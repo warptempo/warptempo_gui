@@ -1,0 +1,240 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <cmath>
+#include <algorithm>
+#include <iomanip>
+#include <sndfile.h>
+#include "Bungee.h"
+
+// Ensure macro exists if cmake fails (fallback)
+#ifndef BUNGEE_VERSION
+#define BUNGEE_VERSION "unknown"
+#endif
+
+struct TimeMapPoint {
+    double source_frame;
+    double target_frame;
+};
+
+// Helper: Calculates how many Output Frames are needed to render the input
+long calculate_output_duration(long total_input_frames, const std::vector<TimeMapPoint>& map) {
+    if (map.empty()) return total_input_frames;
+    if (total_input_frames <= map.front().source_frame) return total_input_frames;
+
+    for (size_t i = 0; i < map.size() - 1; ++i) {
+        if (total_input_frames >= map[i].source_frame && total_input_frames < map[i+1].source_frame) {
+            double section_input_len = map[i+1].source_frame - map[i].source_frame;
+            double section_output_len = map[i+1].target_frame - map[i].target_frame;
+            double progress = total_input_frames - map[i].source_frame;
+            double ratio = section_output_len / section_input_len;
+            return (long)(map[i].target_frame + (progress * ratio));
+        }
+    }
+
+    const auto& last = map.back();
+    const auto& prev = map[map.size()-2];
+    double last_in = last.source_frame - prev.source_frame;
+    double last_out = last.target_frame - prev.target_frame;
+    if (last_in <= 0.0001) last_in = 0.0001;
+    
+    return (long)(last.target_frame + ((total_input_frames - last.source_frame) * (last_out / last_in)));
+}
+
+void get_timemap_status(double target_frame, const std::vector<TimeMapPoint>& map, double& out_source_frame, double& out_speed) {
+    if (map.empty()) {
+        out_source_frame = target_frame;
+        out_speed = 1.0;
+        return;
+    }
+
+    if (target_frame <= map.front().target_frame) {
+        if (map.size() > 1) {
+             double d_src = map[1].source_frame - map[0].source_frame;
+             double d_tgt = map[1].target_frame - map[0].target_frame;
+             double speed = d_src / d_tgt;
+             out_source_frame = map[0].source_frame + (target_frame - map[0].target_frame) * speed;
+             out_speed = speed;
+        } else {
+             out_source_frame = map[0].source_frame;
+             out_speed = 1.0;
+        }
+    } else {
+        bool found = false;
+        for (size_t i = 0; i < map.size() - 1; ++i) {
+            if (target_frame >= map[i].target_frame && target_frame < map[i+1].target_frame) {
+                double section_progress = target_frame - map[i].target_frame;
+                double section_duration = map[i+1].target_frame - map[i].target_frame;
+                double section_source_duration = map[i+1].source_frame - map[i].source_frame;
+                
+                if (section_duration <= 0.0001) section_duration = 0.0001;
+
+                out_speed = section_source_duration / section_duration;
+                out_source_frame = map[i].source_frame + (section_progress * out_speed);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            // FIX: Ensure we have at least 2 points before accessing "size()-2"
+            if (map.size() >= 2) {
+                const auto& last = map.back();
+                const auto& prev = map[map.size()-2];
+                double d_tgt = last.target_frame - prev.target_frame;
+                if (d_tgt <= 0.0001) d_tgt = 0.0001;
+                
+                double speed = (last.source_frame - prev.source_frame) / d_tgt;
+                out_source_frame = last.source_frame + (target_frame - last.target_frame) * speed;
+                out_speed = speed;
+            } else {
+                // Fallback for single-point map (should theoretically never happen with Auto-Anchor)
+                out_source_frame = map.back().source_frame;
+                out_speed = 1.0;
+            }
+        }
+    }
+
+    // Keep Speed Clamping: Prevents engine from stalling or running backwards
+    if (!std::isfinite(out_speed)) out_speed = 1.0;
+    if (out_speed < 0.01) out_speed = 0.01;
+    if (out_speed > 100.0) out_speed = 100.0;
+    
+    if (!std::isfinite(out_source_frame)) out_source_frame = 0.0;
+}
+
+int main(int argc, char* argv[]) {
+    // --- NEW VERSION FLAG ---
+    if (argc > 1 && std::string(argv[1]) == "-v") {
+        std::cout << "bungee " << BUNGEE_VERSION << std::endl;
+        return 0;
+    }
+    if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << " <input> <timemap.txt> <output.wav>" << std::endl;
+        return 1;
+    }
+
+    SF_INFO sfinfo;
+    SNDFILE* infile = sf_open(argv[1], SFM_READ, &sfinfo);
+    if (!infile) { std::cerr << "Error opening input." << std::endl; return 1; }
+
+    std::vector<float> input_buffer(sfinfo.frames * sfinfo.channels);
+    sf_readf_float(infile, input_buffer.data(), sfinfo.frames);
+    sf_close(infile);
+    
+    int sample_rate = sfinfo.samplerate;
+    int channels = sfinfo.channels;
+
+    std::vector<TimeMapPoint> timemap;
+    std::ifstream mapfile(argv[2]);
+    double src, tgt;
+    while (mapfile >> src >> tgt) {
+        timemap.push_back({src, tgt});
+    }
+    
+    std::sort(timemap.begin(), timemap.end(), [](const TimeMapPoint& a, const TimeMapPoint& b) {
+        return a.target_frame < b.target_frame;
+    });
+    
+    // --- NEW AUTO-ANCHOR FIX ---
+    // If the map is missing the start point (0->0), we cannot calculate speed.
+    // We implicitly add it here to ensure we always have at least 2 points (Start and End).
+    if (timemap.empty() || timemap.front().target_frame > 0.0) {
+        timemap.insert(timemap.begin(), {0.0, 0.0});
+    }
+
+    // --- AUTO-CALCULATE OUTPUT DURATION ---
+    long total_job_frames = calculate_output_duration(sfinfo.frames, timemap);
+    
+    // Update output info to match this duration
+    SF_INFO out_sfinfo = sfinfo; 
+    out_sfinfo.frames = total_job_frames;
+    out_sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+
+    SNDFILE* outfile = sf_open(argv[3], SFM_WRITE, &out_sfinfo);
+    if (!outfile) { std::cerr << "Error opening output." << std::endl; return 1; }
+
+    Bungee::Stretcher<Bungee::Basic> stretcher({sample_rate, sample_rate}, channels);
+    Bungee::Request request;
+    request.pitch = 1.0; 
+    
+    std::vector<float> planar_grain_buffer;
+    long current_output_frames_generated = 0;
+
+    std::cout << "Processing..." << std::endl;
+    
+    while (current_output_frames_generated < total_job_frames) {
+        // --- PROGRESS BAR ---
+        if (current_output_frames_generated % 4096 == 0 && total_job_frames > 0) {
+            float percent = (float)current_output_frames_generated / total_job_frames * 100.0f;
+            std::cout << "\rProgress: " << std::fixed << std::setprecision(1) << percent << "%" << std::flush;
+        }
+        
+        double mapped_source_pos, mapped_speed;
+        get_timemap_status((double)current_output_frames_generated, timemap, mapped_source_pos, mapped_speed);
+        
+        request.speed = mapped_speed;
+        request.position = mapped_source_pos; 
+
+        auto input_chunk = stretcher.specifyGrain(request);
+        
+        long start_frame = input_chunk.begin;
+        long frame_count = input_chunk.end - input_chunk.begin;
+        
+        if (frame_count < 0) frame_count = 0;
+        if (frame_count > sample_rate) frame_count = sample_rate;
+
+        if (planar_grain_buffer.size() < frame_count * channels) {
+            planar_grain_buffer.resize(frame_count * channels);
+        }
+
+        for (int c = 0; c < channels; ++c) {
+            for (int i = 0; i < frame_count; ++i) {
+                long input_idx = start_frame + i;
+                
+                // IMPORTANT: Keep Silence Padding
+                // This prevents clicks at the very start/end of file
+                if (input_idx >= 0 && input_idx < sfinfo.frames) {
+                     planar_grain_buffer[c * frame_count + i] = input_buffer[input_idx * channels + c];
+                } else {
+                     planar_grain_buffer[c * frame_count + i] = 0.0f;
+                }
+            }
+        }
+
+        stretcher.analyseGrain(planar_grain_buffer.data(), frame_count); 
+
+        Bungee::OutputChunk output_chunk;
+        stretcher.synthesiseGrain(output_chunk);
+
+        if (output_chunk.frameCount > 0) {
+            std::vector<float> interleaved_out(output_chunk.frameCount * channels);
+            for (int i = 0; i < output_chunk.frameCount; ++i) {
+                for (int c = 0; c < channels; ++c) {
+                    float sample = output_chunk.data[c * output_chunk.channelStride + i];
+                    
+                    // EXTREME SAFETY ONLY
+                    // 1. Silence explosions (NaN/Inf)
+                    if (!std::isfinite(sample)) {
+                        sample = 0.0f; 
+                    }
+                    
+                    // 2. Clamp absurd values to protect hardware
+                    // This allows peaks > 0dB (e.g. +3dB) to pass to ffmpeg for proper limiting,
+                    // but stops +1000dB errors.
+                    if (sample > 10.0f) sample = 10.0f;
+                    if (sample < -10.0f) sample = -10.0f;
+
+                    interleaved_out[i * channels + c] = sample;
+                }
+            }
+            sf_writef_float(outfile, interleaved_out.data(), output_chunk.frameCount);
+            current_output_frames_generated += output_chunk.frameCount;
+        }
+    }
+
+    std::cout << "\rProgress: 100.0%   " << std::endl;
+    std::cout << "Done! Generated " << current_output_frames_generated << " frames." << std::endl;
+
+    sf_close(outfile);
+    return 0;
+}
