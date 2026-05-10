@@ -1,6 +1,7 @@
 #pragma once
 #include "gui_input.h"
 #include <cairo/cairo.h>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -124,6 +125,45 @@ private:
     int  playback_tick_ms_ = 8;
     int  timerfd_ = -1;
 
+    // -- Keyboard --
+    struct wl_seat*     wl_seat_     = nullptr;
+    struct wl_keyboard* wl_keyboard_ = nullptr;
+
+    struct xkb_context* xkb_context_ = nullptr;
+    struct xkb_keymap*  xkb_keymap_  = nullptr;
+    struct xkb_state*   xkb_state_   = nullptr;
+
+    // Tracked modifier state, refreshed by the wl_keyboard.modifiers event
+    // and consumed by GuiInputState construction on every key delivery.
+    // primary_button_held is sourced from pointer state (always false until
+    // the pointer brief lands).
+    bool mod_ctrl_  = false;
+    bool mod_shift_ = false;
+    bool mod_alt_   = false;
+
+    // Key repeat (last-key-wins, timerfd-tick-piggyback).
+    // repeat_key_ is the GuiKey currently repeating (0 = none).
+    // repeat_keycode_ is the raw xkb keycode of that key, used so the
+    // wl_keyboard.key release event can match-and-cancel.
+    // repeat_mods_ captures the modifier state at the moment the key was
+    // pressed (X11 semantics: the same modifiers are delivered with each
+    // synthesized repeat).
+    // repeat_due_us_ is the next-fire monotonic time in microseconds; when
+    // the playback tick fires and current_monotonic_us >= repeat_due_us_,
+    // the on_key_ callback fires and repeat_due_us_ is advanced by the
+    // repeat interval.
+    // repeat_delay_us_ is the compositor-advertised initial delay before
+    // the first repeat (from wl_keyboard.repeat_info), in microseconds.
+    // repeat_period_us_ is the compositor-advertised inter-repeat interval
+    // (1_000_000 / rate), in microseconds.
+    // Zero rate means "no repeat" and is honored — held keys do not repeat.
+    GuiKey        repeat_key_       = 0;
+    uint32_t      repeat_keycode_   = 0;
+    GuiInputState repeat_mods_      = {};
+    uint64_t      repeat_due_us_    = 0;
+    uint64_t      repeat_delay_us_  = 600'000;   // sensible default if compositor
+    uint64_t      repeat_period_us_ = 33'000;    // doesn't advertise (600ms/30Hz)
+
     // -- Callbacks (mirroring the X11 backend's shape) --
     RedrawCallback       on_redraw_;
     ResizeCallback       on_resize_;
@@ -155,4 +195,20 @@ private:
     void on_toplevel_configure(int32_t width, int32_t height);
     void on_toplevel_close();
     void on_frame_done(struct wl_callback* cb);
+
+    // -- Keyboard handlers --
+    void on_seat_capabilities(uint32_t caps);
+    void on_keyboard_keymap(uint32_t format, int fd, uint32_t size);
+    void on_keyboard_enter(uint32_t serial, struct wl_surface* surface,
+                           struct wl_array* keys);
+    void on_keyboard_leave(uint32_t serial, struct wl_surface* surface);
+    void on_keyboard_key(uint32_t serial, uint32_t time,
+                         uint32_t keycode, uint32_t state);
+    void on_keyboard_modifiers(uint32_t serial, uint32_t depressed,
+                               uint32_t latched, uint32_t locked,
+                               uint32_t group);
+    void on_keyboard_repeat_info(int32_t rate, int32_t delay);
+    void deliver_key(GuiKey key, GuiInputState mods);
+    void maybe_fire_repeat();
+    GuiInputState current_mods() const;
 };

@@ -5,12 +5,14 @@
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
 #include <xdg-decoration-unstable-v1-client-protocol.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include <sys/mman.h>
 #include <sys/timerfd.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
+#include <time.h>
 
 #include <algorithm>
 #include <cerrno>
@@ -102,6 +104,13 @@ cairo_status_t png_mem_read(void* closure, unsigned char* out, unsigned int n) {
     std::memcpy(out, r->data + r->pos, n);
     r->pos += n;
     return CAIRO_STATUS_SUCCESS;
+}
+
+uint64_t monotonic_us() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<uint64_t>(ts.tv_sec) * 1'000'000ull +
+           static_cast<uint64_t>(ts.tv_nsec) / 1000ull;
 }
 
 // Open an anonymous, sealable, in-memory file for the wl_shm pool. memfd
@@ -207,6 +216,43 @@ struct WaylandListeners {
     static void buffer_release(void* data, struct wl_buffer*) {
         static_cast<GuiPlatform::ShmBuffer*>(data)->busy = false;
     }
+
+    // wl_seat
+    static void seat_capabilities(void* data, struct wl_seat*, uint32_t caps) {
+        static_cast<GuiPlatform*>(data)->on_seat_capabilities(caps);
+    }
+    static void seat_name(void*, struct wl_seat*, const char*) {}
+
+    // wl_keyboard
+    static void keyboard_keymap(void* data, struct wl_keyboard*,
+                                uint32_t format, int fd, uint32_t size) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_keymap(format, fd, size);
+    }
+    static void keyboard_enter(void* data, struct wl_keyboard*,
+                               uint32_t serial, struct wl_surface* s,
+                               struct wl_array* keys) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_enter(serial, s, keys);
+    }
+    static void keyboard_leave(void* data, struct wl_keyboard*,
+                               uint32_t serial, struct wl_surface* s) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_leave(serial, s);
+    }
+    static void keyboard_key(void* data, struct wl_keyboard*,
+                             uint32_t serial, uint32_t time,
+                             uint32_t key, uint32_t state) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_key(serial, time, key, state);
+    }
+    static void keyboard_modifiers(void* data, struct wl_keyboard*,
+                                   uint32_t serial,
+                                   uint32_t depressed, uint32_t latched,
+                                   uint32_t locked, uint32_t group) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_modifiers(
+            serial, depressed, latched, locked, group);
+    }
+    static void keyboard_repeat_info(void* data, struct wl_keyboard*,
+                                     int32_t rate, int32_t delay) {
+        static_cast<GuiPlatform*>(data)->on_keyboard_repeat_info(rate, delay);
+    }
 };
 
 namespace {
@@ -263,6 +309,20 @@ const struct wl_callback_listener s_frame_listener = {
 
 const struct wl_buffer_listener s_buffer_listener = {
     WaylandListeners::buffer_release,
+};
+
+const struct wl_seat_listener s_seat_listener = {
+    WaylandListeners::seat_capabilities,
+    WaylandListeners::seat_name,
+};
+
+const struct wl_keyboard_listener s_keyboard_listener = {
+    WaylandListeners::keyboard_keymap,
+    WaylandListeners::keyboard_enter,
+    WaylandListeners::keyboard_leave,
+    WaylandListeners::keyboard_key,
+    WaylandListeners::keyboard_modifiers,
+    WaylandListeners::keyboard_repeat_info,
 };
 
 #pragma GCC diagnostic pop
@@ -361,6 +421,14 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     recreate_shm_pool(width_, height_);
 
+    xkb_context_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    if (!xkb_context_) {
+        std::fprintf(stderr,
+                     "warptempo_gui: xkb_context_new failed; "
+                     "keyboard input disabled\n");
+        // Non-fatal — the binary can still run, just without keyboard input.
+    }
+
     playback_tick_ms_ = detect_refresh_rate_ms();
     timerfd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     if (timerfd_ < 0) {
@@ -405,6 +473,29 @@ void GuiPlatform::destroy_wayland_state() {
     if (timerfd_ >= 0) {
         close(timerfd_);
         timerfd_ = -1;
+    }
+
+    if (wl_keyboard_) {
+        wl_keyboard_release(wl_keyboard_);
+        wl_keyboard_ = nullptr;
+    }
+    if (wl_seat_) {
+        // wl_seat.release is a v5+ request; we bind to v4 max, so use
+        // wl_proxy_destroy via the destroy helper.
+        wl_seat_destroy(wl_seat_);
+        wl_seat_ = nullptr;
+    }
+    if (xkb_state_) {
+        xkb_state_unref(xkb_state_);
+        xkb_state_ = nullptr;
+    }
+    if (xkb_keymap_) {
+        xkb_keymap_unref(xkb_keymap_);
+        xkb_keymap_ = nullptr;
+    }
+    if (xkb_context_) {
+        xkb_context_unref(xkb_context_);
+        xkb_context_ = nullptr;
     }
 
     if (frame_callback_) {
@@ -668,6 +759,7 @@ void GuiPlatform::run() {
             uint64_t expirations = 0;
             (void)read(timerfd_, &expirations, sizeof(expirations));
             if (on_tick_) on_tick_();
+            maybe_fire_repeat();
         }
     }
 
@@ -725,6 +817,13 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
                 wl_registry_bind(r, name, &wl_output_interface, v));
             wl_output_add_listener(wl_output_, &s_output_listener, this);
         }
+    } else if (std::strcmp(interface, wl_seat_interface.name) == 0) {
+        // Cap to version 4 — enough for key repeat (added in v4) and
+        // matches what's reasonable for the bindings we use.
+        const uint32_t v = std::min<uint32_t>(version, 4);
+        wl_seat_ = static_cast<struct wl_seat*>(
+            wl_registry_bind(r, name, &wl_seat_interface, v));
+        wl_seat_add_listener(wl_seat_, &s_seat_listener, this);
     }
 }
 
@@ -789,6 +888,187 @@ void GuiPlatform::on_frame_done(struct wl_callback* cb) {
     if (cb == frame_callback_) frame_callback_ = nullptr;
     wl_callback_destroy(cb);
     paint_one_frame();
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard event handlers
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::on_seat_capabilities(uint32_t caps) {
+    const bool has_kb = (caps & WL_SEAT_CAPABILITY_KEYBOARD) != 0;
+    if (has_kb && !wl_keyboard_) {
+        wl_keyboard_ = wl_seat_get_keyboard(wl_seat_);
+        wl_keyboard_add_listener(wl_keyboard_, &s_keyboard_listener, this);
+    } else if (!has_kb && wl_keyboard_) {
+        wl_keyboard_release(wl_keyboard_);
+        wl_keyboard_ = nullptr;
+        // Drop any in-progress repeat — the keyboard is gone.
+        repeat_key_ = 0;
+    }
+    // Pointer / touch capability bits are ignored in this brief.
+}
+
+void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
+    if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+        std::fprintf(stderr,
+                     "warptempo_gui: unsupported keymap format %u\n", format);
+        close(fd);
+        return;
+    }
+    if (!xkb_context_) {
+        close(fd);
+        return;
+    }
+
+    char* mapped = static_cast<char*>(
+        mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0));
+    close(fd);
+    if (mapped == MAP_FAILED) {
+        std::fprintf(stderr,
+                     "warptempo_gui: keymap mmap failed: %s\n",
+                     std::strerror(errno));
+        return;
+    }
+
+    struct xkb_keymap* km = xkb_keymap_new_from_string(
+        xkb_context_, mapped, XKB_KEYMAP_FORMAT_TEXT_V1,
+        XKB_KEYMAP_COMPILE_NO_FLAGS);
+    munmap(mapped, size);
+    if (!km) {
+        std::fprintf(stderr,
+                     "warptempo_gui: xkb_keymap_new_from_string failed\n");
+        return;
+    }
+
+    struct xkb_state* st = xkb_state_new(km);
+    if (!st) {
+        xkb_keymap_unref(km);
+        std::fprintf(stderr, "warptempo_gui: xkb_state_new failed\n");
+        return;
+    }
+
+    // Swap in. Free any prior state/keymap.
+    if (xkb_state_)  xkb_state_unref(xkb_state_);
+    if (xkb_keymap_) xkb_keymap_unref(xkb_keymap_);
+    xkb_keymap_ = km;
+    xkb_state_  = st;
+}
+
+void GuiPlatform::on_keyboard_enter(uint32_t /*serial*/,
+                                    struct wl_surface* /*surface*/,
+                                    struct wl_array* /*keys*/) {
+    // No-op. Modifier state arrives via the modifiers event; per-key
+    // state arrives via subsequent key events.
+}
+
+void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
+                                    struct wl_surface* /*surface*/) {
+    mod_ctrl_ = mod_shift_ = mod_alt_ = false;
+    repeat_key_ = 0;
+}
+
+void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
+                                  uint32_t keycode, uint32_t state) {
+    if (!xkb_state_) return;
+
+    // Wayland delivers raw evdev keycodes (offset by 8 for X11
+    // compatibility — xkbcommon expects this offset).
+    const uint32_t xkb_keycode = keycode + 8;
+
+    if (state == WL_KEYBOARD_KEY_STATE_RELEASED) {
+        // Cancel repeat if the released key was the one repeating.
+        if (xkb_keycode == repeat_keycode_) {
+            repeat_key_ = 0;
+        }
+        return;
+    }
+
+    // Pressed.
+    const xkb_keysym_t sym =
+        xkb_state_key_get_one_sym(xkb_state_, xkb_keycode);
+    if (sym == XKB_KEY_NoSymbol) return;
+
+    // Case-fold ASCII uppercase to lowercase, matching the X11 backend's
+    // translate_keysym helper. Other keysyms pass through.
+    GuiKey key = static_cast<GuiKey>(sym);
+    if (key >= 'A' && key <= 'Z') key |= 0x20;
+
+    const GuiInputState mods = current_mods();
+    deliver_key(key, mods);
+
+    // Arm key repeat (last-key-wins: this replaces any prior repeating
+    // key, even if a different one was held). Skip if repeat_period_us_
+    // is zero — that's the "no repeat" advertisement from the compositor.
+    if (repeat_period_us_ > 0) {
+        repeat_key_     = key;
+        repeat_keycode_ = xkb_keycode;
+        repeat_mods_    = mods;
+        repeat_due_us_  = monotonic_us() + repeat_delay_us_;
+    } else {
+        repeat_key_ = 0;
+    }
+}
+
+void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
+                                        uint32_t depressed,
+                                        uint32_t latched,
+                                        uint32_t locked,
+                                        uint32_t group) {
+    if (!xkb_state_) return;
+    xkb_state_update_mask(xkb_state_,
+                          depressed, latched, locked,
+                          0, 0, group);
+
+    mod_ctrl_  = xkb_state_mod_name_is_active(
+        xkb_state_, XKB_MOD_NAME_CTRL,
+        XKB_STATE_MODS_EFFECTIVE);
+    mod_shift_ = xkb_state_mod_name_is_active(
+        xkb_state_, XKB_MOD_NAME_SHIFT,
+        XKB_STATE_MODS_EFFECTIVE);
+    mod_alt_   = xkb_state_mod_name_is_active(
+        xkb_state_, XKB_MOD_NAME_ALT,
+        XKB_STATE_MODS_EFFECTIVE);
+
+    // No on_key synthesis on modifier change — the next non-modifier
+    // key event carries the updated state. Matches X11 behavior.
+}
+
+void GuiPlatform::on_keyboard_repeat_info(int32_t rate, int32_t delay) {
+    if (rate <= 0) {
+        // Compositor opts out of repeat entirely.
+        repeat_period_us_ = 0;
+        repeat_delay_us_  = 0;
+        repeat_key_       = 0;
+        return;
+    }
+    repeat_delay_us_  = static_cast<uint64_t>(delay) * 1000ull;
+    repeat_period_us_ = 1'000'000ull / static_cast<uint64_t>(rate);
+}
+
+GuiInputState GuiPlatform::current_mods() const {
+    GuiInputState s;
+    s.ctrl  = mod_ctrl_;
+    s.shift = mod_shift_;
+    s.alt   = mod_alt_;
+    s.primary_button_held = false;  // Pointer input not yet wired.
+    return s;
+}
+
+void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
+    if (on_key_) on_key_(key, mods);
+}
+
+void GuiPlatform::maybe_fire_repeat() {
+    if (repeat_key_ == 0 || repeat_period_us_ == 0) return;
+    const uint64_t now = monotonic_us();
+    if (now < repeat_due_us_) return;
+
+    // Deliver one synthesized repeat. Then advance repeat_due_us_ by
+    // repeat_period_us_. If we missed multiple periods (e.g. the main
+    // thread was slow), deliver only one and resync — bursting wouldn't
+    // serve the user.
+    deliver_key(repeat_key_, repeat_mods_);
+    repeat_due_us_ = now + repeat_period_us_;
 }
 
 // ---------------------------------------------------------------------------
