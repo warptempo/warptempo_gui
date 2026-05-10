@@ -12,6 +12,7 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 
 # --- GUI platform dependencies (Wayland) ---
 pkg_check_modules(WAYLAND_CLIENT    REQUIRED wayland-client)
+pkg_check_modules(WAYLAND_CURSOR    REQUIRED wayland-cursor)
 pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
 pkg_check_modules(XKBCOMMON         REQUIRED xkbcommon)
 pkg_get_variable(WAYLAND_PROTOCOLS_DATADIR wayland-protocols pkgdatadir)
@@ -86,6 +87,7 @@ target_include_directories(warptempo_gui PRIVATE
     ${CMAKE_SOURCE_DIR}/src/gui
     ${CMAKE_BINARY_DIR}/wayland-generated
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
+    ${WAYLAND_CURSOR_INCLUDE_DIRS}
     ${XKBCOMMON_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${SNDFILE_INCLUDE_DIRS}
@@ -94,6 +96,7 @@ target_include_directories(warptempo_gui PRIVATE
 )
 target_link_libraries(warptempo_gui PRIVATE
     ${WAYLAND_CLIENT_LIBRARIES}
+    ${WAYLAND_CURSOR_LIBRARIES}
     ${XKBCOMMON_LIBRARIES}
     rt
     ${CAIRO_LIBRARIES}

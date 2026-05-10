@@ -3,10 +3,12 @@
 #include "playhead_cursor_data.h"
 
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 #include <xdg-shell-client-protocol.h>
 #include <xdg-decoration-unstable-v1-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
 #include <fcntl.h>
@@ -111,6 +113,15 @@ uint64_t monotonic_us() {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return static_cast<uint64_t>(ts.tv_sec) * 1'000'000ull +
            static_cast<uint64_t>(ts.tv_nsec) / 1000ull;
+}
+
+bool translate_pointer_button(uint32_t button, GuiMouseButton& out) {
+    switch (button) {
+        case BTN_LEFT:   out = GuiMouseButton::Left;   return true;
+        case BTN_MIDDLE: out = GuiMouseButton::Middle; return true;
+        case BTN_RIGHT:  out = GuiMouseButton::Right;  return true;
+        default:         return false;
+    }
 }
 
 // Open an anonymous, sealable, in-memory file for the wl_shm pool. memfd
@@ -253,6 +264,50 @@ struct WaylandListeners {
                                      int32_t rate, int32_t delay) {
         static_cast<GuiPlatform*>(data)->on_keyboard_repeat_info(rate, delay);
     }
+
+    // wl_pointer
+    static void pointer_enter(void* data, struct wl_pointer*,
+                              uint32_t serial, struct wl_surface* surface,
+                              wl_fixed_t sx, wl_fixed_t sy) {
+        static_cast<GuiPlatform*>(data)->on_pointer_enter(
+            serial, surface, sx, sy);
+    }
+    static void pointer_leave(void* data, struct wl_pointer*,
+                              uint32_t serial, struct wl_surface* surface) {
+        static_cast<GuiPlatform*>(data)->on_pointer_leave(serial, surface);
+    }
+    static void pointer_motion(void* data, struct wl_pointer*,
+                               uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
+        static_cast<GuiPlatform*>(data)->on_pointer_motion(time, sx, sy);
+    }
+    static void pointer_button(void* data, struct wl_pointer*,
+                               uint32_t serial, uint32_t time,
+                               uint32_t button, uint32_t state) {
+        static_cast<GuiPlatform*>(data)->on_pointer_button(
+            serial, time, button, state);
+    }
+    static void pointer_axis(void* data, struct wl_pointer*,
+                             uint32_t time, uint32_t axis, wl_fixed_t value) {
+        static_cast<GuiPlatform*>(data)->on_pointer_axis(time, axis, value);
+    }
+
+    // v5+ pointer events. We bind seat at v4 so none of these are
+    // dispatched at runtime; the slots are still in the listener struct
+    // because wayland-client-protocol.h ships them regardless of bind
+    // version. Same abort-on-NULL rule as wl_output. These stubs are
+    // forward-compat insurance if the bind version is ever raised.
+    static void pointer_frame(void*, struct wl_pointer*) {}
+    static void pointer_axis_source(void*, struct wl_pointer*, uint32_t) {}
+    static void pointer_axis_stop(void*, struct wl_pointer*,
+                                  uint32_t, uint32_t) {}
+    static void pointer_axis_discrete(void*, struct wl_pointer*,
+                                      uint32_t, int32_t) {}
+
+    // v8+ and v9+ stubs.
+    static void pointer_axis_value120(void*, struct wl_pointer*,
+                                      uint32_t, int32_t) {}
+    static void pointer_axis_relative_direction(void*, struct wl_pointer*,
+                                                uint32_t, uint32_t) {}
 };
 
 namespace {
@@ -323,6 +378,20 @@ const struct wl_keyboard_listener s_keyboard_listener = {
     WaylandListeners::keyboard_key,
     WaylandListeners::keyboard_modifiers,
     WaylandListeners::keyboard_repeat_info,
+};
+
+const struct wl_pointer_listener s_pointer_listener = {
+    WaylandListeners::pointer_enter,
+    WaylandListeners::pointer_leave,
+    WaylandListeners::pointer_motion,
+    WaylandListeners::pointer_button,
+    WaylandListeners::pointer_axis,
+    WaylandListeners::pointer_frame,
+    WaylandListeners::pointer_axis_source,
+    WaylandListeners::pointer_axis_stop,
+    WaylandListeners::pointer_axis_discrete,
+    WaylandListeners::pointer_axis_value120,
+    WaylandListeners::pointer_axis_relative_direction,
 };
 
 #pragma GCC diagnostic pop
@@ -421,6 +490,12 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     recreate_shm_pool(width_, height_);
 
+    // Cursor theme load is best-effort: failure leaves cursor_surface_ NULL,
+    // and on_pointer_enter then passes NULL to wl_pointer.set_cursor (which
+    // hides the cursor over our window). That degraded state is acceptable —
+    // the GUI is still fully usable.
+    load_cursor_theme();
+
     xkb_context_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!xkb_context_) {
         std::fprintf(stderr,
@@ -479,6 +554,10 @@ void GuiPlatform::destroy_wayland_state() {
         wl_keyboard_release(wl_keyboard_);
         wl_keyboard_ = nullptr;
     }
+    if (wl_pointer_) {
+        wl_pointer_release(wl_pointer_);
+        wl_pointer_ = nullptr;
+    }
     if (wl_seat_) {
         // wl_seat.release is a v5+ request; we bind to v4 max, so use
         // wl_proxy_destroy via the destroy helper.
@@ -518,6 +597,20 @@ void GuiPlatform::destroy_wayland_state() {
     if (wl_surface_) {
         wl_surface_destroy(wl_surface_);
         wl_surface_ = nullptr;
+    }
+
+    // Cursor: destroy the surface before the theme. The surface holds a
+    // buffer owned by the theme, and freeing in dependency order avoids
+    // any compositor surprise even though libwayland-cursor's buffers can
+    // technically outlive the surface.
+    if (cursor_surface_) {
+        wl_surface_destroy(cursor_surface_);
+        cursor_surface_ = nullptr;
+    }
+    if (wl_cursor_theme_) {
+        wl_cursor_theme_destroy(wl_cursor_theme_);
+        wl_cursor_theme_ = nullptr;
+        wl_cursor_arrow_ = nullptr;  // owned by the theme; no destroy
     }
 
     destroy_shm_pool();
@@ -641,6 +734,62 @@ void GuiPlatform::destroy_shm_pool() {
         close(shm_pool_fd_);
         shm_pool_fd_ = -1;
     }
+}
+
+bool GuiPlatform::load_cursor_theme() {
+    // Size honors XCURSOR_SIZE if the user has set it; otherwise 24 is the
+    // freedesktop fallback.
+    int size = 24;
+    if (const char* env = std::getenv("XCURSOR_SIZE")) {
+        int parsed = std::atoi(env);
+        if (parsed > 0) size = parsed;
+    }
+
+    // Theme name NULL = "system default" per libwayland-cursor.
+    wl_cursor_theme_ = wl_cursor_theme_load(nullptr, size, wl_shm_);
+    if (!wl_cursor_theme_) {
+        std::fprintf(stderr,
+            "warptempo_gui: wl_cursor_theme_load failed; "
+            "pointer will not display a cursor image\n");
+        return false;
+    }
+
+    // left_ptr is the freedesktop standard arrow name. If the active theme
+    // is missing it, the theme is broken; report and move on without a
+    // cursor rather than guess at an alternative.
+    wl_cursor_arrow_ = wl_cursor_theme_get_cursor(wl_cursor_theme_, "left_ptr");
+    if (!wl_cursor_arrow_ || wl_cursor_arrow_->image_count == 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: cursor theme has no \"left_ptr\"; "
+            "pointer will not display a cursor image\n");
+        return false;
+    }
+
+    // First frame only; animated arrows (rare) collapse to frame 0.
+    struct wl_cursor_image* image = wl_cursor_arrow_->images[0];
+    struct wl_buffer* buf = wl_cursor_image_get_buffer(image);
+    if (!buf) {
+        std::fprintf(stderr,
+            "warptempo_gui: wl_cursor_image_get_buffer returned NULL; "
+            "pointer will not display a cursor image\n");
+        return false;
+    }
+
+    cursor_hotspot_x_ = static_cast<int32_t>(image->hotspot_x);
+    cursor_hotspot_y_ = static_cast<int32_t>(image->hotspot_y);
+
+    // Dedicated cursor surface, created once for the process lifetime.
+    // The buffer attachment is sticky; we never switch images.
+    cursor_surface_ = wl_compositor_create_surface(wl_compositor_);
+    if (!cursor_surface_) {
+        std::fprintf(stderr,
+            "warptempo_gui: wl_compositor_create_surface for cursor failed\n");
+        return false;
+    }
+    wl_surface_attach(cursor_surface_, buf, 0, 0);
+    wl_surface_damage(cursor_surface_, 0, 0, image->width, image->height);
+    wl_surface_commit(cursor_surface_);
+    return true;
 }
 
 GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
@@ -895,7 +1044,9 @@ void GuiPlatform::on_frame_done(struct wl_callback* cb) {
 // ---------------------------------------------------------------------------
 
 void GuiPlatform::on_seat_capabilities(uint32_t caps) {
-    const bool has_kb = (caps & WL_SEAT_CAPABILITY_KEYBOARD) != 0;
+    const bool has_kb      = (caps & WL_SEAT_CAPABILITY_KEYBOARD) != 0;
+    const bool has_pointer = (caps & WL_SEAT_CAPABILITY_POINTER)  != 0;
+
     if (has_kb && !wl_keyboard_) {
         wl_keyboard_ = wl_seat_get_keyboard(wl_seat_);
         wl_keyboard_add_listener(wl_keyboard_, &s_keyboard_listener, this);
@@ -905,7 +1056,17 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // Drop any in-progress repeat — the keyboard is gone.
         repeat_key_ = 0;
     }
-    // Pointer / touch capability bits are ignored in this brief.
+
+    if (has_pointer && !wl_pointer_) {
+        wl_pointer_ = wl_seat_get_pointer(wl_seat_);
+        wl_pointer_add_listener(wl_pointer_, &s_pointer_listener, this);
+    } else if (!has_pointer && wl_pointer_) {
+        wl_pointer_release(wl_pointer_);
+        wl_pointer_ = nullptr;
+        pointer_focused_   = false;
+        pointer_left_held_ = false;
+    }
+    // Touch capability bit remains ignored.
 }
 
 void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
@@ -1050,7 +1211,7 @@ GuiInputState GuiPlatform::current_mods() const {
     s.ctrl  = mod_ctrl_;
     s.shift = mod_shift_;
     s.alt   = mod_alt_;
-    s.primary_button_held = false;  // Pointer input not yet wired.
+    s.primary_button_held = pointer_left_held_;
     return s;
 }
 
@@ -1069,6 +1230,96 @@ void GuiPlatform::maybe_fire_repeat() {
     // serve the user.
     deliver_key(repeat_key_, repeat_mods_);
     repeat_due_us_ = now + repeat_period_us_;
+}
+
+// ---------------------------------------------------------------------------
+// Pointer event handlers
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::on_pointer_enter(uint32_t serial,
+                                   struct wl_surface* surface,
+                                   int32_t surface_x, int32_t surface_y) {
+    // Only our own surface should fire this, but a stale enter could
+    // arrive after a hypothetical multi-surface setup. Guard.
+    if (surface != wl_surface_) return;
+
+    pointer_focused_ = true;
+    pointer_x_ = wl_fixed_to_int(surface_x);
+    pointer_y_ = wl_fixed_to_int(surface_y);
+
+    // Hand the compositor our cursor surface so the standard arrow appears
+    // over our window. wl_pointer.set_cursor with a NULL surface is the
+    // protocol's "hide the cursor" request, not "use the default" — there
+    // is no protocol-level default-cursor request, so the client must supply
+    // an image. If cursor loading failed at init, cursor_surface_ is NULL
+    // and this call hides the cursor; that's a degraded but defined state,
+    // strictly better than skipping the call (which leaves the cursor
+    // appearance undefined per protocol).
+    wl_pointer_set_cursor(wl_pointer_, serial, cursor_surface_,
+                          cursor_hotspot_x_, cursor_hotspot_y_);
+
+    // Synthesize a motion delivery so consumers register the pointer
+    // as present at the entry coordinates. Matches how most clients
+    // treat enter — the first "the pointer is here" notification.
+    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+}
+
+void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
+                                   struct wl_surface* surface) {
+    if (surface != wl_surface_) return;
+    pointer_focused_ = false;
+    // Left-held state persists across leave; the next press/release
+    // will resync it. We do NOT clear pointer_left_held_ here because
+    // a drag that briefly skids outside the surface and returns
+    // should not lose its held state.
+}
+
+void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
+                                    int32_t surface_x, int32_t surface_y) {
+    pointer_x_ = wl_fixed_to_int(surface_x);
+    pointer_y_ = wl_fixed_to_int(surface_y);
+    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+}
+
+void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
+                                    uint32_t button, uint32_t state) {
+    GuiMouseButton mb;
+    if (!translate_pointer_button(button, mb)) return;
+
+    const bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+
+    if (button == BTN_LEFT) pointer_left_held_ = pressed;
+
+    if (pressed) {
+        if (on_button_press_)
+            on_button_press_(mb, pointer_x_, pointer_y_, current_mods());
+    } else {
+        if (on_button_release_)
+            on_button_release_(mb, pointer_x_, pointer_y_, current_mods());
+    }
+}
+
+void GuiPlatform::on_pointer_axis(uint32_t /*time*/,
+                                  uint32_t axis, int32_t value) {
+    if (axis != WL_POINTER_AXIS_VERTICAL_SCROLL) return;
+    if (value == 0) return;
+
+    // Wheel convention on Wayland: positive value = scroll down
+    // (content moves up under the cursor), negative = scroll up.
+    // Translate to a discrete WheelUp / WheelDown button event pair.
+    // Trackpad smooth-scroll arrives here too but we treat any
+    // non-zero vertical axis tick as one discrete step; WarpTempo's
+    // wheel bindings (zoom-by-level, pan-by-fraction) are discrete
+    // by nature and don't benefit from sub-step resolution.
+    const GuiMouseButton mb = (value > 0)
+        ? GuiMouseButton::WheelDown
+        : GuiMouseButton::WheelUp;
+
+    const GuiInputState mods = current_mods();
+    if (on_button_press_)
+        on_button_press_(mb, pointer_x_, pointer_y_, mods);
+    if (on_button_release_)
+        on_button_release_(mb, pointer_x_, pointer_y_, mods);
 }
 
 // ---------------------------------------------------------------------------

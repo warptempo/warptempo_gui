@@ -135,11 +135,37 @@ private:
 
     // Tracked modifier state, refreshed by the wl_keyboard.modifiers event
     // and consumed by GuiInputState construction on every key delivery.
-    // primary_button_held is sourced from pointer state (always false until
-    // the pointer brief lands).
     bool mod_ctrl_  = false;
     bool mod_shift_ = false;
     bool mod_alt_   = false;
+
+    // -- Pointer --
+    struct wl_pointer* wl_pointer_ = nullptr;
+
+    // Pointer focus and last-known position. surface_x/y are wl_fixed_t
+    // values delivered with enter and motion; we convert to int with
+    // wl_fixed_to_int at delivery time. pointer_x_/pointer_y_ hold the
+    // most recent int coordinates so we have a position to report with
+    // button events (wl_pointer.button does not carry coordinates).
+    bool pointer_focused_ = false;
+    int  pointer_x_ = 0;
+    int  pointer_y_ = 0;
+
+    // Live truth for left-button held state. Updated on every press and
+    // release for BTN_LEFT. Read by current_mods() into the
+    // primary_button_held field of GuiInputState.
+    bool pointer_left_held_ = false;
+
+    // Cursor (system theme, loaded once at init, kept for the process
+    // lifetime). cursor_surface_ is a dedicated wl_surface that holds
+    // the cursor image buffer; it is distinct from the main window
+    // wl_surface_ and is passed to wl_pointer.set_cursor on every
+    // pointer enter.
+    struct wl_cursor_theme* wl_cursor_theme_   = nullptr;
+    struct wl_cursor*       wl_cursor_arrow_   = nullptr;
+    struct wl_surface*      cursor_surface_    = nullptr;
+    int32_t                 cursor_hotspot_x_  = 0;
+    int32_t                 cursor_hotspot_y_  = 0;
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
     // repeat_key_ is the GuiKey currently repeating (0 = none).
@@ -180,6 +206,7 @@ private:
     // -- Internal helpers --
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
+    bool load_cursor_theme();
     ShmBuffer* acquire_free_buffer();
     void schedule_frame_callback();
     void paint_one_frame();
@@ -211,4 +238,13 @@ private:
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
     GuiInputState current_mods() const;
+
+    // -- Pointer handlers --
+    void on_pointer_enter(uint32_t serial, struct wl_surface* surface,
+                          int32_t surface_x, int32_t surface_y);
+    void on_pointer_leave(uint32_t serial, struct wl_surface* surface);
+    void on_pointer_motion(uint32_t time, int32_t surface_x, int32_t surface_y);
+    void on_pointer_button(uint32_t serial, uint32_t time,
+                           uint32_t button, uint32_t state);
+    void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
 };
