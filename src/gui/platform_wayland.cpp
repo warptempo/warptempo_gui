@@ -349,6 +349,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_add_listener(xdg_toplevel_, &s_toplevel_listener, this);
     xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo");
     xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo");
+    xdg_toplevel_set_maximized(xdg_toplevel_);
 
     if (xdg_decoration_manager_) {
         xdg_toplevel_decoration_ = zxdg_decoration_manager_v1_get_toplevel_decoration(
@@ -744,6 +745,12 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
 
     if (first) {
         has_initial_configure_ = true;
+        if (pending_w_ > 0 && pending_h_ > 0 &&
+            (pending_w_ != width_ || pending_h_ != height_)) {
+            width_  = pending_w_;
+            height_ = pending_h_;
+            recreate_shm_pool(width_, height_);
+        }
         damage_.push_back(DamageRect{0, 0, width_, height_});
         if (on_resize_) on_resize_(width_, height_);
         paint_one_frame();
