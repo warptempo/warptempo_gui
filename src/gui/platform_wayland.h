@@ -3,14 +3,16 @@
 #include <cairo/cairo.h>
 #include <functional>
 #include <string>
+#include <vector>
 
 // GuiPlatform: the platform abstraction for the GUI's window, event loop,
-// and presentation. This is currently a stub — every method is defined to
-// print a diagnostic and abort. Subsequent briefs will fill in window
-// creation, the wl_display event loop, xkbcommon-driven key
-// translation, wl_shm-backed Cairo surfaces, and the data-device drag/drop
-// path. No Wayland headers appear here on purpose; they belong to
-// platform_wayland.cpp once the real implementation lands.
+// and presentation. The Wayland backend opens a window via libwayland-client,
+// paints cairo surfaces directly into wl_shm buffers in response to compositor
+// frame callbacks, drives a separate playback tick on a timerfd, and requests
+// server-side decorations via the xdg-decoration unstable protocol. No
+// Wayland headers appear here on purpose; member pointer types are spelled
+// `struct foo*` so the compiler treats them as forward declarations and the
+// real interface headers stay private to platform_wayland.cpp.
 class GuiPlatform {
 public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
@@ -52,4 +54,105 @@ public:
     void set_idle_timeout_provider(IdleTimeoutProvider p);
 
 private:
+    // libwayland's listener tables are C structs of function pointers, so
+    // dispatch lives in static functions that cast `data` to `GuiPlatform*`
+    // and call into private member functions. This struct is the friend
+    // through which those statics reach the privates.
+    friend struct WaylandListeners;
+
+    // -- Wayland globals (bound during init()) --
+    struct wl_display*    wl_display_     = nullptr;
+    struct wl_registry*   wl_registry_    = nullptr;
+    struct wl_compositor* wl_compositor_  = nullptr;
+    struct wl_shm*        wl_shm_         = nullptr;
+    struct xdg_wm_base*   xdg_wm_base_    = nullptr;
+    struct zxdg_decoration_manager_v1* xdg_decoration_manager_ = nullptr;
+    struct wl_output*     wl_output_      = nullptr;
+
+    // -- Surface objects --
+    struct wl_surface*       wl_surface_       = nullptr;
+    struct xdg_surface*      xdg_surface_      = nullptr;
+    struct xdg_toplevel*     xdg_toplevel_     = nullptr;
+    struct zxdg_toplevel_decoration_v1* xdg_toplevel_decoration_ = nullptr;
+
+    // -- Frame callback (one in flight at a time, or none) --
+    struct wl_callback*      frame_callback_   = nullptr;
+
+    // -- Buffer pool (pattern B: double-buffered wl_shm) --
+    // Pattern X: cairo surfaces are created directly on the wl_shm buffer's
+    // mmap'd memory. The cairo_t* the on_redraw callback receives is a
+    // context on whichever buffer paint_one_frame just acquired. No
+    // off-screen canonical surface — every paint goes straight into a
+    // presentation buffer. The double-buffered pool guarantees the
+    // compositor never reads a buffer we're writing to.
+    struct ShmBuffer {
+        struct wl_buffer* buffer       = nullptr;
+        cairo_surface_t*  surface      = nullptr;  // image-surface on `pixels`
+        void*             pixels       = nullptr;  // points into mmap region
+        size_t            size_bytes   = 0;
+        bool              busy         = false;    // true between attach and release
+    };
+    ShmBuffer shm_buffers_[2];
+    int       shm_pool_fd_   = -1;
+    void*     shm_pool_map_  = nullptr;
+    size_t    shm_pool_size_ = 0;
+    struct wl_shm_pool* shm_pool_ = nullptr;
+
+    // -- Window state --
+    int  width_  = 0;
+    int  height_ = 0;
+    int  pending_w_ = 0;   // populated by xdg_toplevel.configure between
+    int  pending_h_ = 0;   // configure events; consumed by xdg_surface.configure
+    bool should_exit_ = false;
+    bool has_initial_configure_ = false;
+
+    // Highest-refresh wl_output mode reported during the registry
+    // roundtrip, in millihertz. Zero means no output advertised a mode;
+    // detect_refresh_rate_ms() then falls back to 60 Hz.
+    int  output_refresh_mhz_ = 0;
+
+    // -- Damage accumulator --
+    // Set by invalidate_region() at any time; consumed at the next
+    // frame-callback paint and cleared after attach + commit.
+    struct DamageRect { int x, y, w, h; };
+    std::vector<DamageRect> damage_;
+
+    // -- Playhead triangle surface (loaded once during init) --
+    cairo_surface_t* playhead_triangle_surface_ = nullptr;
+
+    // -- Idle-tick timing --
+    int  playback_tick_ms_ = 8;
+    int  timerfd_ = -1;
+
+    // -- Callbacks (mirroring the X11 backend's shape) --
+    RedrawCallback       on_redraw_;
+    ResizeCallback       on_resize_;
+    KeyCallback          on_key_;
+    ButtonCallback       on_button_press_;
+    ButtonCallback       on_button_release_;
+    MotionCallback       on_motion_;
+    CloseCallback        on_close_;
+    FileDropCallback     on_file_drop_;
+    DropAcceptPredicate  drop_accept_;
+    TickCallback         on_tick_;
+    IdleTimeoutProvider  idle_timeout_;
+
+    // -- Internal helpers --
+    void recreate_shm_pool(int w, int h);
+    void destroy_shm_pool();
+    ShmBuffer* acquire_free_buffer();
+    void schedule_frame_callback();
+    void paint_one_frame();
+    void destroy_wayland_state();
+    int  detect_refresh_rate_ms();
+
+    // -- Event handlers (called from file-static dispatchers) --
+    void on_registry_global(struct wl_registry* r, uint32_t name,
+                            const char* interface, uint32_t version);
+    void on_output_mode(uint32_t flags, int32_t width, int32_t height,
+                        int32_t refresh_mhz);
+    void on_xdg_surface_configure(struct xdg_surface* xs, uint32_t serial);
+    void on_toplevel_configure(int32_t width, int32_t height);
+    void on_toplevel_close();
+    void on_frame_done(struct wl_callback* cb);
 };

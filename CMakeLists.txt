@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(warptempo_suite VERSION 2.0 LANGUAGES CXX)
+project(warptempo_suite VERSION 2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,8 +11,38 @@ pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
 
 # --- GUI platform dependencies (Wayland) ---
-pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
-pkg_check_modules(XKBCOMMON      REQUIRED xkbcommon)
+pkg_check_modules(WAYLAND_CLIENT    REQUIRED wayland-client)
+pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
+pkg_check_modules(XKBCOMMON         REQUIRED xkbcommon)
+pkg_get_variable(WAYLAND_PROTOCOLS_DATADIR wayland-protocols pkgdatadir)
+find_program(WAYLAND_SCANNER_EXEC NAMES wayland-scanner REQUIRED)
+
+# wayland-scanner: for each protocol XML, generate a client header and a
+# private dispatch-table .c. Both files land in ${CMAKE_BINARY_DIR}/wayland-
+# generated/ and are added to the warptempo_gui sources below. DEPENDS on
+# the source XML so wayland-protocols updates trigger regeneration.
+set(WAYLAND_PROTOCOL_SOURCES
+    ${WAYLAND_PROTOCOLS_DATADIR}/stable/xdg-shell/xdg-shell.xml
+    ${WAYLAND_PROTOCOLS_DATADIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
+)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/wayland-generated)
+set(WAYLAND_GENERATED_SOURCES "")
+foreach(proto IN LISTS WAYLAND_PROTOCOL_SOURCES)
+    get_filename_component(proto_name ${proto} NAME_WE)
+    set(proto_h ${CMAKE_BINARY_DIR}/wayland-generated/${proto_name}-client-protocol.h)
+    set(proto_c ${CMAKE_BINARY_DIR}/wayland-generated/${proto_name}-protocol.c)
+    add_custom_command(
+        OUTPUT  ${proto_h}
+        COMMAND ${WAYLAND_SCANNER_EXEC} client-header ${proto} ${proto_h}
+        DEPENDS ${proto}
+        VERBATIM)
+    add_custom_command(
+        OUTPUT  ${proto_c}
+        COMMAND ${WAYLAND_SCANNER_EXEC} private-code ${proto} ${proto_c}
+        DEPENDS ${proto}
+        VERBATIM)
+    list(APPEND WAYLAND_GENERATED_SOURCES ${proto_c} ${proto_h})
+endforeach()
 
 # --- Build the GUI (Cairo + selected platform backend) ---
 pkg_check_modules(CAIRO REQUIRED cairo)
@@ -48,11 +78,13 @@ add_executable(warptempo_gui
     src/engine/engine.cpp
     src/engine/limiter.cpp
     src/engine/synthesis.cpp
+    ${WAYLAND_GENERATED_SOURCES}
 )
 target_include_directories(warptempo_gui PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/engine
     ${CMAKE_SOURCE_DIR}/src/gui
+    ${CMAKE_BINARY_DIR}/wayland-generated
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
     ${XKBCOMMON_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
