@@ -4,7 +4,7 @@
 #include "audio.h"
 #include "playback.h"
 #include "selection.h"
-#include "platform.h"
+#include "platform_wayland.h"
 
 #include <cstdint>
 #include <filesystem>

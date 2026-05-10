@@ -14,7 +14,7 @@
 #include "viewport.h"
 #include "warpmarkers_ops.h"
 #include "gui_input.h"
-#include "platform.h"
+#include "platform_wayland.h"
 
 #include <cmath>
 #include <functional>

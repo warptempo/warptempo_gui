@@ -4,10 +4,10 @@
 #include <functional>
 #include <string>
 
-// GuiPlatform: Wayland implementation. Mirrors the public interface of the
-// X11 sibling in platform_x11.h. This is currently a stub — every method is
-// defined to print a diagnostic and abort. Subsequent briefs will fill in
-// window creation, the wl_display event loop, xkbcommon-driven key
+// GuiPlatform: the platform abstraction for the GUI's window, event loop,
+// and presentation. This is currently a stub — every method is defined to
+// print a diagnostic and abort. Subsequent briefs will fill in window
+// creation, the wl_display event loop, xkbcommon-driven key
 // translation, wl_shm-backed Cairo surfaces, and the data-device drag/drop
 // path. No Wayland headers appear here on purpose; they belong to
 // platform_wayland.cpp once the real implementation lands.

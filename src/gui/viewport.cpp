@@ -3,7 +3,7 @@
 #include "audio.h"
 #include "playback.h"
 #include "render.h"
-#include "platform.h"
+#include "platform_wayland.h"
 
 #include <algorithm>
 #include <cmath>
