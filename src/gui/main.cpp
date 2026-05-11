@@ -18,6 +18,7 @@
 #include "time_format.h"
 #include "phase_reset_markers.h"
 #include "phase_reset_markers_ops.h"
+#include "prompt.h"
 #include "undo.h"
 #include "viewport.h"
 #include "warpmarkers_ops.h"
@@ -332,9 +333,10 @@ int main(int argc, char** argv) {
     // X.7.8b-1: forward-declared so GuiInputHandler can capture references.
     // Bodies are assigned later at their original definition sites — same
     // pattern as the prior promotions. The on_key handler reads these
-    // through the std::function refs; the residual lambdas stay in
-    // main.cpp because their bodies still reach lambdas that have not yet
-    // been hoisted (proceed_with_trigger, open_prompt_unsaved, etc.).
+    // through the std::function refs. After X.7.10 the two dialog-cluster
+    // ones (request_close_or_revert, prompt_activate_response) are
+    // one-line forwarders into GuiPrompt; save_markers, toggle_playback,
+    // and set_playback_speed retain inline bodies.
     std::function<bool()>                save_markers;
     std::function<void(DialogTrigger)>   request_close_or_revert;
     std::function<void(char)>            prompt_activate_response;
@@ -358,6 +360,9 @@ int main(int argc, char** argv) {
                         clear_hover_popup, stop_playback_if_playing);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo);
+    GuiPrompt prompt(app, gui, viewport, file_loader,
+                     phase_reset_propagate,
+                     save_markers, clear_hover_popup);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
@@ -532,107 +537,18 @@ int main(int argc, char** argv) {
     };
 
     // -- Unsaved-work dialog + blank-state revert (chunk Q) -----------------
+    //
+    // X.7.10: the dialog cluster (proceed_with_trigger, open_prompt_unsaved,
+    // and the bodies of prompt_activate_response / request_close_or_revert)
+    // moved to prompt.{h,cpp} on GuiPrompt. The two std::functions retained
+    // for GuiInputHandler are now one-line forwarders into that struct,
+    // matching the refresh_active_tab_from_app pattern.
 
-    auto invalidate_all = [&]() { viewport.invalidate_all(); };
-
-    // X.7.9: revert_to_blank moved to file_loader.{h,cpp} on GuiFileLoader.
-    // proceed_with_trigger's REVERT_TO_BLANK case dispatches through it.
-
-    auto proceed_with_trigger = [&](DialogTrigger t) {
-        switch (t) {
-        case DialogTrigger::CLOSE_WINDOW:
-            gui.request_exit();
-            break;
-        case DialogTrigger::REVERT_TO_BLANK:
-            file_loader.revert_to_blank();
-            break;
-        case DialogTrigger::PASTE_CONFIRM:
-            // Paste prompt is dispatched directly by prompt_activate_response;
-            // proceed_with_trigger is not the path it lands on.
-            break;
-        }
-    };
-
-    auto open_prompt_unsaved = [&](DialogTrigger t) {
-        app.prompt.active          = true;
-        app.prompt.text            = "Save unsaved changes?";
-        // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
-        // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
-        // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
-        // machinery remains a vector<char> match.
-        app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-        app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
-        app.prompt.trigger         = t;
-        clear_hover_popup();
-        invalidate_all();
-    };
-
-    // Single-key response dispatch. The trigger captured at prompt-open
-    // time selects which response set is in play; the key picks the
-    // response. On a Save failure, the prompt mutates in place to a
-    // retry/discard/cancel state — same trigger, new text and response
-    // set — rather than dismissing.
     prompt_activate_response = [&](char k) {
-        if (!app.prompt.active) return;
-        const DialogTrigger trigger = app.prompt.trigger;
-        // Sentinels: '\x7f' = Delete (discard), '\x1b' = Escape (cancel).
-        // See open_prompt_unsaved above.
-
-        if (trigger == DialogTrigger::PASTE_CONFIRM) {
-            if (k == 'y') {
-                app.prompt.active = false;
-                invalidate_all();
-                phase_reset_propagate.paste_apply();
-                return;
-            }
-            if (k == '\x1b') {
-                app.prompt.active = false;
-                app.pending_paste_anchor = -1;
-                invalidate_all();
-                return;
-            }
-            return;
-        }
-
-        if (trigger == DialogTrigger::CLOSE_WINDOW ||
-            trigger == DialogTrigger::REVERT_TO_BLANK) {
-            if (k == 's' || k == 'r') {
-                const bool ok = save_markers();
-                if (!ok) {
-                    app.prompt.text            = "Save failed.";
-                    app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
-                    app.prompt.response_labels =
-                        {"[R]etry", "[Delete]", "[Esc]"};
-                    invalidate_all();
-                    return;
-                }
-                app.prompt.active = false;
-                invalidate_all();
-                proceed_with_trigger(trigger);
-                return;
-            }
-            if (k == '\x7f') {
-                app.prompt.active = false;
-                invalidate_all();
-                proceed_with_trigger(trigger);
-                return;
-            }
-            if (k == '\x1b') {
-                app.prompt.active = false;
-                invalidate_all();
-                return;
-            }
-            return;
-        }
+        prompt.activate_response(k);
     };
-
-    // Route a close / revert gesture through the prompt when history is
-    // dirty; otherwise proceed immediately. Centralizes the decision so
-    // Ctrl+Q, Ctrl+W, and the WM-close callback share identical behavior.
     request_close_or_revert = [&](DialogTrigger t) {
-        if (app.prompt.active) return; // already gated; ignore re-entry
-        if (app.dirty) open_prompt_unsaved(t);
-        else           proceed_with_trigger(t);
+        prompt.request_close_or_revert(t);
     };
 
     // Space-bar: start/stop playback. Playback runs from the playhead to

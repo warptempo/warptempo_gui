@@ -71,6 +71,7 @@ add_executable(warptempo_gui
     src/gui/undo.cpp
     src/gui/phase_reset_markers_ops.cpp
     src/gui/phase_reset_propagate.cpp
+    src/gui/prompt.cpp
     src/gui/warpmarkers_ops.cpp
     src/gui/file_loader.cpp
     src/gui/flag_editor.cpp
