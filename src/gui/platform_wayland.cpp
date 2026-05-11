@@ -1304,8 +1304,14 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     }
 
     // Pressed.
-    const xkb_keysym_t sym =
-        xkb_state_key_get_one_sym(xkb_state_, xkb_keycode);
+    if (!xkb_keymap_) return;
+    const xkb_layout_index_t layout =
+        xkb_state_serialize_layout(xkb_state_, XKB_STATE_LAYOUT_EFFECTIVE);
+    const xkb_keysym_t* syms = nullptr;
+    const int nsyms = xkb_keymap_key_get_syms_by_level(
+        xkb_keymap_, xkb_keycode, layout, 0, &syms);
+    if (nsyms <= 0 || !syms) return;
+    const xkb_keysym_t sym = syms[0];
     if (sym == XKB_KEY_NoSymbol) return;
 
     // Case-fold ASCII uppercase keysyms to lowercase so consumers see a

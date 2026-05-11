@@ -7,6 +7,7 @@
 #include "input_handler.h"
 #include "paint_handler.h"
 #include "playback.h"
+#include "playback_lifecycle.h"
 #include "render.h"
 #include "render_pipeline.h"
 #include "render_view.h"
@@ -363,6 +364,7 @@ int main(int argc, char** argv) {
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate,
                      save_markers, clear_hover_popup);
+    GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
@@ -382,7 +384,6 @@ int main(int argc, char** argv) {
                                   prompt_activate_response, toggle_playback,
                                   set_playback_speed);
 
-    auto trim_end_sample             = [&]() { return viewport.trim_end_sample(); };
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -425,17 +426,8 @@ int main(int argc, char** argv) {
 
     auto recompute_dirty = [&]() { undo.recompute_dirty(); };
 
-    // Gesture-stop: called at the top of any handler that will move the
-    // visible playhead (keys, button press, Ctrl+wheel, undo/redo, tab
-    // switch). Stops the audio thread and keeps the LSP in sync with the
-    // visible playhead so the next Space-to-play captures the right
-    // launch position. Does NOT return-to-launch — the gesture is about
-    // to commit a new playhead position.
     stop_playback_if_playing = [&]() {
-        if (!playback.is_playing() && !app.is_playing) return;
-        playback.stop();
-        app.is_playing        = false;
-        app.last_space_sample = app.playhead_sample;
+        playback_lifecycle.stop_playback_if_playing();
     };
 
     refresh_active_tab_from_app = [&]() { tab_mode.refresh_active_tab_from_app(); };
@@ -518,23 +510,11 @@ int main(int argc, char** argv) {
         return true;
     };
 
-    // Snap the visible playhead back to where Space was last pressed and
-    // refresh the affected regions. Used by both Space-to-stop and natural
-    // end-of-playback.
-    auto restore_playhead_to_lsp = [&]() {
-        const double old_px = playhead_pixel_x(app, audio);
-        app.playhead_sample = app.last_space_sample;
-        const double new_px = playhead_pixel_x(app, audio);
-        invalidate_playhead_columns(old_px, new_px);
-        invalidate_timestamp_area();
-        // The triangle shares the top strip with any selected-flag
-        // highlight; restore jumps can uncover/cover both, so invalidate
-        // the flag strip too.
-        const GuiRect ts = top_strip_area(app);
-        gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        app.is_playing      = false;
-        app.playback_cursor = app.playhead_sample;
-    };
+    // X.7.11: the playback-lifecycle cluster (stop_playback_if_playing,
+    // restore_playhead_to_lsp, toggle_playback, set_playback_speed)
+    // moved to playback_lifecycle.{h,cpp} on GuiPlaybackLifecycle. The
+    // three std::functions retained for GuiInputHandler are now one-line
+    // forwarders into that struct, matching the X.7.10 prompt pattern.
 
     // -- Unsaved-work dialog + blank-state revert (chunk Q) -----------------
     //
@@ -551,38 +531,11 @@ int main(int argc, char** argv) {
         prompt.request_close_or_revert(t);
     };
 
-    // Space-bar: start/stop playback. Playback runs from the playhead to
-    // trim_end (or total_frames if no e= marker). Pressing space with the
-    // playhead at or past trim-end is a silent no-op. Space-to-stop
-    // returns the visible playhead to the position where Space-to-play
-    // was last pressed (return-to-launch).
     toggle_playback = [&]() {
-        if (playback.is_playing()) {
-            playback.stop();
-            restore_playhead_to_lsp();
-            return;
-        }
-        const int64_t end = trim_end_sample();
-        if (app.playhead_sample >= end) return;
-        // Clamp the start position into the trim range in case the playhead
-        // is sitting at trim_end - 1 (valid) or somehow slipped.
-        const int64_t start = std::max(app.playhead_sample, viewport.trim_begin_sample());
-        app.last_space_sample = app.playhead_sample;
-        app.playback_cursor = start;
-        app.is_playing = true;
-        if (app.follow_mode) follow_scroll_if_needed();
-        playback.set_speed(app.render_view_enabled ? 1.0f : app.playback_speed);
-        playback.play(start, end);
+        playback_lifecycle.toggle_playback();
     };
-
-    // Helpers for Shift+<digit> speed selection.
     set_playback_speed = [&](float s) {
-        app.playback_speed = s;
-        playback.set_speed(s);
-        // Speed change without resync would cause a backward cursor jump:
-        // the predictor would retroactively apply the new speed to the
-        // entire elapsed-since-anchor period.
-        if (playback.is_playing()) playback.resync_predictor();
+        playback_lifecycle.set_playback_speed(s);
     };
 
     // V.A3b Addendum 3: re-evaluate hover at the cursor's last on_motion
@@ -756,7 +709,7 @@ int main(int argc, char** argv) {
         // Playing was true last tick, now false — natural end. Return the
         // visible playhead to the launch position (same as Space-to-stop).
         if (app.is_playing) {
-            restore_playhead_to_lsp();
+            playback_lifecycle.restore_playhead_to_lsp();
             if (app.follow_mode) follow_scroll_if_needed();
         }
     });
