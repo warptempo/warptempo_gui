@@ -40,7 +40,7 @@ void Undo::recompute_dirty() {
             else                                app.warp_dirty      = true;
         }
     }
-    app.dirty = app.warp_dirty || app.phase_reset_dirty;
+    app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
 void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,

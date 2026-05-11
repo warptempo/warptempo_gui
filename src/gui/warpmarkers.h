@@ -19,12 +19,11 @@
 //      non-empty. `label_def` marks a label origin; `label_ref` cites one.
 //
 //   3. Disabled flag. Allowed on any marker. A disabled marker has its
-//      tempo contribution silenced; trim flags (`b=`/`e=`) are still
-//      honored at render time (see chunk U patch 2). When the disabled
-//      marker is a `label_def`, all `label_ref` markers pointing to it
-//      are also treated as disabled (cascade). The cascade rule applies
-//      only to label_def markers; a disabled non-label-def is locally
-//      disabled and does not propagate.
+//      tempo contribution silenced. When the disabled marker is a
+//      `label_def`, all `label_ref` markers pointing to it are also
+//      treated as disabled (cascade). The cascade rule applies only to
+//      label_def markers; a disabled non-label-def is locally disabled
+//      and does not propagate.
 struct GuiWarpMarker {
     double time_seconds = 0.0;
 
@@ -36,8 +35,6 @@ struct GuiWarpMarker {
     std::string label_ref;
 
     bool disabled      = false;
-    bool is_begin_time = false;
-    bool is_end_time   = false;
 
     // V.B iteration mode. Session-only render-parameter scratchpad: never
     // serialized, lost on app close, populated and edited inline via the
@@ -109,8 +106,7 @@ public:
 
     // Bulk-mutable accessor. Callers must not reorder by time_seconds; the
     // class assumes strict-monotonic order. Exposed for operations that
-    // twiddle a flag across many markers at once (e.g. clearing all
-    // is_begin_time/is_end_time markers).
+    // twiddle a flag across many markers at once.
     std::vector<GuiWarpMarker>& markers_mut() { return markers_; }
 
     void clear() {

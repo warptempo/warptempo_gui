@@ -24,8 +24,7 @@
 //   apply_phase_reset_position_delta → free function (defined in main.cpp)
 //   current_samples_per_pixel   → free function
 //   stop_playback_if_playing,
-//   clear_hover_popup,
-//   find_flag                   → std::function refs (called as f())
+//   clear_hover_popup           → std::function refs (called as f())
 
 // Drop a phase reset marker at `time_seconds`. Rejects creation within
 // 3 pixels at current zoom of an existing phase reset marker. Selection

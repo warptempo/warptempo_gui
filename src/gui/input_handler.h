@@ -194,4 +194,13 @@ private:
     // (and stops playback), matching the bare Left/Right keyboard binding.
     void handle_wheel(GuiMouseButton button, bool ctrl, bool alt,
                       bool inside_waveform, bool inside_top);
+
+    // b / e key handlers — set the settings-side trim_begin / trim_end to
+    // the playhead's current position. Mode-agnostic. Re-press at the
+    // same sample frame toggles off; equal-frame collision with the
+    // opposite trim is refused; out-of-order candidate auto-swaps with
+    // the opposite trim. Trim is settings-class — no undo participation;
+    // sets app.settings_dirty and invalidates.
+    void handle_trim_set_begin_at_playhead();
+    void handle_trim_set_end_at_playhead();
 };

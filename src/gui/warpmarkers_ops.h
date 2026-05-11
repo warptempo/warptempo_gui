@@ -35,7 +35,6 @@ struct GuiWarpMarkersOps {
     Undo&                                         undo;
     std::function<void()>&                        clear_hover_popup;
     std::function<void()>&                        stop_playback_if_playing;
-    std::function<FlagLoc(bool, int)>&            find_flag;
 
     GuiWarpMarkersOps(AppState&                                     app_,
                       const GuiAudio&                               audio_,
@@ -44,8 +43,7 @@ struct GuiWarpMarkersOps {
                       Selection&                                    selection_,
                       Undo&                                         undo_,
                       std::function<void()>&                        clear_hover_popup_,
-                      std::function<void()>&                        stop_playback_if_playing_,
-                      std::function<FlagLoc(bool, int)>&            find_flag_)
+                      std::function<void()>&                        stop_playback_if_playing_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -53,8 +51,7 @@ struct GuiWarpMarkersOps {
           selection(selection_),
           undo(undo_),
           clear_hover_popup(clear_hover_popup_),
-          stop_playback_if_playing(stop_playback_if_playing_),
-          find_flag(find_flag_) {}
+          stop_playback_if_playing(stop_playback_if_playing_) {}
 
     void drop_marker(double time_seconds, bool inherit);
     void drop_marker_at_playhead();
@@ -63,12 +60,7 @@ struct GuiWarpMarkersOps {
     void force_delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();
-    void toggle_begin_time();
-    void toggle_end_time();
-    void set_begin_from_phase_reset_selection();
-    void set_end_from_phase_reset_selection();
     void adjust_tempo(double delta);
-    void clear_trim();
     bool begin_drag(int hit, int mouse_x);
     void apply_drag_motion(double raw_delta);
     void commit_drag();
@@ -76,8 +68,4 @@ struct GuiWarpMarkersOps {
     bool apply_selection_shift(double raw_delta);
     void nudge_selected_markers(int direction);
     void jump_selection_to_playhead();
-
-private:
-    void set_begin_time_on(int idx, char op_mode);
-    void set_end_time_on(int idx, char op_mode);
 };

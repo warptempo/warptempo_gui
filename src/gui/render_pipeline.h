@@ -35,6 +35,16 @@ struct RenderRequest {
     // Empty list disables sidecar emission cleanly.
     std::vector<GuiPhaseResetMarker> phase_resets;
 
+    // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
+    // submission paths. Lifted out of warp markers per the brief: trim
+    // now lives in .settings (trim_begin / trim_end keys), not on b=/e=
+    // markers. The render pipeline forwards these to TimemapBuildInput,
+    // which drives the timemap post-pass + write_trimmed_wav cut.
+    bool   has_trim_begin = false;
+    double trim_begin_sec = 0.0;
+    bool   has_trim_end   = false;
+    double trim_end_sec   = 0.0;
+
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>.wav` (or
     // `.mid` for midi) and, on success, deposits the per-render

@@ -44,17 +44,13 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         return false;
     }
 
-    // Trim range extraction. A b= / e= marker is a real marker in the
-    // stream (it contributes to the timemap math); the flag only governs
-    // the post-pass filter.
-    bool   has_begin    = false;
-    bool   has_end      = false;
-    double begin_sec    = 0.0;
-    double end_sec      = 0.0;
-    for (const auto& m : markers) {
-        if (m.is_begin_time) { has_begin = true; begin_sec = m.time_seconds; }
-        if (m.is_end_time)   { has_end   = true; end_sec   = m.time_seconds; }
-    }
+    // Trim range comes from .settings (TimemapBuildInput::trim_*), no
+    // longer from per-marker flags. The post-pass below filters timemap
+    // segments by source frame against this range.
+    const bool   has_begin = in.has_trim_begin;
+    const bool   has_end   = in.has_trim_end;
+    const double begin_sec = in.trim_begin_sec;
+    const double end_sec   = in.trim_end_sec;
     if (has_begin && begin_sec <= 0.0) {
         std::cerr << "warptempo_gui: timemap error: begin time cannot be 00:00.000\n";
         return false;

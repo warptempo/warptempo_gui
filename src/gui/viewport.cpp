@@ -11,13 +11,12 @@
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.render_view_enabled) {
-        return compute_trim_samples(
-            app.render_view_markers,
-            audio.sample_rate(), audio.total_frames());
+        // Render-view has no trim — the loaded audio is already
+        // render-domain (trim baked in at render time).
+        return {0, audio.total_frames()};
     }
     return compute_trim_samples(
-        app.warpmarkers.markers(),
-        audio.sample_rate(), audio.total_frames());
+        app, audio.sample_rate(), audio.total_frames());
 }
 
 int64_t Viewport::trim_begin_sample() const { return trim_range().first; }

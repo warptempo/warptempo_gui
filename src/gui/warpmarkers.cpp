@@ -84,36 +84,12 @@ double eval_math_string(const std::string& in) {
     return total;
 }
 
-bool starts_with(const std::string& s, const char* pfx) {
-    const size_t n = std::strlen(pfx);
-    return s.size() >= n && s.compare(0, n, pfx) == 0;
-}
-
 std::vector<std::string> split_pipe(const std::string& s) {
     std::vector<std::string> out;
     std::stringstream ss(s);
     std::string seg;
     while (std::getline(ss, seg, '|')) out.push_back(seg);
     return out;
-}
-
-// Strip b=/begin_time=/e=/end_time= prefixes in place. The full-word forms
-// take priority (checked first).
-void strip_trim_prefix(std::string& line, bool& is_begin, bool& is_end) {
-    if (starts_with(line, "begin_time=")) {
-        is_begin = true;
-        line.erase(0, 11);
-    } else if (starts_with(line, "b=")) {
-        is_begin = true;
-        line.erase(0, 2);
-    }
-    if (starts_with(line, "end_time=")) {
-        is_end = true;
-        line.erase(0, 9);
-    } else if (starts_with(line, "e=")) {
-        is_end = true;
-        line.erase(0, 2);
-    }
 }
 
 bool is_indented_raw(const std::string& raw) {
@@ -296,13 +272,7 @@ bool parse_single_canonical_line(
 
     out = GuiWarpMarker{};
 
-    // [b=|e=]?  [#]?  MM:SS.SSS  |  PAYLOAD
-    bool ib = false, ie = false;
-    strip_trim_prefix(t, ib, ie);
-    if (ib && ie) return fail("cannot have both b= and e=");
-    out.is_begin_time = ib;
-    out.is_end_time   = ie;
-
+    // [#]?  MM:SS.SSS  |  PAYLOAD
     if (!t.empty() && t[0] == '#') {
         out.disabled = true;
         t.erase(0, 1);
@@ -369,9 +339,6 @@ bool GuiWarpMarkers::load(const std::string& path) {
         if (is_indented_raw(raw)) continue;
         std::string t = trim_ws(raw);
         if (t.empty()) continue;
-
-        bool ib = false, ie = false;
-        strip_trim_prefix(t, ib, ie);
 
         if (!t.empty() && t[0] == '#') {
             if (t.size() >= 10 && is_valid_time_format(t.substr(1, 9))) {
@@ -447,9 +414,6 @@ bool GuiWarpMarkers::load(const std::string& path) {
             continue;
         }
 
-        bool is_begin = false, is_end = false;
-        strip_trim_prefix(t, is_begin, is_end);
-
         bool line_disabled = false;
         if (!t.empty() && t[0] == '#') {
             if (t.size() >= 10 && is_valid_time_format(t.substr(1, 9))) {
@@ -514,8 +478,6 @@ bool GuiWarpMarkers::load(const std::string& path) {
 
             GuiWarpMarker m;
             m.time_seconds  = final_time;
-            m.is_begin_time = is_begin;
-            m.is_end_time   = is_end;
 
             const std::string& tempo_raw = cols[1];
             const std::string  label_raw = (cols.size() > 2) ? cols[2]
@@ -662,8 +624,6 @@ bool GuiWarpMarkers::load(const std::string& path) {
 
         GuiWarpMarker m;
         m.time_seconds  = final_time;
-        m.is_begin_time = is_begin;
-        m.is_end_time   = is_end;
         if (line_disabled) m.disabled = true;
 
         std::string err;
@@ -722,10 +682,8 @@ bool GuiWarpMarkers::save(const std::string& path,
     std::ostringstream out;
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:
-        //   [b=|e=]?[#]?MM:SS.SSS|PAYLOAD
+        //   [#]?MM:SS.SSS|PAYLOAD
         // PAYLOAD per Part 1A of V.A1.
-        if (m.is_begin_time)    out << "b=";
-        else if (m.is_end_time) out << "e=";
         if (m.disabled) out << '#';
         out << format_timestamp(m.time_seconds) << '|';
 

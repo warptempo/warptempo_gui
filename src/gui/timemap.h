@@ -28,8 +28,6 @@ struct MarkerForRender {
     std::string tempo_scale;           // "" or the numeric string after '*'
     std::string label_def;
     std::string label_ref;
-    bool        is_begin_time = false;
-    bool        is_end_time   = false;
 };
 
 struct TimemapBuildInput {
@@ -38,13 +36,22 @@ struct TimemapBuildInput {
     double scale        = 1.0;   // from settings; 1.0 default
     long   sample_rate  = 0;     // from the source audio file
     long   total_frames = 0;     // from the source audio file
+
+    // Settings-side trim, lifted out of warp markers (brief: move trim
+    // from marker b=/e= flags to project settings). When has_trim_begin
+    // is false, no begin trim is applied; same for end. Times are in
+    // seconds, matching the .settings file representation.
+    bool   has_trim_begin = false;
+    double trim_begin_sec = 0.0;
+    bool   has_trim_end   = false;
+    double trim_end_sec   = 0.0;
 };
 
 struct TimemapBuildResult {
     std::vector<TimemapSegment> standard;
     std::vector<TempomapEntry>  midi;
 
-    // Populated when trim markers (is_begin_time / is_end_time) are present.
+    // Populated when TimemapBuildInput carries trim_begin / trim_end.
     bool   trimmed          = false;
     size_t trim_begin_frame = 0;
     size_t trim_end_frame   = 0;   // exclusive; == total_frames if no end

@@ -167,10 +167,6 @@ bool run_ffmpeg_alimiter(const std::string& in_path,
 // Resolve each GuiWarpMarker to a MarkerForRender. Filters out markers that are:
 //   - references to disabled-defined labels
 //   - disabled label-definition markers (and thereby all refs to them)
-// EXCEPT: a disabled-cascade marker that carries an `is_begin_time` /
-// `is_end_time` trim flag is kept (the trim flag is positionally real
-// regardless of whether the marker's tempo participates), with its tempo
-// pulled from the inheritance walk-back.
 // The inherit walk-back is applied here so MarkerForRender carries a
 // concrete tempo_base / tempo_scale — same rule as resolve_inherited_tempo.
 std::vector<MarkerForRender> resolve_markers_for_render(
@@ -214,28 +210,19 @@ std::vector<MarkerForRender> resolve_markers_for_render(
         // Chunk U patch 3: `disabled` is allowed on any marker; whatever
         // its kind, a disabled marker's tempo is silenced. The label_ref
         // cascade is a separate path (the ref itself is not disabled but
-        // its target is).
+        // its target is). With trim moved to settings, a disabled marker
+        // has no reason to survive into the resolved list.
         const bool is_effectively_disabled =
             g.disabled || is_disabled_label_ref_cascade;
-        const bool has_trim_flag = g.is_begin_time || g.is_end_time;
 
-        if (is_effectively_disabled && !has_trim_flag) continue;
+        if (is_effectively_disabled) continue;
 
         MarkerForRender m;
         m.time_seconds  = g.time_seconds;
         m.label_def     = g.label_def;
         m.label_ref     = g.label_ref;
-        m.is_begin_time = g.is_begin_time;
-        m.is_end_time   = g.is_end_time;
 
-        if (is_effectively_disabled) {
-            // Kept solely for the trim flag — the marker's own tempo is
-            // silenced, so resolve via walk-back through earlier
-            // non-disabled, non-inheriting, non-label_ref markers.
-            auto [base, scale] = walk_back_owning_tempo(i);
-            m.tempo_base  = base;
-            m.tempo_scale = scale;
-        } else if (!g.label_ref.empty()) {
+        if (!g.label_ref.empty()) {
             m.tempo_base = 0.0;
             m.tempo_scale.clear();
         } else if (g.tempo_inherits) {
@@ -305,10 +292,14 @@ bool do_render(const RenderRequest& req) {
 
     // --- Build timemap from in-memory markers. ---
     TimemapBuildInput tmin;
-    tmin.markers      = resolve_markers_for_render(req.markers);
-    tmin.scale        = scale;
-    tmin.sample_rate  = sample_rate;
-    tmin.total_frames = total_frames;
+    tmin.markers        = resolve_markers_for_render(req.markers);
+    tmin.scale          = scale;
+    tmin.sample_rate    = sample_rate;
+    tmin.total_frames   = total_frames;
+    tmin.has_trim_begin = req.has_trim_begin;
+    tmin.trim_begin_sec = req.trim_begin_sec;
+    tmin.has_trim_end   = req.has_trim_end;
+    tmin.trim_end_sec   = req.trim_end_sec;
 
     TimemapBuildResult tmres;
     if (!build_timemaps(tmin, tmres)) {
@@ -634,10 +625,9 @@ bool do_render(const RenderRequest& req) {
             for (const auto& g : req.markers) {
                 const bool eff_disabled =
                     g.disabled || is_cascade_disabled_ref(g);
-                const bool has_trim_flag = g.is_begin_time || g.is_end_time;
 
                 // resolve_markers_for_render filter.
-                if (eff_disabled && !has_trim_flag) continue;
+                if (eff_disabled) continue;
 
                 // Trim-range filter (inclusive both ends — matches the
                 // post-pass at timemap.cpp line 209).
@@ -649,14 +639,8 @@ bool do_render(const RenderRequest& req) {
                 const auto& s = seg[seg_idx];
                 ++seg_idx;
 
-                // Disabled-with-trim-flag survives the resolve filter but
-                // is not display-eligible in render-view (locked design).
-                if (eff_disabled) continue;
-
-                GuiWarpMarker w     = g;
+                GuiWarpMarker w = g;
                 w.time_seconds  = static_cast<double>(s.tgt_frame) / sr_d;
-                w.is_begin_time = false;
-                w.is_end_time   = false;
                 warped_markers.push_back(std::move(w));
             }
             const std::string wmd_path =

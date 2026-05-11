@@ -56,8 +56,6 @@ int byte_index_from_click_x(double click_x, double text_left_x,
 // prefix but visually anchors to the marker line.
 std::string GuiFlagEditor::build_locked_prefix(const GuiWarpMarker& m) {
     std::string out;
-    if (m.is_begin_time)    out = "b=";
-    else if (m.is_end_time) out = "e=";
     if (m.disabled) out += '#';
     // MM:SS.SSS
     out += format_timestamp(m.time_seconds);
@@ -236,10 +234,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m->label_ref      = parsed.label_ref;
     }
     m->time_seconds = preserved_time;
-    // is_begin_time / is_end_time / disabled live in locked prefix —
-    // parse_single_canonical_line populated them; reapply.
-    m->is_begin_time = parsed.is_begin_time;
-    m->is_end_time   = parsed.is_end_time;
+    // disabled lives in the locked prefix — parse_single_canonical_line
+    // populated it; reapply.
     m->disabled      = parsed.disabled;
 
     // Cascade rename: if label_def changed and old_def was non-empty,

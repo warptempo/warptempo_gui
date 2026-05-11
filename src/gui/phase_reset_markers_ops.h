@@ -32,7 +32,6 @@ struct GuiPhaseResetMarkersOps {
     Undo&                                         undo;
     std::function<void()>&                        clear_hover_popup;
     std::function<void()>&                        stop_playback_if_playing;
-    std::function<FlagLoc(bool, int)>&            find_flag;
 
     GuiPhaseResetMarkersOps(AppState&                                     app_,
                            const GuiAudio&                               audio_,
@@ -40,16 +39,14 @@ struct GuiPhaseResetMarkersOps {
                            Selection&                                    selection_,
                            Undo&                                         undo_,
                            std::function<void()>&                        clear_hover_popup_,
-                           std::function<void()>&                        stop_playback_if_playing_,
-                           std::function<FlagLoc(bool, int)>&            find_flag_)
+                           std::function<void()>&                        stop_playback_if_playing_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
           clear_hover_popup(clear_hover_popup_),
-          stop_playback_if_playing(stop_playback_if_playing_),
-          find_flag(find_flag_) {}
+          stop_playback_if_playing(stop_playback_if_playing_) {}
 
     void drop_phase_reset_at_position(double time_seconds);
     void drop_phase_reset_at_playhead();

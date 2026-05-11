@@ -12,6 +12,7 @@
 #include "tab_mode.h"
 #include "text_display.h"
 #include "text_editor.h"
+#include "time_format.h"
 #include "phase_reset_markers.h"
 #include "phase_reset_markers_ops.h"
 #include "undo.h"
@@ -131,6 +132,10 @@ struct ParsedSettings {
     char    active_mode        = 'W';
     bool    has_playback_speed = false;
     float   playback_speed     = 1.0f;
+    bool    has_trim_begin     = false;
+    double  trim_begin         = 0.0;   // seconds
+    bool    has_trim_end       = false;
+    double  trim_end           = 0.0;   // seconds
     std::vector<std::pair<std::string, std::string>> passthrough;
 };
 
@@ -161,26 +166,26 @@ GuiRect top_strip_area(const AppState& a) {
     return GuiRect{0, 0, a.width, top_strip_height(a.height)};
 }
 
-// Scan warp markers for begin_time / end_time flags; fall back to full
-// file if either is absent. Trim flags live exclusively on the warp
-// list, so a single-list scan is authoritative.
+// Resolve the trim region from AppState's settings-side trim fields.
+// Absent has_trim_* falls back to [0, total_frames]. Banker's rounding
+// converts seconds to samples. Clamps to [0, total_frames] and never
+// returns end < begin.
 std::pair<long long, long long> compute_trim_samples(
-    const std::vector<GuiWarpMarker>& warp_markers,
-    int sample_rate, long long total_frames) {
+    const AppState& a, int sample_rate, long long total_frames) {
     long long begin = 0;
     long long end   = total_frames;
+    const double sr = static_cast<double>(sample_rate);
 
-    for (const auto& m : warp_markers) {
-        if (m.is_begin_time) {
-            begin = static_cast<long long>(std::nearbyint(
-                m.time_seconds * static_cast<double>(sample_rate)));
-        }
-        if (m.is_end_time) {
-            end = static_cast<long long>(std::nearbyint(
-                m.time_seconds * static_cast<double>(sample_rate)));
-        }
+    if (a.has_trim_begin) {
+        begin = static_cast<long long>(
+            std::nearbyint(a.trim_begin_seconds * sr));
+    }
+    if (a.has_trim_end) {
+        end = static_cast<long long>(
+            std::nearbyint(a.trim_end_seconds * sr));
     }
     if (begin < 0) begin = 0;
+    if (begin > total_frames) begin = total_frames;
     if (end > total_frames) end = total_frames;
     if (end < begin) end = begin;
     return {begin, end};
@@ -358,6 +363,20 @@ bool parse_float_full(const std::string& s, float& out) {
     return true;
 }
 
+// MM:SS.mmm shape validator: exactly 9 chars, ':' at index 2, '.' at
+// index 5, digits elsewhere. Matches the canonical marker timestamp
+// shape parse_timestamp expects. Returns true if parse_timestamp can
+// be safely called on `s`.
+bool is_settings_timestamp(const std::string& s) {
+    if (s.size() != 9) return false;
+    if (s[2] != ':' || s[5] != '.') return false;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (i == 2 || i == 5) continue;
+        if (s[i] < '0' || s[i] > '9') return false;
+    }
+    return true;
+}
+
 // Parse `.settings`. Missing file → empty result (all has_* false, empty
 // passthrough). Returns false only on a file-open failure of an existing
 // file; per-line errors are silent-skip. Tab values are stored raw, without
@@ -415,6 +434,16 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_playback_speed = true;
                 out.playback_speed = v;
             }
+        } else if (key == "trim_begin") {
+            if (is_settings_timestamp(value)) {
+                out.has_trim_begin = true;
+                out.trim_begin     = parse_timestamp(value);
+            }
+        } else if (key == "trim_end") {
+            if (is_settings_timestamp(value)) {
+                out.has_trim_end = true;
+                out.trim_end     = parse_timestamp(value);
+            }
         } else {
             out.passthrough.emplace_back(key, value);
         }
@@ -458,6 +487,8 @@ bool write_settings_file(
     bool follow,
     char active_mode,
     float playback_speed,
+    bool has_trim_begin, double trim_begin_seconds,
+    bool has_trim_end,   double trim_end_seconds,
     const std::vector<std::pair<std::string, std::string>>& passthrough) {
     std::string data;
     for (const auto& kv : passthrough) {
@@ -477,6 +508,16 @@ bool write_settings_file(
     data += "playback_speed=";
     data += fbuf;
     data += '\n';
+    if (has_trim_begin) {
+        data += "trim_begin=";
+        data += format_timestamp(trim_begin_seconds);
+        data += '\n';
+    }
+    if (has_trim_end) {
+        data += "trim_end=";
+        data += format_timestamp(trim_end_seconds);
+        data += '\n';
+    }
     char buf[64];
     std::snprintf(buf, sizeof(buf), "%lld",
                   static_cast<long long>(tab_a.viewport_start_sample));
@@ -579,11 +620,6 @@ int main(int argc, char** argv) {
     std::function<void()> clear_hover_popup;
     std::function<void()> stop_playback_if_playing;
 
-    // X.7.4: forward-declared so the Phase resets struct can capture
-    // references. Bodies are assigned later at their original definition
-    // sites — same pattern as clear_hover_popup / stop_playback_if_playing.
-    std::function<FlagLoc(bool, int)> find_flag;
-
     // X.7.6: forward-declared so GuiRenderView can capture a reference.
     // Body is assigned later at its original definition site — same
     // pattern as the four prior promotions.
@@ -606,11 +642,9 @@ int main(int argc, char** argv) {
     Undo undo(app, viewport, selection,
               clear_hover_popup, stop_playback_if_playing);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
-                                      clear_hover_popup, stop_playback_if_playing,
-                                      find_flag);
+                                      clear_hover_popup, stop_playback_if_playing);
     GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
-                              clear_hover_popup, stop_playback_if_playing,
-                              find_flag);
+                              clear_hover_popup, stop_playback_if_playing);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               clear_hover_popup);
     GuiRenderView render_view(app, audio, playback, gui, selection,
@@ -672,29 +706,6 @@ int main(int argc, char** argv) {
     // the Undo struct for consistency.
 
     auto recompute_dirty = [&]() { undo.recompute_dirty(); };
-
-    // Warp-list flag scan. `want_begin` selects the b= scan vs the e=
-    // scan. `excl_idx` excludes one warp marker from the search; pass -1
-    // for no exclusion. Trim flags live exclusively on warp markers, so
-    // a single-list scan is authoritative.
-    find_flag = [&](bool want_begin, int excl_idx)
-        -> FlagLoc {
-        FlagLoc f;
-        const int sr = audio.sample_rate();
-        const auto& mv = app.warpmarkers.markers();
-        for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
-            const bool has = want_begin ? mv[i].is_begin_time
-                                        : mv[i].is_end_time;
-            if (!has) continue;
-            if (i == excl_idx) continue;
-            f.valid = true;
-            f.idx   = i;
-            f.frame = static_cast<int64_t>(std::nearbyint(
-                mv[i].time_seconds * static_cast<double>(sr)));
-            return f;
-        }
-        return f;
-    };
 
     // Gesture-stop: called at the top of any handler that will move the
     // visible playhead (keys, button press, Ctrl+wheel, undo/redo, tab
@@ -769,11 +780,21 @@ int main(int argc, char** argv) {
                                      app.follow_mode,
                                      app.active_mode,
                                      app.playback_speed,
+                                     app.has_trim_begin, app.trim_begin_seconds,
+                                     app.has_trim_end,   app.trim_end_seconds,
                                      app.settings_passthrough)) {
                 std::fprintf(stderr,
                     "warptempo_gui: settings save failed: %s: %s\n",
                     app.settings_path.c_str(),
                     std::strerror(errno));
+            } else {
+                // Successful settings write clears the settings-side
+                // dirty flag and refolds it into app.dirty.
+                if (app.settings_dirty) {
+                    app.settings_dirty = false;
+                    app.dirty = app.warp_dirty || app.phase_reset_dirty;
+                    invalidate_timestamp_area();
+                }
             }
         }
         return true;
@@ -836,7 +857,13 @@ int main(int argc, char** argv) {
         app.dirty              = false;
         app.warp_dirty         = false;
         app.phase_reset_dirty    = false;
+        app.settings_dirty     = false;
         app.first_save_pending = true;
+
+        app.has_trim_begin     = false;
+        app.has_trim_end       = false;
+        app.trim_begin_seconds = 0.0;
+        app.trim_end_seconds   = 0.0;
 
         app.warpmarkers_path.clear();
         app.phase_reset_markers_path.clear();
@@ -1180,6 +1207,11 @@ int main(int argc, char** argv) {
         app.dirty              = false;
         app.warp_dirty         = false;
         app.phase_reset_dirty    = false;
+        app.settings_dirty     = false;
+        app.has_trim_begin     = false;
+        app.has_trim_end       = false;
+        app.trim_begin_seconds = 0.0;
+        app.trim_end_seconds   = 0.0;
         app.first_save_pending = true;
         const bool markers_ok = app.warpmarkers.load(wm_path.string());
         if (!markers_ok) {
@@ -1282,6 +1314,10 @@ int main(int argc, char** argv) {
             app.follow_mode    = ps.has_follow         ? ps.follow         : true;
             app.active_mode    = ps.has_active_mode    ? ps.active_mode    : 'W';
             app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
+            app.has_trim_begin     = ps.has_trim_begin;
+            app.trim_begin_seconds = ps.has_trim_begin ? ps.trim_begin : 0.0;
+            app.has_trim_end       = ps.has_trim_end;
+            app.trim_end_seconds   = ps.has_trim_end   ? ps.trim_end   : 0.0;
             app.settings_passthrough = std::move(ps.passthrough);
         }
 

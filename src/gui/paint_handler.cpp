@@ -204,22 +204,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const int     sr         = audio.sample_rate();
 
         // In render-view the audio buffer is already render-domain
-        // (trim already baked in at render time, b=/e= flags stripped
-        // from the .renderwarpmarkers/.renderphaseresetmarkers
-        // sidecars). The
-        // source's authoring markers carry b=/e= in source-frame
-        // coordinates that don't map onto the rendered audio's
-        // timeline, so feeding them to compute_trim_samples here
-        // produces a patchy color split. Use the render-view markers
-        // instead, which collapse to [0, total_frames] and dim
-        // nothing.
+        // (trim baked in at render time). Source-view dims out-of-trim
+        // regions per the settings-side trim.
         const auto trim = app.render_view_enabled
-            ? compute_trim_samples(
-                  app.render_view_markers,
-                  sr, audio.total_frames())
-            : compute_trim_samples(
-                  app.warpmarkers.markers(),
-                  sr, audio.total_frames());
+            ? std::pair<long long, long long>{0, audio.total_frames()}
+            : compute_trim_samples(app, sr, audio.total_frames());
         const int64_t trim_begin = trim.first;
         const int64_t trim_end   = trim.second;
         const TrimRange trim_struct{trim_begin, trim_end};

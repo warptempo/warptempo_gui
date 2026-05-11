@@ -176,16 +176,6 @@ struct PlayheadDragState {
     int  press_marker_idx          = -1;
 };
 
-// Warp-list flag scan result. `valid` is false when the requested flag
-// (b= or e=) is not set on any warp marker. `idx` indexes into the warp
-// marker list. `frame` is the marker's effective sample frame (computed
-// at lookup time so callers don't need a sample-rate).
-struct FlagLoc {
-    bool    valid = false;
-    int     idx   = -1;
-    int64_t frame = 0;
-};
-
 // V.A3b hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor for kHoverDelayMs becomes a tooltip showing
 // the resolved tempo. The motion handler sets `marker_index` + `entry_time`
@@ -351,7 +341,23 @@ struct AppState {
     // each entry's op_mode.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty      = false;
+    // Set whenever a settings-only mutation occurs (b / e / l trim keys,
+    // future settings-class keys). Settings have no undo; cleared by
+    // save_markers after a successful .settings write. ORed into `dirty`
+    // alongside warp_dirty / phase_reset_dirty by recompute_dirty.
+    bool        settings_dirty       = false;
     bool        dirty                = false;
+
+    // Trim region, expressed in seconds for stability across sample-rate
+    // changes (consistent with marker times). has_trim_* distinguishes
+    // "no trim set" from "trim set to 0.0" — 00:00.000 is a legitimate
+    // explicit trim_begin and round-trips through .settings, but compute
+    // _trim_samples returns the same range whether or not has_trim_begin
+    // is set. Persisted in .settings as `trim_begin=` / `trim_end=`.
+    double      trim_begin_seconds   = 0.0;
+    double      trim_end_seconds     = 0.0;
+    bool        has_trim_begin       = false;
+    bool        has_trim_end         = false;
 
     // True until the first save in this session; used to log a one-time
     // notice if the on-disk file had content the canonical form drops.
@@ -525,8 +531,7 @@ int     max_valid_numeric_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
-    const std::vector<GuiWarpMarker>& warp_markers,
-    int sample_rate, long long total_frames);
+    const AppState& a, int sample_rate, long long total_frames);
 GuiRect timestamp_invalidate_rect(int window_height, int window_width,
                                   bool wide_strip);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);

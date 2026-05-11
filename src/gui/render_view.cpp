@@ -348,11 +348,9 @@ bool GuiRenderView::load_render_view_at(int index) {
     audio = std::move(next);
     app.audio_generation++;
 
-    const auto trim = compute_trim_samples(
-        loaded_warp,
-        app.render_view_src_sr, app.render_view_src_total);
-    app.render_view_src_F_begin = trim.first;
-    app.render_view_src_F_end   = trim.second;
+    // Render-view has no trim — the rendered audio is already trimmed.
+    app.render_view_src_F_begin = 0;
+    app.render_view_src_F_end   = app.render_view_src_total;
 
     app.render_view_markers           = std::move(loaded_warp);
     app.render_view_phase_resets        = std::move(loaded_trans);
