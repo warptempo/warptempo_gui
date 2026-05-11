@@ -26,56 +26,42 @@
 // ---------------------------------------------------------------------------
 // Run-loop architecture
 //
-// The X11 backend's run loop uses a poll() with timeout: the timeout is the
-// IdleTimeoutProvider's value, sized via XRandR-detected refresh rate to
-// oversample the active display's vblank by 2x (1000 / refresh_hz / 2). When
-// the poll wakes — either because an X event arrived or the timeout elapsed
-// — the loop drains pending X events, then invokes the per-iteration tick
-// callback (which advances the playback cursor, updates the playhead column,
-// and may call invalidate_region on changed pixel ranges). Paint actually
-// reaches the screen via XPutImage from the cairo image surface to the X
-// server, on whatever schedule X chooses to honor invalidations. This works,
-// but the present-time of XPutImage is compositor-mediated and has jitter
-// that the client cannot directly observe — under raw Xorg without a
-// sympathetic compositor this manifests as occasional horizontal jumps in
-// playhead motion. Under XWayland the compositor enforces honest frame
-// timing and the horizontal jitter is absorbed; only the inherent vblank-
-// quantization of vertical pixel updates remains.
+// The run loop is built on a single poll() that waits indefinitely on two
+// file descriptors: the wl_display fd, which delivers compositor events,
+// and a timerfd whose interval is the detected refresh rate's half-period
+// (2x vblank oversample, falling back to 60 Hz if the compositor advertises
+// no output mode at registry roundtrip). The poll wakes on whichever fd
+// becomes readable first. Compositor events drive every other Wayland-side
+// mechanism — surface configure, input event delivery, frame callbacks,
+// data offers. The timerfd's wakeups drive the per-tick callback (which is
+// a heartbeat: it declares damage at the current playhead position so the
+// paint cycle continues, and provides the wake cadence for text-editor
+// cursor blink and hover-popup dwell timing).
 //
-// wl_surface.frame is a request the client makes after each commit asking
-// the compositor to deliver a callback when the surface's next presentation
-// is appropriate. This is a more honest paint-pacing primitive than X11
-// offers: the compositor knows when it's ready to display a new frame and
-// tells the client directly, rather than the client inferring it from
-// refresh rate. Paint pacing on the Wayland side therefore drives off frame
-// callbacks rather than off a polled timeout.
+// Paint pacing is separate from tick pacing. wl_surface.frame is a request
+// the client makes after each commit asking the compositor to deliver a
+// callback when the surface's next presentation is appropriate. The
+// compositor knows when it is ready to display a new frame and tells the
+// client directly, rather than the client inferring it from refresh rate.
+// When a frame callback fires, paint_one_frame runs: it invokes the
+// pre-paint hook (where the playhead's painted position is resolved from
+// the playback predictor at paint time, so the rendered position is fresh
+// as of the paint moment), consumes the damage list, paints into the next
+// wl_shm buffer, attaches and commits, then schedules the next frame
+// callback.
 //
-// The playback tick — the cadence at which the GUI queries the audio
-// engine's current sample position and updates the playhead column — is a
-// separate concern from paint pacing. Conflating them by driving both off
-// frame callbacks would mean that whenever the compositor pauses frame
-// delivery (window occlusion, throttling during heavy compositor load, the
-// user dragging another window over ours), the playback cursor would freeze
-// in the GUI's representation while the audio engine continues, then the
-// cursor would jump on the first frame callback after the pause. That jump
-// is honest in the sense that it reflects where the audio actually is, but
-// it is exactly the kind of discontinuity that user-initiated change does
-// not mask, and the project's principle is to mask discontinuities with
-// user-initiated change rather than expose them at compositor whim.
-//
-// The chosen design is two cadences. The playback tick runs on a timerfd,
-// polled alongside the wl_display fd in a single poll(). The timerfd's
-// interval is set by the same idle-timeout-provider mechanism the X11
-// backend already uses, sized to 2x vblank oversample, with the refresh
-// rate detected at init time via Wayland-side facilities (xdg_output
-// logical-refresh or the toplevel's preferred-mode hint, with a sensible
-// default fallback). wl_surface.frame callbacks drive paint commits only —
-// when a callback fires, the loop checks whether the invalidate region is
-// non-empty, and if so, paints into the next wl_shm buffer and commits.
-// The two cadences drift independently and re-sync at moments of user
-// action (zoom, scroll, pan, marker edit) where invalidation already
-// forces a full repaint and the playhead column is recomputed afresh from
-// the audio engine's current sample position.
+// The two cadences (tick and paint) drift independently. Conflating them
+// by driving the tick off frame callbacks would mean that whenever the
+// compositor pauses frame delivery — window occlusion, throttling during
+// heavy compositor load, the user dragging another window over ours — the
+// tick would also pause. The audio engine would continue regardless, and
+// at the next frame callback after the pause the playhead would jump to
+// its true current position. That jump is honest in the sense that it
+// reflects where the audio actually is, but it is exactly the kind of
+// discontinuity that user-initiated change does not mask. The separate
+// timerfd keeps the tick running through compositor pauses; on resumption
+// of frame delivery the next paint reads the predictor fresh and the
+// playhead is where it should be without a visible jump.
 //
 // This separation is structurally identical to the project's approach to
 // phase coherence in the phase vocoder. The Laroche-Dolson phase vocoder
@@ -972,7 +958,31 @@ void GuiPlatform::paint_one_frame() {
 
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
-    damage_.push_back(DamageRect{x, y, w, h});
+
+    // Containment suppression: invalidate_region is called from many sites
+    // per paint cycle (tick heartbeat, pre-paint hook, input handlers).
+    // Each surviving rect costs one on_redraw call downstream, so coalesce
+    // here. First, if any existing rect fully contains the new one, drop
+    // the new one. Second, after pushing, drop any existing rects fully
+    // contained by the new one. Together these maintain the invariant
+    // that damage_ never holds a rect that another rect in the list
+    // strictly contains.
+    auto contains = [](const DamageRect& outer, const DamageRect& inner) {
+        return outer.x <= inner.x &&
+               outer.y <= inner.y &&
+               outer.x + outer.w >= inner.x + inner.w &&
+               outer.y + outer.h >= inner.y + inner.h;
+    };
+    const DamageRect nr{x, y, w, h};
+    for (const DamageRect& e : damage_) {
+        if (contains(e, nr)) return;
+    }
+    damage_.push_back(nr);
+    damage_.erase(
+        std::remove_if(damage_.begin(), damage_.end() - 1,
+                       [&](const DamageRect& e) { return contains(nr, e); }),
+        damage_.end() - 1);
+
     if (in_pre_paint_) return;  // paint_one_frame will commit shortly
     if (has_initial_configure_ && !frame_callback_) {
         schedule_frame_callback();
@@ -1286,8 +1296,9 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         xkb_state_key_get_one_sym(xkb_state_, xkb_keycode);
     if (sym == XKB_KEY_NoSymbol) return;
 
-    // Case-fold ASCII uppercase to lowercase, matching the X11 backend's
-    // translate_keysym helper. Other keysyms pass through.
+    // Case-fold ASCII uppercase keysyms to lowercase so consumers see a
+    // single GuiKey value per physical key regardless of shift state.
+    // Other keysyms pass through.
     GuiKey key = static_cast<GuiKey>(sym);
     if (key >= 'A' && key <= 'Z') key |= 0x20;
 
@@ -1328,7 +1339,7 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         XKB_STATE_MODS_EFFECTIVE);
 
     // No on_key synthesis on modifier change — the next non-modifier
-    // key event carries the updated state. Matches X11 behavior.
+    // key event carries the updated state.
 }
 
 void GuiPlatform::on_keyboard_repeat_info(int32_t rate, int32_t delay) {
@@ -1669,7 +1680,6 @@ void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ 
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
-void GuiPlatform::set_idle_timeout_provider(IdleTimeoutProvider p) { idle_timeout_ = std::move(p); }
 
 // ---------------------------------------------------------------------------
 // Getters

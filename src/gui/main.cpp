@@ -1385,10 +1385,13 @@ int main(int argc, char** argv) {
             // the predictor or update app.playhead_sample here — that
             // work moved to the pre-paint hook to eliminate the
             // tick/paint sampling-rate mismatch that caused playhead
-            // motion to stutter at high zoom.
+            // motion to stutter at high zoom. The timestamp area is
+            // invalidated only by the pre-paint hook (when the
+            // predictor advances past app.playhead_sample), never by
+            // the tick — the tick fires ~2x per frame, so duplicating
+            // the timestamp rect here is wasted on_redraw work.
             const double px = playhead_pixel_x(app, audio);
             invalidate_playhead_columns(px, px);
-            invalidate_timestamp_area();
             app.is_playing = true;
             return;
         }
@@ -1422,24 +1425,6 @@ int main(int argc, char** argv) {
         invalidate_playhead_columns(old_px, new_px);
         invalidate_timestamp_area();
         if (app.follow_mode) follow_scroll_if_needed();
-    });
-
-    // Idle timeout: wake the poll loop every ~16 ms during playback so the
-    // tick can advance the playhead even in the absence of input events.
-    gui.set_idle_timeout_provider([&]() -> int {
-        if (app.is_playing || playback.is_playing()) return gui.playback_tick_ms();
-        // While the top-flag editor is active, wake periodically so the
-        // cursor blink can flip. ~125ms gives ample resolution on a
-        // 500ms half-period without burning CPU.
-        if (text_editor::is_active(app.top_flag_editor)) return 125;
-        // V.A3b: while a hover is pending (dwell timer running but popup
-        // not yet visible), wake periodically so the tick-driven check
-        // can flip visibility on time. Once visible, no extra wake is
-        // needed — input events drive any state change.
-        if (!app.hover_popup.visible && app.hover_popup.marker_index >= 0) {
-            return 125;
-        }
-        return -1;
     });
 
     // Paint the initial background before any synchronous load begins so the

@@ -26,7 +26,6 @@ public:
     using DropAcceptPredicate  = std::function<bool(int x, int y)>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
-    using IdleTimeoutProvider  = std::function<int()>;
 
     GuiPlatform();
     ~GuiPlatform();
@@ -54,7 +53,6 @@ public:
     void set_drop_accept_predicate(DropAcceptPredicate p);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
-    void set_idle_timeout_provider(IdleTimeoutProvider p);
 
 private:
     // libwayland's listener tables are C structs of function pointers, so
@@ -206,8 +204,8 @@ private:
     // repeat_keycode_ is the raw xkb keycode of that key, used so the
     // wl_keyboard.key release event can match-and-cancel.
     // repeat_mods_ captures the modifier state at the moment the key was
-    // pressed (X11 semantics: the same modifiers are delivered with each
-    // synthesized repeat).
+    // pressed; the same modifiers are delivered with each synthesized
+    // repeat.
     // repeat_due_us_ is the next-fire monotonic time in microseconds; when
     // the playback tick fires and current_monotonic_us >= repeat_due_us_,
     // the on_key_ callback fires and repeat_due_us_ is advanced by the
@@ -224,7 +222,7 @@ private:
     uint64_t      repeat_delay_us_  = 600'000;   // sensible default if compositor
     uint64_t      repeat_period_us_ = 33'000;    // doesn't advertise (600ms/30Hz)
 
-    // -- Callbacks (mirroring the X11 backend's shape) --
+    // -- Callbacks --
     RedrawCallback       on_redraw_;
     ResizeCallback       on_resize_;
     KeyCallback          on_key_;
@@ -236,7 +234,6 @@ private:
     DropAcceptPredicate  drop_accept_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
-    IdleTimeoutProvider  idle_timeout_;
 
     // -- Internal helpers --
     void recreate_shm_pool(int w, int h);
