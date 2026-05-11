@@ -2,6 +2,7 @@
 #include "async_renderer.h"
 #include "audio.h"
 #include "warpmarkers.h"
+#include "file_loader.h"
 #include "flag_editor.h"
 #include "input_handler.h"
 #include "paint_handler.h"
@@ -10,6 +11,7 @@
 #include "render_pipeline.h"
 #include "render_view.h"
 #include "selection.h"
+#include "settings_io.h"
 #include "tab_mode.h"
 #include "text_display.h"
 #include "text_editor.h"
@@ -111,34 +113,9 @@ constexpr int kPlayheadHalfPx = 8;
 // app_state.h (extracted in brief X.7.1 alongside the Viewport struct).
 
 
-// Parsed contents of .settings, separated into tab-handled keys (typed with
-// presence flags so defaults can be applied per key) and the pass-through
-// vector that preserves any other lines verbatim in their original order.
-struct ParsedSettings {
-    bool    has_tab_a_vp   = false;
-    int64_t tab_a_vp       = 0;
-    bool    has_tab_a_zoom = false;
-    int     tab_a_zoom     = 0;
-    bool    has_tab_a_ph   = false;
-    int64_t tab_a_ph       = 0;
-    bool    has_tab_b_vp   = false;
-    int64_t tab_b_vp       = 0;
-    bool    has_tab_b_zoom = false;
-    int     tab_b_zoom     = 0;
-    bool    has_tab_b_ph   = false;
-    int64_t tab_b_ph       = 0;
-    bool    has_follow         = false;
-    bool    follow             = true;
-    bool    has_active_mode    = false;
-    char    active_mode        = 'W';
-    bool    has_playback_speed = false;
-    float   playback_speed     = 1.0f;
-    bool    has_trim_begin     = false;
-    double  trim_begin         = 0.0;   // seconds
-    bool    has_trim_end       = false;
-    double  trim_end           = 0.0;   // seconds
-    std::vector<std::pair<std::string, std::string>> passthrough;
-};
+// X.7.9: ParsedSettings + the settings parse / format / write helpers
+// moved to settings_io.{h,cpp} so file_loader.cpp and save_markers can
+// both reach them.
 
 // X.7.8a: WaveformCache was promoted to paint_handler.{h,cpp} so
 // paint_handler.cpp can reach it. The instance is still a local in
@@ -301,280 +278,6 @@ GuiRect timestamp_invalidate_rect(int window_height, int window_width,
                    kTimestampRegionW, kTimestampRegionH};
 }
 
-namespace {
-
-// Ensure `p` exists with `contents`. If the file already exists, leave it
-// alone. Returns true on success or if file already exists. Failures are
-// non-fatal — the audio load still proceeds.
-bool create_if_missing(const std::filesystem::path& p,
-                       const std::string& contents) {
-    std::error_code ec;
-    if (std::filesystem::exists(p, ec)) return true;
-    std::ofstream f(p);
-    if (!f) {
-        std::fprintf(stderr,
-                     "warptempo_gui: could not create '%s'\n",
-                     p.string().c_str());
-        return false;
-    }
-    f << contents;
-    return static_cast<bool>(f);
-}
-
-std::string trim_ws(const std::string& s) {
-    size_t a = 0;
-    while (a < s.size() &&
-           std::isspace(static_cast<unsigned char>(s[a]))) ++a;
-    size_t b = s.size();
-    while (b > a &&
-           std::isspace(static_cast<unsigned char>(s[b - 1]))) --b;
-    return s.substr(a, b - a);
-}
-
-bool parse_int64_full(const std::string& s, int64_t& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const long long v = std::strtoll(s.c_str(), &end, 10);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    out = static_cast<int64_t>(v);
-    return true;
-}
-
-bool parse_int_full(const std::string& s, int& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const long v = std::strtol(s.c_str(), &end, 10);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (v < std::numeric_limits<int>::min() ||
-        v > std::numeric_limits<int>::max()) return false;
-    out = static_cast<int>(v);
-    return true;
-}
-
-bool parse_float_full(const std::string& s, float& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const float v = std::strtof(s.c_str(), &end);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (!std::isfinite(v)) return false;
-    out = v;
-    return true;
-}
-
-// MM:SS.mmm shape validator: exactly 9 chars, ':' at index 2, '.' at
-// index 5, digits elsewhere. Matches the canonical marker timestamp
-// shape parse_timestamp expects. Returns true if parse_timestamp can
-// be safely called on `s`.
-bool is_settings_timestamp(const std::string& s) {
-    if (s.size() != 9) return false;
-    if (s[2] != ':' || s[5] != '.') return false;
-    for (size_t i = 0; i < s.size(); ++i) {
-        if (i == 2 || i == 5) continue;
-        if (s[i] < '0' || s[i] > '9') return false;
-    }
-    return true;
-}
-
-// Parse `.settings`. Missing file → empty result (all has_* false, empty
-// passthrough). Returns false only on a file-open failure of an existing
-// file; per-line errors are silent-skip. Tab values are stored raw, without
-// range validation — the caller clamps against the current audio file.
-bool parse_settings_file(const std::string& path, ParsedSettings& out) {
-    out = ParsedSettings{};
-    std::error_code ec;
-    if (!std::filesystem::exists(path, ec) || ec) return true;  // nothing to load
-    std::ifstream f(path);
-    if (!f) return false;
-    std::string line;
-    while (std::getline(f, line)) {
-        const std::string trimmed = trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) continue;
-        const std::string key   = trim_ws(trimmed.substr(0, eq));
-        const std::string value = trim_ws(trimmed.substr(eq + 1));
-        if (key.empty()) continue;
-
-        if (key == "tab_a_viewport_start") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_a_vp = true; out.tab_a_vp = v; }
-        } else if (key == "tab_a_zoom") {
-            int v;
-            if (parse_int_full(value, v)) { out.has_tab_a_zoom = true; out.tab_a_zoom = v; }
-        } else if (key == "tab_a_playhead") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_a_ph = true; out.tab_a_ph = v; }
-        } else if (key == "tab_b_viewport_start") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_b_vp = true; out.tab_b_vp = v; }
-        } else if (key == "tab_b_zoom") {
-            int v;
-            if (parse_int_full(value, v)) { out.has_tab_b_zoom = true; out.tab_b_zoom = v; }
-        } else if (key == "tab_b_playhead") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_b_ph = true; out.tab_b_ph = v; }
-        } else if (key == "follow") {
-            std::string lower = value;
-            for (char& c : lower) c = static_cast<char>(
-                std::tolower(static_cast<unsigned char>(c)));
-            if (lower == "true")       { out.has_follow = true; out.follow = true;  }
-            else if (lower == "false") { out.has_follow = true; out.follow = false; }
-            // Any other value: silent-skip; default (true) applies at the call site.
-        } else if (key == "active_mode") {
-            // Case-sensitive "W" / "P" — these literals cross the engine
-            // boundary. Anything else silent-skips like the `follow` parser.
-            if (value == "W") { out.has_active_mode = true; out.active_mode = 'W'; }
-            else if (value == "P") { out.has_active_mode = true; out.active_mode = 'P'; }
-        } else if (key == "playback_speed") {
-            float v;
-            if (parse_float_full(value, v) && v > 0.0f) {
-                out.has_playback_speed = true;
-                out.playback_speed = v;
-            }
-        } else if (key == "trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_trim_begin = true;
-                out.trim_begin     = parse_timestamp(value);
-            }
-        } else if (key == "trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_trim_end = true;
-                out.trim_end     = parse_timestamp(value);
-            }
-        } else {
-            out.passthrough.emplace_back(key, value);
-        }
-    }
-    return true;
-}
-
-// First-open default `.settings` template. Line ordering must match
-// write_settings_file's output (passthrough fields first, then follow=,
-// then the tab_a_* / tab_b_* triplets) — keep these in sync if either
-// side changes.
-std::string format_default_settings_template(const std::string& stem,
-                                             const std::string& ext_no_dot) {
-    std::string s;
-    s += "title=";       s += stem; s += "-rendered\n";
-    s += "audio_input="; s += stem; s += '.'; s += ext_no_dot; s += '\n';
-    s += "scale=1.000000\n";
-    s += "engine=warptempo\n";
-    s += "N=4096\n";
-    s += "fftw_threads=16\n";
-    s += "limiter_enabled=false\n";
-    s += "active_mode=W\n";
-    s += "playback_speed=1.000000\n";
-    s += "follow=true\n";
-    s += "tab_a_viewport_start=0\n";
-    s += "tab_a_zoom=0\n";
-    s += "tab_a_playhead=0\n";
-    s += "tab_b_viewport_start=0\n";
-    s += "tab_b_zoom=0\n";
-    s += "tab_b_playhead=0\n";
-    return s;
-}
-
-// Atomic write: pass-through lines first in their original order, then the
-// six canonical tab lines. Matches the `.warpmarkers` write pattern
-// (tmp → fsync → rename). Best-effort: failure is logged by the caller.
-bool write_settings_file(
-    const std::string& path,
-    const ViewState& tab_a,
-    const ViewState& tab_b,
-    bool follow,
-    char active_mode,
-    float playback_speed,
-    bool has_trim_begin, double trim_begin_seconds,
-    bool has_trim_end,   double trim_end_seconds,
-    const std::vector<std::pair<std::string, std::string>>& passthrough) {
-    std::string data;
-    for (const auto& kv : passthrough) {
-        data += kv.first;
-        data += '=';
-        data += kv.second;
-        data += '\n';
-    }
-    data += "follow=";
-    data += follow ? "true" : "false";
-    data += '\n';
-    data += "active_mode=";
-    data += active_mode;
-    data += '\n';
-    char fbuf[32];
-    std::snprintf(fbuf, sizeof(fbuf), "%.6f", playback_speed);
-    data += "playback_speed=";
-    data += fbuf;
-    data += '\n';
-    if (has_trim_begin) {
-        data += "trim_begin=";
-        data += format_timestamp(trim_begin_seconds);
-        data += '\n';
-    }
-    if (has_trim_end) {
-        data += "trim_end=";
-        data += format_timestamp(trim_end_seconds);
-        data += '\n';
-    }
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_a.viewport_start_sample));
-    data += "tab_a_viewport_start="; data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%d", tab_a.zoom_level);
-    data += "tab_a_zoom=";            data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_a.playhead_sample));
-    data += "tab_a_playhead=";        data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_b.viewport_start_sample));
-    data += "tab_b_viewport_start="; data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%d", tab_b.zoom_level);
-    data += "tab_b_zoom=";            data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_b.playhead_sample));
-    data += "tab_b_playhead=";        data += buf; data += '\n';
-
-    mode_t mode = 0644;
-    struct stat st;
-    if (::stat(path.c_str(), &st) == 0) mode = st.st_mode & 07777;
-
-    const std::string tmp_path = path + ".tmp";
-    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
-    if (fd < 0) return false;
-
-    size_t written = 0;
-    while (written < data.size()) {
-        const ssize_t n = ::write(fd, data.data() + written,
-                                  data.size() - written);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            ::close(fd);
-            ::unlink(tmp_path.c_str());
-            return false;
-        }
-        written += static_cast<size_t>(n);
-    }
-    if (::fsync(fd) != 0) {
-        ::close(fd);
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    if (::close(fd) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    ::chmod(tmp_path.c_str(), mode);
-    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    return true;
-}
-
-} // namespace
 
 int main(int argc, char** argv) {
     const char* cli_path = nullptr;
@@ -639,6 +342,7 @@ int main(int argc, char** argv) {
     std::function<void(float)>           set_playback_speed;
 
     Viewport viewport(app, audio, gui, playback, recompute_hover_at_cursor);
+    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport);
     Selection selection(app, audio, viewport, playback);
     Undo undo(app, viewport, selection,
               clear_hover_popup, stop_playback_if_playing);
@@ -673,7 +377,6 @@ int main(int argc, char** argv) {
                                   prompt_activate_response, toggle_playback,
                                   set_playback_speed);
 
-    auto trim_begin_sample           = [&]() { return viewport.trim_begin_sample(); };
     auto trim_end_sample             = [&]() { return viewport.trim_end_sample(); };
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
@@ -832,62 +535,8 @@ int main(int argc, char** argv) {
 
     auto invalidate_all = [&]() { viewport.invalidate_all(); };
 
-    // Drop the currently loaded audio and reset all per-file UI state to
-    // what the GUI looks like when launched with no argument. Leaves the
-    // window open so the user can drop another file or quit. Bound to
-    // Ctrl+W (proceed path from either the clean branch or the dialog).
-    auto revert_to_blank = [&]() {
-        // Stop the audio thread before the sample buffer it borrows goes
-        // away. Same invariant as load_file.
-        playback.stop();
-        playback.shutdown();
-        app.is_playing      = false;
-        app.playback_cursor = 0;
-
-        audio = GuiAudio{};
-        app.audio_generation++;
-        wf_cache.destroy_surface();
-
-        app.playhead_sample       = 0;
-        app.viewport_start_sample = 0;
-        app.zoom_level            = 0;
-        app.follow_mode           = true;
-        app.last_space_sample     = 0;
-        app.playback_speed        = 1.0f;
-
-        app.warpmarkers.clear();
-        app.phase_reset_markers.clear();
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        app.active_mode    = 'W';
-        app.drag          = DragState{};
-        app.playhead_drag = PlayheadDragState{};
-        app.hover_popup   = HoverPopupState{};
-        app.history.reset();
-        app.dirty              = false;
-        app.warp_dirty         = false;
-        app.phase_reset_dirty    = false;
-        app.settings_dirty     = false;
-        app.first_save_pending = true;
-
-        app.has_trim_begin     = false;
-        app.has_trim_end       = false;
-        app.trim_begin_seconds = 0.0;
-        app.trim_end_seconds   = 0.0;
-
-        app.warpmarkers_path.clear();
-        app.phase_reset_markers_path.clear();
-        app.settings_path.clear();
-        app.source_audio_path.clear();
-        app.pending_drop_path.clear();
-        app.settings_passthrough.clear();
-
-        app.tab_a = ViewState{};
-        app.tab_b = ViewState{};
-        app.active_tab = 'A';
-
-        invalidate_all();
-    };
+    // X.7.9: revert_to_blank moved to file_loader.{h,cpp} on GuiFileLoader.
+    // proceed_with_trigger's REVERT_TO_BLANK case dispatches through it.
 
     auto proceed_with_trigger = [&](DialogTrigger t) {
         switch (t) {
@@ -895,7 +544,7 @@ int main(int argc, char** argv) {
             gui.request_exit();
             break;
         case DialogTrigger::REVERT_TO_BLANK:
-            revert_to_blank();
+            file_loader.revert_to_blank();
             break;
         case DialogTrigger::PASTE_CONFIRM:
             // Paste prompt is dispatched directly by prompt_activate_response;
@@ -1001,7 +650,7 @@ int main(int argc, char** argv) {
         if (app.playhead_sample >= end) return;
         // Clamp the start position into the trim range in case the playhead
         // is sitting at trim_end - 1 (valid) or somehow slipped.
-        const int64_t start = std::max(app.playhead_sample, trim_begin_sample());
+        const int64_t start = std::max(app.playhead_sample, viewport.trim_begin_sample());
         app.last_space_sample = app.playhead_sample;
         app.playback_cursor = start;
         app.is_playing = true;
@@ -1111,266 +760,11 @@ int main(int argc, char** argv) {
     });
 
     // -- File loading --------------------------------------------------------
-
-    // Loads `path` into a fresh GuiAudio, preflights via libsndfile, and
-    // swaps the new audio in on success. On failure, the prior audio (if
-    // any) remains loaded unchanged. Resets per-file navigation state;
-    // follow_mode is reapplied from the loaded file's .settings (default
-    // true when absent).
-    auto load_file = [&](const std::string& path) -> bool {
-        // Preflight.
-        {
-            SF_INFO probe_info;
-            std::memset(&probe_info, 0, sizeof(probe_info));
-            SNDFILE* probe = sf_open(path.c_str(), SFM_READ, &probe_info);
-            if (!probe) {
-                std::fprintf(stderr,
-                             "warptempo_gui: '%s': %s\n",
-                             path.c_str(), sf_strerror(nullptr));
-                return false;
-            }
-            sf_close(probe);
-        }
-
-        // Stop and tear down the audio device before the sample buffer it
-        // borrows is replaced. Playing into a freed buffer would crash the
-        // audio thread. Order (stop → shutdown → load → init) is fixed.
-        playback.stop();
-        playback.shutdown();
-        app.is_playing     = false;
-        app.playback_cursor = 0;
-        app.hover_popup    = HoverPopupState{};
-
-        app.loading       = true;
-        app.load_progress = 0.0f;
-        gui.invalidate_region(0, 0, app.width, app.height);
-        gui.drain_events();
-
-        GuiAudio next;
-        const auto t0 = std::chrono::steady_clock::now();
-        const bool ok = next.load(path, [&](float p) {
-            app.load_progress = p;
-            const int bar_y = app.height - kProgressBarHeight;
-            gui.invalidate_region(0, bar_y, app.width, kProgressBarHeight);
-            gui.drain_events();
-        });
-        const auto t1 = std::chrono::steady_clock::now();
-
-        if (!ok) {
-            app.loading       = false;
-            app.load_progress = 0.0f;
-            gui.invalidate_region(0, 0, app.width, app.height);
-            return false;
-        }
-
-        audio = std::move(next);
-        app.audio_generation++;
-        app.loading       = false;
-        app.load_progress = 0.0f;
-
-        app.playhead_sample       = 0;
-        app.viewport_start_sample = 0;
-        const int max_num = max_valid_numeric_level(
-            waveform_area(app).w, audio.total_frames(), audio.sample_rate());
-        app.zoom_level = (max_num >= 0) ? 0 : kFitFileLevel;
-        clamp_viewport_start(app, audio);
-
-        // Reset playback bookkeeping; the device is brought up after markers
-        // are parsed so the initial playhead has the final trim-begin.
-        app.playback_speed = 1.0f;
-
-        // Companion files: discover paths, create <basename>.warpmarkers
-        // and <basename>.settings if missing. Companion file convention is
-        // <source_dir>/<source_basename>.<ext> (sibling, basename-prefixed),
-        // not the legacy hidden `./.warpmarkers` form.
-        std::filesystem::path apath(path);
-        std::filesystem::path parent = apath.parent_path();
-        if (parent.empty()) parent = std::filesystem::path(".");
-        const std::string stem = apath.stem().string();
-        const std::string ext = apath.extension().string();
-        const std::string ext_no_dot = ext.empty() ? "" : ext.substr(1);
-        const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
-        const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
-        const std::filesystem::path set_path = parent / (stem + ".settings");
-        app.warpmarkers_path      = wm_path.string();
-        app.phase_reset_markers_path = tm_path.string();
-        app.settings_path         = set_path.string();
-        app.source_audio_path     = path;
-
-        create_if_missing(wm_path, "00:00.000|1.00\n");
-        create_if_missing(set_path,
-                          format_default_settings_template(stem, ext_no_dot));
-
-        // Load the markers file. Parse failures are non-fatal: we log each
-        // error to stderr and leave app.warpmarkers empty. The GUI still works
-        // as a waveform viewer.
-        app.warpmarkers.clear();
-        app.phase_reset_markers.clear();
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        app.active_mode    = 'W';
-        app.drag = DragState{};
-        app.playhead_drag = PlayheadDragState{};
-        // Fresh file = fresh history. Both stacks cleared; the loaded state
-        // is the saved baseline (signed_distance = 0, valid).
-        app.history.reset();
-        app.dirty              = false;
-        app.warp_dirty         = false;
-        app.phase_reset_dirty    = false;
-        app.settings_dirty     = false;
-        app.has_trim_begin     = false;
-        app.has_trim_end       = false;
-        app.trim_begin_seconds = 0.0;
-        app.trim_end_seconds   = 0.0;
-        app.first_save_pending = true;
-        const bool markers_ok = app.warpmarkers.load(wm_path.string());
-        if (!markers_ok) {
-            for (const auto& err : app.warpmarkers.errors()) {
-                if (err.line_number > 0) {
-                    std::fprintf(stderr,
-                                 "warptempo_gui: %s:%d: %s\n",
-                                 wm_path.string().c_str(),
-                                 err.line_number, err.message.c_str());
-                } else {
-                    std::fprintf(stderr,
-                                 "warptempo_gui: %s: %s\n",
-                                 wm_path.string().c_str(),
-                                 err.message.c_str());
-                }
-            }
-        } else {
-            std::fprintf(stderr,
-                         "[warptempo_gui] parsed %zu markers from %s\n",
-                         app.warpmarkers.markers().size(),
-                         wm_path.string().c_str());
-        }
-
-        // Load .phaseresetmarkers if present. Missing file is fine — the
-        // phase reset list is just empty. Parse errors are logged to stderr;
-        // the warp side stays usable regardless.
-        if (std::filesystem::exists(tm_path)) {
-            const bool tr_ok = app.phase_reset_markers.load(tm_path.string());
-            if (!tr_ok) {
-                for (const auto& err : app.phase_reset_markers.errors()) {
-                    if (err.line_number > 0) {
-                        std::fprintf(stderr,
-                                     "warptempo_gui: %s:%d: %s\n",
-                                     tm_path.string().c_str(),
-                                     err.line_number, err.message.c_str());
-                    } else {
-                        std::fprintf(stderr,
-                                     "warptempo_gui: %s: %s\n",
-                                     tm_path.string().c_str(),
-                                     err.message.c_str());
-                    }
-                }
-            } else {
-                std::fprintf(stderr,
-                             "[warptempo_gui] parsed %zu phase_resets from %s\n",
-                             app.phase_reset_markers.markers().size(),
-                             tm_path.string().c_str());
-            }
-        }
-
-        // Initial playhead: land at trim-begin if a b= marker was parsed,
-        // otherwise sample 0. Must happen after marker parse so the trim
-        // range reflects the on-disk state. Scroll the viewport so the
-        // playhead is visible rather than lurking off the left edge.
-        app.playhead_sample = trim_begin_sample();
-        if (app.zoom_level != kFitFileLevel) {
-            app.viewport_start_sample = app.playhead_sample;
-            clamp_viewport_start(app, audio);
-        }
-
-        // Seed both tabs with the freshly-computed default post-load state.
-        // Parsed .settings values overwrite per-key below.
-        ViewState default_tab;
-        default_tab.viewport_start_sample = app.viewport_start_sample;
-        default_tab.zoom_level            = app.zoom_level;
-        default_tab.playhead_sample       = app.playhead_sample;
-        app.tab_a          = default_tab;
-        app.tab_b          = default_tab;
-        app.active_tab     = 'A';
-        app.settings_passthrough.clear();
-
-        // Parse .settings (if present) and apply tab values with silent
-        // coerce on out-of-range. Missing file → all keys default.
-        {
-            ParsedSettings ps;
-            if (!parse_settings_file(app.settings_path, ps)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: could not read '%s'\n",
-                    app.settings_path.c_str());
-            }
-            const int64_t total = audio.total_frames();
-            auto valid_zoom = [](int z) -> bool {
-                if (z == kFitFileLevel) return true;
-                return z >= 0 && z < kNumZoomLevels;
-            };
-            auto apply = [&](bool has_vp, int64_t vp,
-                             bool has_zoom, int zoom,
-                             bool has_ph, int64_t ph,
-                             ViewState& dst) {
-                if (has_vp   && vp   >= 0 && vp   <  total)  dst.viewport_start_sample = vp;
-                if (has_zoom && valid_zoom(zoom))            dst.zoom_level            = zoom;
-                if (has_ph   && ph   >= 0 && ph   <= total)  dst.playhead_sample       = ph;
-            };
-            apply(ps.has_tab_a_vp, ps.tab_a_vp,
-                  ps.has_tab_a_zoom, ps.tab_a_zoom,
-                  ps.has_tab_a_ph, ps.tab_a_ph, app.tab_a);
-            apply(ps.has_tab_b_vp, ps.tab_b_vp,
-                  ps.has_tab_b_zoom, ps.tab_b_zoom,
-                  ps.has_tab_b_ph, ps.tab_b_ph, app.tab_b);
-            app.follow_mode    = ps.has_follow         ? ps.follow         : true;
-            app.active_mode    = ps.has_active_mode    ? ps.active_mode    : 'W';
-            app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
-            app.has_trim_begin     = ps.has_trim_begin;
-            app.trim_begin_seconds = ps.has_trim_begin ? ps.trim_begin : 0.0;
-            app.has_trim_end       = ps.has_trim_end;
-            app.trim_end_seconds   = ps.has_trim_end   ? ps.trim_end   : 0.0;
-            app.settings_passthrough = std::move(ps.passthrough);
-        }
-
-        // Activate tab A: copy its snapshot into the live AppState fields.
-        app.viewport_start_sample = app.tab_a.viewport_start_sample;
-        app.zoom_level            = app.tab_a.zoom_level;
-        app.playhead_sample       = app.tab_a.playhead_sample;
-        clamp_viewport_start(app, audio);
-
-        // Bring up the audio device bound to the new sample buffer. Init
-        // failure disables playback but leaves the rest of the GUI usable.
-        if (!playback.init(audio.sample_rate(), audio.channels(),
-                           audio.samples_ptr(), audio.total_frames())) {
-            std::fprintf(stderr,
-                "warptempo_gui: playback disabled; space bar will no-op.\n");
-        }
-        // Push the loaded speed to the engine so playback starts at the
-        // persisted rate rather than the engine's default 1.0.
-        playback.set_speed(app.playback_speed);
-
-        const double load_ms =
-            std::chrono::duration<double, std::milli>(t1 - t0).count();
-        std::fprintf(stderr,
-                     "[warptempo_gui] loaded %s: sr=%d, channels=%d, frames=%lld, "
-                     "pyramid_levels=%d, load_time=%.1f ms\n",
-                     path.c_str(), audio.sample_rate(), audio.channels(),
-                     static_cast<long long>(audio.total_frames()),
-                     audio.num_levels(), load_ms);
-
-        gui.invalidate_region(0, 0, app.width, app.height);
-        return true;
-    };
-
-    // Process `path` and any drops that arrived while the load was running.
-    // Pending slot is last-wins, not a queue; rapid drags collapse.
-    auto load_then_drain = [&](std::string path) {
-        while (true) {
-            load_file(path);
-            if (app.pending_drop_path.empty()) break;
-            path = std::move(app.pending_drop_path);
-            app.pending_drop_path.clear();
-        }
-    };
+    //
+    // X.7.9: load_file, revert_to_blank, and load_then_drain moved to
+    // file_loader.{h,cpp} on GuiFileLoader. The drop-accept predicate and
+    // the on_file_drop handler stay here as one-line lambdas that capture
+    // file_loader; the predicate has no reference to the loader.
 
     gui.set_drop_accept_predicate([&](int x, int y) -> bool {
         const GuiRect area = waveform_area(app);
@@ -1383,7 +777,7 @@ int main(int argc, char** argv) {
             app.pending_drop_path = path;
             return;
         }
-        load_then_drain(path);
+        file_loader.load_then_drain(path);
     });
 
     // Tick: runs once per event-loop iteration. During playback, snapshots
@@ -1480,7 +874,7 @@ int main(int argc, char** argv) {
     gui.drain_events();
 
     if (cli_path) {
-        if (!load_file(cli_path)) {
+        if (!file_loader.load_file(cli_path)) {
             gui.shutdown();
             return 1;
         }
@@ -1488,7 +882,7 @@ int main(int argc, char** argv) {
         while (!app.pending_drop_path.empty()) {
             std::string next = std::move(app.pending_drop_path);
             app.pending_drop_path.clear();
-            load_file(next);
+            file_loader.load_file(next);
         }
     }
 

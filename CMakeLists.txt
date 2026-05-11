@@ -67,10 +67,12 @@ add_executable(warptempo_gui
     src/gui/timemap.cpp
     src/gui/viewport.cpp
     src/gui/selection.cpp
+    src/gui/settings_io.cpp
     src/gui/undo.cpp
     src/gui/phase_reset_markers_ops.cpp
     src/gui/phase_reset_propagate.cpp
     src/gui/warpmarkers_ops.cpp
+    src/gui/file_loader.cpp
     src/gui/flag_editor.cpp
     src/gui/render_view.cpp
     src/gui/tab_mode.cpp
