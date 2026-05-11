@@ -133,6 +133,32 @@ private:
     int  playback_tick_ms_ = 8;
     int  timerfd_ = -1;
 
+    // -- Data device (drag-and-drop) --
+    struct wl_data_device_manager* wl_data_device_manager_ = nullptr;
+    struct wl_data_device*         wl_data_device_         = nullptr;
+
+    // The current in-flight data offer. Compositor creates it via
+    // wl_data_device.data_offer; we destroy it on leave (drag
+    // cancelled), on drop (after the transfer completes), or when a
+    // new data_offer arrives that supersedes the previous one.
+    struct wl_data_offer* current_data_offer_ = nullptr;
+
+    // True if the current data offer advertises text/uri-list. Set
+    // during the data_offer's offer events; cleared when the offer
+    // is destroyed.
+    bool current_offer_has_uri_list_ = false;
+
+    // The most recent serial from wl_data_device.enter, needed for
+    // wl_data_offer.accept calls during motion and on the final
+    // accept-or-not decision at drop time.
+    uint32_t dnd_enter_serial_ = 0;
+
+    // Last-known cursor position during a drag, in surface coordinates.
+    // Updated by enter and motion events; consulted by the drop-accept
+    // predicate.
+    int dnd_x_ = 0;
+    int dnd_y_ = 0;
+
     // -- Keyboard --
     struct wl_seat*     wl_seat_     = nullptr;
     struct wl_keyboard* wl_keyboard_ = nullptr;
@@ -222,6 +248,11 @@ private:
     void destroy_wayland_state();
     int  detect_refresh_rate_ms();
 
+    void destroy_current_offer();
+    void evaluate_drop_accept();
+    std::string read_drop_data(int read_fd);
+    std::string parse_first_file_uri(const std::string& uri_list);
+
     // -- Event handlers (called from file-static dispatchers) --
     void on_registry_global(struct wl_registry* r, uint32_t name,
                             const char* interface, uint32_t version);
@@ -256,4 +287,14 @@ private:
     void on_pointer_button(uint32_t serial, uint32_t time,
                            uint32_t button, uint32_t state);
     void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
+
+    // -- Data device (drag-and-drop) handlers --
+    void on_data_offer(struct wl_data_offer* offer);
+    void on_data_offer_mime_type(struct wl_data_offer* offer, const char* mime);
+    void on_dnd_enter(uint32_t serial, struct wl_surface* surface,
+                      int32_t surface_x, int32_t surface_y,
+                      struct wl_data_offer* offer);
+    void on_dnd_leave();
+    void on_dnd_motion(uint32_t time, int32_t surface_x, int32_t surface_y);
+    void on_dnd_drop();
 };
