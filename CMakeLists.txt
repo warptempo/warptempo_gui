@@ -54,6 +54,7 @@ pkg_check_modules(JACK REQUIRED jack)
 add_executable(warptempo_gui
     src/gui/main.cpp
     src/gui/app_state.cpp
+    src/gui/async_renderer.cpp
     src/gui/platform_wayland.cpp
     src/gui/audio.cpp
     src/gui/render.cpp

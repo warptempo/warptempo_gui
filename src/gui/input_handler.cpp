@@ -52,42 +52,7 @@
 //     anonymous namespace into input_handler.h so this TU can reach them;
 //     on_key (Ctrl+Alt+M) is the sole caller.
 
-GuiInputHandler::RenderBatchResult
-GuiInputHandler::run_render_batch(const std::vector<RenderRequest>& reqs,
-                                  const std::string& batch_label) {
-    RenderBatchResult result;
-    if (reqs.empty()) return result;
-
-    const int total = static_cast<int>(reqs.size());
-
-    app.queue_cancel_requested = false;
-    app.queue_running          = true;
-    clear_hover_popup();
-
-    for (int i = 0; i < total; ++i) {
-        char buf[128];
-        std::snprintf(buf, sizeof(buf),
-                      "%s: rendering %d of %d...",
-                      batch_label.c_str(), i + 1, total);
-        app.queue_progress_text = buf;
-        viewport.invalidate_timestamp_area();
-        // First drain surfaces the progress-text paint before the
-        // engine starts; otherwise the new "rendering K of N" only
-        // appears after the entry completes.
-        gui.drain_events();
-
-        if (do_render(reqs[i])) ++result.rendered;
-
-        // Second drain surfaces X events queued during the render —
-        // Esc presses, expose events. The cancel flag becomes
-        // visible to the next iteration through this drain.
-        gui.drain_events();
-        if (app.queue_cancel_requested) {
-            result.cancelled = true;
-            break;
-        }
-    }
-
+void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
     // Invalidate the wide bottom-strip rect before clearing the
@@ -97,8 +62,72 @@ GuiInputHandler::run_render_batch(const std::vector<RenderRequest>& reqs,
     // "rendering N of N..." string undamaged.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
+}
 
-    return result;
+void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
+                                         std::string batch_label) {
+    if (reqs.empty()) return;
+
+    batch_.reqs       = std::move(reqs);
+    batch_.label      = std::move(batch_label);
+    batch_.next_index = 0;
+    batch_.rendered   = 0;
+    batch_.active     = true;
+
+    app.queue_cancel_requested = false;
+    app.queue_running          = true;
+    clear_hover_popup();
+
+    dispatch_next_batch_entry();
+}
+
+void GuiInputHandler::dispatch_next_batch_entry() {
+    if (!batch_.active) return;
+
+    const int total = static_cast<int>(batch_.reqs.size());
+
+    // Batch terminates if Esc was pressed since the last dispatch OR if
+    // we ran out of entries. Either way: log a summary and clean up.
+    const bool out_of_entries = (batch_.next_index >= total);
+    const bool cancelled      = app.queue_cancel_requested;
+    if (out_of_entries || cancelled) {
+        if (cancelled) {
+            std::fprintf(stderr,
+                "warptempo_gui: %s: rendered %d of %d entries (cancelled)\n",
+                batch_.label.c_str(), batch_.rendered, total);
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: %s: rendered %d of %d entries\n",
+                batch_.label.c_str(), batch_.rendered, total);
+        }
+        batch_.active = false;
+        batch_.reqs.clear();
+        batch_.reqs.shrink_to_fit();
+        finalize_render_run();
+        return;
+    }
+
+    char buf[128];
+    std::snprintf(buf, sizeof(buf),
+                  "%s: rendering %d of %d...",
+                  batch_.label.c_str(),
+                  batch_.next_index + 1, total);
+    app.queue_progress_text = buf;
+    viewport.invalidate_timestamp_area();
+
+    RenderRequest req = std::move(batch_.reqs[batch_.next_index]);
+    async_renderer.dispatch(std::move(req),
+        [this](RenderOutcome o) { on_batch_entry_complete(o); });
+}
+
+void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
+    if (!batch_.active) return;
+
+    if (outcome == RenderOutcome::Success)   ++batch_.rendered;
+    if (outcome == RenderOutcome::Cancelled) app.queue_cancel_requested = true;
+
+    ++batch_.next_index;
+    dispatch_next_batch_entry();
 }
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
@@ -234,13 +263,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Esc during a render-all run requests cancellation between
-    // entries. Only fires while the queue walker is active; outside
-    // that window Esc retains its other meanings (drag-cancel, etc).
-    // Mid-engine Esc presses are queued by X and surface here on the
-    // next gui.drain_events() — they take effect after the in-flight
-    // entry completes (chunk U does not implement mid-engine cancel).
+    // Esc during a render-in-flight requests cancellation. Two effects:
+    //   1. async_renderer.request_cancel() sets the worker's cancel flag.
+    //      The engine observes it at the next frame boundary (warptempo)
+    //      or at the next 10 ms waitpid tick (subprocess engines) and
+    //      returns Cancelled.
+    //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
+    //      finalizes the batch instead of dispatching the next entry.
+    // Both are needed: (1) interrupts the current render mid-stream;
+    // (2) stops the batch state machine from advancing after the
+    // cancelled render's on_done fires.
+    if (key == GuiKeys::Escape && async_renderer.is_busy()) {
+        async_renderer.request_cancel();
+        app.queue_cancel_requested = true;
+        return;
+    }
     if (key == GuiKeys::Escape && app.queue_running) {
+        // Render-state housekeeping flag survives a frame past the
+        // worker's actual completion (worker_state_ transitions
+        // Running -> CompletionPending while is_busy() still returns
+        // true; once on_completion_event fires it goes Idle). The
+        // is_busy() branch above covers that window. This branch is
+        // the rare case where queue_running is set but the worker has
+        // already cleared — defensive, mirrors the prior behavior.
         app.queue_cancel_requested = true;
         return;
     }
@@ -294,6 +339,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return;
+        // Reject overlapping submissions: the dispatcher is single-job.
+        // The GUI's existing serialization (queue_running gate) prevents
+        // this in practice, but a defensive early-return keeps the
+        // contract local.
+        if (async_renderer.is_busy()) return;
 
         RenderRequest req;
         req.source_audio_path    = app.source_audio_path;
@@ -311,8 +361,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                static_cast<double>(audio.sample_rate()))));
         }
         // Empty batch_folder/basename selects the source-dir naming
-        // convention inside do_render.
-        do_render(req);
+        // convention inside do_render. The dispatch hands the request to
+        // the worker thread; on_done fires on the GUI thread when the
+        // render finishes (success, failure, or cancel).
+        app.queue_cancel_requested = false;
+        app.queue_running          = true;
+        app.queue_progress_text    = "rendering...";
+        clear_hover_popup();
+        viewport.invalidate_timestamp_area();
+        async_renderer.dispatch(std::move(req),
+            [this](RenderOutcome o) {
+                if (o == RenderOutcome::Cancelled) {
+                    std::fprintf(stderr, "warptempo_gui: render cancelled\n");
+                }
+                finalize_render_run();
+            });
         return;
     }
 
@@ -425,17 +488,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             reqs.push_back(std::move(req));
         }
 
-        const auto result = run_render_batch(reqs, "render queue");
-        if (result.cancelled) {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries (cancelled)\n",
-                result.rendered, total);
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries into %s\n",
-                result.rendered, total,
-                batch_folder.filename().string().c_str());
-        }
+        if (async_renderer.is_busy()) return;
+        start_render_batch(std::move(reqs), "render queue");
         return;
     }
 
@@ -634,17 +688,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
         }
 
-        const auto result = run_render_batch(reqs, "render iterations");
-        if (result.cancelled) {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries (cancelled)\n",
-                result.rendered, total);
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries into %s\n",
-                result.rendered, total,
-                batch_folder.filename().string().c_str());
-        }
+        if (async_renderer.is_busy()) return;
+        start_render_batch(std::move(reqs), "render iterations");
         return;
     }
 
@@ -829,18 +874,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
 
-        const int total = static_cast<int>(reqs.size());
-        const auto result = run_render_batch(reqs, "basetempo");
-        if (result.cancelled) {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries (cancelled)\n",
-                result.rendered, total);
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: rendered %d of %d entries into %s\n",
-                result.rendered, total,
-                batch_folder.filename().string().c_str());
-        }
+        if (async_renderer.is_busy()) return;
+        start_render_batch(std::move(reqs), "basetempo");
         return;
     }
 

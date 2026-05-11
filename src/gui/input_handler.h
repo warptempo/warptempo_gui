@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app_state.h"
+#include "async_renderer.h"
 #include "audio.h"
 #include "flag_editor.h"
 #include "playback.h"
@@ -119,6 +120,7 @@ struct GuiInputHandler {
     GuiRenderView&             render_view;
     GuiTabMode&                tab_mode;
     PhaseResetPropagate&        phase_reset_propagate;
+    GuiAsyncRenderer&          async_renderer;
     std::function<void()>&     clear_hover_popup;
     std::function<void()>&     stop_playback_if_playing;
     std::function<bool()>&     save_markers;
@@ -140,6 +142,7 @@ struct GuiInputHandler {
                     GuiRenderView&             render_view_,
                     GuiTabMode&                tab_mode_,
                     PhaseResetPropagate&        phase_reset_propagate_,
+                    GuiAsyncRenderer&          async_renderer_,
                     std::function<void()>&     clear_hover_popup_,
                     std::function<void()>&     stop_playback_if_playing_,
                     std::function<bool()>&     save_markers_,
@@ -160,6 +163,7 @@ struct GuiInputHandler {
           render_view(render_view_),
           tab_mode(tab_mode_),
           phase_reset_propagate(phase_reset_propagate_),
+          async_renderer(async_renderer_),
           clear_hover_popup(clear_hover_popup_),
           stop_playback_if_playing(stop_playback_if_playing_),
           save_markers(save_markers_),
@@ -175,17 +179,40 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
 private:
-    struct RenderBatchResult {
-        int  rendered  = 0;
-        bool cancelled = false;
+    // ActiveBatch holds the run_render_batch state machine. The batch loop
+    // used to be synchronous (blocking inside do_render); now each entry is
+    // dispatched onto GuiAsyncRenderer and the next entry fires from the
+    // worker-completion callback. The GUI remains interactive between (and
+    // during) entries.
+    struct ActiveBatch {
+        std::vector<RenderRequest> reqs;
+        std::string                label;
+        int                        next_index = 0;
+        int                        rendered   = 0;
+        bool                       active     = false;
     };
+    ActiveBatch batch_;
 
-    // Multi-render queue runner. Owns the queue_running / cancel-flag
-    // bookkeeping and per-entry progress display; the caller owns batch
-    // folder creation, RenderRequest construction, and the post-summary log.
-    // Returns rendered count and whether Esc cut the run short.
-    RenderBatchResult run_render_batch(const std::vector<RenderRequest>& reqs,
-                                       const std::string& batch_label);
+    // Start a multi-entry batch. Snapshots reqs + label, sets queue_running,
+    // clears the cancel flag, dispatches the first entry. The on_done
+    // callback advances the state machine. Empty reqs is a silent no-op.
+    void start_render_batch(std::vector<RenderRequest> reqs,
+                            std::string batch_label);
+
+    // Worker-completion callback for batched entries. Increments counters,
+    // observes cancellation, and either dispatches the next entry or
+    // finalizes the batch (clear progress text, log summary).
+    void on_batch_entry_complete(RenderOutcome outcome);
+
+    // Dispatch reqs[batch_.next_index] (or finalize when out of range / on
+    // cancel). Caller must have already mutated batch_ so next_index points
+    // to the entry to run.
+    void dispatch_next_batch_entry();
+
+    // Finalize the current single-render-or-batch run on the GUI thread:
+    // clear queue_running / queue_progress_text, invalidate the bottom
+    // strip. The summary log is the caller's concern.
+    void finalize_render_run();
 
     // X.7.8b-2: shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is

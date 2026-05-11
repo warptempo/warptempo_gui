@@ -1003,15 +1003,21 @@ void GuiPlatform::run() {
         }
         wl_display_flush(wl_display_);
 
-        struct pollfd pfds[2];
+        // pfds[2] is the async-render completion eventfd. When no renderer
+        // is registered (fd == -1), we set events=0 so poll() ignores the
+        // slot — same trick used for "watch only when we care."
+        struct pollfd pfds[3];
         pfds[0].fd     = wl_display_get_fd(wl_display_);
         pfds[0].events = POLLIN;
         pfds[0].revents = 0;
         pfds[1].fd     = timerfd_;
         pfds[1].events = POLLIN;
         pfds[1].revents = 0;
+        pfds[2].fd     = worker_completion_fd_;
+        pfds[2].events = (worker_completion_fd_ >= 0) ? POLLIN : 0;
+        pfds[2].revents = 0;
 
-        int n = poll(pfds, 2, -1);
+        int n = poll(pfds, 3, -1);
 
         if (n < 0) {
             if (errno == EINTR) {
@@ -1042,6 +1048,12 @@ void GuiPlatform::run() {
             (void)read(timerfd_, &expirations, sizeof(expirations));
             if (on_tick_) on_tick_();
             maybe_fire_repeat();
+        }
+
+        if (worker_completion_fd_ >= 0 && (pfds[2].revents & POLLIN)) {
+            uint64_t cnt = 0;
+            (void)read(worker_completion_fd_, &cnt, sizeof(cnt));
+            if (on_worker_completion_) on_worker_completion_();
         }
     }
 
@@ -1680,6 +1692,10 @@ void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ 
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
+void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {
+    worker_completion_fd_  = fd;
+    on_worker_completion_  = std::move(on_event);
+}
 
 // ---------------------------------------------------------------------------
 // Getters

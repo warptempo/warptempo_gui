@@ -54,6 +54,14 @@ public:
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
+    // GuiAsyncRenderer integration. The renderer creates its own eventfd
+    // (it owns the lifetime) and registers it here; the run loop's poll set
+    // grows a third pollfd watching for completion writes from the worker
+    // thread. On POLLIN the loop reads the 8-byte counter to clear the fd
+    // and then invokes the registered callback (which routes to
+    // GuiAsyncRenderer::on_completion_event).
+    void set_worker_completion_fd(int fd, std::function<void()> on_event);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -130,6 +138,12 @@ private:
     // -- Idle-tick timing --
     int  playback_tick_ms_ = 8;
     int  timerfd_ = -1;
+
+    // -- Async renderer completion fd (owned by GuiAsyncRenderer; this is
+    // just a watch handle, not a lifetime claim). -1 when no renderer is
+    // registered.
+    int  worker_completion_fd_ = -1;
+    std::function<void()> on_worker_completion_;
 
     // -- Data device (drag-and-drop) --
     struct wl_data_device_manager* wl_data_device_manager_ = nullptr;

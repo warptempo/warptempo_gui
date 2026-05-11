@@ -40,6 +40,14 @@ void Synthesis::synthesize_full(
     int last_pct = -1;
 
     for (int frame_idx = 0; frame_idx < num_frames; ++frame_idx) {
+        // Cooperative cancellation: stft.cancel_flag is set by the GUI when
+        // the user presses Esc during a render. Worst-case cancel-to-stop
+        // latency is one frame (100-300 us on the target hardware) — well
+        // below human perception.
+        if (stft.cancel_flag && stft.cancel_flag->load()) {
+            stft.cancellation_observed = true;
+            return;
+        }
         const int64_t t_a_rounded = fm[frame_idx];
         const int64_t R_a_actual  = (frame_idx > 0) ? (fm[frame_idx] - fm[frame_idx - 1]) : 0;
 

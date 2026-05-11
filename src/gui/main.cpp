@@ -1,4 +1,5 @@
 #include "app_state.h"
+#include "async_renderer.h"
 #include "audio.h"
 #include "warpmarkers.h"
 #include "flag_editor.h"
@@ -653,11 +654,20 @@ int main(int argc, char** argv) {
                         clear_hover_popup, stop_playback_if_playing);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo);
+    GuiAsyncRenderer async_renderer;
+    if (!async_renderer.init()) {
+        std::fprintf(stderr,
+            "warptempo_gui: failed to start async renderer; exiting\n");
+        return 1;
+    }
+    gui.set_worker_completion_fd(async_renderer.completion_fd(),
+        [&async_renderer]() { async_renderer.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
                                   warpops, phase_resets, flag_editor,
                                   render_view, tab_mode,
                                   phase_reset_propagate,
+                                  async_renderer,
                                   clear_hover_popup, stop_playback_if_playing,
                                   save_markers, request_close_or_revert,
                                   prompt_activate_response, toggle_playback,

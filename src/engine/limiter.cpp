@@ -225,6 +225,7 @@ void Limiter::process(AudioSTFT& stft) {
                                 cached_spectra.data(), write_mem,
                                 /*show_progress=*/false,
                                 /*pass_label=*/"");
+    if (stft.cancellation_observed) return;
 
     // -- Peak detection (all channels) --
     std::vector<Peak> queue;
@@ -258,6 +259,10 @@ void Limiter::process(AudioSTFT& stft) {
     auto within_3tol = [&](double v) { double a = std::abs(v); return a >= band3_lo && a <= band3_hi; };
 
     while (!queue.empty()) {
+        if (stft.cancel_flag && stft.cancel_flag->load()) {
+            stft.cancellation_observed = true;
+            return;
+        }
         Peak peak = queue.front();
         queue.erase(queue.begin());
         ++iterations;

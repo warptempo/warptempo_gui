@@ -3,10 +3,20 @@
 #include "warpmarkers.h"
 #include "phase_reset_markers.h"
 
+#include <atomic>
 #include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
+
+// Tristate result of do_render. Returned from the synchronous entry point
+// and propagated through GuiAsyncRenderer to on_done callbacks.
+//   - Success:   pipeline ran to completion; final output exists on disk.
+//   - Failed:    early-return error path (timemap build, engine, subprocess,
+//                rename); diagnostics already on stderr.
+//   - Cancelled: cancel_flag was observed mid-pipeline; partial output
+//                cleaned up by cleanup_all; no final file on disk.
+enum class RenderOutcome { Success, Failed, Cancelled };
 
 // Self-contained view of the AppState fields do_render reads. Constructed by
 // the Ctrl+Alt+R handler in main.cpp so do_render stays decoupled from
@@ -59,9 +69,12 @@ struct RenderRequest {
 };
 
 // Synchronous render. Blocks the caller until the pipeline finishes (or
-// errors out). All progress / error reporting goes to stderr. Returns true
-// iff the full pipeline ran to completion (including the rename-into-place
-// of the staged output); returns false on every early-return failure path.
-// The Ctrl+Alt+R queue walker uses the return to count actual successes;
-// other callers may ignore it.
-bool do_render(const RenderRequest& req);
+// errors out, or is cancelled). All progress / error reporting goes to
+// stderr. Returns RenderOutcome — Success on a complete render (including
+// the rename-into-place of the staged output); Failed on every early-return
+// failure path; Cancelled if `cancel_flag` (when non-null) was observed set
+// at a frame boundary inside the warptempo synthesis loop or at the 10 ms
+// subprocess-poll cadence for adapter engines. The queue walker uses the
+// outcome to count successes and to detect mid-render cancellation.
+RenderOutcome do_render(const RenderRequest& req,
+                        const std::atomic<bool>* cancel_flag = nullptr);

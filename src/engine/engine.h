@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -30,8 +31,15 @@ struct EngineParams {
     std::vector<int64_t> phase_reset_frames;
 };
 
-// Returns true on success, false on failure. Failure reasons are logged to
-// stderr by the engine itself.
-bool run_warptempo_engine(const EngineParams& p,
-                          std::vector<int64_t>* out_frame_map = nullptr,
-                          int* out_R_s = nullptr);
+// Tristate result so the GUI-thread dispatcher can distinguish cancellation
+// (worker observed `cancel_flag` set at a frame boundary) from genuine
+// failure (open errors, bad timemap, etc.).
+enum class EngineResult { Success, Failed, Cancelled };
+
+// `cancel_flag` is optional. When non-null, the synthesis loop checks it
+// at the top of each frame iteration; if set, the engine returns
+// EngineResult::Cancelled without writing the output wav.
+EngineResult run_warptempo_engine(const EngineParams& p,
+                                  std::vector<int64_t>* out_frame_map = nullptr,
+                                  int* out_R_s = nullptr,
+                                  const std::atomic<bool>* cancel_flag = nullptr);

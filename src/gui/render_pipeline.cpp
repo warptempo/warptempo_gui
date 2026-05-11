@@ -7,11 +7,14 @@
 #include "timemap.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cmath>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -77,13 +80,25 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-// fork + execvp + waitpid. Returns true if the child exited 0.
-bool run_subprocess(const std::string& prog, const std::vector<std::string>& args) {
+// Tristate result for adapter / ffmpeg subprocess runs. Mirrors EngineResult
+// / RenderOutcome so the engine-path branches can map cleanly into do_render's
+// outcome.
+enum class SubprocessResult { Success, Failed, Cancelled };
+
+// fork + execvp + waitpid. When `cancel_flag` is non-null, the parent polls
+// waitpid(WNOHANG) every 10 ms and checks the flag between polls; if set, it
+// sends SIGTERM, waits ~200 ms for a clean exit, escalates to SIGKILL if
+// needed, reaps the zombie, and returns Cancelled. The 10 ms cadence keeps
+// cancel-to-stop latency well below human perception while costing nothing
+// against the subprocess's own CPU budget.
+SubprocessResult run_subprocess(const std::string& prog,
+                                const std::vector<std::string>& args,
+                                const std::atomic<bool>* cancel_flag = nullptr) {
     pid_t pid = fork();
     if (pid < 0) {
         std::fprintf(stderr, "warptempo_gui: render error: fork failed: %s\n",
                      std::strerror(errno));
-        return false;
+        return SubprocessResult::Failed;
     }
     if (pid == 0) {
         std::vector<char*> argv;
@@ -96,20 +111,71 @@ bool run_subprocess(const std::string& prog, const std::vector<std::string>& arg
                      prog.c_str(), std::strerror(errno));
         _exit(127);
     }
+
+    auto reap_blocking = [&](int& status) {
+        while (::waitpid(pid, &status, 0) < 0) {
+            if (errno == EINTR) continue;
+            std::fprintf(stderr,
+                "warptempo_gui: render error: waitpid failed: %s\n",
+                std::strerror(errno));
+            return false;
+        }
+        return true;
+    };
+
     int status = 0;
-    while (::waitpid(pid, &status, 0) < 0) {
-        if (errno == EINTR) continue;
-        std::fprintf(stderr, "warptempo_gui: render error: waitpid failed: %s\n",
-                     std::strerror(errno));
-        return false;
+
+    if (cancel_flag) {
+        // Polling loop: check the flag every 10 ms, reap with WNOHANG, sleep
+        // briefly between iterations. timespec is { 0, 10_000_000 } — 10 ms.
+        struct timespec ts;
+        ts.tv_sec  = 0;
+        ts.tv_nsec = 10 * 1000 * 1000;
+
+        while (true) {
+            if (cancel_flag->load()) {
+                ::kill(pid, SIGTERM);
+                // Give the child up to ~200 ms to flush and exit cleanly.
+                for (int i = 0; i < 20; ++i) {
+                    pid_t r = ::waitpid(pid, &status, WNOHANG);
+                    if (r == pid) return SubprocessResult::Cancelled;
+                    if (r < 0 && errno != EINTR) {
+                        std::fprintf(stderr,
+                            "warptempo_gui: render error: waitpid(WNOHANG) "
+                            "failed: %s\n", std::strerror(errno));
+                        return SubprocessResult::Failed;
+                    }
+                    nanosleep(&ts, nullptr);
+                }
+                // Escalate.
+                ::kill(pid, SIGKILL);
+                (void)reap_blocking(status);
+                return SubprocessResult::Cancelled;
+            }
+
+            pid_t r = ::waitpid(pid, &status, WNOHANG);
+            if (r == pid) break;
+            if (r < 0) {
+                if (errno == EINTR) continue;
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: waitpid(WNOHANG) failed: %s\n",
+                    std::strerror(errno));
+                return SubprocessResult::Failed;
+            }
+            // r == 0: still running. Sleep and loop.
+            nanosleep(&ts, nullptr);
+        }
+    } else {
+        if (!reap_blocking(status)) return SubprocessResult::Failed;
     }
+
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         std::fprintf(stderr,
             "warptempo_gui: render error: '%s' exited with non-zero status\n",
             prog.c_str());
-        return false;
+        return SubprocessResult::Failed;
     }
-    return true;
+    return SubprocessResult::Success;
 }
 
 bool write_standard_timemap(const std::string& path,
@@ -145,9 +211,10 @@ bool write_midi_tempomap(const std::string& path,
     return true;
 }
 
-bool run_ffmpeg_alimiter(const std::string& in_path,
-                         const std::string& out_path,
-                         double ceiling_dbfs) {
+SubprocessResult run_ffmpeg_alimiter(const std::string& in_path,
+                                     const std::string& out_path,
+                                     double ceiling_dbfs,
+                                     const std::atomic<bool>* cancel_flag) {
     char limit_buf[32];
     std::snprintf(limit_buf, sizeof(limit_buf), "%gdB", ceiling_dbfs);
     std::string af =
@@ -161,7 +228,7 @@ bool run_ffmpeg_alimiter(const std::string& in_path,
         "-af",  af,
         "-f", "wav",
         out_path
-    });
+    }, cancel_flag);
 }
 
 // Resolve each GuiWarpMarker to a MarkerForRender. Filters out markers that are:
@@ -240,14 +307,15 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 
 }  // namespace
 
-bool do_render(const RenderRequest& req) {
-    if (req.source_audio_path.empty()) return false;
+RenderOutcome do_render(const RenderRequest& req,
+                        const std::atomic<bool>* cancel_flag) {
+    if (req.source_audio_path.empty()) return RenderOutcome::Failed;
 
     // --- Read settings. ---
     std::string title = settings_get(req.settings_passthrough, "title");
     if (title.empty()) {
         std::fprintf(stderr, "warptempo_gui: render error: title not set in settings\n");
-        return false;
+        return RenderOutcome::Failed;
     }
 
     std::string engine = settings_get(req.settings_passthrough, "engine");
@@ -259,12 +327,12 @@ bool do_render(const RenderRequest& req) {
     if (engine == "none") {
         std::fprintf(stderr,
             "warptempo_gui: render error: engine 'none' is no longer supported\n");
-        return false;
+        return RenderOutcome::Failed;
     }
     if (!is_supported_engine) {
         std::fprintf(stderr,
             "warptempo_gui: render error: unknown engine '%s'\n", engine.c_str());
-        return false;
+        return RenderOutcome::Failed;
     }
 
     const double scale            = parse_double(
@@ -284,7 +352,7 @@ bool do_render(const RenderRequest& req) {
         std::fprintf(stderr,
             "warptempo_gui: render error: could not open source '%s'\n",
             req.source_audio_path.c_str());
-        return false;
+        return RenderOutcome::Failed;
     }
     const long sample_rate  = src_info.samplerate;
     const long total_frames = static_cast<long>(src_info.frames);
@@ -304,7 +372,7 @@ bool do_render(const RenderRequest& req) {
     TimemapBuildResult tmres;
     if (!build_timemaps(tmin, tmres)) {
         std::fprintf(stderr, "warptempo_gui: render error: timemap build failed\n");
-        return false;
+        return RenderOutcome::Failed;
     }
 
     // --- Compute output path. ---
@@ -368,7 +436,7 @@ bool do_render(const RenderRequest& req) {
         if (!write_trimmed_wav(req.source_audio_path, tmp_trimmed_wav,
                                tmres.trim_begin_frame, tmres.trim_end_frame)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         engine_input_path = tmp_trimmed_wav;
     }
@@ -423,41 +491,63 @@ bool do_render(const RenderRequest& req) {
             ep.phase_reset_frames = req.phase_reset_frames;
         }
 
-        if (!run_warptempo_engine(ep, &engine_frame_map, &engine_R_s)) {
-            std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
+        // Map adapter SubprocessResult / EngineResult into RenderOutcome via
+        // small helpers. Cancelled paths short-circuit cleanup_all + return.
+        auto handle_eng = [&](EngineResult r) -> RenderOutcome {
+            if (r == EngineResult::Success)   return RenderOutcome::Success;
             cleanup_all();
-            return false;
+            return (r == EngineResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+        auto handle_sub = [&](SubprocessResult r) -> RenderOutcome {
+            if (r == SubprocessResult::Success)   return RenderOutcome::Success;
+            cleanup_all();
+            return (r == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+
+        const EngineResult er = run_warptempo_engine(
+            ep, &engine_frame_map, &engine_R_s, cancel_flag);
+        if (er != EngineResult::Success) {
+            if (er == EngineResult::Failed) {
+                std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
+            }
+            return handle_eng(er);
         }
         if (tmres.trimmed) {
-            if (!run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path, ceiling_dbfs)) {
-                cleanup_all();
-                return false;
-            }
+            const SubprocessResult sr = run_ffmpeg_alimiter(
+                tmp_engine_wav, staging_output_path, ceiling_dbfs, cancel_flag);
+            if (sr != SubprocessResult::Success) return handle_sub(sr);
         }
     } else if (engine == "rubberband") {
         if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/true)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
-        if (!run_subprocess("rubberband", {
+        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
+            cleanup_all();
+            return (r == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+        SubprocessResult sr = run_subprocess("rubberband", {
                 "-t", "1",
                 "--timemap", tmp_tm,
                 "--fine",
                 "--ignore-clipping",
                 engine_input_path,
                 tmp_engine_wav
-            })) {
-            cleanup_all();
-            return false;
-        }
-        if (!run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path, ceiling_dbfs)) {
-            cleanup_all();
-            return false;
-        }
+            }, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
+        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
+                                 ceiling_dbfs, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
     } else if (engine == "bungee") {
         if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         std::string adapter = adapter_base + "/bungee/build/bungee_adapter";
         if (!std::filesystem::exists(adapter)) {
@@ -465,20 +555,24 @@ bool do_render(const RenderRequest& req) {
                 "warptempo_gui: render error: adapter not found '%s'\n",
                 adapter.c_str());
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
-        if (!run_subprocess(adapter, {engine_input_path, tmp_tm, tmp_engine_wav})) {
+        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
             cleanup_all();
-            return false;
-        }
-        if (!run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path, ceiling_dbfs)) {
-            cleanup_all();
-            return false;
-        }
+            return (r == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+        SubprocessResult sr = run_subprocess(adapter,
+            {engine_input_path, tmp_tm, tmp_engine_wav}, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
+        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
+                                 ceiling_dbfs, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
     } else if (engine == "stretch") {
         if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         std::string adapter = adapter_base + "/stretch/build/stretch_adapter";
         if (!std::filesystem::exists(adapter)) {
@@ -486,20 +580,24 @@ bool do_render(const RenderRequest& req) {
                 "warptempo_gui: render error: adapter not found '%s'\n",
                 adapter.c_str());
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
-        if (!run_subprocess(adapter, {engine_input_path, tmp_tm, tmp_engine_wav})) {
+        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
             cleanup_all();
-            return false;
-        }
-        if (!run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path, ceiling_dbfs)) {
-            cleanup_all();
-            return false;
-        }
+            return (r == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+        SubprocessResult sr = run_subprocess(adapter,
+            {engine_input_path, tmp_tm, tmp_engine_wav}, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
+        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
+                                 ceiling_dbfs, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
     } else if (engine == "soundtouch") {
         if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         std::string adapter = adapter_base + "/soundtouch/build/soundtouch_adapter";
         if (!std::filesystem::exists(adapter)) {
@@ -507,20 +605,24 @@ bool do_render(const RenderRequest& req) {
                 "warptempo_gui: render error: adapter not found '%s'\n",
                 adapter.c_str());
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
-        if (!run_subprocess(adapter, {engine_input_path, tmp_engine_wav, tmp_tm})) {
+        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
             cleanup_all();
-            return false;
-        }
-        if (!run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path, ceiling_dbfs)) {
-            cleanup_all();
-            return false;
-        }
+            return (r == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
+        };
+        SubprocessResult sr = run_subprocess(adapter,
+            {engine_input_path, tmp_engine_wav, tmp_tm}, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
+        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
+                                 ceiling_dbfs, cancel_flag);
+        if (sr != SubprocessResult::Success) return map_sub(sr);
     } else if (engine == "midi") {
         if (!write_midi_tempomap(tmp_tm_midi, tmres.midi)) {
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         std::string adapter = adapter_base + "/midi/build/midi_adapter";
         if (!std::filesystem::exists(adapter)) {
@@ -528,18 +630,21 @@ bool do_render(const RenderRequest& req) {
                 "warptempo_gui: render error: adapter not found '%s'\n",
                 adapter.c_str());
             cleanup_all();
-            return false;
+            return RenderOutcome::Failed;
         }
         std::ostringstream bbs;
         bbs << static_cast<double>(sample_rate) * 0.002;
-        if (!run_subprocess(adapter, {
+        SubprocessResult sr = run_subprocess(adapter, {
                 tmp_tm_midi,
                 staging_output_path,
                 bbs.str(),
                 "30000"
-            })) {
+            }, cancel_flag);
+        if (sr != SubprocessResult::Success) {
             cleanup_all();
-            return false;
+            return (sr == SubprocessResult::Cancelled)
+                ? RenderOutcome::Cancelled
+                : RenderOutcome::Failed;
         }
     }
 
@@ -554,7 +659,7 @@ bool do_render(const RenderRequest& req) {
             staging_output_path.c_str(), final_output_path.c_str(),
             ec.message().c_str());
         cleanup_all();
-        return false;
+        return RenderOutcome::Failed;
     }
 
     // Deposit a peak-pyramid sidecar next to the rendered WAV. Fire-and-forget;
@@ -701,6 +806,6 @@ bool do_render(const RenderRequest& req) {
     cleanup_all();
     std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
                  final_output_path.c_str());
-    return true;
+    return RenderOutcome::Success;
 }
 

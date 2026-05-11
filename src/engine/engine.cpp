@@ -53,12 +53,14 @@ bool validate_timemap_monotonic(const std::vector<TimeMapSegment>& tm) {
 
 } // namespace
 
-bool run_warptempo_engine(const EngineParams& p,
-                          std::vector<int64_t>* out_frame_map,
-                          int* out_R_s) {
+EngineResult run_warptempo_engine(const EngineParams& p,
+                                  std::vector<int64_t>* out_frame_map,
+                                  int* out_R_s,
+                                  const std::atomic<bool>* cancel_flag) {
     AudioSTFT audio_stft;
 
     audio_stft.N = p.N;
+    audio_stft.cancel_flag = cancel_flag;
 
     init_fftw_threads(audio_stft, p.fftw_threads);
 
@@ -74,7 +76,7 @@ bool run_warptempo_engine(const EngineParams& p,
 
     if (audio_stft.N % 4 != 0) {
         std::cerr << "Error: N must be divisible by 4.\n";
-        return false;
+        return EngineResult::Failed;
     }
 
     // Populate timemap from caller and validate monotonicity.
@@ -83,13 +85,13 @@ bool run_warptempo_engine(const EngineParams& p,
     for (const auto& e : p.timemap) {
         audio_stft.timemap.push_back({e.first, e.second});
     }
-    if (!validate_timemap_monotonic(audio_stft.timemap)) return false;
+    if (!validate_timemap_monotonic(audio_stft.timemap)) return EngineResult::Failed;
 
     audio_stft.src_info.format = 0;
     audio_stft.src_snd = sf_open(p.source_audio_path.c_str(), SFM_READ, &audio_stft.src_info);
     if (!audio_stft.src_snd) {
         std::cerr << "Error: Could not open source file: '" << p.source_audio_path << "'\n";
-        return false;
+        return EngineResult::Failed;
     }
     audio_stft.channels = audio_stft.src_info.channels;
     audio_stft.nyquist = audio_stft.src_info.samplerate / 2.0;
@@ -139,11 +141,21 @@ bool run_warptempo_engine(const EngineParams& p,
     limiter.process(audio_stft);
     auto t_p3_1 = std::chrono::steady_clock::now();
     std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
+    if (audio_stft.cancellation_observed) {
+        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+        audio_stft.cleanup();
+        return EngineResult::Cancelled;
+    }
 
     auto t_p4_0 = std::chrono::steady_clock::now();
     synthesis.process(audio_stft);
     auto t_p4_1 = std::chrono::steady_clock::now();
     std::cout << "  (" << pass_ms(t_p4_0, t_p4_1) << " ms)\n";
+    if (audio_stft.cancellation_observed) {
+        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+        audio_stft.cleanup();
+        return EngineResult::Cancelled;
+    }
 
     std::cout << "[Success] " << audio_stft.output_audio_file << "\n";
 
@@ -151,5 +163,5 @@ bool run_warptempo_engine(const EngineParams& p,
     if (out_R_s)       *out_R_s       = audio_stft.R_s;
 
     audio_stft.cleanup();
-    return true;
+    return EngineResult::Success;
 }
