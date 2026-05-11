@@ -25,6 +25,7 @@ public:
     using FileDropCallback     = std::function<void(const std::string& path)>;
     using DropAcceptPredicate  = std::function<bool(int x, int y)>;
     using TickCallback         = std::function<void()>;
+    using PrePaintCallback     = std::function<void()>;
     using IdleTimeoutProvider  = std::function<int()>;
 
     GuiPlatform();
@@ -52,6 +53,7 @@ public:
     void set_on_file_drop(FileDropCallback cb);
     void set_drop_accept_predicate(DropAcceptPredicate p);
     void set_on_tick(TickCallback cb);
+    void set_on_pre_paint(PrePaintCallback cb);
     void set_idle_timeout_provider(IdleTimeoutProvider p);
 
 private:
@@ -106,6 +108,12 @@ private:
     int  pending_h_ = 0;   // configure events; consumed by xdg_surface.configure
     bool should_exit_ = false;
     bool has_initial_configure_ = false;
+
+    // True only while paint_one_frame is executing the pre-paint hook.
+    // invalidate_region() consults this flag and skips its trailing
+    // schedule_frame_callback() call when set, so the hook can declare
+    // additional damage without producing a spurious extra commit.
+    bool in_pre_paint_ = false;
 
     // Highest-refresh wl_output mode reported during the registry
     // roundtrip, in millihertz. Zero means no output advertised a mode;
@@ -201,6 +209,7 @@ private:
     FileDropCallback     on_file_drop_;
     DropAcceptPredicate  drop_accept_;
     TickCallback         on_tick_;
+    PrePaintCallback     on_pre_paint_;
     IdleTimeoutProvider  idle_timeout_;
 
     // -- Internal helpers --

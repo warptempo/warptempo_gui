@@ -818,6 +818,19 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
+    // Pre-paint hook: gives the application a chance to update model
+    // state (e.g., re-read the playback predictor) and declare any
+    // additional damage based on the freshly-updated state. The hook
+    // runs before buffer acquisition because it may add to damage_.
+    // invalidate_region() suppresses its trailing schedule_frame_callback()
+    // while in_pre_paint_ is true so we don't produce a spurious empty
+    // commit before the real attach + commit below.
+    if (on_pre_paint_) {
+        in_pre_paint_ = true;
+        on_pre_paint_();
+        in_pre_paint_ = false;
+    }
+
     ShmBuffer* buf = acquire_free_buffer();
     if (!buf) {
         // Both buffers in flight — try again next compositor frame.
@@ -851,6 +864,7 @@ void GuiPlatform::paint_one_frame() {
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     damage_.push_back(DamageRect{x, y, w, h});
+    if (in_pre_paint_) return;  // paint_one_frame will commit shortly
     if (has_initial_configure_ && !frame_callback_) {
         schedule_frame_callback();
     }
@@ -1336,6 +1350,7 @@ void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = st
 void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
+void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_idle_timeout_provider(IdleTimeoutProvider p) { idle_timeout_ = std::move(p); }
 
 // ---------------------------------------------------------------------------

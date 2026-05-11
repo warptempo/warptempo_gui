@@ -1378,16 +1378,17 @@ int main(int argc, char** argv) {
         if (!app.is_playing && !ma_playing) return;
 
         if (ma_playing) {
-            const int64_t cur = playback.cursor();
-            if (cur != app.playhead_sample) {
-                const double old_px = playhead_pixel_x(app, audio);
-                app.playback_cursor = cur;
-                app.playhead_sample = cur;
-                const double new_px = playhead_pixel_x(app, audio);
-                invalidate_playhead_columns(old_px, new_px);
-                invalidate_timestamp_area();
-                if (app.follow_mode) follow_scroll_if_needed();
-            }
+            // Heartbeat: invalidate the playhead column at the current
+            // model position so the paint cycle keeps running. The
+            // pre-paint hook reads the predictor at paint time and adds
+            // damage for the actually-painted position. We do not read
+            // the predictor or update app.playhead_sample here — that
+            // work moved to the pre-paint hook to eliminate the
+            // tick/paint sampling-rate mismatch that caused playhead
+            // motion to stutter at high zoom.
+            const double px = playhead_pixel_x(app, audio);
+            invalidate_playhead_columns(px, px);
+            invalidate_timestamp_area();
             app.is_playing = true;
             return;
         }
@@ -1398,6 +1399,29 @@ int main(int argc, char** argv) {
             restore_playhead_to_lsp();
             if (app.follow_mode) follow_scroll_if_needed();
         }
+    });
+
+    gui.set_on_pre_paint([&]() {
+        if (app.loading || audio.total_frames() <= 0) return;
+        if (!playback.is_playing()) return;
+
+        // Read the predictor at paint time. The predictor is continuous
+        // in wall time, so this gives the freshest possible position
+        // right before paint consumes the damage list.
+        const int64_t cur = playback.cursor();
+        if (cur == app.playhead_sample) return;
+
+        const double old_px = playhead_pixel_x(app, audio);
+        app.playback_cursor  = cur;
+        app.playhead_sample  = cur;
+        const double new_px  = playhead_pixel_x(app, audio);
+
+        // invalidate_region during pre-paint appends to damage_ without
+        // scheduling a redundant frame callback (platform layer handles
+        // that via its in_pre_paint_ flag).
+        invalidate_playhead_columns(old_px, new_px);
+        invalidate_timestamp_area();
+        if (app.follow_mode) follow_scroll_if_needed();
     });
 
     // Idle timeout: wake the poll loop every ~16 ms during playback so the
