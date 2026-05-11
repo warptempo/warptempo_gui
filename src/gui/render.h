@@ -62,6 +62,13 @@ constexpr double kVPadExtraPx = 1.0;
 // boundary row eliminates the boundary-paint fragility from Brief I.
 constexpr double kFlagBottomLiftPx = 11.0;
 
+// Brief J: marker stems extend upward from the waveform area into the bottom
+// of the top strip by this many pixels via the connector rows. Tracks
+// kFlagBottomLiftPx — see render.cpp's flag-lift commentary. Consumed by
+// render_markers (stem geometry) and by the paint_handler markers-section
+// gate (to intersect damage rects against the actual marker pixel range).
+constexpr double kMarkerConnectorRows = 11.0;
+
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default
 // at non-HiDPI). WarpTempo does not currently support HiDPI; this is

@@ -17,18 +17,9 @@ namespace perf_counters {
     int flag_elided          = 0;
 }
 
-// kVPadExtraPx and kFlagBottomLiftPx now live in render.h so the
-// iteration popup in main.cpp can reference the same values.
-
-// Brief J: lift the flag rect's bottom edge above the strip-boundary row by
-// kFlagBottomLiftPx pixels. The boundary row coincides with the waveform
-// area's first row and paints unreliably outside narrow playhead-column
-// invalidates; lifting it places the bottom edge solidly inside the top-
-// strip clip in every code path. The lift figure also matches the
-// playhead's downward triangle height, leaving room for the stem connector
-// between flag bottom and marker stem. If the flag lift changes,
-// kMarkerConnectorRows should track it.
-constexpr double kMarkerConnectorRows  = 11.0;
+// kVPadExtraPx, kFlagBottomLiftPx, and kMarkerConnectorRows now live in
+// render.h so the iteration popup in main.cpp and the markers-section gate
+// in paint_handler.cpp can reference the same values.
 
 // Half-width of the inverted-triangle playhead asset (17×9, tip at column 8).
 // Mirrors the same-named constant in main.cpp's invalidation logic — both

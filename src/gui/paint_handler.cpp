@@ -317,8 +317,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         // Markers: vertical lines in the waveform area, beneath the
         // playhead. Cairo's outer clip confines painting to `exposed`.
-        if (rects_intersect(exposed, area) ||
-            rects_intersect(exposed, top_strip)) {
+        // Gate against the actual marker pixel range: stems span the
+        // waveform's x-range vertically from `area.y - kMarkerConnectorRows`
+        // (connector top) down to `area.y + area.h`. Top-strip-only damage
+        // above the connector rows (popup edits, hover popup, cursor blink)
+        // would otherwise pay for an empty marker pass.
+        const GuiRect marker_paint_rect{
+            area.x,
+            area.y - static_cast<int>(kMarkerConnectorRows),
+            area.w,
+            area.h + static_cast<int>(kMarkerConnectorRows)
+        };
+        if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
             if (app.render_view_enabled) {
                 // Render-view: dark blue base, sky-tint when selected.
