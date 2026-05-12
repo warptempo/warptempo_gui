@@ -37,7 +37,8 @@ int byte_index_from_click_x(double click_x, double text_left_x,
 //   invalidate_top_strip           → viewport.invalidate_top_strip
 //   invalidate_waveform_area       → viewport.invalidate_waveform_area
 //   invalidate_timestamp_area      → viewport.invalidate_timestamp_area
-//   clear_hover_popup              → std::function ref (called as f())
+//   clear_hover_popup              → viewport.clear_hover_popup
+//                                    (X.7.13 retired the std::function forwarder)
 //   exit_top_flag_edit_no_commit   → this->exit_top_flag_edit_no_commit
 //   build_locked_prefix            → this->build_locked_prefix
 //
@@ -135,7 +136,7 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
         }
     }
 
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 
@@ -332,7 +333,7 @@ void GuiFlagEditor::enter_iter_edit(int idx, double click_x,
         }
     }
 
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 
@@ -574,7 +575,7 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
         }
     }
 
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 
@@ -706,7 +707,7 @@ void GuiFlagEditor::enter_bpm_mode() {
     }
 
     app.bpm_mode_enabled = true;
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 

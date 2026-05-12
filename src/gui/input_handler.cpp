@@ -27,11 +27,15 @@
 //
 //   - Capture-by-reference of `app`, `audio`, `gui`, `playback`, `viewport`,
 //     `selection`, `undo`, `warpops`, `phase resets`, `flag_editor`,
-//     `render_view`, `tab_mode`, `clear_hover_popup`,
-//     `stop_playback_if_playing`, `save_markers`, `request_close_or_revert`,
-//     `prompt_activate_response`, `toggle_playback`, `set_playback_speed` is
-//     now reference-member access on `this`. Identifier spelling is identical
-//     so nothing else changes inside the bodies.
+//     `render_view`, `tab_mode`, `playback_lifecycle`, `save_ops`, `prompt`
+//     is now reference-member access on `this`. The std::function forwarder
+//     pattern (clear_hover_popup, stop_playback_if_playing, save_markers,
+//     request_close_or_revert, prompt_activate_response, toggle_playback,
+//     set_playback_speed) was retired in favor of direct struct method
+//     calls (viewport.clear_hover_popup,
+//     playback_lifecycle.stop_playback_if_playing /
+//     toggle_playback / set_playback_speed, save_ops.save,
+//     prompt.request_close_or_revert / activate_response).
 //   - Forwarder lambdas in main.cpp (do_undo, do_redo, recompute_dirty,
 //     push_undo_both, select_*, clear_selection, set_single_selection,
 //     toggle_selection_membership, move_playhead_*, zoom_*, scroll_viewport,
@@ -76,7 +80,7 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
 
     app.queue_cancel_requested = false;
     app.queue_running          = true;
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 
     dispatch_next_batch_entry();
 }
@@ -156,7 +160,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (k != 0) {
             for (char rk : app.prompt.response_keys) {
                 if (k == rk) {
-                    prompt_activate_response(rk);
+                    prompt.activate_response(rk);
                     return;
                 }
             }
@@ -169,7 +173,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // always false in blank state (history is reset on revert).
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
         }
         return;
     }
@@ -300,13 +304,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+        prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
         return;
     }
 
     // Ctrl+W: revert to blank state (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::W) {
-        request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
+        prompt.request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
         return;
     }
 
@@ -367,7 +371,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         app.queue_cancel_requested = false;
         app.queue_running          = true;
         app.queue_progress_text    = "rendering...";
-        clear_hover_popup();
+        viewport.clear_hover_popup();
         viewport.invalidate_timestamp_area();
         async_renderer.dispatch(std::move(req),
             [this](RenderOutcome o) {
@@ -1056,7 +1060,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Space-bar is modifier-independent.
-    if (key == GuiKeys::Space) { toggle_playback(); return; }
+    if (key == GuiKeys::Space) { playback_lifecycle.toggle_playback(); return; }
 
     // Shift+<digit> selects a playback speed. Shift+0 is 1.00, Shift+1
     // is 0.10, Shift+9 is 0.90. Applies immediately whether or not
@@ -1064,16 +1068,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // on the next buffer.
     if (shift && !ctrl) {
         switch (key) {
-        case GuiKeys::Digit0: set_playback_speed(1.0f); return;
-        case GuiKeys::Digit1: set_playback_speed(0.1f); return;
-        case GuiKeys::Digit2: set_playback_speed(0.2f); return;
-        case GuiKeys::Digit3: set_playback_speed(0.3f); return;
-        case GuiKeys::Digit4: set_playback_speed(0.4f); return;
-        case GuiKeys::Digit5: set_playback_speed(0.5f); return;
-        case GuiKeys::Digit6: set_playback_speed(0.6f); return;
-        case GuiKeys::Digit7: set_playback_speed(0.7f); return;
-        case GuiKeys::Digit8: set_playback_speed(0.8f); return;
-        case GuiKeys::Digit9: set_playback_speed(0.9f); return;
+        case GuiKeys::Digit0: playback_lifecycle.set_playback_speed(1.0f); return;
+        case GuiKeys::Digit1: playback_lifecycle.set_playback_speed(0.1f); return;
+        case GuiKeys::Digit2: playback_lifecycle.set_playback_speed(0.2f); return;
+        case GuiKeys::Digit3: playback_lifecycle.set_playback_speed(0.3f); return;
+        case GuiKeys::Digit4: playback_lifecycle.set_playback_speed(0.4f); return;
+        case GuiKeys::Digit5: playback_lifecycle.set_playback_speed(0.5f); return;
+        case GuiKeys::Digit6: playback_lifecycle.set_playback_speed(0.6f); return;
+        case GuiKeys::Digit7: playback_lifecycle.set_playback_speed(0.7f); return;
+        case GuiKeys::Digit8: playback_lifecycle.set_playback_speed(0.8f); return;
+        case GuiKeys::Digit9: playback_lifecycle.set_playback_speed(0.9f); return;
         default: break;
         }
     }
@@ -1144,7 +1148,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 app.bpm_mode_enabled = false;
             }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;
-            clear_hover_popup();
+            viewport.clear_hover_popup();
             viewport.invalidate_top_strip();
         }
         return;
@@ -1290,7 +1294,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // unshifted GuiKey, so a Shift+letter press arrives as the lowercase
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
     if (key == GuiKeys::S) {
-        if (ctrl)                          save_markers();
+        if (ctrl)                          save_ops.save();
         else if (app.active_mode == 'P')   phase_resets.drop_phase_reset_at_playhead();
         else if (shift)                    warpops.drop_inherit_marker_at_playhead();
         else                               warpops.drop_marker_at_playhead();
@@ -1424,9 +1428,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (!ctrl && !shift && !alt) {
         switch (key) {
         case GuiKeys::Escape: /* top-level Escape is a no-op (chunk Q) */ break;
-        case GuiKeys::Left:   stop_playback_if_playing();
+        case GuiKeys::Left:   playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_pixels(-1);         break;
-        case GuiKeys::Right:  stop_playback_if_playing();
+        case GuiKeys::Right:  playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_pixels(+1);         break;
         case GuiKeys::Up:     viewport.zoom_in();                        break;
         case GuiKeys::Down:   viewport.zoom_out();                       break;
@@ -1441,9 +1445,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         case GuiKeys::C:      viewport.apply_zoom_change(0);
                         viewport.center_viewport_on_playhead();    break;
-        case GuiKeys::Home:   stop_playback_if_playing();
+        case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_to(viewport.trim_begin_sample()); break;
-        case GuiKeys::End:    stop_playback_if_playing();
+        case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_to(viewport.trim_end_sample() - 1); break;
         // b / e set the settings-side trim_begin / trim_end at the
         // current playhead position. Mode-agnostic. Re-press at the same
@@ -1471,7 +1475,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button,
         return;
     }
     if (ctrl) {
-        stop_playback_if_playing();
+        playback_lifecycle.stop_playback_if_playing();
         viewport.move_playhead_pixels(button == GuiMouseButton::WheelUp ? -1 : +1);
         return;
     }
@@ -1659,7 +1663,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const bool was_playing =
             (inside_waveform || inside_top) && playback.is_playing();
         const int64_t playhead_at_click_entry = app.playhead_sample;
-        if (inside_top && was_playing) stop_playback_if_playing();
+        if (inside_top && was_playing) playback_lifecycle.stop_playback_if_playing();
 
         // V.A1 / V.B editor: mouse handling.
         //   click inside top strip on the editing target: re-position
@@ -2017,7 +2021,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     if (app.prompt.active) {
-        clear_hover_popup();
+        viewport.clear_hover_popup();
         return;
     }
     // Chunk W: render-view motion handler. Brief F Section 2 adds
@@ -2028,7 +2032,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // sub-view because hit_test_flag short-circuits to -1).
     if (app.render_view_enabled) {
         if (app.playhead_drag.active) {
-            clear_hover_popup();
+            viewport.clear_hover_popup();
             if (!mods.primary_button_held) {
                 app.playhead_drag = PlayheadDragState{};
                 return;
@@ -2041,7 +2045,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // would stutter badly.
             if (app.playhead_drag.was_playing_at_press &&
                 !app.playhead_drag.drag_motion_stopped_audio) {
-                stop_playback_if_playing();
+                playback_lifecycle.stop_playback_if_playing();
                 app.playhead_drag.drag_motion_stopped_audio = true;
             }
             const int sr = audio.sample_rate();
@@ -2090,7 +2094,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (app.playhead_drag.active) {
-        clear_hover_popup();
+        viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —
         // terminate the drag. Modifier changes mid-drag are ignored.
         if (!mods.primary_button_held) {
@@ -2102,7 +2106,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // for the full rationale; this is the source-view mirror.
         if (app.playhead_drag.was_playing_at_press &&
             !app.playhead_drag.drag_motion_stopped_audio) {
-            stop_playback_if_playing();
+            playback_lifecycle.stop_playback_if_playing();
             app.playhead_drag.drag_motion_stopped_audio = true;
         }
         const int sr = audio.sample_rate();
@@ -2167,12 +2171,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                         : std::string();
             }
         } else {
-            clear_hover_popup();
+            viewport.clear_hover_popup();
         }
         return;
     }
     // A drag is active — drop any pending popup.
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     // Left button must still be held down — otherwise release was lost.
     if (!mods.primary_button_held) {
         warpops.commit_drag();

@@ -3,10 +3,13 @@
 #include "audio.h"
 #include "playback.h"
 #include "render.h"
+#include "text_editor.h"
 #include "platform_wayland.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <string>
 
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
@@ -99,7 +102,7 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     // V.A3b Addendum 3: viewport may have shifted (Home/End or any
     // playhead jump that pushed the viewport). Re-evaluate hover at
     // the cursor's last known coords.
-    if (viewport_changed && recompute_hover_at_cursor) {
+    if (viewport_changed) {
         recompute_hover_at_cursor();
     }
     if (playback.is_playing()) playback.resync_predictor();
@@ -139,7 +142,7 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     // V.A3b Addendum 3: rects shifted under the (possibly stationary)
     // cursor — re-evaluate hover.
-    if (recompute_hover_at_cursor) recompute_hover_at_cursor();
+    recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
 }
 
@@ -179,7 +182,7 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         // V.A3b Addendum 3: rects shifted under the (possibly
         // stationary) cursor — re-evaluate hover.
-        if (recompute_hover_at_cursor) recompute_hover_at_cursor();
+        recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
     }
 }
@@ -196,7 +199,7 @@ void Viewport::center_viewport_on_playhead() {
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         // V.A3b Addendum 3: rects shifted under the (possibly
         // stationary) cursor — re-evaluate hover.
-        if (recompute_hover_at_cursor) recompute_hover_at_cursor();
+        recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
     }
 }
@@ -227,6 +230,69 @@ void Viewport::follow_scroll_if_needed() {
         if (app.viewport_start_sample != old_vp) {
             invalidate_waveform_area();
             if (playback.is_playing()) playback.resync_predictor();
+        }
+    }
+}
+
+// Reset the hover popup state. If the popup was visible, invalidate the
+// top strip so the next paint erases it. Safe to call from any path.
+void Viewport::clear_hover_popup() {
+    const bool was_visible = app.hover_popup.visible;
+    app.hover_popup = HoverPopupState{};
+    if (was_visible) invalidate_top_strip();
+}
+
+// V.A3b Addendum 3: re-evaluate hover at the cursor's last on_motion
+// coordinates. Called after viewport mutations (zoom, scroll, center,
+// playhead-driven viewport shift) so a stationary cursor's hover state
+// tracks the rects that just slid under it. Mirrors the on_motion
+// hover-detection branch: same gating, same hit-test, same state
+// transitions; the tick handler still drives the dwell-to-visible flip.
+void Viewport::recompute_hover_at_cursor() {
+    if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
+    // Dialog / drag / editor / queue still suppress hover in either
+    // view. Source-view also requires warp mode + iter mode off;
+    // render-view bypasses the mode checks because hover always
+    // applies against the loaded render's warpmarkers.
+    if (app.prompt.active ||
+        app.drag.active ||
+        app.playhead_drag.active ||
+        text_editor::is_active(app.top_flag_editor) ||
+        app.queue_running) {
+        clear_hover_popup();
+        return;
+    }
+    if (!app.render_view_enabled &&
+        (app.active_mode != 'W' || app.iteration_mode_enabled)) {
+        clear_hover_popup();
+        return;
+    }
+    const int hit = hit_test_flag(app, audio,
+                                  app.last_mouse_x, app.last_mouse_y);
+    if (hit != app.hover_popup.marker_index) {
+        if (app.hover_popup.visible) invalidate_top_strip();
+        app.hover_popup.marker_index = hit;
+        app.hover_popup.visible      = false;
+        app.hover_popup.entry_time   =
+            std::chrono::steady_clock::now();
+        // Precompute the popup's display text at rect-entry so the
+        // delay-completion paint doesn't have to recompute it. Empty
+        // when `hit` is not popup-eligible (the redraw branch then
+        // skips paint and keeps the strip clean).
+        if (app.render_view_enabled) {
+            app.hover_popup.cached_text =
+                popup_eligible_marker(app, hit)
+                    ? compute_hover_popup_text(
+                          app.render_view_markers, hit,
+                          app.render_view_src_sr)
+                    : std::string();
+        } else {
+            app.hover_popup.cached_text =
+                popup_eligible_marker(app, hit)
+                    ? compute_hover_popup_text(
+                          app.warpmarkers.markers(), hit,
+                          audio.sample_rate())
+                    : std::string();
         }
     }
 }

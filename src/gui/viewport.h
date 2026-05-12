@@ -3,7 +3,6 @@
 #include "app_state.h"
 
 #include <cstdint>
-#include <functional>
 #include <utility>
 
 class GuiAudio;
@@ -19,18 +18,15 @@ struct Viewport {
     const GuiAudio&                 audio;
     GuiPlatform&                         gui;
     GuiPlayback&                    playback;
-    std::function<void()>&          recompute_hover_at_cursor;
 
     Viewport(AppState&                       app_,
              const GuiAudio&                 audio_,
              GuiPlatform&                         gui_,
-             GuiPlayback&                    playback_,
-             std::function<void()>&          recompute_hover_at_cursor_)
+             GuiPlayback&                    playback_)
         : app(app_),
           audio(audio_),
           gui(gui_),
-          playback(playback_),
-          recompute_hover_at_cursor(recompute_hover_at_cursor_) {}
+          playback(playback_) {}
 
     // Trim helpers.
     std::pair<int64_t, int64_t> trim_range() const;
@@ -53,4 +49,16 @@ struct Viewport {
     void invalidate_playhead_columns(double old_px, double new_px);
     void invalidate_top_strip();
     void invalidate_all();
+
+    // Reset the hover popup state. If the popup was visible, invalidate
+    // the top strip so the next paint erases it. Safe to call from any
+    // path. Promoted from main.cpp's clear_hover_popup lambda.
+    void clear_hover_popup();
+
+    // Recompute the hover state at the cursor's last on_motion position.
+    // Called from viewport mutators (so a scroll/zoom updates which
+    // marker is under the cursor) and from the platform tick (so the
+    // dwell-to-visible flip fires after delay). Body promoted from
+    // main.cpp's recompute_hover_at_cursor lambda.
+    void recompute_hover_at_cursor();
 };

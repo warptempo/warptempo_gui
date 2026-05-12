@@ -52,7 +52,7 @@ void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
     e.op_mode            = 'W';
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
@@ -64,7 +64,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.op_mode            = 'P';
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 }
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
@@ -77,7 +77,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.op_mode            = op_mode;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 }
 
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
@@ -231,8 +231,8 @@ void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
 
 void Undo::do_undo() {
     if (app.history.undo_stack.empty()) return;
-    stop_playback_if_playing();
-    clear_hover_popup();
+    playback_lifecycle.stop_playback_if_playing();
+    viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());
     app.history.undo_stack.pop_back();
 
@@ -291,8 +291,8 @@ void Undo::do_undo() {
 
 void Undo::do_redo() {
     if (app.history.redo_stack.empty()) return;
-    stop_playback_if_playing();
-    clear_hover_popup();
+    playback_lifecycle.stop_playback_if_playing();
+    viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.redo_stack.back());
     app.history.redo_stack.pop_back();
 

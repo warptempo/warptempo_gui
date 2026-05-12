@@ -4,11 +4,12 @@
 #include "audio.h"
 #include "playback.h"
 #include "selection.h"
+#include "tab_mode.h"
+#include "viewport.h"
 #include "platform_wayland.h"
 
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <utility>
 #include <vector>
 
@@ -17,23 +18,21 @@
 // the .rendersettings sidecar (per-render zoom/viewport/playhead persistence),
 // the per-entry selection stash with stat-tuple gating, the load-into-active-audio
 // path that parks the source GuiAudio onto an owned member, and the inverse
-// restore. The struct holds references to the long-lived state and std::function
-// callables the methods read and write; bodies are byte-identical to the
-// originals modulo `this->` access on the captured references and the
-// lambda-call rewriting documented in render_view.cpp.
+// restore. clear_hover_popup is reached through viewport;
+// refresh_active_tab_from_app is reached through tab_mode.
 //
 // `source_audio_held` is owned (not a reference): it was a local in main()
 // before extraction and is used only by load_render_view_at /
 // restore_source_audio. Promoting it to a member keeps lifetime tied to
 // the struct rather than to main's stack frame.
 struct GuiRenderView {
-    AppState&              app;
-    GuiAudio&              audio;
-    GuiPlayback&           playback;
-    GuiPlatform&                gui;
-    Selection&             selection;
-    std::function<void()>& clear_hover_popup;
-    std::function<void()>& refresh_active_tab_from_app;
+    AppState&         app;
+    GuiAudio&         audio;
+    GuiPlayback&      playback;
+    GuiPlatform&      gui;
+    Selection&        selection;
+    Viewport&         viewport;
+    GuiTabMode&       tab_mode;
 
     // Chunk W: parked source audio. Populated only while
     // app.render_view_enabled is true — std::move'd off `audio` on
@@ -42,20 +41,20 @@ struct GuiRenderView {
     // (empty / total_frames() == 0) when render-view is off.
     GuiAudio source_audio_held;
 
-    GuiRenderView(AppState&              app_,
-                  GuiAudio&              audio_,
-                  GuiPlayback&           playback_,
-                  GuiPlatform&                gui_,
-                  Selection&             selection_,
-                  std::function<void()>& clear_hover_popup_,
-                  std::function<void()>& refresh_active_tab_from_app_)
+    GuiRenderView(AppState&         app_,
+                  GuiAudio&         audio_,
+                  GuiPlayback&      playback_,
+                  GuiPlatform&      gui_,
+                  Selection&        selection_,
+                  Viewport&         viewport_,
+                  GuiTabMode&       tab_mode_)
         : app(app_),
           audio(audio_),
           playback(playback_),
           gui(gui_),
           selection(selection_),
-          clear_hover_popup(clear_hover_popup_),
-          refresh_active_tab_from_app(refresh_active_tab_from_app_) {}
+          viewport(viewport_),
+          tab_mode(tab_mode_) {}
 
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
     std::filesystem::path rendersettings_path(

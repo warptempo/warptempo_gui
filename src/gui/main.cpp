@@ -42,7 +42,6 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <limits>
 #include <map>
 #include <optional>
@@ -312,61 +311,37 @@ int main(int argc, char** argv) {
     // callsites now call invalidate_timestamp_area directly. `bottom_strip
     // _wide` was promoted to a free function in app_state.{h,cpp} in
     // X.7.8a so paint_handler.cpp can reach it without a capture.
+    //
+    // X.7.13: the nine std::function forward-declares previously kept here
+    // (recompute_hover_at_cursor, clear_hover_popup, stop_playback_if_playing,
+    // refresh_active_tab_from_app, save_markers, request_close_or_revert,
+    // prompt_activate_response, toggle_playback, set_playback_speed) were
+    // retired. The two substantive bodies moved onto Viewport
+    // (clear_hover_popup, recompute_hover_at_cursor); the seven forwarders
+    // are now direct method calls on their owning struct
+    // (viewport.clear_hover_popup, playback_lifecycle.stop_playback_if_playing
+    // / toggle_playback / set_playback_speed, save_ops.save,
+    // prompt.request_close_or_revert / activate_response,
+    // tab_mode.refresh_active_tab_from_app).
 
-    // V.A3b Addendum 3: forward-declared so the viewport methods below can
-    // invoke it. The body is assigned later (after clear_hover_popup is in
-    // scope; X.7.8b-2 made hit_test_flag a free function in app_state.{h,
-    // cpp} so it's no longer a scope concern). Guarded inside Viewport
-    // with a truthiness check because callbacks are wired after this
-    // assignment.
-    std::function<void()> recompute_hover_at_cursor;
-
-    // X.7.3: forward-declared so the Undo struct can capture references.
-    // Bodies are assigned later at their original definition sites — same
-    // forward-declare-then-assign pattern as recompute_hover_at_cursor.
-    std::function<void()> clear_hover_popup;
-    std::function<void()> stop_playback_if_playing;
-
-    // X.7.6: forward-declared so GuiRenderView can capture a reference.
-    // Body is assigned later at its original definition site — same
-    // pattern as the four prior promotions.
-    std::function<void()> refresh_active_tab_from_app;
-
-    // X.7.8b-1: forward-declared so GuiInputHandler can capture references.
-    // Bodies are assigned later at their original definition sites — same
-    // pattern as the prior promotions. The on_key handler reads these
-    // through the std::function refs. After X.7.10 the two dialog-cluster
-    // ones (request_close_or_revert, prompt_activate_response) are
-    // one-line forwarders into GuiPrompt; save_markers, toggle_playback,
-    // and set_playback_speed retain inline bodies.
-    std::function<bool()>                save_markers;
-    std::function<void(DialogTrigger)>   request_close_or_revert;
-    std::function<void(char)>            prompt_activate_response;
-    std::function<void()>                toggle_playback;
-    std::function<void(float)>           set_playback_speed;
-
-    Viewport viewport(app, audio, gui, playback, recompute_hover_at_cursor);
+    Viewport viewport(app, audio, gui, playback);
+    GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport);
     Selection selection(app, audio, viewport, playback);
-    Undo undo(app, viewport, selection,
-              clear_hover_popup, stop_playback_if_playing);
+    Undo undo(app, viewport, selection, playback_lifecycle);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
-                                      clear_hover_popup, stop_playback_if_playing);
+                                         playback_lifecycle);
     GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
-                              clear_hover_popup, stop_playback_if_playing);
-    GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
-                              clear_hover_popup);
+                              playback_lifecycle);
+    GuiFlagEditor flag_editor(app, audio, viewport, selection, undo);
+    GuiTabMode tab_mode(app, audio, viewport, selection, playback_lifecycle);
     GuiRenderView render_view(app, audio, playback, gui, selection,
-                              clear_hover_popup, refresh_active_tab_from_app);
-    GuiTabMode tab_mode(app, audio, viewport, selection,
-                        clear_hover_popup, stop_playback_if_playing);
-    GuiSaveOps save_ops(app, undo, tab_mode, viewport);
+                              viewport, tab_mode);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo);
+    GuiSaveOps save_ops(app, undo, tab_mode, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
-                     phase_reset_propagate,
-                     save_markers, clear_hover_popup);
-    GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
+                     phase_reset_propagate, save_ops);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
@@ -381,10 +356,7 @@ int main(int argc, char** argv) {
                                   render_view, tab_mode,
                                   phase_reset_propagate,
                                   async_renderer,
-                                  clear_hover_popup, stop_playback_if_playing,
-                                  save_markers, request_close_or_revert,
-                                  prompt_activate_response, toggle_playback,
-                                  set_playback_speed);
+                                  playback_lifecycle, save_ops, prompt);
 
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
@@ -404,120 +376,10 @@ int main(int argc, char** argv) {
 
     // X.7.8b-3: popup_eligible_marker moved to a free function in
     // app_state.{h,cpp}. The remaining callers in this TU
-    // (recompute_hover_at_cursor below, on_tick) reach it directly with
-    // the new (app, idx) signature; on_motion calls it from
+    // (Viewport::recompute_hover_at_cursor, on_tick) reach it directly
+    // with the new (app, idx) signature; on_motion calls it from
     // input_handler.cpp. V.A3b / V.B comments live above the
     // declaration in app_state.h.
-
-    // Reset the hover popup state. If the popup was visible, invalidate the
-    // top strip so the next paint erases it. Safe to call from any path.
-    clear_hover_popup = [&]() {
-        const bool was_visible = app.hover_popup.visible;
-        app.hover_popup = HoverPopupState{};
-        if (was_visible) invalidate_top_strip();
-    };
-
-    // -- Undo/redo helpers --------------------------------------------------
-    //
-    // X.7.3: the undo-cluster lambdas have been hoisted onto the Undo struct
-    // in undo.{cpp,h}. The lambdas below are one-line forwarders so callsites
-    // elsewhere in main() don't need to change. apply_post_restore_rules_warp
-    // and apply_post_restore_rules_phase_reset have no callers outside the
-    // undo cluster, so their forwarders are dropped — they remain public on
-    // the Undo struct for consistency.
-
-    stop_playback_if_playing = [&]() {
-        playback_lifecycle.stop_playback_if_playing();
-    };
-
-    refresh_active_tab_from_app = [&]() { tab_mode.refresh_active_tab_from_app(); };
-
-    save_markers = [&]() -> bool {
-        return save_ops.save();
-    };
-
-    // X.7.11: the playback-lifecycle cluster (stop_playback_if_playing,
-    // restore_playhead_to_lsp, toggle_playback, set_playback_speed)
-    // moved to playback_lifecycle.{h,cpp} on GuiPlaybackLifecycle. The
-    // three std::functions retained for GuiInputHandler are now one-line
-    // forwarders into that struct, matching the X.7.10 prompt pattern.
-
-    // -- Unsaved-work dialog + blank-state revert (chunk Q) -----------------
-    //
-    // X.7.10: the dialog cluster (proceed_with_trigger, open_prompt_unsaved,
-    // and the bodies of prompt_activate_response / request_close_or_revert)
-    // moved to prompt.{h,cpp} on GuiPrompt. The two std::functions retained
-    // for GuiInputHandler are now one-line forwarders into that struct,
-    // matching the refresh_active_tab_from_app pattern.
-
-    prompt_activate_response = [&](char k) {
-        prompt.activate_response(k);
-    };
-    request_close_or_revert = [&](DialogTrigger t) {
-        prompt.request_close_or_revert(t);
-    };
-
-    toggle_playback = [&]() {
-        playback_lifecycle.toggle_playback();
-    };
-    set_playback_speed = [&](float s) {
-        playback_lifecycle.set_playback_speed(s);
-    };
-
-    // V.A3b Addendum 3: re-evaluate hover at the cursor's last on_motion
-    // coordinates. Called after viewport mutations (zoom, scroll, center,
-    // playhead-driven viewport shift) so a stationary cursor's hover state
-    // tracks the rects that just slid under it. Mirrors the on_motion
-    // hover-detection branch: same gating, same hit-test, same state
-    // transitions; the tick handler still drives the dwell-to-visible flip.
-    recompute_hover_at_cursor = [&]() {
-        if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
-        // Dialog / drag / editor / queue still suppress hover in either
-        // view. Source-view also requires warp mode + iter mode off;
-        // render-view bypasses the mode checks because hover always
-        // applies against the loaded render's warpmarkers.
-        if (app.prompt.active ||
-            app.drag.active ||
-            app.playhead_drag.active ||
-            text_editor::is_active(app.top_flag_editor) ||
-            app.queue_running) {
-            clear_hover_popup();
-            return;
-        }
-        if (!app.render_view_enabled &&
-            (app.active_mode != 'W' || app.iteration_mode_enabled)) {
-            clear_hover_popup();
-            return;
-        }
-        const int hit = hit_test_flag(app, audio,
-                                      app.last_mouse_x, app.last_mouse_y);
-        if (hit != app.hover_popup.marker_index) {
-            if (app.hover_popup.visible) invalidate_top_strip();
-            app.hover_popup.marker_index = hit;
-            app.hover_popup.visible      = false;
-            app.hover_popup.entry_time   =
-                std::chrono::steady_clock::now();
-            // Precompute the popup's display text at rect-entry so the
-            // delay-completion paint doesn't have to recompute it. Empty
-            // when `hit` is not popup-eligible (the redraw branch then
-            // skips paint and keeps the strip clean).
-            if (app.render_view_enabled) {
-                app.hover_popup.cached_text =
-                    popup_eligible_marker(app, hit)
-                        ? compute_hover_popup_text(
-                              app.render_view_markers, hit,
-                              app.render_view_src_sr)
-                        : std::string();
-            } else {
-                app.hover_popup.cached_text =
-                    popup_eligible_marker(app, hit)
-                        ? compute_hover_popup_text(
-                              app.warpmarkers.markers(), hit,
-                              audio.sample_rate())
-                        : std::string();
-            }
-        }
-    };
 
     // X.7.5a: the drag and selection-shift lambdas have been hoisted onto
     // the GuiWarpMarkersOps struct in warpmarkers_ops.{cpp,h}.
@@ -537,7 +399,7 @@ int main(int argc, char** argv) {
     gui.set_on_close([&]() {
         // Window-manager close (title-bar X) routes through the unsaved-
         // work dialog when dirty, same as Ctrl+Q.
-        request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+        prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
     });
 
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,

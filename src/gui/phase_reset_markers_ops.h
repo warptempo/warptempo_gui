@@ -1,12 +1,12 @@
 #pragma once
 
 #include "app_state.h"
+#include "playback_lifecycle.h"
 #include "selection.h"
 #include "undo.h"
 #include "viewport.h"
 
 #include <cstdint>
-#include <functional>
 
 class GuiAudio;
 
@@ -19,34 +19,28 @@ class GuiAudio;
 void apply_phase_reset_position_delta(GuiPhaseResetMarker& m, double delta_seconds);
 
 // X.7.4: phase reset authoring cluster, extracted from main.cpp's inline
-// lambdas. The struct holds references to the long-lived state and the
-// std::function lambdas the methods read and write; bodies are byte-
-// identical to the originals modulo `this->` access on the captured
-// references and the lambda-call rewriting documented in
-// phase_reset_markers_ops.cpp.
+// lambdas. clear_hover_popup is reached through viewport;
+// stop_playback_if_playing through playback_lifecycle.
 struct GuiPhaseResetMarkersOps {
-    AppState&                                     app;
-    const GuiAudio&                               audio;
-    Viewport&                                     viewport;
-    Selection&                                    selection;
-    Undo&                                         undo;
-    std::function<void()>&                        clear_hover_popup;
-    std::function<void()>&                        stop_playback_if_playing;
+    AppState&             app;
+    const GuiAudio&       audio;
+    Viewport&             viewport;
+    Selection&            selection;
+    Undo&                 undo;
+    GuiPlaybackLifecycle& playback_lifecycle;
 
-    GuiPhaseResetMarkersOps(AppState&                                     app_,
-                           const GuiAudio&                               audio_,
-                           Viewport&                                     viewport_,
-                           Selection&                                    selection_,
-                           Undo&                                         undo_,
-                           std::function<void()>&                        clear_hover_popup_,
-                           std::function<void()>&                        stop_playback_if_playing_)
+    GuiPhaseResetMarkersOps(AppState&             app_,
+                            const GuiAudio&       audio_,
+                            Viewport&             viewport_,
+                            Selection&            selection_,
+                            Undo&                 undo_,
+                            GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
-          clear_hover_popup(clear_hover_popup_),
-          stop_playback_if_playing(stop_playback_if_playing_) {}
+          playback_lifecycle(playback_lifecycle_) {}
 
     void drop_phase_reset_at_position(double time_seconds);
     void drop_phase_reset_at_playhead();

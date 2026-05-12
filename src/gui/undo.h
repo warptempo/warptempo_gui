@@ -1,36 +1,31 @@
 #pragma once
 
 #include "app_state.h"
+#include "playback_lifecycle.h"
 #include "selection.h"
 #include "viewport.h"
 
-#include <functional>
 #include <vector>
 
 // X.7.3: undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
 // write; bodies are byte-identical to the originals modulo `this->` access
-// on the captured references. The two std::function references
-// (clear_hover_popup, stop_playback_if_playing) belong to lambdas that stay
-// in main.cpp because they have many callers outside the undo cluster —
-// same pattern as recompute_hover_at_cursor on Viewport.
+// on the captured references. clear_hover_popup is reached through
+// viewport; stop_playback_if_playing is reached through playback_lifecycle.
 struct Undo {
-    AppState&              app;
-    Viewport&              viewport;
-    Selection&             selection;
-    std::function<void()>& clear_hover_popup;
-    std::function<void()>& stop_playback_if_playing;
+    AppState&             app;
+    Viewport&             viewport;
+    Selection&            selection;
+    GuiPlaybackLifecycle& playback_lifecycle;
 
-    Undo(AppState&              app_,
-         Viewport&              viewport_,
-         Selection&             selection_,
-         std::function<void()>& clear_hover_popup_,
-         std::function<void()>& stop_playback_if_playing_)
+    Undo(AppState&             app_,
+         Viewport&             viewport_,
+         Selection&            selection_,
+         GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_),
           viewport(viewport_),
           selection(selection_),
-          clear_hover_popup(clear_hover_popup_),
-          stop_playback_if_playing(stop_playback_if_playing_) {}
+          playback_lifecycle(playback_lifecycle_) {}
 
     void recompute_dirty();
     void push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,

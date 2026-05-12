@@ -23,8 +23,8 @@
 //   move_playhead_to            → viewport.move_playhead_to
 //   apply_phase_reset_position_delta → free function (defined in main.cpp)
 //   current_samples_per_pixel   → free function
-//   stop_playback_if_playing,
-//   clear_hover_popup           → std::function refs (called as f())
+//   stop_playback_if_playing    → playback_lifecycle.stop_playback_if_playing
+//                                 (X.7.13 retired the std::function forwarder)
 
 // Drop a phase reset marker at `time_seconds`. Rejects creation within
 // 3 pixels at current zoom of an existing phase reset marker. Selection
@@ -171,7 +171,7 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
 // -1 for earlier, +1 for later. Symmetric with nudge_selected_markers.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
-    stop_playback_if_playing();
+    playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     const int sr = audio.sample_rate();
     if (sr <= 0) return;

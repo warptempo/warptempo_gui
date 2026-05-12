@@ -13,8 +13,9 @@
 //   prune_live_selection            → selection.prune_live_selection
 //   invalidate_waveform_area        → viewport.invalidate_waveform_area
 //   invalidate_timestamp_area       → viewport.invalidate_timestamp_area
-//   clear_hover_popup               → std::function ref (called as f())
-//   stop_playback_if_playing        → std::function ref (called as f())
+//   clear_hover_popup               → viewport.clear_hover_popup
+//   stop_playback_if_playing        → playback_lifecycle.stop_playback_if_playing
+//                                     (X.7.13 retired the std::function forwarders)
 //   settings_get                    → free function, takes app explicitly
 //
 // Free function calls (clamp_viewport_start) keep their original spelling —
@@ -82,7 +83,7 @@ void GuiTabMode::switch_active_mode_to(char target_mode) {
     }
     app.active_mode = target_mode;
     selection.prune_live_selection();
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 }
 
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
@@ -92,8 +93,8 @@ void GuiTabMode::switch_active_tab_to(char target_tab) {
     // Synchronous stop so the next tick doesn't snap the playhead
     // back to the audio cursor, overwriting the target tab's
     // stored playhead.
-    stop_playback_if_playing();
-    clear_hover_popup();
+    playback_lifecycle.stop_playback_if_playing();
+    viewport.clear_hover_popup();
     this->refresh_active_tab_from_app();
     app.active_tab = target_tab;
     const ViewState& target = (app.active_tab == 'A') ? app.tab_a : app.tab_b;

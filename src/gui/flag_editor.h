@@ -7,42 +7,30 @@
 #include "viewport.h"
 #include "warpmarkers.h"
 
-#include <functional>
 #include <string>
 
 // X.7.5b: flag-editor cluster, extracted from main.cpp's inline lambdas.
 // Covers the top-flag canonical-line editor (V.A1), the V.B iteration
 // popup editor, the Brief X.2 BPM popup editor, the Shift+I/Shift+M bulk
-// clears, and the BPM-mode enter/exit transitions. The struct holds
-// references to the long-lived state and the std::function lambdas the
-// methods read and write; bodies are byte-identical to the originals
-// modulo `this->` access on the captured references and the lambda-call
-// rewriting documented in flag_editor.cpp.
-//
-// Smaller reference-member set than GuiWarpMarkersOps: the editors don't
-// touch sample_rate, selection methods, the platform layer, or playback.
-// They operate on the text editor state machine and write parsed values
-// into the warp marker container directly via app.warpmarkers.marker_mut.
+// clears, and the BPM-mode enter/exit transitions. clear_hover_popup is
+// reached through viewport.
 struct GuiFlagEditor {
-    AppState&              app;
-    GuiAudio&              audio;
-    Viewport&              viewport;
-    Selection&             selection;
-    Undo&                  undo;
-    std::function<void()>& clear_hover_popup;
+    AppState&     app;
+    GuiAudio&     audio;
+    Viewport&     viewport;
+    Selection&    selection;
+    Undo&         undo;
 
-    GuiFlagEditor(AppState&              app_,
-                  GuiAudio&              audio_,
-                  Viewport&              viewport_,
-                  Selection&             selection_,
-                  Undo&                  undo_,
-                  std::function<void()>& clear_hover_popup_)
+    GuiFlagEditor(AppState&     app_,
+                  GuiAudio&     audio_,
+                  Viewport&     viewport_,
+                  Selection&    selection_,
+                  Undo&         undo_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
-          undo(undo_),
-          clear_hover_popup(clear_hover_popup_) {}
+          undo(undo_) {}
 
     std::string build_locked_prefix(const GuiWarpMarker& m);
     void exit_top_flag_edit_no_commit();

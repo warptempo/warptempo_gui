@@ -25,7 +25,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
     app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
     app.prompt.trigger         = t;
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     viewport.invalidate_all();
 }
 
@@ -59,7 +59,7 @@ void GuiPrompt::activate_response(char k) {
     if (trigger == DialogTrigger::CLOSE_WINDOW ||
         trigger == DialogTrigger::REVERT_TO_BLANK) {
         if (k == 's' || k == 'r') {
-            const bool ok = save_markers();
+            const bool ok = save_ops.save();
             if (!ok) {
                 app.prompt.text            = "Save failed.";
                 app.prompt.response_keys   = {'r', '\x7f', '\x1b'};

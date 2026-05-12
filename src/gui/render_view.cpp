@@ -20,8 +20,9 @@
 // X.7.6: render-view cluster. Method bodies are byte-identical to the
 // lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
-//   clear_hover_popup            → std::function ref (called as f())
-//   refresh_active_tab_from_app  → std::function ref (called as f())
+//   clear_hover_popup            → viewport.clear_hover_popup
+//   refresh_active_tab_from_app  → tab_mode.refresh_active_tab_from_app
+//                                  (X.7.13 retired the std::function forwarders)
 //   prune_live_selection         → selection.prune_live_selection
 //   rendersettings_path,
 //   write_rendersettings_for,
@@ -335,14 +336,14 @@ bool GuiRenderView::load_render_view_at(int index) {
     playback.shutdown();
     app.is_playing      = false;
     app.playback_cursor = 0;
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 
     // Snapshot the live authoring playhead/viewport/zoom into the
     // active tab's slot before we overwrite `audio`. restore_source_audio
     // reads it back on render-view exit so the user lands where they
     // left the source view rather than at sample 0.
     if (source_audio_held.total_frames() == 0) {
-        refresh_active_tab_from_app();
+        tab_mode.refresh_active_tab_from_app();
         source_audio_held = std::move(audio);
     }
     audio = std::move(next);
@@ -422,7 +423,7 @@ void GuiRenderView::restore_source_audio() {
     playback.shutdown();
     app.is_playing      = false;
     app.playback_cursor = 0;
-    clear_hover_popup();
+    viewport.clear_hover_popup();
 
     audio = std::move(source_audio_held);
     source_audio_held = GuiAudio{};

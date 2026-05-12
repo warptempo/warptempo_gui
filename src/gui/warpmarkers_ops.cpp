@@ -26,8 +26,9 @@
 //   invalidate_timestamp_area      → viewport.invalidate_timestamp_area
 //   invalidate_top_strip           → viewport.invalidate_top_strip
 //   move_playhead_to               → viewport.move_playhead_to
-//   stop_playback_if_playing,
-//   clear_hover_popup              → std::function refs (called as f())
+//   stop_playback_if_playing       → playback_lifecycle.stop_playback_if_playing
+//   clear_hover_popup              → viewport.clear_hover_popup
+//                                    (X.7.13 retired the std::function forwarders)
 //   apply_phase_reset_position_delta → free function (declared in
 //                                    phase_reset_markers_ops.h)
 //   resolve_inherited_tempo,
@@ -427,7 +428,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     d.hit_marker             = hit;
     d.pending_collapse_to_hit = pending_collapse;
     app.drag = std::move(d);
-    clear_hover_popup();
+    viewport.clear_hover_popup();
     return true;
 }
 
@@ -603,7 +604,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Nudges move the playhead (via sync_playhead_to_last_selected).
     // Stop playback first — Ctrl+Left/Right is the only caller path.
-    stop_playback_if_playing();
+    playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
