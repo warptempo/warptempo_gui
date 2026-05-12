@@ -1361,9 +1361,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // `l` (no modifier) clears the settings-side trim. `Shift+L` clears
+    // `u` (no modifier) unsets the settings-side trim bounds. `Shift+U` clears
     // the selection set (UI-only — no dirty, no playhead move).
-    if (key == GuiKeys::L && !ctrl) {
+    if (key == GuiKeys::U && !ctrl) {
         if (shift) {
             selection.clear_selection();
         } else if (app.has_trim_begin || app.has_trim_end) {
