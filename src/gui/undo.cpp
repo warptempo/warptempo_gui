@@ -50,6 +50,7 @@ void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
     e.phase_reset_snapshot = app.phase_reset_markers.markers();
     e.op_kind            = op_kind;
     e.op_mode            = 'W';
+    e.tab                = app.active_tab;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -62,6 +63,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.phase_reset_snapshot = std::move(pre_state);
     e.op_kind            = op_kind;
     e.op_mode            = 'P';
+    e.tab                = app.active_tab;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -75,6 +77,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.phase_reset_snapshot = std::move(trans_pre);
     e.op_kind            = op_kind;
     e.op_mode            = op_mode;
+    e.tab                = app.active_tab;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -231,6 +234,10 @@ void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
 
 void Undo::do_undo() {
     if (app.history.undo_stack.empty()) return;
+    // Render view is read-only: undo and redo are silent no-ops so the
+    // underlying source-view marker lists are not mutated behind the
+    // user's back while the UI says render view is read-only.
+    if (app.render_view_enabled) return;
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());
@@ -241,6 +248,7 @@ void Undo::do_undo() {
     redo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
     redo_entry.op_kind            = entry.op_kind;
     redo_entry.op_mode            = entry.op_mode;
+    redo_entry.tab                = entry.tab;
     redo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = redo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = redo_entry.phase_reset_snapshot;
@@ -250,6 +258,14 @@ void Undo::do_undo() {
         app.history.redo_stack.erase(app.history.redo_stack.begin());
     }
     if (app.history.saved_valid) app.history.saved_distance += 1;
+
+    // Restore the originating A/B tab before the marker swap. The
+    // post-restore rules below call selection.jump_playhead_to(...),
+    // which writes app.playhead_sample / app.viewport_start_sample —
+    // those writes must land on the tab the action was authored on.
+    if (entry.tab != app.active_tab) {
+        tab_mode.switch_active_tab_to(entry.tab);
+    }
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
@@ -291,6 +307,7 @@ void Undo::do_undo() {
 
 void Undo::do_redo() {
     if (app.history.redo_stack.empty()) return;
+    if (app.render_view_enabled) return;
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.redo_stack.back());
@@ -301,6 +318,7 @@ void Undo::do_redo() {
     undo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
     undo_entry.op_kind            = entry.op_kind;
     undo_entry.op_mode            = entry.op_mode;
+    undo_entry.tab                = entry.tab;
     undo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = undo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = undo_entry.phase_reset_snapshot;
@@ -310,6 +328,10 @@ void Undo::do_redo() {
         app.history.undo_stack.erase(app.history.undo_stack.begin());
     }
     if (app.history.saved_valid) app.history.saved_distance -= 1;
+
+    if (entry.tab != app.active_tab) {
+        tab_mode.switch_active_tab_to(entry.tab);
+    }
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);

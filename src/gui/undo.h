@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "playback_lifecycle.h"
 #include "selection.h"
+#include "tab_mode.h"
 #include "viewport.h"
 
 #include <vector>
@@ -11,21 +12,26 @@
 // The struct holds references to the long-lived state the methods read and
 // write; bodies are byte-identical to the originals modulo `this->` access
 // on the captured references. clear_hover_popup is reached through
-// viewport; stop_playback_if_playing is reached through playback_lifecycle.
+// viewport; stop_playback_if_playing is reached through playback_lifecycle;
+// switch_active_tab_to is reached through tab_mode (so do_undo / do_redo
+// can restore the originating A/B tab before applying the marker change).
 struct Undo {
     AppState&             app;
     Viewport&             viewport;
     Selection&            selection;
     GuiPlaybackLifecycle& playback_lifecycle;
+    GuiTabMode&           tab_mode;
 
     Undo(AppState&             app_,
          Viewport&             viewport_,
          Selection&            selection_,
-         GuiPlaybackLifecycle& playback_lifecycle_)
+         GuiPlaybackLifecycle& playback_lifecycle_,
+         GuiTabMode&           tab_mode_)
         : app(app_),
           viewport(viewport_),
           selection(selection_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          tab_mode(tab_mode_) {}
 
     void recompute_dirty();
     void push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,

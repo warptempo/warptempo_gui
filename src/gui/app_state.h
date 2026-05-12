@@ -48,11 +48,14 @@ enum class OpKind { Create, Destroy, Move, Other };
 // snapshot and the mode the operation was performed in. Both lists are
 // always restored on undo/redo so the inverse is symmetric regardless of
 // which list the op actually touched. `op_mode` lets undo flip the active
-// mode as a side effect — visual feedback for what's being undone.
+// mode; `tab` lets undo switch the active tab — both are context tags
+// that restore the original authoring view as visual feedback for what's
+// being undone.
 struct UndoEntry {
     std::vector<GuiWarpMarker>      snapshot;
     std::vector<GuiPhaseResetMarker> phase_reset_snapshot;
     char                      op_mode              = 'W';
+    char                      tab                  = 'A';
     OpKind                    op_kind              = OpKind::Other;
     int                       hint_last_selected   = -1;
 };

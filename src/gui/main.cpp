@@ -328,13 +328,13 @@ int main(int argc, char** argv) {
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport);
     Selection selection(app, audio, viewport, playback);
-    Undo undo(app, viewport, selection, playback_lifecycle);
+    GuiTabMode tab_mode(app, audio, viewport, selection, playback_lifecycle);
+    Undo undo(app, viewport, selection, playback_lifecycle, tab_mode);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle);
     GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
                               playback_lifecycle);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo);
-    GuiTabMode tab_mode(app, audio, viewport, selection, playback_lifecycle);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, tab_mode);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
