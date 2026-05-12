@@ -333,22 +333,17 @@ struct AppState {
     // saved reference rather than touching dirty directly.
     UndoHistory history;
 
-    // True if the marker list has been modified since load or last save.
-    // Derived from `history`: mirrors history.is_dirty() after every op.
+    // True if either marker file has authored changes since the last save.
+    // app.dirty = warp_dirty || phase_reset_dirty, recomputed after every
+    // push/undo/redo by walking saved_distance against each entry's
+    // op_mode. Drives both the unsaved-work dialog and the dirty-dot.
     //
-    // Chunk S.2.2 splits dirty into two per-file flags so save can pick
-    // each file independently and the unsaved-work dialog can be triggered
-    // by either. `dirty` becomes the OR of both. The undo system continues
-    // to drive both flags through history; per-mode dirty is recomputed
-    // after every push/undo/redo by walking the saved-distance against
-    // each entry's op_mode.
+    // Settings-class state (trim, viewport, follow_mode, active_mode,
+    // playback_speed) deliberately does NOT participate in dirty: it is
+    // silently persisted on Ctrl+S and silently discarded on Ctrl+W
+    // without save, mirroring the viewport precedent.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty      = false;
-    // Set whenever a settings-only mutation occurs (b / e / l trim keys,
-    // future settings-class keys). Settings have no undo; cleared by
-    // save_markers after a successful .settings write. ORed into `dirty`
-    // alongside warp_dirty / phase_reset_dirty by recompute_dirty.
-    bool        settings_dirty       = false;
     bool        dirty                = false;
 
     // Trim region, expressed in seconds for stability across sample-rate

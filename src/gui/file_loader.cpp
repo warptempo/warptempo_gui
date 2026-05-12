@@ -111,7 +111,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.dirty              = false;
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
-    app.settings_dirty     = false;
     app.has_trim_begin     = false;
     app.has_trim_end       = false;
     app.trim_begin_seconds = 0.0;
@@ -286,7 +285,6 @@ void GuiFileLoader::revert_to_blank() {
     app.dirty              = false;
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
-    app.settings_dirty     = false;
     app.first_save_pending = true;
 
     app.has_trim_begin     = false;

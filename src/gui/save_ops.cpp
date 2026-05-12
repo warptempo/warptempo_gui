@@ -71,14 +71,6 @@ bool GuiSaveOps::save() {
                 "warptempo_gui: settings save failed: %s: %s\n",
                 app.settings_path.c_str(),
                 std::strerror(errno));
-        } else {
-            // Successful settings write clears the settings-side
-            // dirty flag and refolds it into app.dirty.
-            if (app.settings_dirty) {
-                app.settings_dirty = false;
-                app.dirty = app.warp_dirty || app.phase_reset_dirty;
-                viewport.invalidate_timestamp_area();
-            }
         }
     }
     return true;

@@ -1371,9 +1371,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             app.has_trim_end       = false;
             app.trim_begin_seconds = 0.0;
             app.trim_end_seconds   = 0.0;
-            app.settings_dirty     = true;
-            app.dirty              = app.warp_dirty || app.phase_reset_dirty
-                                     || app.settings_dirty;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
         }
@@ -2268,8 +2265,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 // existing trim toggles it off. A candidate equal-frame to the opposite
 // trim refuses (would collapse the trim region). A candidate that would
 // invert the trim ordering auto-swaps with the opposite trim. Otherwise
-// a simple set. Trim is settings-class — no undo; sets settings_dirty
-// and invalidates the waveform + timestamp areas.
+// a simple set. Trim is settings-class — no undo, no dirty signal
+// (settings-class state is silently persisted on Ctrl+S, silently
+// discarded on Ctrl+W without save — same as viewport). Only the
+// waveform + timestamp areas are invalidated.
 void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -2285,9 +2284,6 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
         if (cur_frame == cand_frame) {
             app.has_trim_begin     = false;
             app.trim_begin_seconds = 0.0;
-            app.settings_dirty     = true;
-            app.dirty              = app.warp_dirty || app.phase_reset_dirty
-                                     || app.settings_dirty;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
@@ -2310,9 +2306,6 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
             app.trim_end_seconds   = cand_seconds;
             app.trim_begin_seconds = old_end;
             app.has_trim_begin     = true;
-            app.settings_dirty     = true;
-            app.dirty              = app.warp_dirty || app.phase_reset_dirty
-                                     || app.settings_dirty;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
@@ -2321,9 +2314,6 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
 
     app.has_trim_begin     = true;
     app.trim_begin_seconds = cand_seconds;
-    app.settings_dirty     = true;
-    app.dirty              = app.warp_dirty || app.phase_reset_dirty
-                             || app.settings_dirty;
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 }
@@ -2342,9 +2332,6 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
         if (cur_frame == cand_frame) {
             app.has_trim_end     = false;
             app.trim_end_seconds = 0.0;
-            app.settings_dirty   = true;
-            app.dirty            = app.warp_dirty || app.phase_reset_dirty
-                                   || app.settings_dirty;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
@@ -2364,9 +2351,6 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
             app.trim_begin_seconds = cand_seconds;
             app.trim_end_seconds   = old_begin;
             app.has_trim_end       = true;
-            app.settings_dirty     = true;
-            app.dirty              = app.warp_dirty || app.phase_reset_dirty
-                                     || app.settings_dirty;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
@@ -2375,9 +2359,6 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
 
     app.has_trim_end     = true;
     app.trim_end_seconds = cand_seconds;
-    app.settings_dirty   = true;
-    app.dirty            = app.warp_dirty || app.phase_reset_dirty
-                           || app.settings_dirty;
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 }

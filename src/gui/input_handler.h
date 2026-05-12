@@ -205,7 +205,8 @@ private:
     // same sample frame toggles off; equal-frame collision with the
     // opposite trim is refused; out-of-order candidate auto-swaps with
     // the opposite trim. Trim is settings-class — no undo participation;
-    // sets app.settings_dirty and invalidates.
+    // no dirty signal (silently persisted on Ctrl+S, silently discarded
+    // on Ctrl+W without save); invalidates waveform + timestamp areas.
     void handle_trim_set_begin_at_playhead();
     void handle_trim_set_end_at_playhead();
 };
