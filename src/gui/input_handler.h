@@ -193,6 +193,13 @@ private:
     void handle_wheel(GuiMouseButton button, bool ctrl, bool alt,
                       bool inside_waveform, bool inside_top);
 
+    // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
+    // playback, move the playhead onto the newly focused marker, and
+    // recenter the viewport at maximum zoom. Mirrors the GuiKeys::C zoom +
+    // center sequence with the playhead-move folded in. Mode-aware: reads
+    // from phase_reset_markers in 'P' mode, warpmarkers otherwise.
+    void cycle_marker_focus_with_recenter(bool forward);
+
     // b / e key handlers — set the settings-side trim_begin / trim_end to
     // the playhead's current position. Mode-agnostic. Re-press at the
     // same sample frame toggles off; equal-frame collision with the

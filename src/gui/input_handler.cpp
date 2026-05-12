@@ -1330,9 +1330,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    if (key == GuiKeys::Tab && !shift) { selection.select_next_marker(); return; }
-    if (key == GuiKeys::Tab && shift)  { selection.select_prev_marker(); return; }
-    if (key == GuiKeys::IsoLeftTab)  { selection.select_prev_marker(); return; }
+    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter at max
+    // zoom on the focused marker. The Ctrl+Tab branch above runs first and
+    // returns, so Ctrl+Tab is consumed before reaching here; the explicit
+    // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
+    // cycle path either.
+    if (!ctrl && key == GuiKeys::Tab && !shift) {
+        cycle_marker_focus_with_recenter(true);  return;
+    }
+    if (!ctrl && key == GuiKeys::Tab && shift)  {
+        cycle_marker_focus_with_recenter(false); return;
+    }
+    if (!ctrl && key == GuiKeys::IsoLeftTab)    {
+        cycle_marker_focus_with_recenter(false); return;
+    }
 
     // Tempo nudge. Ctrl+Up / Ctrl+Down only. Bare `=` / `-` were the
     // previous binding; they now zoom (see below) so the keyboard has
@@ -1459,6 +1470,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         default: break;
         }
     }
+}
+
+void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
+    if (forward) selection.select_next_marker();
+    else         selection.select_prev_marker();
+
+    const int idx = app.last_selected_marker;
+    if (idx < 0) return;
+
+    const int sr = audio.sample_rate();
+    int64_t sample = 0;
+    if (app.active_mode == 'P') {
+        const auto& tv = app.phase_reset_markers.markers();
+        if (idx >= static_cast<int>(tv.size())) return;
+        sample = static_cast<int64_t>(std::nearbyint(
+            tv[idx].time_seconds * static_cast<double>(sr)));
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        if (idx >= static_cast<int>(mv.size())) return;
+        sample = static_cast<int64_t>(std::nearbyint(
+            mv[idx].time_seconds * static_cast<double>(sr)));
+    }
+
+    playback_lifecycle.stop_playback_if_playing();
+    viewport.move_playhead_to(sample);
+    // Mirror the GuiKeys::C body verbatim — apply_zoom_change(0) is a
+    // no-op when already at zoom 0, in which case center_viewport_on_playhead
+    // alone carries the centering work.
+    viewport.apply_zoom_change(0);
+    viewport.center_viewport_on_playhead();
 }
 
 // X.7.8b-2: shared wheel handler. Verbatim from the lambda at the original

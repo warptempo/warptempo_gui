@@ -83,34 +83,23 @@ void Selection::cycle_selection(bool forward) {
             static_cast<double>(sr)));
     };
 
-    const int sel_size = static_cast<int>(app.selected_markers.size());
     int new_sel = -1;
 
-    if (sel_size >= 2) {
+    if (!app.selected_markers.empty()) {
+        // Anchor on last_selected_marker over the *full* marker list. A
+        // multi-selection collapses down to next/prev from this anchor —
+        // same code path as the single-selection case. The
+        // repair_last_selected invariant guarantees the anchor is valid
+        // whenever selected_markers is non-empty.
         const int anchor = app.last_selected_marker;
+        if (anchor < 0 || anchor >= n) return;
+        const int64_t cur_f = frame_of(anchor);
         if (forward) {
-            auto it = app.selected_markers.upper_bound(anchor);
-            if (it == app.selected_markers.end()) {
-                it = app.selected_markers.begin();
-            }
-            new_sel = *it;
-        } else {
-            auto it = app.selected_markers.lower_bound(anchor);
-            if (it == app.selected_markers.begin()) {
-                it = app.selected_markers.end();
-            }
-            --it;
-            new_sel = *it;
-        }
-    } else if (sel_size == 1) {
-        const int cur = *app.selected_markers.begin();
-        const int64_t cur_f = frame_of(cur);
-        if (forward) {
-            for (int i = cur + 1; i < n; ++i) {
+            for (int i = anchor + 1; i < n; ++i) {
                 if (frame_of(i) > cur_f) { new_sel = i; break; }
             }
         } else {
-            for (int i = cur - 1; i >= 0; --i) {
+            for (int i = anchor - 1; i >= 0; --i) {
                 if (frame_of(i) < cur_f) { new_sel = i; break; }
             }
         }
@@ -129,16 +118,7 @@ void Selection::cycle_selection(bool forward) {
 
     if (new_sel < 0) return;
 
-    if (sel_size >= 2) {
-        // Within-set cycling: only the focus changes.
-        if (new_sel == app.last_selected_marker) return;
-        app.last_selected_marker = new_sel;
-        viewport.invalidate_top_strip();
-    } else {
-        if (app.selected_markers.count(new_sel) &&
-            app.last_selected_marker == new_sel) return;
-        set_single_selection(new_sel);
-    }
+    set_single_selection(new_sel);
 
     const int64_t sample = frame_of(new_sel);
     const int64_t visible = samples_visible(app, audio);
