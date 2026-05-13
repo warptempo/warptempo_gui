@@ -343,11 +343,11 @@ RenderOutcome do_render(const RenderRequest& req,
         settings_get(req.settings_passthrough, "N"), 4096);
     const int    fftw_threads     = parse_int(
         settings_get(req.settings_passthrough, "fftw_threads"), 0);
-    const double phase_reset_offset_R_s_mult = parse_double(
-        settings_get(req.settings_passthrough, "phase_reset_offset_R_s"), 1.0);
+    const double phase_reset_offset_hops_mult = parse_double(
+        settings_get(req.settings_passthrough, "phase_reset_offset_hops"), 1.0);
     const int    R_s              = N_fft / 4;
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
-        std::nearbyint(phase_reset_offset_R_s_mult *
+        std::nearbyint(phase_reset_offset_hops_mult *
                        static_cast<double>(R_s)));
 
     // --- Probe source audio for sample rate / total frames. ---
