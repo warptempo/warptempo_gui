@@ -8,20 +8,14 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cerrno>
 #include <cmath>
-#include <csignal>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <set>
 #include <string>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
 
@@ -67,104 +61,6 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-// Tristate result for ffmpeg subprocess runs. Mirrors EngineResult /
-// RenderOutcome so the trimmed-wav alimiter call can map cleanly into
-// do_render's outcome.
-enum class SubprocessResult { Success, Failed, Cancelled };
-
-// fork + execvp + waitpid. When `cancel_flag` is non-null, the parent polls
-// waitpid(WNOHANG) every 10 ms and checks the flag between polls; if set, it
-// sends SIGTERM, waits ~200 ms for a clean exit, escalates to SIGKILL if
-// needed, reaps the zombie, and returns Cancelled. The 10 ms cadence keeps
-// cancel-to-stop latency well below human perception while costing nothing
-// against the subprocess's own CPU budget.
-SubprocessResult run_subprocess(const std::string& prog,
-                                const std::vector<std::string>& args,
-                                const std::atomic<bool>* cancel_flag = nullptr) {
-    pid_t pid = fork();
-    if (pid < 0) {
-        std::fprintf(stderr, "warptempo_gui: render error: fork failed: %s\n",
-                     std::strerror(errno));
-        return SubprocessResult::Failed;
-    }
-    if (pid == 0) {
-        std::vector<char*> argv;
-        argv.reserve(args.size() + 2);
-        argv.push_back(const_cast<char*>(prog.c_str()));
-        for (const auto& a : args) argv.push_back(const_cast<char*>(a.c_str()));
-        argv.push_back(nullptr);
-        execvp(prog.c_str(), argv.data());
-        std::fprintf(stderr, "warptempo_gui: render error: execvp('%s') failed: %s\n",
-                     prog.c_str(), std::strerror(errno));
-        _exit(127);
-    }
-
-    auto reap_blocking = [&](int& status) {
-        while (::waitpid(pid, &status, 0) < 0) {
-            if (errno == EINTR) continue;
-            std::fprintf(stderr,
-                "warptempo_gui: render error: waitpid failed: %s\n",
-                std::strerror(errno));
-            return false;
-        }
-        return true;
-    };
-
-    int status = 0;
-
-    if (cancel_flag) {
-        // Polling loop: check the flag every 10 ms, reap with WNOHANG, sleep
-        // briefly between iterations. timespec is { 0, 10_000_000 } — 10 ms.
-        struct timespec ts;
-        ts.tv_sec  = 0;
-        ts.tv_nsec = 10 * 1000 * 1000;
-
-        while (true) {
-            if (cancel_flag->load()) {
-                ::kill(pid, SIGTERM);
-                // Give the child up to ~200 ms to flush and exit cleanly.
-                for (int i = 0; i < 20; ++i) {
-                    pid_t r = ::waitpid(pid, &status, WNOHANG);
-                    if (r == pid) return SubprocessResult::Cancelled;
-                    if (r < 0 && errno != EINTR) {
-                        std::fprintf(stderr,
-                            "warptempo_gui: render error: waitpid(WNOHANG) "
-                            "failed: %s\n", std::strerror(errno));
-                        return SubprocessResult::Failed;
-                    }
-                    nanosleep(&ts, nullptr);
-                }
-                // Escalate.
-                ::kill(pid, SIGKILL);
-                (void)reap_blocking(status);
-                return SubprocessResult::Cancelled;
-            }
-
-            pid_t r = ::waitpid(pid, &status, WNOHANG);
-            if (r == pid) break;
-            if (r < 0) {
-                if (errno == EINTR) continue;
-                std::fprintf(stderr,
-                    "warptempo_gui: render error: waitpid(WNOHANG) failed: %s\n",
-                    std::strerror(errno));
-                return SubprocessResult::Failed;
-            }
-            // r == 0: still running. Sleep and loop.
-            nanosleep(&ts, nullptr);
-        }
-    } else {
-        if (!reap_blocking(status)) return SubprocessResult::Failed;
-    }
-
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: '%s' exited with non-zero status\n",
-            prog.c_str());
-        return SubprocessResult::Failed;
-    }
-    return SubprocessResult::Success;
-}
-
 bool write_standard_timemap(const std::string& path,
                             const std::vector<TimemapSegment>& segs,
                             bool drop_zero_zero) {
@@ -196,26 +92,6 @@ bool write_midi_tempomap(const std::string& path,
         of << e.target_time_sec << " " << e.multiplier << "\n";
     }
     return true;
-}
-
-SubprocessResult run_ffmpeg_alimiter(const std::string& in_path,
-                                     const std::string& out_path,
-                                     double ceiling_dbfs,
-                                     const std::atomic<bool>* cancel_flag) {
-    char limit_buf[32];
-    std::snprintf(limit_buf, sizeof(limit_buf), "%gdB", ceiling_dbfs);
-    std::string af =
-        std::string("alimiter=latency=enabled:level=disabled:asc=disabled:")
-        + "level_in=0dB:limit=" + limit_buf
-        + ":level_out=0dB:attack=10:release=20";
-    return run_subprocess("ffmpeg", {
-        "-hide_banner", "-loglevel", "error",
-        "-y", "-i", in_path,
-        "-c:a", "pcm_s24le",
-        "-af",  af,
-        "-f", "wav",
-        out_path
-    }, cancel_flag);
 }
 
 // Resolve each GuiWarpMarker to a MarkerForRender. Filters out markers that are:
@@ -327,6 +203,12 @@ RenderOutcome do_render(const RenderRequest& req,
         settings_get(req.settings_passthrough, "fftw_threads"), 0);
     const double phase_reset_offset_hops_mult = parse_double(
         settings_get(req.settings_passthrough, "phase_reset_offset_hops"), 1.0);
+    const double limiter_ceiling = parse_double(
+        settings_get(req.settings_passthrough, "limiter_ceiling"), -0.3);
+    const double limiter_attack_ms = parse_double(
+        settings_get(req.settings_passthrough, "limiter_attack_ms"), 0.25);
+    const double limiter_release_ms = parse_double(
+        settings_get(req.settings_passthrough, "limiter_release_ms"), 0.5);
     const int    R_s              = N_fft / 4;
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
         std::nearbyint(phase_reset_offset_hops_mult *
@@ -393,13 +275,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // formats write final_output_path directly.
     const std::string staging_output_path = final_output_path + ".tmp";
 
-    // --- Temp file paths (pid-scoped). ---
-    const pid_t pid = ::getpid();
-    std::string tmp_prefix = "/tmp/warptempo_" + std::to_string(pid) + "_";
-    std::string tmp_engine_wav  = tmp_prefix + "engine.wav";
-
     auto cleanup_all = [&]() {
-        unlink_silent(tmp_engine_wav);
         unlink_silent(staging_output_path);
     };
 
@@ -432,17 +308,14 @@ RenderOutcome do_render(const RenderRequest& req,
         }
 
         // Limiter routing. `limiter_enabled_on_render=false` means no
-        // limiter anywhere in the render pipeline. When true, trim state
-        // decides: no trim → engine spectral limiter; trim → ffmpeg
-        // alimiter downstream (the spectral limiter cannot run on
-        // a trimmed render because the engine receives shifted timemap +
-        // sliced source).
-        const double ceiling_dbfs = -0.3;
-        bool run_alimiter_after_engine = false;
-        bool engine_spectral_limiter   = false;
+        // limiter anywhere. When true, trim state decides: no trim →
+        // engine spectral limiter (frequency-domain, final-archival);
+        // trim → engine peak limiter (time-domain, fast iteration).
+        LimiterMode limiter_mode = LimiterMode::None;
         if (user_limiter_en) {
-            if (tmres.trimmed) run_alimiter_after_engine = true;
-            else               engine_spectral_limiter   = true;
+            limiter_mode = tmres.trimmed
+                ? LimiterMode::Peak
+                : LimiterMode::Spectral;
         }
 
         EngineParams ep;
@@ -451,21 +324,19 @@ RenderOutcome do_render(const RenderRequest& req,
             src_samples.size() / static_cast<size_t>(src_ch);
         ep.source_sample_rate   = src_sr;
         ep.source_channels      = src_ch;
-        ep.output_audio_path    = run_alimiter_after_engine
-            ? tmp_engine_wav
-            : staging_output_path;
+        ep.output_audio_path    = staging_output_path;
         ep.timemap.reserve(tmres.standard.size());
         for (const auto& s : tmres.standard) {
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
         }
         ep.N                    = N_fft;
         ep.fftw_threads         = fftw_threads;
-        ep.limiter_ceiling_dbfs = ceiling_dbfs;
-        ep.limiter_enabled      = engine_spectral_limiter;
+        ep.limiter_mode         = limiter_mode;
+        ep.limiter_ceiling_dbfs       = limiter_ceiling;
+        ep.peak_limiter_ceiling_dbfs  = limiter_ceiling;
+        ep.peak_limiter_attack_ms     = limiter_attack_ms;
+        ep.peak_limiter_release_ms    = limiter_release_ms;
         ep.limiter_diag         = false;
-        // 24-bit PCM only when the engine's write is the final file AND
-        // its internal limiter ran. Trimmed path writes intermediate float.
-        ep.output_24bit_pcm     = !tmres.trimmed && user_limiter_en;
         // Trim-relative source-frame domain. The engine receives a sliced
         // source buffer and a trim-shifted timemap, so phase_reset_frames
         // must live in the same trimmed-source domain as the rest of the
@@ -518,13 +389,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? RenderOutcome::Cancelled
                 : RenderOutcome::Failed;
         };
-        auto handle_sub = [&](SubprocessResult r) -> RenderOutcome {
-            if (r == SubprocessResult::Success)   return RenderOutcome::Success;
-            cleanup_all();
-            return (r == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
-        };
 
         const EngineResult er = run_warptempo_engine(
             ep, &engine_frame_map, &engine_R_s, cancel_flag);
@@ -533,11 +397,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
             }
             return handle_eng(er);
-        }
-        if (run_alimiter_after_engine) {
-            const SubprocessResult sr = run_ffmpeg_alimiter(
-                tmp_engine_wav, staging_output_path, ceiling_dbfs, cancel_flag);
-            if (sr != SubprocessResult::Success) return handle_sub(sr);
         }
 
         // Atomic publish: staging → final.

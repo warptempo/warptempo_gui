@@ -194,6 +194,9 @@ std::string format_default_settings_template(const std::string& stem,
     s += "fftw_threads=16\n";
     s += "limiter_enabled_on_render=true\n";
     s += "phase_reset_offset_hops=1.000000\n";
+    s += "limiter_ceiling=-0.300000\n";
+    s += "limiter_attack_ms=0.250000\n";
+    s += "limiter_release_ms=0.500000\n";
     s += "active_mode=W\n";
     s += "playback_speed=1.000000\n";
     s += "follow=true\n";

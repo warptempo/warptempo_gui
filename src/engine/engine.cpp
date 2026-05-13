@@ -113,14 +113,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     init_fftw_threads(audio_stft, p.fftw_threads);
 
     auto& lp = audio_stft.limiter_params;
-    lp.enabled              = p.limiter_enabled;
+    lp.enabled              = (p.limiter_mode == LimiterMode::Spectral);
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
     lp.num_bands_override   = p.limiter_num_bands;
     lp.diag                 = p.limiter_diag;
 
-    audio_stft.output_audio_file = p.output_audio_path;
-    audio_stft.output_24bit_pcm  = p.output_24bit_pcm;
+    audio_stft.output_audio_file       = p.output_audio_path;
+    audio_stft.limiter_mode            = p.limiter_mode;
+    audio_stft.peak_limiter_ceiling_dbfs = p.peak_limiter_ceiling_dbfs;
+    audio_stft.peak_limiter_attack_ms    = p.peak_limiter_attack_ms;
+    audio_stft.peak_limiter_release_ms   = p.peak_limiter_release_ms;
 
     if (audio_stft.N % 4 != 0) {
         std::cerr << "Error: N must be divisible by 4.\n";

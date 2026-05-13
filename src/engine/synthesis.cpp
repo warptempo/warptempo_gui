@@ -1,4 +1,5 @@
 #include "synthesis.h"
+#include "peak_limiter.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -142,7 +143,8 @@ void Synthesis::synthesize_full(
 void Synthesis::process(AudioSTFT& stft) {
     SF_INFO tgt_info = stft.src_info;
     tgt_info.format = SF_FORMAT_WAV |
-        (stft.output_24bit_pcm ? SF_FORMAT_PCM_24 : SF_FORMAT_FLOAT);
+        (stft.limiter_mode != LimiterMode::None
+            ? SF_FORMAT_PCM_24 : SF_FORMAT_FLOAT);
 
     SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
     if (!output_snd) {
@@ -154,8 +156,23 @@ void Synthesis::process(AudioSTFT& stft) {
         sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
     };
 
-    synthesize_full(stft, nullptr, write_to_file,
-                    /*show_progress=*/true,
-                    /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+    if (stft.limiter_mode == LimiterMode::Peak) {
+        PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
+                       stft.peak_limiter_attack_ms,
+                       stft.peak_limiter_release_ms,
+                       stft.src_info.samplerate,
+                       stft.channels);
+        auto write_through_limiter = [&](const float* buf, size_t n_frames) {
+            pl.process(buf, n_frames, write_to_file);
+        };
+        synthesize_full(stft, nullptr, write_through_limiter,
+                        /*show_progress=*/true,
+                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+        pl.flush(write_to_file);
+    } else {
+        synthesize_full(stft, nullptr, write_to_file,
+                        /*show_progress=*/true,
+                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+    }
     sf_close(output_snd);
 }

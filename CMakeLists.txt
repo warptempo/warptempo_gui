@@ -85,6 +85,7 @@ add_executable(warptempo_gui
     src/gui/miniaudio_impl.cpp
     src/engine/engine.cpp
     src/engine/limiter.cpp
+    src/engine/peak_limiter.cpp
     src/engine/synthesis.cpp
     ${WAYLAND_GENERATED_SOURCES}
 )

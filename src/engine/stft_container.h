@@ -8,6 +8,8 @@
 #include <fftw3.h>
 #include <sndfile.h>
 
+#include "engine.h"
+
 // --- Data Structures ---
 struct TimeMapSegment {
     size_t src_frame;
@@ -132,8 +134,13 @@ struct AudioSTFT {
 
     // Output path (derived from MD5 of source audio)
     std::string output_audio_file;
-    // When true, synthesis writes 24-bit PCM; otherwise 32-bit float.
-    bool output_24bit_pcm = false;
+    // Mirrors EngineParams::limiter_mode. Synthesis derives the wav format
+    // from this (Spectral/Peak → 24-bit PCM, None → 32-bit float) and decides
+    // whether to wrap its write_cb through a PeakLimiter.
+    LimiterMode limiter_mode = LimiterMode::None;
+    double peak_limiter_ceiling_dbfs = -0.3;
+    double peak_limiter_attack_ms    = 0.25;
+    double peak_limiter_release_ms   = 0.5;
 
     // Cached frame map (populated once in main, reused by all passes)
     std::vector<int64_t> frame_map;

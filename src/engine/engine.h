@@ -7,6 +7,15 @@
 #include <utility>
 #include <vector>
 
+// Tri-state selector for the engine's limiter pass. The 24-bit-PCM output
+// format decision is derived from this enum inside the engine (None →
+// 32-bit float, Spectral/Peak → 24-bit PCM) — single source of truth.
+enum class LimiterMode {
+    None,      // no limiter; output is 32-bit float
+    Spectral,  // frequency-domain limiter (limiter.cpp)
+    Peak,      // time-domain peak limiter (peak_limiter.cpp), inline in synthesis
+};
+
 // Parameter struct for the warptempo DSP pipeline. Constructed by the GUI's
 // render pipeline and passed to run_warptempo_engine().
 struct EngineParams {
@@ -24,12 +33,14 @@ struct EngineParams {
 
     int    N                          = 4096;
     int    fftw_threads               = 0;   // 0 = auto
-    bool   limiter_enabled            = true;
-    double limiter_ceiling_dbfs       = -0.3;
+    LimiterMode limiter_mode          = LimiterMode::None;
+    double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
     int    limiter_num_bands          = 0;
     bool   limiter_diag               = false;
-    bool   output_24bit_pcm           = false;
+    double peak_limiter_ceiling_dbfs  = -0.3;
+    double peak_limiter_attack_ms     = 0.25;
+    double peak_limiter_release_ms    = 0.5;
 
     // User-curated phase reset frame list (source-frame domain). When non-empty,
     // the engine skips its internal phase reset detection and uses this list
