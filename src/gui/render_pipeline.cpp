@@ -343,6 +343,12 @@ RenderOutcome do_render(const RenderRequest& req,
         settings_get(req.settings_passthrough, "N"), 4096);
     const int    fftw_threads     = parse_int(
         settings_get(req.settings_passthrough, "fftw_threads"), 0);
+    const double phase_reset_offset_R_s_mult = parse_double(
+        settings_get(req.settings_passthrough, "phase_reset_offset_R_s"), 1.0);
+    const int    R_s              = N_fft / 4;
+    const int64_t phase_reset_offset_samples = static_cast<int64_t>(
+        std::nearbyint(phase_reset_offset_R_s_mult *
+                       static_cast<double>(R_s)));
 
     // --- Probe source audio for sample rate / total frames. ---
     SF_INFO src_info{};
@@ -485,10 +491,34 @@ RenderOutcome do_render(const RenderRequest& req,
             ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
             for (int64_t F : req.phase_reset_frames) {
                 if (F < trim_begin || F > trim_end) continue;
-                ep.phase_reset_frames.push_back(F - trim_begin);
+                int64_t engine_frame =
+                    (F - trim_begin) - phase_reset_offset_samples;
+                if (engine_frame < 0) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: phase reset at %.3f s clamped to "
+                        "engine frame 0 (offset shift would place it "
+                        "before trim begin)\n",
+                        static_cast<double>(F) /
+                            static_cast<double>(sample_rate));
+                    engine_frame = 0;
+                }
+                ep.phase_reset_frames.push_back(engine_frame);
             }
         } else {
-            ep.phase_reset_frames = req.phase_reset_frames;
+            ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
+            for (int64_t F : req.phase_reset_frames) {
+                int64_t engine_frame = F - phase_reset_offset_samples;
+                if (engine_frame < 0) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: phase reset at %.3f s clamped to "
+                        "engine frame 0 (offset shift would place it "
+                        "before audio start)\n",
+                        static_cast<double>(F) /
+                            static_cast<double>(sample_rate));
+                    engine_frame = 0;
+                }
+                ep.phase_reset_frames.push_back(engine_frame);
+            }
         }
 
         // Map adapter SubprocessResult / EngineResult into RenderOutcome via

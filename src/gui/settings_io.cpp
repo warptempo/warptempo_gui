@@ -193,6 +193,7 @@ std::string format_default_settings_template(const std::string& stem,
     s += "N=4096\n";
     s += "fftw_threads=16\n";
     s += "limiter_enabled=false\n";
+    s += "phase_reset_offset_R_s=1.000000\n";
     s += "active_mode=W\n";
     s += "playback_speed=1.000000\n";
     s += "follow=true\n";
