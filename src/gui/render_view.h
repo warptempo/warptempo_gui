@@ -66,4 +66,23 @@ struct GuiRenderView {
     void stash_render_view_selection_to_active_entry();
     bool load_render_view_at(int index);
     void restore_source_audio();
+
+    // Re-enumerate the renders/ folder and merge per-entry persisted
+    // state (state, persisted_size, persisted_mtime) from the existing
+    // app.render_view_list into the refreshed list, keyed by wav_path.
+    // Updates app.render_view_index to follow the currently-viewed
+    // entry by wav_path; if the current entry was deleted, the index
+    // clamps to the closest surviving original position. Returns true
+    // if the list is non-empty after refresh; false if the refresh
+    // produces an empty list (caller should exit render-view in that
+    // case). Live state stashing and load_render_view_at are NOT
+    // performed by this method — callers do those at the appropriate
+    // boundary.
+    bool refresh_render_view_list();
+
+    // Tear down render-view state and restore source audio. Mirrors
+    // the toggle-off branch of the R key handler. Used by the
+    // navigation handlers when refresh_render_view_list returns false
+    // (renders/ folder emptied externally).
+    void exit_render_view_and_clear();
 };

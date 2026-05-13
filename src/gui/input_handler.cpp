@@ -259,6 +259,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_nav =
             ((key == GuiKeys::Left || key == GuiKeys::Right) &&
              shift && !ctrl && !alt);
+        const bool is_render_view_nav_jump =
+            ((key == GuiKeys::Home || key == GuiKeys::End) &&
+             shift && !ctrl && !alt);
         const bool is_commit =
             (ctrl && alt && !shift &&
              key == GuiKeys::C);
@@ -284,7 +287,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
              !ctrl && !shift && !alt);
         const bool is_follow =
             (key == GuiKeys::F && !ctrl && !shift && !alt);
-        if (!(is_r || is_nav || is_commit || is_playback ||
+        if (!(is_r || is_nav || is_render_view_nav_jump ||
+              is_commit || is_playback ||
               is_scrub || is_jump || is_esc ||
               is_sub_view_toggle || is_ctrl_q || is_ctrl_w ||
               is_zoom || is_zoom_symbol || is_follow)) {
@@ -420,8 +424,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // inside the batch are the entry position zero-padded to fit the
     // queue size: 01..10 for 10 entries, 1..7 for 7, 001..100 for 100.
     //
-    // Empty queue is a silent no-op (no implicit-batch fallback —
-    // single-shot rendering belongs on Ctrl+Alt+R now).
+    // Empty queue auto-enqueues the current authoring state (same shape
+    // as Ctrl+E) and dispatches a queue-of-one batch. Use Ctrl+Alt+R for
+    // single-shot rendering into the source directory; Ctrl+Alt+E always
+    // produces a batch folder under renders/.
     //
     // Esc between entries drops the remainder. The current render
     // cannot be interrupted (no mid-engine cancellation); its sidecars
@@ -433,7 +439,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (ctrl && alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return;
-        if (app.queued_renders.empty()) return;
+        if (app.queued_renders.empty()) {
+            AppState::QueuedRender q;
+            q.source_audio_path = app.source_audio_path;
+            q.markers           = app.warpmarkers.markers();
+            q.phase_resets      = app.phase_reset_markers.markers();
+            app.queued_renders.push_back(std::move(q));
+            std::fprintf(stderr,
+                "warptempo_gui: queue empty; enqueueing current state "
+                "and rendering\n");
+        }
 
         std::vector<AppState::QueuedRender> entries =
             std::move(app.queued_renders);
@@ -1458,15 +1473,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // playhead-by-pixel handler in the switch below. Wraparound
     // mirrors the brief: Shift+Right past the end loops to index 0,
     // Shift+Left before index 0 loops to the last entry.
+    //
+    // Pre-nav refresh: re-enumerate the renders/ folder and merge
+    // per-entry persisted state into the refreshed list before
+    // computing the target index. New batch folders or wavs that
+    // appeared since render-view was entered become visible; deleted
+    // entries vanish. Empty-after-refresh exits render-view.
     if (app.render_view_enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right)) {
-        const int n = static_cast<int>(app.render_view_list.size());
-        if (n <= 0) return;
-        int next = app.render_view_index;
-        if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
-        else                    next = (next + 1) % n;
-        // Capture the outgoing render's live zoom/viewport/playhead
-        // before swapping.
+        // Capture outgoing state and stash selection before refresh —
+        // refresh_render_view_list may reorder/drop entries.
         if (app.render_view_index >= 0 &&
             app.render_view_index <
                 static_cast<int>(app.render_view_list.size())) {
@@ -1479,7 +1495,47 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the destination's own persisted state if its stat tuple
         // still matches; otherwise leaves selection empty.
         render_view.stash_render_view_selection_to_active_entry();
+
+        if (!render_view.refresh_render_view_list()) {
+            // Renders folder is empty (e.g. user deleted it externally).
+            // Exit render-view gracefully.
+            render_view.exit_render_view_and_clear();
+            return;
+        }
+
+        const int n = static_cast<int>(app.render_view_list.size());
+        int next = app.render_view_index;
+        if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
+        else                       next = (next + 1) % n;
         render_view.load_render_view_at(next);
+        return;
+    }
+
+    // Shift+Home / Shift+End: jump render-view to first / last entry,
+    // clamped (no wraparound — Shift+Home at index 0 stays at 0,
+    // Shift+End at the last entry stays). Same render_view_enabled
+    // gate as Shift+Left/Right so the chords fall through to the
+    // source-view trim-jump handler when render-view is off. Same
+    // pre-nav refresh of the renders/ folder.
+    if (app.render_view_enabled && shift && !ctrl && !alt &&
+        (key == GuiKeys::Home || key == GuiKeys::End)) {
+        if (app.render_view_index >= 0 &&
+            app.render_view_index <
+                static_cast<int>(app.render_view_list.size())) {
+            render_view.write_rendersettings_for(
+                app.render_view_list[app.render_view_index]);
+        }
+        render_view.stash_render_view_selection_to_active_entry();
+
+        if (!render_view.refresh_render_view_list()) {
+            render_view.exit_render_view_and_clear();
+            return;
+        }
+
+        const int n = static_cast<int>(app.render_view_list.size());
+        const int target = (key == GuiKeys::Home) ? 0 : (n - 1);
+        if (target == app.render_view_index) return;
+        render_view.load_render_view_at(target);
         return;
     }
 

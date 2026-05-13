@@ -10,6 +10,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <map>
 #include <string>
 #include <sys/stat.h>
 #include <system_error>
@@ -456,4 +457,84 @@ void GuiRenderView::restore_source_audio() {
         std::fprintf(stderr, "warptempo_gui: playback disabled\n");
     }
     gui.invalidate_region(0, 0, app.width, app.height);
+}
+
+// Re-enumerate the renders/ folder and migrate persisted per-entry
+// state from the existing app.render_view_list into the refreshed
+// list, keyed by wav_path. Mirrors the migration block in the R-key
+// toggle-on path, but operates on the live render_view_list (in-
+// session) rather than on a freshly-arrived list. Caller is
+// responsible for stashing selection / writing rendersettings for the
+// outgoing entry *before* calling this, since the merge does not
+// preserve any state that lives only on app.* fields (selected_markers
+// etc.) — only the per-entry persisted slots survive.
+bool GuiRenderView::refresh_render_view_list() {
+    std::vector<AppState::RenderViewEntry> fresh =
+        this->enumerate_render_view_list();
+    if (fresh.empty()) {
+        app.render_view_list.clear();
+        app.render_view_index = -1;
+        return false;
+    }
+
+    const int prior_index = app.render_view_index;
+    std::string current_wav_path;
+    if (prior_index >= 0 &&
+        prior_index < static_cast<int>(app.render_view_list.size())) {
+        current_wav_path =
+            app.render_view_list[prior_index].wav_path.string();
+    }
+
+    if (!app.render_view_list.empty()) {
+        std::map<std::string,
+            AppState::RenderViewEntry*> prior;
+        for (auto& pe : app.render_view_list) {
+            prior[pe.wav_path.string()] = &pe;
+        }
+        for (auto& ne : fresh) {
+            auto it = prior.find(ne.wav_path.string());
+            if (it == prior.end()) continue;
+            const auto& src = *it->second;
+            ne.state           = src.state;
+            ne.persisted_size  = src.persisted_size;
+            ne.persisted_mtime = src.persisted_mtime;
+        }
+    }
+
+    app.render_view_list = std::move(fresh);
+
+    int new_index = -1;
+    if (!current_wav_path.empty()) {
+        for (size_t i = 0; i < app.render_view_list.size(); ++i) {
+            if (app.render_view_list[i].wav_path.string() ==
+                current_wav_path) {
+                new_index = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+    if (new_index < 0) {
+        const int n = static_cast<int>(app.render_view_list.size());
+        int clamped = prior_index;
+        if (clamped < 0)  clamped = 0;
+        if (clamped >= n) clamped = n - 1;
+        new_index = clamped;
+    }
+    app.render_view_index = new_index;
+    return true;
+}
+
+// Shared teardown for "render-view ends here" exits driven by the
+// navigation handlers when the renders/ folder turns out to be empty
+// after a refresh. Equivalent to the toggle-off branch of the R key,
+// minus the live-state capture that the navigation handler already
+// performed before calling refresh_render_view_list.
+void GuiRenderView::exit_render_view_and_clear() {
+    this->restore_source_audio();
+    app.render_view_enabled = false;
+    app.render_view_markers.clear();
+    app.render_view_phase_resets.clear();
+    app.render_view_index             = -1;
+    app.render_view_src_F_begin       = 0;
+    app.render_view_src_F_end         = 0;
 }
