@@ -3,6 +3,7 @@
 #include "audio.h"
 #include "paint_handler.h"
 #include "render.h"
+#include "text_editor.h"
 
 #include <cairo/cairo.h>
 
@@ -27,7 +28,9 @@ std::string settings_get(const AppState& app, const std::string& key,
 // original at main.cpp:942-944, with the AppState reach reached through
 // the explicit argument rather than a capture.
 bool bottom_strip_wide(const AppState& app) {
-    return app.prompt.active || !app.queue_progress_text.empty();
+    return app.prompt.active ||
+           !app.queue_progress_text.empty() ||
+           text_editor::is_active(app.settings_editor);
 }
 
 // X.7.8b-2: hit_test_* promoted from lambdas at main.cpp:1214-1368. Bodies

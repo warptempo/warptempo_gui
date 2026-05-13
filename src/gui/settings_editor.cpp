@@ -37,8 +37,8 @@ void GuiSettingsEditor::open() {
 
 void GuiSettingsEditor::exit_no_commit() {
     if (!text_editor::is_active(app.settings_editor)) return;
-    text_editor::deactivate(app.settings_editor);
     viewport.invalidate_timestamp_area();
+    text_editor::deactivate(app.settings_editor);
 }
 
 void GuiSettingsEditor::commit() {
@@ -97,6 +97,6 @@ void GuiSettingsEditor::commit() {
             value.c_str());
     }
 
-    text_editor::deactivate(app.settings_editor);
     viewport.invalidate_timestamp_area();
+    text_editor::deactivate(app.settings_editor);
 }

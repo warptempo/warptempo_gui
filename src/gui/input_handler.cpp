@@ -1402,10 +1402,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // `;` opens the settings prompt in the bottom strip. Keyboard-only
+    // `:` opens the settings prompt in the bottom strip. Keyboard-only
     // (no click analogue). The active-editor block at the top of on_key
     // routes subsequent keystrokes; opening here just primes the State.
-    if (key == GuiKeys::Semicolon && !ctrl && !shift && !alt) {
+    if (key == GuiKeys::Semicolon && shift && !ctrl && !alt) {
         settings_editor.open();
         return;
     }

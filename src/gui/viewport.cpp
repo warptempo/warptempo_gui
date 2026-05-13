@@ -38,8 +38,7 @@ void Viewport::invalidate_waveform_area() {
 
 void Viewport::invalidate_timestamp_area() {
     const GuiRect t = timestamp_invalidate_rect(
-        app.height, app.width,
-        app.prompt.active || !app.queue_progress_text.empty());
+        app.height, app.width, bottom_strip_wide(app));
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
