@@ -70,15 +70,26 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     viewport.invalidate_top_strip();
 }
 
-void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
+// Shared core for the three enter-editor flows. Wrappers below
+// (enter_top_flag_edit, enter_iter_edit, enter_bpm_edit) own the
+// kind-specific eligibility gates and seed-text builders, then
+// delegate here. `text_left_x < 0` falls back to
+// flag_pending_text_left_x(app, audio, idx) — that path serves the
+// top-flag editor whose layout is computed on the fly; the popup
+// editors get the value from the click hit-test and pass it in.
+void GuiFlagEditor::enter_text_edit(int idx,
+                                    text_editor::Kind kind,
+                                    std::string locked_prefix,
+                                    std::string initial_pending,
+                                    double click_x,
+                                    double text_left_x) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
 
     const bool same_target =
         text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::FlagPayload &&
+        app.top_flag_editor.kind == kind &&
         app.top_flag_editor.target == idx;
 
     if (same_target) {
@@ -86,8 +97,9 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
         // preserve pending text and any in-progress state.
         if (click_x >= 0.0) {
             const double advance = monospace_advance();
-            const double text_left =
-                flag_pending_text_left_x(app, audio, idx);
+            const double text_left = (text_left_x >= 0.0)
+                ? text_left_x
+                : flag_pending_text_left_x(app, audio, idx);
             if (advance > 0.0 && text_left >= 0.0) {
                 app.top_flag_editor.cursor_pos =
                     byte_index_from_click_x(
@@ -102,9 +114,9 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
     }
 
     // Target-switching path. Centralize selection + playhead update
-    // here so both call paths (in-edit-active switch and pre-edit
-    // plain-flag-click) keep the marker-column outline and the rest
-    // of the UI in sync with the new editor target.
+    // here so every call path (in-edit-active switch and pre-edit
+    // plain click) keeps the marker-column outline and the rest of
+    // the UI in sync with the new editor target.
     selection.set_single_selection(idx);
     {
         const int sr = audio.sample_rate();
@@ -120,13 +132,15 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
     }
     text_editor::enter(
         app.top_flag_editor, idx,
-        this->build_locked_prefix(mv[idx]),
-        flag_text_for_marker(mv, idx));
+        std::move(locked_prefix),
+        std::move(initial_pending),
+        kind);
 
     if (click_x >= 0.0) {
         const double advance = monospace_advance();
-        const double text_left =
-            flag_pending_text_left_x(app, audio, idx);
+        const double text_left = (text_left_x >= 0.0)
+            ? text_left_x
+            : flag_pending_text_left_x(app, audio, idx);
         if (advance > 0.0 && text_left >= 0.0) {
             app.top_flag_editor.cursor_pos =
                 byte_index_from_click_x(
@@ -138,6 +152,19 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
 
     viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
+}
+
+void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
+    if (idx < 0) return;
+    const auto& mv = app.warpmarkers.markers();
+    if (idx >= static_cast<int>(mv.size())) return;
+    this->enter_text_edit(
+        idx,
+        text_editor::Kind::FlagPayload,
+        this->build_locked_prefix(mv[idx]),
+        flag_text_for_marker(mv, idx),
+        click_x,
+        /*text_left_x=*/-1.0);
 }
 
 // Validate `pending` as a single canonical line and, on success, write
@@ -280,61 +307,13 @@ void GuiFlagEditor::enter_iter_edit(int idx, double click_x,
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
     if (!iter_popup_eligible_marker(mv[idx])) return;
-
-    const bool same_target =
-        text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::IterationBracket &&
-        app.top_flag_editor.target == idx;
-
-    if (same_target) {
-        if (click_x >= 0.0 && text_left_x >= 0.0) {
-            const double advance = monospace_advance();
-            if (advance > 0.0) {
-                app.top_flag_editor.cursor_pos =
-                    byte_index_from_click_x(
-                        click_x, text_left_x, advance,
-                        static_cast<int>(
-                            app.top_flag_editor.pending.size()));
-                app.top_flag_editor.selection_anchor = -1;
-            }
-        }
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    // Target-switching path: see enter_top_flag_edit for rationale.
-    selection.set_single_selection(idx);
-    {
-        const int sr = audio.sample_rate();
-        const int64_t sample = static_cast<int64_t>(std::nearbyint(
-            mv[idx].time_seconds * static_cast<double>(sr)));
-        viewport.move_playhead_to(sample);
-    }
-
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.target != idx) {
-        text_editor::deactivate(app.top_flag_editor);
-    }
-    text_editor::enter(
-        app.top_flag_editor, idx,
+    this->enter_text_edit(
+        idx,
+        text_editor::Kind::IterationBracket,
         /*locked_prefix=*/"",
-        /*initial_pending=*/format_iter_bracket_text(mv[idx]),
-        text_editor::Kind::IterationBracket);
-
-    if (click_x >= 0.0 && text_left_x >= 0.0) {
-        const double advance = monospace_advance();
-        if (advance > 0.0) {
-            app.top_flag_editor.cursor_pos =
-                byte_index_from_click_x(
-                    click_x, text_left_x, advance,
-                    static_cast<int>(
-                        app.top_flag_editor.pending.size()));
-        }
-    }
-
-    viewport.clear_hover_popup();
-    viewport.invalidate_top_strip();
+        format_iter_bracket_text(mv[idx]),
+        click_x,
+        text_left_x);
 }
 
 // Commit the iteration popup's pending buffer. Four accepted forms:
@@ -522,61 +501,13 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
     if (!bpm_popup_eligible_marker(mv[idx])) return;
-
-    const bool same_target =
-        text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::BpmBracket &&
-        app.top_flag_editor.target == idx;
-
-    if (same_target) {
-        if (click_x >= 0.0 && text_left_x >= 0.0) {
-            const double advance = monospace_advance();
-            if (advance > 0.0) {
-                app.top_flag_editor.cursor_pos =
-                    byte_index_from_click_x(
-                        click_x, text_left_x, advance,
-                        static_cast<int>(
-                            app.top_flag_editor.pending.size()));
-                app.top_flag_editor.selection_anchor = -1;
-            }
-        }
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    // Target-switching path: see enter_top_flag_edit for rationale.
-    selection.set_single_selection(idx);
-    {
-        const int sr = audio.sample_rate();
-        const int64_t sample = static_cast<int64_t>(std::nearbyint(
-            mv[idx].time_seconds * static_cast<double>(sr)));
-        viewport.move_playhead_to(sample);
-    }
-
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.target != idx) {
-        text_editor::deactivate(app.top_flag_editor);
-    }
-    text_editor::enter(
-        app.top_flag_editor, idx,
+    this->enter_text_edit(
+        idx,
+        text_editor::Kind::BpmBracket,
         /*locked_prefix=*/"",
-        /*initial_pending=*/format_bpm_bracket_text(mv[idx]),
-        text_editor::Kind::BpmBracket);
-
-    if (click_x >= 0.0 && text_left_x >= 0.0) {
-        const double advance = monospace_advance();
-        if (advance > 0.0) {
-            app.top_flag_editor.cursor_pos =
-                byte_index_from_click_x(
-                    click_x, text_left_x, advance,
-                    static_cast<int>(
-                        app.top_flag_editor.pending.size()));
-        }
-    }
-
-    viewport.clear_hover_popup();
-    viewport.invalidate_top_strip();
+        format_bpm_bracket_text(mv[idx]),
+        click_x,
+        text_left_x);
 }
 
 // Commit the BPM popup's pending buffer. Strict syntax via

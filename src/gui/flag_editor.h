@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "selection.h"
+#include "text_editor.h"
 #include "undo.h"
 #include "viewport.h"
 #include "warpmarkers.h"
@@ -46,4 +47,21 @@ struct GuiFlagEditor {
     void bulk_clear_bpm_values();
     void enter_bpm_mode();
     void exit_bpm_mode();
+
+  private:
+    // Shared core for the three "enter editor on idx" flows. The
+    // public wrappers handle their kind-specific eligibility gates
+    // and seed-text builders, then delegate here for the rest:
+    // same-target re-click (cursor recompute), target-switching
+    // (selection + playhead + editor reseat), initial cursor
+    // positioning, hover-popup clear, top-strip invalidate.
+    // A negative `text_left_x` triggers the on-the-fly fallback via
+    // flag_pending_text_left_x(app, audio, idx) — used by the top-
+    // flag editor whose canonical-line layout is computed dynamically.
+    void enter_text_edit(int idx,
+                         text_editor::Kind kind,
+                         std::string locked_prefix,
+                         std::string initial_pending,
+                         double click_x,
+                         double text_left_x);
 };
