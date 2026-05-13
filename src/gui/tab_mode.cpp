@@ -120,21 +120,13 @@ void GuiTabMode::switch_active_tab_to(char target_tab) {
     viewport.invalidate_timestamp_area();
 }
 
-// `p` key: toggle into/out of phase reset mode. Entry preconditions
-// (only when going W → P): engine setting must be `warptempo`. Exit
-// (P → W) is unconditional.
+// `p` key: toggle into/out of phase reset mode. Phase reset markers are
+// authored independent of output_format — they're consumed only when
+// output_format=wav drives the engine; non-wav formats ignore them.
 void GuiTabMode::toggle_active_mode() {
     if (app.active_mode == 'P') {
         this->switch_active_mode_to('W');
     } else {
-        const std::string engine =
-            settings_get(app, "engine", "warptempo");
-        if (engine != "warptempo") {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset mode unavailable: "
-                "engine=%s\n", engine.c_str());
-            return;
-        }
         this->switch_active_mode_to('P');
     }
     viewport.invalidate_waveform_area();

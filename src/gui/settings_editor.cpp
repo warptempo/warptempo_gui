@@ -160,23 +160,6 @@ void GuiSettingsEditor::commit() {
         "warptempo_gui: setting applied: %s=%s\n",
         key.c_str(), value.c_str());
 
-    // engine= boot-out: P mode requires engine=warptempo (see
-    // GuiTabMode::toggle_active_mode). Setting any other engine while
-    // in P drops the user back to W so the mode invariant holds. Note:
-    // the mode change is a side effect of the settings edit and is not
-    // captured separately on the undo stack — undoing the settings edit
-    // restores `engine` but leaves active_mode at W; the user can press
-    // `p` to re-enter P mode manually.
-    if (key == "engine" && value != "warptempo" &&
-        app.active_mode == 'P') {
-        tab_mode.switch_active_mode_to('W');
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        std::fprintf(stderr,
-            "warptempo_gui: phase_reset mode disabled: engine=%s\n",
-            value.c_str());
-    }
-
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
 }

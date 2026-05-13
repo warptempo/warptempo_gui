@@ -72,3 +72,15 @@ bool write_trimmed_wav(const std::string& src_path,
                        const std::string& out_path,
                        size_t begin_frame,
                        size_t end_frame);
+
+// Reads samples in [begin_frame, end_frame) from src_path into out_samples
+// as interleaved 32-bit float, and reports the source sample rate and
+// channel count. Used by render_pipeline.cpp to populate the warptempo
+// engine's in-memory source buffer (replaces the wav-on-disk trim shim).
+// Returns true on success; false with stderr log on any sndfile error.
+bool load_source_range_to_buffer(const std::string& src_path,
+                                 size_t begin_frame,
+                                 size_t end_frame,
+                                 std::vector<float>& out_samples,
+                                 int& out_sample_rate,
+                                 int& out_channels);

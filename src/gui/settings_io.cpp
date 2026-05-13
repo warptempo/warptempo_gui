@@ -189,10 +189,10 @@ std::string format_default_settings_template(const std::string& stem,
     s += "title=";       s += stem; s += "-rendered\n";
     s += "audio_input="; s += stem; s += '.'; s += ext_no_dot; s += '\n';
     s += "scale=1.000000\n";
-    s += "engine=warptempo\n";
+    s += "output_format=wav\n";
     s += "N=4096\n";
     s += "fftw_threads=16\n";
-    s += "limiter_enabled=false\n";
+    s += "limiter_enabled_on_render=true\n";
     s += "phase_reset_offset_hops=1.000000\n";
     s += "active_mode=W\n";
     s += "playback_speed=1.000000\n";

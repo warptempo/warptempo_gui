@@ -18,9 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <limits.h>
 #include <set>
-#include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -63,26 +61,15 @@ double parse_double(const std::string& s, double default_val) {
     try { return std::stod(s); } catch (...) { return default_val; }
 }
 
-// Directory that contains the currently-running warptempo_gui binary.
-// Used to locate the sibling adapters/ tree. Linux-only via /proc/self/exe.
-std::string gui_binary_dir() {
-    char buf[PATH_MAX];
-    ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-    if (n <= 0) return ".";
-    buf[n] = '\0';
-    std::filesystem::path p(buf);
-    return p.parent_path().string();
-}
-
 // Silent-on-missing unlink wrapper.
 void unlink_silent(const std::string& path) {
     if (path.empty()) return;
     ::unlink(path.c_str());
 }
 
-// Tristate result for adapter / ffmpeg subprocess runs. Mirrors EngineResult
-// / RenderOutcome so the engine-path branches can map cleanly into do_render's
-// outcome.
+// Tristate result for ffmpeg subprocess runs. Mirrors EngineResult /
+// RenderOutcome so the trimmed-wav alimiter call can map cleanly into
+// do_render's outcome.
 enum class SubprocessResult { Success, Failed, Cancelled };
 
 // fork + execvp + waitpid. When `cancel_flag` is non-null, the parent polls
@@ -318,27 +305,22 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Failed;
     }
 
-    std::string engine = settings_get(req.settings_passthrough, "engine");
-    if (engine.empty()) engine = "warptempo";
-    const bool is_supported_engine =
-        engine == "warptempo" || engine == "rubberband" ||
-        engine == "bungee"    || engine == "stretch"    ||
-        engine == "soundtouch"|| engine == "midi";
-    if (engine == "none") {
+    std::string output_format =
+        settings_get(req.settings_passthrough, "output_format");
+    if (output_format.empty()) output_format = "wav";
+    if (output_format != "wav" &&
+        output_format != "timemap" &&
+        output_format != "tempomap") {
         std::fprintf(stderr,
-            "warptempo_gui: render error: engine 'none' is no longer supported\n");
-        return RenderOutcome::Failed;
-    }
-    if (!is_supported_engine) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: unknown engine '%s'\n", engine.c_str());
+            "warptempo_gui: render error: unknown output_format '%s'\n",
+            output_format.c_str());
         return RenderOutcome::Failed;
     }
 
     const double scale            = parse_double(
         settings_get(req.settings_passthrough, "scale"), 1.0);
     const bool   user_limiter_en  = parse_bool(
-        settings_get(req.settings_passthrough, "limiter_enabled"), true);
+        settings_get(req.settings_passthrough, "limiter_enabled_on_render"), true);
     const int    N_fft            = parse_int(
         settings_get(req.settings_passthrough, "N"), 4096);
     const int    fftw_threads     = parse_int(
@@ -382,107 +364,115 @@ RenderOutcome do_render(const RenderRequest& req,
     }
 
     // --- Compute output path. ---
-    const bool midi_engine = (engine == "midi");
+    auto ext_for_format = [&]() -> std::string {
+        if (output_format == "timemap")  return ".timemap";
+        if (output_format == "tempomap") return ".tempomap";
+        return ".wav";
+    };
     const bool batch_render = !req.batch_folder.empty();
     std::string final_output_path;
     if (batch_render) {
-        // Batch render: <batch_folder>/<batch_basename>.{wav,mid}. Sidecars
-        // (.warpmarkers / .phaseresetmarkers / .peaks) are written after the
-        // wav rename succeeds — see the post-render block below. The
-        // engine/limiter-prefix naming does not apply.
-        const std::string ext = midi_engine ? ".mid" : ".wav";
         final_output_path =
             (std::filesystem::path(req.batch_folder) /
-             (req.batch_basename + ext)).string();
+             (req.batch_basename + ext_for_format())).string();
     } else {
         std::filesystem::path src(req.source_audio_path);
         std::filesystem::path dir = src.parent_path();
         if (dir.empty()) dir = std::filesystem::path(".");
-        // Prefix is applied iff the output WAV will be genuinely unlimited.
-        // warptempo+trimmed always runs through ffmpeg alimiter downstream,
-        // so limiter_enabled=false on the engine side is still limited on
-        // disk.
+        // Prefix marks a wav that's genuinely unlimited on disk. Only
+        // applies to the wav path; timemap/tempomap outputs are text
+        // files and don't run any limiter.
         const bool output_unlimited =
-            !midi_engine && !user_limiter_en &&
-            !(engine == "warptempo" && tmres.trimmed);
-        std::string out_filename;
-        if (output_unlimited) {
-            out_filename = "engine=" + engine + ";limiter_enabled=false;" + title
-                         + (midi_engine ? ".mid" : ".wav");
-        } else {
-            out_filename = title + (midi_engine ? ".mid" : ".wav");
-        }
+            output_format == "wav" && !user_limiter_en;
+        std::string out_filename = output_unlimited
+            ? ("limiter_enabled_on_render=false;" + title + ext_for_format())
+            : (title + ext_for_format());
         final_output_path = (dir / out_filename).string();
     }
-    // Staging path: every engine path writes its final output here, and on
-    // success we atomically rename to final_output_path. A killed render
-    // leaves <final>.tmp behind; the next render's O_TRUNC semantics handle
-    // that (libsndfile / ffmpeg / adapters all open with truncate).
+    // Staging path used by the wav engine path's atomic rename. Text-file
+    // formats write final_output_path directly.
     const std::string staging_output_path = final_output_path + ".tmp";
 
     // --- Temp file paths (pid-scoped). ---
     const pid_t pid = ::getpid();
     std::string tmp_prefix = "/tmp/warptempo_" + std::to_string(pid) + "_";
-    std::string tmp_tm          = tmp_prefix + "timemap";
-    std::string tmp_tm_midi     = tmp_prefix + "timemap-midi";
-    std::string tmp_trimmed_wav = tmp_prefix + "trimmed.wav";
     std::string tmp_engine_wav  = tmp_prefix + "engine.wav";
 
     auto cleanup_all = [&]() {
-        unlink_silent(tmp_tm);
-        unlink_silent(tmp_tm_midi);
-        unlink_silent(tmp_trimmed_wav);
         unlink_silent(tmp_engine_wav);
         unlink_silent(staging_output_path);
     };
 
-    // --- Trim, if requested. ---
-    std::string engine_input_path = req.source_audio_path;
-    if (tmres.trimmed) {
-        if (!write_trimmed_wav(req.source_audio_path, tmp_trimmed_wav,
-                               tmres.trim_begin_frame, tmres.trim_end_frame)) {
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        engine_input_path = tmp_trimmed_wav;
-    }
-
     std::fprintf(stderr, "warptempo_gui: rendering %s -> %s\n",
-                 engine.c_str(), final_output_path.c_str());
+                 output_format.c_str(), final_output_path.c_str());
 
-    const double ceiling_dbfs = -0.3;  // shared limit for engine + ffmpeg
-    const std::string gui_dir = gui_binary_dir();
-    const std::string adapter_base = gui_dir + "/../adapters";
-
-    // --- Engine dispatch. ---
-    // Populated by the warptempo path for use in render-domain phase reset
-    // sidecar generation downstream. Other engines leave these defaults.
+    // Populated by the wav (warptempo engine) path for render-domain phase
+    // reset sidecar generation. timemap/tempomap paths leave these empty.
     std::vector<int64_t> engine_frame_map;
     int engine_R_s = 0;
-    if (engine == "warptempo") {
+
+    if (output_format == "wav") {
+        // Load the source range to an in-memory buffer (full source when
+        // no trim; [trim_begin, trim_end) when trimmed). The engine reads
+        // from this buffer via libsndfile virtual IO — no wav-on-disk
+        // shim for trim.
+        std::vector<float> src_samples;
+        int src_sr = 0;
+        int src_ch = 0;
+        {
+            const size_t b = tmres.trimmed ? tmres.trim_begin_frame : 0;
+            const size_t e = tmres.trimmed
+                ? tmres.trim_end_frame
+                : static_cast<size_t>(total_frames);
+            if (!load_source_range_to_buffer(req.source_audio_path, b, e,
+                                             src_samples, src_sr, src_ch)) {
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+        }
+
+        // Limiter routing. `limiter_enabled_on_render=false` means no
+        // limiter anywhere in the render pipeline. When true, trim state
+        // decides: no trim → engine spectral limiter; trim → ffmpeg
+        // alimiter downstream (the spectral limiter cannot run on
+        // a trimmed render because the engine receives shifted timemap +
+        // sliced source).
+        const double ceiling_dbfs = -0.3;
+        bool run_alimiter_after_engine = false;
+        bool engine_spectral_limiter   = false;
+        if (user_limiter_en) {
+            if (tmres.trimmed) run_alimiter_after_engine = true;
+            else               engine_spectral_limiter   = true;
+        }
+
         EngineParams ep;
-        ep.source_audio_path = engine_input_path;
-        ep.output_audio_path = tmres.trimmed ? tmp_engine_wav
-                                             : staging_output_path;
+        ep.source_audio_samples = src_samples.data();
+        ep.source_audio_frames  =
+            src_samples.size() / static_cast<size_t>(src_ch);
+        ep.source_sample_rate   = src_sr;
+        ep.source_channels      = src_ch;
+        ep.output_audio_path    = run_alimiter_after_engine
+            ? tmp_engine_wav
+            : staging_output_path;
         ep.timemap.reserve(tmres.standard.size());
         for (const auto& s : tmres.standard) {
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
         }
-        ep.N                      = N_fft;
-        ep.fftw_threads           = fftw_threads;
-        ep.limiter_ceiling_dbfs   = ceiling_dbfs;
-        // When trimmed, ffmpeg alimiter runs downstream and owns limiting.
-        ep.limiter_enabled        = tmres.trimmed ? false : user_limiter_en;
-        ep.limiter_diag           = false;
+        ep.N                    = N_fft;
+        ep.fftw_threads         = fftw_threads;
+        ep.limiter_ceiling_dbfs = ceiling_dbfs;
+        ep.limiter_enabled      = engine_spectral_limiter;
+        ep.limiter_diag         = false;
         // 24-bit PCM only when the engine's write is the final file AND
         // its internal limiter ran. Trimmed path writes intermediate float.
-        ep.output_24bit_pcm       = !tmres.trimmed && user_limiter_en;
-        // Trim-relative source-frame domain. The engine receives a trimmed
-        // wav and a trim-shifted timemap, so phase_reset_frames must live in
-        // the same trimmed-source domain as the rest of the engine input.
-        // Drop predicates and domain match the .renderphaseresetmarkers
-        // writer below so the on-disk visualization and the engine-applied
-        // placement agree on which phase resets are in scope.
+        ep.output_24bit_pcm     = !tmres.trimmed && user_limiter_en;
+        // Trim-relative source-frame domain. The engine receives a sliced
+        // source buffer and a trim-shifted timemap, so phase_reset_frames
+        // must live in the same trimmed-source domain as the rest of the
+        // engine input. Drop predicates and domain match the
+        // .renderphaseresetmarkers writer below so the on-disk
+        // visualization and the engine-applied placement agree on which
+        // phase resets are in scope.
         if (tmres.trimmed) {
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
@@ -521,8 +511,6 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
 
-        // Map adapter SubprocessResult / EngineResult into RenderOutcome via
-        // small helpers. Cancelled paths short-circuit cleanup_all + return.
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;
             cleanup_all();
@@ -546,155 +534,57 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return handle_eng(er);
         }
-        if (tmres.trimmed) {
+        if (run_alimiter_after_engine) {
             const SubprocessResult sr = run_ffmpeg_alimiter(
                 tmp_engine_wav, staging_output_path, ceiling_dbfs, cancel_flag);
             if (sr != SubprocessResult::Success) return handle_sub(sr);
         }
-    } else if (engine == "rubberband") {
-        if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/true)) {
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
-            cleanup_all();
-            return (r == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
-        };
-        SubprocessResult sr = run_subprocess("rubberband", {
-                "-t", "1",
-                "--timemap", tmp_tm,
-                "--fine",
-                "--ignore-clipping",
-                engine_input_path,
-                tmp_engine_wav
-            }, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
-                                 ceiling_dbfs, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-    } else if (engine == "bungee") {
-        if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        std::string adapter = adapter_base + "/bungee/build/bungee_adapter";
-        if (!std::filesystem::exists(adapter)) {
+
+        // Atomic publish: staging → final.
+        std::error_code ec;
+        std::filesystem::rename(staging_output_path, final_output_path, ec);
+        if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render error: adapter not found '%s'\n",
-                adapter.c_str());
+                "warptempo_gui: render error: rename '%s' -> '%s' failed: %s\n",
+                staging_output_path.c_str(), final_output_path.c_str(),
+                ec.message().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
-            cleanup_all();
-            return (r == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
-        };
-        SubprocessResult sr = run_subprocess(adapter,
-            {engine_input_path, tmp_tm, tmp_engine_wav}, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
-                                 ceiling_dbfs, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-    } else if (engine == "stretch") {
-        if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
+    } else {
+        // output_format == "timemap" or "tempomap". No engine, no limiter.
+        // When trim is active, emit a sibling trimmed wav so the consumer
+        // adapter operates on the trimmed source range; when there's no
+        // trim, the consumer can use the original source directly.
+        std::filesystem::path out_dir =
+            std::filesystem::path(final_output_path).parent_path();
+        if (out_dir.empty()) out_dir = std::filesystem::path(".");
+        if (tmres.trimmed) {
+            const std::string src_stem =
+                std::filesystem::path(req.source_audio_path).stem().string();
+            const std::string trimmed_path =
+                (out_dir / (src_stem + "-trimmed.wav")).string();
+            if (!write_trimmed_wav(req.source_audio_path, trimmed_path,
+                                   tmres.trim_begin_frame,
+                                   tmres.trim_end_frame)) {
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+        }
+        const bool ok = (output_format == "timemap")
+            ? write_standard_timemap(final_output_path, tmres.standard,
+                                     /*drop_zero_zero=*/false)
+            : write_midi_tempomap(final_output_path, tmres.midi);
+        if (!ok) {
             cleanup_all();
             return RenderOutcome::Failed;
-        }
-        std::string adapter = adapter_base + "/stretch/build/stretch_adapter";
-        if (!std::filesystem::exists(adapter)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: adapter not found '%s'\n",
-                adapter.c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
-            cleanup_all();
-            return (r == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
-        };
-        SubprocessResult sr = run_subprocess(adapter,
-            {engine_input_path, tmp_tm, tmp_engine_wav}, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
-                                 ceiling_dbfs, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-    } else if (engine == "soundtouch") {
-        if (!write_standard_timemap(tmp_tm, tmres.standard, /*drop_zero_zero=*/false)) {
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        std::string adapter = adapter_base + "/soundtouch/build/soundtouch_adapter";
-        if (!std::filesystem::exists(adapter)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: adapter not found '%s'\n",
-                adapter.c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        auto map_sub = [&](SubprocessResult r) -> RenderOutcome {
-            cleanup_all();
-            return (r == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
-        };
-        SubprocessResult sr = run_subprocess(adapter,
-            {engine_input_path, tmp_engine_wav, tmp_tm}, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-        sr = run_ffmpeg_alimiter(tmp_engine_wav, staging_output_path,
-                                 ceiling_dbfs, cancel_flag);
-        if (sr != SubprocessResult::Success) return map_sub(sr);
-    } else if (engine == "midi") {
-        if (!write_midi_tempomap(tmp_tm_midi, tmres.midi)) {
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        std::string adapter = adapter_base + "/midi/build/midi_adapter";
-        if (!std::filesystem::exists(adapter)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: adapter not found '%s'\n",
-                adapter.c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
-        std::ostringstream bbs;
-        bbs << static_cast<double>(sample_rate) * 0.002;
-        SubprocessResult sr = run_subprocess(adapter, {
-                tmp_tm_midi,
-                staging_output_path,
-                bbs.str(),
-                "30000"
-            }, cancel_flag);
-        if (sr != SubprocessResult::Success) {
-            cleanup_all();
-            return (sr == SubprocessResult::Cancelled)
-                ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
         }
     }
 
-    // Atomic publish: every engine path above wrote to staging_output_path.
-    // Promote it to final_output_path with a single rename so observers
-    // (the queue walker, downstream tools) never see a half-written file.
-    std::error_code ec;
-    std::filesystem::rename(staging_output_path, final_output_path, ec);
-    if (ec) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: rename '%s' -> '%s' failed: %s\n",
-            staging_output_path.c_str(), final_output_path.c_str(),
-            ec.message().c_str());
-        cleanup_all();
-        return RenderOutcome::Failed;
-    }
-
-    // Deposit a peak-pyramid sidecar next to the rendered WAV. Fire-and-forget;
+    // Deposit a peak-pyramid sidecar next to the rendered wav. Fire-and-forget;
     // the function logs its own errors and never affects render success.
-    if (!midi_engine) {
+    // Only meaningful when there's a rendered wav on disk.
+    if (output_format == "wav") {
         write_peaks_cache_for_wav(final_output_path);
     }
 
@@ -729,7 +619,10 @@ RenderOutcome do_render(const RenderRequest& req,
         // The source-domain pair above stays authoritative for
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
-        if (!tmres.standard.empty() && sample_rate > 0) {
+        // Only wav renders produce these — timemap/tempomap formats skip
+        // the engine, so engine_frame_map and engine_R_s are unset.
+        if (output_format == "wav" && !tmres.standard.empty() &&
+            sample_rate > 0) {
             const auto& seg = tmres.standard;
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);

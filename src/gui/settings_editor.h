@@ -21,10 +21,6 @@ struct Undo;
 //    to the active tab's ViewState; push a settings-undo entry.
 // 3. Anything else overwrites-or-appends in settings_passthrough and
 //    pushes a settings-undo entry.
-//
-// engine= changes from P mode boot the active_mode back to W when the
-// new engine value isn't `warptempo` — mirrors the entry gate in
-// GuiTabMode::toggle_active_mode in the leaving direction.
 struct GuiSettingsEditor {
     AppState&    app;
     GuiAudio&    audio;

@@ -306,3 +306,50 @@ bool write_trimmed_wav(const std::string& src_path,
     sf_close(dst);
     return true;
 }
+
+bool load_source_range_to_buffer(const std::string& src_path,
+                                 size_t begin_frame,
+                                 size_t end_frame,
+                                 std::vector<float>& out_samples,
+                                 int& out_sample_rate,
+                                 int& out_channels) {
+    if (end_frame <= begin_frame) {
+        std::cerr << "warptempo_gui: load_source error: end_frame <= begin_frame\n";
+        return false;
+    }
+    SF_INFO src_info{};
+    src_info.format = 0;
+    SNDFILE* src = sf_open(src_path.c_str(), SFM_READ, &src_info);
+    if (!src) {
+        std::cerr << "warptempo_gui: load_source error: could not open '"
+                  << src_path << "'\n";
+        return false;
+    }
+    if (static_cast<sf_count_t>(end_frame) > src_info.frames) {
+        sf_close(src);
+        std::cerr << "warptempo_gui: load_source error: end_frame "
+                  << end_frame << " exceeds source length " << src_info.frames << "\n";
+        return false;
+    }
+    if (sf_seek(src, static_cast<sf_count_t>(begin_frame), SEEK_SET) < 0) {
+        sf_close(src);
+        std::cerr << "warptempo_gui: load_source error: sf_seek failed\n";
+        return false;
+    }
+
+    out_sample_rate = src_info.samplerate;
+    out_channels    = src_info.channels;
+    const size_t n_frames = end_frame - begin_frame;
+    out_samples.assign(n_frames * static_cast<size_t>(src_info.channels), 0.0f);
+
+    const sf_count_t got =
+        sf_readf_float(src, out_samples.data(),
+                       static_cast<sf_count_t>(n_frames));
+    sf_close(src);
+    if (got != static_cast<sf_count_t>(n_frames)) {
+        std::cerr << "warptempo_gui: load_source error: short read ("
+                  << got << "/" << n_frames << ")\n";
+        return false;
+    }
+    return true;
+}
