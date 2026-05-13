@@ -213,4 +213,10 @@ private:
     // on Ctrl+W without save); invalidates waveform + timestamp areas.
     void handle_trim_set_begin_at_playhead();
     void handle_trim_set_end_at_playhead();
+
+    // Shift+b / Shift+e clear the active tab's trim_begin / trim_end
+    // unconditionally (independent of playhead position). Silent no-op
+    // when the relevant trim is already unset.
+    void handle_trim_unset_begin();
+    void handle_trim_unset_end();
 };

@@ -1421,6 +1421,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // Shift+b / Shift+e clear the active tab's trim_begin / trim_end
+    // unconditionally. Plain b / e (no shift) set the same fields at
+    // the playhead and toggle off only on equal-frame re-press; the
+    // shift form makes the unset gesture independent of playhead
+    // position. Both are silent no-ops when the relevant trim is
+    // already unset.
+    if (shift && !ctrl && !alt && key == GuiKeys::B) {
+        handle_trim_unset_begin();
+        return;
+    }
+    if (shift && !ctrl && !alt && key == GuiKeys::E) {
+        handle_trim_unset_end();
+        return;
+    }
+
     // `:` opens the settings prompt in the bottom strip. Keyboard-only
     // (no click analogue). The active-editor block at the top of on_key
     // routes subsequent keystrokes; opening here just primes the State.
@@ -2428,6 +2443,28 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     SettingsSnapshot pre = capture_current_settings(app);
     vs.has_trim_end     = true;
     vs.trim_end_seconds = cand_seconds;
+    undo.push_settings_undo(std::move(pre));
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+}
+
+void GuiInputHandler::handle_trim_unset_begin() {
+    ViewState& vs = active_view_state(app);
+    if (!vs.has_trim_begin) return;
+    SettingsSnapshot pre = capture_current_settings(app);
+    vs.has_trim_begin     = false;
+    vs.trim_begin_seconds = 0.0;
+    undo.push_settings_undo(std::move(pre));
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+}
+
+void GuiInputHandler::handle_trim_unset_end() {
+    ViewState& vs = active_view_state(app);
+    if (!vs.has_trim_end) return;
+    SettingsSnapshot pre = capture_current_settings(app);
+    vs.has_trim_end     = false;
+    vs.trim_end_seconds = 0.0;
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
