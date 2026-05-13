@@ -85,4 +85,16 @@ struct GuiRenderView {
     // navigation handlers when refresh_render_view_list returns false
     // (renders/ folder emptied externally).
     void exit_render_view_and_clear();
+
+    // Enter render-view at the first .wav of the just-rendered batch.
+    // Called from GuiInputHandler::dispatch_next_batch_entry's
+    // terminal success branch after a multi-entry (or single-entry)
+    // batch finishes uncancelled with at least one render on disk.
+    // Mirrors the R-key toggle-on entry sequence, but targets the
+    // first list entry whose batch_folder matches batch_folder
+    // instead of last_render_view_path. By the input-handler
+    // gatekeeper invariant, render-view must be off on entry —
+    // this method early-returns defensively otherwise.
+    void auto_open_batch_at_first_file(
+        const std::filesystem::path& batch_folder);
 };

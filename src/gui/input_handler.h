@@ -22,6 +22,7 @@
 #include "platform_wayland.h"
 
 #include <cmath>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -165,6 +166,13 @@ private:
         int                        next_index = 0;
         int                        rendered   = 0;
         bool                       active     = false;
+        // Snapshotted at start_render_batch time from reqs.front()
+        // because each entry's RenderRequest::batch_folder is moved
+        // out during dispatch — by the time the terminal success
+        // branch needs the folder for auto-open, reqs[0].batch_folder
+        // is empty. All entries in a single batch share one folder,
+        // so reading from reqs.front() is canonical.
+        std::filesystem::path      batch_folder;
     };
     ActiveBatch batch_;
 

@@ -72,6 +72,15 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
                                          std::string batch_label) {
     if (reqs.empty()) return;
 
+    // Snapshot the batch's destination folder before moving reqs onto
+    // batch_. Each per-entry dispatch moves a RenderRequest out of
+    // batch_.reqs, so reqs.front().batch_folder is only readable here
+    // — by the time the terminal success branch needs it for auto-
+    // open, it's been moved away. All three batch call sites construct
+    // every RenderRequest in the batch with the same batch_folder
+    // string, so reading the front entry is canonical.
+    batch_.batch_folder = std::filesystem::path(reqs.front().batch_folder);
+
     batch_.reqs       = std::move(reqs);
     batch_.label      = std::move(batch_label);
     batch_.next_index = 0;
@@ -103,6 +112,22 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             std::fprintf(stderr,
                 "warptempo_gui: %s: rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
+        }
+        // Auto-open render-view at the just-rendered batch's first
+        // file. Gated on a non-cancelled terminal branch that
+        // actually produced at least one .wav on disk; a batch
+        // where every entry returned Failed leaves rendered == 0
+        // and there is nothing to view. Per the render-view
+        // gatekeeper invariant, render-view must be off here:
+        // S / E / Ctrl+Alt+R / Ctrl+Alt+E / Ctrl+Alt+I / Ctrl+Alt+M
+        // are all dropped while render-view is active, so no batch
+        // dispatch can reach this terminal branch from inside
+        // render-view. The call runs before finalize_render_run +
+        // reqs.clear so render-view sees the same surrounding
+        // state ordering it would on a manual `r` toggle.
+        const bool success = !cancelled && batch_.rendered > 0;
+        if (success) {
+            render_view.auto_open_batch_at_first_file(batch_.batch_folder);
         }
         batch_.active = false;
         batch_.reqs.clear();
@@ -253,6 +278,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Up/Down (no mods)      → zoom in/out (Brief S.2)
     //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
     //   - f (no mods)          → follow mode toggle
+    //
+    // Note on the absent disk-save-shape keys: Ctrl+S (save),
+    // Ctrl+E (queue-add), Ctrl+Alt+R (single render to source dir),
+    // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iterations),
+    // and Ctrl+Alt+M (render basetempo) are intentionally NOT on
+    // the allowlist. Rendering and queue-add are disk-write
+    // operations against the source folder (the same shape as
+    // Ctrl+S), and render-view is read-only with respect to
+    // authoring state and source-dir writes — admitting any of
+    // them would mutate state through a swapped-out view. The
+    // batch-render auto-open path in dispatch_next_batch_entry
+    // relies on this invariant: because none of the render-
+    // shaped keys can fire while render-view is on, the auto-
+    // open call cannot be reached with render-view already
+    // active, and so the new render_view.auto_open_batch_at_
+    // first_file method handles only the "render-view is off"
+    // case.
     if (app.render_view_enabled) {
         const bool is_r =
             (key == GuiKeys::R && !ctrl && !shift && !alt);

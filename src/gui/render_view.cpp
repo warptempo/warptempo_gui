@@ -524,6 +524,79 @@ bool GuiRenderView::refresh_render_view_list() {
     return true;
 }
 
+// Auto-open render-view at the first .wav of the just-finished
+// batch. Mirrors the R-key toggle-on entry sequence in input_
+// handler.cpp, with one substitution: the target index is the
+// first list entry whose batch_folder matches the passed-in
+// batch_folder argument, rather than the entry whose wav_path
+// matches app.last_render_view_path.
+//
+// Per the input-handler gatekeeper invariant (S / E / Ctrl+Alt+R /
+// Ctrl+Alt+E / Ctrl+Alt+I / Ctrl+Alt+M are all dropped while
+// render-view is active), this method is reachable only when
+// render-view is off. The defensive early-return guards against
+// a future change that breaks the invariant — entering twice
+// would corrupt the existing session.
+void GuiRenderView::auto_open_batch_at_first_file(
+        const std::filesystem::path& batch_folder) {
+    if (app.render_view_enabled) return;
+    if (app.source_audio_path.empty()) return;
+
+    std::vector<AppState::RenderViewEntry> list =
+        this->enumerate_render_view_list();
+    if (list.empty()) {
+        std::fprintf(stderr,
+            "warptempo_gui: auto-open: enumerator returned empty list\n");
+        return;
+    }
+
+    // Migrate persisted per-entry state from the prior
+    // app.render_view_list (which survived toggle-off) into the
+    // freshly enumerated list, keyed by wav_path. Same shape as
+    // the R-toggle entry-path migration.
+    if (!app.render_view_list.empty()) {
+        std::map<std::string,
+            AppState::RenderViewEntry*> prior;
+        for (auto& pe : app.render_view_list) {
+            prior[pe.wav_path.string()] = &pe;
+        }
+        for (auto& ne : list) {
+            auto it = prior.find(ne.wav_path.string());
+            if (it == prior.end()) continue;
+            const auto& src = *it->second;
+            ne.state           = src.state;
+            ne.persisted_size  = src.persisted_size;
+            ne.persisted_mtime = src.persisted_mtime;
+        }
+    }
+
+    int target = -1;
+    for (size_t i = 0; i < list.size(); ++i) {
+        if (list[i].batch_folder == batch_folder) {
+            target = static_cast<int>(i);
+            break;
+        }
+    }
+    if (target < 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: auto-open: batch folder '%s' not found "
+            "in render-view list\n",
+            batch_folder.string().c_str());
+        return;
+    }
+
+    app.render_view_src_sr    = audio.sample_rate();
+    app.render_view_src_total = audio.total_frames();
+    app.render_view_list      = std::move(list);
+    app.iteration_mode_enabled = false;
+    app.bpm_mode_enabled       = false;
+    app.render_view_enabled    = true;
+    if (!this->load_render_view_at(target)) {
+        app.render_view_enabled = false;
+        app.render_view_list.clear();
+    }
+}
+
 // Shared teardown for "render-view ends here" exits driven by the
 // navigation handlers when the renders/ folder turns out to be empty
 // after a refresh. Equivalent to the toggle-off branch of the R key,
