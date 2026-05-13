@@ -13,6 +13,7 @@
 #include "render_view.h"
 #include "save_ops.h"
 #include "selection.h"
+#include "settings_editor.h"
 #include "settings_io.h"
 #include "tab_mode.h"
 #include "text_display.h"
@@ -342,6 +343,7 @@ int main(int argc, char** argv) {
     GuiSaveOps save_ops(app, undo, tab_mode, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
+    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
@@ -356,7 +358,8 @@ int main(int argc, char** argv) {
                                   render_view, tab_mode,
                                   phase_reset_propagate,
                                   async_renderer,
-                                  playback_lifecycle, save_ops, prompt);
+                                  playback_lifecycle, save_ops, prompt,
+                                  settings_editor);
 
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
@@ -451,6 +454,16 @@ int main(int argc, char** argv) {
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
                 invalidate_top_strip();
+            }
+        }
+        // Same shape for the bottom-strip settings prompt; invalidate the
+        // timestamp area on each visibility flip.
+        if (text_editor::is_active(app.settings_editor)) {
+            const bool now_visible =
+                text_editor::cursor_visible_now(app.settings_editor);
+            if (now_visible != app.settings_editor_blink_last) {
+                app.settings_editor_blink_last = now_visible;
+                invalidate_timestamp_area();
             }
         }
 

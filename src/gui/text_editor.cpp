@@ -22,9 +22,26 @@ char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind) {
         // below is what handles the shifted form.
         return static_cast<char>('0' + (key - GuiKeys::Digit0));
     }
-    // Decimal point is accepted by FlagPayload and IterationBracket but
-    // NOT BpmBracket (strict integer-only).
+    // Decimal point is accepted by FlagPayload, IterationBracket, and
+    // SettingsAssignment but NOT BpmBracket (strict integer-only).
     if (key == GuiKeys::Period && !shift && kind != Kind::BpmBracket) return '.';
+
+    if (kind == Kind::SettingsAssignment) {
+        // Letters: lowercase only (case-folded at the platform boundary).
+        if (key >= GuiKeys::A && key <= GuiKeys::Z && !shift) {
+            return static_cast<char>('a' + (key - GuiKeys::A));
+        }
+        // Settings lines have exactly one '='; both halves can contain
+        // identifier-shaped characters. Minus carries negative numbers
+        // in future render parameters; colon is needed for the MM:SS.mmm
+        // shape of trim values. Underscore arrives as Shift+Minus on US.
+        if (key == GuiKeys::Equal     && !shift) return '=';
+        if (key == GuiKeys::Minus     && !shift) return '-';
+        if (key == GuiKeys::Minus     &&  shift) return '_';
+        if (key == GuiKeys::Colon                ) return ':';
+        if (key == GuiKeys::Semicolon &&  shift) return ':';
+        return 0;
+    }
 
     if (kind == Kind::IterationBracket) {
         // Brackets, comma, signed-number prefixes. No letters, no `*`,
@@ -217,8 +234,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // tops out at 12 chars, so 13 leaves one char of typo slack.
     const char ch = keysym_to_char(key, mods, s.kind);
     if (ch != 0) {
-        const int cap = (s.kind == Kind::BpmBracket)
-            ? kMaxPendingCharsBpm : kMaxPendingChars;
+        int cap = kMaxPendingChars;
+        if (s.kind == Kind::BpmBracket)        cap = kMaxPendingCharsBpm;
+        if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
         // Replace-on-type: erase before the cap check so the typed
         // char can land inside the cap when a max-length pending is
         // entirely selected.

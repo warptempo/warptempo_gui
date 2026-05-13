@@ -211,6 +211,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // Settings-prompt editor (`;` opener). Same shape as the flag-editor
+    // block above. The two editors are mutually exclusive in practice
+    // because the flag editor's block returns early while it owns the
+    // keyboard, so a stray `;` can't open settings over a live flag
+    // edit. Routed before queue/drag/playhead Esc handlers so Esc
+    // cancels the edit first.
+    if (text_editor::is_active(app.settings_editor)) {
+        (void)ctrl; (void)alt;
+        const auto action = text_editor::handle_key(
+            app.settings_editor, key, mods);
+        if (action == text_editor::KeyAction::CommitRequested) {
+            settings_editor.commit();
+            return;
+        }
+        if (action == text_editor::KeyAction::CancelRequested) {
+            settings_editor.exit_no_commit();
+            return;
+        }
+        if (action == text_editor::KeyAction::Consumed) {
+            viewport.invalidate_timestamp_area();
+            return;
+        }
+        return;
+    }
+
     // Chunk W: render-view input gate. While render-view is active
     // only keys driving navigation / playback / exit / commit are
     // honored; every authoring key is silently dropped so a stray
@@ -1374,6 +1399,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
         }
+        return;
+    }
+
+    // `;` opens the settings prompt in the bottom strip. Keyboard-only
+    // (no click analogue). The active-editor block at the top of on_key
+    // routes subsequent keystrokes; opening here just primes the State.
+    if (key == GuiKeys::Semicolon && !ctrl && !shift && !alt) {
+        settings_editor.open();
         return;
     }
 

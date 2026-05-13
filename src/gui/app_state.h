@@ -414,6 +414,14 @@ struct AppState {
     // invalidate the top strip without redundant repaints.
     bool top_flag_editor_blink_last = false;
 
+    // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
+    // line, writes to settings_passthrough on commit. Lives in the bottom
+    // strip; separate from top_flag_editor so the two paint regions stay
+    // independent (the in-practice mutual exclusion comes from the flag
+    // editor swallowing all keys while active).
+    text_editor::State settings_editor;
+    bool settings_editor_blink_last = false;
+
     // Render-queue state (chunk U). `queue_running` is true only inside the
     // Ctrl+Alt+R queue walker. The Esc handler checks it to scope the
     // cancel binding away from normal interaction. `queue_cancel_requested`

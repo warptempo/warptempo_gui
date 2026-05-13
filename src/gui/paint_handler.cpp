@@ -980,6 +980,131 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_move_to(cr, kTimestampPadX, baseline_y);
                 cairo_show_text(cr, app.queue_progress_text.c_str());
                 cairo_restore(cr);
+            } else if (text_editor::is_active(app.settings_editor)) {
+                // Settings prompt overlay: "setting: <pending>" with a
+                // blink-gated 1-px cursor bar, optional selection swap,
+                // and optional red outline on parse failure. Mirrors the
+                // flag-editor paint shape; the tab letter, dirty dot,
+                // and render-view filename are suppressed for the
+                // duration of the edit.
+                cairo_save(cr);
+                cairo_select_font_face(cr, "monospace",
+                                       CAIRO_FONT_SLANT_NORMAL,
+                                       CAIRO_FONT_WEIGHT_NORMAL);
+                cairo_set_font_size(cr, kFlagFontSize);
+
+                const std::string prefix  = "setting: ";
+                const std::string& pending = app.settings_editor.pending;
+
+                cairo_text_extents_t pre_ext;
+                cairo_text_extents(cr, prefix.c_str(), &pre_ext);
+                cairo_text_extents_t pend_ext;
+                cairo_text_extents(cr, pending.c_str(), &pend_ext);
+                // Uniform vertical extent reference so the cursor /
+                // outline height matches the flag-editor convention
+                // (a representative glyph height, not the pending's
+                // own clipped extent).
+                cairo_text_extents_t uniform_ext;
+                cairo_text_extents(cr, "Mg", &uniform_ext);
+
+                const double pending_x =
+                    static_cast<double>(kTimestampPadX) + pre_ext.x_advance;
+                const double rect_top =
+                    static_cast<double>(baseline_y) +
+                    uniform_ext.y_bearing;
+                const double rect_h = uniform_ext.height;
+
+                // Selection highlight: fill the selected pixel range
+                // with kText, then re-paint the selected substring in
+                // kBackground for contrast (matches the flag editor's
+                // selection-swap shape).
+                if (text_editor::has_selection(app.settings_editor)) {
+                    const int sel_a = text_editor::selection_start(
+                        app.settings_editor);
+                    const int sel_b = text_editor::selection_end(
+                        app.settings_editor);
+                    cairo_text_extents_t a_ext;
+                    cairo_text_extents(cr,
+                        pending.substr(0,
+                            static_cast<size_t>(sel_a)).c_str(),
+                        &a_ext);
+                    cairo_text_extents_t b_ext;
+                    cairo_text_extents(cr,
+                        pending.substr(0,
+                            static_cast<size_t>(sel_b)).c_str(),
+                        &b_ext);
+                    const double hi_x = pending_x + a_ext.x_advance;
+                    const double hi_w = b_ext.x_advance - a_ext.x_advance;
+                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                    cairo_rectangle(cr, hi_x, rect_top, hi_w, rect_h);
+                    cairo_fill(cr);
+                }
+
+                // Static prefix.
+                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                cairo_move_to(cr,
+                    static_cast<double>(kTimestampPadX), baseline_y);
+                cairo_show_text(cr, prefix.c_str());
+
+                // Pending text. Selection portion is repainted in
+                // kBackground after the full pending pass.
+                cairo_move_to(cr, pending_x, baseline_y);
+                cairo_show_text(cr, pending.c_str());
+
+                if (text_editor::has_selection(app.settings_editor)) {
+                    const int sel_a = text_editor::selection_start(
+                        app.settings_editor);
+                    const int sel_b = text_editor::selection_end(
+                        app.settings_editor);
+                    cairo_text_extents_t a_ext;
+                    cairo_text_extents(cr,
+                        pending.substr(0,
+                            static_cast<size_t>(sel_a)).c_str(),
+                        &a_ext);
+                    cairo_set_source_rgb(cr,
+                        kBackground.r, kBackground.g, kBackground.b);
+                    cairo_move_to(cr, pending_x + a_ext.x_advance,
+                                  baseline_y);
+                    cairo_show_text(cr,
+                        pending.substr(
+                            static_cast<size_t>(sel_a),
+                            static_cast<size_t>(sel_b - sel_a))
+                            .c_str());
+                }
+
+                // Cursor bar (blink-gated).
+                if (text_editor::cursor_visible_now(app.settings_editor)) {
+                    cairo_text_extents_t lext;
+                    cairo_text_extents(cr,
+                        pending.substr(0,
+                            static_cast<size_t>(
+                                app.settings_editor.cursor_pos)).c_str(),
+                        &lext);
+                    const double cx = pending_x + lext.x_advance;
+                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                    cairo_set_line_width(cr, 1.0);
+                    cairo_move_to(cr, cx, rect_top);
+                    cairo_line_to(cr, cx, rect_top + rect_h);
+                    cairo_stroke(cr);
+                }
+
+                // Parse-fail outline. Same shape as the flag editor's
+                // red-on-parse-fail rect; no textual error message.
+                if (app.settings_editor.red) {
+                    const double pad = kFlagInnerPadPx;
+                    const double rx = std::round(pending_x - pad) + 0.5;
+                    const double ry = std::round(rect_top) + 0.5;
+                    const double rw =
+                        std::round(pend_ext.x_advance + 2.0 * pad);
+                    const double rh = std::round(rect_h);
+                    cairo_set_source_rgb(cr,
+                        kAccent.r, kAccent.g, kAccent.b);
+                    cairo_set_line_width(cr, 1.0);
+                    cairo_rectangle(cr, rx, ry, rw, rh);
+                    cairo_stroke(cr);
+                }
+
+                cairo_restore(cr);
             } else {
                 // In source-view, sr is the loaded file's sample rate
                 // and playhead_sample is in source-frames. In render

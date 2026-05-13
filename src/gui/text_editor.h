@@ -29,17 +29,23 @@ constexpr int kMaxPendingChars = 16;
 // Brief X.2 BPM popup. Cap matches the brief's per-Kind tightening for
 // `<beats>@[<lo>,<hi>]` editing.
 constexpr int kMaxPendingCharsBpm = 13;
+// Settings prompt. The longest realistic typed-field key (28 chars for
+// `tab_a_viewport_start=44100000`) sits well under this cap; the headroom
+// is reserved for hand-authored passthrough keys.
+constexpr int kMaxPendingCharsSettings = 64;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind selects which keys produce a
 // printable character. V.A1's flag editor uses FlagPayload (digits,
 // letters, `.`, `*`, `:`); V.B's iteration popup uses IterationBracket
 // (digits, `.`, `+`, `-`, `,`, `[`, `]`); brief X.2's BPM popup uses
-// BpmBracket (digits, `@`, `,`, `[`, `]`).
+// BpmBracket (digits, `@`, `,`, `[`, `]`); the settings-prompt editor
+// uses SettingsAssignment (letters, digits, `.`, `=`, `_`, `-`, `:`).
 enum class Kind {
     FlagPayload,
     IterationBracket,
     BpmBracket,
+    SettingsAssignment,
 };
 
 // State for a single editable rect.
