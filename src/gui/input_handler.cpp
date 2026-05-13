@@ -1576,6 +1576,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
     if (app.prompt.active) return;
+    if (text_editor::is_active(app.settings_editor)) return;
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
@@ -1976,6 +1977,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
                                         int /*y*/, GuiInputState mods) {
     if (app.prompt.active) return;
+    if (text_editor::is_active(app.settings_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.playhead_drag.active) {
         // Brief F Section 1: if the playhead snapped onto a marker
@@ -2092,6 +2094,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     if (app.prompt.active) {
+        viewport.clear_hover_popup();
+        return;
+    }
+    if (text_editor::is_active(app.settings_editor)) {
         viewport.clear_hover_popup();
         return;
     }
