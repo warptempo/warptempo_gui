@@ -157,13 +157,14 @@ std::pair<long long, long long> compute_trim_samples(
     long long end   = total_frames;
     const double sr = static_cast<double>(sample_rate);
 
-    if (a.has_trim_begin) {
+    const ViewState& vs = active_view_state(a);
+    if (vs.has_trim_begin) {
         begin = static_cast<long long>(
-            std::nearbyint(a.trim_begin_seconds * sr));
+            std::nearbyint(vs.trim_begin_seconds * sr));
     }
-    if (a.has_trim_end) {
+    if (vs.has_trim_end) {
         end = static_cast<long long>(
-            std::nearbyint(a.trim_end_seconds * sr));
+            std::nearbyint(vs.trim_end_seconds * sr));
     }
     if (begin < 0) begin = 0;
     if (begin > total_frames) begin = total_frames;
@@ -343,7 +344,7 @@ int main(int argc, char** argv) {
     GuiSaveOps save_ops(app, undo, tab_mode, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
-    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode);
+    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode, undo);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,

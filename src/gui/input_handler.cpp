@@ -379,10 +379,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         req.markers              = app.warpmarkers.markers();
         req.phase_resets           = app.phase_reset_markers.markers();
         req.settings_passthrough = app.settings_passthrough;
-        req.has_trim_begin       = app.has_trim_begin;
-        req.trim_begin_sec       = app.trim_begin_seconds;
-        req.has_trim_end         = app.has_trim_end;
-        req.trim_end_sec         = app.trim_end_seconds;
+        {
+            const ViewState& vs = active_view_state(app);
+            req.has_trim_begin       = vs.has_trim_begin;
+            req.trim_begin_sec       = vs.trim_begin_seconds;
+            req.has_trim_end         = vs.has_trim_end;
+            req.trim_end_sec         = vs.trim_end_seconds;
+        }
         for (const auto& m : app.phase_reset_markers.markers()) {
             if (m.disabled) continue;
             req.phase_reset_frames.push_back(static_cast<int64_t>(
@@ -502,10 +505,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.markers              = q.markers;
             req.phase_resets           = q.phase_resets;
             req.settings_passthrough = app.settings_passthrough;
-            req.has_trim_begin       = app.has_trim_begin;
-            req.trim_begin_sec       = app.trim_begin_seconds;
-            req.has_trim_end         = app.has_trim_end;
-            req.trim_end_sec         = app.trim_end_seconds;
+            {
+                const ViewState& vs = active_view_state(app);
+                req.has_trim_begin       = vs.has_trim_begin;
+                req.trim_begin_sec       = vs.trim_begin_seconds;
+                req.has_trim_end         = vs.has_trim_end;
+                req.trim_end_sec         = vs.trim_end_seconds;
+            }
             for (const auto& m : q.phase_resets) {
                 if (m.disabled) continue;
                 req.phase_reset_frames.push_back(static_cast<int64_t>(
@@ -699,10 +705,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
             req.settings_passthrough = app.settings_passthrough;
-            req.has_trim_begin       = app.has_trim_begin;
-            req.trim_begin_sec       = app.trim_begin_seconds;
-            req.has_trim_end         = app.has_trim_end;
-            req.trim_end_sec         = app.trim_end_seconds;
+            {
+                const ViewState& vs = active_view_state(app);
+                req.has_trim_begin       = vs.has_trim_begin;
+                req.trim_begin_sec       = vs.trim_begin_seconds;
+                req.has_trim_end         = vs.has_trim_end;
+                req.trim_end_sec         = vs.trim_end_seconds;
+            }
             req.batch_folder         = batch_folder.string();
             req.batch_basename       = std::move(basename);
             reqs.push_back(std::move(req));
@@ -877,10 +886,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
             req.settings_passthrough = std::move(cell_settings);
-            req.has_trim_begin       = app.has_trim_begin;
-            req.trim_begin_sec       = app.trim_begin_seconds;
-            req.has_trim_end         = app.has_trim_end;
-            req.trim_end_sec         = app.trim_end_seconds;
+            {
+                const ViewState& vs = active_view_state(app);
+                req.has_trim_begin       = vs.has_trim_begin;
+                req.trim_begin_sec       = vs.trim_begin_seconds;
+                req.has_trim_end         = vs.has_trim_end;
+                req.trim_end_sec         = vs.trim_end_seconds;
+            }
             req.batch_folder         = batch_folder.string();
             req.batch_basename       = std::move(basename);
             reqs.push_back(std::move(req));
@@ -1386,18 +1398,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // `u` (no modifier) unsets the settings-side trim bounds. `Shift+U` clears
-    // the selection set (UI-only — no dirty, no playhead move).
+    // `u` (no modifier) unsets the active tab's trim bounds. `Shift+U`
+    // clears the selection set (UI-only — no dirty, no playhead move).
+    // Trim un-set is undoable as a settings entry: snapshot pre-state,
+    // mutate, push.
     if (key == GuiKeys::U && !ctrl) {
         if (shift) {
             selection.clear_selection();
-        } else if (app.has_trim_begin || app.has_trim_end) {
-            app.has_trim_begin     = false;
-            app.has_trim_end       = false;
-            app.trim_begin_seconds = 0.0;
-            app.trim_end_seconds   = 0.0;
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
+        } else {
+            ViewState& vs = active_view_state(app);
+            if (vs.has_trim_begin || vs.has_trim_end) {
+                SettingsSnapshot pre = capture_current_settings(app);
+                vs.has_trim_begin     = false;
+                vs.has_trim_end       = false;
+                vs.trim_begin_seconds = 0.0;
+                vs.trim_end_seconds   = 0.0;
+                undo.push_settings_undo(std::move(pre));
+                viewport.invalidate_waveform_area();
+                viewport.invalidate_timestamp_area();
+            }
         }
         return;
     }
@@ -2304,10 +2323,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 // existing trim toggles it off. A candidate equal-frame to the opposite
 // trim refuses (would collapse the trim region). A candidate that would
 // invert the trim ordering auto-swaps with the opposite trim. Otherwise
-// a simple set. Trim is settings-class — no undo, no dirty signal
-// (settings-class state is silently persisted on Ctrl+S, silently
-// discarded on Ctrl+W without save — same as viewport). Only the
-// waveform + timestamp areas are invalidated.
+// a simple set. Per-tab: reads and writes the active tab's trim fields.
+// Each mutation pushes a settings-undo entry so b/e/u are reversible.
 void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -2315,14 +2332,17 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     const double cand_seconds =
         static_cast<double>(app.playhead_sample) / sr_d;
     const int64_t cand_frame = app.playhead_sample;
+    ViewState& vs = active_view_state(app);
 
     // Toggle-off: same frame as existing trim_begin.
-    if (app.has_trim_begin) {
+    if (vs.has_trim_begin) {
         const int64_t cur_frame = static_cast<int64_t>(
-            std::nearbyint(app.trim_begin_seconds * sr_d));
+            std::nearbyint(vs.trim_begin_seconds * sr_d));
         if (cur_frame == cand_frame) {
-            app.has_trim_begin     = false;
-            app.trim_begin_seconds = 0.0;
+            SettingsSnapshot pre = capture_current_settings(app);
+            vs.has_trim_begin     = false;
+            vs.trim_begin_seconds = 0.0;
+            undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
@@ -2330,9 +2350,9 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     }
 
     // Equal-frame collision with trim_end refuses (would collapse trim).
-    if (app.has_trim_end) {
+    if (vs.has_trim_end) {
         const int64_t end_frame = static_cast<int64_t>(
-            std::nearbyint(app.trim_end_seconds * sr_d));
+            std::nearbyint(vs.trim_end_seconds * sr_d));
         if (end_frame == cand_frame) {
             std::fprintf(stderr,
                 "warptempo_gui: b refused: would collapse trim region\n");
@@ -2341,18 +2361,22 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
         // Auto-swap: candidate past existing trim_end → candidate
         // becomes the new trim_end, old trim_end becomes trim_begin.
         if (cand_frame > end_frame) {
-            const double old_end = app.trim_end_seconds;
-            app.trim_end_seconds   = cand_seconds;
-            app.trim_begin_seconds = old_end;
-            app.has_trim_begin     = true;
+            SettingsSnapshot pre = capture_current_settings(app);
+            const double old_end = vs.trim_end_seconds;
+            vs.trim_end_seconds   = cand_seconds;
+            vs.trim_begin_seconds = old_end;
+            vs.has_trim_begin     = true;
+            undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
         }
     }
 
-    app.has_trim_begin     = true;
-    app.trim_begin_seconds = cand_seconds;
+    SettingsSnapshot pre = capture_current_settings(app);
+    vs.has_trim_begin     = true;
+    vs.trim_begin_seconds = cand_seconds;
+    undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 }
@@ -2364,40 +2388,47 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     const double cand_seconds =
         static_cast<double>(app.playhead_sample) / sr_d;
     const int64_t cand_frame = app.playhead_sample;
+    ViewState& vs = active_view_state(app);
 
-    if (app.has_trim_end) {
+    if (vs.has_trim_end) {
         const int64_t cur_frame = static_cast<int64_t>(
-            std::nearbyint(app.trim_end_seconds * sr_d));
+            std::nearbyint(vs.trim_end_seconds * sr_d));
         if (cur_frame == cand_frame) {
-            app.has_trim_end     = false;
-            app.trim_end_seconds = 0.0;
+            SettingsSnapshot pre = capture_current_settings(app);
+            vs.has_trim_end     = false;
+            vs.trim_end_seconds = 0.0;
+            undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
         }
     }
 
-    if (app.has_trim_begin) {
+    if (vs.has_trim_begin) {
         const int64_t begin_frame = static_cast<int64_t>(
-            std::nearbyint(app.trim_begin_seconds * sr_d));
+            std::nearbyint(vs.trim_begin_seconds * sr_d));
         if (begin_frame == cand_frame) {
             std::fprintf(stderr,
                 "warptempo_gui: e refused: would collapse trim region\n");
             return;
         }
         if (cand_frame < begin_frame) {
-            const double old_begin = app.trim_begin_seconds;
-            app.trim_begin_seconds = cand_seconds;
-            app.trim_end_seconds   = old_begin;
-            app.has_trim_end       = true;
+            SettingsSnapshot pre = capture_current_settings(app);
+            const double old_begin = vs.trim_begin_seconds;
+            vs.trim_begin_seconds = cand_seconds;
+            vs.trim_end_seconds   = old_begin;
+            vs.has_trim_end       = true;
+            undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             return;
         }
     }
 
-    app.has_trim_end     = true;
-    app.trim_end_seconds = cand_seconds;
+    SettingsSnapshot pre = capture_current_settings(app);
+    vs.has_trim_end     = true;
+    vs.trim_end_seconds = cand_seconds;
+    undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 }

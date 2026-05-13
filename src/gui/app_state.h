@@ -40,6 +40,23 @@ constexpr int kDoubleClickPixels  = 5;
 // so Move can restore the "what just moved" selection.
 enum class OpKind { Create, Destroy, Move, Other };
 
+// Wholesale snapshot of the authoring-class settings. Captured at undo-push
+// time and restored on undo/redo. Holds the entire settings_passthrough
+// vector plus the per-tab trim quadruples for both tabs. The passthrough
+// vector is cheap to copy at typical sizes (~10-30 strings); per-tab trim
+// is eight scalars. Cost stays negligible per entry.
+struct SettingsSnapshot {
+    std::vector<std::pair<std::string, std::string>> passthrough;
+    double tab_a_trim_begin     = 0.0;
+    double tab_a_trim_end       = 0.0;
+    bool   tab_a_has_trim_begin = false;
+    bool   tab_a_has_trim_end   = false;
+    double tab_b_trim_begin     = 0.0;
+    double tab_b_trim_end       = 0.0;
+    bool   tab_b_has_trim_begin = false;
+    bool   tab_b_has_trim_end   = false;
+};
+
 // One entry on either stack. Carries the pre-mutation marker snapshot plus
 // a pre-op selection hint (so Undo-of-Destroy / Undo-of-Move can restore
 // a sensible selection anchor) and the op kind.
@@ -51,9 +68,17 @@ enum class OpKind { Create, Destroy, Move, Other };
 // mode; `tab` lets undo switch the active tab — both are context tags
 // that restore the original authoring view as visual feedback for what's
 // being undone.
+//
+// Carry-everywhere shape: every entry — marker, phase reset, or settings
+// — populates `settings` from app at push time, so do_undo/do_redo can
+// restore wholesale without caring which subset actually changed.
+// op_mode 'S' marks settings-only entries: those skip the mode-switch
+// and post-restore-rules dispatch since they don't carry an authoring
+// selection-anchor.
 struct UndoEntry {
     std::vector<GuiWarpMarker>      snapshot;
     std::vector<GuiPhaseResetMarker> phase_reset_snapshot;
+    SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
     OpKind                    op_kind              = OpKind::Other;
@@ -245,6 +270,16 @@ struct ViewState {
     int           warp_last_selected      = -1;
     std::set<int> phase_reset_selected;
     int           phase_reset_last_selected = -1;
+
+    // Per-tab trim region. Moved here so each A/B tab can carry its own
+    // trim independently and so trim edits participate in the undo domain
+    // as part of the SettingsSnapshot. Seconds for sample-rate stability
+    // (consistent with marker times). has_trim_* distinguishes "no trim
+    // set" from "trim set to 0.0" — both round-trip through .settings.
+    double trim_begin_seconds = 0.0;
+    double trim_end_seconds   = 0.0;
+    bool   has_trim_begin     = false;
+    bool   has_trim_end       = false;
 };
 
 struct AppState {
@@ -333,29 +368,23 @@ struct AppState {
     // saved reference rather than touching dirty directly.
     UndoHistory history;
 
-    // True if either marker file has authored changes since the last save.
-    // app.dirty = warp_dirty || phase_reset_dirty, recomputed after every
-    // push/undo/redo by walking saved_distance against each entry's
-    // op_mode. Drives both the unsaved-work dialog and the dirty-dot.
+    // True if any authoring-class file has changes since the last save.
+    // app.dirty = warp_dirty || phase_reset_dirty || settings_dirty,
+    // recomputed after every push/undo/redo by walking saved_distance
+    // against each entry's op_mode. Drives both the unsaved-work dialog
+    // and the dirty-dot.
     //
-    // Settings-class state (trim, viewport, follow_mode, active_mode,
-    // playback_speed) deliberately does NOT participate in dirty: it is
-    // silently persisted on Ctrl+S and silently discarded on Ctrl+W
-    // without save, mirroring the viewport precedent.
+    // Authoring-class settings (trim, engine, scale, N, fftw_threads,
+    // limiter_enabled, title, audio_input, plus any free-form key typed
+    // into the settings editor that isn't a view-state key) participate
+    // in dirty via settings_dirty. View-state keys (viewport, zoom,
+    // playhead, follow_mode, active_mode, playback_speed) do NOT
+    // participate: they are silently persisted on Ctrl+S and silently
+    // discarded on Ctrl+W without save.
     bool        warp_dirty           = false;
-    bool        phase_reset_dirty      = false;
+    bool        phase_reset_dirty    = false;
+    bool        settings_dirty       = false;
     bool        dirty                = false;
-
-    // Trim region, expressed in seconds for stability across sample-rate
-    // changes (consistent with marker times). has_trim_* distinguishes
-    // "no trim set" from "trim set to 0.0" — 00:00.000 is a legitimate
-    // explicit trim_begin and round-trips through .settings, but compute
-    // _trim_samples returns the same range whether or not has_trim_begin
-    // is set. Persisted in .settings as `trim_begin=` / `trim_end=`.
-    double      trim_begin_seconds   = 0.0;
-    double      trim_end_seconds     = 0.0;
-    bool        has_trim_begin       = false;
-    bool        has_trim_end         = false;
 
     // True until the first save in this session; used to log a one-time
     // notice if the on-disk file had content the canonical form drops.
@@ -543,6 +572,25 @@ GuiRect timestamp_invalidate_rect(int window_height, int window_width,
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
+
+// Free-function form of GuiTabMode::active_view_state() restricted to
+// source-view (the A/B tab pair). The renderer / trim path / the b/e/u
+// handlers don't have access to GuiTabMode but need to reach the active
+// tab's view-state from an AppState reference alone. Source-view-only:
+// render-view callers must keep using GuiTabMode::active_view_state(),
+// which handles the render-entry case.
+inline ViewState& active_view_state(AppState& a) {
+    return (a.active_tab == 'B') ? a.tab_b : a.tab_a;
+}
+inline const ViewState& active_view_state(const AppState& a) {
+    return (a.active_tab == 'B') ? a.tab_b : a.tab_a;
+}
+
+// Snapshot the authoring-class settings from `app` (settings_passthrough
+// + per-tab trim quadruples). Called by Undo's push helpers at push time
+// so every entry carries-everywhere; also called by do_undo / do_redo
+// when constructing the inverse entry. Body in app_state.cpp.
+SettingsSnapshot capture_current_settings(const AppState& app);
 
 // X.7.7: promoted from a lambda in main(). Looks up `key` in
 // app.settings_passthrough and returns its value, or `dflt` if the key

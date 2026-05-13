@@ -41,6 +41,11 @@ struct Undo {
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                         std::vector<GuiPhaseResetMarker> trans_pre,
                         char op_mode, OpKind op_kind, int hint_last);
+    // Settings-only undo entry. op_mode='S' marks it as settings-class so
+    // do_undo / do_redo skip the mode-switch and post-restore-rules
+    // dispatch. Markers are captured wholesale at push time (carry-
+    // everywhere shape) so the restore is symmetric with marker entries.
+    void push_settings_undo(SettingsSnapshot pre_state);
     void apply_post_restore_rules_warp(const UndoEntry& entry,
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,

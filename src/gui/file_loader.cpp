@@ -111,10 +111,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.dirty              = false;
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
-    app.has_trim_begin     = false;
-    app.has_trim_end       = false;
-    app.trim_begin_seconds = 0.0;
-    app.trim_end_seconds   = 0.0;
+    app.settings_dirty     = false;
     app.first_save_pending = true;
     const bool markers_ok = app.warpmarkers.load(wm_path.string());
     if (!markers_ok) {
@@ -217,10 +214,34 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.follow_mode    = ps.has_follow         ? ps.follow         : true;
         app.active_mode    = ps.has_active_mode    ? ps.active_mode    : 'W';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
-        app.has_trim_begin     = ps.has_trim_begin;
-        app.trim_begin_seconds = ps.has_trim_begin ? ps.trim_begin : 0.0;
-        app.has_trim_end       = ps.has_trim_end;
-        app.trim_end_seconds   = ps.has_trim_end   ? ps.trim_end   : 0.0;
+        // Trim: per-tab keys take precedence; the legacy singleton form,
+        // when present without any per-tab keys, applies to tab_a only
+        // (tab_b stays at default). When both are present, per-tab wins
+        // — settings_io.cpp evaluates the typed-key branches in the order
+        // listed so the per-tab branch shadows the legacy one for the same
+        // ParsedSettings field.
+        if (ps.has_tab_a_trim_begin) {
+            app.tab_a.has_trim_begin     = true;
+            app.tab_a.trim_begin_seconds = ps.tab_a_trim_begin;
+        } else if (ps.has_trim_begin) {
+            app.tab_a.has_trim_begin     = true;
+            app.tab_a.trim_begin_seconds = ps.trim_begin;
+        }
+        if (ps.has_tab_a_trim_end) {
+            app.tab_a.has_trim_end       = true;
+            app.tab_a.trim_end_seconds   = ps.tab_a_trim_end;
+        } else if (ps.has_trim_end) {
+            app.tab_a.has_trim_end       = true;
+            app.tab_a.trim_end_seconds   = ps.trim_end;
+        }
+        if (ps.has_tab_b_trim_begin) {
+            app.tab_b.has_trim_begin     = true;
+            app.tab_b.trim_begin_seconds = ps.tab_b_trim_begin;
+        }
+        if (ps.has_tab_b_trim_end) {
+            app.tab_b.has_trim_end       = true;
+            app.tab_b.trim_end_seconds   = ps.tab_b_trim_end;
+        }
         app.settings_passthrough = std::move(ps.passthrough);
     }
 
@@ -285,12 +306,8 @@ void GuiFileLoader::revert_to_blank() {
     app.dirty              = false;
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
+    app.settings_dirty     = false;
     app.first_save_pending = true;
-
-    app.has_trim_begin     = false;
-    app.has_trim_end       = false;
-    app.trim_begin_seconds = 0.0;
-    app.trim_end_seconds   = 0.0;
 
     app.warpmarkers_path.clear();
     app.phase_reset_markers_path.clear();

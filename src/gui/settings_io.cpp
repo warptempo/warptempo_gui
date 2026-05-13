@@ -61,10 +61,13 @@ bool parse_float_full(const std::string& s, float& out) {
     return true;
 }
 
+} // namespace
+
 // MM:SS.mmm shape validator: exactly 9 chars, ':' at index 2, '.' at
 // index 5, digits elsewhere. Matches the canonical marker timestamp
 // shape parse_timestamp expects. Returns true if parse_timestamp can
-// be safely called on `s`.
+// be safely called on `s`. Exposed so settings_editor.cpp can route
+// trim_begin / trim_end values through the same predicate.
 bool is_settings_timestamp(const std::string& s) {
     if (s.size() != 9) return false;
     if (s[2] != ':' || s[5] != '.') return false;
@@ -74,8 +77,6 @@ bool is_settings_timestamp(const std::string& s) {
     }
     return true;
 }
-
-} // namespace
 
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
@@ -155,6 +156,26 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_trim_end = true;
                 out.trim_end     = parse_timestamp(value);
             }
+        } else if (key == "tab_a_trim_begin") {
+            if (is_settings_timestamp(value)) {
+                out.has_tab_a_trim_begin = true;
+                out.tab_a_trim_begin     = parse_timestamp(value);
+            }
+        } else if (key == "tab_a_trim_end") {
+            if (is_settings_timestamp(value)) {
+                out.has_tab_a_trim_end = true;
+                out.tab_a_trim_end     = parse_timestamp(value);
+            }
+        } else if (key == "tab_b_trim_begin") {
+            if (is_settings_timestamp(value)) {
+                out.has_tab_b_trim_begin = true;
+                out.tab_b_trim_begin     = parse_timestamp(value);
+            }
+        } else if (key == "tab_b_trim_end") {
+            if (is_settings_timestamp(value)) {
+                out.has_tab_b_trim_end = true;
+                out.tab_b_trim_end     = parse_timestamp(value);
+            }
         } else {
             out.passthrough.emplace_back(key, value);
         }
@@ -191,8 +212,6 @@ bool write_settings_file(
     bool follow,
     char active_mode,
     float playback_speed,
-    bool has_trim_begin, double trim_begin_seconds,
-    bool has_trim_end,   double trim_end_seconds,
     const std::vector<std::pair<std::string, std::string>>& passthrough) {
     std::string data;
     for (const auto& kv : passthrough) {
@@ -212,14 +231,24 @@ bool write_settings_file(
     data += "playback_speed=";
     data += fbuf;
     data += '\n';
-    if (has_trim_begin) {
-        data += "trim_begin=";
-        data += format_timestamp(trim_begin_seconds);
+    if (tab_a.has_trim_begin) {
+        data += "tab_a_trim_begin=";
+        data += format_timestamp(tab_a.trim_begin_seconds);
         data += '\n';
     }
-    if (has_trim_end) {
-        data += "trim_end=";
-        data += format_timestamp(trim_end_seconds);
+    if (tab_a.has_trim_end) {
+        data += "tab_a_trim_end=";
+        data += format_timestamp(tab_a.trim_end_seconds);
+        data += '\n';
+    }
+    if (tab_b.has_trim_begin) {
+        data += "tab_b_trim_begin=";
+        data += format_timestamp(tab_b.trim_begin_seconds);
+        data += '\n';
+    }
+    if (tab_b.has_trim_end) {
+        data += "tab_b_trim_end=";
+        data += format_timestamp(tab_b.trim_end_seconds);
         data += '\n';
     }
     char buf[64];

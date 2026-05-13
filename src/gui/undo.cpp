@@ -12,35 +12,43 @@
 void Undo::recompute_dirty() {
     const auto& h = app.history;
     if (!h.saved_valid) {
-        app.warp_dirty      = true;
+        app.warp_dirty        = true;
         app.phase_reset_dirty = true;
+        app.settings_dirty    = true;
     } else if (h.saved_distance == 0) {
-        app.warp_dirty      = false;
+        app.warp_dirty        = false;
         app.phase_reset_dirty = false;
+        app.settings_dirty    = false;
     } else if (h.saved_distance < 0) {
         // Saved is `n` undos behind the current cursor. The last n
         // entries of undo_stack moved us from saved baseline to current.
-        app.warp_dirty      = false;
+        app.warp_dirty        = false;
         app.phase_reset_dirty = false;
+        app.settings_dirty    = false;
         const int n  = -h.saved_distance;
         const int us = static_cast<int>(h.undo_stack.size());
         for (int i = std::max(0, us - n); i < us; ++i) {
-            if (h.undo_stack[i].op_mode == 'P') app.phase_reset_dirty = true;
-            else                                app.warp_dirty      = true;
+            const char m = h.undo_stack[i].op_mode;
+            if      (m == 'P') app.phase_reset_dirty = true;
+            else if (m == 'S') app.settings_dirty    = true;
+            else               app.warp_dirty        = true;
         }
     } else {
         // Saved is `n` redos ahead. The top n entries of redo_stack
         // would, if redone, take us back to the saved state.
-        app.warp_dirty      = false;
+        app.warp_dirty        = false;
         app.phase_reset_dirty = false;
+        app.settings_dirty    = false;
         const int n  = h.saved_distance;
         const int rs = static_cast<int>(h.redo_stack.size());
         for (int i = std::max(0, rs - n); i < rs; ++i) {
-            if (h.redo_stack[i].op_mode == 'P') app.phase_reset_dirty = true;
-            else                                app.warp_dirty      = true;
+            const char m = h.redo_stack[i].op_mode;
+            if      (m == 'P') app.phase_reset_dirty = true;
+            else if (m == 'S') app.settings_dirty    = true;
+            else               app.warp_dirty        = true;
         }
     }
-    app.dirty = app.warp_dirty || app.phase_reset_dirty;
+    app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
 void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
@@ -48,6 +56,7 @@ void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phase_reset_markers.markers();
+    e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = 'W';
     e.tab                = app.active_tab;
@@ -61,6 +70,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
+    e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = 'P';
     e.tab                = app.active_tab;
@@ -75,12 +85,27 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(trans_pre);
+    e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = op_mode;
     e.tab                = app.active_tab;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
+}
+
+void Undo::push_settings_undo(SettingsSnapshot pre_state) {
+    UndoEntry e;
+    e.snapshot           = app.warpmarkers.markers();
+    e.phase_reset_snapshot = app.phase_reset_markers.markers();
+    e.settings           = std::move(pre_state);
+    e.op_kind            = OpKind::Other;
+    e.op_mode            = 'S';
+    e.tab                = app.active_tab;
+    e.hint_last_selected = app.last_selected_marker;
+    app.history.push(std::move(e));
+    viewport.clear_hover_popup();
+    recompute_dirty();
 }
 
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
@@ -246,6 +271,7 @@ void Undo::do_undo() {
     UndoEntry redo_entry;
     redo_entry.snapshot           = app.warpmarkers.markers();
     redo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
+    redo_entry.settings           = capture_current_settings(app);
     redo_entry.op_kind            = entry.op_kind;
     redo_entry.op_mode            = entry.op_mode;
     redo_entry.tab                = entry.tab;
@@ -267,13 +293,30 @@ void Undo::do_undo() {
         tab_mode.switch_active_tab_to(entry.tab);
     }
 
+    // Restore settings (passthrough + per-tab trim) before the marker
+    // swap. Marker entries get their settings field populated from app
+    // at push time (carry-everywhere), so the restore is a no-op for
+    // marker-only ops. Settings-only entries get the actual pre-edit
+    // settings restored here.
+    app.settings_passthrough        = std::move(entry.settings.passthrough);
+    app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
+    app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
+    app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;
+    app.tab_a.has_trim_end          = entry.settings.tab_a_has_trim_end;
+    app.tab_b.trim_begin_seconds    = entry.settings.tab_b_trim_begin;
+    app.tab_b.trim_end_seconds      = entry.settings.tab_b_trim_end;
+    app.tab_b.has_trim_begin        = entry.settings.tab_b_has_trim_begin;
+    app.tab_b.has_trim_end          = entry.settings.tab_b_has_trim_end;
+
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
     // Switch active mode to match the op being undone before applying
     // post-restore rules — selection state is mode-bound, so the rules
-    // and the sanitize step must run against the correct list.
-    if (entry.op_mode != app.active_mode) {
+    // and the sanitize step must run against the correct list. Skip
+    // entirely for settings-only entries: they don't carry an authoring
+    // mode, and active_mode is a view-state key that's not undoable.
+    if (entry.op_mode != 'S' && entry.op_mode != app.active_mode) {
         // Stash the current selection into the leaving mode's slot,
         // then restore the destination mode's slot.
         ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
@@ -291,7 +334,12 @@ void Undo::do_undo() {
         app.active_mode = entry.op_mode;
     }
 
-    if (entry.op_mode == 'P') {
+    // Post-restore rules apply only to marker-touching entries. Settings
+    // entries don't carry a selection-anchor and don't recompute the
+    // selection (markers were a no-op at push time).
+    if (entry.op_mode == 'S') {
+        // no-op
+    } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.phase_reset_markers.markers().size()));
@@ -316,6 +364,7 @@ void Undo::do_redo() {
     UndoEntry undo_entry;
     undo_entry.snapshot           = app.warpmarkers.markers();
     undo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
+    undo_entry.settings           = capture_current_settings(app);
     undo_entry.op_kind            = entry.op_kind;
     undo_entry.op_mode            = entry.op_mode;
     undo_entry.tab                = entry.tab;
@@ -333,10 +382,20 @@ void Undo::do_redo() {
         tab_mode.switch_active_tab_to(entry.tab);
     }
 
+    app.settings_passthrough        = std::move(entry.settings.passthrough);
+    app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
+    app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
+    app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;
+    app.tab_a.has_trim_end          = entry.settings.tab_a_has_trim_end;
+    app.tab_b.trim_begin_seconds    = entry.settings.tab_b_trim_begin;
+    app.tab_b.trim_end_seconds      = entry.settings.tab_b_trim_end;
+    app.tab_b.has_trim_begin        = entry.settings.tab_b_has_trim_begin;
+    app.tab_b.has_trim_end          = entry.settings.tab_b_has_trim_end;
+
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
-    if (entry.op_mode != app.active_mode) {
+    if (entry.op_mode != 'S' && entry.op_mode != app.active_mode) {
         ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
         if (app.active_mode == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
@@ -352,7 +411,9 @@ void Undo::do_redo() {
         app.active_mode = entry.op_mode;
     }
 
-    if (entry.op_mode == 'P') {
+    if (entry.op_mode == 'S') {
+        // no-op
+    } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.phase_reset_markers.markers().size()));
