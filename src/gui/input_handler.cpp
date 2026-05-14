@@ -2,6 +2,7 @@
 
 #include "render.h"
 #include "render_pipeline.h"
+#include "settings_io.h"
 #include "text_editor.h"
 #include "warpmarkers.h"
 
@@ -791,13 +792,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Brief X.3: Ctrl+Alt+M sweeps every BPM in the popup-owner's
     // [bpm_lo, bpm_hi] range, computing (base_tempo, scale) per cell
     // and rendering one .wav per cell into
-    // `<source_parent>/renders/<N>_render_bpm_iterations/`. The scale value
-    // is encoded in the filename so Ctrl+Alt+C can later extract and
-    // commit it back into source engine_settings.scale. Mirrors the
-    // iter render handler's structure; the substantive difference is
-    // per-cell mutation of cell_settings.scale, in addition to per-cell
-    // marker mutation. Silent no-op outside BPM mode / warp / loaded
-    // audio / committed popup.
+    // `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell
+    // engine values land in the `.rendersettings` sidecar's engine
+    // block (written by do_render); Ctrl+Alt+C reads only the scale
+    // field back when committing a BPM cell. Mirrors the iter render
+    // handler's structure; the substantive difference is per-cell
+    // mutation of cell_settings.scale, in addition to per-cell marker
+    // mutation. Silent no-op outside BPM mode / warp / loaded audio /
+    // committed popup.
     if (ctrl && alt && !shift &&
         key == GuiKeys::M) {
         if (app.active_mode != 'W') return;
@@ -916,9 +918,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             char num_buf[16];
             std::snprintf(num_buf, sizeof(num_buf),
                           "%0*d", pad_width, seq);
-            char rest_buf[96];
+            char rest_buf[64];
             std::snprintf(rest_buf, sizeof(rest_buf),
-                          "_bpm=%d;basetempo=%.2f;scale=%.6f",
+                          "_%d,%.2f,%.6f",
                           bpm, computed->base_tempo, computed->scale);
             std::string basename = num_buf;
             basename += rest_buf;
@@ -1042,49 +1044,39 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                        'W', OpKind::Other, hint_last);
         undo.recompute_dirty();
 
-        // Brief X.3: if the displayed render's basename carries a
-        // `scale=<float>` token (BPM-sweep render filenames do; iter
-        // and queue render filenames don't), extract the float and
-        // overwrite app.engine_settings.scale. Settings has no undo by
+        // Folder-gated engine-settings commit. BPM batch folders are
+        // named `<N>_render_bpm_iterations/` — the `_bpm_` substring
+        // appears in BPM folder names and in no other batch folder
+        // name (queue is `_render_all_in_queue`, iter is
+        // `_render_iterations`). On a BPM cell, read the per-cell
+        // `.rendersettings` sidecar's engine block and assign only
+        // `scale` into app.engine_settings — the BPM sweep varies
+        // only that field per cell; every other engine setting in
+        // the sidecar matches the user's dispatch-time engine state,
+        // and the user may have changed engine settings mid-batch.
+        // On any other batch type, no engine commit happens — same
+        // as today's iter / queue behavior. Settings has no undo by
         // convention; this mutation is permanent until the next
-        // Ctrl+S overwrites or the user manually edits the file.
-        // Conservative parse: any failure logs and skips, leaving
-        // markers+phase resets commit unaffected.
+        // Ctrl+S overwrites or the user manually edits the .settings
+        // file.
         {
-            const std::string& bn = cur_e.basename;
-            const auto sp = bn.find("scale=");
-            if (sp != std::string::npos) {
-                const size_t value_start = sp + 6;
-                size_t value_end = bn.size();
-                for (size_t i = value_start; i < bn.size(); ++i) {
-                    if (bn[i] == ';') { value_end = i; break; }
-                    if (i + 4 <= bn.size() &&
-                        bn.compare(i, 4, ".wav") == 0) {
-                        value_end = i;
-                        break;
-                    }
-                }
-                const std::string val_s =
-                    bn.substr(value_start, value_end - value_start);
-                double parsed = 0.0;
-                bool   ok     = false;
-                if (!val_s.empty()) {
-                    try {
-                        size_t consumed = 0;
-                        parsed = std::stod(val_s, &consumed);
-                        ok = (consumed == val_s.size()) &&
-                             std::isfinite(parsed);
-                    } catch (...) {
-                        ok = false;
-                    }
-                }
-                if (!ok) {
+            const std::string folder_name =
+                cur_e.batch_folder.filename().string();
+            const bool is_bpm_cell =
+                folder_name.find("_bpm_") != std::string::npos;
+            if (is_bpm_cell) {
+                const std::filesystem::path sidecar =
+                    cur_e.batch_folder /
+                    (cur_e.basename + ".rendersettings");
+                auto es = read_rendersettings_engine_block(sidecar);
+                if (!es) {
                     std::fprintf(stderr,
-                        "warptempo_gui: render-view: could not parse "
-                        "scale from basename '%s'; settings unchanged\n",
-                        bn.c_str());
+                        "warptempo_gui: render-view: commit: "
+                        "rendersettings engine block invalid or absent "
+                        "at '%s'; engine settings unchanged\n",
+                        sidecar.string().c_str());
                 } else {
-                    app.engine_settings.scale = parsed;
+                    app.engine_settings.scale = es->scale;
                 }
             }
         }

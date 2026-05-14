@@ -177,6 +177,14 @@ bool is_canonical_non_engine_key(const std::string& key) {
     return false;
 }
 
+// Skip predicate for the `.rendersettings` strict engine-block reader.
+// View-state lines (bare names, no `render_` prefix) are silently
+// skipped; every other non-engine key falls through to the strict
+// "unknown engine key" error.
+bool is_rendersettings_view_state_key(const std::string& key) {
+    return key == "viewport_start" || key == "zoom" || key == "playhead";
+}
+
 // Append the value of `field` from `es` to `out`, using the same format
 // strings the on-disk template encodes (%.6f for doubles, %d for ints,
 // true|false for the limiter flag, raw string for title / output_format).
@@ -223,6 +231,163 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
             out += buf;
             break;
     }
+}
+
+// Atomic write: tmp + fsync + rename, preserving the existing file's
+// permission bits when present. Same shape as the inline I/O inside
+// write_settings_file. Shared by write_rendersettings and
+// update_rendersettings_view_state.
+bool atomic_write_string_to_path(const std::string& path,
+                                 const std::string& data) {
+    mode_t mode = 0644;
+    struct stat st;
+    if (::stat(path.c_str(), &st) == 0) mode = st.st_mode & 07777;
+
+    const std::string tmp_path = path + ".tmp";
+    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
+    if (fd < 0) return false;
+
+    size_t written = 0;
+    while (written < data.size()) {
+        const ssize_t n = ::write(fd, data.data() + written,
+                                  data.size() - written);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            ::close(fd);
+            ::unlink(tmp_path.c_str());
+            return false;
+        }
+        written += static_cast<size_t>(n);
+    }
+    if (::fsync(fd) != 0) {
+        ::close(fd);
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    if (::close(fd) != 0) {
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    ::chmod(tmp_path.c_str(), mode);
+    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    return true;
+}
+
+// Append the engine block (the ten canonical engine keys, in
+// kSettingsOrder order, byte-identical to the engine block of
+// write_settings_file) to `out`. Shared by write_rendersettings.
+void append_engine_block(std::string& out, const EngineSettings& engine) {
+    for (const auto& desc : kSettingsOrder) {
+        if (desc.kind != SettingKind::EnginePassthrough) continue;
+        out += desc.key;
+        out += '=';
+        append_engine_field_value(out, engine, desc.field);
+        out += '\n';
+    }
+}
+
+// Append the three view-state keys (bare names, canonical order) to
+// `out`. Shared by write_rendersettings and
+// update_rendersettings_view_state.
+void append_view_state_block(std::string& out,
+                              int64_t viewport_start,
+                              int     zoom_level,
+                              int64_t playhead) {
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%lld",
+                  static_cast<long long>(viewport_start));
+    out += "viewport_start=";
+    out += buf;
+    out += '\n';
+    std::snprintf(buf, sizeof(buf), "%d", zoom_level);
+    out += "zoom=";
+    out += buf;
+    out += '\n';
+    std::snprintf(buf, sizeof(buf), "%lld",
+                  static_cast<long long>(playhead));
+    out += "playhead=";
+    out += buf;
+    out += '\n';
+}
+
+// Shared strict engine-block scan. `skip_pred` returns true for
+// non-engine keys that should be silent-skipped; every other
+// non-engine key is rejected as "unknown engine key". Used by both
+// read_engine_settings_from_file (skips canonical non-engine /
+// legacy-trim keys) and read_rendersettings_engine_block (skips the
+// three bare view-state keys).
+std::optional<EngineSettings> read_engine_block_strict(
+        const std::string& path,
+        bool (*skip_pred)(const std::string&)) {
+    auto report = [](const std::string& reason) {
+        std::fprintf(stderr,
+            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
+    };
+
+    EngineSettings es{};
+    bool any_error = false;
+    std::set<std::string> seen;
+
+    std::ifstream f(path);
+    if (!f) {
+        report("could not open '" + path + "'");
+        any_error = true;
+    } else {
+        std::string line;
+        while (std::getline(f, line)) {
+            const std::string trimmed = trim_ws(line);
+            if (trimmed.empty()) continue;
+            if (trimmed[0] == '#') continue;
+            const size_t eq = trimmed.find('=');
+            if (eq == std::string::npos) continue;
+            const std::string key   = trim_ws(trimmed.substr(0, eq));
+            const std::string value = trim_ws(trimmed.substr(eq + 1));
+            if (key.empty()) continue;
+
+            if (skip_pred(key)) continue;
+
+            if (!is_canonical_engine_key(key)) {
+                report("unknown engine key '" + key + "'");
+                any_error = true;
+                continue;
+            }
+            if (!seen.insert(key).second) {
+                report("duplicate key '" + key + "'");
+                any_error = true;
+                continue;
+            }
+            std::string reason;
+            if (!validate_engine_setting(key, value, es, reason)) {
+                report("key '" + key + "' has invalid value '" + value +
+                       "': " + reason);
+                any_error = true;
+                continue;
+            }
+        }
+    }
+
+    auto require = [&](const char* key) {
+        if (seen.count(key) == 0) {
+            report(std::string("missing required key '") + key + "'");
+            any_error = true;
+        }
+    };
+    require("title");
+    require("output_format");
+    require("scale");
+    require("N");
+    require("fftw_threads");
+    require("limiter_enabled_on_render");
+    require("phase_reset_offset_hops");
+    require("limiter_ceiling");
+    require("limiter_attack_ms");
+    require("limiter_release_ms");
+
+    if (any_error) return std::nullopt;
+    return es;
 }
 
 } // namespace
@@ -474,74 +639,89 @@ bool validate_engine_setting(const std::string& key,
 
 std::optional<EngineSettings> read_engine_settings_from_file(
     const std::string& path) {
-    auto report = [](const std::string& reason) {
-        std::fprintf(stderr,
-            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
-    };
+    return read_engine_block_strict(path, &is_canonical_non_engine_key);
+}
 
-    EngineSettings es{};
-    bool any_error = false;
-    std::set<std::string> seen;
-
+RenderViewState read_rendersettings_view_state(
+        const std::filesystem::path& path) {
+    RenderViewState out;
+    out.zoom_level = kFitFileLevel;
     std::ifstream f(path);
-    if (!f) {
-        report("could not open '" + path + "'");
-        any_error = true;
-        // Fall through to the missing-required-key reporting below so
-        // the user sees every gap in one pass.
-    } else {
+    if (!f) return out;
+    std::string line;
+    while (std::getline(f, line)) {
+        const std::string trimmed = trim_ws(line);
+        if (trimmed.empty()) continue;
+        if (trimmed[0] == '#') continue;
+        const size_t eq = trimmed.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string key   = trim_ws(trimmed.substr(0, eq));
+        const std::string value = trim_ws(trimmed.substr(eq + 1));
+        if (key == "viewport_start") {
+            int64_t v;
+            if (parse_int64_full(value, v)) out.viewport_start = v;
+        } else if (key == "zoom") {
+            int v;
+            if (parse_int_full(value, v)) out.zoom_level = v;
+        } else if (key == "playhead") {
+            int64_t v;
+            if (parse_int64_full(value, v)) out.playhead = v;
+        }
+        // Engine-block lines and unknown keys: silent-skip.
+    }
+    return out;
+}
+
+std::optional<EngineSettings> read_rendersettings_engine_block(
+        const std::filesystem::path& path) {
+    return read_engine_block_strict(path.string(),
+                                    &is_rendersettings_view_state_key);
+}
+
+bool write_rendersettings(const std::filesystem::path& path,
+                           const EngineSettings& engine,
+                           int64_t viewport_start,
+                           int     zoom_level,
+                           int64_t playhead) {
+    std::string data;
+    append_engine_block(data, engine);
+    append_view_state_block(data, viewport_start, zoom_level, playhead);
+    return atomic_write_string_to_path(path.string(), data);
+}
+
+bool update_rendersettings_view_state(const std::filesystem::path& path,
+                                       int64_t viewport_start,
+                                       int     zoom_level,
+                                       int64_t playhead) {
+    // Read-modify-write: keep every line whose key isn't one of the
+    // three view-state keys, then append the fresh view-state block
+    // at the tail. Preserves the engine block and any unknown lines
+    // in their existing on-disk order.
+    std::string data;
+    std::ifstream f(path);
+    if (f) {
         std::string line;
         while (std::getline(f, line)) {
             const std::string trimmed = trim_ws(line);
-            if (trimmed.empty()) continue;
-            if (trimmed[0] == '#') continue;
+            std::string key;
             const size_t eq = trimmed.find('=');
-            if (eq == std::string::npos) continue;
-            const std::string key   = trim_ws(trimmed.substr(0, eq));
-            const std::string value = trim_ws(trimmed.substr(eq + 1));
-            if (key.empty()) continue;
-
-            if (is_canonical_non_engine_key(key)) continue;
-
-            if (!is_canonical_engine_key(key)) {
-                report("unknown engine key '" + key + "'");
-                any_error = true;
+            if (eq != std::string::npos) {
+                key = trim_ws(trimmed.substr(0, eq));
+            }
+            if (key == "viewport_start" || key == "zoom" ||
+                key == "playhead") {
                 continue;
             }
-            if (!seen.insert(key).second) {
-                report("duplicate key '" + key + "'");
-                any_error = true;
-                continue;
-            }
-            std::string reason;
-            if (!validate_engine_setting(key, value, es, reason)) {
-                report("key '" + key + "' has invalid value '" + value +
-                       "': " + reason);
-                any_error = true;
-                continue;
-            }
+            data += line;
+            data += '\n';
         }
+    } else {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: rendersettings missing at '%s'; "
+            "writing view-state-only file\n", path.string().c_str());
     }
-
-    auto require = [&](const char* key) {
-        if (seen.count(key) == 0) {
-            report(std::string("missing required key '") + key + "'");
-            any_error = true;
-        }
-    };
-    require("title");
-    require("output_format");
-    require("scale");
-    require("N");
-    require("fftw_threads");
-    require("limiter_enabled_on_render");
-    require("phase_reset_offset_hops");
-    require("limiter_ceiling");
-    require("limiter_attack_ms");
-    require("limiter_release_ms");
-
-    if (any_error) return std::nullopt;
-    return es;
+    append_view_state_block(data, viewport_start, zoom_level, playhead);
+    return atomic_write_string_to_path(path.string(), data);
 }
 
 std::string format_default_settings_template(const std::string& stem) {

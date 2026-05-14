@@ -1,20 +1,16 @@
 #include "render_view.h"
 
 #include "phase_reset_markers.h"
+#include "settings_io.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
-#include <fcntl.h>
-#include <fstream>
 #include <map>
 #include <string>
 #include <sys/stat.h>
 #include <system_error>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -113,73 +109,29 @@ GuiRenderView::enumerate_render_view_list() {
     return out;
 }
 
-// -- Chunk W Addendum 5: <basename>.rendersettings sidecar -------------
+// -- <basename>.rendersettings sidecar ---------------------------------
 //
 // Per-render zoom/viewport/playhead persistence. Captures the live
 // render-view state at navigation/exit boundaries; applied on entry
-// / arrival. Source-domain authoring is unaffected — these helpers
-// run only against render-view AppState fields.
+// / arrival. The on-disk file is shared with the engine-block written
+// by render_pipeline (see write_rendersettings in settings_io); these
+// helpers only touch the view-state block.
 
 std::filesystem::path GuiRenderView::rendersettings_path(
         const AppState::RenderViewEntry& e) {
     return e.batch_folder / (e.basename + ".rendersettings");
 }
 
-// Atomic save of the live render-view zoom/viewport/playhead. Same
-// <path>.tmp + fsync + rename scheme as the warpmarkers writer.
-// Failures are non-fatal — logged once and discarded.
+// Atomic update of the view-state block (engine block, if present on
+// disk, is left untouched). Failures are non-fatal — logged once by
+// the underlying writer and otherwise discarded.
 void GuiRenderView::write_rendersettings_for(
         const AppState::RenderViewEntry& e) {
-    const std::filesystem::path path = this->rendersettings_path(e);
-    char buf[256];
-    const int len = std::snprintf(buf, sizeof(buf),
-        "render_viewport_start=%lld\n"
-        "render_zoom=%d\n"
-        "render_playhead=%lld\n",
-        static_cast<long long>(app.viewport_start_sample),
+    update_rendersettings_view_state(
+        this->rendersettings_path(e),
+        app.viewport_start_sample,
         app.zoom_level,
-        static_cast<long long>(app.playhead_sample));
-    if (len <= 0 || len >= static_cast<int>(sizeof(buf))) {
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: rendersettings format failed\n");
-        return;
-    }
-    const std::string tmp_path = path.string() + ".tmp";
-    int fd = ::open(tmp_path.c_str(),
-                    O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: failed to open %s: %s\n",
-            tmp_path.c_str(), std::strerror(errno));
-        return;
-    }
-    ssize_t off = 0;
-    while (off < len) {
-        const ssize_t n = ::write(fd, buf + off, len - off);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            ::close(fd);
-            ::unlink(tmp_path.c_str());
-            std::fprintf(stderr,
-                "warptempo_gui: render-view: write %s failed: %s\n",
-                tmp_path.c_str(), std::strerror(errno));
-            return;
-        }
-        off += n;
-    }
-    if (::fsync(fd) != 0 || ::close(fd) != 0) {
-        ::unlink(tmp_path.c_str());
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: fsync/close %s failed\n",
-            tmp_path.c_str());
-        return;
-    }
-    if (::rename(tmp_path.c_str(), path.string().c_str()) != 0) {
-        ::unlink(tmp_path.c_str());
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: rename %s failed: %s\n",
-            tmp_path.c_str(), std::strerror(errno));
-    }
+        app.playhead_sample);
 }
 
 // Tolerant parser. Missing / malformed file applies fit-file zoom
@@ -188,48 +140,16 @@ void GuiRenderView::write_rendersettings_for(
 // clamp).
 void GuiRenderView::apply_rendersettings_for(
         const AppState::RenderViewEntry& e) {
-    int     z   = kFitFileLevel;
-    int64_t vp  = 0;
-    int64_t ph  = 0;
-    const std::filesystem::path path = this->rendersettings_path(e);
-    std::error_code ec;
-    if (std::filesystem::exists(path, ec)) {
-        std::ifstream f(path);
-        std::string line;
-        while (std::getline(f, line)) {
-            if (line.empty()) continue;
-            const auto eq = line.find('=');
-            if (eq == std::string::npos) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: malformed line in "
-                    "%s: %s\n", path.string().c_str(), line.c_str());
-                continue;
-            }
-            const std::string key = line.substr(0, eq);
-            const std::string val = line.substr(eq + 1);
-            try {
-                if (key == "render_zoom") {
-                    z = std::stoi(val);
-                } else if (key == "render_viewport_start") {
-                    vp = static_cast<int64_t>(std::stoll(val));
-                } else if (key == "render_playhead") {
-                    ph = static_cast<int64_t>(std::stoll(val));
-                }
-                // Unknown keys ignored.
-            } catch (...) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: bad value in "
-                    "%s: %s\n", path.string().c_str(), line.c_str());
-            }
-        }
-    }
+    const RenderViewState vs =
+        read_rendersettings_view_state(this->rendersettings_path(e));
+    int z = vs.zoom_level;
     // Sanitize zoom — accept only kFitFileLevel or 0..kNumZoomLevels-1.
     if (z != kFitFileLevel && (z < 0 || z >= kNumZoomLevels)) {
         z = kFitFileLevel;
     }
     app.zoom_level            = z;
-    app.viewport_start_sample = vp;
-    app.playhead_sample       = ph;
+    app.viewport_start_sample = vs.viewport_start;
+    app.playhead_sample       = vs.playhead;
     clamp_viewport_start(app, audio);
 }
 

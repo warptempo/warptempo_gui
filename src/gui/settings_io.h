@@ -101,6 +101,57 @@ bool validate_engine_setting(const std::string& key,
 std::optional<EngineSettings> read_engine_settings_from_file(
     const std::string& path);
 
+// Tolerant view-state contents of `.rendersettings`. Missing keys are
+// silently defaulted (fit-file zoom for `zoom`, zero for viewport/
+// playhead); malformed values are silent-skipped. Engine-block lines
+// in the same file are skipped — read_rendersettings_engine_block is
+// the strict reader for that side.
+struct RenderViewState {
+    int     zoom_level     = 0;   // Filled with kFitFileLevel by the reader.
+    int64_t viewport_start = 0;
+    int64_t playhead       = 0;
+};
+
+// Tolerant view-state reader. Missing file → fit-file zoom + zero
+// viewport + zero playhead. Engine-block lines and unknown keys are
+// silent-skipped. Same tolerance as the prior
+// GuiRenderView::apply_rendersettings_for.
+RenderViewState read_rendersettings_view_state(
+    const std::filesystem::path& path);
+
+// Strict engine-block reader for `.rendersettings`. Same per-field
+// validator and same stderr line shape as read_engine_settings_from_file.
+// View-state lines (viewport_start, zoom, playhead) are skipped.
+// Any other unknown key, malformed value, missing required key, or
+// duplicate → nullopt with a stderr line per violation.
+std::optional<EngineSettings> read_rendersettings_engine_block(
+    const std::filesystem::path& path);
+
+// Full-write of `.rendersettings`: emits the ten canonical engine keys
+// (in kSettingsOrder order, byte-identical to the engine block of
+// write_settings_file), then the three view-state keys
+// (viewport_start, zoom, playhead). Atomic via tmp + fsync + rename.
+// Called by the render pipeline at render time.
+bool write_rendersettings(const std::filesystem::path& path,
+                          const EngineSettings& engine,
+                          int64_t viewport_start,
+                          int     zoom_level,
+                          int64_t playhead);
+
+// View-state-only update of `.rendersettings`: read-modify-write.
+// Preserves every non-view-state line in its existing order (the
+// engine block + any unknown lines), replaces the three view-state
+// lines (or appends them if absent) at the file's tail. Atomic via
+// tmp + fsync + rename.
+//
+// If the file is missing, emits a view-state-only file (no engine
+// block) after logging once — a later strict engine-block read on
+// the same path will fail its missing-required-key checks.
+bool update_rendersettings_view_state(const std::filesystem::path& path,
+                                       int64_t viewport_start,
+                                       int     zoom_level,
+                                       int64_t playhead);
+
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is
 // byte-identical to a save with a default-constructed EngineSettings
