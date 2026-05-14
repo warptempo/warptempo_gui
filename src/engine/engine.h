@@ -29,6 +29,19 @@ struct EngineParams {
     int          source_channels      = 0;
 
     std::string output_audio_path;
+
+    // Optional in-memory output sink. When non-null, the engine routes
+    // synthesis output to this caller-owned vector (append-only via
+    // std::vector::insert) and skips both limiter passes — Pass 2
+    // (limiter.process) is not invoked and Pass 3 uses an append-to-vector
+    // write_cb rather than the file-path / peak-limiter wrapper. The
+    // existing output_audio_path field is ignored on this path. The buffer
+    // must remain valid through run_warptempo_engine; the caller is
+    // responsible for clearing or reserving. Limiting belongs downstream
+    // of this path (target view runs a PeakLimiter between the engine
+    // buffer and the audio device).
+    std::vector<float>* output_buffer = nullptr;
+
     std::vector<std::pair<size_t, size_t>> timemap;  // src_frame, tgt_frame
 
     int    N                          = 4096;

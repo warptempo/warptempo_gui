@@ -58,6 +58,17 @@ struct RenderRequest {
     bool   has_trim_end   = false;
     double trim_end_sec   = 0.0;
 
+    // Nullable. When non-null and output_format is "wav", do_render routes
+    // the engine to this buffer instead of a staged .wav file. Skips both
+    // limiters, the atomic rename, the peak-pyramid sidecar write, and
+    // every batch sidecar write (.warpmarkers / .phaseresetmarkers /
+    // .rendersettings / .renderwarpmarkers / .renderphaseresetmarkers).
+    // Defaults to nullptr; the existing wav-to-disk path is taken when
+    // null. Reserved for target-view iteration rendering; not
+    // authoring-facing. Non-wav output_format branches silently ignore
+    // this field.
+    std::vector<float>* output_buffer = nullptr;
+
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>.wav` (or
     // `.mid` for midi) and, on success, deposits the per-render

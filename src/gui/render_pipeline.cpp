@@ -272,7 +272,14 @@ RenderOutcome do_render(const RenderRequest& req,
             src_samples.size() / static_cast<size_t>(src_ch);
         ep.source_sample_rate   = src_sr;
         ep.source_channels      = src_ch;
-        ep.output_audio_path    = staging_output_path;
+        // Output sink: when a caller-owned buffer was supplied, route
+        // synthesis to it (no on-disk staging, no rename, no sidecars).
+        // Otherwise the existing wav-on-disk path with atomic rename runs.
+        if (req.output_buffer) {
+            ep.output_buffer = req.output_buffer;
+        } else {
+            ep.output_audio_path = staging_output_path;
+        }
         ep.timemap.reserve(tmres.standard.size());
         for (const auto& s : tmres.standard) {
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
@@ -347,16 +354,19 @@ RenderOutcome do_render(const RenderRequest& req,
             return handle_eng(er);
         }
 
-        // Atomic publish: staging → final.
-        std::error_code ec;
-        std::filesystem::rename(staging_output_path, final_output_path, ec);
-        if (ec) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: rename '%s' -> '%s' failed: %s\n",
-                staging_output_path.c_str(), final_output_path.c_str(),
-                ec.message().c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
+        // Atomic publish: staging → final. Buffer path skips this — the
+        // synthesised audio already landed in *req.output_buffer.
+        if (!req.output_buffer) {
+            std::error_code ec;
+            std::filesystem::rename(staging_output_path, final_output_path, ec);
+            if (ec) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: rename '%s' -> '%s' failed: %s\n",
+                    staging_output_path.c_str(), final_output_path.c_str(),
+                    ec.message().c_str());
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
         }
     } else {
         // output_format == "timemap" or "tempomap". No engine, no limiter.
@@ -390,8 +400,9 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Deposit a peak-pyramid sidecar next to the rendered wav. Fire-and-forget;
     // the function logs its own errors and never affects render success.
-    // Only meaningful when there's a rendered wav on disk.
-    if (output_format == "wav") {
+    // Only meaningful when there's a rendered wav on disk — buffer-output
+    // renders have no on-disk artifact to pyramid against.
+    if (output_format == "wav" && !req.output_buffer) {
         write_peaks_cache_for_wav(final_output_path);
     }
 
@@ -401,7 +412,11 @@ RenderOutcome do_render(const RenderRequest& req,
     // current source authoring state — render-view loads them later to
     // display alongside the rendered audio. Sidecar write failures are
     // logged but never abort: the wav itself is the primary artifact.
-    if (batch_render) {
+    // Batch sidecars (.warpmarkers / .phaseresetmarkers / .rendersettings /
+    // .renderwarpmarkers / .renderphaseresetmarkers) are tied to an on-disk
+    // rendered wav. The buffer-output path has no such artifact, so skip
+    // sidecar emission entirely on that path.
+    if (batch_render && !req.output_buffer) {
         const std::filesystem::path bf(req.batch_folder);
         const std::string wm_path =
             (bf / (req.batch_basename + ".warpmarkers")).string();
@@ -554,7 +569,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     cleanup_all();
     std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
-                 final_output_path.c_str());
+                 req.output_buffer ? "<buffer>" : final_output_path.c_str());
     return RenderOutcome::Success;
 }
 

@@ -8,6 +8,15 @@ class Synthesis {
 public:
     void process(AudioSTFT& stft);
 
+    // Sibling of process() that routes OLA output to a caller-owned
+    // interleaved-float vector instead of an on-disk wav. Same OLA driver
+    // (synthesize_full); no sf_open, no PeakLimiter. The write_cb appends
+    // n_frames * channels floats to *output_buffer per chunk. The vector
+    // ends up with exactly (num_synthesis_frames * R_s + N/2 - R_s) *
+    // channels floats appended, channel-interleaved within each frame
+    // (same layout the file path emits).
+    void process_to_buffer(AudioSTFT& stft, std::vector<float>* output_buffer);
+
     // Shared synthesis helper. Runs full OLA synthesis from frame 0 using
     // stft.attenuation_map. write_cb is invoked with per-iteration chunks (each
     // at most R_s frames; initial iterations contribute less during the N/2

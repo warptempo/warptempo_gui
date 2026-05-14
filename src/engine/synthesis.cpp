@@ -176,3 +176,17 @@ void Synthesis::process(AudioSTFT& stft) {
     }
     sf_close(output_snd);
 }
+
+void Synthesis::process_to_buffer(AudioSTFT& stft,
+                                  std::vector<float>* output_buffer) {
+    const int channels = stft.channels;
+    auto append_to_buffer = [output_buffer, channels](const float* buf,
+                                                      size_t n_frames) {
+        output_buffer->insert(
+            output_buffer->end(), buf,
+            buf + n_frames * static_cast<size_t>(channels));
+    };
+    synthesize_full(stft, nullptr, append_to_buffer,
+                    /*show_progress=*/true,
+                    /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+}

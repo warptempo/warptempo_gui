@@ -119,7 +119,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     lp.num_bands_override   = p.limiter_num_bands;
     lp.diag                 = p.limiter_diag;
 
-    audio_stft.output_audio_file       = p.output_audio_path;
+    // "<buffer>" is a log-only sentinel — never pass it to filesystem APIs.
+    // All such callers (synthesis.cpp's sf_open, limiter.cpp's diag path) sit
+    // inside passes that are gated off on the buffer-output path.
+    audio_stft.output_audio_file       =
+        p.output_buffer ? std::string("<buffer>") : p.output_audio_path;
     audio_stft.limiter_mode            = p.limiter_mode;
     audio_stft.peak_limiter_ceiling_dbfs = p.peak_limiter_ceiling_dbfs;
     audio_stft.peak_limiter_attack_ms    = p.peak_limiter_attack_ms;
@@ -224,18 +228,31 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p2_1 = std::chrono::steady_clock::now();
     std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
 
-    auto t_p3_0 = std::chrono::steady_clock::now();
-    limiter.process(audio_stft);
-    auto t_p3_1 = std::chrono::steady_clock::now();
-    std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
-    if (audio_stft.cancellation_observed) {
-        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
-        audio_stft.cleanup();
-        return EngineResult::Cancelled;
+    // Pass 2 is skipped on the buffer-output path. The attenuation_map was
+    // already assign()'d to all-1.0 above, which is the same identity row
+    // the spectral limiter would have produced for a no-overshoot signal —
+    // so synthesis sees a no-op attenuation row regardless of which branch
+    // we take. The buffer-path caller is responsible for any downstream
+    // limiting (target-view runs a PeakLimiter between the engine buffer
+    // and the audio device).
+    if (!p.output_buffer) {
+        auto t_p3_0 = std::chrono::steady_clock::now();
+        limiter.process(audio_stft);
+        auto t_p3_1 = std::chrono::steady_clock::now();
+        std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
+        if (audio_stft.cancellation_observed) {
+            std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+            audio_stft.cleanup();
+            return EngineResult::Cancelled;
+        }
     }
 
     auto t_p4_0 = std::chrono::steady_clock::now();
-    synthesis.process(audio_stft);
+    if (p.output_buffer) {
+        synthesis.process_to_buffer(audio_stft, p.output_buffer);
+    } else {
+        synthesis.process(audio_stft);
+    }
     auto t_p4_1 = std::chrono::steady_clock::now();
     std::cout << "  (" << pass_ms(t_p4_0, t_p4_1) << " ms)\n";
     if (audio_stft.cancellation_observed) {
