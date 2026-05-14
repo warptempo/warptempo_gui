@@ -420,11 +420,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // contract local.
         if (async_renderer.is_busy()) return;
 
+        auto es = engine_settings_from_passthrough(app.settings_passthrough);
+        if (!es) {
+            std::fprintf(stderr,
+                "warptempo_gui: render: engine settings invalid; "
+                "render dispatch rejected\n");
+            return;
+        }
+
         RenderRequest req;
         req.source_audio_path    = app.source_audio_path;
         req.markers              = app.warpmarkers.markers();
         req.phase_resets           = app.phase_reset_markers.markers();
         req.settings_passthrough = app.settings_passthrough;
+        req.engine_settings      = std::move(*es);
         {
             const ViewState& vs = active_view_state(app);
             req.has_trim_begin       = vs.has_trim_begin;
@@ -557,11 +566,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 i + 1, total,
                 batch_folder.filename().string().c_str(), num_buf);
 
+            auto es = engine_settings_from_passthrough(app.settings_passthrough);
+            if (!es) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-all: engine settings invalid; "
+                    "entry %d of %d rejected\n", i + 1, total);
+                continue;
+            }
+
             RenderRequest req;
             req.source_audio_path    = q.source_audio_path;
             req.markers              = q.markers;
             req.phase_resets           = q.phase_resets;
             req.settings_passthrough = app.settings_passthrough;
+            req.engine_settings      = std::move(*es);
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;
@@ -578,6 +596,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.batch_folder   = batch_folder.string();
             req.batch_basename = num_buf;
             reqs.push_back(std::move(req));
+        }
+
+        if (reqs.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-all: no valid entries; "
+                "nothing to render\n");
+            return;
         }
 
         if (async_renderer.is_busy()) return;
@@ -756,12 +781,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     std::numeric_limits<double>::quiet_NaN();
             }
 
+            auto es = engine_settings_from_passthrough(app.settings_passthrough);
+            if (!es) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-iterations: engine settings "
+                    "invalid; cell %d of %d rejected\n", cell + 1, total);
+                // Maintain the Cartesian-product enumeration even when
+                // rejecting this cell so the surviving cells line up with
+                // their intended delta coordinates.
+                for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
+                    ++indices[k];
+                    if (indices[k] < per_marker_deltas[k].size()) break;
+                    indices[k] = 0;
+                }
+                continue;
+            }
+
             RenderRequest req;
             req.source_audio_path    = app.source_audio_path;
             req.markers              = std::move(cell_markers);
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
             req.settings_passthrough = app.settings_passthrough;
+            req.engine_settings      = std::move(*es);
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;
@@ -781,6 +823,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 if (indices[k] < per_marker_deltas[k].size()) break;
                 indices[k] = 0;
             }
+        }
+
+        if (reqs.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-iterations: no valid cells; "
+                "nothing to render\n");
+            return;
         }
 
         if (async_renderer.is_busy()) return;
@@ -927,6 +976,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 cell_settings.emplace_back("scale", scale_buf);
             }
 
+            auto es = engine_settings_from_passthrough(cell_settings);
+            if (!es) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-basetempo: engine settings "
+                    "invalid; cell bpm=%d rejected\n", bpm);
+                ++seq;
+                continue;
+            }
+
             char num_buf[16];
             std::snprintf(num_buf, sizeof(num_buf),
                           "%0*d", pad_width, seq);
@@ -943,6 +1001,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
             req.settings_passthrough = std::move(cell_settings);
+            req.engine_settings      = std::move(*es);
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;

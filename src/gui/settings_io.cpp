@@ -61,6 +61,62 @@ bool parse_float_full(const std::string& s, float& out) {
     return true;
 }
 
+// Canonical .settings layout. One descriptor per line in the file, in
+// the exact order they appear on disk. Shared by format_default_settings_template
+// (template build) and write_settings_file (Ctrl+S). Reading is
+// order-insensitive — parse_settings_file does not consult this list.
+enum class SettingKind {
+    EnginePassthrough,
+    ActiveModeChar,
+    PlaybackSpeedFloat,
+    FollowFlag,
+    OptionalTrimBegin_A,
+    OptionalTrimEnd_A,
+    OptionalTrimBegin_B,
+    OptionalTrimEnd_B,
+    ViewportStart_A,
+    ZoomLevel_A,
+    Playhead_A,
+    ViewportStart_B,
+    ZoomLevel_B,
+    Playhead_B,
+};
+
+struct SettingDescriptor {
+    const char* key;
+    // Template default. nullptr means "no fixed default": for `title`
+    // it is synthesized from the source stem; for the optional trims
+    // it means the template omits the line entirely.
+    const char* default_value;
+    SettingKind kind;
+};
+
+constexpr SettingDescriptor kSettingsOrder[] = {
+    { "title",                       nullptr,             SettingKind::EnginePassthrough },
+    { "scale",                       "1.000000",          SettingKind::EnginePassthrough },
+    { "output_format",               "wav",               SettingKind::EnginePassthrough },
+    { "N",                           "4096",              SettingKind::EnginePassthrough },
+    { "fftw_threads",                "16",                SettingKind::EnginePassthrough },
+    { "limiter_enabled_on_render",   "true",              SettingKind::EnginePassthrough },
+    { "phase_reset_offset_hops",     "1.000000",          SettingKind::EnginePassthrough },
+    { "limiter_ceiling",             "-0.300000",         SettingKind::EnginePassthrough },
+    { "limiter_attack_ms",           "0.250000",          SettingKind::EnginePassthrough },
+    { "limiter_release_ms",          "0.500000",          SettingKind::EnginePassthrough },
+    { "active_mode",                 "W",                 SettingKind::ActiveModeChar },
+    { "playback_speed",              "1.000000",          SettingKind::PlaybackSpeedFloat },
+    { "follow",                      "true",              SettingKind::FollowFlag },
+    { "tab_a_trim_begin",            nullptr,             SettingKind::OptionalTrimBegin_A },
+    { "tab_a_trim_end",              nullptr,             SettingKind::OptionalTrimEnd_A },
+    { "tab_b_trim_begin",            nullptr,             SettingKind::OptionalTrimBegin_B },
+    { "tab_b_trim_end",              nullptr,             SettingKind::OptionalTrimEnd_B },
+    { "tab_a_viewport_start",        "0",                 SettingKind::ViewportStart_A },
+    { "tab_a_zoom",                  "0",                 SettingKind::ZoomLevel_A },
+    { "tab_a_playhead",              "0",                 SettingKind::Playhead_A },
+    { "tab_b_viewport_start",        "0",                 SettingKind::ViewportStart_B },
+    { "tab_b_zoom",                  "0",                 SettingKind::ZoomLevel_B },
+    { "tab_b_playhead",              "0",                 SettingKind::Playhead_B },
+};
+
 } // namespace
 
 // MM:SS.mmm shape validator: exactly 9 chars, ':' at index 2, '.' at
@@ -183,29 +239,24 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
     return true;
 }
 
-std::string format_default_settings_template(const std::string& stem,
-                                             const std::string& ext_no_dot) {
+std::string format_default_settings_template(const std::string& stem) {
     std::string s;
-    s += "title=";       s += stem; s += "-rendered\n";
-    s += "audio_input="; s += stem; s += '.'; s += ext_no_dot; s += '\n';
-    s += "scale=1.000000\n";
-    s += "output_format=wav\n";
-    s += "N=4096\n";
-    s += "fftw_threads=16\n";
-    s += "limiter_enabled_on_render=true\n";
-    s += "phase_reset_offset_hops=1.000000\n";
-    s += "limiter_ceiling=-0.300000\n";
-    s += "limiter_attack_ms=0.250000\n";
-    s += "limiter_release_ms=0.500000\n";
-    s += "active_mode=W\n";
-    s += "playback_speed=1.000000\n";
-    s += "follow=true\n";
-    s += "tab_a_viewport_start=0\n";
-    s += "tab_a_zoom=0\n";
-    s += "tab_a_playhead=0\n";
-    s += "tab_b_viewport_start=0\n";
-    s += "tab_b_zoom=0\n";
-    s += "tab_b_playhead=0\n";
+    for (const auto& desc : kSettingsOrder) {
+        if (desc.default_value != nullptr) {
+            s += desc.key;
+            s += '=';
+            s += desc.default_value;
+            s += '\n';
+        } else if (desc.kind == SettingKind::EnginePassthrough) {
+            // Only the `title` entry has a stem-derived default.
+            s += desc.key;
+            s += '=';
+            s += stem;
+            s += "-rendered\n";
+        }
+        // Optional trims: nullptr default, non-engine kind. Skipped at
+        // template build; the writer emits them at Ctrl+S iff the flag is set.
+    }
     return s;
 }
 
@@ -218,60 +269,102 @@ bool write_settings_file(
     float playback_speed,
     const std::vector<std::pair<std::string, std::string>>& passthrough) {
     std::string data;
-    for (const auto& kv : passthrough) {
-        data += kv.first;
-        data += '=';
-        data += kv.second;
-        data += '\n';
-    }
-    data += "follow=";
-    data += follow ? "true" : "false";
-    data += '\n';
-    data += "active_mode=";
-    data += active_mode;
-    data += '\n';
-    char fbuf[32];
-    std::snprintf(fbuf, sizeof(fbuf), "%.6f", playback_speed);
-    data += "playback_speed=";
-    data += fbuf;
-    data += '\n';
-    if (tab_a.has_trim_begin) {
-        data += "tab_a_trim_begin=";
-        data += format_timestamp(tab_a.trim_begin_seconds);
-        data += '\n';
-    }
-    if (tab_a.has_trim_end) {
-        data += "tab_a_trim_end=";
-        data += format_timestamp(tab_a.trim_end_seconds);
-        data += '\n';
-    }
-    if (tab_b.has_trim_begin) {
-        data += "tab_b_trim_begin=";
-        data += format_timestamp(tab_b.trim_begin_seconds);
-        data += '\n';
-    }
-    if (tab_b.has_trim_end) {
-        data += "tab_b_trim_end=";
-        data += format_timestamp(tab_b.trim_end_seconds);
-        data += '\n';
-    }
     char buf[64];
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_a.viewport_start_sample));
-    data += "tab_a_viewport_start="; data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%d", tab_a.zoom_level);
-    data += "tab_a_zoom=";            data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_a.playhead_sample));
-    data += "tab_a_playhead=";        data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_b.viewport_start_sample));
-    data += "tab_b_viewport_start="; data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%d", tab_b.zoom_level);
-    data += "tab_b_zoom=";            data += buf; data += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(tab_b.playhead_sample));
-    data += "tab_b_playhead=";        data += buf; data += '\n';
+    for (const auto& desc : kSettingsOrder) {
+        switch (desc.kind) {
+            case SettingKind::EnginePassthrough: {
+                for (const auto& kv : passthrough) {
+                    if (kv.first == desc.key) {
+                        data += desc.key;
+                        data += '=';
+                        data += kv.second;
+                        data += '\n';
+                        break;
+                    }
+                }
+                break;
+            }
+            case SettingKind::ActiveModeChar:
+                data += desc.key;
+                data += '=';
+                data += active_mode;
+                data += '\n';
+                break;
+            case SettingKind::PlaybackSpeedFloat:
+                std::snprintf(buf, sizeof(buf), "%.6f", playback_speed);
+                data += desc.key;
+                data += '=';
+                data += buf;
+                data += '\n';
+                break;
+            case SettingKind::FollowFlag:
+                data += desc.key;
+                data += '=';
+                data += follow ? "true" : "false";
+                data += '\n';
+                break;
+            case SettingKind::OptionalTrimBegin_A:
+                if (tab_a.has_trim_begin) {
+                    data += desc.key;
+                    data += '=';
+                    data += format_timestamp(tab_a.trim_begin_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::OptionalTrimEnd_A:
+                if (tab_a.has_trim_end) {
+                    data += desc.key;
+                    data += '=';
+                    data += format_timestamp(tab_a.trim_end_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::OptionalTrimBegin_B:
+                if (tab_b.has_trim_begin) {
+                    data += desc.key;
+                    data += '=';
+                    data += format_timestamp(tab_b.trim_begin_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::OptionalTrimEnd_B:
+                if (tab_b.has_trim_end) {
+                    data += desc.key;
+                    data += '=';
+                    data += format_timestamp(tab_b.trim_end_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::ViewportStart_A:
+                std::snprintf(buf, sizeof(buf), "%lld",
+                              static_cast<long long>(tab_a.viewport_start_sample));
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+            case SettingKind::ZoomLevel_A:
+                std::snprintf(buf, sizeof(buf), "%d", tab_a.zoom_level);
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+            case SettingKind::Playhead_A:
+                std::snprintf(buf, sizeof(buf), "%lld",
+                              static_cast<long long>(tab_a.playhead_sample));
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+            case SettingKind::ViewportStart_B:
+                std::snprintf(buf, sizeof(buf), "%lld",
+                              static_cast<long long>(tab_b.viewport_start_sample));
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+            case SettingKind::ZoomLevel_B:
+                std::snprintf(buf, sizeof(buf), "%d", tab_b.zoom_level);
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+            case SettingKind::Playhead_B:
+                std::snprintf(buf, sizeof(buf), "%lld",
+                              static_cast<long long>(tab_b.playhead_sample));
+                data += desc.key; data += '='; data += buf; data += '\n';
+                break;
+        }
+    }
 
     mode_t mode = 0644;
     struct stat st;

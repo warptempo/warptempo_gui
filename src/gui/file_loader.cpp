@@ -81,8 +81,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     std::filesystem::path parent = apath.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem = apath.stem().string();
-    const std::string ext = apath.extension().string();
-    const std::string ext_no_dot = ext.empty() ? "" : ext.substr(1);
     const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
     const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
     const std::filesystem::path set_path = parent / (stem + ".settings");
@@ -92,8 +90,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.source_audio_path     = path;
 
     create_if_missing(wm_path, "00:00.000|1.00\n");
-    create_if_missing(set_path,
-                      format_default_settings_template(stem, ext_no_dot));
+    create_if_missing(set_path, format_default_settings_template(stem));
 
     // Load the markers file. Parse failures are non-fatal: we log each
     // error to stderr and leave app.warpmarkers empty. The GUI still works

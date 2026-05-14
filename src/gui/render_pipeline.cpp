@@ -7,13 +7,17 @@
 #include "timemap.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <limits>
+#include <optional>
 #include <set>
 #include <string>
 #include <unistd.h>
@@ -23,36 +27,43 @@
 
 namespace {
 
-std::string settings_get(
-    const std::vector<std::pair<std::string,std::string>>& passthrough,
-    const std::string& key) {
-    for (const auto& kv : passthrough) {
-        if (kv.first == key) {
-            const std::string& v = kv.second;
-            if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
-                return v.substr(1, v.size() - 2);
-            }
-            return v;
-        }
+// Strict-parse helpers used exclusively by engine_settings_from_passthrough.
+// Each consumes the entire string; trailing garbage is rejected. Non-finite
+// doubles are rejected. Integer overflow into out-of-int-range is rejected.
+
+bool parse_double_strict(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    try {
+        std::size_t pos = 0;
+        const double v = std::stod(s, &pos);
+        if (pos != s.size()) return false;
+        if (!std::isfinite(v)) return false;
+        out = v;
+        return true;
+    } catch (...) {
+        return false;
     }
-    return {};
 }
 
-bool parse_bool(const std::string& s, bool default_val) {
-    if (s.empty()) return default_val;
-    if (s == "true" || s == "1" || s == "yes" || s == "on")  return true;
-    if (s == "false" || s == "0" || s == "no"  || s == "off") return false;
-    return default_val;
+bool parse_int_strict(const std::string& s, int& out) {
+    if (s.empty()) return false;
+    try {
+        std::size_t pos = 0;
+        const long v = std::stol(s, &pos, 10);
+        if (pos != s.size()) return false;
+        if (v < std::numeric_limits<int>::min() ||
+            v > std::numeric_limits<int>::max()) return false;
+        out = static_cast<int>(v);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
-int parse_int(const std::string& s, int default_val) {
-    if (s.empty()) return default_val;
-    try { return std::stoi(s); } catch (...) { return default_val; }
-}
-
-double parse_double(const std::string& s, double default_val) {
-    if (s.empty()) return default_val;
-    try { return std::stod(s); } catch (...) { return default_val; }
+bool parse_bool_strict(const std::string& s, bool& out) {
+    if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
+    if (s == "false" || s == "0" || s == "no"  || s == "off") { out = false; return true; }
+    return false;
 }
 
 // Silent-on-missing unlink wrapper.
@@ -170,46 +181,224 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 
 }  // namespace
 
+std::optional<EngineSettings> engine_settings_from_passthrough(
+    const std::vector<std::pair<std::string, std::string>>& passthrough) {
+
+    static const std::array<const char*, 10> kKnownKeys = {{
+        "title",
+        "output_format",
+        "scale",
+        "N",
+        "fftw_threads",
+        "limiter_enabled_on_render",
+        "phase_reset_offset_hops",
+        "limiter_ceiling",
+        "limiter_attack_ms",
+        "limiter_release_ms",
+    }};
+    auto is_known = [&](const std::string& k) {
+        for (const char* kk : kKnownKeys) if (k == kk) return true;
+        return false;
+    };
+
+    auto report = [](const std::string& reason) {
+        std::fprintf(stderr,
+            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
+    };
+
+    bool any_error = false;
+    std::set<std::string> seen;
+
+    EngineSettings es{};
+    bool have_title = false;
+    bool have_output_format = false;
+    bool have_scale = false;
+    bool have_N = false;
+    bool have_fftw_threads = false;
+    bool have_limiter_enabled_on_render = false;
+    bool have_phase_reset_offset_hops = false;
+    bool have_limiter_ceiling = false;
+    bool have_limiter_attack_ms = false;
+    bool have_limiter_release_ms = false;
+
+    for (const auto& kv : passthrough) {
+        const std::string& key   = kv.first;
+        const std::string& value = kv.second;
+
+        if (!is_known(key)) {
+            report("unknown engine key '" + key + "'");
+            any_error = true;
+            continue;
+        }
+        if (!seen.insert(key).second) {
+            report("duplicate key '" + key + "'");
+            any_error = true;
+            continue;
+        }
+
+        if (key == "title") {
+            // Preserve the prior settings_get behavior: strip a matching
+            // leading/trailing double-quote pair, then validate non-empty
+            // after whitespace trim and no embedded newline.
+            std::string v = value;
+            if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
+                v = v.substr(1, v.size() - 2);
+            }
+            std::size_t a = 0;
+            while (a < v.size() &&
+                   std::isspace(static_cast<unsigned char>(v[a]))) ++a;
+            std::size_t b = v.size();
+            while (b > a &&
+                   std::isspace(static_cast<unsigned char>(v[b - 1]))) --b;
+            v = v.substr(a, b - a);
+            if (v.empty()) {
+                report("key 'title' has invalid value '" + value +
+                       "': must be non-empty after whitespace trim");
+                any_error = true;
+                continue;
+            }
+            if (v.find('\n') != std::string::npos) {
+                report("key 'title' has invalid value '" + value +
+                       "': must not contain an embedded newline");
+                any_error = true;
+                continue;
+            }
+            es.title = std::move(v);
+            have_title = true;
+        } else if (key == "output_format") {
+            if (value != "wav" && value != "timemap" && value != "tempomap") {
+                report("key 'output_format' has invalid value '" + value +
+                       "': must be one of {wav, timemap, tempomap}");
+                any_error = true;
+                continue;
+            }
+            es.output_format = value;
+            have_output_format = true;
+        } else if (key == "scale") {
+            double v;
+            if (!parse_double_strict(value, v) || !(v > 0.0)) {
+                report("key 'scale' has invalid value '" + value +
+                       "': must be a finite double strictly greater than 0");
+                any_error = true;
+                continue;
+            }
+            es.scale = v;
+            have_scale = true;
+        } else if (key == "N") {
+            int v;
+            if (!parse_int_strict(value, v) ||
+                (v != 1024 && v != 2048 && v != 4096 && v != 8192)) {
+                report("key 'N' has invalid value '" + value +
+                       "': must be one of {1024, 2048, 4096, 8192}");
+                any_error = true;
+                continue;
+            }
+            es.N = v;
+            have_N = true;
+        } else if (key == "fftw_threads") {
+            int v;
+            if (!parse_int_strict(value, v) || v < 0) {
+                report("key 'fftw_threads' has invalid value '" + value +
+                       "': must be an integer >= 0");
+                any_error = true;
+                continue;
+            }
+            es.fftw_threads = v;
+            have_fftw_threads = true;
+        } else if (key == "limiter_enabled_on_render") {
+            bool v;
+            if (!parse_bool_strict(value, v)) {
+                report("key 'limiter_enabled_on_render' has invalid value '" +
+                       value +
+                       "': must be one of {true, false, 1, 0, yes, no, on, off}");
+                any_error = true;
+                continue;
+            }
+            es.limiter_enabled_on_render = v;
+            have_limiter_enabled_on_render = true;
+        } else if (key == "phase_reset_offset_hops") {
+            double v;
+            if (!parse_double_strict(value, v) || !(v >= 0.0)) {
+                report("key 'phase_reset_offset_hops' has invalid value '" +
+                       value +
+                       "': must be a finite double >= 0");
+                any_error = true;
+                continue;
+            }
+            es.phase_reset_offset_hops = v;
+            have_phase_reset_offset_hops = true;
+        } else if (key == "limiter_ceiling") {
+            double v;
+            if (!parse_double_strict(value, v) || !(v <= 0.0)) {
+                report("key 'limiter_ceiling' has invalid value '" + value +
+                       "': must be a finite double <= 0");
+                any_error = true;
+                continue;
+            }
+            es.limiter_ceiling = v;
+            have_limiter_ceiling = true;
+        } else if (key == "limiter_attack_ms") {
+            double v;
+            if (!parse_double_strict(value, v) || !(v > 0.0)) {
+                report("key 'limiter_attack_ms' has invalid value '" + value +
+                       "': must be a finite double strictly greater than 0");
+                any_error = true;
+                continue;
+            }
+            es.limiter_attack_ms = v;
+            have_limiter_attack_ms = true;
+        } else if (key == "limiter_release_ms") {
+            double v;
+            if (!parse_double_strict(value, v) || !(v > 0.0)) {
+                report("key 'limiter_release_ms' has invalid value '" + value +
+                       "': must be a finite double strictly greater than 0");
+                any_error = true;
+                continue;
+            }
+            es.limiter_release_ms = v;
+            have_limiter_release_ms = true;
+        }
+    }
+
+    auto require = [&](bool have, const char* key) {
+        if (!have) {
+            report(std::string("missing required key '") + key + "'");
+            any_error = true;
+        }
+    };
+    require(have_title,                     "title");
+    require(have_output_format,             "output_format");
+    require(have_scale,                     "scale");
+    require(have_N,                         "N");
+    require(have_fftw_threads,              "fftw_threads");
+    require(have_limiter_enabled_on_render, "limiter_enabled_on_render");
+    require(have_phase_reset_offset_hops,   "phase_reset_offset_hops");
+    require(have_limiter_ceiling,           "limiter_ceiling");
+    require(have_limiter_attack_ms,         "limiter_attack_ms");
+    require(have_limiter_release_ms,        "limiter_release_ms");
+
+    if (any_error) return std::nullopt;
+    return es;
+}
+
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag) {
     if (req.source_audio_path.empty()) return RenderOutcome::Failed;
 
-    // --- Read settings. ---
-    std::string title = settings_get(req.settings_passthrough, "title");
-    if (title.empty()) {
-        std::fprintf(stderr, "warptempo_gui: render error: title not set in settings\n");
-        return RenderOutcome::Failed;
-    }
-
-    std::string output_format =
-        settings_get(req.settings_passthrough, "output_format");
-    if (output_format.empty()) output_format = "wav";
-    if (output_format != "wav" &&
-        output_format != "timemap" &&
-        output_format != "tempomap") {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: unknown output_format '%s'\n",
-            output_format.c_str());
-        return RenderOutcome::Failed;
-    }
-
-    const double scale            = parse_double(
-        settings_get(req.settings_passthrough, "scale"), 1.0);
-    const bool   user_limiter_en  = parse_bool(
-        settings_get(req.settings_passthrough, "limiter_enabled_on_render"), true);
-    const int    N_fft            = parse_int(
-        settings_get(req.settings_passthrough, "N"), 4096);
-    const int    fftw_threads     = parse_int(
-        settings_get(req.settings_passthrough, "fftw_threads"), 0);
-    const double phase_reset_offset_hops_mult = parse_double(
-        settings_get(req.settings_passthrough, "phase_reset_offset_hops"), 1.0);
-    const double limiter_ceiling = parse_double(
-        settings_get(req.settings_passthrough, "limiter_ceiling"), -0.3);
-    const double limiter_attack_ms = parse_double(
-        settings_get(req.settings_passthrough, "limiter_attack_ms"), 0.25);
-    const double limiter_release_ms = parse_double(
-        settings_get(req.settings_passthrough, "limiter_release_ms"), 0.5);
-    const int    R_s              = N_fft / 4;
+    // --- Read settings (typed; populated by engine_settings_from_passthrough
+    // at the dispatch site, which already enforced required-key presence,
+    // value validity, and the {wav,timemap,tempomap} output_format set). ---
+    const std::string& title         = req.engine_settings.title;
+    const std::string& output_format = req.engine_settings.output_format;
+    const double scale               = req.engine_settings.scale;
+    const bool   user_limiter_en     = req.engine_settings.limiter_enabled_on_render;
+    const int    N_fft               = req.engine_settings.N;
+    const int    fftw_threads        = req.engine_settings.fftw_threads;
+    const double phase_reset_offset_hops_mult = req.engine_settings.phase_reset_offset_hops;
+    const double limiter_ceiling     = req.engine_settings.limiter_ceiling;
+    const double limiter_attack_ms   = req.engine_settings.limiter_attack_ms;
+    const double limiter_release_ms  = req.engine_settings.limiter_release_ms;
+    const int    R_s                 = N_fft / 4;
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
         std::nearbyint(phase_reset_offset_hops_mult *
                        static_cast<double>(R_s)));

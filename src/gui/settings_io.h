@@ -67,18 +67,18 @@ bool create_if_missing(const std::filesystem::path& p,
 // range validation — the caller clamps against the current audio file.
 bool parse_settings_file(const std::string& path, ParsedSettings& out);
 
-// First-open default `.settings` template. Line ordering must match
-// write_settings_file's output (passthrough fields first, then follow=,
-// then the tab_a_* / tab_b_* triplets) — keep these in sync if either
-// side changes.
-std::string format_default_settings_template(const std::string& stem,
-                                             const std::string& ext_no_dot);
+// First-open default `.settings` template. Built by walking the same
+// canonical key list write_settings_file walks, so the template is
+// byte-identical to a save with all-zero ViewState and no trims set.
+std::string format_default_settings_template(const std::string& stem);
 
-// Atomic write: pass-through lines first in their original order, then the
-// six canonical tab lines. Per-tab trim is emitted from the tab_a/tab_b
-// ViewState arguments — legacy singleton trim keys are never written.
-// Matches the `.warpmarkers` write pattern (tmp → fsync → rename).
-// Best-effort: failure is logged by the caller.
+// Atomic write: emits keys in the canonical order defined by the shared
+// in-file descriptor list. Engine keys are looked up by name in the
+// passthrough vector; typed scalars come from the explicit parameters;
+// per-tab trims are emitted only when the corresponding has_trim_* flag
+// is set. Passthrough entries whose key is not in the canonical list are
+// silently dropped. Matches the `.warpmarkers` write pattern (tmp →
+// fsync → rename). Best-effort: failure is logged by the caller.
 bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,

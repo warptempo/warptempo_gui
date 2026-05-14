@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,6 +19,25 @@
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
 
+// Typed view of the ten engine-relevant settings keys. Populated from a
+// RenderRequest's settings_passthrough by engine_settings_from_passthrough
+// at dispatch time, then read by do_render in lieu of linear-scanning the
+// string-shaped passthrough. Brief 1 of two: settings authoring stays
+// string-shaped; this struct is the boundary at render dispatch. Brief 2
+// will promote it onto AppState and retire the converter.
+struct EngineSettings {
+    std::string title;
+    std::string output_format;        // "wav" | "timemap" | "tempomap"
+    double      scale;
+    int         N;
+    int         fftw_threads;
+    bool        limiter_enabled_on_render;
+    double      phase_reset_offset_hops;
+    double      limiter_ceiling;      // dBFS, expected <= 0
+    double      limiter_attack_ms;
+    double      limiter_release_ms;
+};
+
 // Self-contained view of the AppState fields do_render reads. Constructed by
 // the Ctrl+Alt+R handler in main.cpp so do_render stays decoupled from
 // AppState's (anonymous-namespace) shape.
@@ -25,6 +45,12 @@ struct RenderRequest {
     std::string            source_audio_path;
     std::vector<GuiWarpMarker> markers;
     std::vector<std::pair<std::string, std::string>> settings_passthrough;
+    // Typed engine settings, populated by the dispatch site via
+    // engine_settings_from_passthrough against the final per-request
+    // settings_passthrough. Brief 1: do_render reads engine-relevant
+    // keys exclusively from this struct; settings_passthrough remains
+    // alongside it as the authoring-side string carrier.
+    EngineSettings engine_settings;
 
     // User-curated phase reset frame list (source-frame domain). When non-empty
     // and the active engine is "warptempo", this overrides the engine's
@@ -78,3 +104,18 @@ struct RenderRequest {
 // outcome to count successes and to detect mid-render cancellation.
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag = nullptr);
+
+// Strict converter from the engine-relevant subset of settings_passthrough
+// into a typed EngineSettings. Validates every required key, rejects unknown
+// engine keys, rejects duplicates, and rejects out-of-range values. On any
+// failure path returns std::nullopt and logs one stderr line per violation
+// of the form `warptempo_gui: engine settings rejected: <reason>`. All
+// violations in one passthrough are surfaced in one pass.
+//
+// Called from the dispatch sites in input_handler.cpp (Ctrl+Alt+R single
+// render and the per-cell Ctrl+Alt+E / Ctrl+Alt+I / Ctrl+Alt+M batch
+// builders) so a malformed passthrough is caught before the worker thread
+// is woken. Brief 2 will retire this function once EngineSettings becomes
+// the live store on AppState.
+std::optional<EngineSettings> engine_settings_from_passthrough(
+    const std::vector<std::pair<std::string, std::string>>& passthrough);
