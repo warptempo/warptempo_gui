@@ -18,13 +18,19 @@
 
 class GuiAudio;
 
-// Number of numeric zoom levels in the table (defined in main.cpp). Used by
-// max_valid_numeric_level and by zoom_in / zoom_out for sentinel comparisons.
-constexpr int kNumZoomLevels = 8;
-
-// Sentinel for the fit-file level ("whole file visible"). Computed at zoom /
-// resize time, not stored as a fixed ms/pixel.
-constexpr int kFitFileLevel = kNumZoomLevels;
+// Zoom level numbering. kFitFileLevel = 0 ("whole file visible", computed
+// at zoom / resize time, not stored as a fixed ms/pixel). Numeric levels
+// run kMinNumericLevel..kMaxNumericLevel inclusive, each exactly 2x the
+// previous in ms-per-pixel. kZoomTableSize is the size of the table in
+// main.cpp (one sentinel slot at index 0 plus the numeric levels).
+//
+// Identity binding for the bare-digit keys: digit N selects level N.
+// Smaller digit = less file per window = more zoomed in; digit 0 =
+// fit-file (most file possible).
+constexpr int kFitFileLevel     = 0;
+constexpr int kMinNumericLevel  = 1;
+constexpr int kMaxNumericLevel  = 9;
+constexpr int kZoomTableSize    = 10;
 
 // X.7.8b-2: hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler

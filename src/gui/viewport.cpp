@@ -151,10 +151,10 @@ void Viewport::zoom_in() {
     if (max_num < 0) return; // no numeric level valid; only fit-file
     if (app.zoom_level == kFitFileLevel) {
         apply_zoom_change(max_num);
-    } else if (app.zoom_level > 0) {
+    } else if (app.zoom_level > kMinNumericLevel) {
         apply_zoom_change(app.zoom_level - 1);
     }
-    // else at level 0 already — no-op.
+    // else at kMinNumericLevel already — no-op.
 }
 
 void Viewport::zoom_out() {

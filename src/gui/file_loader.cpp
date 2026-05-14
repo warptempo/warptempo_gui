@@ -66,7 +66,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.viewport_start_sample = 0;
     const int max_num = max_valid_numeric_level(
         waveform_area(app).w, audio.total_frames(), audio.sample_rate());
-    app.zoom_level = (max_num >= 0) ? 0 : kFitFileLevel;
+    app.zoom_level = (max_num >= 0) ? kMinNumericLevel : kFitFileLevel;
     clamp_viewport_start(app, audio);
 
     // Reset playback bookkeeping; the device is brought up after markers
@@ -192,7 +192,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         const int64_t total = audio.total_frames();
         auto valid_zoom = [](int z) -> bool {
             if (z == kFitFileLevel) return true;
-            return z >= 0 && z < kNumZoomLevels;
+            return z >= kMinNumericLevel && z <= kMaxNumericLevel;
         };
         auto apply = [&](bool has_vp, int64_t vp,
                          bool has_zoom, int zoom,

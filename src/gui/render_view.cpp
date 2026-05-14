@@ -143,8 +143,10 @@ void GuiRenderView::apply_rendersettings_for(
     const RenderViewState vs =
         read_rendersettings_view_state(this->rendersettings_path(e));
     int z = vs.zoom_level;
-    // Sanitize zoom — accept only kFitFileLevel or 0..kNumZoomLevels-1.
-    if (z != kFitFileLevel && (z < 0 || z >= kNumZoomLevels)) {
+    // Sanitize zoom — accept kFitFileLevel (=0) or kMinNumericLevel..
+    // kMaxNumericLevel. kFitFileLevel falls inside the [0, kMaxNumericLevel]
+    // range so a single range check suffices.
+    if (z < 0 || z > kMaxNumericLevel) {
         z = kFitFileLevel;
     }
     app.zoom_level            = z;

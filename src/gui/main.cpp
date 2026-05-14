@@ -31,6 +31,7 @@
 #include <sndfile.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cerrno>
 #include <chrono>
@@ -74,15 +75,25 @@ constexpr double   kBottomStripRatio  = 0.10;
 // vs continuous-state duration) even though they currently share a value.
 constexpr int kHoverDelayMs       = 500;
 
-// ms-per-pixel for each numeric zoom level. Level 0 is most zoomed in.
-// kNumZoomLevels (in app_state.h) is the count of entries here; the
-// static_assert below pins them together so the table can't drift.
+// ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
+// level 0 is the fit-file sentinel (table bypassed in samples_per_pixel_at).
+// Index N holds the ms/px for level N; each numeric step is exactly 2x the
+// previous. kZoomTableSize (in app_state.h) is the size of this table.
 constexpr double kZoomMsPerPixel[] = {
-    1.25, 2.6, 5.2, 10.4, 20.8, 41.7, 83.3, 166.7
+    -1.0,    // [0]  unused — key 0 = level 0 = fit-file, table bypassed
+     1.25,   // [1]  level 1: most zoomed in (2.4 s visible at 1920 px)
+     2.5,    // [2]  level 2: 4.8 s
+     5.0,    // [3]  level 3: 9.6 s
+    10.0,    // [4]  level 4: 19.2 s
+    20.0,    // [5]  level 5: 38.4 s
+    40.0,    // [6]  level 6: 76.8 s
+    80.0,    // [7]  level 7: 153.6 s
+   160.0,    // [8]  level 8: 307.2 s
+   320.0,    // [9]  level 9: 614.4 s (most zoomed out numeric)
 };
 static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
-              == static_cast<size_t>(kNumZoomLevels),
-              "kZoomMsPerPixel size must match kNumZoomLevels");
+              == static_cast<size_t>(kZoomTableSize),
+              "kZoomMsPerPixel size must match kZoomTableSize");
 
 // Region width includes room for the A/B tab letter and the dirty indicator
 // past the timestamp text edge.
@@ -184,18 +195,24 @@ static double samples_per_pixel_at(int zoom_level,
         if (spp < 1e-9) spp = 1e-9;
         return spp;
     }
+    // Documents the contract: the fit-file branch above must catch level 0;
+    // the -1.0 sentinel at kZoomMsPerPixel[0] would surface as garbage spp
+    // otherwise. Numeric levels are kMinNumericLevel..kMaxNumericLevel.
+    assert(zoom_level >= kMinNumericLevel &&
+           zoom_level <= kMaxNumericLevel);
     return kZoomMsPerPixel[zoom_level] *
            static_cast<double>(sample_rate) / 1000.0;
 }
 
-// Largest numeric level L (in [0, kNumZoomLevels)) whose samples_visible does
-// not exceed total_frames. Returns -1 if even level 0 shows more than the
-// file — in which case fit-file is the only valid level.
+// Largest numeric level L (in [kMinNumericLevel, kMaxNumericLevel]) whose
+// samples_visible does not exceed total_frames. Returns -1 if even
+// kMinNumericLevel shows more than the file — in which case fit-file is the
+// only valid level.
 int max_valid_numeric_level(int waveform_width_px,
                             int64_t total_frames,
                             int sample_rate) {
     int best = -1;
-    for (int L = 0; L < kNumZoomLevels; L++) {
+    for (int L = kMinNumericLevel; L <= kMaxNumericLevel; L++) {
         const double spp =
             samples_per_pixel_at(L, waveform_width_px, total_frames, sample_rate);
         const double visible = spp * waveform_width_px;

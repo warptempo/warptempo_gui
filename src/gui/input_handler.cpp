@@ -278,6 +278,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing (Brief F)
     //   - Up/Down (no mods)      → zoom in/out (Brief S.2)
     //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
+    //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
     //   - f (no mods)          → follow mode toggle
     //
     // Note on the absent disk-save-shape keys: Ctrl+S (save),
@@ -328,13 +329,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_zoom_symbol =
             ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
              !ctrl && !shift && !alt);
+        const bool is_zero =
+            (key == GuiKeys::Digit0) && !ctrl && !shift && !alt;
         const bool is_follow =
             (key == GuiKeys::F && !ctrl && !shift && !alt);
         if (!(is_r || is_nav || is_render_view_nav_jump ||
               is_commit || is_playback ||
               is_scrub || is_jump || is_esc ||
               is_sub_view_toggle || is_ctrl_q || is_ctrl_w ||
-              is_zoom || is_zoom_symbol || is_follow)) {
+              is_zoom || is_zoom_symbol || is_zero || is_follow)) {
             return;
         }
     }
@@ -1139,6 +1142,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // Bare 0 toggles between fit-file and max-zoom-in (kMinNumericLevel).
+    // From fit-file → kMinNumericLevel (centered on playhead via
+    // apply_zoom_change's numeric branch). From any numeric level →
+    // fit-file. Two presses from any state always reach max-zoom-in;
+    // C remains the always-direct max-in gesture. Digits 1..9 are
+    // intentionally unbound.
+    if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
+        if (app.zoom_level == kFitFileLevel) {
+            viewport.apply_zoom_change(kMinNumericLevel);
+        } else {
+            viewport.apply_zoom_change(kFitFileLevel);
+        }
+        return;
+    }
+
     // Ctrl+Z undo / Ctrl+Shift+Z redo. Placed before the GuiKeys::S save
     // handling so modifier dispatch reads left-to-right in the source.
     // Both are silent no-ops when their respective stack is empty.
@@ -1579,7 +1597,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
             break;
         }
-        case GuiKeys::C:      viewport.apply_zoom_change(0);
+        case GuiKeys::C:      viewport.apply_zoom_change(kMinNumericLevel);
                         viewport.center_viewport_on_playhead();    break;
         case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_to(viewport.trim_begin_sample()); break;
@@ -1620,10 +1638,10 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
 
     playback_lifecycle.stop_playback_if_playing();
     viewport.move_playhead_to(sample);
-    // Mirror the GuiKeys::C body verbatim — apply_zoom_change(0) is a
-    // no-op when already at zoom 0, in which case center_viewport_on_playhead
-    // alone carries the centering work.
-    viewport.apply_zoom_change(0);
+    // Mirror the GuiKeys::C body verbatim — apply_zoom_change(kMinNumericLevel)
+    // is a no-op when already at that level, in which case
+    // center_viewport_on_playhead alone carries the centering work.
+    viewport.apply_zoom_change(kMinNumericLevel);
     viewport.center_viewport_on_playhead();
 }
 
