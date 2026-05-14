@@ -282,7 +282,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Note on the absent disk-save-shape keys: Ctrl+S (save),
     // Ctrl+E (queue-add), Ctrl+Alt+R (single render to source dir),
     // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iterations),
-    // and Ctrl+Alt+M (render basetempo) are intentionally NOT on
+    // and Ctrl+Alt+M (render BPM iterations) are intentionally NOT on
     // the allowlist. Rendering and queue-add are disk-write
     // operations against the source folder (the same shape as
     // Ctrl+S), and render-view is read-only with respect to
@@ -791,7 +791,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Brief X.3: Ctrl+Alt+M sweeps every BPM in the popup-owner's
     // [bpm_lo, bpm_hi] range, computing (base_tempo, scale) per cell
     // and rendering one .wav per cell into
-    // `<source_parent>/renders/<N>_render_basetempo/`. The scale value
+    // `<source_parent>/renders/<N>_render_bpm_iterations/`. The scale value
     // is encoded in the filename so Ctrl+Alt+C can later extract and
     // commit it back into source engine_settings.scale. Mirrors the
     // iter render handler's structure; the substantive difference is
@@ -872,7 +872,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             next_index = max_idx + 1;
         }
 
-        const std::string command_tag = "render_basetempo";
+        const std::string command_tag = "render_bpm_iterations";
         const std::filesystem::path batch_folder =
             queue_root /
             (std::to_string(next_index) + "_" + command_tag);
@@ -900,7 +900,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 duration_seconds, owner.bpm_beats, bpm);
             if (!computed) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render-basetempo: rejected cell "
+                    "warptempo_gui: render-bpm: rejected cell "
                     "bpm=%d (duration=%.6f, beats=%d)\n",
                     bpm, duration_seconds, owner.bpm_beats);
                 continue;
@@ -944,7 +944,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
         if (reqs.empty()) {
             std::fprintf(stderr,
-                "warptempo_gui: render-basetempo: no valid cells; "
+                "warptempo_gui: render-bpm: no valid cells; "
                 "nothing to render\n");
             return;
         }
@@ -952,14 +952,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         std::filesystem::create_directories(batch_folder, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render-basetempo: could not create "
+                "warptempo_gui: render-bpm: could not create "
                 "'%s': %s\n",
                 batch_folder.string().c_str(), ec.message().c_str());
             return;
         }
 
         if (async_renderer.is_busy()) return;
-        start_render_batch(std::move(reqs), "basetempo");
+        start_render_batch(std::move(reqs), "bpm");
         return;
     }
 
