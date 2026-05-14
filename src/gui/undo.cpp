@@ -293,12 +293,12 @@ void Undo::do_undo() {
         tab_mode.switch_active_tab_to(entry.tab);
     }
 
-    // Restore settings (passthrough + per-tab trim) before the marker
+    // Restore settings (engine_settings + per-tab trim) before the marker
     // swap. Marker entries get their settings field populated from app
     // at push time (carry-everywhere), so the restore is a no-op for
     // marker-only ops. Settings-only entries get the actual pre-edit
     // settings restored here.
-    app.settings_passthrough        = std::move(entry.settings.passthrough);
+    app.engine_settings             = std::move(entry.settings.engine_settings);
     app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
     app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
     app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;
@@ -382,7 +382,7 @@ void Undo::do_redo() {
         tab_mode.switch_active_tab_to(entry.tab);
     }
 
-    app.settings_passthrough        = std::move(entry.settings.passthrough);
+    app.engine_settings             = std::move(entry.settings.engine_settings);
     app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
     app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
     app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;

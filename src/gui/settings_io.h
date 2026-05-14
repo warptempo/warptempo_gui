@@ -1,16 +1,18 @@
 #pragma once
 
+#include "engine_settings.h"
+
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 struct ViewState;
 
-// Parsed contents of .settings, separated into tab-handled keys (typed with
-// presence flags so defaults can be applied per key) and the pass-through
-// vector that preserves any other lines verbatim in their original order.
+// Parsed view-state contents of .settings. Engine-key lines are handled
+// separately by read_engine_settings_from_file; this struct carries only
+// the typed view-state fields (per-tab viewport / zoom / playhead, follow,
+// active_mode, playback_speed, per-tab and legacy trim).
 struct ParsedSettings {
     bool    has_tab_a_vp   = false;
     int64_t tab_a_vp       = 0;
@@ -47,7 +49,6 @@ struct ParsedSettings {
     double  tab_b_trim_begin     = 0.0;
     bool    has_tab_b_trim_end   = false;
     double  tab_b_trim_end       = 0.0;
-    std::vector<std::pair<std::string, std::string>> passthrough;
 };
 
 // Strict shape validator for MM:SS.mmm settings timestamps. Exposed so
@@ -61,24 +62,59 @@ bool is_settings_timestamp(const std::string& s);
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
-// Parse `.settings`. Missing file → empty result (all has_* false, empty
-// passthrough). Returns false only on a file-open failure of an existing
-// file; per-line errors are silent-skip. Tab values are stored raw, without
-// range validation — the caller clamps against the current audio file.
+// Parse `.settings`. Missing file → empty result (all has_* false).
+// Returns false only on a file-open failure of an existing file; per-line
+// errors are silent-skip. Tab values are stored raw, without range
+// validation — the caller clamps against the current audio file. Engine
+// keys are ignored by this function; they are deserialized separately by
+// read_engine_settings_from_file.
 bool parse_settings_file(const std::string& path, ParsedSettings& out);
+
+// True iff `key` is one of the ten canonical engine setting keys.
+// Driven from the EnginePassthrough subset of kSettingsOrder.
+bool is_canonical_engine_key(const std::string& key);
+
+// Validate (key, value) per the canonical engine rules and assign to the
+// corresponding EngineSettings field on success. On failure, leaves `out`
+// untouched and fills `reason` with a short human constraint string
+// (e.g. "must be one of {wav, timemap, tempomap}"). Caller wraps with
+// the surrounding "key 'X' has invalid value 'Y':" prefix. Used by both
+// read_engine_settings_from_file and GuiSettingsEditor::commit.
+//
+// Returns false with reason "unknown engine key" if `key` is not in
+// the canonical engine set — defensible against callers that didn't
+// pre-gate on is_canonical_engine_key.
+bool validate_engine_setting(const std::string& key,
+                              const std::string& value,
+                              EngineSettings& out,
+                              std::string& reason);
+
+// Strict deserializer. Walks `path` looking for canonical engine-key
+// lines and returns the populated typed struct. On any violation
+// (unknown key, duplicate, parse failure, missing required key, file
+// not openable) returns std::nullopt and logs every violation to
+// stderr as `warptempo_gui: engine settings rejected: <reason>`.
+//
+// Non-engine canonical lines (view-state keys, follow, active_mode,
+// playback_speed, trim variants) are ignored by this function;
+// parse_settings_file handles them.
+std::optional<EngineSettings> read_engine_settings_from_file(
+    const std::string& path);
 
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is
-// byte-identical to a save with all-zero ViewState and no trims set.
+// byte-identical to a save with a default-constructed EngineSettings
+// (title overridden to `<stem>-rendered`), all-zero ViewState, and no
+// trims set.
 std::string format_default_settings_template(const std::string& stem);
 
 // Atomic write: emits keys in the canonical order defined by the shared
-// in-file descriptor list. Engine keys are looked up by name in the
-// passthrough vector; typed scalars come from the explicit parameters;
-// per-tab trims are emitted only when the corresponding has_trim_* flag
-// is set. Passthrough entries whose key is not in the canonical list are
-// silently dropped. Matches the `.warpmarkers` write pattern (tmp →
-// fsync → rename). Best-effort: failure is logged by the caller.
+// in-file descriptor list. Engine keys are formatted from the typed
+// EngineSettings parameter via per-field switch; typed scalars come from
+// the explicit parameters; per-tab trims are emitted only when the
+// corresponding has_trim_* flag is set. Matches the `.warpmarkers` write
+// pattern (tmp → fsync → rename). Best-effort: failure is logged by
+// the caller.
 bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,
@@ -86,4 +122,4 @@ bool write_settings_file(
     bool follow,
     char active_mode,
     float playback_speed,
-    const std::vector<std::pair<std::string, std::string>>& passthrough);
+    const EngineSettings& engine);

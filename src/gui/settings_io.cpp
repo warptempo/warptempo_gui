@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <fstream>
 #include <limits>
+#include <set>
+#include <string>
 #include <sys/stat.h>
 #include <system_error>
 #include <unistd.h>
@@ -61,10 +63,50 @@ bool parse_float_full(const std::string& s, float& out) {
     return true;
 }
 
+// Strict-parse helpers shared by validate_engine_setting. Each consumes
+// the entire string; trailing garbage is rejected. Non-finite doubles
+// are rejected. Integer overflow into out-of-int-range is rejected.
+
+bool parse_double_strict(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    try {
+        std::size_t pos = 0;
+        const double v = std::stod(s, &pos);
+        if (pos != s.size()) return false;
+        if (!std::isfinite(v)) return false;
+        out = v;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool parse_int_strict(const std::string& s, int& out) {
+    if (s.empty()) return false;
+    try {
+        std::size_t pos = 0;
+        const long v = std::stol(s, &pos, 10);
+        if (pos != s.size()) return false;
+        if (v < std::numeric_limits<int>::min() ||
+            v > std::numeric_limits<int>::max()) return false;
+        out = static_cast<int>(v);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool parse_bool_strict(const std::string& s, bool& out) {
+    if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
+    if (s == "false" || s == "0" || s == "no"  || s == "off") { out = false; return true; }
+    return false;
+}
+
 // Canonical .settings layout. One descriptor per line in the file, in
-// the exact order they appear on disk. Shared by format_default_settings_template
-// (template build) and write_settings_file (Ctrl+S). Reading is
-// order-insensitive — parse_settings_file does not consult this list.
+// the exact order they appear on disk. Shared by
+// format_default_settings_template (template build) and
+// write_settings_file (Ctrl+S). Reading is order-insensitive —
+// parse_settings_file does not consult this list.
 enum class SettingKind {
     EnginePassthrough,
     ActiveModeChar,
@@ -84,38 +126,104 @@ enum class SettingKind {
 
 struct SettingDescriptor {
     const char* key;
-    // Template default. nullptr means "no fixed default": for `title`
-    // it is synthesized from the source stem; for the optional trims
-    // it means the template omits the line entirely.
-    const char* default_value;
     SettingKind kind;
+    // Engine-key value source: which field of EngineSettings holds the
+    // value. Valid only when kind == EnginePassthrough; ignored otherwise.
+    EngineField field;
+    // Template default for non-engine kinds. nullptr means "no fixed
+    // default" — for the optional trims the template omits the line
+    // entirely. For engine kinds, the template default comes from a
+    // default-constructed EngineSettings and this field is unused.
+    const char* default_value;
 };
 
 constexpr SettingDescriptor kSettingsOrder[] = {
-    { "title",                       nullptr,             SettingKind::EnginePassthrough },
-    { "scale",                       "1.000000",          SettingKind::EnginePassthrough },
-    { "output_format",               "wav",               SettingKind::EnginePassthrough },
-    { "N",                           "4096",              SettingKind::EnginePassthrough },
-    { "fftw_threads",                "16",                SettingKind::EnginePassthrough },
-    { "limiter_enabled_on_render",   "true",              SettingKind::EnginePassthrough },
-    { "phase_reset_offset_hops",     "1.000000",          SettingKind::EnginePassthrough },
-    { "limiter_ceiling",             "-0.300000",         SettingKind::EnginePassthrough },
-    { "limiter_attack_ms",           "0.250000",          SettingKind::EnginePassthrough },
-    { "limiter_release_ms",          "0.500000",          SettingKind::EnginePassthrough },
-    { "active_mode",                 "W",                 SettingKind::ActiveModeChar },
-    { "playback_speed",              "1.000000",          SettingKind::PlaybackSpeedFloat },
-    { "follow",                      "true",              SettingKind::FollowFlag },
-    { "tab_a_trim_begin",            nullptr,             SettingKind::OptionalTrimBegin_A },
-    { "tab_a_trim_end",              nullptr,             SettingKind::OptionalTrimEnd_A },
-    { "tab_b_trim_begin",            nullptr,             SettingKind::OptionalTrimBegin_B },
-    { "tab_b_trim_end",              nullptr,             SettingKind::OptionalTrimEnd_B },
-    { "tab_a_viewport_start",        "0",                 SettingKind::ViewportStart_A },
-    { "tab_a_zoom",                  "0",                 SettingKind::ZoomLevel_A },
-    { "tab_a_playhead",              "0",                 SettingKind::Playhead_A },
-    { "tab_b_viewport_start",        "0",                 SettingKind::ViewportStart_B },
-    { "tab_b_zoom",                  "0",                 SettingKind::ZoomLevel_B },
-    { "tab_b_playhead",              "0",                 SettingKind::Playhead_B },
+    { "title",                       SettingKind::EnginePassthrough,    EngineField::Title,                   nullptr },
+    { "scale",                       SettingKind::EnginePassthrough,    EngineField::Scale,                   nullptr },
+    { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
+    { "N",                           SettingKind::EnginePassthrough,    EngineField::N,                       nullptr },
+    { "fftw_threads",                SettingKind::EnginePassthrough,    EngineField::FftwThreads,             nullptr },
+    { "limiter_enabled_on_render",   SettingKind::EnginePassthrough,    EngineField::LimiterEnabledOnRender,  nullptr },
+    { "phase_reset_offset_hops",     SettingKind::EnginePassthrough,    EngineField::PhaseResetOffsetHops,    nullptr },
+    { "limiter_ceiling",             SettingKind::EnginePassthrough,    EngineField::LimiterCeiling,          nullptr },
+    { "limiter_attack_ms",           SettingKind::EnginePassthrough,    EngineField::LimiterAttackMs,         nullptr },
+    { "limiter_release_ms",          SettingKind::EnginePassthrough,    EngineField::LimiterReleaseMs,        nullptr },
+    { "active_mode",                 SettingKind::ActiveModeChar,       EngineField::Title,                   "W"        },
+    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
+    { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
+    { "tab_a_trim_begin",            SettingKind::OptionalTrimBegin_A,  EngineField::Title,                   nullptr },
+    { "tab_a_trim_end",              SettingKind::OptionalTrimEnd_A,    EngineField::Title,                   nullptr },
+    { "tab_b_trim_begin",            SettingKind::OptionalTrimBegin_B,  EngineField::Title,                   nullptr },
+    { "tab_b_trim_end",              SettingKind::OptionalTrimEnd_B,    EngineField::Title,                   nullptr },
+    { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
+    { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "0" },
+    { "tab_a_playhead",              SettingKind::Playhead_A,           EngineField::Title,                   "0" },
+    { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
+    { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "0" },
+    { "tab_b_playhead",              SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
+
+// True if `key` is in the EnginePassthrough subset of kSettingsOrder OR
+// in the legacy singleton trim set. Used by read_engine_settings_from_file
+// to decide whether a line is a non-engine canonical line (skipped) or
+// an unknown line (error).
+bool is_canonical_non_engine_key(const std::string& key) {
+    if (key == "trim_begin" || key == "trim_end") return true;
+    for (const auto& desc : kSettingsOrder) {
+        if (desc.kind != SettingKind::EnginePassthrough && key == desc.key) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Append the value of `field` from `es` to `out`, using the same format
+// strings the on-disk template encodes (%.6f for doubles, %d for ints,
+// true|false for the limiter flag, raw string for title / output_format).
+void append_engine_field_value(std::string& out, const EngineSettings& es,
+                                EngineField field) {
+    char buf[64];
+    switch (field) {
+        case EngineField::Title:
+            out += es.title;
+            break;
+        case EngineField::OutputFormat:
+            out += es.output_format;
+            break;
+        case EngineField::Scale:
+            std::snprintf(buf, sizeof(buf), "%.6f", es.scale);
+            out += buf;
+            break;
+        case EngineField::N:
+            std::snprintf(buf, sizeof(buf), "%d", es.N);
+            out += buf;
+            break;
+        case EngineField::FftwThreads:
+            std::snprintf(buf, sizeof(buf), "%d", es.fftw_threads);
+            out += buf;
+            break;
+        case EngineField::LimiterEnabledOnRender:
+            out += es.limiter_enabled_on_render ? "true" : "false";
+            break;
+        case EngineField::PhaseResetOffsetHops:
+            std::snprintf(buf, sizeof(buf), "%.6f",
+                          es.phase_reset_offset_hops);
+            out += buf;
+            break;
+        case EngineField::LimiterCeiling:
+            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_ceiling);
+            out += buf;
+            break;
+        case EngineField::LimiterAttackMs:
+            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_attack_ms);
+            out += buf;
+            break;
+        case EngineField::LimiterReleaseMs:
+            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_release_ms);
+            out += buf;
+            break;
+    }
+}
 
 } // namespace
 
@@ -232,30 +340,229 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_tab_b_trim_end = true;
                 out.tab_b_trim_end     = parse_timestamp(value);
             }
-        } else {
-            out.passthrough.emplace_back(key, value);
         }
+        // Engine keys: deserialized by read_engine_settings_from_file.
+        // Unknown keys: silent-skip here; read_engine_settings_from_file
+        // surfaces them as errors.
     }
     return true;
 }
 
+bool is_canonical_engine_key(const std::string& key) {
+    for (const auto& desc : kSettingsOrder) {
+        if (desc.kind == SettingKind::EnginePassthrough && key == desc.key) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool validate_engine_setting(const std::string& key,
+                              const std::string& value,
+                              EngineSettings& out,
+                              std::string& reason) {
+    if (key == "title") {
+        // Preserve the prior settings_get behavior: strip a matching
+        // leading/trailing double-quote pair, then validate non-empty
+        // after whitespace trim and no embedded newline.
+        std::string v = value;
+        if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
+            v = v.substr(1, v.size() - 2);
+        }
+        std::size_t a = 0;
+        while (a < v.size() &&
+               std::isspace(static_cast<unsigned char>(v[a]))) ++a;
+        std::size_t b = v.size();
+        while (b > a &&
+               std::isspace(static_cast<unsigned char>(v[b - 1]))) --b;
+        v = v.substr(a, b - a);
+        if (v.empty()) {
+            reason = "must be non-empty after whitespace trim";
+            return false;
+        }
+        if (v.find('\n') != std::string::npos) {
+            reason = "must not contain an embedded newline";
+            return false;
+        }
+        out.title = std::move(v);
+        return true;
+    }
+    if (key == "output_format") {
+        if (value != "wav" && value != "timemap" && value != "tempomap") {
+            reason = "must be one of {wav, timemap, tempomap}";
+            return false;
+        }
+        out.output_format = value;
+        return true;
+    }
+    if (key == "scale") {
+        double v;
+        if (!parse_double_strict(value, v) || !(v > 0.0)) {
+            reason = "must be a finite double strictly greater than 0";
+            return false;
+        }
+        out.scale = v;
+        return true;
+    }
+    if (key == "N") {
+        int v;
+        if (!parse_int_strict(value, v) ||
+            (v != 1024 && v != 2048 && v != 4096 && v != 8192)) {
+            reason = "must be one of {1024, 2048, 4096, 8192}";
+            return false;
+        }
+        out.N = v;
+        return true;
+    }
+    if (key == "fftw_threads") {
+        int v;
+        if (!parse_int_strict(value, v) || v < 0) {
+            reason = "must be an integer >= 0";
+            return false;
+        }
+        out.fftw_threads = v;
+        return true;
+    }
+    if (key == "limiter_enabled_on_render") {
+        bool v;
+        if (!parse_bool_strict(value, v)) {
+            reason = "must be one of {true, false, 1, 0, yes, no, on, off}";
+            return false;
+        }
+        out.limiter_enabled_on_render = v;
+        return true;
+    }
+    if (key == "phase_reset_offset_hops") {
+        double v;
+        if (!parse_double_strict(value, v) || !(v >= 0.0)) {
+            reason = "must be a finite double >= 0";
+            return false;
+        }
+        out.phase_reset_offset_hops = v;
+        return true;
+    }
+    if (key == "limiter_ceiling") {
+        double v;
+        if (!parse_double_strict(value, v) || !(v <= 0.0)) {
+            reason = "must be a finite double <= 0";
+            return false;
+        }
+        out.limiter_ceiling = v;
+        return true;
+    }
+    if (key == "limiter_attack_ms") {
+        double v;
+        if (!parse_double_strict(value, v) || !(v > 0.0)) {
+            reason = "must be a finite double strictly greater than 0";
+            return false;
+        }
+        out.limiter_attack_ms = v;
+        return true;
+    }
+    if (key == "limiter_release_ms") {
+        double v;
+        if (!parse_double_strict(value, v) || !(v > 0.0)) {
+            reason = "must be a finite double strictly greater than 0";
+            return false;
+        }
+        out.limiter_release_ms = v;
+        return true;
+    }
+    reason = "unknown engine key";
+    return false;
+}
+
+std::optional<EngineSettings> read_engine_settings_from_file(
+    const std::string& path) {
+    auto report = [](const std::string& reason) {
+        std::fprintf(stderr,
+            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
+    };
+
+    EngineSettings es{};
+    bool any_error = false;
+    std::set<std::string> seen;
+
+    std::ifstream f(path);
+    if (!f) {
+        report("could not open '" + path + "'");
+        any_error = true;
+        // Fall through to the missing-required-key reporting below so
+        // the user sees every gap in one pass.
+    } else {
+        std::string line;
+        while (std::getline(f, line)) {
+            const std::string trimmed = trim_ws(line);
+            if (trimmed.empty()) continue;
+            if (trimmed[0] == '#') continue;
+            const size_t eq = trimmed.find('=');
+            if (eq == std::string::npos) continue;
+            const std::string key   = trim_ws(trimmed.substr(0, eq));
+            const std::string value = trim_ws(trimmed.substr(eq + 1));
+            if (key.empty()) continue;
+
+            if (is_canonical_non_engine_key(key)) continue;
+
+            if (!is_canonical_engine_key(key)) {
+                report("unknown engine key '" + key + "'");
+                any_error = true;
+                continue;
+            }
+            if (!seen.insert(key).second) {
+                report("duplicate key '" + key + "'");
+                any_error = true;
+                continue;
+            }
+            std::string reason;
+            if (!validate_engine_setting(key, value, es, reason)) {
+                report("key '" + key + "' has invalid value '" + value +
+                       "': " + reason);
+                any_error = true;
+                continue;
+            }
+        }
+    }
+
+    auto require = [&](const char* key) {
+        if (seen.count(key) == 0) {
+            report(std::string("missing required key '") + key + "'");
+            any_error = true;
+        }
+    };
+    require("title");
+    require("output_format");
+    require("scale");
+    require("N");
+    require("fftw_threads");
+    require("limiter_enabled_on_render");
+    require("phase_reset_offset_hops");
+    require("limiter_ceiling");
+    require("limiter_attack_ms");
+    require("limiter_release_ms");
+
+    if (any_error) return std::nullopt;
+    return es;
+}
+
 std::string format_default_settings_template(const std::string& stem) {
+    EngineSettings defaults{};
+    defaults.title = stem + "-rendered";
     std::string s;
     for (const auto& desc : kSettingsOrder) {
-        if (desc.default_value != nullptr) {
+        if (desc.kind == SettingKind::EnginePassthrough) {
+            s += desc.key;
+            s += '=';
+            append_engine_field_value(s, defaults, desc.field);
+            s += '\n';
+        } else if (desc.default_value != nullptr) {
             s += desc.key;
             s += '=';
             s += desc.default_value;
             s += '\n';
-        } else if (desc.kind == SettingKind::EnginePassthrough) {
-            // Only the `title` entry has a stem-derived default.
-            s += desc.key;
-            s += '=';
-            s += stem;
-            s += "-rendered\n";
         }
-        // Optional trims: nullptr default, non-engine kind. Skipped at
-        // template build; the writer emits them at Ctrl+S iff the flag is set.
+        // Optional trims (nullptr default, non-engine kind): skipped at
+        // template build; the writer emits them at Ctrl+S iff the flag
+        // is set.
     }
     return s;
 }
@@ -267,23 +574,17 @@ bool write_settings_file(
     bool follow,
     char active_mode,
     float playback_speed,
-    const std::vector<std::pair<std::string, std::string>>& passthrough) {
+    const EngineSettings& engine) {
     std::string data;
     char buf[64];
     for (const auto& desc : kSettingsOrder) {
         switch (desc.kind) {
-            case SettingKind::EnginePassthrough: {
-                for (const auto& kv : passthrough) {
-                    if (kv.first == desc.key) {
-                        data += desc.key;
-                        data += '=';
-                        data += kv.second;
-                        data += '\n';
-                        break;
-                    }
-                }
+            case SettingKind::EnginePassthrough:
+                data += desc.key;
+                data += '=';
+                append_engine_field_value(data, engine, desc.field);
+                data += '\n';
                 break;
-            }
             case SettingKind::ActiveModeChar:
                 data += desc.key;
                 data += '=';

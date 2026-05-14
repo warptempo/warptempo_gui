@@ -140,20 +140,33 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // 3c. Passthrough write. Capture-before-mutate so the snapshot on
-    // the undo stack reflects the pre-edit settings.
+    // 3c. Canonical engine-key write. Reject any key that is not in the
+    // canonical engine set; validate the value through the same helper
+    // the file-load deserializer uses. Capture-before-mutate so the
+    // snapshot on the undo stack reflects the pre-edit settings.
+    if (!is_canonical_engine_key(key)) {
+        app.settings_editor.red = true;
+        viewport.invalidate_timestamp_area();
+        std::fprintf(stderr,
+            "warptempo_gui: settings edit rejected: unknown engine key "
+            "'%s'\n", key.c_str());
+        return;
+    }
+
+    EngineSettings candidate = app.engine_settings;
+    std::string reason;
+    if (!validate_engine_setting(key, value, candidate, reason)) {
+        app.settings_editor.red = true;
+        viewport.invalidate_timestamp_area();
+        std::fprintf(stderr,
+            "warptempo_gui: settings edit rejected: key '%s' has invalid "
+            "value '%s': %s\n",
+            key.c_str(), value.c_str(), reason.c_str());
+        return;
+    }
+
     SettingsSnapshot pre = capture_current_settings(app);
-    bool replaced = false;
-    for (auto& kv : app.settings_passthrough) {
-        if (kv.first == key) {
-            kv.second = value;
-            replaced = true;
-            break;
-        }
-    }
-    if (!replaced) {
-        app.settings_passthrough.emplace_back(key, value);
-    }
+    app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
 
     std::fprintf(stderr,

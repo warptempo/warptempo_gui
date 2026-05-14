@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine_settings.h"
 #include "render.h"
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
@@ -41,12 +42,10 @@ constexpr int kDoubleClickPixels  = 5;
 enum class OpKind { Create, Destroy, Move, Other };
 
 // Wholesale snapshot of the authoring-class settings. Captured at undo-push
-// time and restored on undo/redo. Holds the entire settings_passthrough
-// vector plus the per-tab trim quadruples for both tabs. The passthrough
-// vector is cheap to copy at typical sizes (~10-30 strings); per-tab trim
-// is eight scalars. Cost stays negligible per entry.
+// time and restored on undo/redo. Holds the typed EngineSettings plus the
+// per-tab trim quadruples for both tabs. Cost stays negligible per entry.
 struct SettingsSnapshot {
-    std::vector<std::pair<std::string, std::string>> passthrough;
+    EngineSettings engine_settings;
     double tab_a_trim_begin     = 0.0;
     double tab_a_trim_end       = 0.0;
     bool   tab_a_has_trim_begin = false;
@@ -424,10 +423,12 @@ struct AppState {
     ViewState tab_b;
     char active_tab = 'A';
 
-    // Pass-through entries read from .settings on load and re-emitted
-    // verbatim on save. Preserves original order. Never interpreted by
-    // the GUI; exists so the wrapper script's keys survive a round-trip.
-    std::vector<std::pair<std::string, std::string>> settings_passthrough;
+    // Typed engine settings. The live authoring store: settings editor
+    // commits, .settings file load, and the BPM-sweep / Ctrl+Alt+C scale
+    // commit paths all mutate fields of this struct directly. Carried
+    // by RenderRequest at dispatch; serialized to .settings on Ctrl+S.
+    // Default-constructed before any source load.
+    EngineSettings engine_settings;
 
     // Bottom-strip command prompt. Active only when a close / revert /
     // re-detect gesture fires while a confirmation is required. See Part
@@ -444,7 +445,7 @@ struct AppState {
     bool top_flag_editor_blink_last = false;
 
     // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
-    // line, writes to settings_passthrough on commit. Lives in the bottom
+    // line, writes to engine_settings on commit. Lives in the bottom
     // strip; separate from top_flag_editor so the two paint regions stay
     // independent (the in-practice mutual exclusion comes from the flag
     // editor swallowing all keys while active).
@@ -472,8 +473,8 @@ struct AppState {
     // with one rendered output per queued entry. The list is session-only:
     // discarded on app close, never written to disk between sessions.
     // Settings are not snapshotted per-entry — all entries render against
-    // the GUI's live `settings_passthrough` at execution time, mirroring
-    // the chunk-U convention.
+    // the GUI's live `engine_settings` at execution time, mirroring the
+    // chunk-U convention.
     struct QueuedRender {
         std::string                source_audio_path;
         std::vector<GuiWarpMarker>     markers;
@@ -586,18 +587,11 @@ inline const ViewState& active_view_state(const AppState& a) {
     return (a.active_tab == 'B') ? a.tab_b : a.tab_a;
 }
 
-// Snapshot the authoring-class settings from `app` (settings_passthrough
-// + per-tab trim quadruples). Called by Undo's push helpers at push time
+// Snapshot the authoring-class settings from `app` (engine_settings +
+// per-tab trim quadruples). Called by Undo's push helpers at push time
 // so every entry carries-everywhere; also called by do_undo / do_redo
 // when constructing the inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
-
-// X.7.7: promoted from a lambda in main(). Looks up `key` in
-// app.settings_passthrough and returns its value, or `dflt` if the key
-// is not present. Used by the `p`-mode entry path in GuiTabMode to gate
-// on engine= without a typed parser.
-std::string settings_get(const AppState& app, const std::string& key,
-                         const std::string& dflt);
 
 // X.7.8a: promoted from a lambda in main(). True iff the bottom strip
 // must paint full-width — when the prompt overlay is active or when a

@@ -15,7 +15,7 @@
 
 SettingsSnapshot capture_current_settings(const AppState& app) {
     SettingsSnapshot s;
-    s.passthrough            = app.settings_passthrough;
+    s.engine_settings        = app.engine_settings;
     s.tab_a_trim_begin       = app.tab_a.trim_begin_seconds;
     s.tab_a_trim_end         = app.tab_a.trim_end_seconds;
     s.tab_a_has_trim_begin   = app.tab_a.has_trim_begin;
@@ -25,17 +25,6 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     s.tab_b_has_trim_begin   = app.tab_b.has_trim_begin;
     s.tab_b_has_trim_end     = app.tab_b.has_trim_end;
     return s;
-}
-
-// X.7.7: promoted from a lambda in main(). Body is verbatim from the
-// original at main.cpp:1969-1975, with `app.settings_passthrough`
-// reached through the explicit AppState argument rather than a capture.
-std::string settings_get(const AppState& app, const std::string& key,
-                         const std::string& dflt) {
-    for (const auto& kv : app.settings_passthrough) {
-        if (kv.first == key) return kv.second;
-    }
-    return dflt;
 }
 
 // X.7.8a: promoted from a lambda in main(). Body is verbatim from the

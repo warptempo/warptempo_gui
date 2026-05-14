@@ -19,8 +19,10 @@ struct Undo;
 //    dedicated gestures.
 // 2. trim_begin / trim_end parse the value as MM:SS.mmm and write through
 //    to the active tab's ViewState; push a settings-undo entry.
-// 3. Anything else overwrites-or-appends in settings_passthrough and
-//    pushes a settings-undo entry.
+// 3. Canonical engine keys go through validate_engine_setting; on success
+//    the typed field of app.engine_settings is updated and a settings-undo
+//    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
+//    engine key") with a red-flash and no commit.
 struct GuiSettingsEditor {
     AppState&    app;
     GuiAudio&    audio;

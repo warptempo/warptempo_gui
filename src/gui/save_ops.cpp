@@ -64,7 +64,7 @@ bool GuiSaveOps::save() {
                                  app.follow_mode,
                                  app.active_mode,
                                  app.playback_speed,
-                                 app.settings_passthrough)) {
+                                 app.engine_settings)) {
             std::fprintf(stderr,
                 "warptempo_gui: settings save failed: %s: %s\n",
                 app.settings_path.c_str(),

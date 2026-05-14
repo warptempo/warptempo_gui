@@ -388,7 +388,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+E: snapshot current authoring state into the in-memory
     // render queue. No disk writes; on-disk authoring files are untouched.
     // Settings are not snapshotted per-entry — the queue walker uses
-    // the live settings_passthrough at execution time, mirroring the
+    // the live engine_settings at execution time, mirroring the
     // chunk-U convention. (Chunk W: snapshots moved from disk to memory.)
     if (ctrl && !alt && !shift &&
         key == GuiKeys::E) {
@@ -420,20 +420,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // contract local.
         if (async_renderer.is_busy()) return;
 
-        auto es = engine_settings_from_passthrough(app.settings_passthrough);
-        if (!es) {
-            std::fprintf(stderr,
-                "warptempo_gui: render: engine settings invalid; "
-                "render dispatch rejected\n");
-            return;
-        }
-
         RenderRequest req;
         req.source_audio_path    = app.source_audio_path;
         req.markers              = app.warpmarkers.markers();
         req.phase_resets           = app.phase_reset_markers.markers();
-        req.settings_passthrough = app.settings_passthrough;
-        req.engine_settings      = std::move(*es);
+        req.engine_settings      = app.engine_settings;
         {
             const ViewState& vs = active_view_state(app);
             req.has_trim_begin       = vs.has_trim_begin;
@@ -566,20 +557,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 i + 1, total,
                 batch_folder.filename().string().c_str(), num_buf);
 
-            auto es = engine_settings_from_passthrough(app.settings_passthrough);
-            if (!es) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-all: engine settings invalid; "
-                    "entry %d of %d rejected\n", i + 1, total);
-                continue;
-            }
-
             RenderRequest req;
             req.source_audio_path    = q.source_audio_path;
             req.markers              = q.markers;
             req.phase_resets           = q.phase_resets;
-            req.settings_passthrough = app.settings_passthrough;
-            req.engine_settings      = std::move(*es);
+            req.engine_settings      = app.engine_settings;
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;
@@ -596,13 +578,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.batch_folder   = batch_folder.string();
             req.batch_basename = num_buf;
             reqs.push_back(std::move(req));
-        }
-
-        if (reqs.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-all: no valid entries; "
-                "nothing to render\n");
-            return;
         }
 
         if (async_renderer.is_busy()) return;
@@ -781,29 +756,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     std::numeric_limits<double>::quiet_NaN();
             }
 
-            auto es = engine_settings_from_passthrough(app.settings_passthrough);
-            if (!es) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-iterations: engine settings "
-                    "invalid; cell %d of %d rejected\n", cell + 1, total);
-                // Maintain the Cartesian-product enumeration even when
-                // rejecting this cell so the surviving cells line up with
-                // their intended delta coordinates.
-                for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
-                    ++indices[k];
-                    if (indices[k] < per_marker_deltas[k].size()) break;
-                    indices[k] = 0;
-                }
-                continue;
-            }
-
             RenderRequest req;
             req.source_audio_path    = app.source_audio_path;
             req.markers              = std::move(cell_markers);
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
-            req.settings_passthrough = app.settings_passthrough;
-            req.engine_settings      = std::move(*es);
+            req.engine_settings      = app.engine_settings;
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;
@@ -825,13 +783,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
         }
 
-        if (reqs.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-iterations: no valid cells; "
-                "nothing to render\n");
-            return;
-        }
-
         if (async_renderer.is_busy()) return;
         start_render_batch(std::move(reqs), "render iterations");
         return;
@@ -842,11 +793,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and rendering one .wav per cell into
     // `<source_parent>/renders/<N>_render_basetempo/`. The scale value
     // is encoded in the filename so Ctrl+Alt+C can later extract and
-    // commit it back into source settings_passthrough. Mirrors the
+    // commit it back into source engine_settings.scale. Mirrors the
     // iter render handler's structure; the substantive difference is
-    // per-cell mutation of settings_passthrough's `scale` entry, in
-    // addition to per-cell marker mutation. Silent no-op outside
-    // BPM mode / warp / loaded audio / committed popup.
+    // per-cell mutation of cell_settings.scale, in addition to per-cell
+    // marker mutation. Silent no-op outside BPM mode / warp / loaded
+    // audio / committed popup.
     if (ctrl && alt && !shift &&
         key == GuiKeys::M) {
         if (app.active_mode != 'W') return;
@@ -959,31 +910,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             cell_markers[owner_idx].tempo_base  = computed->base_tempo;
             cell_markers[owner_idx].tempo_scale.clear();
 
-            std::vector<std::pair<std::string, std::string>>
-                cell_settings = app.settings_passthrough;
-            char scale_buf[32];
-            std::snprintf(scale_buf, sizeof(scale_buf),
-                          "%.6f", computed->scale);
-            bool found_scale = false;
-            for (auto& kv : cell_settings) {
-                if (kv.first == "scale") {
-                    kv.second = scale_buf;
-                    found_scale = true;
-                    break;
-                }
-            }
-            if (!found_scale) {
-                cell_settings.emplace_back("scale", scale_buf);
-            }
-
-            auto es = engine_settings_from_passthrough(cell_settings);
-            if (!es) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-basetempo: engine settings "
-                    "invalid; cell bpm=%d rejected\n", bpm);
-                ++seq;
-                continue;
-            }
+            EngineSettings cell_settings = app.engine_settings;
+            cell_settings.scale = computed->scale;
 
             char num_buf[16];
             std::snprintf(num_buf, sizeof(num_buf),
@@ -1000,8 +928,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.markers              = std::move(cell_markers);
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
-            req.settings_passthrough = std::move(cell_settings);
-            req.engine_settings      = std::move(*es);
+            req.engine_settings      = std::move(cell_settings);
             {
                 const ViewState& vs = active_view_state(app);
                 req.has_trim_begin       = vs.has_trim_begin;
@@ -1118,8 +1045,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Brief X.3: if the displayed render's basename carries a
         // `scale=<float>` token (BPM-sweep render filenames do; iter
         // and queue render filenames don't), extract the float and
-        // overwrite (or append) the `scale` entry in
-        // app.settings_passthrough. Settings has no undo by
+        // overwrite app.engine_settings.scale. Settings has no undo by
         // convention; this mutation is permanent until the next
         // Ctrl+S overwrites or the user manually edits the file.
         // Conservative parse: any failure logs and skips, leaving
@@ -1158,21 +1084,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                         "scale from basename '%s'; settings unchanged\n",
                         bn.c_str());
                 } else {
-                    char fmt_buf[32];
-                    std::snprintf(fmt_buf, sizeof(fmt_buf),
-                                  "%.6f", parsed);
-                    bool found_scale = false;
-                    for (auto& kv : app.settings_passthrough) {
-                        if (kv.first == "scale") {
-                            kv.second = fmt_buf;
-                            found_scale = true;
-                            break;
-                        }
-                    }
-                    if (!found_scale) {
-                        app.settings_passthrough.emplace_back(
-                            "scale", fmt_buf);
-                    }
+                    app.engine_settings.scale = parsed;
                 }
             }
         }

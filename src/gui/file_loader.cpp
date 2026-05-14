@@ -178,7 +178,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.tab_a          = default_tab;
     app.tab_b          = default_tab;
     app.active_tab     = 'A';
-    app.settings_passthrough.clear();
+    app.engine_settings = EngineSettings{};
 
     // Parse .settings (if present) and apply tab values with silent
     // coerce on out-of-range. Missing file → all keys default.
@@ -239,7 +239,23 @@ bool GuiFileLoader::load_file(const std::string& path) {
             app.tab_b.has_trim_end       = true;
             app.tab_b.trim_end_seconds   = ps.tab_b_trim_end;
         }
-        app.settings_passthrough = std::move(ps.passthrough);
+    }
+
+    // Strict engine-settings deserialization. Any violation (unknown key,
+    // duplicate, parse failure, missing required key) fails the load with
+    // every reason logged. Treat like a corrupt audio file: revert the
+    // partial load and return false so the user sees no half-loaded state.
+    {
+        auto es = read_engine_settings_from_file(app.settings_path);
+        if (!es) {
+            std::fprintf(stderr,
+                "warptempo_gui: source load aborted: invalid engine "
+                "settings in '%s'\n",
+                app.settings_path.c_str());
+            revert_to_blank();
+            return false;
+        }
+        app.engine_settings = std::move(*es);
     }
 
     // Activate tab A: copy its snapshot into the live AppState fields.
@@ -311,7 +327,7 @@ void GuiFileLoader::revert_to_blank() {
     app.settings_path.clear();
     app.source_audio_path.clear();
     app.pending_drop_path.clear();
-    app.settings_passthrough.clear();
+    app.engine_settings = EngineSettings{};
 
     app.tab_a = ViewState{};
     app.tab_b = ViewState{};
