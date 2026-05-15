@@ -523,9 +523,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // below. Source view calls paint_popups(nullptr); target view
         // calls paint_popups(&target_timemap) so the same paint code
         // walks the same hit-rect helper that hit_test_flag uses.
-        // FlagEditorOverlay remains source-view-only (target view passes
-        // a default-constructed overlay) — editing in target view is
-        // gated off until brief 3b.
+        // The FlagEditorOverlay is built once below and threaded into
+        // both the source-view and target-view warp render_flags calls;
+        // render-view keeps FlagEditorOverlay{} (read-only, no editor
+        // target).
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
             // Brief 3a: shared hover / iter / BPM popup paint, parameterized
@@ -903,6 +904,45 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 }
             };
 
+            // Built once, threaded into both source-view and target-view
+            // warp render_flags calls below. Reads only app.top_flag_editor,
+            // which has no view-domain distinction.
+            FlagEditorOverlay overlay;
+            if (text_editor::is_active(app.top_flag_editor) &&
+                app.top_flag_editor.kind ==
+                    text_editor::Kind::FlagPayload) {
+                overlay.marker_index   = app.top_flag_editor.target;
+                overlay.pending        = app.top_flag_editor.pending;
+                overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
+                overlay.is_red         = app.top_flag_editor.red;
+                overlay.cursor_visible =
+                    text_editor::cursor_visible_now(
+                        app.top_flag_editor);
+                overlay.has_selection =
+                    text_editor::has_selection(
+                        app.top_flag_editor);
+                overlay.selection_start =
+                    text_editor::selection_start(
+                        app.top_flag_editor);
+                overlay.selection_end =
+                    text_editor::selection_end(
+                        app.top_flag_editor);
+            } else if (text_editor::is_active(app.top_flag_editor) &&
+                       app.top_flag_editor.kind ==
+                           text_editor::Kind::IterationBracket) {
+                overlay.popup_editor_target =
+                    app.top_flag_editor.target;
+            } else if (text_editor::is_active(app.top_flag_editor) &&
+                       app.top_flag_editor.kind ==
+                           text_editor::Kind::BpmBracket) {
+                // Brief X.2: same flag-rect highlight suppression as
+                // iter — the popup above owns the highlight. Modes are
+                // mutually exclusive so the shared popup_editor_target
+                // channel is safe.
+                overlay.popup_editor_target =
+                    app.top_flag_editor.target;
+            }
+
             if (is_target) {
                 if (app.active_mode == 'P') {
                     render_phase_reset_flags(
@@ -921,7 +961,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                  kFlagFontSize,
                                  app.selected_markers,
                                  trim_struct,
-                                 FlagEditorOverlay{},
+                                 overlay,
                                  &target_timemap,
                                  drag_overlay);
                     // Brief 3a: hover / iter / BPM popups in target view.
@@ -1021,47 +1061,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     nullptr,
                     drag_overlay);
             } else {
-                FlagEditorOverlay overlay;
-                // Only the V.A1 FlagPayload kind paints into the flag
-                // rect; the V.B IterationBracket kind owns the popup
-                // above the rect and leaves the flag's normal text
-                // alone. When the iter popup is the focused editor
-                // target, the flag rect below must suppress its
-                // last-selected highlight (V.B Addendum 2).
-                if (text_editor::is_active(app.top_flag_editor) &&
-                    app.top_flag_editor.kind ==
-                        text_editor::Kind::FlagPayload) {
-                    overlay.marker_index   = app.top_flag_editor.target;
-                    overlay.pending        = app.top_flag_editor.pending;
-                    overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
-                    overlay.is_red         = app.top_flag_editor.red;
-                    overlay.cursor_visible =
-                        text_editor::cursor_visible_now(
-                            app.top_flag_editor);
-                    overlay.has_selection =
-                        text_editor::has_selection(
-                            app.top_flag_editor);
-                    overlay.selection_start =
-                        text_editor::selection_start(
-                            app.top_flag_editor);
-                    overlay.selection_end =
-                        text_editor::selection_end(
-                            app.top_flag_editor);
-                } else if (text_editor::is_active(app.top_flag_editor) &&
-                           app.top_flag_editor.kind ==
-                               text_editor::Kind::IterationBracket) {
-                    overlay.popup_editor_target =
-                        app.top_flag_editor.target;
-                } else if (text_editor::is_active(app.top_flag_editor) &&
-                           app.top_flag_editor.kind ==
-                               text_editor::Kind::BpmBracket) {
-                    // Brief X.2: same flag-rect highlight suppression
-                    // as iter — the popup above owns the highlight.
-                    // Modes are mutually exclusive so the shared
-                    // popup_editor_target channel is safe.
-                    overlay.popup_editor_target =
-                        app.top_flag_editor.target;
-                }
                 render_flags(cr, top_strip, app.warpmarkers.markers(),
                              vp_start, vp_end, sr,
                              kFlagFontSize,

@@ -2,6 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "time_format.h"
+#include "timemap.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1200,7 +1201,25 @@ double flag_pending_text_left_x(
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * top.w));
     const double sr = static_cast<double>(audio.sample_rate());
-    const double ms = mv[marker_idx].time_seconds * sr;
+    // Target view: forward-translate the marker's source-frame through a
+    // freshly-built target-view timemap so the visible-range check and
+    // x-position math match where render_flags actually paints the flag.
+    // Empty / null timemap falls through to identity, matching the
+    // render-side helpers' convention. Not reachable mid-drag (begin_drag
+    // clears the editor; the click handler exits before any drag begins),
+    // so a fresh build is correct and app.drag.frozen_timemap need not be
+    // consulted.
+    double ms = mv[marker_idx].time_seconds * sr;
+    if (app.view_domain == ViewDomain::Target) {
+        const auto tmap = build_target_view_timemap(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        if (!tmap.empty()) {
+            const size_t src_frame = static_cast<size_t>(
+                std::nearbyint(mv[marker_idx].time_seconds * sr));
+            ms = map_source_to_target(src_frame, tmap);
+        }
+    }
     if (ms <  static_cast<double>(vp_start)) return -1.0;
     if (ms >= static_cast<double>(vp_end))   return -1.0;
     const double samples_per_pixel =
