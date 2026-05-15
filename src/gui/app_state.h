@@ -498,6 +498,20 @@ struct AppState {
     // callback; read by the playback rebind. Zero before the first
     // successful iteration render in this session.
     int64_t iteration_buffer_frames = 0;
+    // Full-target-frame coordinate that iteration_buffer[0] represents.
+    // With trim set: map_source_to_target(trim_begin_frame) against the
+    // full-source timemap. With trim unset: 0 (the iteration buffer is
+    // the full-song render starting at target frame 0). Captured in
+    // on_iteration_done's Success branch when iteration_buffer_frames
+    // has just been set and the timemap is still derivable from the
+    // live AppState. Read by toggle_playback (to translate the
+    // playhead's target-domain coordinate into an iteration-buffer
+    // frame index for playback.play()) and by the pre-paint hook (to
+    // translate playback.cursor() back into target-domain when writing
+    // to app.playhead_sample). Cleared at the same lifecycle points
+    // that clear iteration_buffer: failure/cancel, file load, revert,
+    // rebind_to_source.
+    int64_t iteration_buffer_target_start_frame = 0;
 
     // A/B navigational tabs. Ctrl+Tab toggles between them; each holds a
     // snapshot of viewport/zoom/playhead. Persisted in .settings.

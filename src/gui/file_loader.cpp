@@ -72,6 +72,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.target_view_total_frames = 0;
     app.iteration_buffer.clear();
     app.iteration_buffer_frames = 0;
+    app.iteration_buffer_target_start_frame = 0;
 
     app.playhead_sample       = 0;
     app.viewport_start_sample = 0;
@@ -348,6 +349,7 @@ void GuiFileLoader::revert_to_blank() {
     // revert so a subsequent file load doesn't inherit stale frames.
     app.iteration_buffer.clear();
     app.iteration_buffer_frames = 0;
+    app.iteration_buffer_target_start_frame = 0;
     app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
 

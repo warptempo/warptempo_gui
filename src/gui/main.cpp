@@ -555,11 +555,28 @@ int main(int argc, char** argv) {
         // in wall time, so this gives the freshest possible position
         // right before paint consumes the damage list.
         const int64_t cur = playback.cursor();
-        if (cur == app.playhead_sample) return;
+        // Target view: playback.cursor() is an iteration-buffer-frame
+        // index in [0, iteration_buffer_frames). app.playhead_sample is
+        // full-target-frame. Translate at the boundary. Source view and
+        // render view: identity (impl_->samples points at the source's
+        // own audio for both; cursor is already in the active-domain
+        // coordinate system). The iteration_buffer_frames > 0 guard
+        // ensures the bias is only applied when a successful iteration
+        // render has populated the buffer; pre-paint can fire briefly
+        // between dispatch and on_iteration_done if a paint races a
+        // cancel, and applying a stale bias against the source-bound
+        // buffer would skew the playhead.
+        int64_t translated = cur;
+        if (app.view_domain == ViewDomain::Target &&
+            !app.render_view_enabled &&
+            app.iteration_buffer_frames > 0) {
+            translated = cur + app.iteration_buffer_target_start_frame;
+        }
+        if (translated == app.playhead_sample) return;
 
         const double old_px = playhead_pixel_x(app, audio);
-        app.playback_cursor  = cur;
-        app.playhead_sample  = cur;
+        app.playback_cursor  = translated;
+        app.playhead_sample  = translated;
         const double new_px  = playhead_pixel_x(app, audio);
 
         // invalidate_region during pre-paint appends to damage_ without

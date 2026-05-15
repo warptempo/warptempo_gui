@@ -1,6 +1,8 @@
 #include "target_iteration.h"
 
 #include "app_state.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <cmath>
 #include <cstdio>
@@ -81,9 +83,11 @@ void GuiTargetIteration::dispatch_iteration_now() {
     viewport.invalidate_timestamp_area();
 
     // Clear the iteration buffer; do_render appends synthesised samples
-    // into it via std::vector::insert.
+    // into it via std::vector::insert. The start_frame is also cleared
+    // for symmetry — it will be recomputed at on_iteration_done time.
     app.iteration_buffer.clear();
     app.iteration_buffer_frames = 0;
+    app.iteration_buffer_target_start_frame = 0;
 
     RenderRequest req;
     req.source_audio_path = app.source_audio_path;
@@ -132,6 +136,31 @@ void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
         } else {
             app.iteration_buffer_frames = 0;
         }
+        // Capture the full-target-frame coordinate that
+        // iteration_buffer[0] represents. With trim set, this is
+        // map_source_to_target(trim_begin_frame) against the full-
+        // source timemap — the engine rendered only the trim range,
+        // so its frame 0 corresponds to the trim's target-frame start.
+        // With trim unset, frame 0 of the iteration buffer corresponds
+        // to target frame 0 (full-song render). Capture only after
+        // iteration_buffer_frames has been set so a failed channel
+        // probe doesn't leave start_frame set against an empty buffer.
+        app.iteration_buffer_target_start_frame = 0;
+        const ViewState& vs = active_view_state(app);
+        if (vs.has_trim_begin && app.iteration_buffer_frames > 0 &&
+            audio.sample_rate() > 0 && audio.total_frames() > 0) {
+            const auto tmap = build_target_view_timemap(
+                app, audio.sample_rate(),
+                static_cast<long>(audio.total_frames()));
+            const int64_t trim_begin_frame = static_cast<int64_t>(
+                std::nearbyint(vs.trim_begin_seconds *
+                               static_cast<double>(audio.sample_rate())));
+            const double tgt = map_source_to_target(
+                static_cast<size_t>(trim_begin_frame < 0
+                                    ? 0 : trim_begin_frame), tmap);
+            app.iteration_buffer_target_start_frame =
+                static_cast<int64_t>(std::nearbyint(tgt));
+        }
         // Only rebind if we're still in target view. A T→S toggle
         // during render already called rebind_to_source(); we don't
         // want to undo that.
@@ -149,10 +178,12 @@ void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
         // gating checks this to refuse Space.
         app.iteration_buffer.clear();
         app.iteration_buffer_frames = 0;
+        app.iteration_buffer_target_start_frame = 0;
     } else {
         std::fprintf(stderr, "warptempo_gui: iteration failed\n");
         app.iteration_buffer.clear();
         app.iteration_buffer_frames = 0;
+        app.iteration_buffer_target_start_frame = 0;
     }
 
     // Clear status. Mirrors finalize_render_run: invalidate first (so
@@ -189,4 +220,9 @@ void GuiTargetIteration::rebind_to_source() {
     if (audio.total_frames() > 0) {
         playback.rebind_buffer(audio.samples_ptr(), audio.total_frames());
     }
+    // Iteration buffer is no longer the live playback source; null out
+    // its target-domain anchor so a future T→S→T round trip starts
+    // with a clean slate. iteration_buffer and frames stay populated
+    // (cheap; the next trigger() in target view will overwrite them).
+    app.iteration_buffer_target_start_frame = 0;
 }
