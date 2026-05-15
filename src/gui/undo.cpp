@@ -1,6 +1,7 @@
 #include "undo.h"
 
 #include "audio.h"
+#include "timemap.h"
 
 #include <algorithm>
 #include <cmath>
@@ -151,8 +152,20 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 }
             }
             if (any) {
-                const int64_t target_sample = static_cast<int64_t>(
+                int64_t target_sample = static_cast<int64_t>(
                     std::nearbyint(rightmost * static_cast<double>(sr)));
+                // The marker's time_seconds is source-domain; the
+                // playhead is active-domain. In target view forward-
+                // translate so the playhead lands at the restored
+                // marker's displayed position, mirroring
+                // Selection::sync_playhead_to_last_selected.
+                if (app.view_domain == ViewDomain::Target) {
+                    const auto tmap = build_target_view_timemap(
+                        app, sr,
+                        static_cast<long>(selection.audio.total_frames()));
+                    target_sample =
+                        to_domain_frame(app, target_sample, tmap);
+                }
                 selection.jump_playhead_to(target_sample);
             }
         }
@@ -226,8 +239,18 @@ void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
         }
         if (any) {
             const int sr = selection.audio.sample_rate();
-            selection.jump_playhead_to(static_cast<int64_t>(std::nearbyint(
-                rightmost * static_cast<double>(sr))));
+            int64_t target_sample = static_cast<int64_t>(std::nearbyint(
+                rightmost * static_cast<double>(sr)));
+            // Source-frame → active-domain translation, as in the warp
+            // helper above and Selection::sync_playhead_to_last_selected.
+            if (app.view_domain == ViewDomain::Target) {
+                const auto tmap = build_target_view_timemap(
+                    app, sr,
+                    static_cast<long>(selection.audio.total_frames()));
+                target_sample =
+                    to_domain_frame(app, target_sample, tmap);
+            }
+            selection.jump_playhead_to(target_sample);
         }
         app.selected_markers.clear();
         app.last_selected_marker = -1;

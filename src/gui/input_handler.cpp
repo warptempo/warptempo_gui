@@ -2727,16 +2727,28 @@ void GuiInputHandler::handle_view_domain_toggle() {
     // mutating playhead state".
     playback_lifecycle.stop_playback_if_playing();
 
-    const GuiRect area = waveform_area(app);
-    const int area_w   = area.w > 0 ? area.w : 1;
+    // Anchor the toggle on the playhead's pre-flip screen-pixel column.
+    // Compute ph_px now, translate the playhead through the timemap,
+    // then derive the new viewport_start so the translated playhead
+    // occupies the same column. zoom_level is preserved across the
+    // flip (the visible time span will differ by the timemap's net
+    // stretch — that is the deformity made visible). clamp_viewport_start
+    // below pins viewport_start to file bounds; when the playhead sits
+    // near the start / end of the file, the clamp moves the playhead's
+    // column toward the edge instead of forcing it inside the file.
+    const double cur_spp = current_samples_per_pixel(app, audio);
+    const double ph_px =
+        (cur_spp > 0.0)
+        ? (static_cast<double>(app.playhead_sample -
+                               app.viewport_start_sample) / cur_spp)
+        : 0.0;
+
+    int64_t new_playhead = app.playhead_sample;
 
     if (app.view_domain == ViewDomain::Source) {
-        // S → T: forward-translate the live viewport / playhead, cache
-        // target_total_frames, then derive the new zoom level from the
-        // translated viewport's target-frame span so the visible width
-        // in pixels stays the same. The numeric-level table is discrete,
-        // so the post-translation viewport may differ by one level's
-        // worth of samples — accepted per the brief.
+        // S → T: forward-translate the playhead and cache the target-
+        // domain total so live_total_frames returns the deformed
+        // length for the post-flip viewport math.
         const int64_t src_total = audio.total_frames();
         const double tgt_total_d = map_source_to_target(
             static_cast<size_t>(src_total < 0 ? 0 : src_total), tmap);
@@ -2744,104 +2756,32 @@ void GuiInputHandler::handle_view_domain_toggle() {
             std::nearbyint(tgt_total_d));
         app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
 
-        const int64_t src_vp_start = app.viewport_start_sample;
-        const double  src_spp      = current_samples_per_pixel(app, audio);
-        const int64_t src_vp_end   = src_vp_start +
-            static_cast<int64_t>(std::nearbyint(src_spp * area_w));
-
-        const double t0 = map_source_to_target(
-            static_cast<size_t>(src_vp_start < 0 ? 0 : src_vp_start), tmap);
-        const double t1 = map_source_to_target(
-            static_cast<size_t>(src_vp_end   < 0 ? 0 : src_vp_end),   tmap);
         const double tph = map_source_to_target(
             static_cast<size_t>(app.playhead_sample < 0
                                 ? 0 : app.playhead_sample), tmap);
+        new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
-        app.view_domain          = ViewDomain::Target;
-        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(t0));
-        app.playhead_sample       = static_cast<int64_t>(std::nearbyint(tph));
-
-        // Match target zoom to source's screen pixels per sample.
-        // Translation: pick the discrete zoom level closest to the
-        // target-frame visible span. For fit-file source: target stays
-        // fit-file. Otherwise: search the numeric table for the
-        // closest log-distance match against (t1 - t0).
-        if (app.zoom_level == kFitFileLevel) {
-            // Fit-file at source → fit-file at target. The
-            // target_view_total_frames cache is set above, so
-            // samples_visible(app, audio) at fit-file naturally
-            // expands to the deformed timeline's full length.
-        } else {
-            // Pick the discrete numeric level whose target-frame
-            // samples_visible is closest (in log2-space) to the
-            // forward-translated viewport span. Probe by temporarily
-            // swapping app.zoom_level — samples_visible(app, audio)
-            // already factors in view_domain via live_total_frames.
-            const double desired_visible = (t1 > t0)
-                ? (t1 - t0) : 1.0;
-            const int max_num = max_valid_numeric_level(
-                area_w, live_total_frames(app, audio), audio.sample_rate());
-            const int cap = (max_num >= kMinNumericLevel)
-                ? max_num : kMaxNumericLevel;
-            int best = kMinNumericLevel;
-            double best_dist = std::numeric_limits<double>::infinity();
-            for (int L = kMinNumericLevel; L <= cap; ++L) {
-                const int saved = app.zoom_level;
-                app.zoom_level = L;
-                const double v =
-                    static_cast<double>(samples_visible(app, audio));
-                app.zoom_level = saved;
-                const double d = std::abs(std::log2(v / desired_visible));
-                if (d < best_dist) { best_dist = d; best = L; }
-            }
-            app.zoom_level = best;
-        }
+        app.view_domain = ViewDomain::Target;
     } else {
-        // T → S: inverse-translate viewport / playhead back to source
-        // frame. zoom_level translation mirrors the forward case but
-        // with the inverse-translated viewport span.
-        const int64_t tgt_vp_start = app.viewport_start_sample;
-        const double  tgt_spp      = current_samples_per_pixel(app, audio);
-        const int64_t tgt_vp_end   = tgt_vp_start +
-            static_cast<int64_t>(std::nearbyint(tgt_spp * area_w));
-
-        const double s0 = map_target_to_source(
-            static_cast<size_t>(tgt_vp_start < 0 ? 0 : tgt_vp_start), tmap);
-        const double s1 = map_target_to_source(
-            static_cast<size_t>(tgt_vp_end   < 0 ? 0 : tgt_vp_end),   tmap);
+        // T → S: inverse-translate the playhead, drop the target-domain
+        // total cache.
         const double sph = map_target_to_source(
             static_cast<size_t>(app.playhead_sample < 0
                                 ? 0 : app.playhead_sample), tmap);
+        new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
-        // Flip the domain BEFORE the zoom-level probe loop below so
-        // samples_visible() uses audio.total_frames() as the total.
-        app.view_domain           = ViewDomain::Source;
+        app.view_domain              = ViewDomain::Source;
         app.target_view_total_frames = 0;
-        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(s0));
-        app.playhead_sample       = static_cast<int64_t>(std::nearbyint(sph));
-
-        if (app.zoom_level == kFitFileLevel) {
-            // stays fit
-        } else {
-            const double desired_visible = (s1 > s0)
-                ? (s1 - s0) : 1.0;
-            const int max_num = max_valid_numeric_level(
-                area_w, live_total_frames(app, audio), audio.sample_rate());
-            int best = kMinNumericLevel;
-            double best_dist = std::numeric_limits<double>::infinity();
-            const int cap = (max_num >= kMinNumericLevel)
-                ? max_num : kMaxNumericLevel;
-            for (int L = kMinNumericLevel; L <= cap; ++L) {
-                const int saved = app.zoom_level;
-                app.zoom_level = L;
-                const double v = static_cast<double>(samples_visible(app, audio));
-                app.zoom_level = saved;
-                const double d = std::abs(std::log2(v / desired_visible));
-                if (d < best_dist) { best_dist = d; best = L; }
-            }
-            app.zoom_level = best;
-        }
     }
+
+    // Domain is flipped — current_samples_per_pixel below reads the
+    // post-flip live_total_frames against the preserved zoom_level.
+    app.playhead_sample = new_playhead;
+    const double new_spp = current_samples_per_pixel(app, audio);
+    const double new_vp_d =
+        static_cast<double>(new_playhead) - ph_px * new_spp;
+    app.viewport_start_sample =
+        static_cast<int64_t>(std::nearbyint(new_vp_d));
 
     // Clamp viewport into the new domain's bounds, then full-window
     // invalidate so the bottom-strip S/T indicator, the waveform
