@@ -93,6 +93,35 @@ std::vector<TimeMapSegment> build_target_view_timemap(
     int sample_rate,
     long total_frames);
 
+// AppState-driven overload of build_target_view_timemap. Pulls the live
+// warp marker store and engine_settings.scale from `app`; otherwise
+// identical to the markers-and-scale overload above. Both input and
+// paint paths in target view route through this helper so the segment
+// list they walk is byte-identical. Defined in timemap.cpp; an
+// AppState forward declaration suffices here.
+struct AppState;
+std::vector<TimeMapSegment> build_target_view_timemap(
+    const AppState& app, int sample_rate, long total_frames);
+
+// Inverse-translate a domain-frame coordinate (active-domain) into a
+// source-frame coordinate. In source view this is identity. In target
+// view this routes through `map_target_to_source` against the supplied
+// timemap. Banker's rounding to integer. Used at every input boundary
+// in target view where a pixel-derived sample coordinate (playhead,
+// click position, drag anchor / motion) becomes a source-frame value
+// written into a marker / trim / phase reset store.
+int64_t to_source_frame(const AppState& app, int64_t domain_frame,
+                        const std::vector<TimeMapSegment>& timemap);
+
+// Forward-translate a source-frame coordinate (e.g. a stored marker
+// time) into the active domain's frame coordinates. Source view:
+// identity. Target view: `map_source_to_target`. Used by handlers that
+// need to position the viewport / playhead at a source-domain anchor
+// while in the active domain (e.g. Tab cycling recentering on a marker
+// whose time_seconds is source-domain).
+int64_t to_domain_frame(const AppState& app, int64_t source_frame,
+                        const std::vector<TimeMapSegment>& timemap);
+
 // libsndfile-based slice: reads src_path samples [begin_frame, end_frame)
 // and writes them to out_path as 32-bit float WAV preserving channel count
 // and sample rate. Returns true on success; false (with stderr log) on any

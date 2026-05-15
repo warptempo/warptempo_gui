@@ -1,8 +1,11 @@
 #include "flag_editor.h"
 
+#include "audio.h"
 #include "render.h"
 #include "text_editor.h"
 #include "time_format.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <algorithm>
 #include <cctype>
@@ -120,8 +123,17 @@ void GuiFlagEditor::enter_text_edit(int idx,
     selection.set_single_selection(idx);
     {
         const int sr = audio.sample_rate();
-        const int64_t sample = static_cast<int64_t>(std::nearbyint(
+        const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
             mv[idx].time_seconds * static_cast<double>(sr)));
+        // Target view: marker time_seconds is source-domain; playhead
+        // is active-domain. Forward-translate so the playhead lands on
+        // the marker's displayed (target-frame) position.
+        int64_t sample = src_sample;
+        if (app.view_domain == ViewDomain::Target) {
+            const auto tmap = build_target_view_timemap(
+                app, sr, static_cast<long>(audio.total_frames()));
+            sample = to_domain_frame(app, src_sample, tmap);
+        }
         viewport.move_playhead_to(sample);
     }
 

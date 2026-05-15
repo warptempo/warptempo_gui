@@ -322,6 +322,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // fp_target / fp_timemap_hash carry the target-view inputs:
             // toggling `t` flips the former; any source-view edit that
             // would shift the deformity changes the latter.
+            //
+            // Brief 3b: during a target-view drag, freeze the cache by
+            // ignoring the timemap-hash change. Live drag mutates the
+            // dragged marker's time_seconds every motion event, so the
+            // hash would change every frame and force a full waveform
+            // rebuild at 60–120 Hz. The deformed pixels stay at their
+            // pre-drag positions; marker stems / flags paint above the
+            // cache so they reposition smoothly. Drop (drag.active
+            // clears) triggers the normal invalidation on the next
+            // paint, snapping the waveform to its committed state.
+            const bool drag_freeze =
+                is_target && app.drag.active;
             if (wf_cache.surface &&
                 (wf_cache.fp_audio_gen   != app.audio_generation   ||
                  wf_cache.fp_vp_start    != vp_start               ||
@@ -331,7 +343,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                  wf_cache.fp_area_w      != area.w                 ||
                  wf_cache.fp_area_h      != area.h                 ||
                  wf_cache.fp_target      != is_target              ||
-                 wf_cache.fp_timemap_hash != target_timemap_hash)) {
+                 (!drag_freeze &&
+                  wf_cache.fp_timemap_hash != target_timemap_hash))) {
                 wf_cache.dirty = true;
             }
 

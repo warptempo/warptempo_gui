@@ -1,7 +1,10 @@
 #include "timemap.h"
 
+#include "app_state.h"
+
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <string>
@@ -344,6 +347,35 @@ std::vector<TimeMapSegment> build_target_view_timemap(
         out.push_back(TimeMapSegment{s.src_frame, s.tgt_frame});
     }
     return out;
+}
+
+std::vector<TimeMapSegment> build_target_view_timemap(
+    const AppState& app, int sample_rate, long total_frames) {
+    return build_target_view_timemap(
+        app.warpmarkers.markers(),
+        app.engine_settings.scale,
+        sample_rate,
+        total_frames);
+}
+
+int64_t to_source_frame(const AppState& app, int64_t domain_frame,
+                        const std::vector<TimeMapSegment>& timemap) {
+    if (app.view_domain == ViewDomain::Source) return domain_frame;
+    const size_t q = (domain_frame < 0)
+        ? static_cast<size_t>(0)
+        : static_cast<size_t>(domain_frame);
+    return static_cast<int64_t>(
+        std::nearbyint(map_target_to_source(q, timemap)));
+}
+
+int64_t to_domain_frame(const AppState& app, int64_t source_frame,
+                        const std::vector<TimeMapSegment>& timemap) {
+    if (app.view_domain == ViewDomain::Source) return source_frame;
+    const size_t q = (source_frame < 0)
+        ? static_cast<size_t>(0)
+        : static_cast<size_t>(source_frame);
+    return static_cast<int64_t>(
+        std::nearbyint(map_source_to_target(q, timemap)));
 }
 
 bool write_trimmed_wav(const std::string& src_path,

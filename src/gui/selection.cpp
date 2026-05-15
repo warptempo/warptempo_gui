@@ -2,6 +2,8 @@
 
 #include "audio.h"
 #include "playback.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <algorithm>
 #include <cmath>
@@ -71,16 +73,27 @@ void Selection::cycle_selection(bool forward) {
         : static_cast<int>(app.warpmarkers.markers().size());
     if (n == 0) return;
 
-    // Helper to read frame-of-index in source samples regardless of mode.
+    // Helper to read frame-of-index in the active domain. Source view:
+    // marker source-frame == active-domain frame (identity). Target view:
+    // forward-translate to active-domain so frame_of values are
+    // comparable to playhead_sample / viewport_start_sample below.
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
     auto frame_of = [&](int i) -> int64_t {
+        int64_t src_f;
         if (phase_reset) {
-            return static_cast<int64_t>(std::nearbyint(
+            src_f = static_cast<int64_t>(std::nearbyint(
                 app.phase_reset_markers.markers()[i].time_seconds *
                 static_cast<double>(sr)));
+        } else {
+            src_f = static_cast<int64_t>(std::nearbyint(
+                app.warpmarkers.markers()[i].time_seconds *
+                static_cast<double>(sr)));
         }
-        return static_cast<int64_t>(std::nearbyint(
-            app.warpmarkers.markers()[i].time_seconds *
-            static_cast<double>(sr)));
+        return to_domain_frame(app, src_f, tmap);
     };
 
     int new_sel = -1;
@@ -179,17 +192,26 @@ void Selection::sync_playhead_to_last_selected() {
     const int last = app.last_selected_marker;
     if (last < 0) return;
 
-    int64_t target_sample = 0;
+    int64_t src_sample = 0;
     if (app.active_mode == 'P') {
         const auto& tv = app.phase_reset_markers.markers();
         if (last >= static_cast<int>(tv.size())) return;
-        target_sample = static_cast<int64_t>(std::nearbyint(
+        src_sample = static_cast<int64_t>(std::nearbyint(
             tv[last].time_seconds * static_cast<double>(sr)));
     } else {
         const auto& mv = app.warpmarkers.markers();
         if (last >= static_cast<int>(mv.size())) return;
-        target_sample = static_cast<int64_t>(std::nearbyint(
+        src_sample = static_cast<int64_t>(std::nearbyint(
             mv[last].time_seconds * static_cast<double>(sr)));
+    }
+    // Target view: the marker time_seconds is source-domain but the
+    // playhead is active-domain. Forward-translate so the playhead
+    // lands at the marker's displayed (target-frame) position.
+    int64_t target_sample = src_sample;
+    if (app.view_domain == ViewDomain::Target) {
+        const auto tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        target_sample = to_domain_frame(app, src_sample, tmap);
     }
     jump_playhead_to(target_sample);
 }

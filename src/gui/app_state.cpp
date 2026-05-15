@@ -5,6 +5,7 @@
 #include "render.h"
 #include "text_editor.h"
 #include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <cairo/cairo.h>
 
@@ -68,6 +69,17 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : (app.active_mode == 'P')
                     ? static_cast<int>(app.phase_reset_markers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
+    // Brief 3b: target view paints marker stems at map_source_to_target
+    // translated positions; the hit test must walk the same timemap so
+    // mouse_x lands on the visually-drawn stem, not the marker's source-
+    // frame position. compute_flag_hit_rects already does this on the
+    // top strip; this mirrors that for the waveform-area marker line.
+    std::vector<TimeMapSegment> target_timemap;
+    if (!rv && app.view_domain == ViewDomain::Target) {
+        target_timemap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const bool use_tmap = !target_timemap.empty();
     for (int i = 0; i < n; ++i) {
         double ms;
         if (rv_trans) {
@@ -82,6 +94,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
         } else {
             ms = app.warpmarkers.markers()[i].time_seconds *
                  static_cast<double>(sr);
+        }
+        if (use_tmap) {
+            const size_t q = (ms < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(ms));
+            ms = map_source_to_target(q, target_timemap);
         }
         if (ms < vp) continue;
         if (ms >= vp + static_cast<double>(visible)) continue;

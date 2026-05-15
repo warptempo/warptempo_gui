@@ -4,6 +4,8 @@
 #include "render.h"
 #include "phase_reset_markers_ops.h"
 #include "platform_wayland.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <algorithm>
 #include <cmath>
@@ -81,15 +83,28 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     // Move the playhead to the new marker for consistency with click-
     // to-select behavior. Done last so invalidations in the helper
     // don't double-paint with the ones above.
-    const int64_t sample = static_cast<int64_t>(std::nearbyint(
+    const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
         time_seconds * static_cast<double>(sr)));
+    int64_t sample = src_sample;
+    if (app.view_domain == ViewDomain::Target) {
+        const auto tmap_after = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        sample = to_domain_frame(app, src_sample, tmap_after);
+    }
     viewport.move_playhead_to(sample);
 }
 
 void GuiWarpMarkersOps::drop_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const double t = static_cast<double>(app.playhead_sample) /
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t src_frame =
+        to_source_frame(app, app.playhead_sample, tmap);
+    const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_marker(t, /*inherit=*/false);
 }
@@ -97,7 +112,14 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
 void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const double t = static_cast<double>(app.playhead_sample) /
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t src_frame =
+        to_source_frame(app, app.playhead_sample, tmap);
+    const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_marker(t, /*inherit=*/true);
 }
@@ -370,11 +392,29 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     }
 
     // Anchor mouse time — computed at mouse_x in the waveform's X axis.
+    // Target view: the press position is in target-domain frames; the
+    // dragged markers' original_times are source-domain seconds. Convert
+    // the anchor to source-domain at the boundary so the on_motion delta
+    // (mouse_time - anchor_mouse_time_seconds) lives in source-seconds.
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    const double vp_time = static_cast<double>(app.viewport_start_sample) / sr_d;
-    d.anchor_mouse_time_seconds =
-        vp_time + static_cast<double>(mouse_x - area.x) * spp / sr_d;
+    if (app.view_domain == ViewDomain::Target) {
+        const int64_t anchor_frame_active =
+            app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint(
+                static_cast<double>(mouse_x - area.x) * spp));
+        const auto tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        const int64_t anchor_frame_src =
+            to_source_frame(app, anchor_frame_active, tmap);
+        d.anchor_mouse_time_seconds =
+            static_cast<double>(anchor_frame_src) / sr_d;
+    } else {
+        const double vp_time =
+            static_cast<double>(app.viewport_start_sample) / sr_d;
+        d.anchor_mouse_time_seconds =
+            vp_time + static_cast<double>(mouse_x - area.x) * spp / sr_d;
+    }
 
     // Compute scalar delta_min / delta_max from per-marker neighbor
     // bounds. Correct for both contiguous and non-contiguous drag sets.
@@ -451,8 +491,24 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
     const bool geom_ok = (sr > 0 && spp > 0.0 && area.w > 0);
     const double vp    = static_cast<double>(app.viewport_start_sample);
 
+    // Target view: marker time_seconds is source-domain but vp/spp are
+    // target-domain. Forward-translate the source-frame through the
+    // current timemap so the pixel column the invalidation covers is
+    // the same column the marker stem paints at.
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
     auto col_rect_for_time = [&](double t_seconds) -> GuiRect {
-        const double ms = t_seconds * sr_d;
+        const double src_ms = t_seconds * sr_d;
+        double ms = src_ms;
+        if (app.view_domain == ViewDomain::Target) {
+            const size_t q = (src_ms < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(src_ms));
+            ms = map_source_to_target(q, tmap);
+        }
         const double px = area.x + (ms - vp) / spp;
         return playhead_invalidate_rect(area, px);
     };
@@ -600,6 +656,13 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
 
 // Nudge selected markers by +/- 1 pixel of source time at current zoom.
 // direction: -1 for earlier (up/left), +1 for later (down/right).
+//
+// Brief 3b: target view interprets the nudge visually — each selected
+// marker shifts by direction * 1 target-pixel; the resulting source-
+// seconds delta per marker depends on the local alpha, so the per-
+// marker shifts diverge. Validation walks each marker's proposed new
+// source-time against its non-selected source-domain neighbors; the
+// nudge is all-or-nothing.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Nudges move the playhead (via sync_playhead_to_last_selected).
@@ -609,6 +672,73 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
+
+    if (app.view_domain == ViewDomain::Target) {
+        const auto& mv = app.warpmarkers.markers();
+        for (int idx : app.selected_markers) {
+            if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+            if (idx == 0 || mv[idx].time_seconds == 0.0) return;
+        }
+        const double sr_d = static_cast<double>(sr);
+        const auto tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        const double total_duration =
+            static_cast<double>(audio.total_frames()) / sr_d;
+        // Compute proposed new source-times per selected marker, then
+        // validate against non-selected source-domain neighbors. eps
+        // here is the minimum 1-frame gap; the visual 3-px gap source
+        // view enforces doesn't translate uniformly to source-domain
+        // under a non-trivial timemap, so we degrade to strict-monotonic
+        // with one-frame headroom.
+        const double eps = 1.0 / sr_d;
+        std::vector<std::pair<int, double>> proposals;
+        proposals.reserve(app.selected_markers.size());
+        for (int idx : app.selected_markers) {
+            const double t_src = mv[idx].time_seconds;
+            const double t_tgt = map_source_to_target(
+                static_cast<size_t>(std::llrint(t_src * sr_d)), tmap);
+            const double t_tgt_new = t_tgt +
+                static_cast<double>(direction) * spp;
+            const size_t q = (t_tgt_new < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(t_tgt_new));
+            const double t_src_new =
+                map_target_to_source(q, tmap) / sr_d;
+            proposals.emplace_back(idx, t_src_new);
+        }
+        bool any_changed = false;
+        for (const auto& [idx, t_new] : proposals) {
+            if (t_new == mv[idx].time_seconds) continue;
+            int prev = idx - 1;
+            while (prev >= 0 && app.selected_markers.count(prev)) --prev;
+            const double lo = (prev >= 0)
+                ? (mv[prev].time_seconds + eps)
+                : eps;
+            int next = idx + 1;
+            const int n = static_cast<int>(mv.size());
+            while (next < n && app.selected_markers.count(next)) ++next;
+            const double hi = (next < n)
+                ? (mv[next].time_seconds - eps)
+                : (total_duration - eps);
+            if (t_new < lo || t_new > hi) return;
+            any_changed = true;
+        }
+        if (!any_changed) return;
+        std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
+        const int              hint_last = app.last_selected_marker;
+        for (const auto& [idx, t_new] : proposals) {
+            GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
+            if (!m) continue;
+            m->time_seconds = t_new;
+        }
+        undo.push_undo(std::move(pre_state), OpKind::Move, hint_last);
+        selection.sync_playhead_to_last_selected();
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+
     const double delta_s =
         static_cast<double>(direction) * spp / static_cast<double>(sr);
     if (delta_s == 0.0) return;
@@ -634,9 +764,18 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     const auto& mv = app.warpmarkers.markers();
     if (app.last_selected_marker >= static_cast<int>(mv.size())) return;
     const double anchor_t = mv[app.last_selected_marker].time_seconds;
+    // Target view: the playhead is target-domain; the anchor marker's
+    // time_seconds is source-domain. Inverse-translate playhead before
+    // taking the delta so the resulting shift is source-seconds.
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t ph_src =
+        to_source_frame(app, app.playhead_sample, tmap);
     const double ph_t =
-        static_cast<double>(app.playhead_sample) /
-        static_cast<double>(sr);
+        static_cast<double>(ph_src) / static_cast<double>(sr);
     const double delta = ph_t - anchor_t;
     if (delta == 0.0) return;
 

@@ -1,6 +1,8 @@
 #include "phase_reset_markers_ops.h"
 
 #include "audio.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <algorithm>
 #include <cmath>
@@ -59,14 +61,28 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     viewport.invalidate_timestamp_area();
     // Match drop_marker: move playhead to the new phase reset. When
     // dropping at the current playhead, this is a no-op.
-    viewport.move_playhead_to(static_cast<int64_t>(std::nearbyint(
-        time_seconds * static_cast<double>(sr))));
+    const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
+        time_seconds * static_cast<double>(sr)));
+    int64_t sample = src_sample;
+    if (app.view_domain == ViewDomain::Target) {
+        const auto tmap_after = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        sample = to_domain_frame(app, src_sample, tmap_after);
+    }
+    viewport.move_playhead_to(sample);
 }
 
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const double t = static_cast<double>(app.playhead_sample) /
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t src_frame =
+        to_source_frame(app, app.playhead_sample, tmap);
+    const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_phase_reset_at_position(t);
 }
@@ -169,6 +185,9 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
 
 // Nudge selected phase resets by +/- 1 source-pixel of seconds. Direction:
 // -1 for earlier, +1 for later. Symmetric with nudge_selected_markers.
+//
+// Brief 3b: target view interprets nudge visually — see the matching
+// note on nudge_selected_markers. Per-marker shifts, all-or-nothing.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     playback_lifecycle.stop_playback_if_playing();
@@ -176,6 +195,69 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
+
+    if (app.view_domain == ViewDomain::Target) {
+        const auto& tv = app.phase_reset_markers.markers();
+        for (int idx : app.selected_markers) {
+            if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
+        }
+        const double sr_d = static_cast<double>(sr);
+        const auto tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        const double total_duration =
+            static_cast<double>(audio.total_frames()) / sr_d;
+        const double eps = 1.0 / sr_d;
+        std::vector<std::pair<int, double>> proposals;
+        proposals.reserve(app.selected_markers.size());
+        for (int idx : app.selected_markers) {
+            const double t_src = tv[idx].time_seconds;
+            const double t_tgt = map_source_to_target(
+                static_cast<size_t>(std::llrint(t_src * sr_d)), tmap);
+            const double t_tgt_new = t_tgt +
+                static_cast<double>(direction) * spp;
+            const size_t q = (t_tgt_new < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(t_tgt_new));
+            const double t_src_new =
+                map_target_to_source(q, tmap) / sr_d;
+            proposals.emplace_back(idx, t_src_new);
+        }
+        bool any_changed = false;
+        for (const auto& [idx, t_new] : proposals) {
+            if (t_new == tv[idx].time_seconds) continue;
+            int prev = idx - 1;
+            while (prev >= 0 && app.selected_markers.count(prev)) --prev;
+            const double lo = (prev >= 0)
+                ? (tv[prev].time_seconds + eps)
+                : eps;
+            int next = idx + 1;
+            const int n = static_cast<int>(tv.size());
+            while (next < n && app.selected_markers.count(next)) ++next;
+            const double hi = (next < n)
+                ? (tv[next].time_seconds - eps)
+                : (total_duration - eps);
+            if (t_new < lo || t_new > hi) return;
+            any_changed = true;
+        }
+        if (!any_changed) return;
+        std::vector<GuiPhaseResetMarker> pre_state =
+            app.phase_reset_markers.markers();
+        const int                 hint_last = app.last_selected_marker;
+        for (const auto& [idx, t_new] : proposals) {
+            GuiPhaseResetMarker* m =
+                app.phase_reset_markers.marker_mut(idx);
+            if (!m) continue;
+            m->time_seconds = t_new;
+        }
+        undo.push_undo_phase_reset(std::move(pre_state),
+                                   OpKind::Move, hint_last);
+        selection.sync_playhead_to_last_selected();
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+
     const double delta_s =
         static_cast<double>(direction) * spp / static_cast<double>(sr);
     if (delta_s == 0.0) return;
@@ -212,7 +294,16 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     const auto& tv = app.phase_reset_markers.markers();
     if (app.last_selected_marker >= static_cast<int>(tv.size())) return;
     const double anchor_t = tv[app.last_selected_marker].time_seconds;
-    const double ph_t     = static_cast<double>(app.playhead_sample) /
+    // Target view: inverse-translate playhead so the delta lives in
+    // source-seconds (matching anchor_t's domain).
+    std::vector<TimeMapSegment> tmap;
+    if (app.view_domain == ViewDomain::Target) {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t ph_src =
+        to_source_frame(app, app.playhead_sample, tmap);
+    const double ph_t     = static_cast<double>(ph_src) /
                             static_cast<double>(sr);
     const double delta    = ph_t - anchor_t;
     if (delta == 0.0) return;
