@@ -411,9 +411,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             area.w,
             area.h + static_cast<int>(kMarkerConnectorRows)
         };
-        if (!is_target && rects_intersect(exposed, marker_paint_rect)) {
+        if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
-            if (app.render_view_enabled) {
+            if (is_target) {
+                // Target view (brief 2): paint marker stems at their
+                // map_source_to_target-translated positions. No marker
+                // editing reaches here — input gates in input_handler.cpp
+                // block W/P-axis edits while target view is active.
+                if (app.active_mode == 'P') {
+                    render_phase_reset_markers(
+                        cr, area, app.phase_reset_markers.markers(),
+                        vp_start, vp_end, sr,
+                        trim_struct, &target_timemap);
+                } else {
+                    render_markers(cr, area, app.warpmarkers.markers(),
+                                   vp_start, vp_end, sr,
+                                   trim_struct, &target_timemap);
+                }
+            } else if (app.render_view_enabled) {
                 // Render-view: dark blue base, sky-tint when selected.
                 // The render's warpmarkers list is strict-monotonic on
                 // time_seconds (engine-written), so render_markers'
@@ -449,12 +464,35 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         const double px_x = playhead_pixel_x(app, audio);
 
-        // Flag annotations in the top strip. Suppressed in target view —
-        // brief 1 paints waveform + playhead + timestamp + indicators
-        // only; markers are invisible while target view is active.
-        if (!is_target && rects_intersect(exposed, top_strip)) {
+        // Flag annotations in the top strip. Brief 2 lifts the target-view
+        // suppression: target view paints flag stems and rects at their
+        // translated positions. Hover popup, iter popup, BPM popup, and
+        // the flag editor overlay remain source-view-only — they sit
+        // inside the source-view branch below; target view passes a
+        // default FlagEditorOverlay{} and never reaches the popup paths.
+        if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
-            if (app.render_view_enabled) {
+            if (is_target) {
+                if (app.active_mode == 'P') {
+                    render_phase_reset_flags(
+                        cr, top_strip,
+                        app.phase_reset_markers.markers(),
+                        vp_start, vp_end, sr,
+                        kFlagFontSize,
+                        app.selected_markers,
+                        trim_struct,
+                        &target_timemap);
+                } else {
+                    render_flags(cr, top_strip,
+                                 app.warpmarkers.markers(),
+                                 vp_start, vp_end, sr,
+                                 kFlagFontSize,
+                                 app.selected_markers,
+                                 trim_struct,
+                                 FlagEditorOverlay{},
+                                 &target_timemap);
+                }
+            } else if (app.render_view_enabled) {
                 // Render-view: dark-blue flags, no editor overlay.
                 // Selection is visual-only (sky-tint on selected,
                 // dark-blue otherwise). Iteration popups are

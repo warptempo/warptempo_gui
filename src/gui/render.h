@@ -211,13 +211,20 @@ void render_timestamp(cairo_t* cr,
 // reference inherits the disabled flag of its defining marker). Disabled
 // markers are skipped entirely; selection has no effect on stems under the
 // brief H palette rules.
+// `timemap` (default null) shifts marker positioning into the target-frame
+// domain when target view is active: each marker's source-frame position is
+// run through `map_source_to_target` before viewport clipping and column
+// placement. Trim brightness uses the translated position so it stays
+// consistent with `trim` (which paint_handler also forwards in the same
+// domain). Null timemap = identity, exact pre-brief-2 behavior.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
                     long long viewport_start_sample,
                     long long viewport_end_sample,
                     int sample_rate,
-                    const TrimRange& trim);
+                    const TrimRange& trim,
+                    const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Editor overlay used by V.A1's top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is
@@ -275,6 +282,11 @@ struct FlagEditorOverlay {
 // Disabled markers render identically to enabled markers in the top strip;
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
+// `timemap`: same target-frame translation as render_markers. The greedy
+// pack and elision still walk left-to-right, so in target view the pack
+// rule is applied against post-translation positions (a region the timemap
+// stretches may un-elide flags that were elided in source view; a region
+// the timemap compresses may elide flags that were visible there).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   const std::vector<GuiWarpMarker>& markers,
@@ -284,12 +296,18 @@ void render_flags(cairo_t* cr,
                   double font_size,
                   const std::set<int>& selected_set,
                   const TrimRange& trim,
-                  const FlagEditorOverlay& editor = {});
+                  const FlagEditorOverlay& editor = {},
+                  const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Same greedy-pack and elision logic as render_flags, without drawing —
 // returns the screen-coord rects of the flags that would be rendered. The
 // caller uses these for hit-testing. A minimal image-surface cairo_t works
 // fine as `cr` since only font metrics are needed.
+// `timemap` parameter mirrors render_flags so the two stay in sync. Brief 2
+// adds it for symmetry — target view's hover/iter/BPM popups are gated off
+// elsewhere, so this helper is not yet called with a non-null timemap. A
+// future brief that re-enables popup paint in target view will route the
+// timemap through here without further signature churn.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     cairo_t* cr,
     GuiRect top_strip_area,
@@ -297,7 +315,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size);
+    double font_size,
+    const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Phase reset marker analogues (chunk S.2.2). Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
@@ -309,7 +328,8 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_start_sample,
                               long long viewport_end_sample,
                               int sample_rate,
-                              const TrimRange& trim);
+                              const TrimRange& trim,
+                              const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Flag text for phase resets is `[b=|e=]<status>` where status is `I`
 // (inserted), `D` (detected), or `D*` (detected with user displacement).
@@ -327,7 +347,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const TrimRange& trim);
+                            const TrimRange& trim,
+                            const std::vector<TimeMapSegment>* timemap = nullptr);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     cairo_t* cr,
@@ -336,7 +357,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size);
+    double font_size,
+    const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Returns the text that render_flags would draw for `markers[idx]`. Used
 // by the GUI text editor to seed the editable payload (the on-screen rect

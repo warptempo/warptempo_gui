@@ -414,7 +414,8 @@ void render_markers(cairo_t* cr,
                     long long viewport_start_sample,
                     long long viewport_end_sample,
                     int sample_rate,
-                    const TrimRange& trim) {
+                    const TrimRange& trim,
+                    const std::vector<TimeMapSegment>* timemap) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -442,11 +443,21 @@ void render_markers(cairo_t* cr,
         for (size_t i = 0; i < markers.size(); ++i) {
             if (effective_disabled(markers, static_cast<int>(i))) continue;
             const auto& m = markers[i];
-            const double ms = m.time_seconds * sr;
+            // Translate per-marker source-frame to target-frame in target view
+            // (timemap non-null/non-empty); identity otherwise. Viewport and
+            // trim are passed in the same domain (source in source view,
+            // target in target view), so the comparisons stay consistent.
+            double ms;
+            if (timemap && !timemap->empty()) {
+                const size_t src_frame = static_cast<size_t>(
+                    std::nearbyint(m.time_seconds * sr));
+                ms = map_source_to_target(src_frame, *timemap);
+            } else {
+                ms = m.time_seconds * sr;
+            }
             if (ms < static_cast<double>(viewport_start_sample)) continue;
             if (ms >= static_cast<double>(viewport_end_sample)) continue;
-            const int64_t pos = static_cast<int64_t>(
-                std::nearbyint(m.time_seconds * sr));
+            const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
             if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
             const double x_raw =
                 (ms - static_cast<double>(viewport_start_sample))
@@ -476,6 +487,7 @@ void iterate_visible_flags(cairo_t* cr,
                            long long viewport_start_sample,
                            long long viewport_end_sample,
                            int sample_rate,
+                           const std::vector<TimeMapSegment>* timemap,
                            Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -505,7 +517,17 @@ void iterate_visible_flags(cairo_t* cr,
 
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
-        const double ms = m.time_seconds * sr;
+        // Translate per-marker source-frame to target-frame in target view
+        // (timemap non-null/non-empty); identity otherwise. Pack/elision
+        // walk left-to-right against post-translation positions.
+        double ms;
+        if (timemap && !timemap->empty()) {
+            const size_t src_frame = static_cast<size_t>(
+                std::nearbyint(m.time_seconds * sr));
+            ms = map_source_to_target(src_frame, *timemap);
+        } else {
+            ms = m.time_seconds * sr;
+        }
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
 
@@ -542,7 +564,8 @@ void render_flags(cairo_t* cr,
                   double font_size,
                   const std::set<int>& selected_set,
                   const TrimRange& trim,
-                  const FlagEditorOverlay& editor) {
+                  const FlagEditorOverlay& editor,
+                  const std::vector<TimeMapSegment>* timemap) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -579,7 +602,7 @@ void render_flags(cairo_t* cr,
     std::vector<FlagEmit> emits;
     iterate_visible_flags(cr, top_strip_area, markers,
                           viewport_start_sample, viewport_end_sample,
-                          sample_rate,
+                          sample_rate, timemap,
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -596,9 +619,19 @@ void render_flags(cairo_t* cr,
         const bool is_editing    = (e.i == editor.marker_index);
         const bool is_parse_fail = is_editing && editor.is_red;
 
-        const int64_t source_pos = static_cast<int64_t>(
-            std::nearbyint(markers[e.i].time_seconds * sr_d));
-        const bool out_of_trim = marker_out_of_trim(source_pos, trim);
+        // Translate per-marker frame to target-frame in target view so the
+        // out-of-trim comparison runs in the same domain as `trim`.
+        double pos_ms;
+        if (timemap && !timemap->empty()) {
+            const size_t src_frame = static_cast<size_t>(
+                std::nearbyint(markers[e.i].time_seconds * sr_d));
+            pos_ms = map_source_to_target(src_frame, *timemap);
+        } else {
+            pos_ms = markers[e.i].time_seconds * sr_d;
+        }
+        const int64_t marker_pos =
+            static_cast<int64_t>(std::nearbyint(pos_ms));
+        const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
 
         std::string draw_text = is_editing ? editor.pending : e.text;
         cairo_text_extents_t draw_ext = e.ext;
@@ -723,7 +756,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size) {
+    double font_size,
+    const std::vector<TimeMapSegment>* timemap) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -745,7 +779,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 
     iterate_visible_flags(cr, top_strip_area, markers,
                           viewport_start_sample, viewport_end_sample,
-                          sample_rate,
+                          sample_rate, timemap,
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
@@ -778,6 +812,7 @@ void iterate_visible_phase_reset_flags(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
+    const std::vector<TimeMapSegment>* timemap,
     Emit&& emit) {
     (void)cr;
     const double span = static_cast<double>(viewport_end_sample -
@@ -805,7 +840,16 @@ void iterate_visible_phase_reset_flags(
 
     for (size_t i = 0; i < phase_resets.size(); ++i) {
         const auto& m = phase_resets[i];
-        const double ms = m.time_seconds * sr;
+        // Translate per-marker source-frame to target-frame in target view
+        // (timemap non-null/non-empty); identity otherwise.
+        double ms;
+        if (timemap && !timemap->empty()) {
+            const size_t src_frame = static_cast<size_t>(
+                std::nearbyint(m.time_seconds * sr));
+            ms = map_source_to_target(src_frame, *timemap);
+        } else {
+            ms = m.time_seconds * sr;
+        }
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
 
@@ -839,7 +883,8 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_start_sample,
                               long long viewport_end_sample,
                               int sample_rate,
-                              const TrimRange& trim) {
+                              const TrimRange& trim,
+                              const std::vector<TimeMapSegment>* timemap) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -868,7 +913,16 @@ void render_phase_reset_markers(cairo_t* cr,
         for (size_t i = 0; i < phase_resets.size(); ++i) {
             const auto& m = phase_resets[i];
             if (m.disabled) continue;
-            const double ms = m.time_seconds * sr;
+            // Translate per-marker source-frame to target-frame in target
+            // view (timemap non-null/non-empty); identity otherwise.
+            double ms;
+            if (timemap && !timemap->empty()) {
+                const size_t src_frame = static_cast<size_t>(
+                    std::nearbyint(m.time_seconds * sr));
+                ms = map_source_to_target(src_frame, *timemap);
+            } else {
+                ms = m.time_seconds * sr;
+            }
             const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
             if (ms < static_cast<double>(viewport_start_sample)) continue;
             if (ms >= static_cast<double>(viewport_end_sample)) continue;
@@ -894,7 +948,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const TrimRange& trim) {
+                            const TrimRange& trim,
+                            const std::vector<TimeMapSegment>* timemap) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -926,7 +981,7 @@ void render_phase_reset_flags(cairo_t* cr,
     std::vector<PhaseResetEmit> emits;
     iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
                                     viewport_start_sample, viewport_end_sample,
-                                    sample_rate,
+                                    sample_rate, timemap,
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -935,9 +990,19 @@ void render_phase_reset_flags(cairo_t* cr,
     const double sr = static_cast<double>(sample_rate);
     auto paint_one = [&](const PhaseResetEmit& e) {
         const bool is_selected = selected_set.count(e.i) > 0;
-        const bool out_of_trim =
-            marker_out_of_trim(static_cast<int64_t>(std::nearbyint(
-                phase_resets[e.i].time_seconds * sr)), trim);
+        // Translate per-marker frame to target-frame in target view so the
+        // out-of-trim comparison runs in the same domain as `trim`.
+        double pos_ms;
+        if (timemap && !timemap->empty()) {
+            const size_t src_frame = static_cast<size_t>(
+                std::nearbyint(phase_resets[e.i].time_seconds * sr));
+            pos_ms = map_source_to_target(src_frame, *timemap);
+        } else {
+            pos_ms = phase_resets[e.i].time_seconds * sr;
+        }
+        const int64_t marker_pos =
+            static_cast<int64_t>(std::nearbyint(pos_ms));
+        const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
 
         // Brief Y.4 sub-bug A: opaque canvas-bg fill under the text.
         // Phase reset flags have no editor (no growing pending text),
@@ -992,7 +1057,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size) {
+    double font_size,
+    const std::vector<TimeMapSegment>* timemap) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -1010,7 +1076,7 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 
     iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
                                     viewport_start_sample, viewport_end_sample,
-                                    sample_rate,
+                                    sample_rate, timemap,
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
