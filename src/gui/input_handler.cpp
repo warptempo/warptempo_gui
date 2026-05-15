@@ -2132,8 +2132,38 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // to the marker's sample. Skip the reseek when the
                 // click landed on the marker the playhead was already
                 // on — it'd be a no-op move + a wasted teardown.
+                //
+                // Target view: the audio device is bound to
+                // app.iteration_buffer, which represents target frames
+                // [iteration_buffer_target_start_frame,
+                //  + iteration_buffer_frames) indexed [0, frames).
+                // Translate the target-domain `sample` into an
+                // iteration-buffer-frame before passing to play(),
+                // mirroring the shape in toggle_playback's target-view
+                // branch. Out-of-range click stops playback rather
+                // than letting it continue from a stale position;
+                // toggle_playback's no-op pattern is for the "no
+                // playback running" case, but here playback IS running.
                 if (was_playing && sample != playhead_at_click_entry) {
-                    playback.play(sample, viewport.trim_end_sample());
+                    if (app.view_domain == ViewDomain::Target &&
+                        !app.render_view_enabled) {
+                        if (app.iteration_buffer_frames <= 0) {
+                            playback.stop();
+                        } else {
+                            const int64_t bias =
+                                app.iteration_buffer_target_start_frame;
+                            const int64_t local = sample - bias;
+                            if (local < 0 ||
+                                local >= app.iteration_buffer_frames) {
+                                playback.stop();
+                            } else {
+                                playback.play(local,
+                                              app.iteration_buffer_frames);
+                            }
+                        }
+                    } else {
+                        playback.play(sample, viewport.trim_end_sample());
+                    }
                 }
                 app.playhead_drag.active = true;
                 app.playhead_drag.was_playing_at_press = was_playing;
@@ -2152,9 +2182,29 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 viewport.move_playhead_to(sample);
                 // Brief six: empty-space click in the waveform area
                 // keeps playback alive by reseeking to the click
-                // position.
+                // position. Target-view translation matches the
+                // marker-line branch above — see the comment there
+                // for the iteration-buffer-frame rationale.
                 if (was_playing && sample != playhead_at_click_entry) {
-                    playback.play(sample, viewport.trim_end_sample());
+                    if (app.view_domain == ViewDomain::Target &&
+                        !app.render_view_enabled) {
+                        if (app.iteration_buffer_frames <= 0) {
+                            playback.stop();
+                        } else {
+                            const int64_t bias =
+                                app.iteration_buffer_target_start_frame;
+                            const int64_t local = sample - bias;
+                            if (local < 0 ||
+                                local >= app.iteration_buffer_frames) {
+                                playback.stop();
+                            } else {
+                                playback.play(local,
+                                              app.iteration_buffer_frames);
+                            }
+                        }
+                    } else {
+                        playback.play(sample, viewport.trim_end_sample());
+                    }
                 }
                 app.playhead_drag.active = true;
                 app.playhead_drag.was_playing_at_press = was_playing;
