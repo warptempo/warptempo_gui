@@ -186,7 +186,27 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             output_buffer->end(), buf,
             buf + n_frames * static_cast<size_t>(channels));
     };
-    synthesize_full(stft, nullptr, append_to_buffer,
-                    /*show_progress=*/true,
-                    /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+    // Mirror Synthesis::process: when limiter_mode == Peak, wrap the
+    // append in a PeakLimiter so target-view iteration audio is
+    // brick-walled at the configured ceiling. The spectral limiter is
+    // skipped on the buffer path (Pass 2 is gated off in engine.cpp);
+    // the peak limiter is the only limiter that runs here.
+    if (stft.limiter_mode == LimiterMode::Peak) {
+        PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
+                       stft.peak_limiter_attack_ms,
+                       stft.peak_limiter_release_ms,
+                       stft.src_info.samplerate,
+                       stft.channels);
+        auto write_through_limiter = [&](const float* buf, size_t n_frames) {
+            pl.process(buf, n_frames, append_to_buffer);
+        };
+        synthesize_full(stft, nullptr, write_through_limiter,
+                        /*show_progress=*/true,
+                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+        pl.flush(append_to_buffer);
+    } else {
+        synthesize_full(stft, nullptr, append_to_buffer,
+                        /*show_progress=*/true,
+                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+    }
 }

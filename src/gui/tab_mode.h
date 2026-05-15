@@ -6,6 +6,8 @@
 #include "selection.h"
 #include "viewport.h"
 
+struct GuiTargetIteration;
+
 // X.7.7: mode/tab management cluster, extracted from main.cpp's inline
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
 // active-tab snapshot push (refresh_active_tab_from_app), the per-mode
@@ -20,17 +22,20 @@ struct GuiTabMode {
     Viewport&             viewport;
     Selection&            selection;
     GuiPlaybackLifecycle& playback_lifecycle;
+    GuiTargetIteration&   target_iteration;
 
     GuiTabMode(AppState&             app_,
                const GuiAudio&       audio_,
                Viewport&             viewport_,
                Selection&            selection_,
-               GuiPlaybackLifecycle& playback_lifecycle_)
+               GuiPlaybackLifecycle& playback_lifecycle_,
+               GuiTargetIteration&   target_iteration_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          target_iteration(target_iteration_) {}
 
     void       refresh_active_tab_from_app();
     ViewState* active_view_state();

@@ -9,6 +9,7 @@
 #include <cstdint>
 
 class GuiAudio;
+struct GuiTargetIteration;
 
 // X.7.4: phase reset authoring cluster, extracted from main.cpp's inline
 // lambdas. clear_hover_popup is reached through viewport;
@@ -20,19 +21,22 @@ struct GuiPhaseResetMarkersOps {
     Selection&            selection;
     Undo&                 undo;
     GuiPlaybackLifecycle& playback_lifecycle;
+    GuiTargetIteration&   target_iteration;
 
     GuiPhaseResetMarkersOps(AppState&             app_,
                             const GuiAudio&       audio_,
                             Viewport&             viewport_,
                             Selection&            selection_,
                             Undo&                 undo_,
-                            GuiPlaybackLifecycle& playback_lifecycle_)
+                            GuiPlaybackLifecycle& playback_lifecycle_,
+                            GuiTargetIteration&   target_iteration_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          target_iteration(target_iteration_) {}
 
     void drop_phase_reset_at_position(double time_seconds);
     void drop_phase_reset_at_playhead();

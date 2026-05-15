@@ -10,28 +10,33 @@
 
 #include <string>
 
+struct GuiTargetIteration;
+
 // X.7.5b: flag-editor cluster, extracted from main.cpp's inline lambdas.
 // Covers the top-flag canonical-line editor (V.A1), the V.B iteration
 // popup editor, the Brief X.2 BPM popup editor, the Shift+I/Shift+M bulk
 // clears, and the BPM-mode enter/exit transitions. clear_hover_popup is
 // reached through viewport.
 struct GuiFlagEditor {
-    AppState&     app;
-    GuiAudio&     audio;
-    Viewport&     viewport;
-    Selection&    selection;
-    Undo&         undo;
+    AppState&             app;
+    GuiAudio&             audio;
+    Viewport&             viewport;
+    Selection&            selection;
+    Undo&                 undo;
+    GuiTargetIteration&   target_iteration;
 
-    GuiFlagEditor(AppState&     app_,
-                  GuiAudio&     audio_,
-                  Viewport&     viewport_,
-                  Selection&    selection_,
-                  Undo&         undo_)
+    GuiFlagEditor(AppState&             app_,
+                  GuiAudio&             audio_,
+                  Viewport&             viewport_,
+                  Selection&            selection_,
+                  Undo&                 undo_,
+                  GuiTargetIteration&   target_iteration_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
-          undo(undo_) {}
+          undo(undo_),
+          target_iteration(target_iteration_) {}
 
     std::string build_locked_prefix(const GuiWarpMarker& m);
     void exit_top_flag_edit_no_commit();

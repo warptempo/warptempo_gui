@@ -90,6 +90,17 @@ public:
     bool    is_playing() const;
     int64_t cursor()     const;
 
+    // Swap the borrowed sample buffer pointer without tearing down the
+    // device. Asserts the device is currently stopped (callers must call
+    // stop() first and verify is_playing() is false). The new buffer must
+    // match the sample rate and channel count the device was init()'d with
+    // — only `samples` and `total_frames` change. The cursor is reset to
+    // 0; the end_sample is reset to 0 so the next play() supplies a fresh
+    // range. Used by target-view iteration to rebind playback to the
+    // freshly-rendered iteration_buffer, and to swap back to source.wav
+    // when leaving target view.
+    void rebind_buffer(const float* samples, int64_t total_frames);
+
     // Tear down the device. Blocks until the audio callback has drained.
     // Call before the sample buffer dies (reload, shutdown).
     void shutdown();

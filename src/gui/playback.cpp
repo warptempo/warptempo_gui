@@ -339,6 +339,36 @@ int64_t GuiPlayback::cursor() const {
     return predicted;
 }
 
+void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
+    if (!impl_) return;
+    if (!impl_->device_inited) {
+        // No live device — just stash so a future init() against the same
+        // sample rate / channel count would see the new buffer. In
+        // practice the iteration path runs only after a successful init,
+        // so this branch is defensive.
+        impl_->samples      = samples;
+        impl_->total_frames = total_frames;
+        return;
+    }
+    // Caller invariant: the device must be stopped before rebind. Crashing
+    // the audio callback on a mid-flight pointer swap would be silent
+    // corruption; assert loudly so the broken caller is found.
+    if (impl_->playing.load(std::memory_order_relaxed)) {
+        std::fprintf(stderr,
+            "warptempo_gui: rebind_buffer called while playing — refusing "
+            "to swap the audio buffer (would race the callback)\n");
+        return;
+    }
+    impl_->samples      = samples;
+    impl_->total_frames = total_frames;
+    impl_->cursor.store(0, std::memory_order_relaxed);
+    impl_->end_sample.store(0, std::memory_order_relaxed);
+    impl_->pending_start.store(-1, std::memory_order_relaxed);
+    impl_->fractional_cursor = 0.0;
+    impl_->anchor_sample.store(0, std::memory_order_relaxed);
+    impl_->anchor_ns.store(0, std::memory_order_relaxed);
+}
+
 void GuiPlayback::shutdown() {
     if (!impl_) return;
     if (impl_->device_inited) {

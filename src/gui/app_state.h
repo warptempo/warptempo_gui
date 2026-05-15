@@ -484,6 +484,21 @@ struct AppState {
     // invalidation fingerprint so a file swap forces a re-render.
     long long audio_generation = 0;
 
+    // Target-view live audio iteration buffer. The render pipeline appends
+    // synthesised samples here via RenderRequest::output_buffer when the
+    // trigger_target_iteration helper dispatches a render in target view.
+    // On completion the playback device rebinds to this buffer via
+    // GuiPlayback::rebind_buffer so playback plays the warped result. The
+    // buffer is replaced wholesale per iteration render — no historical
+    // cache. Source-view playback continues to read source.wav from the
+    // GuiAudio store, not this buffer.
+    std::vector<float> iteration_buffer;
+    // Cached frame count for the populated iteration_buffer (i.e.
+    // iteration_buffer.size() / channels). Set in the iteration on_done
+    // callback; read by the playback rebind. Zero before the first
+    // successful iteration render in this session.
+    int64_t iteration_buffer_frames = 0;
+
     // A/B navigational tabs. Ctrl+Tab toggles between them; each holds a
     // snapshot of viewport/zoom/playhead. Persisted in .settings.
     ViewState tab_a;

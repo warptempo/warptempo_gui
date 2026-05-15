@@ -69,6 +69,9 @@ void GuiInputHandler::finalize_render_run() {
     // "rendering N of N..." string undamaged.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
+    // A target-view edit during this archival render may have queued a
+    // pending iteration. Worker is now idle — fire it.
+    target_iteration.maybe_dispatch_pending();
 }
 
 void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
@@ -160,6 +163,11 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 
     ++batch_.next_index;
     dispatch_next_batch_entry();
+    // dispatch_next_batch_entry either dispatched the next batch
+    // entry (worker is busy → pending iteration stays queued) or
+    // finalized via finalize_render_run (which already pumps the
+    // pending iteration). Either way we don't need to call
+    // maybe_dispatch_pending here.
 }
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
@@ -1138,7 +1146,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Space-bar is modifier-independent.
-    if (key == GuiKeys::Space) { playback_lifecycle.toggle_playback(); return; }
+    if (key == GuiKeys::Space) {
+        // Target-view playback gating: refuse Space-to-play while an
+        // iteration update is in flight (current is stale by
+        // definition). Space-to-stop is still honored — if playback
+        // happened to be running before an edit, the trigger() helper
+        // already froze it, so playback.is_playing() is false in
+        // practice. The empty-iteration-buffer case (no successful
+        // iteration render yet in this session) is also refused so the
+        // user can't play stale source-domain samples through a
+        // target-view binding. Source view falls through unchanged.
+        if (app.view_domain == ViewDomain::Target && !playback.is_playing()) {
+            if (target_iteration.is_updating()) return;
+            if (app.iteration_buffer_frames <= 0) return;
+        }
+        playback_lifecycle.toggle_playback();
+        return;
+    }
 
     // Shift+<digit> selects a playback speed. Shift+0 is 1.00, Shift+1
     // is 0.10, Shift+9 is 0.90. Applies immediately whether or not
@@ -1472,6 +1496,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 undo.push_settings_undo(std::move(pre));
                 viewport.invalidate_waveform_area();
                 viewport.invalidate_timestamp_area();
+                target_iteration.trigger();
             }
         }
         return;
@@ -2556,6 +2581,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            target_iteration.trigger();
             return;
         }
     }
@@ -2580,6 +2606,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            target_iteration.trigger();
             return;
         }
     }
@@ -2590,6 +2617,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 void GuiInputHandler::handle_trim_set_end_at_playhead() {
@@ -2619,6 +2647,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            target_iteration.trigger();
             return;
         }
     }
@@ -2640,6 +2669,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            target_iteration.trigger();
             return;
         }
     }
@@ -2650,6 +2680,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 void GuiInputHandler::handle_trim_unset_begin() {
@@ -2661,6 +2692,7 @@ void GuiInputHandler::handle_trim_unset_begin() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 void GuiInputHandler::handle_trim_unset_end() {
@@ -2672,6 +2704,7 @@ void GuiInputHandler::handle_trim_unset_end() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 void GuiInputHandler::handle_view_domain_toggle() {
@@ -2737,6 +2770,7 @@ void GuiInputHandler::handle_view_domain_toggle() {
 
     int64_t new_playhead = app.playhead_sample;
 
+    bool going_to_target = false;
     if (app.view_domain == ViewDomain::Source) {
         // S → T: forward-translate the playhead and cache the target-
         // domain total so live_total_frames returns the deformed
@@ -2754,6 +2788,7 @@ void GuiInputHandler::handle_view_domain_toggle() {
         new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
         app.view_domain = ViewDomain::Target;
+        going_to_target = true;
     } else {
         // T → S: inverse-translate the playhead, drop the target-domain
         // total cache.
@@ -2781,4 +2816,16 @@ void GuiInputHandler::handle_view_domain_toggle() {
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
     gui.invalidate_region(0, 0, app.width, app.height);
+
+    if (going_to_target) {
+        // S → T: dispatch an eager iteration render so playback is
+        // ready without a first-edit wait. The helper handles the
+        // playback freeze + cancel-clear-dispatch sequence.
+        target_iteration.trigger();
+    } else {
+        // T → S: cancel any in-flight iteration render and rebind
+        // playback to source.wav. No replacement dispatch — source
+        // view's playback reads source.wav across archival renders.
+        target_iteration.rebind_to_source();
+    }
 }

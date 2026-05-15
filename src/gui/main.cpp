@@ -16,6 +16,7 @@
 #include "settings_editor.h"
 #include "settings_io.h"
 #include "tab_mode.h"
+#include "target_iteration.h"
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
@@ -348,27 +349,39 @@ int main(int argc, char** argv) {
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport);
     Selection selection(app, audio, viewport, playback);
-    GuiTabMode tab_mode(app, audio, viewport, selection, playback_lifecycle);
-    Undo undo(app, viewport, selection, playback_lifecycle, tab_mode);
-    GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
-                                         playback_lifecycle);
-    GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
-                              playback_lifecycle);
-    GuiFlagEditor flag_editor(app, audio, viewport, selection, undo);
-    GuiRenderView render_view(app, audio, playback, gui, selection,
-                              viewport, tab_mode);
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
-    PhaseResetPropagate phase_reset_propagate(app, viewport, undo);
-    GuiSaveOps save_ops(app, undo, tab_mode, viewport);
-    GuiPrompt prompt(app, gui, viewport, file_loader,
-                     phase_reset_propagate, save_ops);
-    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode, undo);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
             "warptempo_gui: failed to start async renderer; exiting\n");
         return 1;
     }
+    // GuiTargetIteration is the cancel-restart dispatcher for target-view
+    // live audio iteration. It must be constructed after async_renderer
+    // (a dependency) and BEFORE the op clusters (which take it as a
+    // ref). The trigger() method is a no-op in source view, so injecting
+    // it into source-view-only call sites is harmless.
+    GuiTargetIteration target_iteration(app, audio, async_renderer, playback,
+                                        viewport);
+    GuiTabMode tab_mode(app, audio, viewport, selection,
+                        playback_lifecycle, target_iteration);
+    Undo undo(app, viewport, selection, playback_lifecycle, tab_mode,
+              target_iteration);
+    GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
+                                         playback_lifecycle, target_iteration);
+    GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
+                              playback_lifecycle, target_iteration);
+    GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
+                              target_iteration);
+    GuiRenderView render_view(app, audio, playback, gui, selection,
+                              viewport, tab_mode);
+    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
+    PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
+                                              target_iteration);
+    GuiSaveOps save_ops(app, undo, tab_mode, viewport);
+    GuiPrompt prompt(app, gui, viewport, file_loader,
+                     phase_reset_propagate, save_ops);
+    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode, undo,
+                                      target_iteration);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
@@ -378,7 +391,7 @@ int main(int argc, char** argv) {
                                   phase_reset_propagate,
                                   async_renderer,
                                   playback_lifecycle, save_ops, prompt,
-                                  settings_editor);
+                                  settings_editor, target_iteration);
 
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };

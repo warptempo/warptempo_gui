@@ -65,9 +65,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // File-load lands the user back in source view: the just-loaded
     // audio sets a fresh source-frame baseline, and the target-frame
     // cache from any prior session is stale. Defensive even though
-    // brief 1's target view is session-only.
+    // brief 1's target view is session-only. The iteration buffer is
+    // tied to the live source audio's content, so clear it too — a
+    // subsequent S→T toggle will dispatch a fresh iteration render.
     app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
+    app.iteration_buffer.clear();
+    app.iteration_buffer_frames = 0;
 
     app.playhead_sample       = 0;
     app.viewport_start_sample = 0;
@@ -339,6 +343,13 @@ void GuiFileLoader::revert_to_blank() {
     app.tab_a = ViewState{};
     app.tab_b = ViewState{};
     app.active_tab = 'A';
+
+    // Iteration state is tied to the live source audio; clear it on
+    // revert so a subsequent file load doesn't inherit stale frames.
+    app.iteration_buffer.clear();
+    app.iteration_buffer_frames = 0;
+    app.view_domain              = ViewDomain::Source;
+    app.target_view_total_frames = 0;
 
     viewport.invalidate_all();
 }

@@ -228,13 +228,13 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p2_1 = std::chrono::steady_clock::now();
     std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
 
-    // Pass 2 is skipped on the buffer-output path. The attenuation_map was
-    // already assign()'d to all-1.0 above, which is the same identity row
-    // the spectral limiter would have produced for a no-overshoot signal —
-    // so synthesis sees a no-op attenuation row regardless of which branch
-    // we take. The buffer-path caller is responsible for any downstream
-    // limiting (target-view runs a PeakLimiter between the engine buffer
-    // and the audio device).
+    // Pass 2 (spectral limiter) is skipped on the buffer-output path. The
+    // attenuation_map was already assign()'d to all-1.0 above, which is
+    // the same identity row the spectral limiter would have produced for
+    // a no-overshoot signal — so synthesis sees a no-op attenuation row
+    // regardless of which branch we take. Pass 3 still applies the peak
+    // limiter when limiter_mode == Peak (target-view iteration sets
+    // force_peak_limiter at the GUI boundary to opt in).
     if (!p.output_buffer) {
         auto t_p3_0 = std::chrono::steady_clock::now();
         limiter.process(audio_stft);

@@ -13,6 +13,7 @@
 #include "selection.h"
 #include "settings_editor.h"
 #include "tab_mode.h"
+#include "target_iteration.h"
 #include "phase_reset_propagate.h"
 #include "phase_reset_markers_ops.h"
 #include "undo.h"
@@ -110,6 +111,7 @@ struct GuiInputHandler {
     GuiSaveOps&              save_ops;
     GuiPrompt&               prompt;
     GuiSettingsEditor&       settings_editor;
+    GuiTargetIteration&      target_iteration;
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -128,7 +130,8 @@ struct GuiInputHandler {
                     GuiPlaybackLifecycle&    playback_lifecycle_,
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
-                    GuiSettingsEditor&       settings_editor_)
+                    GuiSettingsEditor&       settings_editor_,
+                    GuiTargetIteration&      target_iteration_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -146,7 +149,8 @@ struct GuiInputHandler {
           playback_lifecycle(playback_lifecycle_),
           save_ops(save_ops_),
           prompt(prompt_),
-          settings_editor(settings_editor_) {}
+          settings_editor(settings_editor_),
+          target_iteration(target_iteration_) {}
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);

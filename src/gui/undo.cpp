@@ -1,6 +1,7 @@
 #include "undo.h"
 
 #include "audio.h"
+#include "target_iteration.h"
 #include "timemap.h"
 
 #include <algorithm>
@@ -374,6 +375,10 @@ void Undo::do_undo() {
     recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Every undo restores engine input (markers, phase resets, or
+    // settings) — fire an iteration update in target view. No-op in
+    // source view.
+    target_iteration.trigger();
 }
 
 void Undo::do_redo() {
@@ -448,4 +453,7 @@ void Undo::do_redo() {
     recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Every redo restores engine input — fire an iteration update in
+    // target view. No-op in source view.
+    target_iteration.trigger();
 }

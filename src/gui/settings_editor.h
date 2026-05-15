@@ -6,6 +6,7 @@
 #include "viewport.h"
 
 struct Undo;
+struct GuiTargetIteration;
 
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
@@ -24,22 +25,25 @@ struct Undo;
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
 //    engine key") with a red-flash and no commit.
 struct GuiSettingsEditor {
-    AppState&    app;
-    GuiAudio&    audio;
-    Viewport&    viewport;
-    GuiTabMode&  tab_mode;
-    Undo&        undo;
+    AppState&             app;
+    GuiAudio&             audio;
+    Viewport&             viewport;
+    GuiTabMode&           tab_mode;
+    Undo&                 undo;
+    GuiTargetIteration&   target_iteration;
 
-    GuiSettingsEditor(AppState&   app_,
-                      GuiAudio&   audio_,
-                      Viewport&   viewport_,
-                      GuiTabMode& tab_mode_,
-                      Undo&       undo_)
+    GuiSettingsEditor(AppState&             app_,
+                      GuiAudio&             audio_,
+                      Viewport&             viewport_,
+                      GuiTabMode&           tab_mode_,
+                      Undo&                 undo_,
+                      GuiTargetIteration&   target_iteration_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           tab_mode(tab_mode_),
-          undo(undo_) {}
+          undo(undo_),
+          target_iteration(target_iteration_) {}
 
     void open();
     void exit_no_commit();

@@ -1,6 +1,7 @@
 #include "phase_reset_markers_ops.h"
 
 #include "audio.h"
+#include "target_iteration.h"
 #include "timemap.h"
 #include "engine/stft_container.h"
 
@@ -69,6 +70,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
         sample = to_domain_frame(app, src_sample, tmap_after);
     }
     viewport.move_playhead_to(sample);
+    target_iteration.trigger();
 }
 
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
@@ -112,6 +114,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Toggle the disabled flag on each selected phase reset. Unconditional —
@@ -132,6 +135,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Compute (delta_min, delta_max) seconds bounds for shifting the
@@ -254,6 +258,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        target_iteration.trigger();
         return;
     }
 
@@ -281,6 +286,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // `j` for phase reset mode: shift the selection so last_selected lands
@@ -326,5 +332,6 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 

@@ -1,6 +1,7 @@
 #include "settings_editor.h"
 
 #include "settings_io.h"
+#include "target_iteration.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "undo.h"
@@ -137,6 +138,8 @@ void GuiSettingsEditor::commit() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.settings_editor);
+        // Trim is engine input — fire the iteration update.
+        target_iteration.trigger();
         return;
     }
 
@@ -175,4 +178,9 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
+    // Engine settings are engine input — fire iteration update.
+    // (title / output_format don't change rendered audio in any
+    // user-visible way, but the trigger is cheap and the iteration
+    // is throttled by cancel-restart, so we don't gate per-key.)
+    target_iteration.trigger();
 }

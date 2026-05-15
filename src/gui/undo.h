@@ -8,6 +8,8 @@
 
 #include <vector>
 
+struct GuiTargetIteration;
+
 // X.7.3: undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
 // write; bodies are byte-identical to the originals modulo `this->` access
@@ -21,17 +23,20 @@ struct Undo {
     Selection&            selection;
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiTabMode&           tab_mode;
+    GuiTargetIteration&   target_iteration;
 
     Undo(AppState&             app_,
          Viewport&             viewport_,
          Selection&            selection_,
          GuiPlaybackLifecycle& playback_lifecycle_,
-         GuiTabMode&           tab_mode_)
+         GuiTabMode&           tab_mode_,
+         GuiTargetIteration&   target_iteration_)
         : app(app_),
           viewport(viewport_),
           selection(selection_),
           playback_lifecycle(playback_lifecycle_),
-          tab_mode(tab_mode_) {}
+          tab_mode(tab_mode_),
+          target_iteration(target_iteration_) {}
 
     void recompute_dirty();
     void push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,

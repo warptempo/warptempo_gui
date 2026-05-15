@@ -1,5 +1,7 @@
 #include "tab_mode.h"
 
+#include "target_iteration.h"
+
 #include <cstdio>
 #include <string>
 
@@ -118,6 +120,11 @@ void GuiTabMode::switch_active_tab_to(char target_tab) {
     // area holds the letter and the ts text.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Per-tab trim is engine input. Switching tabs in target view
+    // invalidates the iteration buffer (rendered against the leaving
+    // tab's trim) — fire a fresh render against the entering tab.
+    // No-op in source view.
+    target_iteration.trigger();
 }
 
 // `p` key: toggle into/out of phase reset mode. Phase reset markers are

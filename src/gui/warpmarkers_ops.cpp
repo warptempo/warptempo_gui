@@ -4,6 +4,7 @@
 #include "render.h"
 #include "phase_reset_markers_ops.h"
 #include "platform_wayland.h"
+#include "target_iteration.h"
 #include "timemap.h"
 #include "engine/stft_container.h"
 
@@ -96,6 +97,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
         sample = to_domain_frame(app, src_sample, tmap_after);
     }
     viewport.move_playhead_to(sample);
+    target_iteration.trigger();
 }
 
 void GuiWarpMarkersOps::drop_marker_at_playhead() {
@@ -185,6 +187,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Shift+Delete variant. Auto-cascades label_refs of any selected def
@@ -236,6 +239,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Shift+P: convert each selected marker's tempo source. Cache-free —
@@ -281,6 +285,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Toggle the disabled flag on each selected marker. Per chunk U patch 3
@@ -302,6 +307,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 // Nudge every selected marker by `delta`. Label refs are silently
@@ -342,6 +348,7 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
 
 bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
@@ -585,6 +592,7 @@ void GuiWarpMarkersOps::commit_drag() {
         viewport.invalidate_timestamp_area();
     }
     viewport.invalidate_waveform_area();
+    if (moved) target_iteration.trigger();
 }
 
 // Compute (delta_min, delta_max) scalar bounds for shifting the current
@@ -736,6 +744,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        target_iteration.trigger();
         return;
     }
 
@@ -750,6 +759,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        target_iteration.trigger();
     }
 }
 
@@ -798,4 +808,5 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    target_iteration.trigger();
 }
