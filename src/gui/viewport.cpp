@@ -276,13 +276,10 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    // Target view has no flag rects (markers don't paint in brief 1),
-    // so hover-popup math against source-frame marker positions would
-    // be both wrong and invisible. Drop it cleanly.
-    if (app.view_domain == ViewDomain::Target) {
-        clear_hover_popup();
-        return;
-    }
+    // Brief 3a: target view's hover popup runs the same way as
+    // source view's. hit_test_flag builds the target_timemap
+    // internally when view_domain == Target so the flag rects it
+    // walks match what paint_handler renders at translated columns.
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);
     if (hit != app.hover_popup.marker_index) {

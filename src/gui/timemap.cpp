@@ -319,6 +319,33 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     return true;
 }
 
+std::vector<TimeMapSegment> build_target_view_timemap(
+    const std::vector<GuiWarpMarker>& markers,
+    double scale,
+    int sample_rate,
+    long total_frames) {
+    TimemapBuildInput tmin;
+    tmin.markers        = resolve_markers_for_render(markers);
+    tmin.scale          = scale;
+    tmin.sample_rate    = sample_rate;
+    tmin.total_frames   = total_frames;
+    // Trim is render-time, not view-time — target view paints the WHOLE
+    // song. Forcing trim off here matches the paint_handler construction
+    // so hit-test math and waveform paint walk the same segment list.
+    tmin.has_trim_begin = false;
+    tmin.trim_begin_sec = 0.0;
+    tmin.has_trim_end   = false;
+    tmin.trim_end_sec   = 0.0;
+    TimemapBuildResult tmres;
+    std::vector<TimeMapSegment> out;
+    if (!build_timemaps(tmin, tmres)) return out;
+    out.reserve(tmres.standard.size());
+    for (const auto& s : tmres.standard) {
+        out.push_back(TimeMapSegment{s.src_frame, s.tgt_frame});
+    }
+    return out;
+}
+
 bool write_trimmed_wav(const std::string& src_path,
                        const std::string& out_path,
                        size_t begin_frame,

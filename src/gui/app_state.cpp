@@ -4,6 +4,7 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
+#include "timemap.h"
 
 #include <cairo/cairo.h>
 
@@ -112,6 +113,23 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
+    // Brief 3a: target view's flags paint at translated positions
+    // (compute_flag_hit_rects with a non-null timemap), so hit-test
+    // must walk the same timemap. Build it locally — same construction
+    // as paint_handler's on_redraw, trim forced off. Empty in source-
+    // view and render-view; the helper's nullptr-when-empty pass-through
+    // below leaves those paths untouched.
+    std::vector<TimeMapSegment> target_timemap;
+    if (!app.render_view_enabled &&
+        app.view_domain == ViewDomain::Target) {
+        target_timemap = build_target_view_timemap(
+            app.warpmarkers.markers(),
+            app.engine_settings.scale,
+            audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+    }
+    const std::vector<TimeMapSegment>* tmap_arg =
+        target_timemap.empty() ? nullptr : &target_timemap;
     std::vector<FlagHitRect> rects;
     if (app.render_view_enabled) {
         rects = compute_flag_hit_rects(
@@ -120,11 +138,13 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     } else if (app.active_mode == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             scratch_cr, top, app.phase_reset_markers.markers(),
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize);
+            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            tmap_arg);
     } else {
         rects = compute_flag_hit_rects(
             scratch_cr, top, app.warpmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize);
+            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            tmap_arg);
     }
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
@@ -151,9 +171,21 @@ int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
+    std::vector<TimeMapSegment> target_timemap;
+    if (!app.render_view_enabled &&
+        app.view_domain == ViewDomain::Target) {
+        target_timemap = build_target_view_timemap(
+            app.warpmarkers.markers(),
+            app.engine_settings.scale,
+            audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+    }
+    const std::vector<TimeMapSegment>* tmap_arg =
+        target_timemap.empty() ? nullptr : &target_timemap;
     auto hits = compute_iter_popup_hits(
         scratch_cr, top, app.warpmarkers.markers(),
-        vp_start, vp_end, audio.sample_rate(), kFlagFontSize);
+        vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+        tmap_arg);
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
     for (const auto& h : hits) {
@@ -208,9 +240,21 @@ int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
+    std::vector<TimeMapSegment> target_timemap;
+    if (!app.render_view_enabled &&
+        app.view_domain == ViewDomain::Target) {
+        target_timemap = build_target_view_timemap(
+            app.warpmarkers.markers(),
+            app.engine_settings.scale,
+            audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+    }
+    const std::vector<TimeMapSegment>* tmap_arg =
+        target_timemap.empty() ? nullptr : &target_timemap;
     auto hits = compute_bpm_popup_hits(
         scratch_cr, top, app.warpmarkers.markers(),
-        vp_start, vp_end, audio.sample_rate(), kFlagFontSize);
+        vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+        tmap_arg);
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
     for (const auto& h : hits) {

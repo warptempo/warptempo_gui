@@ -1,6 +1,7 @@
 #pragma once
 
 #include "warpmarkers.h"
+#include "engine/stft_container.h"   // TimeMapSegment
 
 #include <cstddef>
 #include <string>
@@ -76,6 +77,21 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
 // would emit.
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<GuiWarpMarker>& src);
+
+// Builds the target-view timemap from live warp markers plus scale, mirroring
+// the resolve-then-build pipeline paint_handler's on_redraw uses for target-
+// view waveform translation. Trim is forced off — target view paints the
+// WHOLE song; the timemap must describe the whole song with warp segments
+// where markers exist and identity outside (see paint_handler.cpp commentary
+// next to the same construction). Returns an empty vector if build_timemaps
+// fails or yields no segments. Callers in target view route this through
+// compute_flag_hit_rects / render_flags / popup-hit helpers so hit-test
+// math and paint stay in sync.
+std::vector<TimeMapSegment> build_target_view_timemap(
+    const std::vector<GuiWarpMarker>& markers,
+    double scale,
+    int sample_rate,
+    long total_frames);
 
 // libsndfile-based slice: reads src_path samples [begin_frame, end_frame)
 // and writes them to out_path as 32-bit float WAV preserving channel count
