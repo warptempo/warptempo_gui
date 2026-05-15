@@ -473,45 +473,18 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
 }
 
 // Apply a raw delta (mouse-derived) to the dragging markers, clamped.
-// Updates marker times in place and invalidates only the old-and-new
-// pixel columns of each moved marker plus the flag strip. The waveform
-// cache stays valid throughout the drag — viewport / trim / dimensions
-// don't change — so these narrow invalidations blit the cache over
-// tiny rects and repaint just markers + flags + playhead on top.
+// Updates marker times in place and invalidates the full waveform area
+// plus the flag strip. The waveform cache stays valid throughout the
+// drag — viewport / trim / dimensions / view-domain / timemap-hash
+// don't change — so the invalidation triggers a cheap blit of cached
+// pixels with stems, flags, and playhead repainted on top. A narrow
+// per-marker rect would be wrong in target view, where moving one
+// marker shifts every downstream stem's x via the timemap.
 void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
     if (!app.drag.active) return;
     double delta = raw_delta;
     if (delta < app.drag.delta_min) delta = app.drag.delta_min;
     if (delta > app.drag.delta_max) delta = app.drag.delta_max;
-
-    const GuiRect area = waveform_area(app);
-    const int sr       = audio.sample_rate();
-    const double spp   = current_samples_per_pixel(app, audio);
-    const double sr_d  = static_cast<double>(sr);
-    const bool geom_ok = (sr > 0 && spp > 0.0 && area.w > 0);
-    const double vp    = static_cast<double>(app.viewport_start_sample);
-
-    // Target view: marker time_seconds is source-domain but vp/spp are
-    // target-domain. Forward-translate the source-frame through the
-    // current timemap so the pixel column the invalidation covers is
-    // the same column the marker stem paints at.
-    std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
-        tmap = build_target_view_timemap(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
-    auto col_rect_for_time = [&](double t_seconds) -> GuiRect {
-        const double src_ms = t_seconds * sr_d;
-        double ms = src_ms;
-        if (app.view_domain == ViewDomain::Target) {
-            const size_t q = (src_ms < 0.0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(std::llrint(src_ms));
-            ms = map_source_to_target(q, tmap);
-        }
-        const double px = area.x + (ms - vp) / spp;
-        return playhead_invalidate_rect(area, px);
-    };
 
     const bool phase_reset = (app.drag.drag_mode == 'P');
     bool any_changed = false;
@@ -533,13 +506,6 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
             m->time_seconds = new_t;
         }
         any_changed = true;
-        if (!geom_ok) continue;
-        const GuiRect r_old = col_rect_for_time(old_t);
-        const GuiRect r_new = col_rect_for_time(new_t);
-        const GuiRect u = union_rect(r_old, r_new);
-        if (u.w > 0 && u.h > 0) {
-            gui.invalidate_region(u.x, u.y, u.w, u.h);
-        }
     }
     if (any_changed) {
         const bool first_motion = !app.drag.moved;
@@ -556,8 +522,7 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
             app.last_selected_marker = hit;
             app.drag.pending_collapse_to_hit = false;
         }
-        // Flag strip is at most ~top_strip_height px tall; repainting
-        // the whole strip takes ~0.05 ms, so don't bother per-flag.
+        viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
     }
 }
