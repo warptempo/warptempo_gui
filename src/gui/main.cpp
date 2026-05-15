@@ -222,17 +222,24 @@ int max_valid_numeric_level(int waveform_width_px,
     return best;
 }
 
+int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
+    if (a.view_domain == ViewDomain::Target && a.target_view_total_frames > 0) {
+        return a.target_view_total_frames;
+    }
+    return audio.total_frames();
+}
+
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     const GuiRect area = waveform_area(a);
     const double spp = samples_per_pixel_at(
-        a.zoom_level, area.w, audio.total_frames(), audio.sample_rate());
+        a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
     return static_cast<int64_t>(std::nearbyint(spp * area.w));
 }
 
 double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
     const GuiRect area = waveform_area(a);
     return samples_per_pixel_at(
-        a.zoom_level, area.w, audio.total_frames(), audio.sample_rate());
+        a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
 }
 
 // Applies a position delta (in seconds) to the phase reset's time_seconds.
@@ -243,7 +250,7 @@ void apply_phase_reset_position_delta(GuiPhaseResetMarker& m, double delta_secon
 
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     const int64_t visible = samples_visible(a, audio);
-    const int64_t total   = audio.total_frames();
+    const int64_t total   = live_total_frames(a, audio);
     if (visible >= total) {
         a.viewport_start_sample = 0;
         return;

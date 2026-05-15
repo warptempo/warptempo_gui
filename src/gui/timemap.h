@@ -1,5 +1,7 @@
 #pragma once
 
+#include "warpmarkers.h"
+
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -63,6 +65,17 @@ struct TimemapBuildResult {
 // reference, duplicate label definition, final_multiplier > 9.9999 on label
 // refs, begin_time at 00:00.000.
 bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
+
+// Resolve each GuiWarpMarker to a MarkerForRender. Filters out markers that
+// are references to disabled-defined labels and disabled label-definition
+// markers (and thereby all refs to them). The inherit walk-back is applied
+// here so MarkerForRender carries a concrete tempo_base / tempo_scale —
+// same rule as resolve_inherited_tempo. Both the engine-bound render
+// pipeline and the target view's per-paint timemap recompute go through
+// this single resolver so the visible deformity matches what the engine
+// would emit.
+std::vector<MarkerForRender> resolve_markers_for_render(
+    const std::vector<GuiWarpMarker>& src);
 
 // libsndfile-based slice: reads src_path samples [begin_frame, end_frame)
 // and writes them to out_path as 32-bit float WAV preserving channel count

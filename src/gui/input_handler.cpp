@@ -4,7 +4,9 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
+#include "timemap.h"
 #include "warpmarkers.h"
+#include "engine/stft_container.h"
 
 #include <algorithm>
 #include <chrono>
@@ -340,6 +342,63 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
               is_zoom || is_zoom_symbol || is_zero || is_follow)) {
             return;
         }
+    }
+
+    // Target view input gate. Brief 1 is read-only with respect to
+    // authoring state: marker / phase reset / trim edits, save,
+    // render, queue-add, and playback are all dropped while target
+    // view is active. Allowed: viewport scroll / zoom / playhead
+    // seek / `t` to exit / `p` to flip the marker axis / Esc / `f`
+    // follow-mode. Structurally a sibling of the render-view gate
+    // above. (Welcome-back parsimony note: this is the second
+    // allowlist of this shape — a future refactor opportunity is to
+    // table-drive these gates; don't do it in brief 1 — just add the
+    // sibling.)
+    if (app.view_domain == ViewDomain::Target && !app.render_view_enabled) {
+        const bool is_t =
+            (key == GuiKeys::T && !ctrl && !shift && !alt);
+        const bool is_p =
+            (key == GuiKeys::P && !ctrl && !shift && !alt);
+        const bool is_scrub_tv =
+            ((key == GuiKeys::Left || key == GuiKeys::Right) &&
+             !ctrl && !shift && !alt);
+        const bool is_jump_tv =
+            ((key == GuiKeys::Home || key == GuiKeys::End) &&
+             !ctrl && !shift && !alt);
+        const bool is_esc_tv = (key == GuiKeys::Escape);
+        const bool is_zoom_tv =
+            ((key == GuiKeys::Up || key == GuiKeys::Down) &&
+             !ctrl && !shift && !alt);
+        const bool is_zoom_symbol_tv =
+            ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+             !ctrl && !shift && !alt);
+        const bool is_zero_tv =
+            (key == GuiKeys::Digit0) && !ctrl && !shift && !alt;
+        const bool is_follow_tv =
+            (key == GuiKeys::F && !ctrl && !shift && !alt);
+        const bool is_center_tv =
+            (key == GuiKeys::C && !ctrl && !shift && !alt);
+        const bool is_ctrl_q_tv =
+            (ctrl && !shift && !alt && key == GuiKeys::Q);
+        const bool is_ctrl_w_tv =
+            (ctrl && !shift && !alt && key == GuiKeys::W);
+        if (!(is_t || is_p || is_scrub_tv || is_jump_tv || is_esc_tv ||
+              is_zoom_tv || is_zoom_symbol_tv || is_zero_tv ||
+              is_follow_tv || is_center_tv ||
+              is_ctrl_q_tv || is_ctrl_w_tv)) {
+            return;
+        }
+    }
+
+    // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
+    // phase reset edit handlers so the toggle wins over any future
+    // bare-t binding; placed after the prompt / editor / render-view
+    // / queue gates so those still own the keyboard when active.
+    // Render-view drops bare `t` via the gate above (target view is
+    // unreachable from render-view; render-view exits via `r`).
+    if (key == GuiKeys::T && !ctrl && !shift && !alt) {
+        handle_view_domain_toggle();
+        return;
     }
 
     // Esc during a render-in-flight requests cancellation. Two effects:
@@ -1718,6 +1777,32 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // movement are silent no-ops so the read-only invariant on
     // marker state is preserved. Hover-popup motion still runs in
     // the motion handler against render_view_markers.
+    // Target view mouse gate. Brief 1 is read-only: marker
+    // hit-tests / drag-create / top-strip flag interactions are all
+    // blocked. Wheel events (zoom + Alt/Ctrl+Alt pan) pass through
+    // since they're pure viewport ops. Left-click in the waveform
+    // area positions the target-frame playhead with playback stop;
+    // top-strip clicks are no-ops (no flag rects paint in target
+    // view). Marker / phase reset edits unblock in a follow-up brief.
+    if (app.view_domain == ViewDomain::Target && !app.render_view_enabled) {
+        if (button == GuiMouseButton::WheelUp ||
+            button == GuiMouseButton::WheelDown) {
+            handle_wheel(button, ctrl, alt, inside_waveform, inside_top);
+            return;
+        }
+        if (button != GuiMouseButton::Left) return;
+        if (!inside_waveform) return;
+        playback_lifecycle.stop_playback_if_playing();
+        const double spp = current_samples_per_pixel(app, audio);
+        int rel = x - area.x;
+        if (rel < 0) rel = 0;
+        if (rel >= area.w) rel = area.w - 1;
+        const int64_t new_sample = app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint(spp * rel));
+        viewport.move_playhead_to(new_sample);
+        return;
+    }
+
     if (app.render_view_enabled) {
         if (button == GuiMouseButton::WheelUp || button == GuiMouseButton::WheelDown) {
             handle_wheel(button, ctrl, alt,
@@ -2214,6 +2299,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
+    // Target view: no flag rects, no marker hit-tests, no drag-create.
+    // Hover-popup math against source-frame markers in a target-frame
+    // viewport would be wrong; clear and bail. (The on_button_press
+    // gate above never starts a playhead_drag in target view, so the
+    // drag branch below cannot fire.)
+    if (app.view_domain == ViewDomain::Target && !app.render_view_enabled) {
+        viewport.clear_hover_popup();
+        return;
+    }
     // Chunk W: render-view motion handler. Brief F Section 2 adds
     // playhead-drag snap support: when a drag is in flight, snap the
     // playhead to the visible sub-view's markers (3px epsilon),
@@ -2547,4 +2641,173 @@ void GuiInputHandler::handle_trim_unset_end() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+}
+
+void GuiInputHandler::handle_view_domain_toggle() {
+    // Audio must be loaded — `t` is a silent no-op in blank state.
+    // (The blank/loading guard near the top of on_key already covers
+    // this, but the helper is defensive in case future callers reach
+    // it from elsewhere.)
+    if (audio.total_frames() <= 0) return;
+
+    // Build the current timemap from the live warp marker store +
+    // settings trim. Same resolve-then-build pipeline the render
+    // pipeline runs, so the visible deformity in target view matches
+    // what the engine would emit. An empty / failed build degenerates
+    // to identity (the helpers return src_frame unchanged), which is
+    // the right fallback when there are no qualifying markers.
+    TimemapBuildInput tmin;
+    tmin.markers      = resolve_markers_for_render(app.warpmarkers.markers());
+    tmin.scale        = app.engine_settings.scale;
+    tmin.sample_rate  = audio.sample_rate();
+    tmin.total_frames = static_cast<long>(audio.total_frames());
+    // Trim is a render-time cut, not a view-time concept. The toggle
+    // translates source-frame viewport / playhead / total_frames across
+    // the WHOLE song, so the timemap must too — see the matching
+    // comment in paint_handler.cpp's per-paint recompute. Passing the
+    // active tab's trim here would shrink the segment list to the
+    // exposition's source-frame range and identity-extrapolate the
+    // post-exposition tail from the wrong tgt_frame anchor.
+    tmin.has_trim_begin = false;
+    tmin.trim_begin_sec = 0.0;
+    tmin.has_trim_end   = false;
+    tmin.trim_end_sec   = 0.0;
+    TimemapBuildResult tmres;
+    std::vector<TimeMapSegment> tmap;
+    if (build_timemaps(tmin, tmres)) {
+        tmap.reserve(tmres.standard.size());
+        for (const auto& s : tmres.standard) {
+            tmap.push_back(TimeMapSegment{s.src_frame, s.tgt_frame});
+        }
+    }
+
+    // Playback is disabled in target view (Space is in the gate's
+    // blocked set). Stop on every toggle so playback never finds
+    // itself chasing a playhead in the other domain. Mirrors the
+    // viewport-mutator pattern of "stop_playback_if_playing before
+    // mutating playhead state".
+    playback_lifecycle.stop_playback_if_playing();
+
+    const GuiRect area = waveform_area(app);
+    const int area_w   = area.w > 0 ? area.w : 1;
+
+    if (app.view_domain == ViewDomain::Source) {
+        // S → T: forward-translate the live viewport / playhead, cache
+        // target_total_frames, then derive the new zoom level from the
+        // translated viewport's target-frame span so the visible width
+        // in pixels stays the same. The numeric-level table is discrete,
+        // so the post-translation viewport may differ by one level's
+        // worth of samples — accepted per the brief.
+        const int64_t src_total = audio.total_frames();
+        const double tgt_total_d = map_source_to_target(
+            static_cast<size_t>(src_total < 0 ? 0 : src_total), tmap);
+        const int64_t tgt_total = static_cast<int64_t>(
+            std::nearbyint(tgt_total_d));
+        app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
+
+        const int64_t src_vp_start = app.viewport_start_sample;
+        const double  src_spp      = current_samples_per_pixel(app, audio);
+        const int64_t src_vp_end   = src_vp_start +
+            static_cast<int64_t>(std::nearbyint(src_spp * area_w));
+
+        const double t0 = map_source_to_target(
+            static_cast<size_t>(src_vp_start < 0 ? 0 : src_vp_start), tmap);
+        const double t1 = map_source_to_target(
+            static_cast<size_t>(src_vp_end   < 0 ? 0 : src_vp_end),   tmap);
+        const double tph = map_source_to_target(
+            static_cast<size_t>(app.playhead_sample < 0
+                                ? 0 : app.playhead_sample), tmap);
+
+        app.view_domain          = ViewDomain::Target;
+        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(t0));
+        app.playhead_sample       = static_cast<int64_t>(std::nearbyint(tph));
+
+        // Match target zoom to source's screen pixels per sample.
+        // Translation: pick the discrete zoom level closest to the
+        // target-frame visible span. For fit-file source: target stays
+        // fit-file. Otherwise: search the numeric table for the
+        // closest log-distance match against (t1 - t0).
+        if (app.zoom_level == kFitFileLevel) {
+            // Fit-file at source → fit-file at target. The
+            // target_view_total_frames cache is set above, so
+            // samples_visible(app, audio) at fit-file naturally
+            // expands to the deformed timeline's full length.
+        } else {
+            // Pick the discrete numeric level whose target-frame
+            // samples_visible is closest (in log2-space) to the
+            // forward-translated viewport span. Probe by temporarily
+            // swapping app.zoom_level — samples_visible(app, audio)
+            // already factors in view_domain via live_total_frames.
+            const double desired_visible = (t1 > t0)
+                ? (t1 - t0) : 1.0;
+            const int max_num = max_valid_numeric_level(
+                area_w, live_total_frames(app, audio), audio.sample_rate());
+            const int cap = (max_num >= kMinNumericLevel)
+                ? max_num : kMaxNumericLevel;
+            int best = kMinNumericLevel;
+            double best_dist = std::numeric_limits<double>::infinity();
+            for (int L = kMinNumericLevel; L <= cap; ++L) {
+                const int saved = app.zoom_level;
+                app.zoom_level = L;
+                const double v =
+                    static_cast<double>(samples_visible(app, audio));
+                app.zoom_level = saved;
+                const double d = std::abs(std::log2(v / desired_visible));
+                if (d < best_dist) { best_dist = d; best = L; }
+            }
+            app.zoom_level = best;
+        }
+    } else {
+        // T → S: inverse-translate viewport / playhead back to source
+        // frame. zoom_level translation mirrors the forward case but
+        // with the inverse-translated viewport span.
+        const int64_t tgt_vp_start = app.viewport_start_sample;
+        const double  tgt_spp      = current_samples_per_pixel(app, audio);
+        const int64_t tgt_vp_end   = tgt_vp_start +
+            static_cast<int64_t>(std::nearbyint(tgt_spp * area_w));
+
+        const double s0 = map_target_to_source(
+            static_cast<size_t>(tgt_vp_start < 0 ? 0 : tgt_vp_start), tmap);
+        const double s1 = map_target_to_source(
+            static_cast<size_t>(tgt_vp_end   < 0 ? 0 : tgt_vp_end),   tmap);
+        const double sph = map_target_to_source(
+            static_cast<size_t>(app.playhead_sample < 0
+                                ? 0 : app.playhead_sample), tmap);
+
+        // Flip the domain BEFORE the zoom-level probe loop below so
+        // samples_visible() uses audio.total_frames() as the total.
+        app.view_domain           = ViewDomain::Source;
+        app.target_view_total_frames = 0;
+        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(s0));
+        app.playhead_sample       = static_cast<int64_t>(std::nearbyint(sph));
+
+        if (app.zoom_level == kFitFileLevel) {
+            // stays fit
+        } else {
+            const double desired_visible = (s1 > s0)
+                ? (s1 - s0) : 1.0;
+            const int max_num = max_valid_numeric_level(
+                area_w, live_total_frames(app, audio), audio.sample_rate());
+            int best = kMinNumericLevel;
+            double best_dist = std::numeric_limits<double>::infinity();
+            const int cap = (max_num >= kMinNumericLevel)
+                ? max_num : kMaxNumericLevel;
+            for (int L = kMinNumericLevel; L <= cap; ++L) {
+                const int saved = app.zoom_level;
+                app.zoom_level = L;
+                const double v = static_cast<double>(samples_visible(app, audio));
+                app.zoom_level = saved;
+                const double d = std::abs(std::log2(v / desired_visible));
+                if (d < best_dist) { best_dist = d; best = L; }
+            }
+            app.zoom_level = best;
+        }
+    }
+
+    // Clamp viewport into the new domain's bounds, then full-window
+    // invalidate so the bottom-strip S/T indicator, the waveform
+    // surface, and the playhead column all repaint in one frame.
+    clamp_viewport_start(app, audio);
+    viewport.clear_hover_popup();
+    gui.invalidate_region(0, 0, app.width, app.height);
 }

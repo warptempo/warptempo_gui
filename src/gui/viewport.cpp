@@ -18,6 +18,12 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // render-domain (trim baked in at render time).
         return {0, audio.total_frames()};
     }
+    if (app.view_domain == ViewDomain::Target) {
+        // Target view (brief 1): no editable trim and the source-side
+        // trim is read-only (display-only translation in the waveform
+        // paint). Home/End jump to the full target-frame range.
+        return {0, live_total_frames(app, audio)};
+    }
     return compute_trim_samples(
         app, audio.sample_rate(), audio.total_frames());
 }
@@ -66,7 +72,11 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 void Viewport::move_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     if (new_sample < 0) new_sample = 0;
-    const int64_t total = audio.total_frames();
+    // Live-domain total: source-frame total in source view, target-frame
+    // total (cached at `t`-toggle) in target view. The playhead in target
+    // view is target-frame, so its clamp must be against the deformed
+    // timeline's length.
+    const int64_t total = live_total_frames(app, audio);
     if (total > 0 && new_sample >= total) new_sample = total - 1;
 
     const double old_px = playhead_pixel_x(app, audio);
@@ -147,7 +157,7 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
 
 void Viewport::zoom_in() {
     const int max_num = max_valid_numeric_level(
-        waveform_area(app).w, audio.total_frames(), audio.sample_rate());
+        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (max_num < 0) return; // no numeric level valid; only fit-file
     if (app.zoom_level == kFitFileLevel) {
         apply_zoom_change(max_num);
@@ -159,7 +169,7 @@ void Viewport::zoom_in() {
 
 void Viewport::zoom_out() {
     const int max_num = max_valid_numeric_level(
-        waveform_area(app).w, audio.total_frames(), audio.sample_rate());
+        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (app.zoom_level == kFitFileLevel) return; // already fully out
     if (max_num < 0 || app.zoom_level >= max_num) {
         apply_zoom_change(kFitFileLevel);
@@ -263,6 +273,13 @@ void Viewport::recompute_hover_at_cursor() {
     }
     if (!app.render_view_enabled &&
         (app.active_mode != 'W' || app.iteration_mode_enabled)) {
+        clear_hover_popup();
+        return;
+    }
+    // Target view has no flag rects (markers don't paint in brief 1),
+    // so hover-popup math against source-frame marker positions would
+    // be both wrong and invisible. Drop it cleanly.
+    if (app.view_domain == ViewDomain::Target) {
         clear_hover_popup();
         return;
     }

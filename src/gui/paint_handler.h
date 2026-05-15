@@ -72,14 +72,22 @@ struct WaveformCache {
     int              height  = 0;     // surface height (== area.h when valid)
 
     // Fingerprint of the last successful render. Compared against the
-    // current redraw's inputs to decide whether to re-render.
-    int64_t   fp_vp_start   = 0;
-    int64_t   fp_vp_end     = 0;
-    int64_t   fp_trim_begin = 0;
-    int64_t   fp_trim_end   = 0;
-    int       fp_area_w     = 0;
-    int       fp_area_h     = 0;
-    long long fp_audio_gen  = -1;     // -1 = never rendered
+    // current redraw's inputs to decide whether to re-render. fp_target
+    // discriminates the source-view and target-view caches: a `t` toggle
+    // flips it without disturbing the source-domain inputs, forcing a
+    // cache rebuild. fp_timemap_hash captures the warp marker / trim
+    // state baked into the timemap the target paint just consumed; any
+    // authoring edit in source view that would shift the deformity
+    // invalidates the target view's last cached paint on its next entry.
+    int64_t   fp_vp_start    = 0;
+    int64_t   fp_vp_end      = 0;
+    int64_t   fp_trim_begin  = 0;
+    int64_t   fp_trim_end    = 0;
+    int       fp_area_w      = 0;
+    int       fp_area_h      = 0;
+    long long fp_audio_gen   = -1;     // -1 = never rendered
+    bool      fp_target      = false;
+    uint64_t  fp_timemap_hash = 0;
 
     bool dirty = true;
 

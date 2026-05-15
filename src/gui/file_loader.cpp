@@ -62,6 +62,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.loading       = false;
     app.load_progress = 0.0f;
 
+    // File-load lands the user back in source view: the just-loaded
+    // audio sets a fresh source-frame baseline, and the target-frame
+    // cache from any prior session is stale. Defensive even though
+    // brief 1's target view is session-only.
+    app.view_domain              = ViewDomain::Source;
+    app.target_view_total_frames = 0;
+
     app.playhead_sample       = 0;
     app.viewport_start_sample = 0;
     const int max_num = max_valid_numeric_level(

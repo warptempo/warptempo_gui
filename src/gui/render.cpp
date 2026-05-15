@@ -219,7 +219,8 @@ void render_waveform(cairo_t* cr,
                      long long trim_begin_sample,
                      long long trim_end_sample,
                      GuiColor bright_color,
-                     GuiColor dim_color) {
+                     GuiColor dim_color,
+                     const std::vector<TimeMapSegment>* timemap) {
     if (area.w <= 0 || area.h <= 2) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -233,6 +234,12 @@ void render_waveform(cairo_t* cr,
     // Cache layout (must match audio.cpp): level 0 = raw samples;
     // levels 1, 2, 3 = stride 32, 1024, 32768. Pick the coarsest cache
     // level whose stride is <= spp; below stride 32, fall through to raw.
+    //
+    // In target view (timemap != nullptr) `samples_per_pixel` is in
+    // target-frame units. Brief 1 accepts the resulting imprecision —
+    // tempo-compressed regions paint from a coarser pyramid level than
+    // they "should," and stretched regions from a finer one. Aesthetic,
+    // not functional.
     int level;
     if      (samples_per_pixel >= 32768.0) level = 3;
     else if (samples_per_pixel >= 1024.0)  level = 2;
@@ -252,8 +259,19 @@ void render_waveform(cairo_t* cr,
                           (span * i)     / area.w;
         const double f1 = static_cast<double>(viewport_start_sample) +
                           (span * (i+1)) / area.w;
-        const long long s0 = static_cast<long long>(std::nearbyint(f0));
-        long long       s1 = static_cast<long long>(std::nearbyint(f1));
+        // Target view: translate each column's [t0, t1) endpoint into
+        // source-frame via the timemap so the pyramid read lands at the
+        // matching authored audio. Source view: identity.
+        const double g0 = timemap ? map_target_to_source(
+                              static_cast<size_t>(f0 < 0.0 ? 0.0 : f0),
+                              *timemap)
+                                  : f0;
+        const double g1 = timemap ? map_target_to_source(
+                              static_cast<size_t>(f1 < 0.0 ? 0.0 : f1),
+                              *timemap)
+                                  : f1;
+        const long long s0 = static_cast<long long>(std::nearbyint(g0));
+        long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
@@ -281,9 +299,15 @@ void render_waveform(cairo_t* cr,
         const double x_px     = area.x + i + 0.5;
 
         // Per spec: a column that straddles a trim boundary is assigned by
-        // the midpoint of its source-sample range.
-        const long long mid = s0 + (s1 - s0) / 2;
-        const bool bright = (mid >= trim_begin_sample && mid < trim_end_sample);
+        // the midpoint of its DOMAIN-frame range. In source view that's
+        // the source-sample midpoint; in target view it's the target-frame
+        // midpoint. trim_*_sample is interpreted in the same domain as the
+        // viewport, so the comparison is correct in both views (no extra
+        // translation).
+        const long long mid_domain =
+            static_cast<long long>(std::nearbyint((f0 + f1) * 0.5));
+        const bool bright = (mid_domain >= trim_begin_sample &&
+                             mid_domain <  trim_end_sample);
 
         lines.push_back({x_px, y_top, y_bottom, bright});
     }

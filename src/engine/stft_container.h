@@ -72,6 +72,31 @@ inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSe
     return 0.0;
 }
 
+// Inverse of map_source_to_target: piecewise-linear interpolation over
+// the same segment list, mapping a target-frame query back to its
+// source-frame position. Used by the GUI's target view to translate
+// per-column target-frame ranges into source-frame ranges for the
+// shared waveform paint. Symmetric edge cases: clamp to the first
+// segment for queries before the timemap's tgt start; identity past
+// the last segment; empty map degenerates to identity.
+inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSegment>& map) {
+    if (map.empty()) return static_cast<double>(tgt_frame);
+    if (tgt_frame <= map.front().tgt_frame) return map.front().src_frame;
+    for (size_t i = 0; i < map.size() - 1; ++i) {
+        if (tgt_frame >= map[i].tgt_frame && tgt_frame < map[i+1].tgt_frame) {
+            double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
+            double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
+            double offset = static_cast<double>(tgt_frame - map[i].tgt_frame);
+            return map[i].src_frame + (offset * (src_dur / tgt_dur));
+        }
+    }
+    const auto& last = map.back();
+    if (tgt_frame >= last.tgt_frame) {
+        return last.src_frame + (tgt_frame - last.tgt_frame);
+    }
+    return 0.0;
+}
+
 // --- Output sample timing convention ---
 // Both the phase vocoder pass (Pass 1) and synthesis (Pass 4) emit samples with the
 // same OLA ramp-up trim: the first N/2 samples are dropped via `frames_to_skip = N/2`.

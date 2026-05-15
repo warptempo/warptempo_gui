@@ -3,10 +3,13 @@
 #include "render.h"
 #include "text_display.h"
 #include "text_editor.h"
+#include "timemap.h"
+#include "engine/stft_container.h"
 
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -203,12 +206,90 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             static_cast<int64_t>(std::nearbyint(spp * area.w));
         const int     sr         = audio.sample_rate();
 
+        // Target view: build the timemap on the fly from the live warp
+        // marker store + settings trim, mirroring the engine's
+        // resolve-then-build pipeline. Brief 1 recomputes every paint
+        // (cost is O(markers); the cache below short-circuits the
+        // pixel-level work when nothing changed). The timemap doubles as
+        // the waveform translator and the source-trim → target-trim
+        // translator below.
+        const bool is_target = (app.view_domain == ViewDomain::Target) &&
+                               !app.render_view_enabled;
+        std::vector<TimeMapSegment> target_timemap;
+        uint64_t target_timemap_hash = 0;
+        if (is_target) {
+            TimemapBuildInput tmin;
+            tmin.markers      = resolve_markers_for_render(
+                                     app.warpmarkers.markers());
+            tmin.scale        = app.engine_settings.scale;
+            tmin.sample_rate  = sr;
+            tmin.total_frames = static_cast<long>(audio.total_frames());
+            // Trim is a render-time cut, not a view-time concept. The
+            // target view paints the WHOLE song; the timemap must
+            // describe the whole song, with warp segments where markers
+            // exist and identity behavior outside. Threading the active
+            // tab's trim through here makes build_timemaps emit a
+            // trimmed segment list whose post-last-segment extrapolation
+            // mis-positions the post-trim tail (it identity-walks from
+            // the last in-trim segment's tgt_frame instead of from the
+            // un-warped source-frame position). Force trim off; the
+            // brightness boundary's translation below uses the same
+            // un-trimmed timemap so the dim band paints at the matching
+            // target-frame columns.
+            tmin.has_trim_begin = false;
+            tmin.trim_begin_sec = 0.0;
+            tmin.has_trim_end   = false;
+            tmin.trim_end_sec   = 0.0;
+            TimemapBuildResult tmres;
+            if (build_timemaps(tmin, tmres)) {
+                target_timemap.reserve(tmres.standard.size());
+                // FNV-1a-style rolling hash over segment endpoints —
+                // fingerprints the timemap for cache validation. Cheap
+                // (linear), no collisions in practice for the segment
+                // counts the GUI sees (a few hundred max).
+                uint64_t h = 0xcbf29ce484222325ULL;
+                for (const auto& s : tmres.standard) {
+                    target_timemap.push_back(TimeMapSegment{
+                        s.src_frame, s.tgt_frame});
+                    h ^= static_cast<uint64_t>(s.src_frame);
+                    h *= 0x100000001b3ULL;
+                    h ^= static_cast<uint64_t>(s.tgt_frame);
+                    h *= 0x100000001b3ULL;
+                }
+                target_timemap_hash = h;
+            }
+        }
+
         // In render-view the audio buffer is already render-domain
         // (trim baked in at render time). Source-view dims out-of-trim
-        // regions per the settings-side trim.
-        const auto trim = app.render_view_enabled
-            ? std::pair<long long, long long>{0, audio.total_frames()}
-            : compute_trim_samples(app, sr, audio.total_frames());
+        // regions per the settings-side trim. Target view: read the
+        // source-side trim and forward-translate via the timemap so the
+        // brightness boundary lands at the matching target-frame column.
+        std::pair<long long, long long> trim;
+        if (app.render_view_enabled) {
+            trim = {0, audio.total_frames()};
+        } else if (is_target) {
+            const auto src_trim = compute_trim_samples(
+                app, sr, audio.total_frames());
+            if (!target_timemap.empty()) {
+                const long long t0 = static_cast<long long>(std::nearbyint(
+                    map_source_to_target(
+                        static_cast<size_t>(src_trim.first),
+                        target_timemap)));
+                const long long t1 = static_cast<long long>(std::nearbyint(
+                    map_source_to_target(
+                        static_cast<size_t>(src_trim.second),
+                        target_timemap)));
+                trim = {t0, t1};
+            } else {
+                // No timemap (no qualifying markers, identity deformity)
+                // — source trim values already coincide with target
+                // values frame-for-frame.
+                trim = src_trim;
+            }
+        } else {
+            trim = compute_trim_samples(app, sr, audio.total_frames());
+        }
         const int64_t trim_begin = trim.first;
         const int64_t trim_end   = trim.second;
         const TrimRange trim_struct{trim_begin, trim_end};
@@ -236,14 +317,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // Cache invalidation: any change to the inputs of
             // render_waveform forces a re-render. Checked here (not at
             // mutation sites) so new mutation paths can never forget.
+            // fp_target / fp_timemap_hash carry the target-view inputs:
+            // toggling `t` flips the former; any source-view edit that
+            // would shift the deformity changes the latter.
             if (wf_cache.surface &&
-                (wf_cache.fp_audio_gen  != app.audio_generation ||
-                 wf_cache.fp_vp_start   != vp_start             ||
-                 wf_cache.fp_vp_end     != vp_end               ||
-                 wf_cache.fp_trim_begin != trim_begin           ||
-                 wf_cache.fp_trim_end   != trim_end             ||
-                 wf_cache.fp_area_w     != area.w               ||
-                 wf_cache.fp_area_h     != area.h)) {
+                (wf_cache.fp_audio_gen   != app.audio_generation   ||
+                 wf_cache.fp_vp_start    != vp_start               ||
+                 wf_cache.fp_vp_end      != vp_end                 ||
+                 wf_cache.fp_trim_begin  != trim_begin             ||
+                 wf_cache.fp_trim_end    != trim_end               ||
+                 wf_cache.fp_area_w      != area.w                 ||
+                 wf_cache.fp_area_h      != area.h                 ||
+                 wf_cache.fp_target      != is_target              ||
+                 wf_cache.fp_timemap_hash != target_timemap_hash)) {
                 wf_cache.dirty = true;
             }
 
@@ -256,11 +342,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_paint(ccr);
                 cairo_restore(ccr);
                 const GuiRect cache_area{0, 0, area.w, area.h};
+                const std::vector<TimeMapSegment>* tmap_arg =
+                    (is_target && !target_timemap.empty())
+                        ? &target_timemap : nullptr;
                 if (rc == 1) {
                     render_waveform(ccr, cache_area, audio, 0,
                                     vp_start, vp_end,
                                     trim_begin, trim_end,
-                                    kWaveform, dim(kWaveform));
+                                    kWaveform, dim(kWaveform),
+                                    tmap_arg);
                 } else if (rc >= 2) {
                     const int ch_h = (cache_area.h - kChannelGapPx) / 2;
                     const GuiRect ch0{0, 0, cache_area.w, ch_h};
@@ -269,20 +359,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     render_waveform(ccr, ch0, audio, 0,
                                     vp_start, vp_end,
                                     trim_begin, trim_end,
-                                    kWaveform, dim(kWaveform));
+                                    kWaveform, dim(kWaveform),
+                                    tmap_arg);
                     render_waveform(ccr, ch1, audio, 1,
                                     vp_start, vp_end,
                                     trim_begin, trim_end,
-                                    kWaveform, dim(kWaveform));
+                                    kWaveform, dim(kWaveform),
+                                    tmap_arg);
                 }
                 cairo_destroy(ccr);
-                wf_cache.fp_audio_gen  = app.audio_generation;
-                wf_cache.fp_vp_start   = vp_start;
-                wf_cache.fp_vp_end     = vp_end;
-                wf_cache.fp_trim_begin = trim_begin;
-                wf_cache.fp_trim_end   = trim_end;
-                wf_cache.fp_area_w     = area.w;
-                wf_cache.fp_area_h     = area.h;
+                wf_cache.fp_audio_gen    = app.audio_generation;
+                wf_cache.fp_vp_start     = vp_start;
+                wf_cache.fp_vp_end       = vp_end;
+                wf_cache.fp_trim_begin   = trim_begin;
+                wf_cache.fp_trim_end     = trim_end;
+                wf_cache.fp_area_w       = area.w;
+                wf_cache.fp_area_h       = area.h;
+                wf_cache.fp_target       = is_target;
+                wf_cache.fp_timemap_hash = target_timemap_hash;
                 wf_cache.dirty = false;
             }
 
@@ -317,7 +411,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             area.w,
             area.h + static_cast<int>(kMarkerConnectorRows)
         };
-        if (rects_intersect(exposed, marker_paint_rect)) {
+        if (!is_target && rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
             if (app.render_view_enabled) {
                 // Render-view: dark blue base, sky-tint when selected.
@@ -355,8 +449,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         const double px_x = playhead_pixel_x(app, audio);
 
-        // Flag annotations in the top strip.
-        if (rects_intersect(exposed, top_strip)) {
+        // Flag annotations in the top strip. Suppressed in target view —
+        // brief 1 paints waveform + playhead + timestamp + indicators
+        // only; markers are invisible while target view is active.
+        if (!is_target && rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
             if (app.render_view_enabled) {
                 // Render-view: dark-blue flags, no editor overlay.
@@ -1144,6 +1240,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     cairo_move_to(cr, letter_x, baseline_y);
                     cairo_show_text(cr, letter_buf);
                     right_after_letter = letter_x + ext.x_advance;
+
+                    // S/T indicator (view-domain axis). 'S' = source view,
+                    // 'T' = target view. Painted next to the A/B tab
+                    // letter at bottom-left so the orthogonal axes are
+                    // both visible at a glance; suppressed in render-view
+                    // (matching the tab-letter suppression — `t` is a
+                    // silent no-op while render-view is active).
+                    const double st_x =
+                        right_after_letter + kTabLetterGapPx;
+                    const char st_buf[2] = {
+                        app.view_domain == ViewDomain::Target ? 'T' : 'S',
+                        '\0'
+                    };
+                    cairo_text_extents_t st_ext;
+                    cairo_text_extents(cr, st_buf, &st_ext);
+                    cairo_move_to(cr, st_x, baseline_y);
+                    cairo_show_text(cr, st_buf);
+                    right_after_letter = st_x + st_ext.x_advance;
                     cairo_restore(cr);
                 }
 
@@ -1265,8 +1379,10 @@ void GuiPaintHandler::on_resize(int w, int h) {
 
     // A numeric zoom level may have been valid at the old width but show
     // more samples than the file at the new width — promote to fit-file.
+    // live_total_frames returns target_view_total_frames in target view
+    // so the cap is consistent with the deformed timeline's length.
     const int max_num = max_valid_numeric_level(
-        waveform_area(app).w, audio.total_frames(), audio.sample_rate());
+        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (app.zoom_level != kFitFileLevel) {
         if (max_num < 0 || app.zoom_level > max_num) {
             app.zoom_level = kFitFileLevel;

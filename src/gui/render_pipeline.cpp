@@ -64,79 +64,10 @@ bool write_midi_tempomap(const std::string& path,
     return true;
 }
 
-// Resolve each GuiWarpMarker to a MarkerForRender. Filters out markers that are:
-//   - references to disabled-defined labels
-//   - disabled label-definition markers (and thereby all refs to them)
-// The inherit walk-back is applied here so MarkerForRender carries a
-// concrete tempo_base / tempo_scale — same rule as resolve_inherited_tempo.
-std::vector<MarkerForRender> resolve_markers_for_render(
-    const std::vector<GuiWarpMarker>& src) {
-
-    // First pass: collect disabled label names.
-    std::vector<std::string> disabled;
-    for (const auto& m : src) {
-        if (!m.label_def.empty() && m.disabled) disabled.push_back(m.label_def);
-    }
-    auto is_disabled_ref = [&](const std::string& label) {
-        for (const auto& d : disabled) if (d == label) return true;
-        return false;
-    };
-
-    // Walk backward through SOURCE markers from at_index, returning the
-    // nearest earlier marker's tempo if it owns its tempo and is not
-    // itself disabled. Skips: tempo_inherits markers, label_ref markers,
-    // and disabled markers (any kind — chunk U patch 3 allows `disabled`
-    // on non-label-defs, and a disabled marker is never a valid tempo
-    // source). Default if none found: {1.0, ""}.
-    auto walk_back_owning_tempo = [&](size_t at_index)
-        -> std::pair<double, std::string> {
-        for (int j = static_cast<int>(at_index) - 1; j >= 0; --j) {
-            const auto& p = src[j];
-            if (p.tempo_inherits) continue;
-            if (!p.label_ref.empty()) continue;
-            if (p.disabled) continue;
-            return { p.tempo_base, p.tempo_scale };
-        }
-        return { 1.0, std::string{} };
-    };
-
-    std::vector<MarkerForRender> out;
-    out.reserve(src.size());
-    for (size_t i = 0; i < src.size(); ++i) {
-        const auto& g = src[i];
-        const bool is_disabled_label_ref_cascade =
-            !g.disabled && !g.label_ref.empty()
-            && is_disabled_ref(g.label_ref);
-        // Chunk U patch 3: `disabled` is allowed on any marker; whatever
-        // its kind, a disabled marker's tempo is silenced. The label_ref
-        // cascade is a separate path (the ref itself is not disabled but
-        // its target is). With trim moved to settings, a disabled marker
-        // has no reason to survive into the resolved list.
-        const bool is_effectively_disabled =
-            g.disabled || is_disabled_label_ref_cascade;
-
-        if (is_effectively_disabled) continue;
-
-        MarkerForRender m;
-        m.time_seconds  = g.time_seconds;
-        m.label_def     = g.label_def;
-        m.label_ref     = g.label_ref;
-
-        if (!g.label_ref.empty()) {
-            m.tempo_base = 0.0;
-            m.tempo_scale.clear();
-        } else if (g.tempo_inherits) {
-            auto [base, scale] = walk_back_owning_tempo(i);
-            m.tempo_base  = base;
-            m.tempo_scale = scale;
-        } else {
-            m.tempo_base  = g.tempo_base;
-            m.tempo_scale = g.tempo_scale;
-        }
-        out.push_back(std::move(m));
-    }
-    return out;
-}
+// resolve_markers_for_render moved to timemap.cpp (public function) so the
+// target-view paint can reach it without crossing the render_pipeline
+// boundary. Both callers — do_render below and the GUI paint in
+// paint_handler — receive the same resolved list.
 
 }  // namespace
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "warpmarkers.h"
 #include "phase_reset_markers.h"
+#include "engine/stft_container.h"   // TimeMapSegment for target-view waveform
 
 #include <cairo/cairo.h>
 #include <cmath>
@@ -159,11 +160,20 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
                          float progress_fraction);
 
-// Draws one channel's waveform into `area`, displaying source samples in
-// [viewport_start_sample, viewport_end_sample). Columns whose source-sample
-// midpoint falls inside [trim_begin_sample, trim_end_sample) paint with
-// `bright_color`; the rest paint with `dim_color`. Pass a wide range
-// (0 .. total_frames) to disable dimming.
+// Draws one channel's waveform into `area`, displaying samples in
+// [viewport_start_sample, viewport_end_sample). When `timemap` is null
+// (source view) the viewport range is interpreted in source-frame and
+// each column reads `audio.get_peak_range` directly. When `timemap` is
+// non-null (target view) the viewport range is target-frame: each
+// column's [t0, t1) is translated to source-frame via
+// `map_target_to_source` before the pyramid read, producing the
+// deformed-waveform display. The brightness threshold (trim_*_sample)
+// is interpreted in the SAME domain as the viewport: source-frame in
+// source view, target-frame in target view.
+//
+// Columns whose midpoint falls inside [trim_begin_sample,
+// trim_end_sample) paint with `bright_color`; the rest paint with
+// `dim_color`. Pass a wide range to disable dimming.
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
@@ -173,7 +183,8 @@ void render_waveform(cairo_t* cr,
                      long long trim_begin_sample,
                      long long trim_end_sample,
                      GuiColor bright_color,
-                     GuiColor dim_color);
+                     GuiColor dim_color,
+                     const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.

@@ -238,6 +238,16 @@ enum class DialogTrigger {
     PASTE_CONFIRM,
 };
 
+// Active view-domain axis. Orthogonal to the marker-axis flag (W/P).
+// In Source, app.viewport_start_sample / playhead_sample / zoom_level
+// carry source-frame values; in Target, they carry target-frame values.
+// On `t` toggle the live fields translate through the current timemap
+// in place (forward on S→T, inverse on T→S). Render-view is unaffected
+// — `t` is silently dropped while render-view is active. Brief 1 is
+// read-only in target view: no marker paint, no playback, no engine
+// call, no trim editing.
+enum class ViewDomain { Source, Target };
+
 // In-window modal prompt state. When `active` is true, the bottom strip
 // overlays the prompt's text and response options in place of the
 // timestamp / tab letter / dirty indicator / render-view filename.
@@ -349,6 +359,23 @@ struct AppState {
     // edited / hit-tested and which color set is used for the playhead
     // and selected indicators.
     char active_mode = 'W';
+
+    // Active view-domain axis. Source = the authored timeline; Target =
+    // the engine's deformed-output timeline. Orthogonal to active_mode
+    // (the W/P marker axis): `t` toggles S/T, `p` toggles W/P. While in
+    // Target, app.viewport_start_sample / playhead_sample / zoom_level
+    // are target-frame; the live fields' interpretation flips on toggle.
+    // Render-view leaves this unchanged — `t` is dropped in render-view.
+    ViewDomain view_domain = ViewDomain::Source;
+
+    // Cached total-frame count for the active timemap, in TARGET-frame
+    // units. Computed at every S→T toggle as forward-translate(audio
+    // .total_frames()) and zeroed on file load. Read by samples_visible /
+    // clamp_viewport_start / current_samples_per_pixel when view_domain
+    // == Target so the viewport-clamp / fit-file math operates against
+    // the deformed timeline's length. Zero is sentinel for "not yet
+    // populated" — the toggle handler is the only writer in brief 1.
+    int64_t target_view_total_frames = 0;
 
     // Ctrl+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.
@@ -569,6 +596,13 @@ int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
+// Active-domain total frame count. Source view returns audio.total_frames();
+// target view returns the cached target_view_total_frames (the forward-
+// translated source length). Used by every viewport helper that needs the
+// "length of the timeline currently being viewed" — clamp, fit-file zoom,
+// and the numeric-level cap. Declared here so any TU touching the
+// viewport math can reach it.
+int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 int     max_valid_numeric_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int sample_rate);
