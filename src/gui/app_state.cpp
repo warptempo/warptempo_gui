@@ -137,32 +137,47 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // as paint_handler's on_redraw, trim forced off. Empty in source-
     // view and render-view; the helper's nullptr-when-empty pass-through
     // below leaves those paths untouched.
+    //
+    // During a drag, route through the frozen timemap captured at
+    // begin_drag so hit-rect positions match the frozen-coord paint.
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
         app.view_domain == ViewDomain::Target) {
-        target_timemap = build_target_view_timemap(
-            app.warpmarkers.markers(),
-            app.engine_settings.scale,
-            audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
+        if (app.drag.active) {
+            target_timemap = app.drag.frozen_timemap;
+        } else {
+            target_timemap = build_target_view_timemap(
+                app.warpmarkers.markers(),
+                app.engine_settings.scale,
+                audio.sample_rate(),
+                static_cast<long>(audio.total_frames()));
+        }
     }
     const std::vector<TimeMapSegment>* tmap_arg =
         target_timemap.empty() ? nullptr : &target_timemap;
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
     std::vector<FlagHitRect> rects;
     if (app.render_view_enabled) {
         rects = compute_flag_hit_rects(
             scratch_cr, top, app.render_view_markers,
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize);
+            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            nullptr, drag_overlay);
     } else if (app.active_mode == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             scratch_cr, top, app.phase_reset_markers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
-            tmap_arg);
+            tmap_arg, drag_overlay);
     } else {
         rects = compute_flag_hit_rects(
             scratch_cr, top, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
-            tmap_arg);
+            tmap_arg, drag_overlay);
     }
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
@@ -192,18 +207,29 @@ int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
         app.view_domain == ViewDomain::Target) {
-        target_timemap = build_target_view_timemap(
-            app.warpmarkers.markers(),
-            app.engine_settings.scale,
-            audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
+        if (app.drag.active) {
+            target_timemap = app.drag.frozen_timemap;
+        } else {
+            target_timemap = build_target_view_timemap(
+                app.warpmarkers.markers(),
+                app.engine_settings.scale,
+                audio.sample_rate(),
+                static_cast<long>(audio.total_frames()));
+        }
     }
     const std::vector<TimeMapSegment>* tmap_arg =
         target_timemap.empty() ? nullptr : &target_timemap;
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
     auto hits = compute_iter_popup_hits(
         scratch_cr, top, app.warpmarkers.markers(),
         vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
-        tmap_arg);
+        tmap_arg, drag_overlay);
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
     for (const auto& h : hits) {
@@ -261,18 +287,29 @@ int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
         app.view_domain == ViewDomain::Target) {
-        target_timemap = build_target_view_timemap(
-            app.warpmarkers.markers(),
-            app.engine_settings.scale,
-            audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
+        if (app.drag.active) {
+            target_timemap = app.drag.frozen_timemap;
+        } else {
+            target_timemap = build_target_view_timemap(
+                app.warpmarkers.markers(),
+                app.engine_settings.scale,
+                audio.sample_rate(),
+                static_cast<long>(audio.total_frames()));
+        }
     }
     const std::vector<TimeMapSegment>* tmap_arg =
         target_timemap.empty() ? nullptr : &target_timemap;
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
     auto hits = compute_bpm_popup_hits(
         scratch_cr, top, app.warpmarkers.markers(),
         vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
-        tmap_arg);
+        tmap_arg, drag_overlay);
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);
     for (const auto& h : hits) {

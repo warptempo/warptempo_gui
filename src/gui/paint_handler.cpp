@@ -42,12 +42,13 @@ std::vector<IterPopupHit> compute_iter_popup_hits(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap) {
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
     std::vector<IterPopupHit> out;
     auto rects = compute_flag_hit_rects(
         cr, top_strip_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, timemap);
+        sample_rate, font_size, timemap, drag_overlay);
     if (rects.empty()) return out;
 
     cairo_save(cr);
@@ -117,12 +118,13 @@ std::vector<BpmPopupHit> compute_bpm_popup_hits(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap) {
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
     std::vector<BpmPopupHit> out;
     auto rects = compute_flag_hit_rects(
         cr, top_strip_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, timemap);
+        sample_rate, font_size, timemap, drag_overlay);
     if (rects.empty()) return out;
 
     cairo_save(cr);
@@ -215,51 +217,84 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // pixel-level work when nothing changed). The timemap doubles as
         // the waveform translator and the source-trim → target-trim
         // translator below.
+        //
+        // Frozen-coord regime: while a drag is active, source the
+        // timemap from app.drag.frozen_timemap (captured at begin_drag)
+        // rather than rebuilding from the live store. This keeps the
+        // target-view coordinate system fixed for the duration of the
+        // drag — non-dragged markers don't jitter as the dragged
+        // marker's time mutates and the build_timemaps cascade can't
+        // overflow against a moving label_def. The drag_freeze gate
+        // below already pins the waveform cache; supplying the same
+        // frozen timemap downstream keeps stem / flag positions and
+        // the trim translation consistent with the cached waveform.
         const bool is_target = (app.view_domain == ViewDomain::Target) &&
                                !app.render_view_enabled;
         std::vector<TimeMapSegment> target_timemap;
         uint64_t target_timemap_hash = 0;
         if (is_target) {
-            TimemapBuildInput tmin;
-            tmin.markers      = resolve_markers_for_render(
-                                     app.warpmarkers.markers());
-            tmin.scale        = app.engine_settings.scale;
-            tmin.sample_rate  = sr;
-            tmin.total_frames = static_cast<long>(audio.total_frames());
-            // Trim is a render-time cut, not a view-time concept. The
-            // target view paints the WHOLE song; the timemap must
-            // describe the whole song, with warp segments where markers
-            // exist and identity behavior outside. Threading the active
-            // tab's trim through here makes build_timemaps emit a
-            // trimmed segment list whose post-last-segment extrapolation
-            // mis-positions the post-trim tail (it identity-walks from
-            // the last in-trim segment's tgt_frame instead of from the
-            // un-warped source-frame position). Force trim off; the
-            // brightness boundary's translation below uses the same
-            // un-trimmed timemap so the dim band paints at the matching
-            // target-frame columns.
-            tmin.has_trim_begin = false;
-            tmin.trim_begin_sec = 0.0;
-            tmin.has_trim_end   = false;
-            tmin.trim_end_sec   = 0.0;
-            TimemapBuildResult tmres;
-            if (build_timemaps(tmin, tmres)) {
-                target_timemap.reserve(tmres.standard.size());
-                // FNV-1a-style rolling hash over segment endpoints —
-                // fingerprints the timemap for cache validation. Cheap
-                // (linear), no collisions in practice for the segment
-                // counts the GUI sees (a few hundred max).
-                uint64_t h = 0xcbf29ce484222325ULL;
-                for (const auto& s : tmres.standard) {
-                    target_timemap.push_back(TimeMapSegment{
-                        s.src_frame, s.tgt_frame});
-                    h ^= static_cast<uint64_t>(s.src_frame);
-                    h *= 0x100000001b3ULL;
-                    h ^= static_cast<uint64_t>(s.tgt_frame);
-                    h *= 0x100000001b3ULL;
+            if (app.drag.active) {
+                target_timemap = app.drag.frozen_timemap;
+            } else {
+                TimemapBuildInput tmin;
+                tmin.markers      = resolve_markers_for_render(
+                                         app.warpmarkers.markers());
+                tmin.scale        = app.engine_settings.scale;
+                tmin.sample_rate  = sr;
+                tmin.total_frames = static_cast<long>(audio.total_frames());
+                // Trim is a render-time cut, not a view-time concept. The
+                // target view paints the WHOLE song; the timemap must
+                // describe the whole song, with warp segments where markers
+                // exist and identity behavior outside. Threading the active
+                // tab's trim through here makes build_timemaps emit a
+                // trimmed segment list whose post-last-segment extrapolation
+                // mis-positions the post-trim tail (it identity-walks from
+                // the last in-trim segment's tgt_frame instead of from the
+                // un-warped source-frame position). Force trim off; the
+                // brightness boundary's translation below uses the same
+                // un-trimmed timemap so the dim band paints at the matching
+                // target-frame columns.
+                tmin.has_trim_begin = false;
+                tmin.trim_begin_sec = 0.0;
+                tmin.has_trim_end   = false;
+                tmin.trim_end_sec   = 0.0;
+                TimemapBuildResult tmres;
+                if (build_timemaps(tmin, tmres)) {
+                    target_timemap.reserve(tmres.standard.size());
+                    // FNV-1a-style rolling hash over segment endpoints —
+                    // fingerprints the timemap for cache validation. Cheap
+                    // (linear), no collisions in practice for the segment
+                    // counts the GUI sees (a few hundred max).
+                    uint64_t h = 0xcbf29ce484222325ULL;
+                    for (const auto& s : tmres.standard) {
+                        target_timemap.push_back(TimeMapSegment{
+                            s.src_frame, s.tgt_frame});
+                        h ^= static_cast<uint64_t>(s.src_frame);
+                        h *= 0x100000001b3ULL;
+                        h ^= static_cast<uint64_t>(s.tgt_frame);
+                        h *= 0x100000001b3ULL;
+                    }
+                    target_timemap_hash = h;
                 }
-                target_timemap_hash = h;
             }
+        }
+
+        // Drag-time position overlay. Active for the duration of a
+        // ctrl-drag; non-null only when app.drag.active. Routed through
+        // every render / hit-rect call site below so dragged markers
+        // paint at their proposed (moveable_times) positions while the
+        // live store stays untouched until commit. The DragOverlay's
+        // index lookup is a no-op when a list's indices don't match
+        // (e.g. routing a warp drag's overlay through render_phase_reset
+        // -markers — phase reset indices never appear in dragging_markers
+        // for a warp drag), so the same overlay is safe to pass to
+        // every renderer.
+        DragOverlay drag_overlay_storage;
+        const DragOverlay* drag_overlay = nullptr;
+        if (app.drag.active) {
+            drag_overlay_storage.indices = &app.drag.dragging_markers;
+            drag_overlay_storage.times   = &app.drag.moveable_times;
+            drag_overlay = &drag_overlay_storage;
         }
 
         // In render-view the audio buffer is already render-domain
@@ -440,11 +475,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     render_phase_reset_markers(
                         cr, area, app.phase_reset_markers.markers(),
                         vp_start, vp_end, sr,
-                        trim_struct, &target_timemap);
+                        trim_struct, &target_timemap, drag_overlay);
                 } else {
                     render_markers(cr, area, app.warpmarkers.markers(),
                                    vp_start, vp_end, sr,
-                                   trim_struct, &target_timemap);
+                                   trim_struct, &target_timemap, drag_overlay);
                 }
             } else if (app.render_view_enabled) {
                 // Render-view: dark blue base, sky-tint when selected.
@@ -459,21 +494,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     render_phase_reset_markers(
                         cr, area, app.render_view_phase_resets,
                         vp_start, vp_end, sr,
-                        trim_struct);
+                        trim_struct, nullptr, drag_overlay);
                 } else {
                     render_markers(cr, area, app.render_view_markers,
                                    vp_start, vp_end, sr,
-                                   trim_struct);
+                                   trim_struct, nullptr, drag_overlay);
                 }
             } else if (app.active_mode == 'P') {
                 render_phase_reset_markers(
                     cr, area, app.phase_reset_markers.markers(),
                     vp_start, vp_end, sr,
-                    trim_struct);
+                    trim_struct, nullptr, drag_overlay);
             } else {
                 render_markers(cr, area, app.warpmarkers.markers(),
                                vp_start, vp_end, sr,
-                               trim_struct);
+                               trim_struct, nullptr, drag_overlay);
             }
             const auto m1 = clock::now();
             t_markers_ms =
@@ -518,7 +553,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         auto rects = compute_flag_hit_rects(
                             cr, top_strip, mv,
                             vp_start, vp_end, sr, kFlagFontSize,
-                            timemap);
+                            timemap, drag_overlay);
                         GuiRect anchor{0, 0, 0, 0};
                         for (const auto& r : rects) {
                             if (r.marker_index == hidx) {
@@ -552,7 +587,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     auto hits = compute_iter_popup_hits(
                         cr, top_strip, mv,
                         vp_start, vp_end, sr, kFlagFontSize,
-                        timemap);
+                        timemap, drag_overlay);
                     const bool editor_on_iter =
                         text_editor::is_active(app.top_flag_editor) &&
                         app.top_flag_editor.kind ==
@@ -712,7 +747,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     auto hits = compute_bpm_popup_hits(
                         cr, top_strip, mv,
                         vp_start, vp_end, sr, kFlagFontSize,
-                        timemap);
+                        timemap, drag_overlay);
                     const bool editor_on_bpm =
                         text_editor::is_active(app.top_flag_editor) &&
                         app.top_flag_editor.kind ==
@@ -877,7 +912,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         kFlagFontSize,
                         app.selected_markers,
                         trim_struct,
-                        &target_timemap);
+                        &target_timemap,
+                        drag_overlay);
                 } else {
                     render_flags(cr, top_strip,
                                  app.warpmarkers.markers(),
@@ -886,7 +922,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                  app.selected_markers,
                                  trim_struct,
                                  FlagEditorOverlay{},
-                                 &target_timemap);
+                                 &target_timemap,
+                                 drag_overlay);
                     // Brief 3a: hover / iter / BPM popups in target view.
                     // The lambda walks the same timemap-aware hit-rect
                     // helper that hit_test_flag now uses, so popup anchors
@@ -908,7 +945,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                              kFlagFontSize,
                              app.selected_markers,
                              trim_struct,
-                             FlagEditorOverlay{});
+                             FlagEditorOverlay{},
+                             nullptr,
+                             drag_overlay);
 
                 // V.A3b hover popup paint, render-view variant.
                 // Mirrors the source-view branch below but reads
@@ -928,7 +967,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     if (eligible) {
                         auto rects = compute_flag_hit_rects(
                             cr, top_strip, mv,
-                            vp_start, vp_end, sr, kFlagFontSize);
+                            vp_start, vp_end, sr, kFlagFontSize,
+                            nullptr, drag_overlay);
                         GuiRect anchor{0, 0, 0, 0};
                         for (const auto& r : rects) {
                             if (r.marker_index == hidx) {
@@ -967,7 +1007,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         vp_start, vp_end, sr,
                         kFlagFontSize,
                         app.selected_markers,
-                        trim_struct);
+                        trim_struct,
+                        nullptr,
+                        drag_overlay);
                 }
             } else if (app.active_mode == 'P') {
                 render_phase_reset_flags(
@@ -975,7 +1017,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     vp_start, vp_end, sr,
                     kFlagFontSize,
                     app.selected_markers,
-                    trim_struct);
+                    trim_struct,
+                    nullptr,
+                    drag_overlay);
             } else {
                 FlagEditorOverlay overlay;
                 // Only the V.A1 FlagPayload kind paints into the flag
@@ -1023,7 +1067,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                              kFlagFontSize,
                              app.selected_markers,
                              trim_struct,
-                             overlay);
+                             overlay,
+                             nullptr,
+                             drag_overlay);
 
                 paint_popups(nullptr);
             }

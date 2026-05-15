@@ -242,12 +242,6 @@ double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
         a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
 }
 
-// Applies a position delta (in seconds) to the phase reset's time_seconds.
-void apply_phase_reset_position_delta(GuiPhaseResetMarker& m, double delta_seconds) {
-    if (delta_seconds == 0.0) return;
-    m.time_seconds += delta_seconds;
-}
-
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     const int64_t visible = samples_visible(a, audio);
     const int64_t total   = live_total_frames(a, audio);

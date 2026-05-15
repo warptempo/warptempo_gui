@@ -10,14 +10,6 @@
 
 class GuiAudio;
 
-// Free function: apply a position delta (in seconds) to one phase reset's
-// time_seconds. Defined at file scope in main.cpp; called from
-// GuiPhaseResetMarkersOps's methods (this TU) and from the warp drag
-// handler (in main.cpp). Promoted from a captureless lambda in X.7.4 so
-// the cluster could be extracted without dragging the lambda along by
-// reference.
-void apply_phase_reset_position_delta(GuiPhaseResetMarker& m, double delta_seconds);
-
 // X.7.4: phase reset authoring cluster, extracted from main.cpp's inline
 // lambdas. clear_hover_popup is reached through viewport;
 // stop_playback_if_playing through playback_lifecycle.

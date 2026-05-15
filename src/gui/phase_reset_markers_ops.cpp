@@ -23,7 +23,6 @@
 //   invalidate_timestamp_area   → viewport.invalidate_timestamp_area
 //   invalidate_all              → viewport.invalidate_all
 //   move_playhead_to            → viewport.move_playhead_to
-//   apply_phase_reset_position_delta → free function (defined in main.cpp)
 //   current_samples_per_pixel   → free function
 //   stop_playback_if_playing    → playback_lifecycle.stop_playback_if_playing
 //                                 (X.7.13 retired the std::function forwarder)
@@ -275,7 +274,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
         if (!m) continue;
-        apply_phase_reset_position_delta(*m, delta);
+        m->time_seconds += delta;
     }
     undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
     selection.sync_playhead_to_last_selected();
@@ -321,7 +320,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     for (int idx : app.selected_markers) {
         GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
         if (!m) continue;
-        apply_phase_reset_position_delta(*m, delta);
+        m->time_seconds += delta;
     }
     undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
     undo.recompute_dirty();

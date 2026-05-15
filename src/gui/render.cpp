@@ -415,7 +415,8 @@ void render_markers(cairo_t* cr,
                     long long viewport_end_sample,
                     int sample_rate,
                     const TrimRange& trim,
-                    const std::vector<TimeMapSegment>* timemap) {
+                    const std::vector<TimeMapSegment>* timemap,
+                    const DragOverlay* drag_overlay) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -443,6 +444,15 @@ void render_markers(cairo_t* cr,
         for (size_t i = 0; i < markers.size(); ++i) {
             if (effective_disabled(markers, static_cast<int>(i))) continue;
             const auto& m = markers[i];
+            // Effective time: when a drag is active and this marker is
+            // in the overlay, read its proposed time from the overlay
+            // instead of the live store. The frozen timemap (passed in
+            // via `timemap`) is the matching pre-drag coordinate system
+            // for forward translation.
+            const double eff_time = drag_overlay
+                ? drag_overlay->effective_time(
+                      static_cast<int>(i), m.time_seconds)
+                : m.time_seconds;
             // Translate per-marker source-frame to target-frame in target view
             // (timemap non-null/non-empty); identity otherwise. Viewport and
             // trim are passed in the same domain (source in source view,
@@ -450,10 +460,10 @@ void render_markers(cairo_t* cr,
             double ms;
             if (timemap && !timemap->empty()) {
                 const size_t src_frame = static_cast<size_t>(
-                    std::nearbyint(m.time_seconds * sr));
+                    std::nearbyint(eff_time * sr));
                 ms = map_source_to_target(src_frame, *timemap);
             } else {
-                ms = m.time_seconds * sr;
+                ms = eff_time * sr;
             }
             if (ms < static_cast<double>(viewport_start_sample)) continue;
             if (ms >= static_cast<double>(viewport_end_sample)) continue;
@@ -488,6 +498,7 @@ void iterate_visible_flags(cairo_t* cr,
                            long long viewport_end_sample,
                            int sample_rate,
                            const std::vector<TimeMapSegment>* timemap,
+                           const DragOverlay* drag_overlay,
                            Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -517,16 +528,23 @@ void iterate_visible_flags(cairo_t* cr,
 
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
+        // Effective time: drag overlay > live store. The frozen timemap
+        // supplied via `timemap` is the matching pre-drag coordinate
+        // system for target-view forward translation.
+        const double eff_time = drag_overlay
+            ? drag_overlay->effective_time(
+                  static_cast<int>(i), m.time_seconds)
+            : m.time_seconds;
         // Translate per-marker source-frame to target-frame in target view
         // (timemap non-null/non-empty); identity otherwise. Pack/elision
         // walk left-to-right against post-translation positions.
         double ms;
         if (timemap && !timemap->empty()) {
             const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(m.time_seconds * sr));
+                std::nearbyint(eff_time * sr));
             ms = map_source_to_target(src_frame, *timemap);
         } else {
-            ms = m.time_seconds * sr;
+            ms = eff_time * sr;
         }
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
@@ -565,7 +583,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const TrimRange& trim,
                   const FlagEditorOverlay& editor,
-                  const std::vector<TimeMapSegment>* timemap) {
+                  const std::vector<TimeMapSegment>* timemap,
+                  const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -602,7 +621,7 @@ void render_flags(cairo_t* cr,
     std::vector<FlagEmit> emits;
     iterate_visible_flags(cr, top_strip_area, markers,
                           viewport_start_sample, viewport_end_sample,
-                          sample_rate, timemap,
+                          sample_rate, timemap, drag_overlay,
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -620,14 +639,21 @@ void render_flags(cairo_t* cr,
         const bool is_parse_fail = is_editing && editor.is_red;
 
         // Translate per-marker frame to target-frame in target view so the
-        // out-of-trim comparison runs in the same domain as `trim`.
+        // out-of-trim comparison runs in the same domain as `trim`. Pulls
+        // the effective time from the drag overlay if this marker is in
+        // it — keeps the trim dim consistent with the displayed stem
+        // position throughout the drag.
+        const double eff_time = drag_overlay
+            ? drag_overlay->effective_time(
+                  e.i, markers[e.i].time_seconds)
+            : markers[e.i].time_seconds;
         double pos_ms;
         if (timemap && !timemap->empty()) {
             const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(markers[e.i].time_seconds * sr_d));
+                std::nearbyint(eff_time * sr_d));
             pos_ms = map_source_to_target(src_frame, *timemap);
         } else {
-            pos_ms = markers[e.i].time_seconds * sr_d;
+            pos_ms = eff_time * sr_d;
         }
         const int64_t marker_pos =
             static_cast<int64_t>(std::nearbyint(pos_ms));
@@ -757,7 +783,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap) {
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -779,7 +806,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 
     iterate_visible_flags(cr, top_strip_area, markers,
                           viewport_start_sample, viewport_end_sample,
-                          sample_rate, timemap,
+                          sample_rate, timemap, drag_overlay,
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
@@ -813,6 +840,7 @@ void iterate_visible_phase_reset_flags(
     long long viewport_end_sample,
     int sample_rate,
     const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay,
     Emit&& emit) {
     (void)cr;
     const double span = static_cast<double>(viewport_end_sample -
@@ -840,15 +868,21 @@ void iterate_visible_phase_reset_flags(
 
     for (size_t i = 0; i < phase_resets.size(); ++i) {
         const auto& m = phase_resets[i];
+        // Effective time: drag overlay > live store. The supplied
+        // `timemap` is the frozen pre-drag timemap during drag.
+        const double eff_time = drag_overlay
+            ? drag_overlay->effective_time(
+                  static_cast<int>(i), m.time_seconds)
+            : m.time_seconds;
         // Translate per-marker source-frame to target-frame in target view
         // (timemap non-null/non-empty); identity otherwise.
         double ms;
         if (timemap && !timemap->empty()) {
             const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(m.time_seconds * sr));
+                std::nearbyint(eff_time * sr));
             ms = map_source_to_target(src_frame, *timemap);
         } else {
-            ms = m.time_seconds * sr;
+            ms = eff_time * sr;
         }
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
@@ -884,7 +918,8 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_end_sample,
                               int sample_rate,
                               const TrimRange& trim,
-                              const std::vector<TimeMapSegment>* timemap) {
+                              const std::vector<TimeMapSegment>* timemap,
+                              const DragOverlay* drag_overlay) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -913,15 +948,23 @@ void render_phase_reset_markers(cairo_t* cr,
         for (size_t i = 0; i < phase_resets.size(); ++i) {
             const auto& m = phase_resets[i];
             if (m.disabled) continue;
+            // Effective time: drag overlay > live store. Forward
+            // translation goes through the frozen pre-drag timemap when
+            // the drag is active so the stem paints at its proposed
+            // target-frame position without disturbing other markers.
+            const double eff_time = drag_overlay
+                ? drag_overlay->effective_time(
+                      static_cast<int>(i), m.time_seconds)
+                : m.time_seconds;
             // Translate per-marker source-frame to target-frame in target
             // view (timemap non-null/non-empty); identity otherwise.
             double ms;
             if (timemap && !timemap->empty()) {
                 const size_t src_frame = static_cast<size_t>(
-                    std::nearbyint(m.time_seconds * sr));
+                    std::nearbyint(eff_time * sr));
                 ms = map_source_to_target(src_frame, *timemap);
             } else {
-                ms = m.time_seconds * sr;
+                ms = eff_time * sr;
             }
             const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
             if (ms < static_cast<double>(viewport_start_sample)) continue;
@@ -949,7 +992,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const TrimRange& trim,
-                            const std::vector<TimeMapSegment>* timemap) {
+                            const std::vector<TimeMapSegment>* timemap,
+                            const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -981,7 +1025,7 @@ void render_phase_reset_flags(cairo_t* cr,
     std::vector<PhaseResetEmit> emits;
     iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
                                     viewport_start_sample, viewport_end_sample,
-                                    sample_rate, timemap,
+                                    sample_rate, timemap, drag_overlay,
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -990,15 +1034,21 @@ void render_phase_reset_flags(cairo_t* cr,
     const double sr = static_cast<double>(sample_rate);
     auto paint_one = [&](const PhaseResetEmit& e) {
         const bool is_selected = selected_set.count(e.i) > 0;
+        // Effective time: drag overlay > live store. Keeps out-of-trim
+        // dim consistent with displayed stem during drag.
+        const double eff_time = drag_overlay
+            ? drag_overlay->effective_time(
+                  e.i, phase_resets[e.i].time_seconds)
+            : phase_resets[e.i].time_seconds;
         // Translate per-marker frame to target-frame in target view so the
         // out-of-trim comparison runs in the same domain as `trim`.
         double pos_ms;
         if (timemap && !timemap->empty()) {
             const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(phase_resets[e.i].time_seconds * sr));
+                std::nearbyint(eff_time * sr));
             pos_ms = map_source_to_target(src_frame, *timemap);
         } else {
-            pos_ms = phase_resets[e.i].time_seconds * sr;
+            pos_ms = eff_time * sr;
         }
         const int64_t marker_pos =
             static_cast<int64_t>(std::nearbyint(pos_ms));
@@ -1058,7 +1108,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap) {
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -1076,7 +1127,7 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 
     iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
                                     viewport_start_sample, viewport_end_sample,
-                                    sample_rate, timemap,
+                                    sample_rate, timemap, drag_overlay,
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;

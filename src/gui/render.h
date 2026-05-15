@@ -12,6 +12,7 @@
 
 class GuiAudio;
 struct AppState;
+struct DragOverlay;
 
 struct GuiRect {
     int x;
@@ -224,7 +225,8 @@ void render_markers(cairo_t* cr,
                     long long viewport_end_sample,
                     int sample_rate,
                     const TrimRange& trim,
-                    const std::vector<TimeMapSegment>* timemap = nullptr);
+                    const std::vector<TimeMapSegment>* timemap = nullptr,
+                    const DragOverlay* drag_overlay = nullptr);
 
 // Editor overlay used by V.A1's top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is
@@ -297,7 +299,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const TrimRange& trim,
                   const FlagEditorOverlay& editor = {},
-                  const std::vector<TimeMapSegment>* timemap = nullptr);
+                  const std::vector<TimeMapSegment>* timemap = nullptr,
+                  const DragOverlay* drag_overlay = nullptr);
 
 // Same greedy-pack and elision logic as render_flags, without drawing —
 // returns the screen-coord rects of the flags that would be rendered. The
@@ -316,7 +319,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr);
+    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const DragOverlay* drag_overlay = nullptr);
 
 // Phase reset marker analogues (chunk S.2.2). Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
@@ -329,7 +333,8 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_end_sample,
                               int sample_rate,
                               const TrimRange& trim,
-                              const std::vector<TimeMapSegment>* timemap = nullptr);
+                              const std::vector<TimeMapSegment>* timemap = nullptr,
+                              const DragOverlay* drag_overlay = nullptr);
 
 // Flag text for phase resets is `[b=|e=]<status>` where status is `I`
 // (inserted), `D` (detected), or `D*` (detected with user displacement).
@@ -348,7 +353,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const TrimRange& trim,
-                            const std::vector<TimeMapSegment>* timemap = nullptr);
+                            const std::vector<TimeMapSegment>* timemap = nullptr,
+                            const DragOverlay* drag_overlay = nullptr);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     cairo_t* cr,
@@ -358,7 +364,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr);
+    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const DragOverlay* drag_overlay = nullptr);
 
 // Returns the text that render_flags would draw for `markers[idx]`. Used
 // by the GUI text editor to seed the editable payload (the on-screen rect

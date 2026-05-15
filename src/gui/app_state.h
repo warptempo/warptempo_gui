@@ -106,10 +106,21 @@ struct DragState {
     bool                active = false;
     std::vector<int>    dragging_markers;   // sorted ascending
     std::vector<double> original_times;     // parallel to dragging_markers
+    // Proposed new times during motion, parallel to dragging_markers.
+    // Written by apply_drag_motion as original_times[k] + delta; consumed
+    // by paint via DragOverlay so the live marker store stays untouched
+    // until commit. Seeded from original_times at begin_drag.
+    std::vector<double> moveable_times;
     double              anchor_mouse_time_seconds = 0.0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
+    // Pre-drag timemap snapshot. Captured at begin_drag via
+    // build_target_view_timemap so paint can route selected-marker
+    // positions and target-view waveform through a frozen coordinate
+    // system for the duration of the drag. Empty when source view is
+    // active at begin_drag time, or when the build failed.
+    std::vector<TimeMapSegment> frozen_timemap;
     // Full pre-drag marker state. Captured at button-press so commit_drag
     // can push it onto the undo stack when motion landed; discarded on
     // commit when no motion occurred (DragState is reset wholesale there).
@@ -130,6 +141,29 @@ struct DragState {
     // handlers dispatch on this so a drag started in phase reset mode
     // mutates the phase reset list.
     char                   drag_mode = 'W';
+};
+
+// Drag-time position overlay. Paint sites consult this when a marker
+// index appears in `indices` to read the proposed new time from
+// `times` rather than the live store's time_seconds. The two spans
+// alias DragState's `dragging_markers` and `moveable_times` (parallel
+// vectors, sorted ascending). Empty overlay (default-constructed) is
+// equivalent to "no drag active" and falls back to the live store.
+struct DragOverlay {
+    const std::vector<int>*    indices = nullptr;
+    const std::vector<double>* times   = nullptr;
+
+    // Returns the overlay time for marker `marker_idx`, or
+    // `fallback_time_seconds` when the index is not in the overlay.
+    // Caller passes the live store's time_seconds as the fallback.
+    double effective_time(int marker_idx,
+                          double fallback_time_seconds) const {
+        if (!indices || !times) return fallback_time_seconds;
+        for (size_t k = 0; k < indices->size(); ++k) {
+            if ((*indices)[k] == marker_idx) return (*times)[k];
+        }
+        return fallback_time_seconds;
+    }
 };
 
 // Two-stack undo/redo history for marker mutations. Entries are full

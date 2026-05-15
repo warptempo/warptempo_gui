@@ -31,13 +31,17 @@
 //   stop_playback_if_playing       → playback_lifecycle.stop_playback_if_playing
 //   clear_hover_popup              → viewport.clear_hover_popup
 //                                    (X.7.13 retired the std::function forwarders)
-//   apply_phase_reset_position_delta → free function (declared in
-//                                    phase_reset_markers_ops.h)
 //   resolve_inherited_tempo,
 //   resolve_inherited_tempo_scale,
 //   current_samples_per_pixel,
 //   waveform_area, union_rect,
 //   playhead_invalidate_rect       → free functions, no qualifier change
+//
+// Drag write-back: apply_drag_motion writes proposed positions to
+// app.drag.moveable_times only; the per-list live stores stay untouched
+// during motion. commit_drag does the write-back step that copies
+// moveable_times into the active-list's marker time_seconds before
+// pushing the snapshot.
 
 void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     const int sr = audio.sample_rate();
@@ -457,6 +461,19 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     }
 
     d.moved = false;
+    // Seed moveable_times from original_times. apply_drag_motion writes
+    // moveable_times[k] = original_times[k] + delta on every motion event.
+    d.moveable_times = d.original_times;
+    // Capture a snapshot of the pre-drag timemap so paint can route
+    // selected-marker positions and target-view waveform through a frozen
+    // coordinate system. Both views capture: in source view the segment
+    // list is harmless (its forward translation is identity at the
+    // relevant input boundaries) and the symmetry lets paint code route
+    // through DragOverlay unconditionally. Build may fail (returns empty)
+    // — in that case paint walks the identity fallback for the duration
+    // of the drag, which is the correct degradation.
+    d.frozen_timemap = build_target_view_timemap(
+        app, sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
     // active-mode snapshot if motion landed; otherwise it's discarded.
     if (phase_reset) {
@@ -473,38 +490,32 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
 }
 
 // Apply a raw delta (mouse-derived) to the dragging markers, clamped.
-// Updates marker times in place and invalidates the full waveform area
-// plus the flag strip. The waveform cache stays valid throughout the
-// drag — viewport / trim / dimensions / view-domain / timemap-hash
-// don't change — so the invalidation triggers a cheap blit of cached
-// pixels with stems, flags, and playhead repainted on top. A narrow
-// per-marker rect would be wrong in target view, where moving one
-// marker shifts every downstream stem's x via the timemap.
+// Writes proposed new times into app.drag.moveable_times — the live
+// marker store is NOT mutated. Paint reads moveable_times through the
+// DragOverlay so dragged markers paint at their proposed positions while
+// the timemap stays frozen at its pre-drag snapshot. The live store is
+// updated wholesale in commit_drag.
+//
+// Symmetric across warp and phase reset: both branches write the same
+// statement into the same vector. The waveform cache stays valid
+// throughout the drag — viewport / trim / dimensions / view-domain /
+// frozen-timemap-hash don't change — so the invalidation triggers a
+// cheap blit of cached pixels with stems, flags, and playhead repainted
+// on top. A narrow per-marker rect would be wrong in target view, where
+// the dragged marker's proposed position lands at the cursor's pixel
+// regardless of which markers surround it.
 void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
     if (!app.drag.active) return;
     double delta = raw_delta;
     if (delta < app.drag.delta_min) delta = app.drag.delta_min;
     if (delta > app.drag.delta_max) delta = app.drag.delta_max;
 
-    const bool phase_reset = (app.drag.drag_mode == 'P');
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        const int idx = app.drag.dragging_markers[k];
         const double new_t = app.drag.original_times[k] + delta;
-        double old_t;
-        if (phase_reset) {
-            GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
-            if (!m) continue;
-            old_t = m->time_seconds;
-            if (old_t == new_t) continue;
-            apply_phase_reset_position_delta(*m, new_t - old_t);
-        } else {
-            GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-            if (!m) continue;
-            old_t = m->time_seconds;
-            if (old_t == new_t) continue;
-            m->time_seconds = new_t;
-        }
+        if (k >= app.drag.moveable_times.size()) continue;
+        if (app.drag.moveable_times[k] == new_t) continue;
+        app.drag.moveable_times[k] = new_t;
         any_changed = true;
     }
     if (any_changed) {
@@ -530,10 +541,34 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
 // Commit the current drag. Caller ensures drag was active. Sets dirty
 // only if the markers actually moved. Playhead is left wherever it
 // ended up (tracked live in the motion handler) — no snap.
+//
+// Write-back step: the live store was untouched throughout motion (the
+// proposed positions lived in app.drag.moveable_times and paint read
+// them through the DragOverlay). On commit, walk dragging_markers and
+// assign each marker's time_seconds from moveable_times before pushing
+// the pre-drag snapshot onto the undo stack. Symmetric across warp and
+// phase reset: identical statement shape on each side.
 void GuiWarpMarkersOps::commit_drag() {
     if (!app.drag.active) return;
     const bool moved = app.drag.moved;
     const bool phase_reset = (app.drag.drag_mode == 'P');
+    if (moved) {
+        for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
+            const int idx = app.drag.dragging_markers[k];
+            if (k >= app.drag.moveable_times.size()) continue;
+            const double new_t = app.drag.moveable_times[k];
+            if (phase_reset) {
+                GuiPhaseResetMarker* m =
+                    app.phase_reset_markers.marker_mut(idx);
+                if (!m) continue;
+                m->time_seconds = new_t;
+            } else {
+                GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
+                if (!m) continue;
+                m->time_seconds = new_t;
+            }
+        }
+    }
     std::vector<GuiWarpMarker>    snap_w =
         std::move(app.drag.pre_drag_snapshot);
     std::vector<GuiPhaseResetMarker> snap_t =

@@ -132,7 +132,8 @@ std::vector<IterPopupHit> compute_iter_popup_hits(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr);
+    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const DragOverlay* drag_overlay = nullptr);
 
 // -- BPM popup geometry --------------------------------------------------
 //
@@ -157,7 +158,8 @@ std::vector<BpmPopupHit> compute_bpm_popup_hits(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr);
+    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const DragOverlay* drag_overlay = nullptr);
 
 // -- GuiPaintHandler -----------------------------------------------------
 //
