@@ -2485,37 +2485,29 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     warpops.apply_drag_motion(mouse_time - app.drag.anchor_mouse_time_seconds);
 
-    // Track the playhead with the grabbed marker. The drag applies a
-    // uniform delta across the dragging set, so the hit marker's
-    // post-motion time matches the user's cursor intent. Viewport is
-    // deliberately not followed — the user can pan manually if the
-    // drag runs past the edge.
+    // Track the playhead with the grabbed marker. The hit marker's
+    // proposed source-time lives in the drag overlay — under the
+    // frozen-coord regime apply_drag_motion does not mutate the live
+    // store during motion. In target view, forward-translate through
+    // the frozen timemap (the same map paint walks during motion) so
+    // the playhead lands at the same screen column as the marker stem.
+    // Viewport is deliberately not followed — the user can pan manually
+    // if the drag runs past the edge.
     const int hit_idx = app.drag.hit_marker;
-    const bool phase_reset_drag = (app.drag.drag_mode == 'P');
-    const int n = phase_reset_drag
-        ? static_cast<int>(app.phase_reset_markers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
-    if (hit_idx >= 0 && hit_idx < n) {
-        int64_t ph_src;
-        if (phase_reset_drag) {
-            ph_src = static_cast<int64_t>(std::nearbyint(
-                app.phase_reset_markers.markers()[hit_idx].time_seconds * sr_d));
-        } else {
-            ph_src = static_cast<int64_t>(std::nearbyint(
-                app.warpmarkers.markers()[hit_idx].time_seconds * sr_d));
+    int hit_pos = -1;
+    for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
+        if (app.drag.dragging_markers[k] == hit_idx) {
+            hit_pos = static_cast<int>(k);
+            break;
         }
-        // Target view: the marker's time_seconds is source-domain but
-        // the playhead is active-domain. Forward-translate through the
-        // post-write timemap so the playhead tracks the marker's new
-        // displayed (target-frame) position.
-        int64_t ph;
-        if (app.view_domain == ViewDomain::Target) {
-            const auto tmap_after = build_target_view_timemap(
-                app, sr, static_cast<long>(audio.total_frames()));
-            ph = to_domain_frame(app, ph_src, tmap_after);
-        } else {
-            ph = ph_src;
-        }
+    }
+    if (hit_pos >= 0 &&
+        static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
+        const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
+            app.drag.moveable_times[hit_pos] * sr_d));
+        const int64_t ph = (app.view_domain == ViewDomain::Target)
+            ? to_domain_frame(app, ph_src, app.drag.frozen_timemap)
+            : ph_src;
         if (ph != app.playhead_sample) {
             const double old_px = playhead_pixel_x(app, audio);
             app.playhead_sample = ph;
