@@ -96,35 +96,31 @@ void Selection::cycle_selection(bool forward) {
         return to_domain_frame(app, src_f, tmap);
     };
 
-    int new_sel = -1;
+    // Disabled-skip predicate. Warp side respects label_ref cascade via
+    // effective_disabled; phase reset has no cascade and reads the bool.
+    auto is_disabled = [&](int i) -> bool {
+        if (phase_reset) {
+            return app.phase_reset_markers.markers()[i].disabled;
+        }
+        return effective_disabled(app.warpmarkers.markers(), i);
+    };
 
-    if (!app.selected_markers.empty()) {
-        // Anchor on last_selected_marker over the *full* marker list. A
-        // multi-selection collapses down to next/prev from this anchor —
-        // same code path as the single-selection case. The
-        // repair_last_selected invariant guarantees the anchor is valid
-        // whenever selected_markers is non-empty.
-        const int anchor = app.last_selected_marker;
-        if (anchor < 0 || anchor >= n) return;
-        const int64_t cur_f = frame_of(anchor);
-        if (forward) {
-            for (int i = anchor + 1; i < n; ++i) {
-                if (frame_of(i) > cur_f) { new_sel = i; break; }
-            }
-        } else {
-            for (int i = anchor - 1; i >= 0; --i) {
-                if (frame_of(i) < cur_f) { new_sel = i; break; }
+    // Playhead is the sole anchor for cycle direction. Strict inequality
+    // ensures a marker exactly at the playhead's frame is not a valid
+    // landing — Tab is motion, not confirmation. Disabled markers are
+    // skipped as if they were not present in the active mode's list.
+    int new_sel = -1;
+    const int64_t ph_f = app.playhead_sample;
+    if (forward) {
+        for (int i = 0; i < n; ++i) {
+            if (frame_of(i) > ph_f && !is_disabled(i)) {
+                new_sel = i; break;
             }
         }
     } else {
-        const int64_t ph_f = app.playhead_sample;
-        if (forward) {
-            for (int i = 0; i < n; ++i) {
-                if (frame_of(i) >= ph_f) { new_sel = i; break; }
-            }
-        } else {
-            for (int i = n - 1; i >= 0; --i) {
-                if (frame_of(i) <= ph_f) { new_sel = i; break; }
+        for (int i = n - 1; i >= 0; --i) {
+            if (frame_of(i) < ph_f && !is_disabled(i)) {
+                new_sel = i; break;
             }
         }
     }
