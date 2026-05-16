@@ -79,14 +79,13 @@ struct GuiTargetRender {
     // current?".
     void ensure_ready();
 
-    // Wholesale-invalidate hook for file_loader's two buffer-clear sites
-    // (load_file success branch and revert_to_blank). Sets the dirty bit
-    // unconditionally; callers separately zero target_buffer / frames /
-    // start_frame in the same block. A subsequent T-entry will dispatch
-    // against the new source rather than re-binding to whatever was in
-    // the cleared buffer's prior life. Replaced by cancel_for_load() in
-    // the follow-up brief.
-    void mark_dirty() { is_dirty_ = true; }
+    // File-load entry hook. Called by GuiFileLoader before it tears
+    // down the live source audio. Sets is_dirty_; clears pending_; if
+    // in_flight_, requests worker cancellation and leaves the buffer
+    // clear to on_render_done's Cancelled branch (asynchronous); else
+    // synchronously clears target_buffer / frames / start_frame.
+    // Replaces the inline buffer-clear that brief 2 used.
+    void cancel_for_load();
 
 private:
     // Construct and dispatch the target RenderRequest. Caller must
@@ -109,7 +108,7 @@ private:
     bool in_flight_ = false;
     // True iff app.target_buffer is potentially stale relative to the
     // current engine input. Set by trigger() (any output-affecting
-    // mutation) and by mark_dirty() (file_loader's wholesale source
+    // mutation) and by cancel_for_load() (file_loader's wholesale source
     // invalidation). Cleared inside on_render_done's success branch
     // after the rebind, where the buffer is known to match the
     // engine input that produced it. Initial value true: at

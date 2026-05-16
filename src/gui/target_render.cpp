@@ -243,6 +243,44 @@ void GuiTargetRender::ensure_ready() {
     trigger();
 }
 
+void GuiTargetRender::cancel_for_load() {
+    // file_loader entry hook. Runs on the GUI thread immediately before
+    // the live source audio is torn down. Goal: leave the target buffer
+    // in a coherent state without racing the async render worker, which
+    // may currently be appending samples into *req.output_buffer (the
+    // address of app.target_buffer).
+    //
+    // The buffer is no longer current with the soon-to-be-loaded source,
+    // regardless of which branch we take below.
+    is_dirty_ = true;
+    // Any pending target-render dispatch must not pump into the new
+    // source's worker queue. If a cancel-restart was queued behind a
+    // busy archival render, clearing the pending bit aborts the queued
+    // dispatch before maybe_dispatch_pending() can fire it.
+    pending_ = false;
+
+    if (in_flight_) {
+        // Worker is mid-target-render, writing into target_buffer. Do NOT
+        // touch the buffer fields here — that would race vector::insert
+        // on the worker side. Set the cancel flag and let
+        // on_render_done's Cancelled branch clear target_buffer /
+        // target_buffer_frames / target_buffer_start_frame after the
+        // worker exits. The Cancelled branch's status cleanup
+        // (invalidate_timestamp_area + queue_progress_text.clear) also
+        // covers the "updating..." text.
+        async_renderer.request_cancel();
+        return;
+    }
+
+    // Worker is idle or running an archival render (whose RenderRequest
+    // has output_buffer == nullptr — archivals write to disk via
+    // libsndfile, not into a vector). Either way, no one is touching
+    // target_buffer; the synchronous clear is race-free.
+    app.target_buffer.clear();
+    app.target_buffer_frames = 0;
+    app.target_buffer_start_frame = 0;
+}
+
 void GuiTargetRender::rebind_to_source() {
     // Called from the target → source view toggle. Cancel any in-flight
     // target render and clear the pending dispatch — source view's

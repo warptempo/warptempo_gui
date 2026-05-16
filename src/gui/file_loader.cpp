@@ -67,14 +67,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // audio sets a fresh source-frame baseline, and the target-frame
     // cache from any prior session is stale. Defensive even though
     // brief 1's target view is session-only. The target buffer is
-    // tied to the live source audio's content, so clear it too — a
-    // subsequent S→T toggle will dispatch a fresh target render.
+    // tied to the live source audio's content, so cancel any in-flight
+    // target render and clear it — a subsequent S→T toggle will dispatch
+    // a fresh target render against the new source.
+    target_render.cancel_for_load();
     app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
-    app.target_buffer.clear();
-    app.target_buffer_frames = 0;
-    app.target_buffer_start_frame = 0;
-    target_render.mark_dirty();
 
     app.playhead_sample       = 0;
     app.viewport_start_sample = 0;
@@ -347,12 +345,10 @@ void GuiFileLoader::revert_to_blank() {
     app.tab_b = ViewState{};
     app.active_tab = 'A';
 
-    // Target render state is tied to the live source audio; clear it on
-    // revert so a subsequent file load doesn't inherit stale frames.
-    app.target_buffer.clear();
-    app.target_buffer_frames = 0;
-    app.target_buffer_start_frame = 0;
-    target_render.mark_dirty();
+    // Target render state is tied to the live source audio; cancel any
+    // in-flight target render and clear it on revert so a subsequent
+    // file load doesn't inherit stale frames.
+    target_render.cancel_for_load();
     app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
 

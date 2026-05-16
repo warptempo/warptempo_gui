@@ -363,8 +363,8 @@ int main(int argc, char** argv) {
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
                                   viewport);
-    // file_loader's clear sites call target_render.mark_dirty(), so it
-    // must be constructed after target_render.
+    // file_loader's clear sites call target_render.cancel_for_load(),
+    // so it must be constructed after target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport,
                               target_render);
     GuiTabMode tab_mode(app, audio, viewport, selection,
