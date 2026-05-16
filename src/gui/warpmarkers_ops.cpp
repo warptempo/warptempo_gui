@@ -429,7 +429,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
 
     // Compute scalar delta_min / delta_max from per-marker neighbor
     // bounds. Correct for both contiguous and non-contiguous drag sets.
-    // eps enforces a 3-pixel visual gap at the current zoom — markers
+    // eps enforces a 4-pixel visual gap at the current zoom — markers
     // never stack even at the tightest clamp. When a selected marker
     // has no neighbor on a side, clamp to [eps, total_duration - eps]
     // so the drag can't leave the audio range.

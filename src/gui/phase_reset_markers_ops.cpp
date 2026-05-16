@@ -29,7 +29,7 @@
 //                                 (X.7.13 retired the std::function forwarder)
 
 // Drop a phase reset marker at `time_seconds`. Rejects creation within
-// 3 pixels at current zoom of an existing phase reset marker. Selection
+// 4 pixels at current zoom of an existing phase reset marker. Selection
 // collapses to the freshly-inserted index. Frame-0 phase alignment is
 // implicit by definition and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) {
