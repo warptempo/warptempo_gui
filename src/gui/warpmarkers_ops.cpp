@@ -559,6 +559,36 @@ void GuiWarpMarkersOps::commit_drag() {
     if (!app.drag.active) return;
     const bool moved = app.drag.moved;
     const bool phase_reset = (app.drag.drag_mode == 'P');
+    // Cascade validation for warp drags. The frozen-coord regime keeps
+    // build_timemaps from running during motion (paint sources from the
+    // pre-drag snapshot in app.drag.frozen_timemap), so a drag end-state
+    // that violates the per-segment label_ref final_multiplier ceiling
+    // can otherwise land in the live store and leave the next
+    // build_target_view_timemap call returning empty. Construct the
+    // proposed post-write warp marker vector, run build_target_view_timemap
+    // against it, and reject the drag on empty result. Phase-reset markers
+    // don't participate in label cascade, so this branch is warp-only.
+    if (moved && !phase_reset) {
+        std::vector<GuiWarpMarker> proposed = app.warpmarkers.markers();
+        for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
+            const int idx = app.drag.dragging_markers[k];
+            if (k >= app.drag.moveable_times.size()) continue;
+            if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+            proposed[idx].time_seconds = app.drag.moveable_times[k];
+        }
+        const auto tmap = build_target_view_timemap(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        if (tmap.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: drag rejected: would violate label "
+                "multiplier constraint\n");
+            app.drag = DragState{};
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+            return;
+        }
+    }
     if (moved) {
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
