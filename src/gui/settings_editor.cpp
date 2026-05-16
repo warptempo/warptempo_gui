@@ -62,7 +62,7 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_b_zoom"           ||
            k == "tab_b_playhead"       ||
            k == "follow"               ||
-           k == "active_mode"          ||
+           k == "active_markers_view"          ||
            k == "playback_speed"       ||
            k == "tab_a_trim_begin"     ||
            k == "tab_a_trim_end"       ||

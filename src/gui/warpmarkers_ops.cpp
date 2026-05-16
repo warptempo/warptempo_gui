@@ -355,7 +355,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     if (hit < 0) return false;
     const int sr = audio.sample_rate();
     if (sr <= 0) return false;
-    const bool phase_reset = (app.active_mode == 'P');
+    const bool phase_reset = (app.active_markers_view == 'P');
     const int n = phase_reset
         ? static_cast<int>(app.phase_reset_markers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());

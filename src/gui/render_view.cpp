@@ -175,8 +175,8 @@ std::pair<uintmax_t, int64_t> GuiRenderView::wav_stat_tuple(
 // current stat tuple. No-op when no entry is active. Called from
 // the render-view exit path and from the batch-nav path
 // (Shift+Left/Right) before the destination is loaded. The
-// OTHER-mode slot was last written when active_mode flipped
-// away from it via switch_active_mode_to (or never written if
+// OTHER-mode slot was last written when active_markers_view flipped
+// away from it via switch_active_markers_view_to (or never written if
 // the user has not flipped mode in this render-view session);
 // either way it is current at stash time.
 void GuiRenderView::stash_render_view_selection_to_active_entry() {
@@ -186,7 +186,7 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
         return;
     }
     auto& e = app.render_view_list[app.render_view_index];
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         e.state.phase_reset_selected      = app.selected_markers;
         e.state.phase_reset_last_selected = app.last_selected_marker;
     } else {
@@ -298,8 +298,8 @@ bool GuiRenderView::load_render_view_at(int index) {
         // Brief J.2 Section 4: load only the matching-mode slot
         // into the live pair. The OTHER-mode slot stays on state
         // and gets swapped in if mode flips during this render-
-        // view session via switch_active_mode_to.
-        if (app.active_mode == 'P') {
+        // view session via switch_active_markers_view_to.
+        if (app.active_markers_view == 'P') {
             app.selected_markers     = e.state.phase_reset_selected;
             app.last_selected_marker = e.state.phase_reset_last_selected;
         } else {
@@ -365,7 +365,7 @@ void GuiRenderView::restore_source_audio() {
     // live pair. Live pair held render-view selection while
     // render-view was active; restoring source-view requires
     // pulling the source tab's matching-mode slot back in.
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         app.selected_markers     = t.phase_reset_selected;
         app.last_selected_marker = t.phase_reset_last_selected;
     } else {

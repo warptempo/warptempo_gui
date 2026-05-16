@@ -48,7 +48,7 @@
 //     toggle_phase_reset_*, detect_phase_resets, clear_all_phase_resets,
 //     enter_*_edit, commit_*_edit, exit_top_flag_edit_no_commit,
 //     bulk_clear_*_values, enter_bpm_mode, exit_bpm_mode,
-//     toggle_active_mode, load_render_view_at, restore_source_audio,
+//     toggle_active_markers_view, load_render_view_at, restore_source_audio,
 //     stash_render_view_selection_to_active_entry,
 //     enumerate_render_view_list, write_rendersettings_for) were rewritten
 //     to direct method calls on the appropriate operation struct ref.
@@ -831,7 +831,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // committed popup.
     if (ctrl && alt && !shift &&
         key == GuiKeys::M) {
-        if (app.active_mode != 'W') return;
+        if (app.active_markers_view != 'W') return;
         if (!app.bpm_mode_enabled) return;
         if (app.source_audio_path.empty()) return;
         if (audio.sample_rate() <= 0) return;
@@ -1213,7 +1213,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // mode is a silent no-op. Off-count selection in W-mode emits a
     // one-line stderr nudge.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
-        if (app.active_mode != 'W') return;
+        if (app.active_markers_view != 'W') return;
         if (app.selected_markers.size() != 2) {
             std::fprintf(stderr,
                 "warptempo_gui: phase_reset copy: select exactly two warp "
@@ -1229,7 +1229,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // reset mode is a silent no-op. Empty clipboard is a silent no-op.
     // Opens a confirmation prompt before any mutation.
     if (key == GuiKeys::P && ctrl && !shift && alt) {
-        if (app.active_mode != 'W') return;
+        if (app.active_markers_view != 'W') return;
         if (app.phase_reset_clipboard.empty()) return;
         if (app.selected_markers.size() != 1) {
             std::fprintf(stderr,
@@ -1241,23 +1241,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // `p` (no modifiers) toggles phase reset mode globally. Brief
-    // J.2: render-view shares the global active_mode flag, so a
+    // `p` (no modifiers) toggles phase reset view globally. Brief
+    // J.2: render-view shares the global active_markers_view flag, so a
     // single handler serves both views. Render-view inherits the
-    // engine precondition check from toggle_active_mode.
+    // engine precondition check from toggle_active_markers_view.
     if (key == GuiKeys::P && !ctrl && !shift && !alt) {
-        tab_mode.toggle_active_mode();
+        tab_mode.toggle_active_markers_view();
         return;
     }
 
     // V.B `i` (no modifiers) toggles iteration mode in warp. Silent
-    // no-op in phase reset mode (phase reset flags carry no tempo to
+    // no-op in phase reset view (phase reset flags carry no tempo to
     // iterate). The editor-active branch above already swallows any
     // keystroke while a popup edit is in flight, so this code only
     // runs with no active editor. Toggling repaints the top strip
     // so iteration popups appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
-        if (app.active_mode == 'W') {
+        if (app.active_markers_view == 'W') {
             // Brief X.2: mutual exclusion. Toggling iter ON forces
             // BPM mode off; toggling iter OFF leaves BPM untouched.
             const bool turning_on = !app.iteration_mode_enabled;
@@ -1274,7 +1274,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // iteration mode in one keystroke ("stop authoring this mode").
     // Only fires while iteration mode is on; otherwise silent no-op.
     if (key == GuiKeys::I && !ctrl && shift && !alt) {
-        if (app.active_mode == 'W' && app.iteration_mode_enabled) {
+        if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
             flag_editor.bulk_clear_iter_values();
             app.iteration_mode_enabled = false;
             viewport.invalidate_top_strip();
@@ -1283,10 +1283,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Brief X.2 `m` (no modifiers): toggle BPM mode in warp. Silent
-    // no-op in phase reset mode. Mutual exclusion with iter mode is
+    // no-op in phase reset view. Mutual exclusion with iter mode is
     // handled inside enter_bpm_mode.
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
-        if (app.active_mode == 'W') {
+        if (app.active_markers_view == 'W') {
             if (app.bpm_mode_enabled) {
                 flag_editor.exit_bpm_mode();
             } else {
@@ -1299,7 +1299,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // exit BPM mode in one keystroke ("stop authoring this mode").
     // Only fires while BPM mode is on; otherwise silent no-op.
     if (key == GuiKeys::M && !ctrl && shift && !alt) {
-        if (app.active_mode == 'W' && app.bpm_mode_enabled) {
+        if (app.active_markers_view == 'W' && app.bpm_mode_enabled) {
             flag_editor.bulk_clear_bpm_values();
             flag_editor.exit_bpm_mode();
         }
@@ -1371,7 +1371,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // BPM mode back on after exiting render-view.
             app.bpm_mode_enabled       = false;
             app.render_view_enabled    = true;
-            // Brief J.2: render-view shares the global active_mode
+            // Brief J.2: render-view shares the global active_markers_view
             // flag, so the user's chosen mode carries across the
             // view-domain transition without per-entry restore.
             if (!render_view.load_render_view_at(target)) {
@@ -1412,25 +1412,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
     if (key == GuiKeys::S) {
         if (ctrl)                          save_ops.save();
-        else if (app.active_mode == 'P')   phase_resets.drop_phase_reset_at_playhead();
+        else if (app.active_markers_view == 'P')   phase_resets.drop_phase_reset_at_playhead();
         else if (shift)                    warpops.drop_inherit_marker_at_playhead();
         else                               warpops.drop_marker_at_playhead();
         return;
     }
     // Shift+P: toggle inherit (warp only).
     if (key == GuiKeys::P && !ctrl && !alt && shift) {
-        if (app.active_mode == 'P') return;
+        if (app.active_markers_view == 'P') return;
         warpops.toggle_inherits();
         return;
     }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
     if (key == GuiKeys::D && ctrl && !alt && !shift) {
-        if (app.active_mode == 'P') phase_resets.toggle_phase_reset_disabled();
+        if (app.active_markers_view == 'P') phase_resets.toggle_phase_reset_disabled();
         else                        warpops.toggle_disabled();
         return;
     }
     if (key == GuiKeys::Delete && !ctrl) {
-        if (app.active_mode == 'P') {
+        if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
         }
@@ -1528,7 +1528,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // `j` jumps the selected set to the playhead, anchored on
     // last_selected_marker. All-or-nothing clamp check.
     if (key == GuiKeys::J && !shift && !ctrl) {
-        if (app.active_mode == 'P') phase_resets.jump_phase_reset_selection_to_playhead();
+        if (app.active_markers_view == 'P') phase_resets.jump_phase_reset_selection_to_playhead();
         else                        warpops.jump_selection_to_playhead();
         return;
     }
@@ -1607,12 +1607,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Left / Ctrl+Right: nudge selected markers by one pixel.
     if (ctrl && !shift && key == GuiKeys::Left) {
-        if (app.active_mode == 'P') phase_resets.nudge_selected_phase_resets(-1);
+        if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
     if (ctrl && !shift && key == GuiKeys::Right) {
-        if (app.active_mode == 'P') phase_resets.nudge_selected_phase_resets(+1);
+        if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;
     }
@@ -1667,7 +1667,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
 
     const int sr = audio.sample_rate();
     int64_t src_sample = 0;
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         const auto& tv = app.phase_reset_markers.markers();
         if (idx >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
@@ -1788,7 +1788,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // are silent no-ops (phase resets have no flag rects). Bail
         // before hit-testing so we don't attempt selection bookkeeping
         // on a non-existent flag pack.
-        if (app.active_mode == 'P' && inside_top) return;
+        if (app.active_markers_view == 'P' && inside_top) return;
         // Brief six: capture playback / playhead state at press entry
         // so the four playhead-moving gestures below can reseek the
         // audio device to the new position when playback is active,
@@ -1804,9 +1804,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
         else                  return;
         // Brief J.2 Section 3: live selection lives in the global
-        // pair regardless of view domain. active_mode tells us
+        // pair regardless of view domain. active_markers_view tells us
         // which marker list the indices map to.
-        const bool sub_t = (app.active_mode == 'P');
+        const bool sub_t = (app.active_markers_view == 'P');
         std::set<int>& sel = app.selected_markers;
         int& last_sel      = app.last_selected_marker;
         const int n = sub_t
@@ -1938,7 +1938,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
                 const int hit_now = hit_test_flag(app, audio, x, y);
-                if (hit_now >= 0 && app.active_mode != 'P') {
+                if (hit_now >= 0 && app.active_markers_view != 'P') {
                     flag_editor.enter_top_flag_edit(
                         hit_now, static_cast<double>(x));
                     return;
@@ -1964,8 +1964,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             std::abs(y - app.last_click_y) <= kDoubleClickPixels;
 
         // A double-click in the waveform area creates a new marker at
-        // the click position (not the playhead). In warp mode, drops a
-        // warp marker (Shift forces inherit). In phase reset mode, drops
+        // the click position (not the playhead). In warp view, drops a
+        // warp marker (Shift forces inherit). In phase reset view, drops
         // a phase reset (Shift is ignored — no inherit concept). The
         // first single-click already moved the playhead via the
         // playhead-drag-press logic below.
@@ -1990,7 +1990,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 ? static_cast<double>(src_sample) /
                   static_cast<double>(sr)
                 : 0.0;
-            if (app.active_mode == 'P') {
+            if (app.active_markers_view == 'P') {
                 phase_resets.drop_phase_reset_at_position(t);
             } else {
                 warpops.drop_marker(t, /*inherit=*/shift);
@@ -2060,10 +2060,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Non-Ctrl: plain or Shift press. In the waveform area this
         // starts a playhead-drag gesture. In the top strip (flag click)
         // a warp-mode flag click enters the V.A1 text editor; in
-        // phase reset mode we keep the legacy select-on-click behavior.
+        // phase reset view we keep the legacy select-on-click behavior.
         if (inside_top) {
             if (hit >= 0) {
-                if (app.active_mode != 'P' && !shift) {
+                if (app.active_markers_view != 'P' && !shift) {
                     // V.A1: plain click on a warp flag enters edit
                     // mode. enter_top_flag_edit owns the selection +
                     // playhead update on its target-switching path,
@@ -2077,7 +2077,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 else       selection.set_single_selection(hit);
                 const int sr = audio.sample_rate();
                 int64_t src_sample;
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
                         app.phase_reset_markers.markers()[hit].time_seconds *
                         static_cast<double>(sr)));
@@ -2111,7 +2111,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     selection.toggle_selection_membership(hit);
                 }
                 int64_t src_sample;
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
                         app.phase_reset_markers.markers()[hit].time_seconds *
                         static_cast<double>(sr)));
@@ -2248,7 +2248,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
                 ph_for_local = to_source_frame(app, ph, tmap);
             }
             if (app.render_view_enabled) {
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     const auto& mv = app.render_view_phase_resets;
                     for (size_t i = 0; i < mv.size(); ++i) {
                         const int64_t s = static_cast<int64_t>(
@@ -2271,7 +2271,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
                         }
                     }
                 }
-            } else if (app.active_mode == 'P') {
+            } else if (app.active_markers_view == 'P') {
                 const auto& mv = app.phase_reset_markers.markers();
                 for (size_t i = 0; i < mv.size(); ++i) {
                     const int64_t s = static_cast<int64_t>(
@@ -2307,7 +2307,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
             }
             if (app.render_view_enabled) {
                 // Brief J.2 Section 3: render-view writes the
-                // global live pair. active_mode tells us which
+                // global live pair. active_markers_view tells us which
                 // marker list the indices map to.
                 if (shift) {
                     app.selected_markers.insert(snapped);
@@ -2394,7 +2394,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const int hit = hit_test_marker_line(app, audio, mouse_x);
             int64_t new_playhead;
             if (hit >= 0) {
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     new_playhead = static_cast<int64_t>(std::nearbyint(
                         app.render_view_phase_resets[hit].time_seconds *
                         static_cast<double>(sr)));
@@ -2460,7 +2460,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         int64_t new_playhead;
         if (hit >= 0) {
             int64_t src_sample;
-            if (app.active_mode == 'P') {
+            if (app.active_markers_view == 'P') {
                 src_sample = static_cast<int64_t>(std::nearbyint(
                     app.phase_reset_markers.markers()[hit].time_seconds *
                     static_cast<double>(sr)));
@@ -2499,7 +2499,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // and not while iteration mode owns the popup space.
         // The dwell timer is started/restarted on every transition into
         // an eligible rect; the on_tick handler flips visibility.
-        if (app.active_mode == 'W' &&
+        if (app.active_markers_view == 'W' &&
             !app.iteration_mode_enabled &&
             !text_editor::is_active(app.top_flag_editor) &&
             !app.queue_running) {

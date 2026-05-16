@@ -57,7 +57,7 @@ struct EngineParams {
     // User-curated phase reset frame list (source-frame domain). When non-empty,
     // the engine skips its internal phase reset detection and uses this list
     // verbatim for phase reset positioning. Must be sorted ascending.
-    // Typical source: GUI's phase reset mode, providing the union of inserted
+    // Typical source: GUI's phase reset view, providing the union of inserted
     // + active-detected (with displacement applied) entries.
     std::vector<int64_t> phase_reset_frames;
 };

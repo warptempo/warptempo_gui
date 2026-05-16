@@ -489,7 +489,7 @@ void GuiFlagEditor::commit_iter_edit() {
 // entry on the undo stack).
 void GuiFlagEditor::bulk_clear_iter_values() {
     if (!app.iteration_mode_enabled) return;
-    if (app.active_mode != 'W') return;
+    if (app.active_markers_view != 'W') return;
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {
@@ -588,7 +588,7 @@ void GuiFlagEditor::commit_bpm_edit() {
 // (regardless of mode state). Brief X.2: no undo entry; in-memory
 // only, no .warpmarkers write.
 void GuiFlagEditor::bulk_clear_bpm_values() {
-    if (app.active_mode != 'W') return;
+    if (app.active_markers_view != 'W') return;
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {
@@ -612,7 +612,7 @@ void GuiFlagEditor::bulk_clear_bpm_values() {
 // visual endpoint cue, and flips the mode flag.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
-    if (app.active_mode != 'W') return;
+    if (app.active_markers_view != 'W') return;
     if (app.selected_markers.size() != 1) return;
     const int owner = *app.selected_markers.begin();
     const auto& mv_const = app.warpmarkers.markers();

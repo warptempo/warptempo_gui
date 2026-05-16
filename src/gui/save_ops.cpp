@@ -62,7 +62,7 @@ bool GuiSaveOps::save() {
         if (!write_settings_file(app.settings_path,
                                  app.tab_a, app.tab_b,
                                  app.follow_mode,
-                                 app.active_mode,
+                                 app.active_markers_view,
                                  app.playback_speed,
                                  app.engine_settings)) {
             std::fprintf(stderr,

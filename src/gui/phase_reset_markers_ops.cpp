@@ -289,7 +289,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     target_render.trigger();
 }
 
-// `j` for phase reset mode: shift the selection so last_selected lands
+// `j` for phase reset view: shift the selection so last_selected lands
 // on the playhead. All-or-nothing clamp check.
 void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     if (app.selected_markers.empty()) return;

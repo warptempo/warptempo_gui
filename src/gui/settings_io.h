@@ -12,7 +12,7 @@ struct ViewState;
 // Parsed view-state contents of .settings. Engine-key lines are handled
 // separately by read_engine_settings_from_file; this struct carries only
 // the typed view-state fields (per-tab viewport / zoom / playhead, follow,
-// active_mode, playback_speed, per-tab and legacy trim).
+// active_markers_view, playback_speed, per-tab and legacy trim).
 struct ParsedSettings {
     bool    has_tab_a_vp   = false;
     int64_t tab_a_vp       = 0;
@@ -28,8 +28,8 @@ struct ParsedSettings {
     int64_t tab_b_ph       = 0;
     bool    has_follow         = false;
     bool    follow             = true;
-    bool    has_active_mode    = false;
-    char    active_mode        = 'W';
+    bool    has_active_markers_view    = false;
+    char    active_markers_view        = 'W';
     bool    has_playback_speed = false;
     float   playback_speed     = 1.0f;
     // Legacy singleton trim keys. Accepted on read for back-compat;
@@ -95,7 +95,7 @@ bool validate_engine_setting(const std::string& key,
 // not openable) returns std::nullopt and logs every violation to
 // stderr as `warptempo_gui: engine settings rejected: <reason>`.
 //
-// Non-engine canonical lines (view-state keys, follow, active_mode,
+// Non-engine canonical lines (view-state keys, follow, active_markers_view,
 // playback_speed, trim variants) are ignored by this function;
 // parse_settings_file handles them.
 std::optional<EngineSettings> read_engine_settings_from_file(
@@ -171,6 +171,6 @@ bool write_settings_file(
     const ViewState& tab_a,
     const ViewState& tab_b,
     bool follow,
-    char active_mode,
+    char active_markers_view,
     float playback_speed,
     const EngineSettings& engine);

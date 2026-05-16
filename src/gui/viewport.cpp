@@ -260,7 +260,7 @@ void Viewport::clear_hover_popup() {
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     // Dialog / drag / editor / queue still suppress hover in either
-    // view. Source-view also requires warp mode + iter mode off;
+    // view. Source-view also requires warp view + iter mode off;
     // render-view bypasses the mode checks because hover always
     // applies against the loaded render's warpmarkers.
     if (app.prompt.active ||
@@ -272,7 +272,7 @@ void Viewport::recompute_hover_at_cursor() {
         return;
     }
     if (!app.render_view_enabled &&
-        (app.active_mode != 'W' || app.iteration_mode_enabled)) {
+        (app.active_markers_view != 'W' || app.iteration_mode_enabled)) {
         clear_hover_popup();
         return;
     }

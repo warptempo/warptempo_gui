@@ -10,7 +10,7 @@
 //
 //   active_view_state,
 //   refresh_active_tab_from_app,
-//   switch_active_mode_to,
+//   switch_active_markers_view_to,
 //   switch_active_tab_to            → this->method_name (intra-cluster calls)
 //   prune_live_selection            → selection.prune_live_selection
 //   invalidate_waveform_area        → viewport.invalidate_waveform_area
@@ -33,7 +33,7 @@ void GuiTabMode::refresh_active_tab_from_app() {
     t.viewport_start_sample = app.viewport_start_sample;
     t.zoom_level            = app.zoom_level;
     t.playhead_sample       = app.playhead_sample;
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         t.phase_reset_selected      = app.selected_markers;
         t.phase_reset_last_selected = app.last_selected_marker;
     } else {
@@ -68,11 +68,11 @@ ViewState* GuiTabMode::active_view_state() {
 // then restores the destination mode's slot. Visible state (viewport /
 // zoom / playhead) is unaffected. Caller decides what invalidations to
 // run; this helper just shuffles the AppState fields.
-void GuiTabMode::switch_active_mode_to(char target_mode) {
-    if (target_mode == app.active_mode) return;
+void GuiTabMode::switch_active_markers_view_to(char target_mode) {
+    if (target_mode == app.active_markers_view) return;
     ViewState* vs = this->active_view_state();
     if (!vs) return;
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         vs->phase_reset_selected      = app.selected_markers;
         vs->phase_reset_last_selected = app.last_selected_marker;
         app.selected_markers        = vs->warp_selected;
@@ -83,7 +83,7 @@ void GuiTabMode::switch_active_mode_to(char target_mode) {
         app.selected_markers        = vs->phase_reset_selected;
         app.last_selected_marker    = vs->phase_reset_last_selected;
     }
-    app.active_mode = target_mode;
+    app.active_markers_view = target_mode;
     selection.prune_live_selection();
     viewport.clear_hover_popup();
 }
@@ -107,7 +107,7 @@ void GuiTabMode::switch_active_tab_to(char target_tab) {
     // current-mode slot. Mode itself is per-AppState (not per-tab),
     // so the destination tab's other-mode slot stays warm for any
     // future `p` flip back inside that tab.
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         app.selected_markers     = target.phase_reset_selected;
         app.last_selected_marker = target.phase_reset_last_selected;
     } else {
@@ -127,14 +127,14 @@ void GuiTabMode::switch_active_tab_to(char target_tab) {
     target_render.trigger();
 }
 
-// `p` key: toggle into/out of phase reset mode. Phase reset markers are
+// `p` key: toggle into/out of phase reset view. Phase reset markers are
 // authored independent of output_format — they're consumed only when
 // output_format=wav drives the engine; non-wav formats ignore them.
-void GuiTabMode::toggle_active_mode() {
-    if (app.active_mode == 'P') {
-        this->switch_active_mode_to('W');
+void GuiTabMode::toggle_active_markers_view() {
+    if (app.active_markers_view == 'P') {
+        this->switch_active_markers_view_to('W');
     } else {
-        this->switch_active_mode_to('P');
+        this->switch_active_markers_view_to('P');
     }
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

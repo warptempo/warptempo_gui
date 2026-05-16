@@ -505,7 +505,7 @@ int main(int argc, char** argv) {
         }
 
         // V.A3b: dwell-driven popup show. The motion handler already gates
-        // on warp mode + no editor + no drag + no dialog and clears
+        // on warp view + no editor + no drag + no dialog and clears
         // hover_popup when those conditions break, so here it's enough to
         // check the elapsed time and re-validate eligibility.
         if (!app.hover_popup.visible &&

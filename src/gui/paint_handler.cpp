@@ -470,8 +470,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 // Target view (brief 2): paint marker stems at their
                 // map_source_to_target-translated positions. No marker
                 // editing reaches here — input gates in input_handler.cpp
-                // block W/P-axis edits while target view is active.
-                if (app.active_mode == 'P') {
+                // block W/P-view edits while target view is active.
+                if (app.active_markers_view == 'P') {
                     render_phase_reset_markers(
                         cr, area, app.phase_reset_markers.markers(),
                         vp_start, vp_end, sr,
@@ -490,7 +490,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 // Brief F Section 3: when sub-mode is 'P', paint the
                 // render's phase reset list using the phase reset renderer
                 // (matches source-view's phase reset appearance).
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     render_phase_reset_markers(
                         cr, area, app.render_view_phase_resets,
                         vp_start, vp_end, sr,
@@ -500,7 +500,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                    vp_start, vp_end, sr,
                                    trim_struct, nullptr, drag_overlay);
                 }
-            } else if (app.active_mode == 'P') {
+            } else if (app.active_markers_view == 'P') {
                 render_phase_reset_markers(
                     cr, area, app.phase_reset_markers.markers(),
                     vp_start, vp_end, sr,
@@ -944,7 +944,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             }
 
             if (is_target) {
-                if (app.active_mode == 'P') {
+                if (app.active_markers_view == 'P') {
                     render_phase_reset_flags(
                         cr, top_strip,
                         app.phase_reset_markers.markers(),
@@ -979,7 +979,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 // Sub-mode 'P' (phase resets): paint via
                 // render_phase_reset_flags from app.render_view_phase_resets
                 // (no popups; phase reset markers are not popup-eligible).
-                if (app.active_mode != 'P') {
+                if (app.active_markers_view != 'P') {
                 render_flags(cr, top_strip, app.render_view_markers,
                              vp_start, vp_end, sr,
                              kFlagFontSize,
@@ -1051,7 +1051,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         nullptr,
                         drag_overlay);
                 }
-            } else if (app.active_mode == 'P') {
+            } else if (app.active_markers_view == 'P') {
                 render_phase_reset_flags(
                     cr, top_strip, app.phase_reset_markers.markers(),
                     vp_start, vp_end, sr,
@@ -1277,11 +1277,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                 // Brief 3a: three single-letter indicators between the
                 // timestamp and the dirty asterisk, in domain-axis-first
-                // order: S/T (view-domain) → W/P (marker class) →
-                // A/B (tab within marker class). All three suppressed in
+                // order: S/T (view-domain) → W/P (markers view) →
+                // A/B (tab within markers view). All three suppressed in
                 // render-view, matching the original A/B suppression
                 // (Tab key is gated out there, `t` is a silent no-op,
-                // and W/P meaning is render-view's own sub-mode).
+                // and W/P meaning is render-view's own sub-view).
                 const double tw = measure_timestamp_width(cr, seconds);
                 double right_after_indicators =
                     static_cast<double>(kTimestampPadX) + tw;
@@ -1307,7 +1307,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                     const double wp_x =
                         right_after_indicators + kTabLetterGapPx;
-                    const char wp_buf[2] = { app.active_mode, '\0' };
+                    const char wp_buf[2] = { app.active_markers_view, '\0' };
                     cairo_text_extents_t wp_ext;
                     cairo_text_extents(cr, wp_buf, &wp_ext);
                     cairo_move_to(cr, wp_x, baseline_y);

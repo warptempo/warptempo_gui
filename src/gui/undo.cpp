@@ -339,12 +339,12 @@ void Undo::do_undo() {
     // post-restore rules — selection state is mode-bound, so the rules
     // and the sanitize step must run against the correct list. Skip
     // entirely for settings-only entries: they don't carry an authoring
-    // mode, and active_mode is a view-state key that's not undoable.
-    if (entry.op_mode != 'S' && entry.op_mode != app.active_mode) {
+    // mode, and active_markers_view is a view-state key that's not undoable.
+    if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         // Stash the current selection into the leaving mode's slot,
         // then restore the destination mode's slot.
         ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
-        if (app.active_mode == 'P') {
+        if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
             curtab.phase_reset_last_selected = app.last_selected_marker;
             app.selected_markers           = curtab.warp_selected;
@@ -355,7 +355,7 @@ void Undo::do_undo() {
             app.selected_markers           = curtab.phase_reset_selected;
             app.last_selected_marker       = curtab.phase_reset_last_selected;
         }
-        app.active_mode = entry.op_mode;
+        app.active_markers_view = entry.op_mode;
     }
 
     // Post-restore rules apply only to marker-touching entries. Settings
@@ -423,9 +423,9 @@ void Undo::do_redo() {
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
-    if (entry.op_mode != 'S' && entry.op_mode != app.active_mode) {
+    if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
-        if (app.active_mode == 'P') {
+        if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
             curtab.phase_reset_last_selected = app.last_selected_marker;
             app.selected_markers           = curtab.warp_selected;
@@ -436,7 +436,7 @@ void Undo::do_redo() {
             app.selected_markers           = curtab.phase_reset_selected;
             app.last_selected_marker       = curtab.phase_reset_last_selected;
         }
-        app.active_mode = entry.op_mode;
+        app.active_markers_view = entry.op_mode;
     }
 
     if (entry.op_mode == 'S') {

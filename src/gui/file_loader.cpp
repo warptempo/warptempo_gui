@@ -111,7 +111,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phase_reset_markers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    app.active_mode    = 'W';
+    app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
     // Fresh file = fresh history. Both stacks cleared; the loaded state
@@ -221,7 +221,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
               ps.has_tab_b_zoom, ps.tab_b_zoom,
               ps.has_tab_b_ph, ps.tab_b_ph, app.tab_b);
         app.follow_mode    = ps.has_follow         ? ps.follow         : true;
-        app.active_mode    = ps.has_active_mode    ? ps.active_mode    : 'W';
+        app.active_markers_view    = ps.has_active_markers_view    ? ps.active_markers_view    : 'W';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
         // Trim: per-tab keys take precedence; the legacy singleton form,
         // when present without any per-tab keys, applies to tab_a only
@@ -323,7 +323,7 @@ void GuiFileLoader::revert_to_blank() {
     app.phase_reset_markers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    app.active_mode    = 'W';
+    app.active_markers_view    = 'W';
     app.drag          = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.hover_popup   = HoverPopupState{};

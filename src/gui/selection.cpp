@@ -67,7 +67,7 @@ void Selection::sanitize_selection_after_restore(int n) {
 
 void Selection::cycle_selection(bool forward) {
     const int sr = audio.sample_rate();
-    const bool phase_reset = (app.active_mode == 'P');
+    const bool phase_reset = (app.active_markers_view == 'P');
     const int n = phase_reset
         ? static_cast<int>(app.phase_reset_markers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());
@@ -156,11 +156,11 @@ void Selection::select_prev_marker() { cycle_selection(false); }
 void Selection::prune_live_selection() {
     int n = 0;
     if (app.render_view_enabled) {
-        n = (app.active_mode == 'P')
+        n = (app.active_markers_view == 'P')
             ? static_cast<int>(app.render_view_phase_resets.size())
             : static_cast<int>(app.render_view_markers.size());
     } else {
-        n = (app.active_mode == 'P')
+        n = (app.active_markers_view == 'P')
             ? static_cast<int>(app.phase_reset_markers.markers().size())
             : static_cast<int>(app.warpmarkers.markers().size());
     }
@@ -189,7 +189,7 @@ void Selection::sync_playhead_to_last_selected() {
     if (last < 0) return;
 
     int64_t src_sample = 0;
-    if (app.active_mode == 'P') {
+    if (app.active_markers_view == 'P') {
         const auto& tv = app.phase_reset_markers.markers();
         if (last >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(

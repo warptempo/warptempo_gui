@@ -138,7 +138,7 @@ struct DragState {
     // selection untouched. Cleared on the first moved transition.
     bool                   pending_collapse_to_hit = false;
     // Which list this drag operates on (chunk S.2.2). The motion / commit
-    // handlers dispatch on this so a drag started in phase reset mode
+    // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
     char                   drag_mode = 'W';
 };
@@ -272,7 +272,7 @@ enum class DialogTrigger {
     PASTE_CONFIRM,
 };
 
-// Active view-domain axis. Orthogonal to the marker-axis flag (W/P).
+// Active view-domain axis. Orthogonal to the markers-view flag (W/P).
 // In Source, app.viewport_start_sample / playhead_sample / zoom_level
 // carry source-frame values; in Target, they carry target-frame values.
 // On `t` toggle the live fields translate through the current timemap
@@ -383,20 +383,20 @@ struct AppState {
     // anchor on it.
     //
     // Chunk S.2.2: this pair holds the *active* selection — i.e. for the
-    // current tab + current `active_mode`. The persistent per-tab per-mode
+    // current tab + current `active_markers_view`. The persistent per-tab per-mode
     // slots live on ViewState and are saved/restored on mode/tab transitions.
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
-    // Active editing mode: 'W' = warp markers, 'P' = phase reset markers
-    // (chunk S.2.2). Toggled by `p`. Determines which list is visible /
-    // edited / hit-tested and which color set is used for the playhead
-    // and selected indicators.
-    char active_mode = 'W';
+    // Active markers view: 'W' = warp markers, 'P' = phase reset markers
+    // (chunk S.2.2). Toggled by `p`. Determines which marker collection
+    // is visible / edited / hit-tested and which color set is used for
+    // the playhead and selected indicators.
+    char active_markers_view = 'W';
 
     // Active view-domain axis. Source = the authored timeline; Target =
-    // the engine's deformed-output timeline. Orthogonal to active_mode
-    // (the W/P marker axis): `t` toggles S/T, `p` toggles W/P. While in
+    // the engine's deformed-output timeline. Orthogonal to active_markers_view
+    // (the W/P markers-view axis): `t` toggles S/T, `p` toggles W/P. While in
     // Target, app.viewport_start_sample / playhead_sample / zoom_level
     // are target-frame; the live fields' interpretation flips on toggle.
     // Render-view leaves this unchanged — `t` is dropped in render-view.
@@ -444,7 +444,7 @@ struct AppState {
     // limiter_enabled, title, audio_input, plus any free-form key typed
     // into the settings editor that isn't a view-state key) participate
     // in dirty via settings_dirty. View-state keys (viewport, zoom,
-    // playhead, follow_mode, active_mode, playback_speed) do NOT
+    // playhead, follow_mode, active_markers_view, playback_speed) do NOT
     // participate: they are silently persisted on Ctrl+S and silently
     // discarded on Ctrl+W without save.
     bool        warp_dirty           = false;
@@ -533,7 +533,7 @@ struct AppState {
     PromptState prompt;
 
     // Top-flag text editor (V.A1). Active only when editing a flag rect
-    // in warp mode. The editor owns the keyboard while active and
+    // in warp view. The editor owns the keyboard while active and
     // overlays a custom rect + cursor on top of render_flags.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
@@ -585,14 +585,14 @@ struct AppState {
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
 
-    // V.B iteration mode. Toggled by plain `i` in warp mode (no-op in
-    // phase reset mode). Session-only; survives mode-switches but is lost
+    // V.B iteration mode. Toggled by plain `i` in warp view (no-op in
+    // phase reset view). Session-only; survives view-switches but is lost
     // on app close. When true, hover popups are suppressed and a
     // persistent iteration popup is rendered above every owning
     // marker's flag rect.
     bool iteration_mode_enabled = false;
 
-    // Brief X.2 BPM mode. Toggled by plain `m` in warp mode. Mutually
+    // Brief X.2 BPM mode. Toggled by plain `m` in warp view. Mutually
     // exclusive with iteration_mode_enabled (toggling one ON forces the
     // other OFF). Session-only. The popup owner is identified at runtime
     // by walking markers for bpm_is_popup_owner=true; at most one marker holds
@@ -722,7 +722,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 
 // hit_test_iter_popup: V.B iteration-popup hit-test. Returns the marker
 // index whose iteration popup contains (mouse_x, mouse_y), or -1. Always
-// -1 when iteration mode is off, in phase reset mode, or in render-view.
+// -1 when iteration mode is off, in phase reset view, or in render-view.
 int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
                         int mouse_x, int mouse_y,
                         double* out_text_left_x = nullptr);
@@ -739,6 +739,6 @@ int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
 // display a numeric tempo (pass markers and label_ref markers qualify;
 // owning markers don't). Render-view honors the loaded render's
 // markers regardless of the pre-toggle mode; source-view requires warp
-// mode with iteration mode off. Always false in phase reset mode (no
+// view with iteration mode off. Always false in phase reset view (no
 // pass concept).
 bool popup_eligible_marker(const AppState& app, int idx);

@@ -60,13 +60,13 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // list drives hit-testing. 'P' reads phase reset time_seconds and
     // converts to source frames via the source sample rate
     // (matching source-view's phase reset branch).
-    const bool rv_trans = rv && app.active_mode == 'P';
+    const bool rv_trans = rv && app.active_markers_view == 'P';
     const int n =
         rv_trans
             ? static_cast<int>(app.render_view_phase_resets.size())
             : rv
                 ? static_cast<int>(app.render_view_markers.size())
-                : (app.active_mode == 'P')
+                : (app.active_markers_view == 'P')
                     ? static_cast<int>(app.phase_reset_markers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
     // Brief 3b: target view paints marker stems at map_source_to_target
@@ -88,7 +88,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
         } else if (rv) {
             ms = app.render_view_markers[i].time_seconds *
                  static_cast<double>(sr);
-        } else if (app.active_mode == 'P') {
+        } else if (app.active_markers_view == 'P') {
             ms = app.phase_reset_markers.markers()[i].time_seconds *
                  static_cast<double>(sr);
         } else {
@@ -119,7 +119,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // flags; short-circuit to no-hit so click and hover paths see a
     // bare top strip.
     if (app.render_view_enabled &&
-        app.active_mode == 'P') {
+        app.active_markers_view == 'P') {
         return -1;
     }
     const GuiRect area = waveform_area(app);
@@ -168,7 +168,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             scratch_cr, top, app.render_view_markers,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             nullptr, drag_overlay);
-    } else if (app.active_mode == 'P') {
+    } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             scratch_cr, top, app.phase_reset_markers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
@@ -194,7 +194,7 @@ int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
                         int mouse_x, int mouse_y,
                         double* out_text_left_x) {
     if (!app.iteration_mode_enabled) return -1;
-    if (app.active_mode != 'W') return -1;
+    if (app.active_markers_view != 'W') return -1;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     cairo_surface_t* scratch_s = cairo_image_surface_create(
@@ -262,7 +262,7 @@ bool popup_eligible_marker(const AppState& app, int idx) {
         const auto& m = mv[idx];
         return m.tempo_inherits || !m.label_ref.empty();
     }
-    if (app.active_mode != 'W') return false;
+    if (app.active_markers_view != 'W') return false;
     if (app.iteration_mode_enabled) return false;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
@@ -274,7 +274,7 @@ int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
                        int mouse_x, int mouse_y,
                        double* out_text_left_x) {
     if (!app.bpm_mode_enabled) return -1;
-    if (app.active_mode != 'W') return -1;
+    if (app.active_markers_view != 'W') return -1;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     cairo_surface_t* scratch_s = cairo_image_surface_create(

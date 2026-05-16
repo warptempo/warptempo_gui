@@ -15,7 +15,7 @@ struct GuiTargetRender;
 // instead of over the flag rect.
 //
 // commit() routes the typed key through three paths:
-// 1. View-state keys (viewport / zoom / playhead / follow / active_mode /
+// 1. View-state keys (viewport / zoom / playhead / follow / active_markers_view /
 //    playback_speed, plus the per-tab trim keys) are rejected — they have
 //    dedicated gestures.
 // 2. trim_begin / trim_end parse the value as MM:SS.mmm and write through
