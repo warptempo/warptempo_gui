@@ -224,7 +224,9 @@ int max_valid_numeric_level(int waveform_width_px,
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
-    if (a.view_domain == ViewDomain::Target && a.target_view_total_frames > 0) {
+    if (a.view_domain == ViewDomain::Target &&
+        !a.render_view_enabled &&
+        a.target_view_total_frames > 0) {
         return a.target_view_total_frames;
     }
     return audio.total_frames();
