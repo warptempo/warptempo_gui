@@ -35,7 +35,7 @@ constexpr int kZoomTableSize    = 10;
 // X.7.8b-2: hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them.
-constexpr int kMarkerHitHalfPx    = 3;
+constexpr int kMarkerHitHalfPx    = 4;
 constexpr int kDoubleClickMs      = 300;
 constexpr int kDoubleClickPixels  = 5;
 

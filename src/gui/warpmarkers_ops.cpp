@@ -49,7 +49,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     if (sr <= 0) return;
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = 3.0 * spp / sr_d;  // 3 pixels at current zoom
+    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const auto& mv = app.warpmarkers.markers();
     for (const auto& m : mv) {
         if (std::abs(m.time_seconds - time_seconds) < eps) {
@@ -433,7 +433,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     // never stack even at the tightest clamp. When a selected marker
     // has no neighbor on a side, clamp to [eps, total_duration - eps]
     // so the drag can't leave the audio range.
-    const double eps = 3.0 * spp / sr_d;
+    const double eps = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
 
@@ -612,7 +612,7 @@ std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool
     }
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = 3.0 * spp / sr_d;  // 3 pixels at current zoom
+    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
 

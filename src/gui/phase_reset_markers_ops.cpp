@@ -37,7 +37,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     if (sr <= 0) return;
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = 3.0 * spp / sr_d;  // 3 pixels at current zoom
+    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const auto& tv = app.phase_reset_markers.markers();
     for (const auto& m : tv) {
         if (std::abs(m.time_seconds - time_seconds) < eps) {
@@ -154,7 +154,7 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
     }
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = 3.0 * spp / sr_d;  // 3 pixels at current zoom
+    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
 
