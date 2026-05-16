@@ -10,7 +10,7 @@
 
 class GuiAudio;
 class GuiPlatform;
-struct GuiTargetIteration;
+struct GuiTargetRender;
 
 // X.7.5a: warp-authoring cluster, extracted from main.cpp's inline
 // lambdas. Covers the basic authoring lambdas (drop / delete / toggle /
@@ -34,7 +34,7 @@ struct GuiWarpMarkersOps {
     Selection&            selection;
     Undo&                 undo;
     GuiPlaybackLifecycle& playback_lifecycle;
-    GuiTargetIteration&   target_iteration;
+    GuiTargetRender&   target_render;
 
     GuiWarpMarkersOps(AppState&             app_,
                       const GuiAudio&       audio_,
@@ -43,7 +43,7 @@ struct GuiWarpMarkersOps {
                       Selection&            selection_,
                       Undo&                 undo_,
                       GuiPlaybackLifecycle& playback_lifecycle_,
-                      GuiTargetIteration&   target_iteration_)
+                      GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -51,7 +51,7 @@ struct GuiWarpMarkersOps {
           selection(selection_),
           undo(undo_),
           playback_lifecycle(playback_lifecycle_),
-          target_iteration(target_iteration_) {}
+          target_render(target_render_) {}
 
     void drop_marker(double time_seconds, bool inherit);
     void drop_marker_at_playhead();

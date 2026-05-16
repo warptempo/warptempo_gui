@@ -70,8 +70,8 @@ void GuiInputHandler::finalize_render_run() {
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
     // A target-view edit during this archival render may have queued a
-    // pending iteration. Worker is now idle — fire it.
-    target_iteration.maybe_dispatch_pending();
+    // pending target render. Worker is now idle — fire it.
+    target_render.maybe_dispatch_pending();
 }
 
 void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
@@ -164,9 +164,9 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
     ++batch_.next_index;
     dispatch_next_batch_entry();
     // dispatch_next_batch_entry either dispatched the next batch
-    // entry (worker is busy → pending iteration stays queued) or
+    // entry (worker is busy → pending target render stays queued) or
     // finalized via finalize_render_run (which already pumps the
-    // pending iteration). Either way we don't need to call
+    // pending target render). Either way we don't need to call
     // maybe_dispatch_pending here.
 }
 
@@ -1147,18 +1147,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Space-bar is modifier-independent.
     if (key == GuiKeys::Space) {
-        // Target-view playback gating: refuse Space-to-play while an
-        // iteration update is in flight (current is stale by
+        // Target-view playback gating: refuse Space-to-play while a
+        // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
         // happened to be running before an edit, the trigger() helper
         // already froze it, so playback.is_playing() is false in
-        // practice. The empty-iteration-buffer case (no successful
-        // iteration render yet in this session) is also refused so the
+        // practice. The empty-target-buffer case (no successful target
+        // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
         if (app.view_domain == ViewDomain::Target && !playback.is_playing()) {
-            if (target_iteration.is_updating()) return;
-            if (app.iteration_buffer_frames <= 0) return;
+            if (target_render.is_updating()) return;
+            if (app.target_buffer_frames <= 0) return;
         }
         playback_lifecycle.toggle_playback();
         return;
@@ -1496,7 +1496,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 undo.push_settings_undo(std::move(pre));
                 viewport.invalidate_waveform_area();
                 viewport.invalidate_timestamp_area();
-                target_iteration.trigger();
+                target_render.trigger();
             }
         }
         return;
@@ -2134,11 +2134,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // on — it'd be a no-op move + a wasted teardown.
                 //
                 // Target view: the audio device is bound to
-                // app.iteration_buffer, which represents target frames
-                // [iteration_buffer_target_start_frame,
-                //  + iteration_buffer_frames) indexed [0, frames).
-                // Translate the target-domain `sample` into an
-                // iteration-buffer-frame before passing to play(),
+                // app.target_buffer, which represents target frames
+                // [target_buffer_start_frame,
+                //  + target_buffer_frames) indexed [0, frames).
+                // Translate the target-domain `sample` into a
+                // target-buffer-frame before passing to play(),
                 // mirroring the shape in toggle_playback's target-view
                 // branch. Out-of-range click stops playback rather
                 // than letting it continue from a stale position;
@@ -2147,18 +2147,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing && sample != playhead_at_click_entry) {
                     if (app.view_domain == ViewDomain::Target &&
                         !app.render_view_enabled) {
-                        if (app.iteration_buffer_frames <= 0) {
+                        if (app.target_buffer_frames <= 0) {
                             playback.stop();
                         } else {
                             const int64_t bias =
-                                app.iteration_buffer_target_start_frame;
+                                app.target_buffer_start_frame;
                             const int64_t local = sample - bias;
                             if (local < 0 ||
-                                local >= app.iteration_buffer_frames) {
+                                local >= app.target_buffer_frames) {
                                 playback.stop();
                             } else {
                                 playback.play(local,
-                                              app.iteration_buffer_frames);
+                                              app.target_buffer_frames);
                             }
                         }
                     } else {
@@ -2184,22 +2184,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // keeps playback alive by reseeking to the click
                 // position. Target-view translation matches the
                 // marker-line branch above — see the comment there
-                // for the iteration-buffer-frame rationale.
+                // for the target-buffer-frame rationale.
                 if (was_playing && sample != playhead_at_click_entry) {
                     if (app.view_domain == ViewDomain::Target &&
                         !app.render_view_enabled) {
-                        if (app.iteration_buffer_frames <= 0) {
+                        if (app.target_buffer_frames <= 0) {
                             playback.stop();
                         } else {
                             const int64_t bias =
-                                app.iteration_buffer_target_start_frame;
+                                app.target_buffer_start_frame;
                             const int64_t local = sample - bias;
                             if (local < 0 ||
-                                local >= app.iteration_buffer_frames) {
+                                local >= app.target_buffer_frames) {
                                 playback.stop();
                             } else {
                                 playback.play(local,
-                                              app.iteration_buffer_frames);
+                                              app.target_buffer_frames);
                             }
                         }
                     } else {
@@ -2631,7 +2631,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            target_iteration.trigger();
+            target_render.trigger();
             return;
         }
     }
@@ -2656,7 +2656,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            target_iteration.trigger();
+            target_render.trigger();
             return;
         }
     }
@@ -2667,7 +2667,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }
 
 void GuiInputHandler::handle_trim_set_end_at_playhead() {
@@ -2697,7 +2697,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            target_iteration.trigger();
+            target_render.trigger();
             return;
         }
     }
@@ -2719,7 +2719,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            target_iteration.trigger();
+            target_render.trigger();
             return;
         }
     }
@@ -2730,7 +2730,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }
 
 void GuiInputHandler::handle_trim_unset_begin() {
@@ -2742,7 +2742,7 @@ void GuiInputHandler::handle_trim_unset_begin() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }
 
 void GuiInputHandler::handle_trim_unset_end() {
@@ -2754,7 +2754,7 @@ void GuiInputHandler::handle_trim_unset_end() {
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }
 
 void GuiInputHandler::handle_view_domain_toggle() {
@@ -2868,14 +2868,14 @@ void GuiInputHandler::handle_view_domain_toggle() {
     gui.invalidate_region(0, 0, app.width, app.height);
 
     if (going_to_target) {
-        // S → T: dispatch an eager iteration render so playback is
+        // S → T: dispatch an eager target render so playback is
         // ready without a first-edit wait. The helper handles the
         // playback freeze + cancel-clear-dispatch sequence.
-        target_iteration.trigger();
+        target_render.trigger();
     } else {
-        // T → S: cancel any in-flight iteration render and rebind
+        // T → S: cancel any in-flight target render and rebind
         // playback to source.wav. No replacement dispatch — source
         // view's playback reads source.wav across archival renders.
-        target_iteration.rebind_to_source();
+        target_render.rebind_to_source();
     }
 }

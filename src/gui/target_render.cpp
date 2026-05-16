@@ -1,4 +1,4 @@
-#include "target_iteration.h"
+#include "target_render.h"
 
 #include "app_state.h"
 #include "timemap.h"
@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <utility>
 
-void GuiTargetIteration::trigger() {
+void GuiTargetRender::trigger() {
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
     if (app.view_domain != ViewDomain::Target) return;
@@ -37,7 +37,7 @@ void GuiTargetIteration::trigger() {
 
     // Surface the "updating..." status. The bottom_strip_wide() predicate
     // reads queue_progress_text; "rendering..." (archival) and
-    // "updating..." (iteration) share the slot.
+    // "updating..." (target render) share the slot.
     app.queue_progress_text = "updating...";
     viewport.invalidate_timestamp_area();
 
@@ -49,10 +49,10 @@ void GuiTargetIteration::trigger() {
         return;
     }
     // Worker is idle. Dispatch immediately.
-    dispatch_iteration_now();
+    dispatch_render_now();
 }
 
-void GuiTargetIteration::maybe_dispatch_pending() {
+void GuiTargetRender::maybe_dispatch_pending() {
     if (!pending_)                  return;
     if (async_renderer.is_busy())   return;
     // Re-validate target view: a target → source toggle between trigger()
@@ -62,32 +62,32 @@ void GuiTargetIteration::maybe_dispatch_pending() {
         pending_ = false;
         return;
     }
-    dispatch_iteration_now();
+    dispatch_render_now();
 }
 
-void GuiTargetIteration::dispatch_iteration_now() {
+void GuiTargetRender::dispatch_render_now() {
     pending_   = false;
     in_flight_ = true;
 
     // The batch state machine's cancel sentinel may still be set from
-    // trigger(); the iteration's on_done doesn't read it but the next
+    // trigger(); the target render's on_done doesn't read it but the next
     // archival render path needs a clean slate.
     app.queue_cancel_requested = false;
 
     // Re-stamp the progress text. A cancelled archival's on_done
     // (finalize_render_run) clears the text in its terminal branch,
-    // and the iteration dispatch may run in that callback's pumping
+    // and the target render's dispatch may run in that callback's pumping
     // path. Re-asserting "updating..." here keeps the bottom strip
-    // wide for the duration of the actual iteration render.
+    // wide for the duration of the actual target render.
     app.queue_progress_text = "updating...";
     viewport.invalidate_timestamp_area();
 
-    // Clear the iteration buffer; do_render appends synthesised samples
+    // Clear the target buffer; do_render appends synthesised samples
     // into it via std::vector::insert. The start_frame is also cleared
-    // for symmetry — it will be recomputed at on_iteration_done time.
-    app.iteration_buffer.clear();
-    app.iteration_buffer_frames = 0;
-    app.iteration_buffer_target_start_frame = 0;
+    // for symmetry — it will be recomputed at on_render_done time.
+    app.target_buffer.clear();
+    app.target_buffer_frames = 0;
+    app.target_buffer_start_frame = 0;
 
     RenderRequest req;
     req.source_audio_path = app.source_audio_path;
@@ -110,7 +110,7 @@ void GuiTargetIteration::dispatch_iteration_now() {
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead.
-    req.output_buffer = &app.iteration_buffer;
+    req.output_buffer = &app.target_buffer;
     // Force the peak limiter on. Brick-walling at the user's configured
     // ceiling protects the speakers from spikes the unrendered engine
     // would otherwise emit. This bypasses do_render's trim-derived
@@ -118,10 +118,10 @@ void GuiTargetIteration::dispatch_iteration_now() {
     req.force_peak_limiter = true;
 
     async_renderer.dispatch(std::move(req),
-        [this](RenderOutcome o) { on_iteration_done(o); });
+        [this](RenderOutcome o) { on_render_done(o); });
 }
 
-void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
+void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     in_flight_ = false;
 
     if (outcome == RenderOutcome::Success) {
@@ -130,24 +130,24 @@ void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
         // source's channel count (engine preserves channel count).
         const int ch = audio.channels();
         if (ch > 0) {
-            app.iteration_buffer_frames =
-                static_cast<int64_t>(app.iteration_buffer.size() /
+            app.target_buffer_frames =
+                static_cast<int64_t>(app.target_buffer.size() /
                                      static_cast<size_t>(ch));
         } else {
-            app.iteration_buffer_frames = 0;
+            app.target_buffer_frames = 0;
         }
         // Capture the full-target-frame coordinate that
-        // iteration_buffer[0] represents. With trim set, this is
+        // target_buffer[0] represents. With trim set, this is
         // map_source_to_target(trim_begin_frame) against the full-
         // source timemap — the engine rendered only the trim range,
         // so its frame 0 corresponds to the trim's target-frame start.
-        // With trim unset, frame 0 of the iteration buffer corresponds
+        // With trim unset, frame 0 of the target buffer corresponds
         // to target frame 0 (full-song render). Capture only after
-        // iteration_buffer_frames has been set so a failed channel
+        // target_buffer_frames has been set so a failed channel
         // probe doesn't leave start_frame set against an empty buffer.
-        app.iteration_buffer_target_start_frame = 0;
+        app.target_buffer_start_frame = 0;
         const ViewState& vs = active_view_state(app);
-        if (vs.has_trim_begin && app.iteration_buffer_frames > 0 &&
+        if (vs.has_trim_begin && app.target_buffer_frames > 0 &&
             audio.sample_rate() > 0 && audio.total_frames() > 0) {
             const auto tmap = build_target_view_timemap(
                 app, audio.sample_rate(),
@@ -158,32 +158,32 @@ void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
             const double tgt = map_source_to_target(
                 static_cast<size_t>(trim_begin_frame < 0
                                     ? 0 : trim_begin_frame), tmap);
-            app.iteration_buffer_target_start_frame =
+            app.target_buffer_start_frame =
                 static_cast<int64_t>(std::nearbyint(tgt));
         }
         // Only rebind if we're still in target view. A T→S toggle
         // during render already called rebind_to_source(); we don't
         // want to undo that.
         if (app.view_domain == ViewDomain::Target &&
-            app.iteration_buffer_frames > 0) {
+            app.target_buffer_frames > 0) {
             // The trigger always freezes playback before dispatch, so
             // the device should still be stopped here. The rebind helper
             // refuses if the device is somehow playing.
-            playback.rebind_buffer(app.iteration_buffer.data(),
-                                   app.iteration_buffer_frames);
+            playback.rebind_buffer(app.target_buffer.data(),
+                                   app.target_buffer_frames);
         }
     } else if (outcome == RenderOutcome::Cancelled) {
-        std::fprintf(stderr, "warptempo_gui: iteration cancelled\n");
-        // Leave the iteration buffer's frames count at 0 — playback
+        std::fprintf(stderr, "warptempo_gui: target render cancelled\n");
+        // Leave the target buffer's frames count at 0 — playback
         // gating checks this to refuse Space.
-        app.iteration_buffer.clear();
-        app.iteration_buffer_frames = 0;
-        app.iteration_buffer_target_start_frame = 0;
+        app.target_buffer.clear();
+        app.target_buffer_frames = 0;
+        app.target_buffer_start_frame = 0;
     } else {
-        std::fprintf(stderr, "warptempo_gui: iteration failed\n");
-        app.iteration_buffer.clear();
-        app.iteration_buffer_frames = 0;
-        app.iteration_buffer_target_start_frame = 0;
+        std::fprintf(stderr, "warptempo_gui: target render failed\n");
+        app.target_buffer.clear();
+        app.target_buffer_frames = 0;
+        app.target_buffer_start_frame = 0;
     }
 
     // Clear status. Mirrors finalize_render_run: invalidate first (so
@@ -197,17 +197,17 @@ void GuiTargetIteration::on_iteration_done(RenderOutcome outcome) {
     maybe_dispatch_pending();
 }
 
-void GuiTargetIteration::rebind_to_source() {
+void GuiTargetRender::rebind_to_source() {
     // Called from the target → source view toggle. Cancel any in-flight
-    // iteration render and clear the pending dispatch — source view's
-    // playback reads source.wav, not iteration_buffer.
+    // target render and clear the pending dispatch — source view's
+    // playback reads source.wav, not target_buffer.
     if (async_renderer.is_busy() && in_flight_) {
         async_renderer.request_cancel();
     }
     pending_ = false;
 
-    // Clear status if it still says "updating..." (the iteration on_done
-    // also clears it but that fires asynchronously).
+    // Clear status if it still says "updating..." (the target render's
+    // on_done also clears it but that fires asynchronously).
     if (app.queue_progress_text == "updating...") {
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
@@ -220,9 +220,9 @@ void GuiTargetIteration::rebind_to_source() {
     if (audio.total_frames() > 0) {
         playback.rebind_buffer(audio.samples_ptr(), audio.total_frames());
     }
-    // Iteration buffer is no longer the live playback source; null out
+    // Target buffer is no longer the live playback source; null out
     // its target-domain anchor so a future T→S→T round trip starts
-    // with a clean slate. iteration_buffer and frames stay populated
+    // with a clean slate. target_buffer and frames stay populated
     // (cheap; the next trigger() in target view will overwrite them).
-    app.iteration_buffer_target_start_frame = 0;
+    app.target_buffer_start_frame = 0;
 }

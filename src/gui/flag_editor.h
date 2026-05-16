@@ -10,7 +10,7 @@
 
 #include <string>
 
-struct GuiTargetIteration;
+struct GuiTargetRender;
 
 // X.7.5b: flag-editor cluster, extracted from main.cpp's inline lambdas.
 // Covers the top-flag canonical-line editor (V.A1), the V.B iteration
@@ -23,20 +23,20 @@ struct GuiFlagEditor {
     Viewport&             viewport;
     Selection&            selection;
     Undo&                 undo;
-    GuiTargetIteration&   target_iteration;
+    GuiTargetRender&   target_render;
 
     GuiFlagEditor(AppState&             app_,
                   GuiAudio&             audio_,
                   Viewport&             viewport_,
                   Selection&            selection_,
                   Undo&                 undo_,
-                  GuiTargetIteration&   target_iteration_)
+                  GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
-          target_iteration(target_iteration_) {}
+          target_render(target_render_) {}
 
     std::string build_locked_prefix(const GuiWarpMarker& m);
     void exit_top_flag_edit_no_commit();

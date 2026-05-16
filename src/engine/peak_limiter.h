@@ -5,8 +5,8 @@
 #include <vector>
 
 // Time-domain lookahead peak limiter. Replaces the ffmpeg alimiter
-// subprocess used on trimmed renders, and is reused by L-mode iteration
-// rendering (writes through an in-memory write_cb in that path).
+// subprocess used on trimmed renders, and is reused by the target render
+// path (writes through an in-memory write_cb in that path).
 //
 // Algorithm: single-stage lookahead with predicted-peak ramp-down and
 // exponential release. Follows ffmpeg alimiter's core shape with shorter

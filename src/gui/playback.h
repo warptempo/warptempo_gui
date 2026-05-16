@@ -96,8 +96,8 @@ public:
     // match the sample rate and channel count the device was init()'d with
     // — only `samples` and `total_frames` change. The cursor is reset to
     // 0; the end_sample is reset to 0 so the next play() supplies a fresh
-    // range. Used by target-view iteration to rebind playback to the
-    // freshly-rendered iteration_buffer, and to swap back to source.wav
+    // range. Used by the target render to rebind playback to the
+    // freshly-rendered target_buffer, and to swap back to source.wav
     // when leaving target view.
     void rebind_buffer(const float* samples, int64_t total_frames);
 

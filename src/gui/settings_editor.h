@@ -6,7 +6,7 @@
 #include "viewport.h"
 
 struct Undo;
-struct GuiTargetIteration;
+struct GuiTargetRender;
 
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
@@ -30,20 +30,20 @@ struct GuiSettingsEditor {
     Viewport&             viewport;
     GuiTabMode&           tab_mode;
     Undo&                 undo;
-    GuiTargetIteration&   target_iteration;
+    GuiTargetRender&   target_render;
 
     GuiSettingsEditor(AppState&             app_,
                       GuiAudio&             audio_,
                       Viewport&             viewport_,
                       GuiTabMode&           tab_mode_,
                       Undo&                 undo_,
-                      GuiTargetIteration&   target_iteration_)
+                      GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           tab_mode(tab_mode_),
           undo(undo_),
-          target_iteration(target_iteration_) {}
+          target_render(target_render_) {}
 
     void open();
     void exit_no_commit();

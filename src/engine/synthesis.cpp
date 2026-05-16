@@ -187,7 +187,7 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             buf + n_frames * static_cast<size_t>(channels));
     };
     // Mirror Synthesis::process: when limiter_mode == Peak, wrap the
-    // append in a PeakLimiter so target-view iteration audio is
+    // append in a PeakLimiter so the target render's audio is
     // brick-walled at the configured ceiling. The spectral limiter is
     // skipped on the buffer path (Pass 2 is gated off in engine.cpp);
     // the peak limiter is the only limiter that runs here.

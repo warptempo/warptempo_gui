@@ -190,7 +190,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // limiter anywhere. When true, trim state decides: no trim →
         // engine spectral limiter (frequency-domain, final-archival);
         // trim → engine peak limiter (time-domain, fast iteration).
-        // Target-view iteration overrides this to LimiterMode::Peak
+        // The target render overrides this to LimiterMode::Peak
         // unconditionally — see RenderRequest::force_peak_limiter.
         LimiterMode limiter_mode = LimiterMode::None;
         if (req.force_peak_limiter) {

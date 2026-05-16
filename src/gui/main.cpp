@@ -16,7 +16,7 @@
 #include "settings_editor.h"
 #include "settings_io.h"
 #include "tab_mode.h"
-#include "target_iteration.h"
+#include "target_render.h"
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
@@ -357,33 +357,33 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start async renderer; exiting\n");
         return 1;
     }
-    // GuiTargetIteration is the cancel-restart dispatcher for target-view
-    // live audio iteration. It must be constructed after async_renderer
+    // GuiTargetRender is the cancel-restart dispatcher for target-view
+    // live audio. It must be constructed after async_renderer
     // (a dependency) and BEFORE the op clusters (which take it as a
     // ref). The trigger() method is a no-op in source view, so injecting
     // it into source-view-only call sites is harmless.
-    GuiTargetIteration target_iteration(app, audio, async_renderer, playback,
-                                        viewport);
+    GuiTargetRender target_render(app, audio, async_renderer, playback,
+                                  viewport);
     GuiTabMode tab_mode(app, audio, viewport, selection,
-                        playback_lifecycle, target_iteration);
+                        playback_lifecycle, target_render);
     Undo undo(app, viewport, selection, playback_lifecycle, tab_mode,
-              target_iteration);
+              target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
-                                         playback_lifecycle, target_iteration);
+                                         playback_lifecycle, target_render);
     GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
-                              playback_lifecycle, target_iteration);
+                              playback_lifecycle, target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
-                              target_iteration);
+                              target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, tab_mode);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
-                                              target_iteration);
+                                              target_render);
     GuiSaveOps save_ops(app, undo, tab_mode, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
     GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode, undo,
-                                      target_iteration);
+                                      target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
@@ -393,7 +393,7 @@ int main(int argc, char** argv) {
                                   phase_reset_propagate,
                                   async_renderer,
                                   playback_lifecycle, save_ops, prompt,
-                                  settings_editor, target_iteration);
+                                  settings_editor, target_render);
 
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
@@ -557,22 +557,22 @@ int main(int argc, char** argv) {
         // in wall time, so this gives the freshest possible position
         // right before paint consumes the damage list.
         const int64_t cur = playback.cursor();
-        // Target view: playback.cursor() is an iteration-buffer-frame
-        // index in [0, iteration_buffer_frames). app.playhead_sample is
+        // Target view: playback.cursor() is a target-buffer-frame
+        // index in [0, target_buffer_frames). app.playhead_sample is
         // full-target-frame. Translate at the boundary. Source view and
         // render view: identity (impl_->samples points at the source's
         // own audio for both; cursor is already in the active-domain
-        // coordinate system). The iteration_buffer_frames > 0 guard
-        // ensures the bias is only applied when a successful iteration
+        // coordinate system). The target_buffer_frames > 0 guard
+        // ensures the bias is only applied when a successful target
         // render has populated the buffer; pre-paint can fire briefly
-        // between dispatch and on_iteration_done if a paint races a
+        // between dispatch and on_render_done if a paint races a
         // cancel, and applying a stale bias against the source-bound
         // buffer would skew the playhead.
         int64_t translated = cur;
         if (app.view_domain == ViewDomain::Target &&
             !app.render_view_enabled &&
-            app.iteration_buffer_frames > 0) {
-            translated = cur + app.iteration_buffer_target_start_frame;
+            app.target_buffer_frames > 0) {
+            translated = cur + app.target_buffer_start_frame;
         }
         if (translated == app.playhead_sample) return;
 

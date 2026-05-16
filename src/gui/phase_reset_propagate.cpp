@@ -2,7 +2,7 @@
 
 #include "phase_reset_clipboard.h"
 #include "phase_reset_markers.h"
-#include "target_iteration.h"
+#include "target_render.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
@@ -168,5 +168,5 @@ void PhaseResetPropagate::paste_apply() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }

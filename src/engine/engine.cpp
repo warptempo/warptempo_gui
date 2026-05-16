@@ -233,7 +233,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // the same identity row the spectral limiter would have produced for
     // a no-overshoot signal — so synthesis sees a no-op attenuation row
     // regardless of which branch we take. Pass 3 still applies the peak
-    // limiter when limiter_mode == Peak (target-view iteration sets
+    // limiter when limiter_mode == Peak (the target render sets
     // force_peak_limiter at the GUI boundary to opt in).
     if (!p.output_buffer) {
         auto t_p3_0 = std::chrono::steady_clock::now();

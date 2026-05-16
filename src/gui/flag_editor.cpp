@@ -1,6 +1,6 @@
 #include "flag_editor.h"
 
-#include "target_iteration.h"
+#include "target_render.h"
 
 #include "audio.h"
 #include "render.h"
@@ -307,7 +307,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    target_iteration.trigger();
+    target_render.trigger();
 }
 
 // Open an iteration popup edit on `idx`. The seed pending is the
@@ -480,7 +480,7 @@ void GuiFlagEditor::commit_iter_edit() {
     // iter range values are session-only and don't affect engine
     // output. Only the case-4 additive tempo_base offset hits the
     // engine — fire only when that branch ran.
-    if (tempo_changed) target_iteration.trigger();
+    if (tempo_changed) target_render.trigger();
 }
 
 // Bulk-clear the session-only iter values across all warp markers.

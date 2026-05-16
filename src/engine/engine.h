@@ -34,7 +34,7 @@ struct EngineParams {
     // synthesis output to this caller-owned vector (append-only via
     // std::vector::insert) and skips the spectral limiter pass — Pass 2
     // (limiter.process) is not invoked. Pass 3 still applies a peak
-    // limiter when limiter_mode == Peak (target-view iteration opts in
+    // limiter when limiter_mode == Peak (the target render opts in
     // via RenderRequest::force_peak_limiter at the GUI boundary). The
     // existing output_audio_path field is ignored on this path. The
     // buffer must remain valid through run_warptempo_engine; the caller

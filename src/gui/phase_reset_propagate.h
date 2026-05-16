@@ -4,7 +4,7 @@
 #include "undo.h"
 #include "viewport.h"
 
-struct GuiTargetIteration;
+struct GuiTargetRender;
 
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate
@@ -16,12 +16,12 @@ struct PhaseResetPropagate {
     AppState&           app;
     Viewport&           viewport;
     Undo&               undo;
-    GuiTargetIteration& target_iteration;
+    GuiTargetRender& target_render;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
-                        GuiTargetIteration& target_iteration_)
+                        GuiTargetRender& target_render_)
         : app(app_), viewport(viewport_), undo(undo_),
-          target_iteration(target_iteration_) {}
+          target_render(target_render_) {}
 
     // Ctrl+P copy. Caller has already verified W-mode + exactly two
     // warp markers selected. Replaces the clipboard with the named

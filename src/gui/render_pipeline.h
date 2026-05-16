@@ -67,13 +67,13 @@ struct RenderRequest {
     // path when limiter_mode == Peak (force_peak_limiter or the trim-
     // derived selection picks it). Defaults to nullptr; the existing
     // wav-to-disk path is taken when null. Reserved for target-view
-    // iteration rendering; not authoring-facing. Non-wav output_format
+    // target rendering; not authoring-facing. Non-wav output_format
     // branches silently ignore this field.
     std::vector<float>* output_buffer = nullptr;
 
-    // Target-view iteration override. When true, do_render forces
+    // Target-view override. When true, do_render forces
     // LimiterMode::Peak regardless of engine_settings.limiter_enabled_on_render
-    // or the trim state, so the user monitoring iteration output through
+    // or the trim state, so the user monitoring target output through
     // speakers gets brick-walled at the configured ceiling on every
     // update. Reading peak_limiter_ceiling_dbfs / attack_ms / release_ms
     // from engine_settings as usual. Defaults to false — archival renders

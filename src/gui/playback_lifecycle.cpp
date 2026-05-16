@@ -41,14 +41,14 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // returns the visible playhead to the position where Space-to-play
 // was last pressed (return-to-launch).
 //
-// Target-view branch: the audio device is bound to app.iteration_buffer
-// (rebound by GuiTargetIteration::on_iteration_done on Success). The
+// Target-view branch: the audio device is bound to app.target_buffer
+// (rebound by GuiTargetRender::on_render_done on Success). The
 // playhead in target view is a full-target-frame coordinate; the
-// iteration buffer is indexed [0, iteration_buffer_frames) and
+// target buffer is indexed [0, target_buffer_frames) and
 // represents the target-domain range starting at
-// iteration_buffer_target_start_frame. Translate the bounds at the
+// target_buffer_start_frame. Translate the bounds at the
 // dispatch site so playback.play()'s frame indices land inside the
-// iteration buffer. Speed is forced to 1.0 here (sibling case to
+// target buffer. Speed is forced to 1.0 here (sibling case to
 // render view): target view's whole purpose is that audio plays the
 // user's authored warp, so an extra speed multiplier on top would
 // defeat the brief. The persistent app.playback_speed is left
@@ -64,20 +64,20 @@ void GuiPlaybackLifecycle::toggle_playback() {
     int64_t end;
     if (app.view_domain == ViewDomain::Target &&
         !app.render_view_enabled) {
-        // Target view: iteration buffer is the live playback source.
-        // Refuse if no successful iteration render has populated it yet
+        // Target view: the target buffer is the live playback source.
+        // Refuse if no successful target render has populated it yet
         // — Space's outer gate in input_handler.cpp already checks this,
         // but stay defensive here so a future caller can't slip through.
-        if (app.iteration_buffer_frames <= 0) return;
-        const int64_t bias = app.iteration_buffer_target_start_frame;
+        if (app.target_buffer_frames <= 0) return;
+        const int64_t bias = app.target_buffer_start_frame;
         const int64_t local = app.playhead_sample - bias;
-        // Playhead outside the iteration buffer's target-domain extent
+        // Playhead outside the target buffer's target-domain extent
         // is a silent no-op. Mirrors the "playhead at or past trim_end
         // is a silent no-op" pattern below for source view.
         if (local < 0) return;
-        if (local >= app.iteration_buffer_frames) return;
+        if (local >= app.target_buffer_frames) return;
         start = local;
-        end   = app.iteration_buffer_frames;
+        end   = app.target_buffer_frames;
     } else {
         end = viewport.trim_end_sample();
         if (app.playhead_sample >= end) return;
@@ -96,7 +96,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
 }
 
 // Helpers for Shift+<digit> speed selection. Refused silently in target
-// view: target view's audio is the warped iteration buffer, and adding
+// view: target view's audio is the warped target buffer, and adding
 // a playback-speed multiplier on top would defeat the brief's whole
 // premise (the audible result must match the authored warp, not the
 // warp scaled by an extra factor). The persistent app.playback_speed

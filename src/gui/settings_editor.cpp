@@ -1,7 +1,7 @@
 #include "settings_editor.h"
 
 #include "settings_io.h"
-#include "target_iteration.h"
+#include "target_render.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "undo.h"
@@ -138,8 +138,8 @@ void GuiSettingsEditor::commit() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.settings_editor);
-        // Trim is engine input — fire the iteration update.
-        target_iteration.trigger();
+        // Trim is engine input — fire the target render.
+        target_render.trigger();
         return;
     }
 
@@ -178,9 +178,9 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
-    // Engine settings are engine input — fire iteration update.
+    // Engine settings are engine input — fire target render.
     // (title / output_format don't change rendered audio in any
-    // user-visible way, but the trigger is cheap and the iteration
-    // is throttled by cancel-restart, so we don't gate per-key.)
-    target_iteration.trigger();
+    // user-visible way, but the trigger is cheap and the target render
+    // surfaces in target view.)
+    target_render.trigger();
 }

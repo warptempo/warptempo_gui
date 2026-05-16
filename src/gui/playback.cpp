@@ -344,7 +344,7 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
     if (!impl_->device_inited) {
         // No live device — just stash so a future init() against the same
         // sample rate / channel count would see the new buffer. In
-        // practice the iteration path runs only after a successful init,
+        // practice the target render path runs only after a successful init,
         // so this branch is defensive.
         impl_->samples      = samples;
         impl_->total_frames = total_frames;
