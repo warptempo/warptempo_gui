@@ -68,6 +68,26 @@ struct GuiTargetRender {
     // stopped; callers (the toggle handler) stop playback before calling.
     void rebind_to_source();
 
+    // Target-view entry hook. Called from sites that *enter* target view
+    // (S→T toggle, render-view exit while view_domain==Target). If the
+    // target buffer is current (is_dirty_ == false and frames > 0),
+    // rebinds playback to the existing buffer with no dispatch. Otherwise
+    // falls through to trigger() to cancel-clear-dispatch a fresh render.
+    // No-op in source view. Distinct from trigger() in semantics:
+    // trigger() is "an edit happened, the buffer is now stale";
+    // ensure_ready() is "we just entered target view, is the buffer
+    // current?".
+    void ensure_ready();
+
+    // Wholesale-invalidate hook for file_loader's two buffer-clear sites
+    // (load_file success branch and revert_to_blank). Sets the dirty bit
+    // unconditionally; callers separately zero target_buffer / frames /
+    // start_frame in the same block. A subsequent T-entry will dispatch
+    // against the new source rather than re-binding to whatever was in
+    // the cleared buffer's prior life. Replaced by cancel_for_load() in
+    // the follow-up brief.
+    void mark_dirty() { is_dirty_ = true; }
+
 private:
     // Construct and dispatch the target RenderRequest. Caller must
     // have verified the worker is idle and we are in target view.
@@ -87,4 +107,13 @@ private:
     // Allows is_updating() to report "still updating" between dispatch
     // and completion.
     bool in_flight_ = false;
+    // True iff app.target_buffer is potentially stale relative to the
+    // current engine input. Set by trigger() (any output-affecting
+    // mutation) and by mark_dirty() (file_loader's wholesale source
+    // invalidation). Cleared inside on_render_done's success branch
+    // after the rebind, where the buffer is known to match the
+    // engine input that produced it. Initial value true: at
+    // construction the buffer is empty and no render has run, so the
+    // first ensure_ready() must dispatch.
+    bool is_dirty_  = true;
 };

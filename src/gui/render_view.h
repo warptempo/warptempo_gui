@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+struct GuiTargetRender;
+
 // X.7.6: render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
 // the .rendersettings sidecar (per-render zoom/viewport/playhead persistence),
@@ -33,6 +35,7 @@ struct GuiRenderView {
     Selection&        selection;
     Viewport&         viewport;
     GuiTabMode&       tab_mode;
+    GuiTargetRender&  target_render;
 
     // Chunk W: parked source audio. Populated only while
     // app.render_view_enabled is true — std::move'd off `audio` on
@@ -47,14 +50,16 @@ struct GuiRenderView {
                   GuiPlatform&      gui_,
                   Selection&        selection_,
                   Viewport&         viewport_,
-                  GuiTabMode&       tab_mode_)
+                  GuiTabMode&       tab_mode_,
+                  GuiTargetRender&  target_render_)
         : app(app_),
           audio(audio_),
           playback(playback_),
           gui(gui_),
           selection(selection_),
           viewport(viewport_),
-          tab_mode(tab_mode_) {}
+          tab_mode(tab_mode_),
+          target_render(target_render_) {}
 
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
     std::filesystem::path rendersettings_path(

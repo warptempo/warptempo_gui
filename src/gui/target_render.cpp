@@ -9,6 +9,12 @@
 #include <utility>
 
 void GuiTargetRender::trigger() {
+    // Output-affecting mutation hook: the buffer is now stale relative
+    // to engine input. Set the bit unconditionally — even in source
+    // view — so a later S→T ensure_ready() sees the staleness and
+    // dispatches against the accumulated source-view edits rather than
+    // re-binding to a buffer that no longer matches the live state.
+    is_dirty_ = true;
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
     if (app.view_domain != ViewDomain::Target) return;
@@ -171,6 +177,13 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
             // refuses if the device is somehow playing.
             playback.rebind_buffer(app.target_buffer.data(),
                                    app.target_buffer_frames);
+            // Buffer now matches the engine input that produced it.
+            // Gate the clear behind the rebind path: a render that
+            // completed while view_domain flipped to Source must not
+            // clear the bit, since a later S→T may follow source-view
+            // edits whose trigger() set the bit while the render was
+            // already in flight.
+            is_dirty_ = false;
         }
     } else if (outcome == RenderOutcome::Cancelled) {
         std::fprintf(stderr, "warptempo_gui: target render cancelled\n");
@@ -195,6 +208,39 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     // A new trigger() may have fired during render. Pump the pending
     // dispatch now that the worker is idle.
     maybe_dispatch_pending();
+}
+
+void GuiTargetRender::ensure_ready() {
+    // Source view does not use target_buffer. Match trigger()'s
+    // source-view no-op invariant.
+    if (app.view_domain != ViewDomain::Target) return;
+    // No audio loaded — nothing to do.
+    if (audio.total_frames() <= 0)              return;
+    if (app.source_audio_path.empty())          return;
+
+    // Clean path: the buffer is current AND non-empty. Rebind playback
+    // to it without dispatching a render.
+    if (!is_dirty_ && app.target_buffer_frames > 0) {
+        // Defensive stop: rebind_buffer refuses if the device is playing.
+        // Call sites are expected to have stopped playback already (the
+        // S→T toggle handler does, render-view exit's restore_source_audio
+        // does), but a future caller that forgets shouldn't get a silent
+        // refused-rebind.
+        if (playback.is_playing()) {
+            playback.stop();
+            app.is_playing        = false;
+            app.last_space_sample = app.playhead_sample;
+        }
+        playback.rebind_buffer(app.target_buffer.data(),
+                               app.target_buffer_frames);
+        return;
+    }
+
+    // Dirty or empty buffer: dispatch fresh. trigger() re-sets the bit
+    // (already true here by construction) and runs the cancel-clear-
+    // dispatch sequence. Identical body to the original S→T eager-
+    // dispatch path that this method replaces.
+    trigger();
 }
 
 void GuiTargetRender::rebind_to_source() {

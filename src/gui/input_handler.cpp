@@ -2868,10 +2868,13 @@ void GuiInputHandler::handle_view_domain_toggle() {
     gui.invalidate_region(0, 0, app.width, app.height);
 
     if (going_to_target) {
-        // S → T: dispatch an eager target render so playback is
-        // ready without a first-edit wait. The helper handles the
-        // playback freeze + cancel-clear-dispatch sequence.
-        target_render.trigger();
+        // S → T: ensure playback is bound to a current target buffer.
+        // ensure_ready short-circuits to a clean rebind if no edits
+        // have invalidated the cached buffer since the last successful
+        // render; otherwise it falls through to trigger()'s cancel-
+        // clear-dispatch sequence so a fresh render runs against the
+        // current engine input.
+        target_render.ensure_ready();
     } else {
         // T → S: cancel any in-flight target render and rebind
         // playback to source.wav. No replacement dispatch — source

@@ -2,6 +2,7 @@
 
 #include "phase_reset_markers.h"
 #include "settings_io.h"
+#include "target_render.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
@@ -377,6 +378,14 @@ void GuiRenderView::restore_source_audio() {
     if (!playback.init(audio.sample_rate(), audio.channels(),
                        audio.samples_ptr(), audio.total_frames())) {
         std::fprintf(stderr, "warptempo_gui: playback disabled\n");
+    }
+    // H1 fix: render-view exit lands playback bound to source.wav
+    // unconditionally above. If the user is still in target view (R
+    // does not touch view_domain), rebind to the target buffer —
+    // ensure_ready dispatches a fresh render if the buffer is stale,
+    // otherwise it short-circuits to a clean playback.rebind_buffer.
+    if (app.view_domain == ViewDomain::Target) {
+        target_render.ensure_ready();
     }
     gui.invalidate_region(0, 0, app.width, app.height);
 }

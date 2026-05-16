@@ -9,6 +9,8 @@
 
 #include <string>
 
+struct GuiTargetRender;
+
 // X.7.9: file-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
 // playback-init pipeline (load_file) and its companion revert-to-blank
@@ -18,25 +20,28 @@
 // produced by methods on this struct, so the platform wiring in main.cpp
 // is a single line each.
 struct GuiFileLoader {
-    AppState&      app;
-    GuiAudio&      audio;
-    GuiPlatform&   gui;
-    GuiPlayback&   playback;
-    WaveformCache& wf_cache;
-    Viewport&      viewport;
+    AppState&        app;
+    GuiAudio&        audio;
+    GuiPlatform&     gui;
+    GuiPlayback&     playback;
+    WaveformCache&   wf_cache;
+    Viewport&        viewport;
+    GuiTargetRender& target_render;
 
-    GuiFileLoader(AppState&      app_,
-                  GuiAudio&      audio_,
-                  GuiPlatform&   gui_,
-                  GuiPlayback&   playback_,
-                  WaveformCache& wf_cache_,
-                  Viewport&      viewport_)
+    GuiFileLoader(AppState&        app_,
+                  GuiAudio&        audio_,
+                  GuiPlatform&     gui_,
+                  GuiPlayback&     playback_,
+                  WaveformCache&   wf_cache_,
+                  Viewport&        viewport_,
+                  GuiTargetRender& target_render_)
         : app(app_),
           audio(audio_),
           gui(gui_),
           playback(playback_),
           wf_cache(wf_cache_),
-          viewport(viewport_) {}
+          viewport(viewport_),
+          target_render(target_render_) {}
 
     bool load_file(const std::string& path);
     void revert_to_blank();

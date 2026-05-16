@@ -1,6 +1,7 @@
 #include "file_loader.h"
 
 #include "settings_io.h"
+#include "target_render.h"
 
 #include <sndfile.h>
 
@@ -73,6 +74,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
     app.target_buffer_start_frame = 0;
+    target_render.mark_dirty();
 
     app.playhead_sample       = 0;
     app.viewport_start_sample = 0;
@@ -350,6 +352,7 @@ void GuiFileLoader::revert_to_blank() {
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
     app.target_buffer_start_frame = 0;
+    target_render.mark_dirty();
     app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
 
