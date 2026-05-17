@@ -290,6 +290,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
     //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
     //   - f (no mods)          → follow mode toggle
+    //   - c (no mods)            → center+max-zoom-in on playhead
     //
     // Note on the absent disk-save-shape keys: Ctrl+S (save),
     // Ctrl+E (queue-add), Ctrl+Alt+R (single render to source dir),
@@ -343,11 +344,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             (key == GuiKeys::Digit0) && !ctrl && !shift && !alt;
         const bool is_follow =
             (key == GuiKeys::F && !ctrl && !shift && !alt);
+        const bool is_center =
+            (key == GuiKeys::C && !ctrl && !shift && !alt);
         if (!(is_r || is_nav || is_render_view_nav_jump ||
               is_commit || is_playback ||
               is_scrub || is_jump || is_esc ||
               is_sub_view_toggle || is_ctrl_q || is_ctrl_w ||
-              is_zoom || is_zoom_symbol || is_zero || is_follow)) {
+              is_zoom || is_zoom_symbol || is_zero || is_follow ||
+              is_center)) {
             return;
         }
     }
