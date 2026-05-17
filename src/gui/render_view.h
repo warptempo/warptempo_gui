@@ -1,10 +1,10 @@
 #pragma once
 
+#include "active_views.h"
 #include "app_state.h"
 #include "audio.h"
 #include "playback.h"
 #include "selection.h"
-#include "tab_mode.h"
 #include "viewport.h"
 #include "platform_wayland.h"
 
@@ -21,7 +21,7 @@ struct GuiTargetRender;
 // the per-entry selection stash with stat-tuple gating, the load-into-active-audio
 // path that parks the source GuiAudio onto an owned member, and the inverse
 // restore. clear_hover_popup is reached through viewport;
-// refresh_active_tab_view_from_app is reached through tab_mode.
+// refresh_active_tab_view_from_app is reached through active_views.
 //
 // `source_audio_held` is owned (not a reference): it was a local in main()
 // before extraction and is used only by load_render_view_at /
@@ -34,7 +34,7 @@ struct GuiRenderView {
     GuiPlatform&      gui;
     Selection&        selection;
     Viewport&         viewport;
-    GuiTabMode&       tab_mode;
+    GuiActiveViews&   active_views;
     GuiTargetRender&  target_render;
 
     // Chunk W: parked source audio. Populated only while
@@ -50,7 +50,7 @@ struct GuiRenderView {
                   GuiPlatform&      gui_,
                   Selection&        selection_,
                   Viewport&         viewport_,
-                  GuiTabMode&       tab_mode_,
+                  GuiActiveViews&   active_views_,
                   GuiTargetRender&  target_render_)
         : app(app_),
           audio(audio_),
@@ -58,7 +58,7 @@ struct GuiRenderView {
           gui(gui_),
           selection(selection_),
           viewport(viewport_),
-          tab_mode(tab_mode_),
+          active_views(active_views_),
           target_render(target_render_) {}
 
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();

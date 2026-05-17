@@ -11,8 +11,8 @@
 #include "render_view.h"
 #include "save_ops.h"
 #include "selection.h"
+#include "active_views.h"
 #include "settings_editor.h"
-#include "tab_mode.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
 #include "phase_reset_markers_ops.h"
@@ -104,7 +104,7 @@ struct GuiInputHandler {
     GuiPhaseResetMarkersOps& phase_resets;
     GuiFlagEditor&           flag_editor;
     GuiRenderView&           render_view;
-    GuiTabMode&              tab_mode;
+    GuiActiveViews&          active_views;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
     GuiPlaybackLifecycle&    playback_lifecycle;
@@ -124,7 +124,7 @@ struct GuiInputHandler {
                     GuiPhaseResetMarkersOps& phase_resets_,
                     GuiFlagEditor&           flag_editor_,
                     GuiRenderView&           render_view_,
-                    GuiTabMode&              tab_mode_,
+                    GuiActiveViews&          active_views_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiPlaybackLifecycle&    playback_lifecycle_,
@@ -143,7 +143,7 @@ struct GuiInputHandler {
           phase_resets(phase_resets_),
           flag_editor(flag_editor_),
           render_view(render_view_),
-          tab_mode(tab_mode_),
+          active_views(active_views_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
           playback_lifecycle(playback_lifecycle_),

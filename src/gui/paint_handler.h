@@ -18,7 +18,7 @@
 //
 // Construction site: main.cpp, after AppState / GuiAudio / GuiPlayback /
 // GuiPlatform / WaveformCache exist. Lifetime is the same scope as the other
-// operation structs (Undo, Selection, GuiTabMode, etc.).
+// operation structs (Undo, Selection, GuiActiveViews, etc.).
 //
 // Reference list deviates from the original brief:
 //   - The brief listed Viewport& and std::function<bool(int)>&

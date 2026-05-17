@@ -8,15 +8,20 @@
 
 struct GuiTargetRender;
 
-// X.7.7: mode/tab management cluster, extracted from main.cpp's inline
+// X.7.7: active-views management cluster, extracted from main.cpp's inline
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
-// active-tab snapshot push (refresh_active_tab_view_from_app), the per-mode
-// selection-slot resolver (active_view_state), the W/P view swap
-// (switch_active_markers_view_to), the `p`-keypress entry path with engine
-// gating (toggle_active_markers_view), and the Ctrl+Tab flip (switch_active_tab_view_to).
+// two view-axis swap operations (W/P markers and A/B tab) plus their
+// shared snapshot machinery: active-tab snapshot push
+// (refresh_active_tab_view_from_app), the per-view selection-slot resolver
+// (active_view_state), the W/P markers-view swap
+// (switch_active_markers_view_to), the `p`-keypress entry path with
+// engine gating (toggle_active_markers_view), and the Ctrl+Tab tab-view
+// flip (switch_active_tab_view_to). The S/T audio-view axis is handled
+// elsewhere (input_handler) — it's a domain translation, not a snapshot
+// swap, and lives outside this cluster's scope by design.
 // clear_hover_popup is reached through viewport;
 // stop_playback_if_playing through playback_lifecycle.
-struct GuiTabMode {
+struct GuiActiveViews {
     AppState&             app;
     const GuiAudio&       audio;
     Viewport&             viewport;
@@ -24,12 +29,12 @@ struct GuiTabMode {
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiTargetRender&   target_render;
 
-    GuiTabMode(AppState&             app_,
-               const GuiAudio&       audio_,
-               Viewport&             viewport_,
-               Selection&            selection_,
-               GuiPlaybackLifecycle& playback_lifecycle_,
-               GuiTargetRender&   target_render_)
+    GuiActiveViews(AppState&             app_,
+                   const GuiAudio&       audio_,
+                   Viewport&             viewport_,
+                   Selection&            selection_,
+                   GuiPlaybackLifecycle& playback_lifecycle_,
+                   GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),

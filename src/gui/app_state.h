@@ -675,11 +675,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 
-// Free-function form of GuiTabMode::active_view_state() restricted to
+// Free-function form of GuiActiveViews::active_view_state() restricted to
 // source-view (the A/B tab pair). The renderer / trim path / the b/e/u
-// handlers don't have access to GuiTabMode but need to reach the active
+// handlers don't have access to GuiActiveViews but need to reach the active
 // tab's view-state from an AppState reference alone. Source-view-only:
-// render-view callers must keep using GuiTabMode::active_view_state(),
+// render-view callers must keep using GuiActiveViews::active_view_state(),
 // which handles the render-entry case.
 inline ViewState& active_view_state(AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;

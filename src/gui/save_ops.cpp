@@ -17,7 +17,7 @@ bool GuiSaveOps::save() {
     }
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.
-    tab_mode.refresh_active_tab_view_from_app();
+    active_views.refresh_active_tab_view_from_app();
 
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {

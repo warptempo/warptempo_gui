@@ -19,7 +19,7 @@
 // lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   clear_hover_popup            → viewport.clear_hover_popup
-//   refresh_active_tab_view_from_app  → tab_mode.refresh_active_tab_view_from_app
+//   refresh_active_tab_view_from_app  → active_views.refresh_active_tab_view_from_app
 //                                  (X.7.13 retired the std::function forwarders)
 //   prune_live_selection         → selection.prune_live_selection
 //   rendersettings_path,
@@ -267,7 +267,7 @@ bool GuiRenderView::load_render_view_at(int index) {
     // reads it back on render-view exit so the user lands where they
     // left the source view rather than at sample 0.
     if (source_audio_held.total_frames() == 0) {
-        tab_mode.refresh_active_tab_view_from_app();
+        active_views.refresh_active_tab_view_from_app();
         source_audio_held = std::move(audio);
     }
     audio = std::move(next);

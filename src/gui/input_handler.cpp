@@ -30,7 +30,7 @@
 //
 //   - Capture-by-reference of `app`, `audio`, `gui`, `playback`, `viewport`,
 //     `selection`, `undo`, `warpops`, `phase resets`, `flag_editor`,
-//     `render_view`, `tab_mode`, `playback_lifecycle`, `save_ops`, `prompt`
+//     `render_view`, `active_views`, `playback_lifecycle`, `save_ops`, `prompt`
 //     is now reference-member access on `this`. The std::function forwarder
 //     pattern (clear_hover_popup, stop_playback_if_playing, save_markers,
 //     request_close_or_revert, prompt_activate_response, toggle_playback,
@@ -1246,7 +1246,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // single handler serves both views. Render-view inherits the
     // engine precondition check from toggle_active_markers_view.
     if (key == GuiKeys::P && !ctrl && !shift && !alt) {
-        tab_mode.toggle_active_markers_view();
+        active_views.toggle_active_markers_view();
         return;
     }
 
@@ -1443,7 +1443,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // current viewport/zoom/playhead to the leaving tab, restores the
     // target tab. Does not mark the document dirty.
     if (ctrl && !shift && key == GuiKeys::Tab) {
-        tab_mode.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         return;
     }
 

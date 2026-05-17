@@ -1,12 +1,12 @@
-#include "tab_mode.h"
+#include "active_views.h"
 
 #include "target_render.h"
 
 #include <cstdio>
 #include <string>
 
-// X.7.7: mode/tab management cluster. Method bodies are byte-identical to
-// the lambdas they replaced in main.cpp, with these mechanical rewrites:
+// X.7.7: active-views management cluster. Method bodies are byte-identical
+// to the lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   active_view_state,
 //   refresh_active_tab_view_from_app,
@@ -28,7 +28,7 @@
 // so "remembered spot" semantics stay consistent between the two paths.
 // Also stashes the active selection into the per-mode slot so a tab
 // flip + mode flip can restore the right pair on return.
-void GuiTabMode::refresh_active_tab_view_from_app() {
+void GuiActiveViews::refresh_active_tab_view_from_app() {
     ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     t.viewport_start_sample = app.viewport_start_sample;
     t.zoom_level            = app.zoom_level;
@@ -48,7 +48,7 @@ void GuiTabMode::refresh_active_tab_view_from_app() {
 // active render entry's `state`. Returns nullptr when no valid
 // active view-state is available; callers must handle nullptr
 // by no-op-ing rather than silently corrupting a fallback slot.
-ViewState* GuiTabMode::active_view_state() {
+ViewState* GuiActiveViews::active_view_state() {
     if (app.render_view_enabled) {
         if (app.render_view_index >= 0 &&
             app.render_view_index <
@@ -68,7 +68,7 @@ ViewState* GuiTabMode::active_view_state() {
 // then restores the destination mode's slot. Visible state (viewport /
 // zoom / playhead) is unaffected. Caller decides what invalidations to
 // run; this helper just shuffles the AppState fields.
-void GuiTabMode::switch_active_markers_view_to(char target_mode) {
+void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     ViewState* vs = this->active_view_state();
     if (!vs) return;
@@ -91,7 +91,7 @@ void GuiTabMode::switch_active_markers_view_to(char target_mode) {
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
 // current viewport/zoom/playhead to the leaving tab, restores the
 // target tab. Does not mark the document dirty.
-void GuiTabMode::switch_active_tab_view_to(char target_tab) {
+void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // Synchronous stop so the next tick doesn't snap the playhead
     // back to the audio cursor, overwriting the target tab's
     // stored playhead.
@@ -130,7 +130,7 @@ void GuiTabMode::switch_active_tab_view_to(char target_tab) {
 // `p` key: toggle into/out of phase reset view. Phase reset markers are
 // authored independent of output_format — they're consumed only when
 // output_format=wav drives the engine; non-wav formats ignore them.
-void GuiTabMode::toggle_active_markers_view() {
+void GuiActiveViews::toggle_active_markers_view() {
     if (app.active_markers_view == 'P') {
         this->switch_active_markers_view_to('W');
     } else {

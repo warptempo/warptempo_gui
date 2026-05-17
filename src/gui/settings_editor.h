@@ -1,8 +1,8 @@
 #pragma once
 
+#include "active_views.h"
 #include "app_state.h"
 #include "audio.h"
-#include "tab_mode.h"
 #include "viewport.h"
 
 struct Undo;
@@ -28,20 +28,20 @@ struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
     Viewport&             viewport;
-    GuiTabMode&           tab_mode;
+    GuiActiveViews&       active_views;
     Undo&                 undo;
     GuiTargetRender&   target_render;
 
     GuiSettingsEditor(AppState&             app_,
                       GuiAudio&             audio_,
                       Viewport&             viewport_,
-                      GuiTabMode&           tab_mode_,
+                      GuiActiveViews&       active_views_,
                       Undo&                 undo_,
                       GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
-          tab_mode(tab_mode_),
+          active_views(active_views_),
           undo(undo_),
           target_render(target_render_) {}
 

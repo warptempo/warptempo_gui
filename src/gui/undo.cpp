@@ -314,7 +314,7 @@ void Undo::do_undo() {
     // which writes app.playhead_sample / app.viewport_start_sample —
     // those writes must land on the tab the action was authored on.
     if (entry.tab != app.active_tab_view) {
-        tab_mode.switch_active_tab_view_to(entry.tab);
+        active_views.switch_active_tab_view_to(entry.tab);
     }
 
     // Restore settings (engine_settings + per-tab trim) before the marker
@@ -407,7 +407,7 @@ void Undo::do_redo() {
     if (app.history.saved_valid) app.history.saved_distance -= 1;
 
     if (entry.tab != app.active_tab_view) {
-        tab_mode.switch_active_tab_view_to(entry.tab);
+        active_views.switch_active_tab_view_to(entry.tab);
     }
 
     app.engine_settings             = std::move(entry.settings.engine_settings);

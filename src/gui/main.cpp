@@ -11,11 +11,11 @@
 #include "render.h"
 #include "render_pipeline.h"
 #include "render_view.h"
+#include "active_views.h"
 #include "save_ops.h"
 #include "selection.h"
 #include "settings_editor.h"
 #include "settings_io.h"
-#include "tab_mode.h"
 #include "target_render.h"
 #include "text_display.h"
 #include "text_editor.h"
@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
     // (viewport.clear_hover_popup, playback_lifecycle.stop_playback_if_playing
     // / toggle_playback / set_playback_speed, save_ops.save,
     // prompt.request_close_or_revert / activate_response,
-    // tab_mode.refresh_active_tab_view_from_app).
+    // active_views.refresh_active_tab_view_from_app).
 
     Viewport viewport(app, audio, gui, playback);
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
@@ -367,9 +367,9 @@ int main(int argc, char** argv) {
     // so it must be constructed after target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport,
                               target_render);
-    GuiTabMode tab_mode(app, audio, viewport, selection,
-                        playback_lifecycle, target_render);
-    Undo undo(app, viewport, selection, playback_lifecycle, tab_mode,
+    GuiActiveViews active_views(app, audio, viewport, selection,
+                                playback_lifecycle, target_render);
+    Undo undo(app, viewport, selection, playback_lifecycle, active_views,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle, target_render);
@@ -378,21 +378,21 @@ int main(int argc, char** argv) {
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
-                              viewport, tab_mode, target_render);
+                              viewport, active_views, target_render);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render);
-    GuiSaveOps save_ops(app, undo, tab_mode, viewport);
+    GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
-    GuiSettingsEditor settings_editor(app, audio, viewport, tab_mode, undo,
+    GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
                                       target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
                                   warpops, phase_resets, flag_editor,
-                                  render_view, tab_mode,
+                                  render_view, active_views,
                                   phase_reset_propagate,
                                   async_renderer,
                                   playback_lifecycle, save_ops, prompt,

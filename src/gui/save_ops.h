@@ -1,7 +1,7 @@
 #pragma once
 
+#include "active_views.h"
 #include "app_state.h"
-#include "tab_mode.h"
 #include "undo.h"
 #include "viewport.h"
 
@@ -13,18 +13,18 @@
 // target; the .phaseresetmarkers write is a sibling; the .settings
 // write is best-effort and its failure does not fail the call.
 struct GuiSaveOps {
-    AppState&     app;
-    Undo&         undo;
-    GuiTabMode&   tab_mode;
-    Viewport&     viewport;
+    AppState&        app;
+    Undo&            undo;
+    GuiActiveViews&  active_views;
+    Viewport&        viewport;
 
-    GuiSaveOps(AppState&     app_,
-               Undo&         undo_,
-               GuiTabMode&   tab_mode_,
-               Viewport&     viewport_)
+    GuiSaveOps(AppState&        app_,
+               Undo&            undo_,
+               GuiActiveViews&  active_views_,
+               Viewport&        viewport_)
         : app(app_),
           undo(undo_),
-          tab_mode(tab_mode_),
+          active_views(active_views_),
           viewport(viewport_) {}
 
     bool save();

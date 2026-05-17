@@ -1,9 +1,9 @@
 #pragma once
 
+#include "active_views.h"
 #include "app_state.h"
 #include "playback_lifecycle.h"
 #include "selection.h"
-#include "tab_mode.h"
 #include "viewport.h"
 
 #include <vector>
@@ -15,27 +15,27 @@ struct GuiTargetRender;
 // write; bodies are byte-identical to the originals modulo `this->` access
 // on the captured references. clear_hover_popup is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
-// switch_active_tab_view_to is reached through tab_mode (so do_undo / do_redo
+// switch_active_tab_view_to is reached through active_views (so do_undo / do_redo
 // can restore the originating A/B tab before applying the marker change).
 struct Undo {
     AppState&             app;
     Viewport&             viewport;
     Selection&            selection;
     GuiPlaybackLifecycle& playback_lifecycle;
-    GuiTabMode&           tab_mode;
+    GuiActiveViews&       active_views;
     GuiTargetRender&   target_render;
 
     Undo(AppState&             app_,
          Viewport&             viewport_,
          Selection&            selection_,
          GuiPlaybackLifecycle& playback_lifecycle_,
-         GuiTabMode&           tab_mode_,
+         GuiActiveViews&       active_views_,
          GuiTargetRender&   target_render_)
         : app(app_),
           viewport(viewport_),
           selection(selection_),
           playback_lifecycle(playback_lifecycle_),
-          tab_mode(tab_mode_),
+          active_views(active_views_),
           target_render(target_render_) {}
 
     void recompute_dirty();
