@@ -2605,11 +2605,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 // invert the trim ordering auto-swaps with the opposite trim. Otherwise
 // a simple set. Per-tab: reads and writes the active tab's trim fields.
 // Each mutation pushes a settings-undo entry so b/e/u are reversible.
-void GuiInputHandler::handle_trim_set_begin_at_playhead() {
+//
+// Side-parameterized to share the body between Begin and End. The
+// load-bearing asymmetry is the auto-swap direction: Begin accepts a
+// candidate past the existing trim_end, End accepts a candidate before
+// the existing trim_begin. Both swaps then route cand_seconds into the
+// opposite-side field and the old opposite-side seconds into this side.
+void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
     const double sr_d = static_cast<double>(sr);
-    // Target view: playhead is target-domain; trim_begin_seconds is
+    // Target view: playhead is target-domain; the trim store is
     // source-domain. Inverse-translate at the boundary so the
     // downstream toggle / collision / swap logic compares against the
     // source-frame domain the trim store lives in.
@@ -2624,14 +2630,20 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
         static_cast<double>(cand_frame) / sr_d;
     ViewState& vs = active_view_state(app);
 
-    // Toggle-off: same frame as existing trim_begin.
-    if (vs.has_trim_begin) {
+    bool&   this_has      = (side == TrimSide::Begin) ? vs.has_trim_begin     : vs.has_trim_end;
+    double& this_seconds  = (side == TrimSide::Begin) ? vs.trim_begin_seconds : vs.trim_end_seconds;
+    bool&   other_has     = (side == TrimSide::Begin) ? vs.has_trim_end       : vs.has_trim_begin;
+    double& other_seconds = (side == TrimSide::Begin) ? vs.trim_end_seconds   : vs.trim_begin_seconds;
+    const char letter     = (side == TrimSide::Begin) ? 'b' : 'e';
+
+    // Toggle-off: same frame as the existing this-side trim.
+    if (this_has) {
         const int64_t cur_frame = static_cast<int64_t>(
-            std::nearbyint(vs.trim_begin_seconds * sr_d));
+            std::nearbyint(this_seconds * sr_d));
         if (cur_frame == cand_frame) {
             SettingsSnapshot pre = capture_current_settings(app);
-            vs.has_trim_begin     = false;
-            vs.trim_begin_seconds = 0.0;
+            this_has     = false;
+            this_seconds = 0.0;
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -2640,23 +2652,28 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
         }
     }
 
-    // Equal-frame collision with trim_end refuses (would collapse trim).
-    if (vs.has_trim_end) {
-        const int64_t end_frame = static_cast<int64_t>(
-            std::nearbyint(vs.trim_end_seconds * sr_d));
-        if (end_frame == cand_frame) {
+    // Equal-frame collision with the opposite-side trim refuses (would
+    // collapse the trim region). Past-the-other auto-swaps: candidate
+    // becomes the opposite-side trim, old opposite-side seconds becomes
+    // this-side trim.
+    if (other_has) {
+        const int64_t other_frame = static_cast<int64_t>(
+            std::nearbyint(other_seconds * sr_d));
+        if (other_frame == cand_frame) {
             std::fprintf(stderr,
-                "warptempo_gui: b refused: would collapse trim region\n");
+                "warptempo_gui: %c refused: would collapse trim region\n",
+                letter);
             return;
         }
-        // Auto-swap: candidate past existing trim_end → candidate
-        // becomes the new trim_end, old trim_end becomes trim_begin.
-        if (cand_frame > end_frame) {
+        const bool cand_is_past_other = (side == TrimSide::Begin)
+            ? (cand_frame > other_frame)
+            : (cand_frame < other_frame);
+        if (cand_is_past_other) {
             SettingsSnapshot pre = capture_current_settings(app);
-            const double old_end = vs.trim_end_seconds;
-            vs.trim_end_seconds   = cand_seconds;
-            vs.trim_begin_seconds = old_end;
-            vs.has_trim_begin     = true;
+            const double old_other = other_seconds;
+            other_seconds = cand_seconds;
+            this_seconds  = old_other;
+            this_has      = true;
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -2666,71 +2683,30 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     }
 
     SettingsSnapshot pre = capture_current_settings(app);
-    vs.has_trim_begin     = true;
-    vs.trim_begin_seconds = cand_seconds;
+    this_has     = true;
+    this_seconds = cand_seconds;
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
 }
 
+void GuiInputHandler::handle_trim_set_begin_at_playhead() {
+    handle_trim_set_at_playhead(TrimSide::Begin);
+}
+
 void GuiInputHandler::handle_trim_set_end_at_playhead() {
-    const int sr = audio.sample_rate();
-    if (audio.total_frames() <= 0 || sr <= 0) return;
-    const double sr_d = static_cast<double>(sr);
-    // Target view: see the matching note in handle_trim_set_begin —
-    // playhead is target-domain; the trim store is source-domain.
-    std::vector<TimeMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
-    const int64_t cand_frame =
-        to_source_frame(app, app.playhead_sample, tmap);
-    const double cand_seconds =
-        static_cast<double>(cand_frame) / sr_d;
+    handle_trim_set_at_playhead(TrimSide::End);
+}
+
+void GuiInputHandler::handle_trim_unset(TrimSide side) {
     ViewState& vs = active_view_state(app);
-
-    if (vs.has_trim_end) {
-        const int64_t cur_frame = static_cast<int64_t>(
-            std::nearbyint(vs.trim_end_seconds * sr_d));
-        if (cur_frame == cand_frame) {
-            SettingsSnapshot pre = capture_current_settings(app);
-            vs.has_trim_end     = false;
-            vs.trim_end_seconds = 0.0;
-            undo.push_settings_undo(std::move(pre));
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
-            return;
-        }
-    }
-
-    if (vs.has_trim_begin) {
-        const int64_t begin_frame = static_cast<int64_t>(
-            std::nearbyint(vs.trim_begin_seconds * sr_d));
-        if (begin_frame == cand_frame) {
-            std::fprintf(stderr,
-                "warptempo_gui: e refused: would collapse trim region\n");
-            return;
-        }
-        if (cand_frame < begin_frame) {
-            SettingsSnapshot pre = capture_current_settings(app);
-            const double old_begin = vs.trim_begin_seconds;
-            vs.trim_begin_seconds = cand_seconds;
-            vs.trim_end_seconds   = old_begin;
-            vs.has_trim_end       = true;
-            undo.push_settings_undo(std::move(pre));
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
-            return;
-        }
-    }
-
+    bool&   this_has     = (side == TrimSide::Begin) ? vs.has_trim_begin     : vs.has_trim_end;
+    double& this_seconds = (side == TrimSide::Begin) ? vs.trim_begin_seconds : vs.trim_end_seconds;
+    if (!this_has) return;
     SettingsSnapshot pre = capture_current_settings(app);
-    vs.has_trim_end     = true;
-    vs.trim_end_seconds = cand_seconds;
+    this_has     = false;
+    this_seconds = 0.0;
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -2738,27 +2714,11 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
 }
 
 void GuiInputHandler::handle_trim_unset_begin() {
-    ViewState& vs = active_view_state(app);
-    if (!vs.has_trim_begin) return;
-    SettingsSnapshot pre = capture_current_settings(app);
-    vs.has_trim_begin     = false;
-    vs.trim_begin_seconds = 0.0;
-    undo.push_settings_undo(std::move(pre));
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
+    handle_trim_unset(TrimSide::Begin);
 }
 
 void GuiInputHandler::handle_trim_unset_end() {
-    ViewState& vs = active_view_state(app);
-    if (!vs.has_trim_end) return;
-    SettingsSnapshot pre = capture_current_settings(app);
-    vs.has_trim_end     = false;
-    vs.trim_end_seconds = 0.0;
-    undo.push_settings_undo(std::move(pre));
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
+    handle_trim_unset(TrimSide::End);
 }
 
 void GuiInputHandler::handle_active_audio_view_toggle() {

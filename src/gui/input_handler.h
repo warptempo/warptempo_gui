@@ -232,6 +232,14 @@ private:
     void handle_trim_unset_begin();
     void handle_trim_unset_end();
 
+    // Side-parameterized helpers shared by the four trim entry points
+    // above. The entry points are kept as named per-side wrappers
+    // because the on_key dispatch reads more cleanly as four named
+    // methods than as four side-parameterized invocations.
+    enum class TrimSide { Begin, End };
+    void handle_trim_set_at_playhead(TrimSide side);
+    void handle_trim_unset(TrimSide side);
+
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Translates app.viewport_start_sample / playhead_sample / zoom_level
     // through the current timemap in place (forward on S→T, inverse on
