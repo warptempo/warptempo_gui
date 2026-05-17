@@ -69,6 +69,25 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     return text;
 }
 
+// Forward-translate a per-marker effective time (seconds) to the paint-
+// sample position used by the stem, flag, and hit-rect loops. In target
+// view (timemap non-null/non-empty) the source-frame is rounded with
+// banker's nearbyint and looked up through map_source_to_target; in
+// source view (null/empty timemap) the result is the identity
+// eff_time * sr. Callers that need an integer sample-frame for trim or
+// viewport arithmetic apply their own nearbyint to the returned double.
+static inline double sec_to_paint_sample(
+    double eff_time,
+    double sr,
+    const std::vector<TimeMapSegment>* timemap) {
+    if (timemap && !timemap->empty()) {
+        const size_t src_frame = static_cast<size_t>(
+            std::nearbyint(eff_time * sr));
+        return map_source_to_target(src_frame, *timemap);
+    }
+    return eff_time * sr;
+}
+
 // Shared stem-painting loop used by render_markers and
 // render_phase_reset_markers. The only meaningful difference between the
 // two callers is how visual-disability is computed: warp markers walk
@@ -129,14 +148,7 @@ void render_marker_stems_impl(
             // (timemap non-null/non-empty); identity otherwise. Viewport and
             // trim are passed in the same domain (source in source view,
             // target in target view), so the comparisons stay consistent.
-            double ms;
-            if (timemap && !timemap->empty()) {
-                const size_t src_frame = static_cast<size_t>(
-                    std::nearbyint(eff_time * sr));
-                ms = map_source_to_target(src_frame, *timemap);
-            } else {
-                ms = eff_time * sr;
-            }
+            const double ms = sec_to_paint_sample(eff_time, sr, timemap);
             if (ms < static_cast<double>(viewport_start_sample)) continue;
             if (ms >= static_cast<double>(viewport_end_sample)) continue;
             const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
@@ -572,14 +584,7 @@ void iterate_visible_flags_impl(
         // Translate per-marker source-frame to target-frame in target view
         // (timemap non-null/non-empty); identity otherwise. Pack/elision
         // walk left-to-right against post-translation positions.
-        double ms;
-        if (timemap && !timemap->empty()) {
-            const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(eff_time * sr));
-            ms = map_source_to_target(src_frame, *timemap);
-        } else {
-            ms = eff_time * sr;
-        }
+        const double ms = sec_to_paint_sample(eff_time, sr, timemap);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
 
@@ -684,14 +689,7 @@ void render_flags(cairo_t* cr,
             ? drag_overlay->effective_time(
                   e.i, markers[e.i].time_seconds)
             : markers[e.i].time_seconds;
-        double pos_ms;
-        if (timemap && !timemap->empty()) {
-            const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(eff_time * sr_d));
-            pos_ms = map_source_to_target(src_frame, *timemap);
-        } else {
-            pos_ms = eff_time * sr_d;
-        }
+        const double pos_ms = sec_to_paint_sample(eff_time, sr_d, timemap);
         const int64_t marker_pos =
             static_cast<int64_t>(std::nearbyint(pos_ms));
         const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
@@ -975,14 +973,7 @@ void render_phase_reset_flags(cairo_t* cr,
             : phase_resets[e.i].time_seconds;
         // Translate per-marker frame to target-frame in target view so the
         // out-of-trim comparison runs in the same domain as `trim`.
-        double pos_ms;
-        if (timemap && !timemap->empty()) {
-            const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(eff_time * sr));
-            pos_ms = map_source_to_target(src_frame, *timemap);
-        } else {
-            pos_ms = eff_time * sr;
-        }
+        const double pos_ms = sec_to_paint_sample(eff_time, sr, timemap);
         const int64_t marker_pos =
             static_cast<int64_t>(std::nearbyint(pos_ms));
         const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
