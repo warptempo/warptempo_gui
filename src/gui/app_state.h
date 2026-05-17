@@ -8,7 +8,9 @@
 #include "warpmarkers.h"
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <limits>
 #include <set>
@@ -655,6 +657,29 @@ GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+
+// Drop-marker dedup pre-check shared by GuiWarpMarkersOps::drop_marker and
+// GuiPhaseResetMarkersOps::drop_phase_reset_at_position. Iterates `markers`
+// and rejects the drop if any existing marker sits within `eps` seconds of
+// `time_seconds`, logging a `<label> marker already exists near …` line to
+// stderr. The marker container is read only through `m.time_seconds`, so
+// any marker type exposing that field works.
+template <typename MarkerVec>
+bool reject_if_marker_within_eps(
+    const MarkerVec& markers,
+    double time_seconds,
+    double eps,
+    const char* label) {
+    for (const auto& m : markers) {
+        if (std::abs(m.time_seconds - time_seconds) < eps) {
+            std::fprintf(stderr,
+                "warptempo_gui: %s marker already exists near %.3fs\n",
+                label, time_seconds);
+            return true;
+        }
+    }
+    return false;
+}
 
 // Shared neighbor-walk core for compute_selection_delta_bounds (warp) and
 // compute_phase_reset_delta_bounds (phase reset). For each selected index,

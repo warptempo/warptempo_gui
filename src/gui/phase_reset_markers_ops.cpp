@@ -29,9 +29,9 @@
 //                                 (X.7.13 retired the std::function forwarder)
 
 // Drop a phase reset marker at `time_seconds`. Rejects creation within
-// 4 pixels at current zoom of an existing phase reset marker. Selection
-// collapses to the freshly-inserted index. Frame-0 phase alignment is
-// implicit by definition and needs no marker to assert it.
+// kMarkerHitHalfPx pixels at current zoom of an existing phase reset marker.
+// Selection collapses to the freshly-inserted index. Frame-0 phase alignment
+// is implicit by definition and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
@@ -39,14 +39,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const auto& tv = app.phase_reset_markers.markers();
-    for (const auto& m : tv) {
-        if (std::abs(m.time_seconds - time_seconds) < eps) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset marker already exists near %.3fs\n",
-                time_seconds);
-            return;
-        }
-    }
+    if (reject_if_marker_within_eps(tv, time_seconds, eps, "phase_reset")) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
     const int                 hint_last = app.last_selected_marker;
     GuiPhaseResetMarker nm;

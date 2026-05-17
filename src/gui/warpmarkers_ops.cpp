@@ -51,14 +51,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const auto& mv = app.warpmarkers.markers();
-    for (const auto& m : mv) {
-        if (std::abs(m.time_seconds - time_seconds) < eps) {
-            std::fprintf(stderr,
-                "warptempo_gui: warp marker already exists near %.3fs\n",
-                time_seconds);
-            return;
-        }
-    }
+    if (reject_if_marker_within_eps(mv, time_seconds, eps, "warp")) return;
     // Snapshot pre-mutation state for undo. Captured after the dup
     // check so rejected drops don't leave a no-op entry on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;

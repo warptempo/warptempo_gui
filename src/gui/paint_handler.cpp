@@ -71,7 +71,7 @@ std::vector<IterPopupHit> compute_iter_popup_hits(
     // pack and paint are separate concerns. With this rule, two adjacent
     // owning markers whose painted popup texts (e.g. "[ ]") don't actually
     // overlap will both render, even if their uniform hit rects do — which
-    // matches the flag pack in iterate_visible_flags. No editor exemption.
+    // matches the flag pack in iterate_visible_flags_impl. No editor exemption.
     const double pop_pad = 4.0;
     double rightmost_right_edge = -1e18;
     for (const auto& r : rects) {
@@ -466,21 +466,31 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
+            auto paint_markers_for_view = [&](
+                const std::vector<GuiWarpMarker>& warp_list,
+                const std::vector<GuiPhaseResetMarker>& phase_reset_list,
+                const std::vector<TimeMapSegment>* timemap) {
+                if (app.active_markers_view == 'P') {
+                    render_phase_reset_markers(
+                        cr, area, phase_reset_list,
+                        vp_start, vp_end, sr,
+                        trim_struct, timemap, drag_overlay);
+                } else {
+                    render_markers(
+                        cr, area, warp_list,
+                        vp_start, vp_end, sr,
+                        trim_struct, timemap, drag_overlay);
+                }
+            };
             if (is_target) {
                 // Target view (brief 2): paint marker stems at their
                 // map_source_to_target-translated positions. No marker
                 // editing reaches here — input gates in input_handler.cpp
                 // block W/P-view edits while target view is active.
-                if (app.active_markers_view == 'P') {
-                    render_phase_reset_markers(
-                        cr, area, app.phase_reset_markers.markers(),
-                        vp_start, vp_end, sr,
-                        trim_struct, &target_timemap, drag_overlay);
-                } else {
-                    render_markers(cr, area, app.warpmarkers.markers(),
-                                   vp_start, vp_end, sr,
-                                   trim_struct, &target_timemap, drag_overlay);
-                }
+                paint_markers_for_view(
+                    app.warpmarkers.markers(),
+                    app.phase_reset_markers.markers(),
+                    &target_timemap);
             } else if (app.render_view_enabled) {
                 // Render-view: dark blue base, sky-tint when selected.
                 // The render's warpmarkers list is strict-monotonic on
@@ -490,25 +500,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 // Brief F Section 3: when sub-mode is 'P', paint the
                 // render's phase reset list using the phase reset renderer
                 // (matches source-view's phase reset appearance).
-                if (app.active_markers_view == 'P') {
-                    render_phase_reset_markers(
-                        cr, area, app.render_view_phase_resets,
-                        vp_start, vp_end, sr,
-                        trim_struct, nullptr, drag_overlay);
-                } else {
-                    render_markers(cr, area, app.render_view_markers,
-                                   vp_start, vp_end, sr,
-                                   trim_struct, nullptr, drag_overlay);
-                }
-            } else if (app.active_markers_view == 'P') {
-                render_phase_reset_markers(
-                    cr, area, app.phase_reset_markers.markers(),
-                    vp_start, vp_end, sr,
-                    trim_struct, nullptr, drag_overlay);
+                paint_markers_for_view(
+                    app.render_view_markers,
+                    app.render_view_phase_resets,
+                    nullptr);
             } else {
-                render_markers(cr, area, app.warpmarkers.markers(),
-                               vp_start, vp_end, sr,
-                               trim_struct, nullptr, drag_overlay);
+                paint_markers_for_view(
+                    app.warpmarkers.markers(),
+                    app.phase_reset_markers.markers(),
+                    nullptr);
             }
             const auto m1 = clock::now();
             t_markers_ms =
