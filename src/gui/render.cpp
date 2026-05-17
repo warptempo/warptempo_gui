@@ -486,21 +486,25 @@ void render_markers(cairo_t* cr,
 namespace {
 
 // Shared greedy-pack iteration used by both render_flags and
-// compute_flag_hit_rects. Invokes `emit(i, text_left, baseline_y, ext)` for
-// each flag that survives elision, in left-to-right order. The cairo font
-// face/size are assumed to already be set on `cr` by the caller.
-// `text_left` is snapped to the marker's integer pixel column so the flag's
-// left edge coincides with the marker/playhead column.
-template <typename Emit>
-void iterate_visible_flags(cairo_t* cr,
-                           GuiRect top_strip_area,
-                           const std::vector<GuiWarpMarker>& markers,
-                           long long viewport_start_sample,
-                           long long viewport_end_sample,
-                           int sample_rate,
-                           const std::vector<TimeMapSegment>* timemap,
-                           const DragOverlay* drag_overlay,
-                           Emit&& emit) {
+// compute_flag_hit_rects, and their phase-reset analogues. Invokes
+// `emit(i, text_left, baseline_y, text, ext)` for each flag that survives
+// elision, in left-to-right order. The cairo font face/size are assumed to
+// already be set on `cr` by the caller. `text_left` is snapped to the
+// marker's integer pixel column so the flag's left edge coincides with the
+// marker/playhead column. `get_flag_text(i)` returns the marker's flag
+// payload; an empty return is the "this marker has no visible flag" signal.
+template <typename MarkerVec, typename FlagTextFn, typename Emit>
+void iterate_visible_flags_impl(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    const MarkerVec& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay,
+    FlagTextFn&& get_flag_text,
+    Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
     const double samples_per_pixel = span / static_cast<double>(top_strip_area.w);
@@ -560,7 +564,7 @@ void iterate_visible_flags(cairo_t* cr,
             continue;
         }
 
-        const std::string text = flag_text(markers, static_cast<int>(i));
+        const std::string text = get_flag_text(static_cast<int>(i));
         if (text.empty()) continue;
 
         cairo_text_extents_t ext;
@@ -604,14 +608,14 @@ void render_flags(cairo_t* cr,
 
     // Brief Y.5: collect emit args during the left-to-right iterate pass,
     // then paint the collected list in REVERSE order. The pack rule inside
-    // iterate_visible_flags still elides right-of-collision flags (leftmost
-    // wins), and reverse paint order makes the leftmost flag's pixels land
-    // on top — so when an editor's pending text grows past its original
-    // flag width into the right neighbor's territory, the editor's bg-fill
-    // and text occlude the right neighbor instead of being overwritten by
-    // it. In all static (no-edit) states the bg-fills are kBackground and
-    // text rects don't overlap, so reverse paint order produces pixels
-    // identical to forward order.
+    // iterate_visible_flags_impl still elides right-of-collision flags
+    // (leftmost wins), and reverse paint order makes the leftmost flag's
+    // pixels land on top — so when an editor's pending text grows past its
+    // original flag width into the right neighbor's territory, the
+    // editor's bg-fill and text occlude the right neighbor instead of
+    // being overwritten by it. In all static (no-edit) states the bg-fills
+    // are kBackground and text rects don't overlap, so reverse paint order
+    // produces pixels identical to forward order.
     struct FlagEmit {
         int                  i;
         double               text_left;
@@ -620,9 +624,12 @@ void render_flags(cairo_t* cr,
         cairo_text_extents_t ext;
     };
     std::vector<FlagEmit> emits;
-    iterate_visible_flags(cr, top_strip_area, markers,
-                          viewport_start_sample, viewport_end_sample,
-                          sample_rate, timemap, drag_overlay,
+    iterate_visible_flags_impl(cr, top_strip_area, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               sample_rate, timemap, drag_overlay,
+        [&](int i) {
+            return flag_text(markers, i);
+        },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -776,16 +783,20 @@ void render_flags(cairo_t* cr,
     cairo_restore(cr);
 }
 
-std::vector<FlagHitRect> compute_flag_hit_rects(
+namespace {
+
+template <typename MarkerVec, typename FlagTextFn>
+std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     cairo_t* cr,
     GuiRect top_strip_area,
-    const std::vector<GuiWarpMarker>& markers,
+    const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
     const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
+    const DragOverlay* drag_overlay,
+    FlagTextFn&& get_flag_text) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -805,9 +816,10 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
     const double hl_pad = kFlagInnerPadPx;
 
-    iterate_visible_flags(cr, top_strip_area, markers,
-                          viewport_start_sample, viewport_end_sample,
-                          sample_rate, timemap, drag_overlay,
+    iterate_visible_flags_impl(cr, top_strip_area, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               sample_rate, timemap, drag_overlay,
+        std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
@@ -823,6 +835,26 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     return out;
 }
 
+} // namespace
+
+std::vector<FlagHitRect> compute_flag_hit_rects(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    const std::vector<GuiWarpMarker>& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    double font_size,
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
+    return compute_flag_hit_rects_impl(cr, top_strip_area, markers,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, font_size, timemap, drag_overlay,
+        [&](int i) {
+            return flag_text(markers, i);
+        });
+}
+
 // ---------- Phase reset marker rendering (chunk S.2.2) ----------
 
 namespace {
@@ -830,84 +862,6 @@ namespace {
 std::string phase_reset_flag_text(const GuiPhaseResetMarker& m) {
     (void)m;
     return "p";
-}
-
-template <typename Emit>
-void iterate_visible_phase_reset_flags(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay,
-    Emit&& emit) {
-    (void)cr;
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(top_strip_area.w);
-    if (samples_per_pixel <= 0.0) return;
-
-    const double sr           = static_cast<double>(sample_rate);
-    // Mirror iterate_visible_flags: place the rect bottom at the strip
-    // bottom by deriving baseline_y from a representative monospace
-    // measurement.
-    cairo_text_extents_t base_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &base_ext);
-    const double hl_pad_helper = kFlagInnerPadPx;
-    const double baseline_y =
-        static_cast<double>(top_strip_area.y + top_strip_area.h)
-      - kFlagBottomLiftPx
-      - base_ext.y_bearing
-      - base_ext.height
-      - hl_pad_helper
-      - kVPadExtraPx;
-    const double pad          = 4.0;
-
-    double rightmost_right_edge = -1e18;
-
-    for (size_t i = 0; i < phase_resets.size(); ++i) {
-        const auto& m = phase_resets[i];
-        // Effective time: drag overlay > live store. The supplied
-        // `timemap` is the frozen pre-drag timemap during drag.
-        const double eff_time = drag_overlay
-            ? drag_overlay->effective_time(
-                  static_cast<int>(i), m.time_seconds)
-            : m.time_seconds;
-        // Translate per-marker source-frame to target-frame in target view
-        // (timemap non-null/non-empty); identity otherwise.
-        double ms;
-        if (timemap && !timemap->empty()) {
-            const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(eff_time * sr));
-            ms = map_source_to_target(src_frame, *timemap);
-        } else {
-            ms = eff_time * sr;
-        }
-        if (ms < static_cast<double>(viewport_start_sample)) continue;
-        if (ms >= static_cast<double>(viewport_end_sample)) continue;
-
-        const double x_raw =
-            (ms - static_cast<double>(viewport_start_sample)) /
-            samples_per_pixel;
-        const double text_left =
-            static_cast<double>(top_strip_area.x) + std::round(x_raw);
-        if (text_left < rightmost_right_edge + pad) {
-            if constexpr (kDebugPerf) perf_counters::flag_elided++;
-            continue;
-        }
-
-        const std::string text = phase_reset_flag_text(m);
-        if (text.empty()) continue;
-
-        cairo_text_extents_t ext;
-        cairo_text_extents(cr, text.c_str(), &ext);
-        if constexpr (kDebugPerf) perf_counters::flag_measure++;
-
-        emit(static_cast<int>(i), text_left, baseline_y, text, ext);
-        rightmost_right_edge = text_left + ext.width;
-    }
 }
 
 } // namespace
@@ -1024,9 +978,12 @@ void render_phase_reset_flags(cairo_t* cr,
         cairo_text_extents_t ext;
     };
     std::vector<PhaseResetEmit> emits;
-    iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
-                                    viewport_start_sample, viewport_end_sample,
-                                    sample_rate, timemap, drag_overlay,
+    iterate_visible_flags_impl(cr, top_strip_area, phase_resets,
+                               viewport_start_sample, viewport_end_sample,
+                               sample_rate, timemap, drag_overlay,
+        [&](int i) {
+            return phase_reset_flag_text(phase_resets[i]);
+        },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
             emits.push_back({i, text_left, baseline_y, text, ext});
@@ -1111,37 +1068,12 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     double font_size,
     const std::vector<TimeMapSegment>* timemap,
     const DragOverlay* drag_overlay) {
-    std::vector<FlagHitRect> out;
-    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
-    if (viewport_end_sample <= viewport_start_sample) return out;
-    if (sample_rate <= 0) return out;
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, font_size);
-
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
-    const double hl_pad = kFlagInnerPadPx;
-
-    iterate_visible_phase_reset_flags(cr, top_strip_area, phase_resets,
-                                    viewport_start_sample, viewport_end_sample,
-                                    sample_rate, timemap, drag_overlay,
-        [&](int i, double text_left, double baseline_y,
-            const std::string& /*text*/, const cairo_text_extents_t& ext) {
-            FlagHitRect r;
-            r.marker_index = i;
-            r.x = text_left;
-            r.y = baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
-            r.w = hl_pad + ext.x_bearing + ext.width + hl_pad;
-            r.h = uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
-            out.push_back(r);
+    return compute_flag_hit_rects_impl(cr, top_strip_area, phase_resets,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, font_size, timemap, drag_overlay,
+        [&](int i) {
+            return phase_reset_flag_text(phase_resets[i]);
         });
-
-    cairo_restore(cr);
-    return out;
 }
 
 double measure_timestamp_width(cairo_t* cr, double seconds) {
