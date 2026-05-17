@@ -78,7 +78,7 @@ void Selection::cycle_selection(bool forward) {
     // forward-translate to active-domain so frame_of values are
     // comparable to playhead_sample / viewport_start_sample below.
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -204,7 +204,7 @@ void Selection::sync_playhead_to_last_selected() {
     // playhead is active-domain. Forward-translate so the playhead
     // lands at the marker's displayed (target-frame) position.
     int64_t target_sample = src_sample;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const auto tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
         target_sample = to_domain_frame(app, src_sample, tmap);

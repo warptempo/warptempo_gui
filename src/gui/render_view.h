@@ -21,7 +21,7 @@ struct GuiTargetRender;
 // the per-entry selection stash with stat-tuple gating, the load-into-active-audio
 // path that parks the source GuiAudio onto an owned member, and the inverse
 // restore. clear_hover_popup is reached through viewport;
-// refresh_active_tab_from_app is reached through tab_mode.
+// refresh_active_tab_view_from_app is reached through tab_mode.
 //
 // `source_audio_held` is owned (not a reference): it was a local in main()
 // before extraction and is used only by load_render_view_at /

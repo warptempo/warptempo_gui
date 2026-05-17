@@ -131,7 +131,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
         // is active-domain. Forward-translate so the playhead lands on
         // the marker's displayed (target-frame) position.
         int64_t sample = src_sample;
-        if (app.view_domain == ViewDomain::Target) {
+        if (app.active_audio_view == 'T') {
             const auto tmap = build_target_view_timemap(
                 app, sr, static_cast<long>(audio.total_frames()));
             sample = to_domain_frame(app, src_sample, tmap);

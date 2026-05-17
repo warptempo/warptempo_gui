@@ -69,7 +69,7 @@ struct GuiTargetRender {
     void rebind_to_source();
 
     // Target-view entry hook. Called from sites that *enter* target view
-    // (S→T toggle, render-view exit while view_domain==Target). If the
+    // (S→T toggle, render-view exit while active_audio_view==Target). If the
     // target buffer is current (is_dirty_ == false and frames > 0),
     // rebinds playback to the existing buffer with no dispatch. Otherwise
     // falls through to trigger() to cancel-clear-dispatch a fresh render.

@@ -224,7 +224,7 @@ int max_valid_numeric_level(int waveform_width_px,
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
-    if (a.view_domain == ViewDomain::Target &&
+    if (a.active_audio_view == 'T' &&
         !a.render_view_enabled &&
         a.target_view_total_frames > 0) {
         return a.target_view_total_frames;
@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
     //
     // X.7.13: the nine std::function forward-declares previously kept here
     // (recompute_hover_at_cursor, clear_hover_popup, stop_playback_if_playing,
-    // refresh_active_tab_from_app, save_markers, request_close_or_revert,
+    // refresh_active_tab_view_from_app, save_markers, request_close_or_revert,
     // prompt_activate_response, toggle_playback, set_playback_speed) were
     // retired. The two substantive bodies moved onto Viewport
     // (clear_hover_popup, recompute_hover_at_cursor); the seven forwarders
@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
     // (viewport.clear_hover_popup, playback_lifecycle.stop_playback_if_playing
     // / toggle_playback / set_playback_speed, save_ops.save,
     // prompt.request_close_or_revert / activate_response,
-    // tab_mode.refresh_active_tab_from_app).
+    // tab_mode.refresh_active_tab_view_from_app).
 
     Viewport viewport(app, audio, gui, playback);
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
@@ -572,7 +572,7 @@ int main(int argc, char** argv) {
         // cancel, and applying a stale bias against the source-bound
         // buffer would skew the playhead.
         int64_t translated = cur;
-        if (app.view_domain == ViewDomain::Target &&
+        if (app.active_audio_view == 'T' &&
             !app.render_view_enabled &&
             app.target_buffer_frames > 0) {
             translated = cur + app.target_buffer_start_frame;

@@ -18,7 +18,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // render-domain (trim baked in at render time).
         return {0, audio.total_frames()};
     }
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         // Target view (brief 1): no editable trim and the source-side
         // trim is read-only (display-only translation in the waveform
         // paint). Home/End jump to the full target-frame range.
@@ -278,7 +278,7 @@ void Viewport::recompute_hover_at_cursor() {
     }
     // Brief 3a: target view's hover popup runs the same way as
     // source view's. hit_test_flag builds the target_timemap
-    // internally when view_domain == Target so the flag rects it
+    // internally when active_audio_view == Target so the flag rects it
     // walks match what paint_handler renders at translated columns.
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);

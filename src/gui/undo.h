@@ -15,7 +15,7 @@ struct GuiTargetRender;
 // write; bodies are byte-identical to the originals modulo `this->` access
 // on the captured references. clear_hover_popup is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
-// switch_active_tab_to is reached through tab_mode (so do_undo / do_redo
+// switch_active_tab_view_to is reached through tab_mode (so do_undo / do_redo
 // can restore the originating A/B tab before applying the marker change).
 struct Undo {
     AppState&             app;

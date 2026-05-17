@@ -1210,7 +1210,7 @@ double flag_pending_text_left_x(
     // so a fresh build is correct and app.drag.frozen_timemap need not be
     // consulted.
     double ms = mv[marker_idx].time_seconds * sr;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const auto tmap = build_target_view_timemap(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));

@@ -109,7 +109,9 @@ bool parse_bool_strict(const std::string& s, bool& out) {
 // parse_settings_file does not consult this list.
 enum class SettingKind {
     EnginePassthrough,
+    ActiveAudioViewChar,
     ActiveMarkersViewChar,
+    ActiveTabViewChar,
     PlaybackSpeedFloat,
     FollowFlag,
     OptionalTrimBegin_A,
@@ -148,7 +150,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "limiter_ceiling",             SettingKind::EnginePassthrough,    EngineField::LimiterCeiling,          nullptr },
     { "limiter_attack_ms",           SettingKind::EnginePassthrough,    EngineField::LimiterAttackMs,         nullptr },
     { "limiter_release_ms",          SettingKind::EnginePassthrough,    EngineField::LimiterReleaseMs,        nullptr },
-    { "active_markers_view",                 SettingKind::ActiveMarkersViewChar,       EngineField::Title,                   "W"        },
+    { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
+    { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
+    { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     { "tab_a_trim_begin",            SettingKind::OptionalTrimBegin_A,  EngineField::Title,                   nullptr },
@@ -464,11 +468,20 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             if (lower == "true")       { out.has_follow = true; out.follow = true;  }
             else if (lower == "false") { out.has_follow = true; out.follow = false; }
             // Any other value: silent-skip; default (true) applies at the call site.
+        } else if (key == "active_audio_view") {
+            // Case-sensitive "S" / "T". Anything else silent-skips like
+            // the active_markers_view parser.
+            if (value == "S") { out.has_active_audio_view = true; out.active_audio_view = 'S'; }
+            else if (value == "T") { out.has_active_audio_view = true; out.active_audio_view = 'T'; }
         } else if (key == "active_markers_view") {
             // Case-sensitive "W" / "P" — these literals cross the engine
             // boundary. Anything else silent-skips like the `follow` parser.
             if (value == "W") { out.has_active_markers_view = true; out.active_markers_view = 'W'; }
             else if (value == "P") { out.has_active_markers_view = true; out.active_markers_view = 'P'; }
+        } else if (key == "active_tab_view") {
+            // Case-sensitive "A" / "B". Anything else silent-skips.
+            if (value == "A") { out.has_active_tab_view = true; out.active_tab_view = 'A'; }
+            else if (value == "B") { out.has_active_tab_view = true; out.active_tab_view = 'B'; }
         } else if (key == "playback_speed") {
             float v;
             if (parse_float_full(value, v) && v > 0.0f) {
@@ -752,7 +765,9 @@ bool write_settings_file(
     const ViewState& tab_a,
     const ViewState& tab_b,
     bool follow,
+    char active_audio_view,
     char active_markers_view,
+    char active_tab_view,
     float playback_speed,
     const EngineSettings& engine) {
     std::string data;
@@ -765,10 +780,22 @@ bool write_settings_file(
                 append_engine_field_value(data, engine, desc.field);
                 data += '\n';
                 break;
+            case SettingKind::ActiveAudioViewChar:
+                data += desc.key;
+                data += '=';
+                data += active_audio_view;
+                data += '\n';
+                break;
             case SettingKind::ActiveMarkersViewChar:
                 data += desc.key;
                 data += '=';
                 data += active_markers_view;
+                data += '\n';
+                break;
+            case SettingKind::ActiveTabViewChar:
+                data += desc.key;
+                data += '=';
+                data += active_tab_view;
                 data += '\n';
                 break;
             case SettingKind::PlaybackSpeedFloat:

@@ -19,7 +19,7 @@
 // lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   clear_hover_popup            → viewport.clear_hover_popup
-//   refresh_active_tab_from_app  → tab_mode.refresh_active_tab_from_app
+//   refresh_active_tab_view_from_app  → tab_mode.refresh_active_tab_view_from_app
 //                                  (X.7.13 retired the std::function forwarders)
 //   prune_live_selection         → selection.prune_live_selection
 //   rendersettings_path,
@@ -267,7 +267,7 @@ bool GuiRenderView::load_render_view_at(int index) {
     // reads it back on render-view exit so the user lands where they
     // left the source view rather than at sample 0.
     if (source_audio_held.total_frames() == 0) {
-        tab_mode.refresh_active_tab_from_app();
+        tab_mode.refresh_active_tab_view_from_app();
         source_audio_held = std::move(audio);
     }
     audio = std::move(next);
@@ -355,9 +355,9 @@ void GuiRenderView::restore_source_audio() {
 
     // Read back the active tab's snapshot saved when render-view was
     // first entered. The Tab key is gated out of render-view's input
-    // allowlist, so app.active_tab is the same letter the snapshot
+    // allowlist, so app.active_tab_view is the same letter the snapshot
     // was written under.
-    const ViewState& t = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
+    const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     app.viewport_start_sample = t.viewport_start_sample;
     app.zoom_level            = t.zoom_level;
     app.playhead_sample       = t.playhead_sample;
@@ -381,10 +381,10 @@ void GuiRenderView::restore_source_audio() {
     }
     // H1 fix: render-view exit lands playback bound to source.wav
     // unconditionally above. If the user is still in target view (R
-    // does not touch view_domain), rebind to the target buffer —
+    // does not touch active_audio_view), rebind to the target buffer —
     // ensure_ready dispatches a fresh render if the buffer is stale,
     // otherwise it short-circuits to a clean playback.rebind_buffer.
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         target_render.ensure_ready();
     }
     gui.invalidate_region(0, 0, app.width, app.height);

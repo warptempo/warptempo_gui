@@ -232,7 +232,7 @@ private:
     void handle_trim_unset_begin();
     void handle_trim_unset_end();
 
-    // Bare `t` toggle: flip app.view_domain between Source and Target.
+    // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Translates app.viewport_start_sample / playhead_sample / zoom_level
     // through the current timemap in place (forward on S→T, inverse on
     // T→S) so the visible viewport stays the same screen-pixel extent
@@ -240,5 +240,5 @@ private:
     // brief 1) and invalidates the whole window. Silent no-op while
     // render-view is active — the render-view gate above this dispatcher
     // already drops bare `t`.
-    void handle_view_domain_toggle();
+    void handle_active_audio_view_toggle();
 };

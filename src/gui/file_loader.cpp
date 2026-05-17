@@ -63,15 +63,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.loading       = false;
     app.load_progress = 0.0f;
 
-    // File-load lands the user back in source view: the just-loaded
-    // audio sets a fresh source-frame baseline, and the target-frame
-    // cache from any prior session is stale. Defensive even though
-    // brief 1's target view is session-only. The target buffer is
-    // tied to the live source audio's content, so cancel any in-flight
-    // target render and clear it — a subsequent S→T toggle will dispatch
-    // a fresh target render against the new source.
+    // The just-loaded audio sets a fresh source-frame baseline; the
+    // target-frame cache from any prior session is stale. The target
+    // buffer is tied to the live source audio's content, so cancel any
+    // in-flight target render and clear it — the eager ensure_ready()
+    // at end-of-load will dispatch a fresh target render if the parsed
+    // .settings landed us in target view.
     target_render.cancel_for_load();
-    app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
 
     app.playhead_sample       = 0;
@@ -189,7 +187,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     default_tab.playhead_sample       = app.playhead_sample;
     app.tab_a          = default_tab;
     app.tab_b          = default_tab;
-    app.active_tab     = 'A';
     app.engine_settings = EngineSettings{};
 
     // Parse .settings (if present) and apply tab values with silent
@@ -221,7 +218,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
               ps.has_tab_b_zoom, ps.tab_b_zoom,
               ps.has_tab_b_ph, ps.tab_b_ph, app.tab_b);
         app.follow_mode    = ps.has_follow         ? ps.follow         : true;
-        app.active_markers_view    = ps.has_active_markers_view    ? ps.active_markers_view    : 'W';
+        app.active_audio_view   = ps.has_active_audio_view   ? ps.active_audio_view   : 'S';
+        app.active_markers_view = ps.has_active_markers_view ? ps.active_markers_view : 'W';
+        app.active_tab_view     = ps.has_active_tab_view     ? ps.active_tab_view     : 'A';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
         // Trim: per-tab keys take precedence; the legacy singleton form,
         // when present without any per-tab keys, applies to tab_a only
@@ -270,11 +269,16 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.engine_settings = std::move(*es);
     }
 
-    // Activate tab A: copy its snapshot into the live AppState fields.
-    app.viewport_start_sample = app.tab_a.viewport_start_sample;
-    app.zoom_level            = app.tab_a.zoom_level;
-    app.playhead_sample       = app.tab_a.playhead_sample;
-    clamp_viewport_start(app, audio);
+    // Activate the parsed-tab: copy its snapshot into the live AppState
+    // fields. active_tab_view was set from the parsed-settings block above.
+    {
+        const ViewState& parsed_tab = (app.active_tab_view == 'B')
+                                      ? app.tab_b : app.tab_a;
+        app.viewport_start_sample = parsed_tab.viewport_start_sample;
+        app.zoom_level            = parsed_tab.zoom_level;
+        app.playhead_sample       = parsed_tab.playhead_sample;
+        clamp_viewport_start(app, audio);
+    }
 
     // Bring up the audio device bound to the new sample buffer. Init
     // failure disables playback but leaves the rest of the GUI usable.
@@ -295,6 +299,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
                  audio.num_levels(), load_ms);
+
+    // If the parsed settings landed us in target view, dispatch a fresh
+    // target render now so the first Space press is ready without a
+    // first-edit wait. The target buffer was cleared by cancel_for_load
+    // above; ensure_ready's is_dirty_=true falls through to trigger().
+    // No-op if active_audio_view=='S'.
+    target_render.ensure_ready();
 
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
@@ -323,7 +334,6 @@ void GuiFileLoader::revert_to_blank() {
     app.phase_reset_markers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    app.active_markers_view    = 'W';
     app.drag          = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.hover_popup   = HoverPopupState{};
@@ -343,13 +353,16 @@ void GuiFileLoader::revert_to_blank() {
 
     app.tab_a = ViewState{};
     app.tab_b = ViewState{};
-    app.active_tab = 'A';
+
+    // View-selector triplet defaults, in bottom-bar order [S/T] [W/P] [A/B].
+    app.active_audio_view   = 'S';
+    app.active_markers_view = 'W';
+    app.active_tab_view     = 'A';
 
     // Target render state is tied to the live source audio; cancel any
     // in-flight target render and clear it on revert so a subsequent
     // file load doesn't inherit stale frames.
     target_render.cancel_for_load();
-    app.view_domain              = ViewDomain::Source;
     app.target_view_total_frames = 0;
 
     viewport.invalidate_all();

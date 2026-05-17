@@ -228,7 +228,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // below already pins the waveform cache; supplying the same
         // frozen timemap downstream keeps stem / flag positions and
         // the trim translation consistent with the cached waveform.
-        const bool is_target = (app.view_domain == ViewDomain::Target) &&
+        const bool is_target = (app.active_audio_view == 'T') &&
                                !app.render_view_enabled;
         std::vector<TimeMapSegment> target_timemap;
         uint64_t target_timemap_hash = 0;
@@ -1296,7 +1296,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     const double st_x =
                         right_after_indicators + kTabLetterGapPx;
                     const char st_buf[2] = {
-                        app.view_domain == ViewDomain::Target ? 'T' : 'S',
+                        app.active_audio_view == 'T' ? 'T' : 'S',
                         '\0'
                     };
                     cairo_text_extents_t st_ext;
@@ -1316,7 +1316,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                     const double ab_x =
                         right_after_indicators + kTabLetterGapPx;
-                    const char ab_buf[2] = { app.active_tab, '\0' };
+                    const char ab_buf[2] = { app.active_tab_view, '\0' };
                     cairo_text_extents_t ab_ext;
                     cairo_text_extents(cr, ab_buf, &ab_ext);
                     cairo_move_to(cr, ab_x, baseline_y);

@@ -61,7 +61,7 @@ void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
     e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = 'W';
-    e.tab                = app.active_tab;
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -75,7 +75,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = 'P';
-    e.tab                = app.active_tab;
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -90,7 +90,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.settings           = capture_current_settings(app);
     e.op_kind            = op_kind;
     e.op_mode            = op_mode;
-    e.tab                = app.active_tab;
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -103,7 +103,7 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.settings           = std::move(pre_state);
     e.op_kind            = OpKind::Other;
     e.op_mode            = 'S';
-    e.tab                = app.active_tab;
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = app.last_selected_marker;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -160,7 +160,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 // translate so the playhead lands at the restored
                 // marker's displayed position, mirroring
                 // Selection::sync_playhead_to_last_selected.
-                if (app.view_domain == ViewDomain::Target) {
+                if (app.active_audio_view == 'T') {
                     const auto tmap = build_target_view_timemap(
                         app, sr,
                         static_cast<long>(selection.audio.total_frames()));
@@ -244,7 +244,7 @@ void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                 rightmost * static_cast<double>(sr)));
             // Source-frame → active-domain translation, as in the warp
             // helper above and Selection::sync_playhead_to_last_selected.
-            if (app.view_domain == ViewDomain::Target) {
+            if (app.active_audio_view == 'T') {
                 const auto tmap = build_target_view_timemap(
                     app, sr,
                     static_cast<long>(selection.audio.total_frames()));
@@ -313,8 +313,8 @@ void Undo::do_undo() {
     // post-restore rules below call selection.jump_playhead_to(...),
     // which writes app.playhead_sample / app.viewport_start_sample —
     // those writes must land on the tab the action was authored on.
-    if (entry.tab != app.active_tab) {
-        tab_mode.switch_active_tab_to(entry.tab);
+    if (entry.tab != app.active_tab_view) {
+        tab_mode.switch_active_tab_view_to(entry.tab);
     }
 
     // Restore settings (engine_settings + per-tab trim) before the marker
@@ -343,7 +343,7 @@ void Undo::do_undo() {
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         // Stash the current selection into the leaving mode's slot,
         // then restore the destination mode's slot.
-        ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
+        ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
         if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
             curtab.phase_reset_last_selected = app.last_selected_marker;
@@ -406,8 +406,8 @@ void Undo::do_redo() {
     }
     if (app.history.saved_valid) app.history.saved_distance -= 1;
 
-    if (entry.tab != app.active_tab) {
-        tab_mode.switch_active_tab_to(entry.tab);
+    if (entry.tab != app.active_tab_view) {
+        tab_mode.switch_active_tab_view_to(entry.tab);
     }
 
     app.engine_settings             = std::move(entry.settings.engine_settings);
@@ -424,7 +424,7 @@ void Undo::do_redo() {
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
-        ViewState& curtab = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
+        ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
         if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
             curtab.phase_reset_last_selected = app.last_selected_marker;

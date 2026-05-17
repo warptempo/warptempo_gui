@@ -272,16 +272,6 @@ enum class DialogTrigger {
     PASTE_CONFIRM,
 };
 
-// Active view-domain axis. Orthogonal to the markers-view flag (W/P).
-// In Source, app.viewport_start_sample / playhead_sample / zoom_level
-// carry source-frame values; in Target, they carry target-frame values.
-// On `t` toggle the live fields translate through the current timemap
-// in place (forward on S→T, inverse on T→S). Render-view is unaffected
-// — `t` is silently dropped while render-view is active. Brief 1 is
-// read-only in target view: no marker paint, no playback, no engine
-// call, no trim editing.
-enum class ViewDomain { Source, Target };
-
 // In-window modal prompt state. When `active` is true, the bottom strip
 // overlays the prompt's text and response options in place of the
 // timestamp / tab letter / dirty indicator / render-view filename.
@@ -394,19 +384,23 @@ struct AppState {
     // the playhead and selected indicators.
     char active_markers_view = 'W';
 
-    // Active view-domain axis. Source = the authored timeline; Target =
-    // the engine's deformed-output timeline. Orthogonal to active_markers_view
-    // (the W/P markers-view axis): `t` toggles S/T, `p` toggles W/P. While in
-    // Target, app.viewport_start_sample / playhead_sample / zoom_level
-    // are target-frame; the live fields' interpretation flips on toggle.
-    // Render-view leaves this unchanged — `t` is dropped in render-view.
-    ViewDomain view_domain = ViewDomain::Source;
+    // Active audio view: 'S' = source (the authored timeline), 'T' =
+    // target (the engine's deformed-output timeline). Orthogonal to
+    // active_markers_view ('W'/'P'): `t` toggles S/T, `p` toggles
+    // W/P. While 'T', app.viewport_start_sample / playhead_sample /
+    // zoom_level carry target-frame values; the live fields'
+    // interpretation flips on toggle. Render-view leaves this
+    // unchanged — `t` is dropped in render-view. Brief 1 was
+    // read-only in target view; the target-render audio subsystem
+    // (briefs 1-3 of the target-render sequence) makes target view
+    // playable with live engine output.
+    char active_audio_view = 'S';
 
     // Cached total-frame count for the active timemap, in TARGET-frame
     // units. Computed at every S→T toggle as forward-translate(audio
     // .total_frames()) and zeroed on file load. Read by samples_visible /
-    // clamp_viewport_start / current_samples_per_pixel when view_domain
-    // == Target so the viewport-clamp / fit-file math operates against
+    // clamp_viewport_start / current_samples_per_pixel when active_audio_view
+    // == 'T' so the viewport-clamp / fit-file math operates against
     // the deformed timeline's length. Zero is sentinel for "not yet
     // populated" — the toggle handler is the only writer in brief 1.
     int64_t target_view_total_frames = 0;
@@ -513,11 +507,15 @@ struct AppState {
     // rebind_to_source.
     int64_t target_buffer_start_frame = 0;
 
-    // A/B navigational tabs. Ctrl+Tab toggles between them; each holds a
-    // snapshot of viewport/zoom/playhead. Persisted in .settings.
+    // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
+    // (tab_a or tab_b) is mirrored into the live AppState fields.
+    // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
+    // each hold an independent viewport/zoom/playhead/trim/selection
+    // tuple, but share the same warpmarkers, phase_reset_markers, and
+    // engine_settings.
     ViewState tab_a;
     ViewState tab_b;
-    char active_tab = 'A';
+    char active_tab_view = 'A';
 
     // Typed engine settings. The live authoring store: settings editor
     // commits, .settings file load, and the BPM-sweep / Ctrl+Alt+C scale
@@ -684,10 +682,10 @@ GuiRect union_rect(GuiRect a, GuiRect b);
 // render-view callers must keep using GuiTabMode::active_view_state(),
 // which handles the render-entry case.
 inline ViewState& active_view_state(AppState& a) {
-    return (a.active_tab == 'B') ? a.tab_b : a.tab_a;
+    return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
 }
 inline const ViewState& active_view_state(const AppState& a) {
-    return (a.active_tab == 'B') ? a.tab_b : a.tab_a;
+    return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
 }
 
 // Snapshot the authoring-class settings from `app` (engine_settings +

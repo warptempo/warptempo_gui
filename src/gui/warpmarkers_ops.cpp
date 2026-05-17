@@ -91,7 +91,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
         time_seconds * static_cast<double>(sr)));
     int64_t sample = src_sample;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const auto tmap_after = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
         sample = to_domain_frame(app, src_sample, tmap_after);
@@ -104,7 +104,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -119,7 +119,7 @@ void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -409,7 +409,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     // (mouse_time - anchor_mouse_time_seconds) lives in source-seconds.
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const int64_t anchor_frame_active =
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(
@@ -711,7 +711,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
 
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const auto& mv = app.warpmarkers.markers();
         for (int idx : app.selected_markers) {
             if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
@@ -808,7 +808,7 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     // time_seconds is source-domain. Inverse-translate playhead before
     // taking the delta so the resulting shift is source-seconds.
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }

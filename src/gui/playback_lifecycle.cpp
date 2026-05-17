@@ -62,7 +62,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
     }
     int64_t start;
     int64_t end;
-    if (app.view_domain == ViewDomain::Target &&
+    if (app.active_audio_view == 'T' &&
         !app.render_view_enabled) {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet
@@ -90,7 +90,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
     app.is_playing = true;
     if (app.follow_mode) viewport.follow_scroll_if_needed();
     const bool force_one_x =
-        app.render_view_enabled || app.view_domain == ViewDomain::Target;
+        app.render_view_enabled || app.active_audio_view == 'T';
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     playback.play(start, end);
 }
@@ -104,7 +104,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
 // user last set in source view. This is the only path that writes
 // app.playback_speed, so the refusal here is sufficient.
 void GuiPlaybackLifecycle::set_playback_speed(float s) {
-    if (app.view_domain == ViewDomain::Target) return;
+    if (app.active_audio_view == 'T') return;
     app.playback_speed = s;
     playback.set_speed(s);
     // Speed change without resync would cause a backward cursor jump:

@@ -75,7 +75,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
     std::vector<TimeMapSegment> target_timemap;
-    if (!rv && app.view_domain == ViewDomain::Target) {
+    if (!rv && app.active_audio_view == 'T') {
         target_timemap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -142,7 +142,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // begin_drag so hit-rect positions match the frozen-coord paint.
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
-        app.view_domain == ViewDomain::Target) {
+        app.active_audio_view == 'T') {
         if (app.drag.active) {
             target_timemap = app.drag.frozen_timemap;
         } else {
@@ -206,7 +206,7 @@ int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
-        app.view_domain == ViewDomain::Target) {
+        app.active_audio_view == 'T') {
         if (app.drag.active) {
             target_timemap = app.drag.frozen_timemap;
         } else {
@@ -286,7 +286,7 @@ int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     std::vector<TimeMapSegment> target_timemap;
     if (!app.render_view_enabled &&
-        app.view_domain == ViewDomain::Target) {
+        app.active_audio_view == 'T') {
         if (app.drag.active) {
             target_timemap = app.drag.frozen_timemap;
         } else {

@@ -360,7 +360,7 @@ std::vector<TimeMapSegment> build_target_view_timemap(
 
 int64_t to_source_frame(const AppState& app, int64_t domain_frame,
                         const std::vector<TimeMapSegment>& timemap) {
-    if (app.view_domain == ViewDomain::Source) return domain_frame;
+    if (app.active_audio_view == 'S') return domain_frame;
     const size_t q = (domain_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(domain_frame);
@@ -370,7 +370,7 @@ int64_t to_source_frame(const AppState& app, int64_t domain_frame,
 
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
                         const std::vector<TimeMapSegment>& timemap) {
-    if (app.view_domain == ViewDomain::Source) return source_frame;
+    if (app.active_audio_view == 'S') return source_frame;
     const size_t q = (source_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(source_frame);

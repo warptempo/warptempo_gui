@@ -17,7 +17,7 @@ bool GuiSaveOps::save() {
     }
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.
-    tab_mode.refresh_active_tab_from_app();
+    tab_mode.refresh_active_tab_view_from_app();
 
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
@@ -62,7 +62,9 @@ bool GuiSaveOps::save() {
         if (!write_settings_file(app.settings_path,
                                  app.tab_a, app.tab_b,
                                  app.follow_mode,
+                                 app.active_audio_view,
                                  app.active_markers_view,
+                                 app.active_tab_view,
                                  app.playback_speed,
                                  app.engine_settings)) {
             std::fprintf(stderr,

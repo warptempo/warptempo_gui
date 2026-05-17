@@ -9,9 +9,9 @@
 // the lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   active_view_state,
-//   refresh_active_tab_from_app,
+//   refresh_active_tab_view_from_app,
 //   switch_active_markers_view_to,
-//   switch_active_tab_to            → this->method_name (intra-cluster calls)
+//   switch_active_tab_view_to            → this->method_name (intra-cluster calls)
 //   prune_live_selection            → selection.prune_live_selection
 //   invalidate_waveform_area        → viewport.invalidate_waveform_area
 //   invalidate_timestamp_area       → viewport.invalidate_timestamp_area
@@ -28,8 +28,8 @@
 // so "remembered spot" semantics stay consistent between the two paths.
 // Also stashes the active selection into the per-mode slot so a tab
 // flip + mode flip can restore the right pair on return.
-void GuiTabMode::refresh_active_tab_from_app() {
-    ViewState& t = (app.active_tab == 'B') ? app.tab_b : app.tab_a;
+void GuiTabMode::refresh_active_tab_view_from_app() {
+    ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     t.viewport_start_sample = app.viewport_start_sample;
     t.zoom_level            = app.zoom_level;
     t.playhead_sample       = app.playhead_sample;
@@ -60,7 +60,7 @@ ViewState* GuiTabMode::active_view_state() {
         // a source tab slot.
         return nullptr;
     }
-    return (app.active_tab == 'B') ? &app.tab_b : &app.tab_a;
+    return (app.active_tab_view == 'B') ? &app.tab_b : &app.tab_a;
 }
 
 // Toggle active editing mode between 'W' (warp) and 'P' (phase reset).
@@ -91,15 +91,15 @@ void GuiTabMode::switch_active_markers_view_to(char target_mode) {
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
 // current viewport/zoom/playhead to the leaving tab, restores the
 // target tab. Does not mark the document dirty.
-void GuiTabMode::switch_active_tab_to(char target_tab) {
+void GuiTabMode::switch_active_tab_view_to(char target_tab) {
     // Synchronous stop so the next tick doesn't snap the playhead
     // back to the audio cursor, overwriting the target tab's
     // stored playhead.
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
-    this->refresh_active_tab_from_app();
-    app.active_tab = target_tab;
-    const ViewState& target = (app.active_tab == 'A') ? app.tab_a : app.tab_b;
+    this->refresh_active_tab_view_from_app();
+    app.active_tab_view = target_tab;
+    const ViewState& target = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;
     app.viewport_start_sample = target.viewport_start_sample;
     app.zoom_level            = target.zoom_level;
     app.playhead_sample       = target.playhead_sample;

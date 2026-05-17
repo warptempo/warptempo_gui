@@ -17,7 +17,7 @@ void GuiTargetRender::trigger() {
     is_dirty_ = true;
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
-    if (app.view_domain != ViewDomain::Target) return;
+    if (app.active_audio_view != 'T') return;
     // No audio loaded — nothing to render.
     if (audio.total_frames() <= 0)              return;
     if (app.source_audio_path.empty())          return;
@@ -64,7 +64,7 @@ void GuiTargetRender::maybe_dispatch_pending() {
     // Re-validate target view: a target → source toggle between trigger()
     // and the pump may have moved us out of target view. In that case
     // rebind_to_source() already cleared pending_, but be defensive.
-    if (app.view_domain != ViewDomain::Target) {
+    if (app.active_audio_view != 'T') {
         pending_ = false;
         return;
     }
@@ -170,7 +170,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // Only rebind if we're still in target view. A T→S toggle
         // during render already called rebind_to_source(); we don't
         // want to undo that.
-        if (app.view_domain == ViewDomain::Target &&
+        if (app.active_audio_view == 'T' &&
             app.target_buffer_frames > 0) {
             // The trigger always freezes playback before dispatch, so
             // the device should still be stopped here. The rebind helper
@@ -179,7 +179,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
                                    app.target_buffer_frames);
             // Buffer now matches the engine input that produced it.
             // Gate the clear behind the rebind path: a render that
-            // completed while view_domain flipped to Source must not
+            // completed while active_audio_view flipped to Source must not
             // clear the bit, since a later S→T may follow source-view
             // edits whose trigger() set the bit while the render was
             // already in flight.
@@ -213,7 +213,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 void GuiTargetRender::ensure_ready() {
     // Source view does not use target_buffer. Match trigger()'s
     // source-view no-op invariant.
-    if (app.view_domain != ViewDomain::Target) return;
+    if (app.active_audio_view != 'T') return;
     // No audio loaded — nothing to do.
     if (audio.total_frames() <= 0)              return;
     if (app.source_audio_path.empty())          return;

@@ -364,7 +364,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Render-view drops bare `t` via the gate above (target view is
     // unreachable from render-view; render-view exits via `r`).
     if (key == GuiKeys::T && !ctrl && !shift && !alt) {
-        handle_view_domain_toggle();
+        handle_active_audio_view_toggle();
         return;
     }
 
@@ -1061,7 +1061,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // empty into the live pair (and so a later mode flip
         // doesn't surface stale indices).
         {
-            ViewState& t = (app.active_tab == 'B') ? app.tab_b
+            ViewState& t = (app.active_tab_view == 'B') ? app.tab_b
                                                    : app.tab_a;
             t.warp_selected.clear();
             t.warp_last_selected      = -1;
@@ -1156,7 +1156,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
-        if (app.view_domain == ViewDomain::Target && !playback.is_playing()) {
+        if (app.active_audio_view == 'T' && !playback.is_playing()) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
         }
@@ -1443,7 +1443,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // current viewport/zoom/playhead to the leaving tab, restores the
     // target tab. Does not mark the document dirty.
     if (ctrl && !shift && key == GuiKeys::Tab) {
-        tab_mode.switch_active_tab_to(app.active_tab == 'A' ? 'B' : 'A');
+        tab_mode.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         return;
     }
 
@@ -1683,7 +1683,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     // displayed position; the viewport recenter below also uses this
     // target-frame value via center_viewport_on_playhead.
     int64_t sample = src_sample;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const auto tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
         sample = to_domain_frame(app, src_sample, tmap);
@@ -1980,7 +1980,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const int64_t sample = app.viewport_start_sample +
                 static_cast<int64_t>(std::nearbyint(click_rel_x * spp));
             std::vector<TimeMapSegment> tmap;
-            if (app.view_domain == ViewDomain::Target) {
+            if (app.active_audio_view == 'T') {
                 tmap = build_target_view_timemap(
                     app, sr, static_cast<long>(audio.total_frames()));
             }
@@ -2087,7 +2087,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         static_cast<double>(sr)));
                 }
                 int64_t sample = src_sample;
-                if (app.view_domain == ViewDomain::Target) {
+                if (app.active_audio_view == 'T') {
                     const auto tmap = build_target_view_timemap(
                         app, sr, static_cast<long>(audio.total_frames()));
                     sample = to_domain_frame(app, src_sample, tmap);
@@ -2121,7 +2121,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         static_cast<double>(sr)));
                 }
                 int64_t sample = src_sample;
-                if (app.view_domain == ViewDomain::Target) {
+                if (app.active_audio_view == 'T') {
                     const auto tmap = build_target_view_timemap(
                         app, sr, static_cast<long>(audio.total_frames()));
                     sample = to_domain_frame(app, src_sample, tmap);
@@ -2145,7 +2145,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // toggle_playback's no-op pattern is for the "no
                 // playback running" case, but here playback IS running.
                 if (was_playing && sample != playhead_at_click_entry) {
-                    if (app.view_domain == ViewDomain::Target &&
+                    if (app.active_audio_view == 'T' &&
                         !app.render_view_enabled) {
                         if (app.target_buffer_frames <= 0) {
                             playback.stop();
@@ -2186,7 +2186,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // marker-line branch above — see the comment there
                 // for the target-buffer-frame rationale.
                 if (was_playing && sample != playhead_at_click_entry) {
-                    if (app.view_domain == ViewDomain::Target &&
+                    if (app.active_audio_view == 'T' &&
                         !app.render_view_enabled) {
                         if (app.target_buffer_frames <= 0) {
                             playback.stop();
@@ -2242,7 +2242,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
             // frame. Render-view is unaffected (own coordinate system).
             int64_t ph_for_local = ph;
             if (!app.render_view_enabled &&
-                app.view_domain == ViewDomain::Target) {
+                app.active_audio_view == 'T') {
                 const auto tmap = build_target_view_timemap(
                     app, sr, static_cast<long>(audio.total_frames()));
                 ph_for_local = to_source_frame(app, ph, tmap);
@@ -2472,7 +2472,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // Target view: forward-translate the snapped marker's
             // source-frame to active-domain so the playhead lands on
             // the marker's displayed position.
-            if (app.view_domain == ViewDomain::Target) {
+            if (app.active_audio_view == 'T') {
                 const auto tmap = build_target_view_timemap(
                     app, sr, static_cast<long>(audio.total_frames()));
                 new_playhead = to_domain_frame(app, src_sample, tmap);
@@ -2542,7 +2542,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // captured and the source-domain time_seconds the apply path
     // writes into.
     double mouse_time;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         const int64_t mouse_frame_active =
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(
@@ -2580,7 +2580,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
         const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
             app.drag.moveable_times[hit_pos] * sr_d));
-        const int64_t ph = (app.view_domain == ViewDomain::Target)
+        const int64_t ph = (app.active_audio_view == 'T')
             ? to_domain_frame(app, ph_src, app.drag.frozen_timemap)
             : ph_src;
         if (ph != app.playhead_sample) {
@@ -2610,7 +2610,7 @@ void GuiInputHandler::handle_trim_set_begin_at_playhead() {
     // downstream toggle / collision / swap logic compares against the
     // source-frame domain the trim store lives in.
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -2677,7 +2677,7 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     // Target view: see the matching note in handle_trim_set_begin —
     // playhead is target-domain; the trim store is source-domain.
     std::vector<TimeMapSegment> tmap;
-    if (app.view_domain == ViewDomain::Target) {
+    if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
     }
@@ -2757,7 +2757,7 @@ void GuiInputHandler::handle_trim_unset_end() {
     target_render.trigger();
 }
 
-void GuiInputHandler::handle_view_domain_toggle() {
+void GuiInputHandler::handle_active_audio_view_toggle() {
     // Audio must be loaded — `t` is a silent no-op in blank state.
     // (The blank/loading guard near the top of on_key already covers
     // this, but the helper is defensive in case future callers reach
@@ -2821,7 +2821,7 @@ void GuiInputHandler::handle_view_domain_toggle() {
     int64_t new_playhead = app.playhead_sample;
 
     bool going_to_target = false;
-    if (app.view_domain == ViewDomain::Source) {
+    if (app.active_audio_view == 'S') {
         // S → T: forward-translate the playhead and cache the target-
         // domain total so live_total_frames returns the deformed
         // length for the post-flip viewport math.
@@ -2837,7 +2837,7 @@ void GuiInputHandler::handle_view_domain_toggle() {
                                 ? 0 : app.playhead_sample), tmap);
         new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
-        app.view_domain = ViewDomain::Target;
+        app.active_audio_view = 'T';
         going_to_target = true;
     } else {
         // T → S: inverse-translate the playhead, drop the target-domain
@@ -2847,7 +2847,7 @@ void GuiInputHandler::handle_view_domain_toggle() {
                                 ? 0 : app.playhead_sample), tmap);
         new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
-        app.view_domain              = ViewDomain::Source;
+        app.active_audio_view              = 'S';
         app.target_view_total_frames = 0;
     }
 
