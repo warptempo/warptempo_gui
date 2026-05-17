@@ -655,6 +655,55 @@ GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+
+// Shared neighbor-walk core for compute_selection_delta_bounds (warp) and
+// compute_phase_reset_delta_bounds (phase reset). For each selected index,
+// walks past contiguous selected neighbors on each side to find the
+// nearest non-selected neighbor, intersecting per-marker (delta_min,
+// delta_max) bounds. When a selected marker has no neighbor on a side it
+// clamps to [eps, total_duration - eps]. The marker container is read
+// only through `markers[idx].time_seconds`, so any marker type exposing
+// that field works.
+//
+// Preconditions enforced here: every idx in `selected` is in range of
+// `markers` (returns {0.0, 0.0} on violation, which the caller treats as
+// the same no-op shape it returns for its own precondition failures).
+// Caller-side preconditions (warp's frame-zero pin; non-empty selection;
+// positive sample rate) are not the helper's responsibility.
+template <typename MarkerVec>
+std::pair<double, double> compute_neighbor_walk_bounds(
+    const MarkerVec& markers,
+    const std::set<int>& selected,
+    double eps,
+    double total_duration) {
+    double d_min = -std::numeric_limits<double>::infinity();
+    double d_max =  std::numeric_limits<double>::infinity();
+    const int n = static_cast<int>(markers.size());
+    for (int idx : selected) {
+        if (idx < 0 || idx >= n) return {0.0, 0.0};
+        const double orig_t = markers[idx].time_seconds;
+        int prev = idx - 1;
+        while (prev >= 0 && selected.count(prev)) --prev;
+        if (prev >= 0) {
+            const double lb = (markers[prev].time_seconds + eps) - orig_t;
+            if (lb > d_min) d_min = lb;
+        } else {
+            const double lb = eps - orig_t;
+            if (lb > d_min) d_min = lb;
+        }
+        int next = idx + 1;
+        while (next < n && selected.count(next)) ++next;
+        if (next < n) {
+            const double ub = (markers[next].time_seconds - eps) - orig_t;
+            if (ub < d_max) d_max = ub;
+        } else {
+            const double ub = (total_duration - eps) - orig_t;
+            if (ub < d_max) d_max = ub;
+        }
+    }
+    return {d_min, d_max};
+}
+
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
 // Active-domain total frame count. Source view returns audio.total_frames();

@@ -636,6 +636,9 @@ std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool
     if (app.selected_markers.empty()) return {0.0, 0.0};
     const int sr = audio.sample_rate();
     if (sr <= 0) return {0.0, 0.0};
+    // Bounds check is needed inline because the frame-zero pin
+    // dereferences mv[idx]; the warp wrapper owns this precondition,
+    // not the shared helper.
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return {0.0, 0.0};
         if (idx == 0 || mv[idx].time_seconds == 0.0) return {0.0, 0.0};
@@ -645,33 +648,10 @@ std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
-
-    double d_min = -std::numeric_limits<double>::infinity();
-    double d_max =  std::numeric_limits<double>::infinity();
-    for (int idx : app.selected_markers) {
-        const double orig_t = mv[idx].time_seconds;
-        int prev = idx - 1;
-        while (prev >= 0 && app.selected_markers.count(prev)) --prev;
-        if (prev >= 0) {
-            const double lb = (mv[prev].time_seconds + eps) - orig_t;
-            if (lb > d_min) d_min = lb;
-        } else {
-            const double lb = eps - orig_t;
-            if (lb > d_min) d_min = lb;
-        }
-        int next = idx + 1;
-        while (next < static_cast<int>(mv.size()) &&
-               app.selected_markers.count(next)) ++next;
-        if (next < static_cast<int>(mv.size())) {
-            const double ub = (mv[next].time_seconds - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        } else {
-            const double ub = (total_duration - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        }
-    }
+    auto bounds = compute_neighbor_walk_bounds(
+        mv, app.selected_markers, eps, total_duration);
     ok = true;
-    return {d_min, d_max};
+    return bounds;
 }
 
 // Shift every selected marker by the clamped delta. Returns whether any

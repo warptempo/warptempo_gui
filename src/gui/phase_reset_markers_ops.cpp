@@ -141,49 +141,25 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // Compute (delta_min, delta_max) seconds bounds for shifting the
 // currently-selected phase resets by a uniform delta. Same shape as the
 // warp version: nearest non-selected neighbor on each side, intersected,
-// with a 3-pixel-at-current-zoom visual gap enforced via eps. No trim
-// clamp — phase resets aren't bounded by trim flags during edit.
+// with a kMarkerHitHalfPx-pixels-at-current-zoom visual gap enforced via
+// eps. No trim clamp — phase resets aren't bounded by trim flags during
+// edit. No frame-zero pin either — a phase reset at time 0.0 is legit-
+// imately movable, in contrast to warp marker 0.
 std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bounds(bool& ok) {
     ok = false;
     const auto& tv = app.phase_reset_markers.markers();
     if (app.selected_markers.empty()) return {0.0, 0.0};
     const int sr = audio.sample_rate();
     if (sr <= 0) return {0.0, 0.0};
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(tv.size())) return {0.0, 0.0};
-    }
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
-
-    double d_min = -std::numeric_limits<double>::infinity();
-    double d_max =  std::numeric_limits<double>::infinity();
-    for (int idx : app.selected_markers) {
-        const double orig_t = tv[idx].time_seconds;
-        int prev = idx - 1;
-        while (prev >= 0 && app.selected_markers.count(prev)) --prev;
-        if (prev >= 0) {
-            const double lb = (tv[prev].time_seconds + eps) - orig_t;
-            if (lb > d_min) d_min = lb;
-        } else {
-            const double lb = eps - orig_t;
-            if (lb > d_min) d_min = lb;
-        }
-        int next = idx + 1;
-        while (next < static_cast<int>(tv.size()) &&
-               app.selected_markers.count(next)) ++next;
-        if (next < static_cast<int>(tv.size())) {
-            const double ub = (tv[next].time_seconds - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        } else {
-            const double ub = (total_duration - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        }
-    }
+    auto bounds = compute_neighbor_walk_bounds(
+        tv, app.selected_markers, eps, total_duration);
     ok = true;
-    return {d_min, d_max};
+    return bounds;
 }
 
 // Nudge selected phase resets by +/- 1 source-pixel of seconds. Direction:
