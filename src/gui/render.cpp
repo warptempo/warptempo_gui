@@ -69,6 +69,91 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     return text;
 }
 
+// Shared stem-painting loop used by render_markers and
+// render_phase_reset_markers. The only meaningful difference between the
+// two callers is how visual-disability is computed: warp markers walk
+// the label_ref cascade via `effective_disabled`, phase resets read
+// `disabled` directly. That asymmetry is exposed here as a predicate
+// `is_disabled(i)`; everything else (viewport math, drag overlay, target
+// translation, two-pass in-trim/out-of-trim split, integer-pixel snap)
+// is identical for both marker kinds.
+template <typename MarkerVec, typename IsVisuallyDisabled>
+void render_marker_stems_impl(
+    cairo_t* cr,
+    GuiRect waveform_area,
+    const MarkerVec& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    const TrimRange& trim,
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay,
+    IsVisuallyDisabled&& is_disabled) {
+    if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+    if (sample_rate <= 0) return;
+
+    const double span = static_cast<double>(viewport_end_sample -
+                                            viewport_start_sample);
+    const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
+    if (samples_per_pixel <= 0.0) return;
+
+    const double sr = static_cast<double>(sample_rate);
+    const double y_conn_top =
+        static_cast<double>(waveform_area.y) - kMarkerConnectorRows;
+    const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
+
+    cairo_save(cr);
+    cairo_set_line_width(cr, 1.0);
+
+    // Two passes — one path per color — split by in-trim vs out-of-trim.
+    // Disabled markers are skipped entirely (no stem); selection has no
+    // effect on stems under the brief H palette rules.
+    for (int pass = 0; pass < 2; pass++) {
+        const bool out_of_trim_pass = (pass == 1);
+        const GuiColor c = out_of_trim_pass ? dim(kMarker) : kMarker;
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        for (size_t i = 0; i < markers.size(); ++i) {
+            if (is_disabled(static_cast<int>(i))) continue;
+            const auto& m = markers[i];
+            // Effective time: when a drag is active and this marker is
+            // in the overlay, read its proposed time from the overlay
+            // instead of the live store. The frozen timemap (passed in
+            // via `timemap`) is the matching pre-drag coordinate system
+            // for forward translation.
+            const double eff_time = drag_overlay
+                ? drag_overlay->effective_time(
+                      static_cast<int>(i), m.time_seconds)
+                : m.time_seconds;
+            // Translate per-marker source-frame to target-frame in target view
+            // (timemap non-null/non-empty); identity otherwise. Viewport and
+            // trim are passed in the same domain (source in source view,
+            // target in target view), so the comparisons stay consistent.
+            double ms;
+            if (timemap && !timemap->empty()) {
+                const size_t src_frame = static_cast<size_t>(
+                    std::nearbyint(eff_time * sr));
+                ms = map_source_to_target(src_frame, *timemap);
+            } else {
+                ms = eff_time * sr;
+            }
+            if (ms < static_cast<double>(viewport_start_sample)) continue;
+            if (ms >= static_cast<double>(viewport_end_sample)) continue;
+            const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
+            if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
+            const double x_raw =
+                (ms - static_cast<double>(viewport_start_sample))
+                    / samples_per_pixel;
+            const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
+            cairo_move_to(cr, x_px, y_conn_top);
+            cairo_line_to(cr, x_px, y1);
+        }
+        cairo_stroke(cr);
+    }
+
+    cairo_restore(cr);
+}
+
 } // namespace
 
 std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int idx) {
@@ -418,69 +503,13 @@ void render_markers(cairo_t* cr,
                     const TrimRange& trim,
                     const std::vector<TimeMapSegment>* timemap,
                     const DragOverlay* drag_overlay) {
-    if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
-    if (samples_per_pixel <= 0.0) return;
-
-    const double sr = static_cast<double>(sample_rate);
-    const double y_conn_top =
-        static_cast<double>(waveform_area.y) - kMarkerConnectorRows;
-    const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
-
-    cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
-
-    // Two passes — one path per color — split by in-trim vs out-of-trim.
-    // Disabled markers are skipped entirely (no stem); selection has no
-    // effect on stems under the brief H palette rules.
-    for (int pass = 0; pass < 2; pass++) {
-        const bool out_of_trim_pass = (pass == 1);
-        const GuiColor c = out_of_trim_pass ? dim(kMarker) : kMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        for (size_t i = 0; i < markers.size(); ++i) {
-            if (effective_disabled(markers, static_cast<int>(i))) continue;
-            const auto& m = markers[i];
-            // Effective time: when a drag is active and this marker is
-            // in the overlay, read its proposed time from the overlay
-            // instead of the live store. The frozen timemap (passed in
-            // via `timemap`) is the matching pre-drag coordinate system
-            // for forward translation.
-            const double eff_time = drag_overlay
-                ? drag_overlay->effective_time(
-                      static_cast<int>(i), m.time_seconds)
-                : m.time_seconds;
-            // Translate per-marker source-frame to target-frame in target view
-            // (timemap non-null/non-empty); identity otherwise. Viewport and
-            // trim are passed in the same domain (source in source view,
-            // target in target view), so the comparisons stay consistent.
-            double ms;
-            if (timemap && !timemap->empty()) {
-                const size_t src_frame = static_cast<size_t>(
-                    std::nearbyint(eff_time * sr));
-                ms = map_source_to_target(src_frame, *timemap);
-            } else {
-                ms = eff_time * sr;
-            }
-            if (ms < static_cast<double>(viewport_start_sample)) continue;
-            if (ms >= static_cast<double>(viewport_end_sample)) continue;
-            const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
-            if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
-            const double x_raw =
-                (ms - static_cast<double>(viewport_start_sample))
-                    / samples_per_pixel;
-            const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
-            cairo_move_to(cr, x_px, y_conn_top);
-            cairo_line_to(cr, x_px, y1);
-        }
-        cairo_stroke(cr);
-    }
-
-    cairo_restore(cr);
+    render_marker_stems_impl(
+        cr, waveform_area, markers,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, trim, timemap, drag_overlay,
+        [&](int i) {
+            return effective_disabled(markers, i);
+        });
 }
 
 namespace {
@@ -875,67 +904,13 @@ void render_phase_reset_markers(cairo_t* cr,
                               const TrimRange& trim,
                               const std::vector<TimeMapSegment>* timemap,
                               const DragOverlay* drag_overlay) {
-    if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
-    if (samples_per_pixel <= 0.0) return;
-
-    const double sr = static_cast<double>(sample_rate);
-
-    const double y_conn_top =
-        static_cast<double>(waveform_area.y) - kMarkerConnectorRows;
-    const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
-
-    cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
-
-    // Two passes — one path per color — split by in-trim vs out-of-trim.
-    // Disabled phase resets are skipped entirely (no stem); selection has no
-    // effect on stems under the brief H palette rules.
-    for (int pass = 0; pass < 2; pass++) {
-        const bool out_of_trim_pass = (pass == 1);
-        const GuiColor c = out_of_trim_pass ? dim(kMarker) : kMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        for (size_t i = 0; i < phase_resets.size(); ++i) {
-            const auto& m = phase_resets[i];
-            if (m.disabled) continue;
-            // Effective time: drag overlay > live store. Forward
-            // translation goes through the frozen pre-drag timemap when
-            // the drag is active so the stem paints at its proposed
-            // target-frame position without disturbing other markers.
-            const double eff_time = drag_overlay
-                ? drag_overlay->effective_time(
-                      static_cast<int>(i), m.time_seconds)
-                : m.time_seconds;
-            // Translate per-marker source-frame to target-frame in target
-            // view (timemap non-null/non-empty); identity otherwise.
-            double ms;
-            if (timemap && !timemap->empty()) {
-                const size_t src_frame = static_cast<size_t>(
-                    std::nearbyint(eff_time * sr));
-                ms = map_source_to_target(src_frame, *timemap);
-            } else {
-                ms = eff_time * sr;
-            }
-            const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
-            if (ms < static_cast<double>(viewport_start_sample)) continue;
-            if (ms >= static_cast<double>(viewport_end_sample)) continue;
-            if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
-            const double x_raw =
-                (ms - static_cast<double>(viewport_start_sample))
-                    / samples_per_pixel;
-            const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
-            cairo_move_to(cr, x_px, y_conn_top);
-            cairo_line_to(cr, x_px, y1);
-        }
-        cairo_stroke(cr);
-    }
-
-    cairo_restore(cr);
+    render_marker_stems_impl(
+        cr, waveform_area, phase_resets,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, trim, timemap, drag_overlay,
+        [&](int i) {
+            return phase_resets[i].disabled;
+        });
 }
 
 void render_phase_reset_flags(cairo_t* cr,
