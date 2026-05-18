@@ -1451,6 +1451,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
+    // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
+    // march paired tabs forward in lockstep with one chord.
+    if (ctrl && shift && key == GuiKeys::Tab) {
+        cycle_marker_focus_with_recenter(true);
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        cycle_marker_focus_with_recenter(true);
+        return;
+    }
+
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter at max
     // zoom on the focused marker. The Ctrl+Tab branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
