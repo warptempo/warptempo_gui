@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
     GuiPlayback  playback;
     GuiPlatform  gui;
     WaveformCache wf_cache;
-    if (!gui.init(app.width, app.height, "Warptempo")) {
+    if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
     }
 

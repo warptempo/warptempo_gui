@@ -199,7 +199,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     impl_->fractional_cursor = 0.0;
 
     // Force JACK explicitly: the user runs PipeWire with pipewire-jack and
-    // wants warptempo's latency profile to match REAPER's JACK path. A
+    // wants warptempo_gui's latency profile to match REAPER's JACK path. A
     // silent fallback to ALSA would defeat the purpose, so we pass a
     // single-element backends array — if JACK is unavailable, init fails
     // here rather than landing on the ALSA shim.

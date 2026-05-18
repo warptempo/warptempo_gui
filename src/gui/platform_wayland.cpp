@@ -143,11 +143,11 @@ std::string url_decode(const std::string& s) {
 int open_shm_fd(size_t size) {
     int fd = -1;
 #ifdef MFD_CLOEXEC
-    fd = memfd_create("warptempo-shm", MFD_CLOEXEC);
+    fd = memfd_create("warptempo_gui-shm", MFD_CLOEXEC);
 #endif
     if (fd < 0) {
         char name[64];
-        std::snprintf(name, sizeof(name), "/warptempo-shm-%d-%ld",
+        std::snprintf(name, sizeof(name), "/warptempo_gui-shm-%d-%ld",
                       getpid(), (long)time(nullptr));
         fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
         if (fd >= 0) shm_unlink(name);
@@ -544,8 +544,8 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     xdg_toplevel_ = xdg_surface_get_toplevel(xdg_surface_);
     xdg_toplevel_add_listener(xdg_toplevel_, &s_toplevel_listener, this);
-    xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo");
-    xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo");
+    xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo_gui");
+    xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo_gui");
     xdg_toplevel_set_maximized(xdg_toplevel_);
 
     if (xdg_decoration_manager_) {
@@ -1474,7 +1474,7 @@ void GuiPlatform::on_pointer_axis(uint32_t /*time*/,
     // (content moves up under the cursor), negative = scroll up.
     // Translate to a discrete WheelUp / WheelDown button event pair.
     // Trackpad smooth-scroll arrives here too but we treat any
-    // non-zero vertical axis tick as one discrete step; WarpTempo's
+    // non-zero vertical axis tick as one discrete step; warptempo_gui's
     // wheel bindings (zoom-by-level, pan-by-fraction) are discrete
     // by nature and don't benefit from sub-step resolution.
     const GuiMouseButton mb = (value > 0)
@@ -1648,7 +1648,7 @@ std::string GuiPlatform::parse_first_file_uri(const std::string& uri_list) {
     // skipped. Many implementations send LF only; accept either. Each
     // URI is URL-encoded; we URL-decode and require the file:// scheme
     // with an absolute path. Multi-file drops collapse to first-wins
-    // because WarpTempo is single-source-audio; a stderr line announces
+    // because warptempo_gui is single-source-audio; a stderr line announces
     // when the user dropped more than one.
     std::string first_path;
     int valid_count = 0;

@@ -73,7 +73,7 @@ constexpr double kMarkerConnectorRows = 11.0;
 
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default
-// at non-HiDPI). WarpTempo does not currently support HiDPI; this is
+// at non-HiDPI). warptempo_gui does not currently support HiDPI; this is
 // a fixed pixel value rather than a runtime pt->px conversion. The
 // literal computation form makes the pt origin self-documenting --
 // the compiler folds it to a constant at compile time.
