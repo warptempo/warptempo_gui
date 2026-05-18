@@ -88,14 +88,20 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     viewport.clear_hover_popup();
 }
 
-// Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
-// current viewport/zoom/playhead to the leaving tab, restores the
-// target tab. Does not mark the document dirty.
+// Ctrl+Tab toggles A/B navigational tabs. Stops playback with
+// return-to-launch, saves current viewport/zoom/playhead to the
+// leaving tab, restores the target tab. Does not mark the document
+// dirty.
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
-    // Synchronous stop so the next tick doesn't snap the playhead
-    // back to the audio cursor, overwriting the target tab's
-    // stored playhead.
-    playback_lifecycle.stop_playback_if_playing();
+    // Mirror toggle_playback's stop branch: tab switch is not a
+    // navigational commit, so the leaving tab's snapshot should
+    // capture the Space-launch position rather than the run-time
+    // audio cursor. stop_playback_if_playing's LSP overwrite is
+    // wrong here.
+    if (playback_lifecycle.playback.is_playing()) {
+        playback_lifecycle.playback.stop();
+        playback_lifecycle.restore_playhead_to_lsp();
+    }
     viewport.clear_hover_popup();
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
