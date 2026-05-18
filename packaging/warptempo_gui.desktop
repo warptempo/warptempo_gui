@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=warptempo_gui
+Comment=Phase vocoder for tempo-warping classical orchestral recordings
+Exec=warptempo_gui %f
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;AudioVideoEditing;
+MimeType=audio/x-wav;audio/flac;
+StartupWMClass=warptempo_gui
