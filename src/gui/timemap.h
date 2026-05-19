@@ -58,7 +58,25 @@ struct TimemapBuildResult {
     bool   trimmed          = false;
     size_t trim_begin_frame = 0;
     size_t trim_end_frame   = 0;   // exclusive; == total_frames if no end
+
+    // True when the post-pass injected a synthetic begin/end entry into
+    // standard (and, for end, midi) because the trim boundary did not
+    // align with a real warp marker. Engine- and adapter-facing consumers
+    // read these anchors as valid waypoints; the GUI-facing render sidecar
+    // walk strips them via real_segments() below.
+    bool   has_trim_begin_anchor = false;
+    bool   has_trim_end_anchor   = false;
 };
+
+// Iterator range over the "real" segments of a built timemap — i.e.
+// tmres.standard with the synthetic trim anchors (if any) excluded at
+// both ends. Used by the render sidecar lockstep walk so injected
+// anchors do not surface as ghost markers in render-view.
+struct TimemapRealRange {
+    std::vector<TimemapSegment>::const_iterator begin;
+    std::vector<TimemapSegment>::const_iterator end;
+};
+TimemapRealRange real_segments(const TimemapBuildResult& r);
 
 // Returns true on success; false on any validation failure (message logged
 // to stderr). Failure conditions: tempo > 9.99, tempo <= 0,

@@ -259,24 +259,53 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     out.midi.push_back({final_tgt_sec, last_valid_multiplier});
 
     // Trim post-pass. Shifts both standard and midi vectors to begin at the
-    // trim start; drops entries outside [begin_frame, end_frame].
+    // trim start; drops entries outside [begin_frame, end_frame]. Injects
+    // synthetic boundary anchors into standard (and, on the end side, midi)
+    // when the trim boundaries do not align with real warp markers, so the
+    // engine reads target_total_frames = anchor + N rather than truncating
+    // at the last in-range marker.
     if (has_begin || has_end) {
         long begin_frame = has_begin
-            ? static_cast<long>(std::llrint(begin_sec * sample_rate))
+            ? static_cast<long>(std::nearbyint(begin_sec * sample_rate))
             : 0;
         long end_frame   = has_end
-            ? static_cast<long>(std::llrint(end_sec   * sample_rate))
+            ? static_cast<long>(std::nearbyint(end_sec   * sample_rate))
             : total_frames;
 
+        // Snapshot the pre-shift standard for boundary interpolation; the
+        // shift loop below moves into out.standard. The engine helper
+        // map_source_to_target takes std::vector<TimeMapSegment> (engine
+        // struct), so build a one-shot element-wise copy.
+        std::vector<TimemapSegment> pre_shift_standard = out.standard;
+        std::vector<TimeMapSegment> pre_shift_eng;
+        pre_shift_eng.reserve(pre_shift_standard.size());
+        for (const auto& s : pre_shift_standard) {
+            pre_shift_eng.push_back({s.src_frame, s.tgt_frame});
+        }
+
+        // Boundary tgt values. Aligning to a real marker degenerates to
+        // that marker's tgt (interpolation at a node returns the node);
+        // off-alignment yields the interpolated tgt at the trim boundary
+        // so the shift offset preserves strict monotonicity when the
+        // synthetic anchor is later prepended/appended.
+        const long begin_tgt = has_begin
+            ? static_cast<long>(std::nearbyint(
+                  map_source_to_target(static_cast<size_t>(begin_frame),
+                                       pre_shift_eng)))
+            : 0;
+        const long end_tgt = has_end
+            ? static_cast<long>(std::nearbyint(
+                  map_source_to_target(static_cast<size_t>(end_frame),
+                                       pre_shift_eng)))
+            : (pre_shift_standard.empty()
+                  ? 0
+                  : static_cast<long>(pre_shift_standard.back().tgt_frame));
+
         std::vector<TimemapSegment> std_shifted;
-        long begin_tgt = -1;
-        long end_tgt   = -1;
-        for (const auto& seg : out.standard) {
+        for (const auto& seg : pre_shift_standard) {
             long sf = static_cast<long>(seg.src_frame);
             long tf = static_cast<long>(seg.tgt_frame);
             if (sf >= begin_frame && sf <= end_frame) {
-                if (begin_tgt == -1) begin_tgt = tf;
-                end_tgt = tf;
                 std_shifted.push_back({
                     static_cast<size_t>(sf - begin_frame),
                     static_cast<size_t>(tf - begin_tgt)
@@ -285,11 +314,33 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         }
         out.standard = std::move(std_shifted);
 
-        if (begin_tgt != -1) {
+        // Begin anchor: prepend (0, 0) when no surviving entry shifted to
+        // src_frame == 0. The interpolated begin_tgt above guarantees
+        // strict monotonicity against the first real entry.
+        if (has_begin &&
+            (out.standard.empty() || out.standard.front().src_frame != 0)) {
+            out.standard.insert(out.standard.begin(), TimemapSegment{0, 0});
+            out.has_trim_begin_anchor = true;
+        }
+
+        // End anchor: append (end-begin, end_tgt-begin_tgt) when no
+        // surviving entry sits at the trim_end boundary.
+        if (has_end) {
+            const size_t end_src_shifted =
+                static_cast<size_t>(end_frame - begin_frame);
+            if (out.standard.empty() ||
+                out.standard.back().src_frame != end_src_shifted) {
+                out.standard.push_back(TimemapSegment{
+                    end_src_shifted,
+                    static_cast<size_t>(end_tgt - begin_tgt)
+                });
+                out.has_trim_end_anchor = true;
+            }
+        }
+
+        {
             double begin_tgt_sec = static_cast<double>(begin_tgt) / sample_rate;
-            double end_tgt_sec   = (end_tgt != -1)
-                ? (static_cast<double>(end_tgt) / sample_rate)
-                : (static_cast<double>(total_frames) / sample_rate);
+            double end_tgt_sec   = static_cast<double>(end_tgt)   / sample_rate;
 
             std::vector<TempomapEntry> midi_shifted;
             double active_multiplier = 1.0;
@@ -311,6 +362,14 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
             if (!start_point_written) {
                 midi_shifted.push_back({0.0, active_multiplier});
             }
+            // End anchor for midi: a final tempo event at the trim_end
+            // timestamp carrying the multiplier active just before the
+            // boundary — a no-op tempo change that gives DAWs the correct
+            // track length. Mirrors the standard end anchor's presence.
+            if (out.has_trim_end_anchor) {
+                midi_shifted.push_back(
+                    {end_tgt_sec - begin_tgt_sec, active_multiplier});
+            }
             out.midi = std::move(midi_shifted);
         }
 
@@ -320,6 +379,12 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     }
 
     return true;
+}
+
+TimemapRealRange real_segments(const TimemapBuildResult& r) {
+    auto b = r.standard.begin() + (r.has_trim_begin_anchor ? 1 : 0);
+    auto e = r.standard.end()   - (r.has_trim_end_anchor   ? 1 : 0);
+    return {b, e};
 }
 
 std::vector<TimeMapSegment> build_target_view_timemap(

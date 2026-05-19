@@ -399,7 +399,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // the engine, so engine_frame_map and engine_R_s are unset.
         if (output_format == "wav" && !tmres.standard.empty() &&
             sample_rate > 0) {
-            const auto& seg = tmres.standard;
+            const TimemapRealRange real = real_segments(tmres);
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
             const int64_t trim_end = tmres.trimmed
@@ -407,11 +407,13 @@ RenderOutcome do_render(const RenderRequest& req,
                 : static_cast<int64_t>(total_frames);
             const double sr_d = static_cast<double>(sample_rate);
 
-            // Markers: lockstep walk between req.markers and tmres.standard.
-            // Each surviving marker (post resolve filter + post trim filter)
-            // pairs with the next-in-order surviving segment. seg.tgt_frame
-            // is already post-shift (render-domain) so the render-time is
-            // tgt_frame / sr directly.
+            // Markers: lockstep walk between req.markers and the real-segment
+            // range of tmres.standard (synthetic trim anchors stripped so they
+            // do not surface as ghost markers in render-view). Each surviving
+            // marker (post resolve filter + post trim filter) pairs with the
+            // next-in-order surviving segment. seg.tgt_frame is already
+            // post-shift (render-domain) so the render-time is tgt_frame / sr
+            // directly.
             std::set<std::string> disabled_label_defs;
             for (const auto& m : req.markers) {
                 if (!m.label_def.empty() && m.disabled) {
@@ -423,7 +425,7 @@ RenderOutcome do_render(const RenderRequest& req,
                        disabled_label_defs.count(m.label_ref) > 0;
             };
 
-            size_t seg_idx = 0;
+            auto seg_it = real.begin;
             std::vector<GuiWarpMarker> warped_markers;
             warped_markers.reserve(req.markers.size());
             for (const auto& g : req.markers) {
@@ -434,14 +436,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (eff_disabled) continue;
 
                 // Trim-range filter (inclusive both ends — matches the
-                // post-pass at timemap.cpp line 209).
+                // post-pass at timemap.cpp).
                 const int64_t sf_abs = static_cast<int64_t>(
                     std::nearbyint(g.time_seconds * sr_d));
                 if (sf_abs < trim_begin || sf_abs > trim_end) continue;
 
-                if (seg_idx >= seg.size()) break;
-                const auto& s = seg[seg_idx];
-                ++seg_idx;
+                if (seg_it == real.end) break;
+                const auto& s = *seg_it;
+                ++seg_it;
 
                 GuiWarpMarker w = g;
                 w.time_seconds  = static_cast<double>(s.tgt_frame) / sr_d;
