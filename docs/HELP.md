@@ -104,3 +104,137 @@ example directory under the basename the sidecar files expect.
 
 The conceptual model and hotkey reference are in the sections
 below.
+
+## Conceptual model
+
+### Engine and timemap
+
+warptempo_gui drives a phase vocoder. Internally this is a
+Laroche-Dolson identity phase-locking phase vocoder running at
+fs=44100, FFT size N=4096, synthesis hop R_s=1024. The phase-
+locking keeps bins coherent within each frame so steady-state
+content — held strings, sustained winds, room tone — stretches
+without smearing into a chorused or phasey artifact.
+
+What separates this project from the off-the-shelf phase
+vocoders shipped in commercial time-stretch tools is that the
+analysis hop R_a is not a constant. A typical phase vocoder
+takes one input file and one global stretch ratio. This engine
+takes one input file and a timemap: a piecewise-linear function
+from source time to target time, built from the user-authored
+warp markers. Each segment between adjacent warp markers gets
+its own local stretch ratio. The vocoder walks the timemap and
+varies R_a per segment, so a single render can hold one tempo
+through the exposition, accelerate gradually through a transition,
+and settle at a different tempo for the recapitulation, all from
+one source file and one set of markers. The variable-stretch
+timemap is the project's central contribution.
+
+Identity phase-locking is what keeps steady-state content clean.
+It is also exactly what does not work at transients. An attack —
+oboe entry, pizzicato, timpani strike — is a moment where the
+spectrum reorganizes within a few hops, and the phase
+relationships the vocoder has been propagating no longer
+correspond to the acoustic event arriving. The attack smears
+across surrounding frames. The mitigation is a phase reset: at a
+user-chosen position, the synthesis phase is reset rather than
+propagated, sacrificing local coherence in exchange for a clean
+transient. Phase reset markers are the authoring surface for
+this. They are a separate marker collection from warp markers,
+visible and edited in their own view, because they parameterize
+a distinct engine concern: warp markers shape the timemap, phase
+reset markers protect transients.
+
+### View axes
+
+The bottom bar of the window shows three letter pairs:
+`[S/T] [W/P] [A/B]`. Each pair is an independent toggle. All
+three combinations are valid; the GUI's state is the product
+of all three selections plus whatever modes happen to be
+active on top.
+
+The first pair, **source vs target**, selects the audio domain
+of the waveform under the playhead. Source view (S) shows the
+unprocessed source recording with warp markers drawn at the
+times the user authored them. Target view (T) shows the same
+audio after the engine has applied the live timemap — the
+waveform is stretched and compressed to reflect what the render
+will sound like, with markers drawn at their post-stretch
+positions. Authoring happens in source view; target view is for
+auditioning the warp without committing to a full render. The
+GUI is fully usable in source view alone, but proper use of the
+tool involves toggling to target view regularly to hear what
+the markers are actually doing.
+
+The second pair, **warp vs phase reset**, selects which marker
+collection is visible and edited. Warp markers (W) drive the
+timemap. Phase reset markers (P) protect transients. The two
+collections are stored, authored, and rendered independently;
+toggling between them swaps which collection the marker hotkeys
+operate on but changes nothing else. Authoring proceeds in warp
+view first, since phase resets have no useful position until
+the timemap exists.
+
+The third pair, **tab A vs tab B**, selects between two
+snapshots of viewport, zoom, playhead, trim region, and
+selection. Marker stores and engine settings are shared across
+both tabs; only navigation state differs. The intended use is
+keeping two regions of the piece in view at once — typically an
+exposition section and its recapitulation — for aligning
+material across them. The GUI is fully usable on tab A alone;
+the second tab is engaged when there are sections to align.
+
+### Warp marker model
+
+Each warp marker carries three independent pieces of state.
+
+**Tempo source.** A marker either owns its own tempo or
+inherits the tempo from the nearest earlier owning marker.
+An owning marker presents an explicit numeric value; an
+inheriting marker (a "pass" marker) carries no tempo of its
+own and resolves its presentation tempo live by walking
+backward through the marker list.
+
+**Label relationship.** A marker can declare itself a label
+origin (a `label_def`) or cite an existing label by name
+(a `label_ref`). A `label_ref` marker inherits its tempo from
+the named def rather than from positional walk-back. Changing
+the def's tempo updates every ref that cites it. This is the
+mechanism for tempo locking across recapitulated material: a
+sonata-form exposition section receives a `label_def`, the
+corresponding recapitulation section receives a `label_ref`
+back to that def, and the two sections will always render at
+the same tempo regardless of subsequent tempo edits. A marker
+carries at most one of `label_def` or `label_ref`; neither is
+the unlabeled default.
+
+**Disabled flag.** A marker can be disabled, which silences
+its tempo contribution as if the marker were not present.
+Disabling a `label_def` cascades: every `label_ref` citing
+that def is treated as disabled too. Disabling a non-def
+marker is local and does not propagate.
+
+An owning marker's tempo is a base value times a scale. The
+base value is two decimals in the range `0.01` to `9.99` and
+expresses the headline stretch ratio relative to the source
+recording — `1.00` is no stretch, `1.05` is 5% faster, `0.95`
+is 5% slower. The base value's precision is deliberately
+coarse; the user authors at the resolution they would set a
+metronome, not finer. The scale is a separate four-decimal
+multiplier defaulting to `1.0000`. The intended use is fine-
+tuning a marker's effective tempo to approximate a neighboring
+section's effective tempo when that neighbor uses a
+`label_ref` — the user reads off the neighbor's resolved
+`base × scale` from its hover popup and applies a matching
+scale to the marker being authored. The user can use scale
+for anything else they want; there are no enforced rules.
+The reference example in `examples/550 - 1/` shows both
+fields in use across a complete movement.
+
+Phase reset markers carry only a position and a disabled flag.
+They have no tempo, no labels, no scale — the engine concern
+they parameterize is a single bit ("reset phase here") and the
+marker's data model reflects that.
+
+The next sections walk through authoring an example movement
+end to end and list the full hotkey reference.
