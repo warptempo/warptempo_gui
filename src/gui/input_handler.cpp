@@ -282,7 +282,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Alt+C             → commit displayed render's markers
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
-    //   - Home/End (no mods)     → playhead to trim begin/end
+    //   - Home/End (no mods)     → playhead to absolute file bounds
+    //                              (render-view has no trim — see
+    //                              viewport.cpp trim_range)
     //   - Esc                    → top-level no-op (chunk Q)
     //   - t (no mods)            → toggle warp/phase reset sub-view (Brief F)
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing (Brief F)
@@ -1593,10 +1595,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Shift+Home / Shift+End: jump render-view to first / last entry,
     // clamped (no wraparound — Shift+Home at index 0 stays at 0,
-    // Shift+End at the last entry stays). Same render_view_enabled
-    // gate as Shift+Left/Right so the chords fall through to the
-    // source-view trim-jump handler when render-view is off. Same
-    // pre-nav refresh of the renders/ folder.
+    // Shift+End at the last entry stays). Gated on
+    // app.render_view_enabled; outside render-view the chord is a
+    // silent no-op (the bare-key switch at the bottom of this
+    // function is modifier-strict). Same pre-nav refresh of the
+    // renders/ folder.
     if (app.render_view_enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
         if (app.render_view_index >= 0 &&

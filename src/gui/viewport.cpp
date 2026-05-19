@@ -4,6 +4,7 @@
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
+#include "timemap.h"
 #include "platform_wayland.h"
 
 #include <algorithm>
@@ -19,10 +20,42 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         return {0, audio.total_frames()};
     }
     if (app.active_audio_view == 'T') {
-        // Target view (brief 1): no editable trim and the source-side
-        // trim is read-only (display-only translation in the waveform
-        // paint). Home/End jump to the full target-frame range.
-        return {0, live_total_frames(app, audio)};
+        // Target view: trim is authored source-domain (b/e store
+        // source-domain seconds via inverse-translation in
+        // handle_trim_set_at_playhead) but Home/End needs to land
+        // the playhead in the active target-frame domain. Build
+        // the live timemap and forward-translate the source-domain
+        // trim boundaries; unset sides fall back to 0 / live total,
+        // matching compute_trim_samples' unset-side semantics for
+        // S-view.
+        const int sr = audio.sample_rate();
+        const long total = static_cast<long>(audio.total_frames());
+        const ViewState& vs = active_view_state(app);
+        const int64_t live_total =
+            live_total_frames(app, audio);
+        if (!vs.has_trim_begin && !vs.has_trim_end) {
+            return {0, live_total};
+        }
+        const auto tmap = build_target_view_timemap(app, sr, total);
+        int64_t begin_tgt = 0;
+        int64_t end_tgt   = live_total;
+        if (vs.has_trim_begin) {
+            const int64_t begin_src = static_cast<int64_t>(
+                std::nearbyint(vs.trim_begin_seconds *
+                               static_cast<double>(sr)));
+            begin_tgt = to_domain_frame(app, begin_src, tmap);
+        }
+        if (vs.has_trim_end) {
+            const int64_t end_src = static_cast<int64_t>(
+                std::nearbyint(vs.trim_end_seconds *
+                               static_cast<double>(sr)));
+            end_tgt = to_domain_frame(app, end_src, tmap);
+        }
+        if (begin_tgt < 0) begin_tgt = 0;
+        if (begin_tgt > live_total) begin_tgt = live_total;
+        if (end_tgt > live_total) end_tgt = live_total;
+        if (end_tgt < begin_tgt) end_tgt = begin_tgt;
+        return {begin_tgt, end_tgt};
     }
     return compute_trim_samples(
         app, audio.sample_rate(), audio.total_frames());
