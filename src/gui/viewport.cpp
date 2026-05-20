@@ -196,8 +196,9 @@ void Viewport::zoom_in() {
         apply_zoom_change(max_num);
     } else if (app.zoom_level > kMinNumericLevel) {
         apply_zoom_change(app.zoom_level - 1);
+    } else {
+        center_viewport_on_playhead();
     }
-    // else at kMinNumericLevel already — no-op.
 }
 
 void Viewport::zoom_out() {
