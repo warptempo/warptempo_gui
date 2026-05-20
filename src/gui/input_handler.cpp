@@ -385,7 +385,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
     // Every authoring chord (drop, drag, delete, label/tempo edit,
     // trim set/unset, disabled-flag toggle, paste, iteration / BPM
-    // mode, save, render dispatch, queue add, undo/redo) is silently
+    // mode, render dispatch, queue add, undo/redo) is silently
     // dropped at this gate.
     if (!app.render_view_enabled && active_view_state(app).read_only) {
         const bool is_o =
@@ -428,11 +428,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             (ctrl && !shift && !alt && key == GuiKeys::Q);
         const bool is_ctrl_w =
             (ctrl && !shift && !alt && key == GuiKeys::W);
+        const bool is_save =
+            (ctrl && !shift && !alt && key == GuiKeys::S);
         if (!(is_o || is_space || is_scrub || is_scrub_samples ||
               is_home_end || is_zoom || is_zoom_symbol || is_zero ||
               is_follow || is_center || is_sub_t || is_sub_p ||
               is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-              is_esc || is_ctrl_q || is_ctrl_w)) {
+              is_esc || is_ctrl_q || is_ctrl_w || is_save)) {
             return;
         }
     }
