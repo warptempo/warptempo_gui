@@ -59,6 +59,12 @@
 //     anonymous namespace into input_handler.h so this TU can reach them;
 //     on_key (Ctrl+Alt+M) is the sole caller.
 
+static bool is_play_pause_key(GuiKey key) {
+    return key == GuiKeys::Space
+        || key == GuiKeys::Return
+        || key == GuiKeys::KpEnter;
+}
+
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
@@ -322,7 +328,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_commit =
             (ctrl && alt && !shift &&
              key == GuiKeys::C);
-        const bool is_playback = (key == GuiKeys::Space);
+        const bool is_playback = is_play_pause_key(key);
         const bool is_scrub =
             ((key == GuiKeys::Left || key == GuiKeys::Right) &&
              !ctrl && !shift && !alt);
@@ -383,6 +389,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → top-level no-op
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
+    //   - Ctrl+P                 → copy phase reset placements
+    //                              (read-only: writes only to the
+    //                              session-only phase_reset_clipboard)
     // Every authoring chord (drop, drag, delete, label/tempo edit,
     // trim set/unset, disabled-flag toggle, paste, iteration / BPM
     // mode, render dispatch, queue add, undo/redo) is silently
@@ -390,7 +399,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (!app.render_view_enabled && active_view_state(app).read_only) {
         const bool is_o =
             (key == GuiKeys::O && !ctrl && !shift && !alt);
-        const bool is_space = (key == GuiKeys::Space);
+        const bool is_play_pause = is_play_pause_key(key);
         const bool is_scrub =
             ((key == GuiKeys::Left || key == GuiKeys::Right) &&
              !ctrl && !shift && !alt);
@@ -430,11 +439,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             (ctrl && !shift && !alt && key == GuiKeys::W);
         const bool is_save =
             (ctrl && !shift && !alt && key == GuiKeys::S);
-        if (!(is_o || is_space || is_scrub || is_scrub_samples ||
+        const bool is_copy_phase_resets =
+            (ctrl && !shift && !alt && key == GuiKeys::P);
+        if (!(is_o || is_play_pause || is_scrub || is_scrub_samples ||
               is_home_end || is_zoom || is_zoom_symbol || is_zero ||
               is_follow || is_center || is_sub_t || is_sub_p ||
               is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-              is_esc || is_ctrl_q || is_ctrl_w || is_save)) {
+              is_esc || is_ctrl_q || is_ctrl_w || is_save ||
+              is_copy_phase_resets)) {
             return;
         }
     }
@@ -1247,8 +1259,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Space-bar is modifier-independent.
-    if (key == GuiKeys::Space) {
+    // Space / Return / KpEnter is modifier-independent.
+    if (is_play_pause_key(key)) {
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
