@@ -1,5 +1,6 @@
 # Backups
 *~
+*.bak
 
 # Warptempo Build Artifacts
 build*/
