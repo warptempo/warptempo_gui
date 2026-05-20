@@ -321,6 +321,12 @@ struct ViewState {
     double trim_end_seconds   = 0.0;
     bool   has_trim_begin     = false;
     bool   has_trim_end       = false;
+
+    // Per-tab read-only lock. Toggled by bare `o`. While true, the active
+    // tab admits a subset of keys (navigation, playback, view-switch) and
+    // its mouse handlers block authoring gestures (drop, drag, label
+    // edit). Persisted as tab_a_read_only / tab_b_read_only in .settings.
+    bool   read_only          = false;
 };
 
 struct AppState {

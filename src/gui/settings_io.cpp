@@ -118,6 +118,8 @@ enum class SettingKind {
     OptionalTrimEnd_A,
     OptionalTrimBegin_B,
     OptionalTrimEnd_B,
+    ReadOnly_A,
+    ReadOnly_B,
     ViewportStart_A,
     ZoomLevel_A,
     Playhead_A,
@@ -159,6 +161,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_a_trim_end",              SettingKind::OptionalTrimEnd_A,    EngineField::Title,                   nullptr },
     { "tab_b_trim_begin",            SettingKind::OptionalTrimBegin_B,  EngineField::Title,                   nullptr },
     { "tab_b_trim_end",              SettingKind::OptionalTrimEnd_B,    EngineField::Title,                   nullptr },
+    { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
+    { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
     { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "0" },
     { "tab_a_playhead",              SettingKind::Playhead_A,           EngineField::Title,                   "0" },
@@ -518,6 +522,18 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_tab_b_trim_end = true;
                 out.tab_b_trim_end     = parse_timestamp(value);
             }
+        } else if (key == "tab_a_read_only") {
+            bool v;
+            if (parse_bool_strict(value, v)) {
+                out.has_tab_a_read_only = true;
+                out.tab_a_read_only     = v;
+            }
+        } else if (key == "tab_b_read_only") {
+            bool v;
+            if (parse_bool_strict(value, v)) {
+                out.has_tab_b_read_only = true;
+                out.tab_b_read_only     = v;
+            }
         }
         // Engine keys: deserialized by read_engine_settings_from_file.
         // Unknown keys: silent-skip here; read_engine_settings_from_file
@@ -842,6 +858,18 @@ bool write_settings_file(
                     data += format_timestamp(tab_b.trim_end_seconds);
                     data += '\n';
                 }
+                break;
+            case SettingKind::ReadOnly_A:
+                data += desc.key;
+                data += '=';
+                data += tab_a.read_only ? "true" : "false";
+                data += '\n';
+                break;
+            case SettingKind::ReadOnly_B:
+                data += desc.key;
+                data += '=';
+                data += tab_b.read_only ? "true" : "false";
+                data += '\n';
                 break;
             case SettingKind::ViewportStart_A:
                 std::snprintf(buf, sizeof(buf), "%lld",

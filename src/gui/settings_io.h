@@ -54,6 +54,11 @@ struct ParsedSettings {
     double  tab_b_trim_begin     = 0.0;
     bool    has_tab_b_trim_end   = false;
     double  tab_b_trim_end       = 0.0;
+    // Per-tab read-only flags. Absent → tab defaults to editable.
+    bool    has_tab_a_read_only  = false;
+    bool    tab_a_read_only      = false;
+    bool    has_tab_b_read_only  = false;
+    bool    tab_b_read_only      = false;
 };
 
 // Strict shape validator for MM:SS.mmm settings timestamps. Exposed so

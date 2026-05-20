@@ -1319,8 +1319,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     const char ab_buf[2] = { app.active_tab_view, '\0' };
                     cairo_text_extents_t ab_ext;
                     cairo_text_extents(cr, ab_buf, &ab_ext);
+                    // Read-only dim: half-blend the A/B glyph toward the
+                    // background so the locked-out state is visible
+                    // without changing the active-tab marker (no glyph
+                    // change). Resets back to kText after the glyph so
+                    // the dirty-dot below renders at full strength.
+                    const bool ab_dim = active_view_state(app).read_only;
+                    if (ab_dim) {
+                        const GuiColor c = dim(kText);
+                        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+                    }
                     cairo_move_to(cr, ab_x, baseline_y);
                     cairo_show_text(cr, ab_buf);
+                    if (ab_dim) {
+                        cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                    }
                     right_after_indicators = ab_x + ab_ext.x_advance;
 
                     cairo_restore(cr);

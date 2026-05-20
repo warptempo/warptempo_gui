@@ -250,6 +250,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
             app.tab_b.has_trim_end       = true;
             app.tab_b.trim_end_seconds   = ps.tab_b_trim_end;
         }
+        if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
+        if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
     }
 
     // Strict engine-settings deserialization. Any violation (unknown key,

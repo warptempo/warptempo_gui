@@ -358,6 +358,85 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // Per-tab read-only keyboard gate. Mirrors the render-view gate
+    // above structurally: a permitted-keys allowlist that filters out
+    // every authoring chord while admitting navigation, playback,
+    // view-switching, the close-prompt routing, and the bare-o
+    // toggle-off escape chord. Only runs when render-view is off and
+    // the active tab's ViewState carries read_only = true. Render-view
+    // is its own read-only modality that supersedes everything else,
+    // so this gate sits second.
+    //   - Bare o                 → toggle read-only off (escape chord)
+    //   - Space                  → playback toggle
+    //   - Left/Right (no mods)   → playhead-by-pixel scrub
+    //   - Shift+Left/Right       → playhead-by-samples scrub
+    //   - Home/End (no mods)     → playhead to trim region bounds
+    //   - Up/Down (no mods)      → zoom in/out
+    //   - =/- (no mods)          → zoom symbol-key alias
+    //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
+    //   - f (no mods)            → follow mode toggle
+    //   - c (no mods)            → center+max-zoom on playhead
+    //   - t (no mods)            → S/T sub-view toggle
+    //   - p (no mods)            → W/P sub-view toggle
+    //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
+    //   - Ctrl+Tab               → switch A/B tab (the other escape)
+    //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
+    //   - Esc                    → top-level no-op
+    //   - Ctrl+Q / Ctrl+W        → close-prompt routing
+    // Every authoring chord (drop, drag, delete, label/tempo edit,
+    // trim set/unset, disabled-flag toggle, paste, iteration / BPM
+    // mode, save, render dispatch, queue add, undo/redo) is silently
+    // dropped at this gate.
+    if (!app.render_view_enabled && active_view_state(app).read_only) {
+        const bool is_o =
+            (key == GuiKeys::O && !ctrl && !shift && !alt);
+        const bool is_space = (key == GuiKeys::Space);
+        const bool is_scrub =
+            ((key == GuiKeys::Left || key == GuiKeys::Right) &&
+             !ctrl && !shift && !alt);
+        const bool is_scrub_samples =
+            ((key == GuiKeys::Left || key == GuiKeys::Right) &&
+             !ctrl && shift && !alt);
+        const bool is_home_end =
+            ((key == GuiKeys::Home || key == GuiKeys::End) &&
+             !ctrl && !shift && !alt);
+        const bool is_zoom =
+            ((key == GuiKeys::Up || key == GuiKeys::Down) &&
+             !ctrl && !shift && !alt);
+        const bool is_zoom_symbol =
+            ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+             !ctrl && !shift && !alt);
+        const bool is_zero =
+            (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
+        const bool is_follow =
+            (key == GuiKeys::F && !ctrl && !shift && !alt);
+        const bool is_center =
+            (key == GuiKeys::C && !ctrl && !shift && !alt);
+        const bool is_sub_t =
+            (key == GuiKeys::T && !ctrl && !shift && !alt);
+        const bool is_sub_p =
+            (key == GuiKeys::P && !ctrl && !shift && !alt);
+        const bool is_tab_cycle =
+            (!ctrl && key == GuiKeys::Tab) ||
+            (!ctrl && key == GuiKeys::IsoLeftTab);
+        const bool is_ctrl_tab =
+            (ctrl && !shift && key == GuiKeys::Tab);
+        const bool is_ctrl_shift_tab =
+            (ctrl && shift && key == GuiKeys::Tab);
+        const bool is_esc = (key == GuiKeys::Escape);
+        const bool is_ctrl_q =
+            (ctrl && !shift && !alt && key == GuiKeys::Q);
+        const bool is_ctrl_w =
+            (ctrl && !shift && !alt && key == GuiKeys::W);
+        if (!(is_o || is_space || is_scrub || is_scrub_samples ||
+              is_home_end || is_zoom || is_zoom_symbol || is_zero ||
+              is_follow || is_center || is_sub_t || is_sub_p ||
+              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
+              is_esc || is_ctrl_q || is_ctrl_w)) {
+            return;
+        }
+    }
+
     // Brief 3b: target-view keyboard authoring is fully unblocked.
     // Every binding source view honors runs in target view too; the
     // input-to-source-frame boundary translation lives at the individual
@@ -371,6 +450,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // unreachable from render-view; render-view exits via `r`).
     if (key == GuiKeys::T && !ctrl && !shift && !alt) {
         handle_active_audio_view_toggle();
+        return;
+    }
+
+    // Bare `o` toggles the active tab's read-only flag. Always admitted
+    // by the read-only allowlist above (the locked-out user must be
+    // able to unlock) and dropped by the render-view allowlist (the
+    // flag is irrelevant while render-view is its own read-only
+    // modality). Pure view-state mutation: not undoable, not dirty;
+    // silently persisted on Ctrl+S. The bottom-strip dim update lands
+    // through invalidate_timestamp_area, which covers the A/B tab
+    // letter glyph.
+    if (key == GuiKeys::O && !ctrl && !shift && !alt) {
+        ViewState& vs = active_view_state(app);
+        vs.read_only = !vs.read_only;
+        viewport.invalidate_timestamp_area();
         return;
     }
 
@@ -1987,6 +2081,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // first single-click already moved the playhead via the
         // playhead-drag-press logic below.
         if (is_double && inside_waveform && !ctrl) {
+            // Read-only: refuse the double-click drop entirely. Consume
+            // the click so a triple-click doesn't re-fire the gesture
+            // and bypass read-only via the trailing fallthrough.
+            if (active_view_state(app).read_only) {
+                app.last_click_consumed = true;
+                return;
+            }
             const double spp = current_samples_per_pixel(app, audio);
             const int click_rel_x = x - area.x;
             const int sr = audio.sample_rate();
@@ -2027,8 +2128,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // iteration mode is on. The popup sits above the flag rect so
         // their hit zones don't overlap, but checking the popup first
         // makes the intent unambiguous when the flag-strip extents
-        // change shape.
-        if (inside_top && !ctrl) {
+        // change shape. Read-only refuses both popup entries (both
+        // open mutating editors); a top-strip popup click in read-only
+        // mode is a silent no-op.
+        if (inside_top && !ctrl && !active_view_state(app).read_only) {
             double iter_text_left = -1.0;
             const int iter_hit = hit_test_iter_popup(
                 app, audio, x, y, &iter_text_left);
@@ -2064,6 +2167,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         if (ctrl) {
             // Ctrl branch: marker-reposition drag or no-op on empty.
+            // Read-only refuses the drag-begin so app.drag.active never
+            // enters flight state; motion / release / Escape paths all
+            // short-circuit on !app.drag.active.
+            if (active_view_state(app).read_only) return;
             if (hit >= 0) {
                 // begin_drag preserves the multi-selection if `hit` is in
                 // it, else collapses to just `hit`. Motion decides whether
@@ -2085,7 +2192,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // mode. enter_top_flag_edit owns the selection +
                     // playhead update on its target-switching path,
                     // so this site just delegates. Shift+click keeps
-                    // the legacy multi-select toggle below.
+                    // the legacy multi-select toggle below. Read-only
+                    // refuses the editor open; selection updates below
+                    // (the Shift branch) still run on the
+                    // phase-reset-mode fallthrough but the editor
+                    // entry itself is a silent no-op.
+                    if (active_view_state(app).read_only) return;
                     flag_editor.enter_top_flag_edit(
                         hit, static_cast<double>(x));
                     return;
