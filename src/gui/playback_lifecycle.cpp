@@ -22,6 +22,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     app.playhead_scanner_sample = app.playhead_cursor_sample;
     viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
+    app.follow_overridden_for_session = false;
 }
 
 // End scanner motion and restore the invariant. Used by Space/Enter to
@@ -39,6 +40,7 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
+    app.follow_overridden_for_session = false;
 }
 
 // Space-bar: start/stop playback. Playback runs from the cursor to
@@ -66,6 +68,9 @@ void GuiPlaybackLifecycle::toggle_playback() {
         restore_playhead_to_lsp();
         return;
     }
+    // Defensive: clear any stale override from an unhandled stop path so
+    // it can't survive into the new playback session.
+    app.follow_overridden_for_session = false;
     int64_t start;
     int64_t end;
     if (app.active_audio_view == 'T' &&

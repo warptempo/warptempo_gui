@@ -230,13 +230,11 @@ struct UndoHistory {
 //
 // Mouse-side click-keep-alive: a waveform-area press during playback
 // reseeks audio to the clicked sample (Reaper-style) instead of stopping.
-// Motion during the drag continuously reseeks if playback was alive at
-// press time. `was_playing_at_press` is captured at press and gates the
-// motion-side reseek; the press-side reseek uses the value computed
-// locally before it propagates into this struct.
+// Motion does NOT reseek — the scanner advances independently from the
+// click position via the predictor while the cursor moves freely with
+// the drag (split-playhead model).
 struct PlayheadDragState {
     bool active                    = false;
-    bool was_playing_at_press      = false;
     // Marker index the press landed on, or -1 if pressed on empty space;
     // release uses it to suppress the snap-action when no actual drag
     // occurred.
@@ -337,6 +335,12 @@ struct AppState {
     int     zoom_level             = 0;
     int64_t viewport_start_sample  = 0;
     bool    follow_mode            = true;
+
+    // True when a cursor-moving interaction has overridden follow mode
+    // for the current playback session. Cleared when playback ends
+    // (via restore_playhead_to_lsp or stop_playback_if_playing); never
+    // set or cleared except by these paths.
+    bool    follow_overridden_for_session = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame; the scanner
@@ -739,11 +743,32 @@ std::pair<double, double> compute_neighbor_walk_bounds(
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.
+// The (app, audio) form reads a.viewport_start_sample — the live/logical
+// viewport. Use it from invalidation math, hit-testing, and pre-paint
+// updates: anywhere that wants "where is the playhead RIGHT NOW".
+//
+// The (app, audio, vp_start) form takes the viewport explicitly. Use it
+// from on_redraw to align the live cursor/scanner paint with the cached
+// layers (waveform, marker stems, flags) — those layers render against
+// wf_cache.fp_vp_start, the displayed viewport, for the 1-2 paint frames
+// while the worker rebuilds against a viewport change. Threading
+// fp_vp_start through here keeps cursor/scanner and surrounding markers
+// in lockstep during that window. Do NOT reroute invalidation through
+// the displayed-viewport form: invalidation already widens to the full
+// waveform-area span at viewport-change gestures, and the narrow-damage
+// path (arrow step, drag, predictor advance at fixed viewport) needs the
+// live position because live == displayed in steady state.
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
+double  playhead_pixel_x(const AppState& a, const GuiAudio& audio,
+                         int64_t vp_start);
 // Returns the pixel column (offset from waveform_area.x) for the scanner.
 // Equal to playhead_pixel_x when playhead_scanner_active is false (by the
-// invariant: scanner sample tracks cursor sample when inactive).
+// invariant: scanner sample tracks cursor sample when inactive). The
+// (app, audio, vp_start) overload follows the same live-vs-displayed
+// split documented on playhead_pixel_x above.
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
+double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
+                        int64_t vp_start);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the cached target_view_total_frames (the forward-
 // translated source length). Used by every viewport helper that needs the

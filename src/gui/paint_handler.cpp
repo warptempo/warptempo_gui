@@ -367,7 +367,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 std::chrono::duration<double, std::milli>(m1 - m0).count();
         }
 
-        const double px_x = playhead_pixel_x(app, audio);
+        // Use the displayed viewport (wf_cache.fp_vp_start) so the cursor
+        // stays in lockstep with the cached waveform / stem / flag layers
+        // during the 1-2 paint frames while the worker rebuilds against a
+        // viewport change. See declaration comment in app_state.h.
+        const double px_x = playhead_pixel_x(app, audio,
+                                             wf_cache.fp_vp_start);
 
         // Flag annotations in the top strip. After Stage C the steady-
         // state flag-rect pixels live on flag_cache.surface (rebuilt
@@ -947,7 +952,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             rects_intersect(exposed, top_strip)) {
             const auto p0 = clock::now();
             if (app.playhead_scanner_active) {
-                const double scan_px = scanner_pixel_x(app, audio);
+                const double scan_px = scanner_pixel_x(app, audio,
+                                                       wf_cache.fp_vp_start);
                 render_playhead(cr, area, scan_px, kPlayheadScanner,
                                 gui.playhead_triangle_surface(),
                                 /*draw_triangle=*/false);

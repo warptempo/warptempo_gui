@@ -276,16 +276,26 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     if (a.viewport_start_sample > max_start) a.viewport_start_sample = max_start;
 }
 
-double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
+double playhead_pixel_x(const AppState& a, const GuiAudio& audio,
+                        int64_t vp_start) {
     const double spp = current_samples_per_pixel(a, audio);
     if (spp <= 0.0) return -1.0;
-    return static_cast<double>(a.playhead_cursor_sample - a.viewport_start_sample) / spp;
+    return static_cast<double>(a.playhead_cursor_sample - vp_start) / spp;
+}
+
+double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
+    return playhead_pixel_x(a, audio, a.viewport_start_sample);
+}
+
+double scanner_pixel_x(const AppState& a, const GuiAudio& audio,
+                       int64_t vp_start) {
+    const double spp = current_samples_per_pixel(a, audio);
+    if (spp <= 0.0) return -1.0;
+    return static_cast<double>(a.playhead_scanner_sample - vp_start) / spp;
 }
 
 double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
-    const double spp = current_samples_per_pixel(a, audio);
-    if (spp <= 0.0) return -1.0;
-    return static_cast<double>(a.playhead_scanner_sample - a.viewport_start_sample) / spp;
+    return scanner_pixel_x(a, audio, a.viewport_start_sample);
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to
@@ -616,7 +626,8 @@ int main(int argc, char** argv) {
         // visible playhead to the launch position (same as Space-to-stop).
         if (app.playhead_scanner_active) {
             playback_lifecycle.restore_playhead_to_lsp();
-            if (app.follow_mode) follow_scroll_if_needed();
+            if (app.follow_mode && !app.follow_overridden_for_session)
+                follow_scroll_if_needed();
         }
     });
 
@@ -669,7 +680,8 @@ int main(int argc, char** argv) {
         // that via its in_pre_paint_ flag).
         invalidate_playhead_columns(old_px, new_px);
         invalidate_timestamp_area();
-        if (app.follow_mode) follow_scroll_if_needed();
+        if (app.follow_mode && !app.follow_overridden_for_session)
+            follow_scroll_if_needed();
     });
 
     // Paint the initial background before any synchronous load begins so the

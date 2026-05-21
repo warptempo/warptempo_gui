@@ -1974,8 +1974,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing_rv && sample != playhead_at_entry_rv) {
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
+                if (was_playing_rv) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing_rv;
                 app.playhead_drag.press_marker_idx = hit;
             }
             return;
@@ -2002,8 +2002,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (was_playing_rv && sample != playhead_at_entry_rv) {
                 playback_lifecycle.reseek_keeping_alive(sample);
             }
+            if (was_playing_rv) app.follow_overridden_for_session = true;
             app.playhead_drag.active = true;
-            app.playhead_drag.was_playing_at_press = was_playing_rv;
             app.playhead_drag.press_marker_idx = -1;
         }
         return;
@@ -2176,7 +2176,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // begin_drag preserves the multi-selection if `hit` is in
                 // it, else collapses to just `hit`. Motion decides whether
                 // it actually becomes a drag vs. a plain click.
+                const bool was_playing_ctrl = playback.is_playing();
                 warpops.begin_drag(hit, x);
+                if (was_playing_ctrl)
+                    app.follow_overridden_for_session = true;
             }
             // else: Ctrl+press on empty space is a silent no-op.
             return;
@@ -2260,8 +2263,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing && sample != playhead_at_entry) {
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
+                if (was_playing) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = hit;
             } else {
                 // Press on empty waveform.
@@ -2278,8 +2281,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing && sample != playhead_at_entry) {
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
+                if (was_playing) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = -1;
             }
         }
@@ -2473,9 +2476,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             }
             if (new_playhead != app.playhead_cursor_sample) {
                 viewport.move_playhead_to(new_playhead);
-                if (app.playhead_drag.was_playing_at_press) {
-                    playback_lifecycle.reseek_keeping_alive(new_playhead);
-                }
             }
             return;
         }
@@ -2546,9 +2546,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 
         if (new_playhead != app.playhead_cursor_sample) {
             viewport.move_playhead_to(new_playhead);
-            if (app.playhead_drag.was_playing_at_press) {
-                playback_lifecycle.reseek_keeping_alive(new_playhead);
-            }
         }
         return;
     }
