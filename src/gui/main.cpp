@@ -277,25 +277,27 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
 }
 
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio,
-                        int64_t vp_start) {
-    const double spp = current_samples_per_pixel(a, audio);
+                        int64_t vp_start, double spp) {
+    (void)audio;
     if (spp <= 0.0) return -1.0;
     return static_cast<double>(a.playhead_cursor_sample - vp_start) / spp;
 }
 
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return playhead_pixel_x(a, audio, a.viewport_start_sample);
+    return playhead_pixel_x(a, audio, a.viewport_start_sample,
+                            current_samples_per_pixel(a, audio));
 }
 
 double scanner_pixel_x(const AppState& a, const GuiAudio& audio,
-                       int64_t vp_start) {
-    const double spp = current_samples_per_pixel(a, audio);
+                       int64_t vp_start, double spp) {
+    (void)audio;
     if (spp <= 0.0) return -1.0;
     return static_cast<double>(a.playhead_scanner_sample - vp_start) / spp;
 }
 
 double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return scanner_pixel_x(a, audio, a.viewport_start_sample);
+    return scanner_pixel_x(a, audio, a.viewport_start_sample,
+                           current_samples_per_pixel(a, audio));
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to

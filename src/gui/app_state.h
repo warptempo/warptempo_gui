@@ -747,28 +747,32 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // viewport. Use it from invalidation math, hit-testing, and pre-paint
 // updates: anywhere that wants "where is the playhead RIGHT NOW".
 //
-// The (app, audio, vp_start) form takes the viewport explicitly. Use it
-// from on_redraw to align the live cursor/scanner paint with the cached
-// layers (waveform, marker stems, flags) — those layers render against
-// wf_cache.fp_vp_start, the displayed viewport, for the 1-2 paint frames
-// while the worker rebuilds against a viewport change. Threading
-// fp_vp_start through here keeps cursor/scanner and surrounding markers
-// in lockstep during that window. Do NOT reroute invalidation through
-// the displayed-viewport form: invalidation already widens to the full
-// waveform-area span at viewport-change gestures, and the narrow-damage
-// path (arrow step, drag, predictor advance at fixed viewport) needs the
-// live position because live == displayed in steady state.
+// The (app, audio, vp_start, spp) form takes the viewport AND its
+// samples-per-pixel explicitly. Use it from on_redraw to align the live
+// cursor/scanner paint with the cached layers (waveform, marker stems,
+// flags) — those layers render against wf_cache.fp_vp_start at the
+// displayed spp (derivable as (fp_vp_end - fp_vp_start) / fp_area_w) for
+// the 1-2 paint frames while the worker rebuilds against a viewport
+// change. Threading BOTH parameters through here keeps cursor/scanner
+// and surrounding markers in lockstep during that window; passing
+// fp_vp_start alone but reading the live spp would mix frames of
+// reference and visibly displace the cursor for one frame after each
+// zoom gesture. Do NOT reroute invalidation through the displayed-
+// viewport form: invalidation already widens to the full waveform-area
+// span at viewport-change gestures, and the narrow-damage path (arrow
+// step, drag, predictor advance at fixed viewport) needs the live
+// position because live == displayed in steady state.
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio,
-                         int64_t vp_start);
+                         int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner.
 // Equal to playhead_pixel_x when playhead_scanner_active is false (by the
 // invariant: scanner sample tracks cursor sample when inactive). The
-// (app, audio, vp_start) overload follows the same live-vs-displayed
+// (app, audio, vp_start, spp) overload follows the same live-vs-displayed
 // split documented on playhead_pixel_x above.
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
-                        int64_t vp_start);
+                        int64_t vp_start, double spp);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the cached target_view_total_frames (the forward-
 // translated source length). Used by every viewport helper that needs the
