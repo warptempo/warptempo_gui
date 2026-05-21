@@ -1914,16 +1914,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // before hit-testing so we don't attempt selection bookkeeping
         // on a non-existent flag pack.
         if (app.active_markers_view == 'P' && inside_top) return;
-        // Brief six: capture playback / playhead state at press entry
-        // so the four playhead-moving gestures below can reseek the
-        // audio device to the new position when playback is active,
-        // keeping audio alive across a click. The reseek is gated on
-        // sample != playhead_at_click_entry so a marker-click on the
-        // marker the playhead is already on doesn't tear down and
-        // restart the audio device for nothing.
-        const bool was_playing_rv =
-            (inside_waveform || inside_top) && playback.is_playing();
-        const int64_t playhead_at_click_entry_rv = app.playhead_cursor_sample;
+        // Any waveform or top-strip click that moves the cursor stops
+        // playback first — same policy as the source-view branch and
+        // the keyboard navigation gestures.
+        if (inside_waveform || inside_top) playback_lifecycle.stop_playback_if_playing();
         int hit = -1;
         if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
         else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
@@ -1969,19 +1963,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static_cast<double>(sr)));
             }
             viewport.move_playhead_to(sample);
-            // Brief six: keep playback alive across a marker-line /
-            // top-strip flag click in render-view. The reseek replaces
-            // the previous unconditional press-time stop. Skip when
-            // the click landed on the marker the playhead was already
-            // on — the move was a no-op, so the reseek would be too.
-            if (was_playing_rv && sample != playhead_at_click_entry_rv) {
-                playback.play(sample, viewport.trim_end_sample());
-            }
             // Brief F Section 2: any waveform-area press starts a
             // playhead-drag gesture. Top-strip flag-click does not.
             if (inside_waveform) {
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing_rv;
                 app.playhead_drag.press_marker_idx = hit;
             }
             return;
@@ -2005,34 +1990,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.viewport_start_sample +
                 static_cast<int64_t>(std::nearbyint(rel * spp));
             viewport.move_playhead_to(sample);
-            // Brief six: empty-space click in render-view keeps
-            // playback alive by reseeking to the new position.
-            if (was_playing_rv && sample != playhead_at_click_entry_rv) {
-                playback.play(sample, viewport.trim_end_sample());
-            }
             app.playhead_drag.active = true;
-            app.playhead_drag.was_playing_at_press = was_playing_rv;
             app.playhead_drag.press_marker_idx = -1;
         }
         return;
     }
 
     if (button == GuiMouseButton::Left) {
-        // Brief six: the chunk-P-patch-1 unconditional stop is now
-        // overridden for waveform clicks. A click in the waveform area
-        // that reseats the playhead keeps playback alive — the press
-        // sites below reseek the audio device to the new position. A
-        // drag (button-1 motion observed while the gesture is active)
-        // converts the gesture into a scrub and stops playback once
-        // from the on_motion handler. Top-strip clicks still stop
-        // playback unconditionally: anything in the top strip could
-        // open an editor, so the conservative scope is "stop on any
-        // top-strip click." The mental model: attention is signalled
-        // by Space (or transport keys), not by mouse press.
-        const bool was_playing =
-            (inside_waveform || inside_top) && playback.is_playing();
-        const int64_t playhead_at_click_entry = app.playhead_cursor_sample;
-        if (inside_top && was_playing) playback_lifecycle.stop_playback_if_playing();
+        // Any waveform or top-strip click that moves the cursor stops
+        // playback first, matching the keyboard navigation model
+        // (left/right, Tab/Shift+Tab, Home/End). The previous keep-
+        // alive design treated the post-press motion as the stop
+        // signal, which mistook physical mouse jitter between mousedown
+        // and mouseup for a drag. The remaining "relocate while
+        // listening" workflow is click-then-Space.
+        if (inside_waveform || inside_top) playback_lifecycle.stop_playback_if_playing();
 
         // V.A1 / V.B editor: mouse handling.
         //   click inside top strip on the editing target: re-position
@@ -2270,46 +2242,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     sample = to_domain_frame(app, src_sample, tmap);
                 }
                 viewport.move_playhead_to(sample);
-                // Brief six: marker-line click in the waveform area
-                // keeps playback alive by reseeking the audio device
-                // to the marker's sample. Skip the reseek when the
-                // click landed on the marker the playhead was already
-                // on — it'd be a no-op move + a wasted teardown.
-                //
-                // Target view: the audio device is bound to
-                // app.target_buffer, which represents target frames
-                // [target_buffer_start_frame,
-                //  + target_buffer_frames) indexed [0, frames).
-                // Translate the target-domain `sample` into a
-                // target-buffer-frame before passing to play(),
-                // mirroring the shape in toggle_playback's target-view
-                // branch. Out-of-range click stops playback rather
-                // than letting it continue from a stale position;
-                // toggle_playback's no-op pattern is for the "no
-                // playback running" case, but here playback IS running.
-                if (was_playing && sample != playhead_at_click_entry) {
-                    if (app.active_audio_view == 'T' &&
-                        !app.render_view_enabled) {
-                        if (app.target_buffer_frames <= 0) {
-                            playback.stop();
-                        } else {
-                            const int64_t bias =
-                                app.target_buffer_start_frame;
-                            const int64_t local = sample - bias;
-                            if (local < 0 ||
-                                local >= app.target_buffer_frames) {
-                                playback.stop();
-                            } else {
-                                playback.play(local,
-                                              app.target_buffer_frames);
-                            }
-                        }
-                    } else {
-                        playback.play(sample, viewport.trim_end_sample());
-                    }
-                }
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = hit;
             } else {
                 // Press on empty waveform.
@@ -2323,34 +2256,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static_cast<int64_t>(std::nearbyint(click_rel_x * spp));
                 if (!shift) selection.clear_selection();
                 viewport.move_playhead_to(sample);
-                // Brief six: empty-space click in the waveform area
-                // keeps playback alive by reseeking to the click
-                // position. Target-view translation matches the
-                // marker-line branch above — see the comment there
-                // for the target-buffer-frame rationale.
-                if (was_playing && sample != playhead_at_click_entry) {
-                    if (app.active_audio_view == 'T' &&
-                        !app.render_view_enabled) {
-                        if (app.target_buffer_frames <= 0) {
-                            playback.stop();
-                        } else {
-                            const int64_t bias =
-                                app.target_buffer_start_frame;
-                            const int64_t local = sample - bias;
-                            if (local < 0 ||
-                                local >= app.target_buffer_frames) {
-                                playback.stop();
-                            } else {
-                                playback.play(local,
-                                              app.target_buffer_frames);
-                            }
-                        }
-                    } else {
-                        playback.play(sample, viewport.trim_end_sample());
-                    }
-                }
                 app.playhead_drag.active = true;
-                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = -1;
             }
         }
@@ -2518,17 +2424,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 app.playhead_drag = PlayheadDragState{};
                 return;
             }
-            // Brief six: the first drag-motion event after a press
-            // during playback stops playback once. Click-only gestures
-            // (press, no motion before release) keep playback alive
-            // via the press-site reseek; once motion fires, the
-            // gesture has become a scrub and continuous reseeking
-            // would stutter badly.
-            if (app.playhead_drag.was_playing_at_press &&
-                !app.playhead_drag.drag_motion_stopped_audio) {
-                playback_lifecycle.stop_playback_if_playing();
-                app.playhead_drag.drag_motion_stopped_audio = true;
-            }
             const int sr = audio.sample_rate();
             if (sr <= 0) return;
             const GuiRect area = waveform_area(app);
@@ -2581,14 +2476,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {
             app.playhead_drag = PlayheadDragState{};
             return;
-        }
-        // Brief six: the first drag-motion event after a press during
-        // playback stops playback once. See render-view branch above
-        // for the full rationale; this is the source-view mirror.
-        if (app.playhead_drag.was_playing_at_press &&
-            !app.playhead_drag.drag_motion_stopped_audio) {
-            playback_lifecycle.stop_playback_if_playing();
-            app.playhead_drag.drag_motion_stopped_audio = true;
         }
         const int sr = audio.sample_rate();
         if (sr <= 0) return;

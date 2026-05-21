@@ -9,23 +9,31 @@
 // Stops the audio thread and restores the split-playhead invariant:
 // when the scanner is inactive its sample equals the cursor's sample.
 // The cursor is not touched here — the caller is about to commit a new
-// cursor position.
+// cursor position. The scanner's last-painted column must be invalidated
+// here regardless of what the caller does next: the caller cares about
+// the cursor, but the scanner has its own visible identity that this
+// function is responsible for tearing down.
 void GuiPlaybackLifecycle::stop_playback_if_playing() {
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
+    const double scanner_px = scanner_pixel_x(app, audio);
+    const double cursor_px  = playhead_pixel_x(app, audio);
     playback.stop();
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
+    viewport.invalidate_playhead_columns(scanner_px, cursor_px);
+    viewport.invalidate_timestamp_area();
 }
 
 // End scanner motion and restore the invariant. Used by Space/Enter to
 // stop and by natural end-of-playback. The cursor never moved during
 // playback (the predictor only writes the scanner), so the only work
 // here is to deactivate the scanner and snap it back onto the cursor.
-// Invalidate the columns the scanner's line and the cursor's
-// triangle/highlight occupy so they repaint cleanly.
+// Invalidate the span between the scanner's last-painted column and the
+// cursor's column so both repaint cleanly.
 void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
-    const double cursor_px = playhead_pixel_x(app, audio);
-    viewport.invalidate_playhead_columns(cursor_px, cursor_px);
+    const double scanner_px = scanner_pixel_x(app, audio);
+    const double cursor_px  = playhead_pixel_x(app, audio);
+    viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);

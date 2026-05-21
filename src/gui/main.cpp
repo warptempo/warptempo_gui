@@ -565,7 +565,6 @@ int main(int argc, char** argv) {
             // work.
             const double px = scanner_pixel_x(app, audio);
             invalidate_playhead_columns(px, px);
-            app.playhead_scanner_active = true;
             return;
         }
 
