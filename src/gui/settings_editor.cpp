@@ -55,18 +55,18 @@ namespace {
 // active tab); exposing the per-tab spelling here would be a parallel
 // pathway with the same content.
 bool is_view_state_key(const std::string& k) {
-    return k == "tab_a_viewport_start" ||
-           k == "tab_a_zoom"           ||
-           k == "tab_a_playhead"       ||
-           k == "tab_b_viewport_start" ||
-           k == "tab_b_zoom"           ||
-           k == "tab_b_playhead"       ||
-           k == "follow"               ||
-           k == "active_markers_view"          ||
-           k == "playback_speed"       ||
-           k == "tab_a_trim_begin"     ||
-           k == "tab_a_trim_end"       ||
-           k == "tab_b_trim_begin"     ||
+    return k == "tab_a_viewport_start"   ||
+           k == "tab_a_zoom"             ||
+           k == "tab_a_playhead_cursor"  ||
+           k == "tab_b_viewport_start"   ||
+           k == "tab_b_zoom"             ||
+           k == "tab_b_playhead_cursor"  ||
+           k == "follow"                 ||
+           k == "active_markers_view"    ||
+           k == "playback_speed"         ||
+           k == "tab_a_trim_begin"       ||
+           k == "tab_a_trim_end"         ||
+           k == "tab_b_trim_begin"       ||
            k == "tab_b_trim_end";
 }
 

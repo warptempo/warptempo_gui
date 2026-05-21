@@ -278,7 +278,13 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
     const double spp = current_samples_per_pixel(a, audio);
     if (spp <= 0.0) return -1.0;
-    return static_cast<double>(a.playhead_sample - a.viewport_start_sample) / spp;
+    return static_cast<double>(a.playhead_cursor_sample - a.viewport_start_sample) / spp;
+}
+
+double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
+    const double spp = current_samples_per_pixel(a, audio);
+    if (spp <= 0.0) return -1.0;
+    return static_cast<double>(a.playhead_scanner_sample - a.viewport_start_sample) / spp;
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to
@@ -541,30 +547,31 @@ int main(int argc, char** argv) {
         if (app.loading || audio.total_frames() <= 0) return;
 
         const bool ma_playing = playback.is_playing();
-        if (!app.is_playing && !ma_playing) return;
+        if (!app.playhead_scanner_active && !ma_playing) return;
 
         if (ma_playing) {
-            // Heartbeat: invalidate the playhead column at the current
+            // Heartbeat: invalidate the scanner column at the current
             // model position so the paint cycle keeps running. The
             // pre-paint hook reads the predictor at paint time and adds
             // damage for the actually-painted position. We do not read
-            // the predictor or update app.playhead_sample here — that
-            // work moved to the pre-paint hook to eliminate the
+            // the predictor or update app.playhead_scanner_sample here
+            // — that work moved to the pre-paint hook to eliminate the
             // tick/paint sampling-rate mismatch that caused playhead
             // motion to stutter at high zoom. The timestamp area is
             // invalidated only by the pre-paint hook (when the
-            // predictor advances past app.playhead_sample), never by
-            // the tick — the tick fires ~2x per frame, so duplicating
-            // the timestamp rect here is wasted on_redraw work.
-            const double px = playhead_pixel_x(app, audio);
+            // predictor advances past app.playhead_scanner_sample),
+            // never by the tick — the tick fires ~2x per frame, so
+            // duplicating the timestamp rect here is wasted on_redraw
+            // work.
+            const double px = scanner_pixel_x(app, audio);
             invalidate_playhead_columns(px, px);
-            app.is_playing = true;
+            app.playhead_scanner_active = true;
             return;
         }
 
         // Playing was true last tick, now false — natural end. Return the
         // visible playhead to the launch position (same as Space-to-stop).
-        if (app.is_playing) {
+        if (app.playhead_scanner_active) {
             playback_lifecycle.restore_playhead_to_lsp();
             if (app.follow_mode) follow_scroll_if_needed();
         }
@@ -576,18 +583,20 @@ int main(int argc, char** argv) {
 
         // Read the predictor at paint time. The predictor is continuous
         // in wall time, so this gives the freshest possible position
-        // right before paint consumes the damage list.
+        // right before paint consumes the damage list. Under the
+        // split-playhead model the predictor advances the scanner only
+        // — the cursor stays where the user left it.
         const int64_t cur = playback.cursor();
         // Target view: playback.cursor() is a target-buffer-frame
-        // index in [0, target_buffer_frames). app.playhead_sample is
-        // full-target-frame. Translate at the boundary. Source view and
-        // render view: identity (impl_->samples points at the source's
-        // own audio for both; cursor is already in the active-domain
-        // coordinate system). The target_buffer_frames > 0 guard
-        // ensures the bias is only applied when a successful target
-        // render has populated the buffer; pre-paint can fire briefly
-        // between dispatch and on_render_done if a paint races a
-        // cancel, and applying a stale bias against the source-bound
+        // index in [0, target_buffer_frames). app.playhead_scanner_sample
+        // is full-target-frame. Translate at the boundary. Source view
+        // and render view: identity (impl_->samples points at the
+        // source's own audio for both; cursor is already in the
+        // active-domain coordinate system). The target_buffer_frames
+        // > 0 guard ensures the bias is only applied when a successful
+        // target render has populated the buffer; pre-paint can fire
+        // briefly between dispatch and on_render_done if a paint races
+        // a cancel, and applying a stale bias against the source-bound
         // buffer would skew the playhead.
         int64_t translated = cur;
         if (app.active_audio_view == 'T' &&
@@ -595,12 +604,11 @@ int main(int argc, char** argv) {
             app.target_buffer_frames > 0) {
             translated = cur + app.target_buffer_start_frame;
         }
-        if (translated == app.playhead_sample) return;
+        if (translated == app.playhead_scanner_sample) return;
 
-        const double old_px = playhead_pixel_x(app, audio);
-        app.playback_cursor  = translated;
-        app.playhead_sample  = translated;
-        const double new_px  = playhead_pixel_x(app, audio);
+        const double old_px = scanner_pixel_x(app, audio);
+        app.playhead_scanner_sample = translated;
+        const double new_px  = scanner_pixel_x(app, audio);
 
         // invalidate_region during pre-paint appends to damage_ without
         // scheduling a redundant frame callback (platform layer handles

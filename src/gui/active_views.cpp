@@ -32,7 +32,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     t.viewport_start_sample = app.viewport_start_sample;
     t.zoom_level            = app.zoom_level;
-    t.playhead_sample       = app.playhead_sample;
+    t.playhead_cursor_sample       = app.playhead_cursor_sample;
     if (app.active_markers_view == 'P') {
         t.phase_reset_selected      = app.selected_markers;
         t.phase_reset_last_selected = app.last_selected_marker;
@@ -108,7 +108,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     const ViewState& target = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;
     app.viewport_start_sample = target.viewport_start_sample;
     app.zoom_level            = target.zoom_level;
-    app.playhead_sample       = target.playhead_sample;
+    app.playhead_cursor_sample       = target.playhead_cursor_sample;
     // Restore the active selection from the destination tab's
     // current-mode slot. Mode itself is per-AppState (not per-tab),
     // so the destination tab's other-mode slot stays warm for any

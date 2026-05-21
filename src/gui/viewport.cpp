@@ -116,7 +116,15 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t visible = samples_visible(app, audio);
 
-    app.playhead_sample = new_sample;
+    app.playhead_cursor_sample = new_sample;
+    // Split-playhead invariant: when the scanner is inactive its
+    // sample tracks the cursor. Mouse-click-during-playback paths
+    // keep scanner_active true and update the scanner via the audio
+    // thread's reseek; this branch only fires for the idle / stopped
+    // case the gesture callers funnel through here after stop.
+    if (!app.playhead_scanner_active) {
+        app.playhead_scanner_sample = new_sample;
+    }
 
     const int64_t vp_end = app.viewport_start_sample + visible;
     bool viewport_changed = false;
@@ -155,7 +163,7 @@ void Viewport::move_playhead_pixels(int delta_px) {
     const double spp = current_samples_per_pixel(app, audio);
     const int64_t delta_samples =
         static_cast<int64_t>(std::nearbyint(delta_px * spp));
-    move_playhead_to(app.playhead_sample + delta_samples);
+    move_playhead_to(app.playhead_cursor_sample + delta_samples);
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper
@@ -170,9 +178,15 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     if (app.zoom_level == kFitFileLevel) {
         app.viewport_start_sample = 0;
     } else {
+        // Split-playhead: during playback zoom tracks the audio under
+        // review (scanner); otherwise tracks the launch point (cursor).
+        // The two are equal by invariant when the scanner is inactive,
+        // so this only matters during playback.
+        const int64_t target = app.playhead_scanner_active
+            ? app.playhead_scanner_sample
+            : app.playhead_cursor_sample;
         const int64_t visible = samples_visible(app, audio);
-        app.viewport_start_sample =
-            app.playhead_sample - visible / 2;
+        app.viewport_start_sample = target - visible / 2;
         clamp_viewport_start(app, audio);
     }
 
@@ -232,9 +246,15 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
 
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
+    // Split-playhead: during playback center on the scanner (audio
+    // under review); otherwise center on the cursor (launch point).
+    // The two are equal by invariant when the scanner is inactive.
+    const int64_t target = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
-    app.viewport_start_sample = app.playhead_sample - visible / 2;
+    app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
         invalidate_waveform_area();
@@ -256,19 +276,24 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
-// Auto-follow during playback: when the playhead leaves the viewport,
-// scroll the viewport so the playhead lands ~10% into the new view, leaving
-// room ahead. Only the first move beyond vp_end triggers a scroll.
+// Auto-follow during playback: when the scanner leaves the viewport,
+// scroll so the scanner lands ~10% into the new view, leaving room
+// ahead. Only the first move beyond vp_end triggers a scroll. Called
+// at play press too (when scanner == cursor by invariant), so the same
+// landing rule left-edge-aligns the viewport on the cursor if it was
+// offscreen — matching the brief's "issue scanner forth from a visible
+// cursor" requirement.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;
+    const int64_t target = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
     const int64_t vp_end = app.viewport_start_sample + visible;
-    if (app.playhead_sample < app.viewport_start_sample ||
-        app.playhead_sample >= vp_end) {
+    if (target < app.viewport_start_sample || target >= vp_end) {
         const int64_t lead = visible / 10;
         const int64_t old_vp = app.viewport_start_sample;
-        app.viewport_start_sample =
-            std::max<int64_t>(0, app.playhead_sample - lead);
+        app.viewport_start_sample = std::max<int64_t>(0, target - lead);
         clamp_viewport_start(app, audio);
         if (app.viewport_start_sample != old_vp) {
             invalidate_waveform_area();

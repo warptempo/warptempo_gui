@@ -5,41 +5,39 @@
 #include <cstdio>
 
 // Gesture-stop: called at the top of any handler that will move the
-// visible playhead (keys, button press, Ctrl+wheel, undo/redo, tab
-// switch). Stops the audio thread and keeps the LSP in sync with the
-// visible playhead so the next Space-to-play captures the right
-// launch position. Does NOT return-to-launch — the gesture is about
-// to commit a new playhead position.
+// cursor (keys, button press, Ctrl+wheel, undo/redo, tab switch).
+// Stops the audio thread and restores the split-playhead invariant:
+// when the scanner is inactive its sample equals the cursor's sample.
+// The cursor is not touched here — the caller is about to commit a new
+// cursor position.
 void GuiPlaybackLifecycle::stop_playback_if_playing() {
-    if (!playback.is_playing() && !app.is_playing) return;
+    if (!playback.is_playing() && !app.playhead_scanner_active) return;
     playback.stop();
-    app.is_playing        = false;
-    app.last_space_sample = app.playhead_sample;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_sample = app.playhead_cursor_sample;
 }
 
-// Snap the visible playhead back to where Space was last pressed and
-// refresh the affected regions. Used by both Space-to-stop and natural
-// end-of-playback.
+// End scanner motion and restore the invariant. Used by Space/Enter to
+// stop and by natural end-of-playback. The cursor never moved during
+// playback (the predictor only writes the scanner), so the only work
+// here is to deactivate the scanner and snap it back onto the cursor.
+// Invalidate the columns the scanner's line and the cursor's
+// triangle/highlight occupy so they repaint cleanly.
 void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
-    const double old_px = playhead_pixel_x(app, audio);
-    app.playhead_sample = app.last_space_sample;
-    const double new_px = playhead_pixel_x(app, audio);
-    viewport.invalidate_playhead_columns(old_px, new_px);
+    const double cursor_px = playhead_pixel_x(app, audio);
+    viewport.invalidate_playhead_columns(cursor_px, cursor_px);
     viewport.invalidate_timestamp_area();
-    // The triangle shares the top strip with any selected-flag
-    // highlight; restore jumps can uncover/cover both, so invalidate
-    // the flag strip too.
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    app.is_playing      = false;
-    app.playback_cursor = app.playhead_sample;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_sample = app.playhead_cursor_sample;
 }
 
-// Space-bar: start/stop playback. Playback runs from the playhead to
+// Space-bar: start/stop playback. Playback runs from the cursor to
 // trim_end (or total_frames if no e= marker). Pressing space with the
-// playhead at or past trim-end is a silent no-op. Space-to-stop
-// returns the visible playhead to the position where Space-to-play
-// was last pressed (return-to-launch).
+// cursor at or past trim-end is a silent no-op. Space-to-stop sends
+// the scanner back to the cursor (the cursor is the launch point by
+// definition under the split-playhead model — no separate stash).
 //
 // Target-view branch: the audio device is bound to app.target_buffer
 // (rebound by GuiTargetRender::on_render_done on Success). The
@@ -70,7 +68,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
         // but stay defensive here so a future caller can't slip through.
         if (app.target_buffer_frames <= 0) return;
         const int64_t bias = app.target_buffer_start_frame;
-        const int64_t local = app.playhead_sample - bias;
+        const int64_t local = app.playhead_cursor_sample - bias;
         // Playhead outside the target buffer's target-domain extent
         // is a silent no-op. Mirrors the "playhead at or past trim_end
         // is a silent no-op" pattern below for source view.
@@ -80,15 +78,18 @@ void GuiPlaybackLifecycle::toggle_playback() {
         end   = app.target_buffer_frames;
     } else {
         end = viewport.trim_end_sample();
-        if (app.playhead_sample >= end) return;
+        if (app.playhead_cursor_sample >= end) return;
         // Clamp the start position into the trim range in case the
-        // playhead is sitting at trim_end - 1 (valid) or somehow slipped.
-        start = std::max(app.playhead_sample, viewport.trim_begin_sample());
+        // cursor is sitting at trim_end - 1 (valid) or somehow slipped.
+        start = std::max(app.playhead_cursor_sample, viewport.trim_begin_sample());
     }
-    app.last_space_sample = app.playhead_sample;
-    app.playback_cursor = start;
-    app.is_playing = true;
-    if (app.follow_mode) viewport.follow_scroll_if_needed();
+    app.playhead_scanner_sample = start;
+    app.playhead_scanner_active = true;
+    // If the cursor is offscreen at play press, left-edge-align the
+    // viewport on the cursor before the scanner issues forth. Follow
+    // mode's same-shape check is sufficient regardless of whether the
+    // user has follow mode toggled on, so always run it on press.
+    viewport.follow_scroll_if_needed();
     const bool force_one_x =
         app.render_view_enabled || app.active_audio_view == 'T';
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);

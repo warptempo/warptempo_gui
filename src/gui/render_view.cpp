@@ -132,7 +132,7 @@ void GuiRenderView::write_rendersettings_for(
         this->rendersettings_path(e),
         app.viewport_start_sample,
         app.zoom_level,
-        app.playhead_sample);
+        app.playhead_cursor_sample);
 }
 
 // Tolerant parser. Missing / malformed file applies fit-file zoom
@@ -152,7 +152,7 @@ void GuiRenderView::apply_rendersettings_for(
     }
     app.zoom_level            = z;
     app.viewport_start_sample = vs.viewport_start;
-    app.playhead_sample       = vs.playhead;
+    app.playhead_cursor_sample       = vs.playhead;
     clamp_viewport_start(app, audio);
 }
 
@@ -258,8 +258,8 @@ bool GuiRenderView::load_render_view_at(int index) {
     }
     playback.stop();
     playback.shutdown();
-    app.is_playing      = false;
-    app.playback_cursor = 0;
+    app.playhead_scanner_active      = false;
+    app.playhead_scanner_sample = 0;
     viewport.clear_hover_popup();
 
     // Snapshot the live authoring playhead/viewport/zoom into the
@@ -345,8 +345,8 @@ void GuiRenderView::restore_source_audio() {
     if (source_audio_held.total_frames() == 0) return;
     playback.stop();
     playback.shutdown();
-    app.is_playing      = false;
-    app.playback_cursor = 0;
+    app.playhead_scanner_active      = false;
+    app.playhead_scanner_sample = 0;
     viewport.clear_hover_popup();
 
     audio = std::move(source_audio_held);
@@ -360,7 +360,7 @@ void GuiRenderView::restore_source_audio() {
     const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     app.viewport_start_sample = t.viewport_start_sample;
     app.zoom_level            = t.zoom_level;
-    app.playhead_sample       = t.playhead_sample;
+    app.playhead_cursor_sample       = t.playhead_cursor_sample;
     // Brief J.2 Section 4: load the matching-mode slot into the
     // live pair. Live pair held render-view selection while
     // render-view was active; restoring source-view requires

@@ -28,8 +28,8 @@ void GuiTargetRender::trigger() {
     // we (potentially) swap it underneath.
     if (playback.is_playing()) {
         playback.stop();
-        app.is_playing        = false;
-        app.last_space_sample = app.playhead_sample;
+        app.playhead_scanner_active = false;
+        app.playhead_scanner_sample = app.playhead_cursor_sample;
     }
 
     // Drop any pending archival batch entries. The current Ctrl+Alt+R /
@@ -228,8 +228,8 @@ void GuiTargetRender::ensure_ready() {
         // refused-rebind.
         if (playback.is_playing()) {
             playback.stop();
-            app.is_playing        = false;
-            app.last_space_sample = app.playhead_sample;
+            app.playhead_scanner_active = false;
+            app.playhead_scanner_sample = app.playhead_cursor_sample;
         }
         playback.rebind_buffer(app.target_buffer.data(),
                                app.target_buffer_frames);
@@ -299,7 +299,7 @@ void GuiTargetRender::rebind_to_source() {
 
     if (playback.is_playing()) {
         playback.stop();
-        app.is_playing = false;
+        app.playhead_scanner_active = false;
     }
     if (audio.total_frames() > 0) {
         playback.rebind_buffer(audio.samples_ptr(), audio.total_frames());

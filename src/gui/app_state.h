@@ -303,9 +303,9 @@ struct PromptState {
 // at default in J.1 (those still flow through the live AppState fields
 // and the .rendersettings sidecar; J.2 will reroute them through `state`).
 struct ViewState {
-    int64_t viewport_start_sample = 0;
-    int     zoom_level            = 0;
-    int64_t playhead_sample       = 0;
+    int64_t viewport_start_sample      = 0;
+    int     zoom_level                 = 0;
+    int64_t playhead_cursor_sample     = 0;
 
     std::set<int> warp_selected;
     int           warp_last_selected      = -1;
@@ -335,25 +335,22 @@ struct AppState {
     bool    loading               = false;
     float   load_progress         = 0.0f;
 
-    int64_t playhead_sample       = 0;
-    int     zoom_level            = 0;
-    int64_t viewport_start_sample = 0;
-    bool    follow_mode           = true;
+    int64_t playhead_cursor_sample = 0;
+    int     zoom_level             = 0;
+    int64_t viewport_start_sample  = 0;
+    bool    follow_mode            = true;
 
-    // Playback state. `playback_cursor` is the last sample read from the
-    // audio thread; `is_playing` mirrors the audio thread's flag so the
-    // main loop can detect natural end-of-playback. `playback_speed` is
-    // authoritative on the main thread and pushed to the playback engine
-    // on every change.
-    int64_t playback_cursor = 0;
-    bool    is_playing      = false;
-    float   playback_speed  = 1.0f;
-
-    // "Last-Space playhead": the sample where Space-to-play was last
-    // pressed. Space-to-stop (and natural end) restore `playhead_sample`
-    // to this value — return-to-launch. Only differs from `playhead_sample`
-    // while Space-initiated playback is active; otherwise tracks it.
-    int64_t last_space_sample = 0;
+    // Split-playhead state. The cursor (above, mirrored from the active
+    // ViewState) is the user's stationary reference frame; the scanner
+    // is the engine's playback position. They coincide when nothing is
+    // playing — every stop path restores playhead_scanner_sample ==
+    // playhead_cursor_sample before paint returns. The cursor is
+    // per-tab; the scanner is session-only and not persisted.
+    // `playback_speed` is authoritative on the main thread and pushed
+    // to the playback engine on every change.
+    int64_t playhead_scanner_sample = 0;
+    bool    playhead_scanner_active = false;
+    float   playback_speed          = 1.0f;
 
     // Companion files discovered alongside the loaded audio. Chunk E just
     // records these; later chunks will parse their contents.
@@ -395,7 +392,7 @@ struct AppState {
     // Active audio view: 'S' = source (the authored timeline), 'T' =
     // target (the engine's deformed-output timeline). Orthogonal to
     // active_markers_view ('W'/'P'): `t` toggles S/T, `p` toggles
-    // W/P. While 'T', app.viewport_start_sample / playhead_sample /
+    // W/P. While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
     // interpretation flips on toggle. Render-view leaves this
     // unchanged — `t` is dropped in render-view. Brief 1 was
@@ -510,7 +507,7 @@ struct AppState {
     // playhead's target-domain coordinate into a target-buffer
     // frame index for playback.play()) and by the pre-paint hook (to
     // translate playback.cursor() back into target-domain when writing
-    // to app.playhead_sample). Cleared at the same lifecycle points
+    // to app.playhead_cursor_sample). Cleared at the same lifecycle points
     // that clear target_buffer: failure/cancel, file load, revert,
     // rebind_to_source.
     int64_t target_buffer_start_frame = 0;
@@ -736,7 +733,12 @@ std::pair<double, double> compute_neighbor_walk_bounds(
 }
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
+// Returns the pixel column (offset from waveform_area.x) for the cursor.
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
+// Returns the pixel column (offset from waveform_area.x) for the scanner.
+// Equal to playhead_pixel_x when playhead_scanner_active is false (by the
+// invariant: scanner sample tracks cursor sample when inactive).
+double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the cached target_view_total_frames (the forward-
 // translated source length). Used by every viewport helper that needs the

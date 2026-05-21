@@ -37,14 +37,16 @@ struct TrimRange {
 };
 
 // Brief H palette: bases shared across the renderer module and
-// main.cpp. kPlayhead is the foreground reference and must never be
-// passed to dim() — preserve that invariant in subsequent phases.
-inline constexpr GuiColor kBackground = {0.10, 0.10, 0.12};
-inline constexpr GuiColor kWaveform   = {0.55, 0.75, 0.90};
-inline constexpr GuiColor kMarker     = {0.57, 0.27, 0.68};
-inline constexpr GuiColor kPlayhead   = {0.95, 0.85, 0.35};
-inline constexpr GuiColor kAccent     = {0.75, 0.20, 0.18};
-inline constexpr GuiColor kText       = {0.99, 0.99, 0.99};
+// main.cpp. kPlayheadCursor and kPlayheadScanner are foreground
+// references and must never be passed to dim() — preserve that
+// invariant in subsequent phases.
+inline constexpr GuiColor kBackground       = {0.10, 0.10, 0.12};
+inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
+inline constexpr GuiColor kMarker           = {0.57, 0.27, 0.68};
+inline constexpr GuiColor kPlayheadScanner  = {0.95, 0.85, 0.35};
+inline constexpr GuiColor kPlayheadCursor   = {0.10, 0.74, 0.61};
+inline constexpr GuiColor kAccent           = {0.75, 0.20, 0.18};
+inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
 
 // Flag rect geometry. Internal padding around the text glyph bounding box,
 // applied symmetrically (horizontal and vertical). Brief Q raised this from
@@ -191,12 +193,16 @@ void render_waveform(cairo_t* cr,
 // (offset from area.x, float for subpixel centering). No-op if outside.
 // `triangle_surface` is the pre-loaded playhead-triangle indicator (loaded by
 // GuiPlatform); it's stamped above the stem via cairo_mask_surface, tinted with
-// `color`. May be nullptr — in that case the indicator is skipped.
+// `color`. May be nullptr — in that case the indicator is skipped. The
+// triangle belongs to the cursor exclusively under the split-playhead
+// model; pass `draw_triangle = false` for the scanner call so only the
+// vertical line is drawn.
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     cairo_surface_t* triangle_surface);
+                     cairo_surface_t* triangle_surface,
+                     bool draw_triangle = true);
 
 // Formats `seconds` as MM:SS.mmm and paints it with Cairo's monospace face.
 // Baseline of the text lands at (x, y).

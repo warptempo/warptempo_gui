@@ -1923,7 +1923,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // restart the audio device for nothing.
         const bool was_playing_rv =
             (inside_waveform || inside_top) && playback.is_playing();
-        const int64_t playhead_at_click_entry_rv = app.playhead_sample;
+        const int64_t playhead_at_click_entry_rv = app.playhead_cursor_sample;
         int hit = -1;
         if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
         else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
@@ -2031,7 +2031,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // by Space (or transport keys), not by mouse press.
         const bool was_playing =
             (inside_waveform || inside_top) && playback.is_playing();
-        const int64_t playhead_at_click_entry = app.playhead_sample;
+        const int64_t playhead_at_click_entry = app.playhead_cursor_sample;
         if (inside_top && was_playing) playback_lifecycle.stop_playback_if_playing();
 
         // V.A1 / V.B editor: mouse handling.
@@ -2378,7 +2378,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
         const int  sr    = audio.sample_rate();
         int snapped = -1;
         if (sr > 0) {
-            const int64_t ph = app.playhead_sample;
+            const int64_t ph = app.playhead_cursor_sample;
             // Target view: marker time_seconds is source-domain;
             // playhead is active-domain. Inverse-translate playhead
             // once so the per-marker == comparison stays in source-
@@ -2553,7 +2553,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 new_playhead = app.viewport_start_sample +
                     static_cast<int64_t>(std::nearbyint(rel * spp));
             }
-            if (new_playhead != app.playhead_sample) {
+            if (new_playhead != app.playhead_cursor_sample) {
                 viewport.move_playhead_to(new_playhead);
             }
             return;
@@ -2631,7 +2631,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 static_cast<int64_t>(std::nearbyint(rel * spp));
         }
 
-        if (new_playhead != app.playhead_sample) {
+        if (new_playhead != app.playhead_cursor_sample) {
             viewport.move_playhead_to(new_playhead);
         }
         return;
@@ -2726,9 +2726,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int64_t ph = (app.active_audio_view == 'T')
             ? to_domain_frame(app, ph_src, app.drag.frozen_timemap)
             : ph_src;
-        if (ph != app.playhead_sample) {
+        if (ph != app.playhead_cursor_sample) {
             const double old_px = playhead_pixel_x(app, audio);
-            app.playhead_sample = ph;
+            app.playhead_cursor_sample = ph;
             if (playback.is_playing()) playback.resync_predictor();
             const double new_px = playhead_pixel_x(app, audio);
             viewport.invalidate_playhead_columns(old_px, new_px);
@@ -2764,7 +2764,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t cand_frame =
-        to_source_frame(app, app.playhead_sample, tmap);
+        to_source_frame(app, app.playhead_cursor_sample, tmap);
     const double cand_seconds =
         static_cast<double>(cand_frame) / sr_d;
     ViewState& vs = active_view_state(app);
@@ -2917,11 +2917,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     const double cur_spp = current_samples_per_pixel(app, audio);
     const double ph_px =
         (cur_spp > 0.0)
-        ? (static_cast<double>(app.playhead_sample -
+        ? (static_cast<double>(app.playhead_cursor_sample -
                                app.viewport_start_sample) / cur_spp)
         : 0.0;
 
-    int64_t new_playhead = app.playhead_sample;
+    int64_t new_playhead = app.playhead_cursor_sample;
 
     bool going_to_target = false;
     if (app.active_audio_view == 'S') {
@@ -2936,8 +2936,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
 
         const double tph = map_source_to_target(
-            static_cast<size_t>(app.playhead_sample < 0
-                                ? 0 : app.playhead_sample), tmap);
+            static_cast<size_t>(app.playhead_cursor_sample < 0
+                                ? 0 : app.playhead_cursor_sample), tmap);
         new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
         app.active_audio_view = 'T';
@@ -2946,8 +2946,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // T → S: inverse-translate the playhead, drop the target-domain
         // total cache.
         const double sph = map_target_to_source(
-            static_cast<size_t>(app.playhead_sample < 0
-                                ? 0 : app.playhead_sample), tmap);
+            static_cast<size_t>(app.playhead_cursor_sample < 0
+                                ? 0 : app.playhead_cursor_sample), tmap);
         new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
         app.active_audio_view              = 'S';
@@ -2956,7 +2956,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 
     // Domain is flipped — current_samples_per_pixel below reads the
     // post-flip live_total_frames against the preserved zoom_level.
-    app.playhead_sample = new_playhead;
+    app.playhead_cursor_sample = new_playhead;
     const double new_spp = current_samples_per_pixel(app, audio);
     const double new_vp_d =
         static_cast<double>(new_playhead) - ph_px * new_spp;

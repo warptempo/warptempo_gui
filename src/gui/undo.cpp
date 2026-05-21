@@ -311,7 +311,7 @@ void Undo::do_undo() {
 
     // Restore the originating A/B tab before the marker swap. The
     // post-restore rules below call selection.jump_playhead_to(...),
-    // which writes app.playhead_sample / app.viewport_start_sample —
+    // which writes app.playhead_cursor_sample / app.viewport_start_sample —
     // those writes must land on the tab the action was authored on.
     if (entry.tab != app.active_tab_view) {
         active_views.switch_active_tab_view_to(entry.tab);

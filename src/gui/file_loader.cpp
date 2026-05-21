@@ -32,8 +32,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // audio thread. Order (stop → shutdown → load → init) is fixed.
     playback.stop();
     playback.shutdown();
-    app.is_playing     = false;
-    app.playback_cursor = 0;
+    app.playhead_scanner_active     = false;
+    app.playhead_scanner_sample = 0;
     app.hover_popup    = HoverPopupState{};
 
     app.loading       = true;
@@ -72,7 +72,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     target_render.cancel_for_load();
     app.target_view_total_frames = 0;
 
-    app.playhead_sample       = 0;
+    app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
     const int max_num = max_valid_numeric_level(
         waveform_area(app).w, audio.total_frames(), audio.sample_rate());
@@ -173,9 +173,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // otherwise sample 0. Must happen after marker parse so the trim
     // range reflects the on-disk state. Scroll the viewport so the
     // playhead is visible rather than lurking off the left edge.
-    app.playhead_sample = viewport.trim_begin_sample();
+    app.playhead_cursor_sample = viewport.trim_begin_sample();
     if (app.zoom_level != kFitFileLevel) {
-        app.viewport_start_sample = app.playhead_sample;
+        app.viewport_start_sample = app.playhead_cursor_sample;
         clamp_viewport_start(app, audio);
     }
 
@@ -184,7 +184,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     ViewState default_tab;
     default_tab.viewport_start_sample = app.viewport_start_sample;
     default_tab.zoom_level            = app.zoom_level;
-    default_tab.playhead_sample       = app.playhead_sample;
+    default_tab.playhead_cursor_sample       = app.playhead_cursor_sample;
     app.tab_a          = default_tab;
     app.tab_b          = default_tab;
     app.engine_settings = EngineSettings{};
@@ -209,7 +209,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                          ViewState& dst) {
             if (has_vp   && vp   >= 0 && vp   <  total)  dst.viewport_start_sample = vp;
             if (has_zoom && valid_zoom(zoom))            dst.zoom_level            = zoom;
-            if (has_ph   && ph   >= 0 && ph   <= total)  dst.playhead_sample       = ph;
+            if (has_ph   && ph   >= 0 && ph   <= total)  dst.playhead_cursor_sample       = ph;
         };
         apply(ps.has_tab_a_vp, ps.tab_a_vp,
               ps.has_tab_a_zoom, ps.tab_a_zoom,
@@ -278,7 +278,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                                       ? app.tab_b : app.tab_a;
         app.viewport_start_sample = parsed_tab.viewport_start_sample;
         app.zoom_level            = parsed_tab.zoom_level;
-        app.playhead_sample       = parsed_tab.playhead_sample;
+        app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         clamp_viewport_start(app, audio);
     }
 
@@ -318,19 +318,19 @@ void GuiFileLoader::revert_to_blank() {
     // away. Same invariant as load_file.
     playback.stop();
     playback.shutdown();
-    app.is_playing      = false;
-    app.playback_cursor = 0;
+    app.playhead_scanner_active      = false;
+    app.playhead_scanner_sample = 0;
 
     audio = GuiAudio{};
     app.audio_generation++;
     wf_cache.destroy_surface();
 
-    app.playhead_sample       = 0;
-    app.viewport_start_sample = 0;
-    app.zoom_level            = 0;
-    app.follow_mode           = true;
-    app.last_space_sample     = 0;
-    app.playback_speed        = 1.0f;
+    app.playhead_cursor_sample  = 0;
+    app.viewport_start_sample   = 0;
+    app.zoom_level              = 0;
+    app.follow_mode             = true;
+    app.playhead_scanner_sample = 0;
+    app.playback_speed          = 1.0f;
 
     app.warpmarkers.clear();
     app.phase_reset_markers.clear();

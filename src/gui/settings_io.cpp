@@ -165,10 +165,10 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
     { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "0" },
-    { "tab_a_playhead",              SettingKind::Playhead_A,           EngineField::Title,                   "0" },
+    { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
     { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "0" },
-    { "tab_b_playhead",              SettingKind::Playhead_B,           EngineField::Title,                   "0" },
+    { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
 
 // True if `key` is in the EnginePassthrough subset of kSettingsOrder OR
@@ -453,7 +453,7 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         } else if (key == "tab_a_zoom") {
             int v;
             if (parse_int_full(value, v)) { out.has_tab_a_zoom = true; out.tab_a_zoom = v; }
-        } else if (key == "tab_a_playhead") {
+        } else if (key == "tab_a_playhead_cursor") {
             int64_t v;
             if (parse_int64_full(value, v)) { out.has_tab_a_ph = true; out.tab_a_ph = v; }
         } else if (key == "tab_b_viewport_start") {
@@ -462,7 +462,7 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         } else if (key == "tab_b_zoom") {
             int v;
             if (parse_int_full(value, v)) { out.has_tab_b_zoom = true; out.tab_b_zoom = v; }
-        } else if (key == "tab_b_playhead") {
+        } else if (key == "tab_b_playhead_cursor") {
             int64_t v;
             if (parse_int64_full(value, v)) { out.has_tab_b_ph = true; out.tab_b_ph = v; }
         } else if (key == "follow") {
@@ -882,7 +882,7 @@ bool write_settings_file(
                 break;
             case SettingKind::Playhead_A:
                 std::snprintf(buf, sizeof(buf), "%lld",
-                              static_cast<long long>(tab_a.playhead_sample));
+                              static_cast<long long>(tab_a.playhead_cursor_sample));
                 data += desc.key; data += '='; data += buf; data += '\n';
                 break;
             case SettingKind::ViewportStart_B:
@@ -896,7 +896,7 @@ bool write_settings_file(
                 break;
             case SettingKind::Playhead_B:
                 std::snprintf(buf, sizeof(buf), "%lld",
-                              static_cast<long long>(tab_b.playhead_sample));
+                              static_cast<long long>(tab_b.playhead_cursor_sample));
                 data += desc.key; data += '='; data += buf; data += '\n';
                 break;
         }

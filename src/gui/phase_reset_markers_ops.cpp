@@ -75,7 +75,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t src_frame =
-        to_source_frame(app, app.playhead_sample, tmap);
+        to_source_frame(app, app.playhead_cursor_sample, tmap);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_phase_reset_at_position(t);
@@ -276,7 +276,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t ph_src =
-        to_source_frame(app, app.playhead_sample, tmap);
+        to_source_frame(app, app.playhead_cursor_sample, tmap);
     const double ph_t     = static_cast<double>(ph_src) /
                             static_cast<double>(sr);
     const double delta    = ph_t - anchor_t;

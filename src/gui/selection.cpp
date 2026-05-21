@@ -76,7 +76,7 @@ void Selection::cycle_selection(bool forward) {
     // Helper to read frame-of-index in the active domain. Source view:
     // marker source-frame == active-domain frame (identity). Target view:
     // forward-translate to active-domain so frame_of values are
-    // comparable to playhead_sample / viewport_start_sample below.
+    // comparable to playhead_cursor_sample / viewport_start_sample below.
     std::vector<TimeMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
@@ -110,7 +110,7 @@ void Selection::cycle_selection(bool forward) {
     // landing — Tab is motion, not confirmation. Disabled markers are
     // skipped as if they were not present in the active mode's list.
     int new_sel = -1;
-    const int64_t ph_f = app.playhead_sample;
+    const int64_t ph_f = app.playhead_cursor_sample;
     if (forward) {
         for (int i = 0; i < n; ++i) {
             if (frame_of(i) > ph_f && !is_disabled(i)) {
@@ -213,7 +213,7 @@ void Selection::sync_playhead_to_last_selected() {
 }
 
 void Selection::jump_playhead_to(int64_t target_sample) {
-    app.playhead_sample = target_sample;
+    app.playhead_cursor_sample = target_sample;
 
     const int64_t visible = samples_visible(app, audio);
     const bool offscreen =

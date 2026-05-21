@@ -436,7 +436,8 @@ void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     cairo_surface_t* triangle_surface) {
+                     cairo_surface_t* triangle_surface,
+                     bool draw_triangle) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: the triangle's nearer
     // half stays onscreen even when the tip column itself has clipped
@@ -465,7 +466,9 @@ void render_playhead(cairo_t* cr,
     // the tip at column index 8 (image-local); integer division places that
     // tip column at `area.x + col`. The bottom row sits one pixel above
     // `area.y` so the stem stroke beginning at `area.y` is visually adjacent.
-    if (triangle_surface) {
+    // Skipped for the scanner call (draw_triangle=false): the triangle
+    // belongs to the cursor exclusively under the split-playhead model.
+    if (draw_triangle && triangle_surface) {
         const int img_w = cairo_image_surface_get_width(triangle_surface);
         const int img_h = cairo_image_surface_get_height(triangle_surface);
         const double dst_x = static_cast<double>(area.x + col - img_w / 2);

@@ -1084,11 +1084,22 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // strip, so render whenever either the waveform or top strip is
         // exposed; otherwise a flag-strip-only repaint would erase the
         // triangle.
+        //
+        // Split-playhead paint order: scanner first (line only, gated
+        // on playhead_scanner_active), then cursor (line + triangle).
+        // The cursor draws over the scanner on overlap.
         if (rects_intersect(exposed, area) ||
             rects_intersect(exposed, top_strip)) {
             const auto p0 = clock::now();
-            render_playhead(cr, area, px_x, kPlayhead,
-                            gui.playhead_triangle_surface());
+            if (app.playhead_scanner_active) {
+                const double scan_px = scanner_pixel_x(app, audio);
+                render_playhead(cr, area, scan_px, kPlayheadScanner,
+                                gui.playhead_triangle_surface(),
+                                /*draw_triangle=*/false);
+            }
+            render_playhead(cr, area, px_x, kPlayheadCursor,
+                            gui.playhead_triangle_surface(),
+                            /*draw_triangle=*/true);
             const auto p1 = clock::now();
             t_playhead_ms =
                 std::chrono::duration<double, std::milli>(p1 - p0).count();
@@ -1254,16 +1265,25 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_restore(cr);
             } else {
                 // In source-view, sr is the loaded file's sample rate
-                // and playhead_sample is in source-frames. In render
-                // -view the active `audio` is the render, so its sr
-                // is what the engine wrote out — but the playhead is
+                // and the playhead samples are in source-frames. In
+                // render-view the active `audio` is the render, so its
+                // sr is what the engine wrote out — but the playhead is
                 // in render-frame coords. Render-view timestamp is
                 // render-domain (zero at render sample 0); source-time
                 // and render-time advance at different rates because
                 // of warping, so the same arithmetic suffices.
+                //
+                // Split-playhead: track the scanner during playback
+                // (what the user is hearing) and the cursor otherwise.
+                // The two are equal by invariant when the scanner is
+                // inactive, so the conditional only matters during
+                // playback.
+                const int64_t ts_sample = app.playhead_scanner_active
+                    ? app.playhead_scanner_sample
+                    : app.playhead_cursor_sample;
                 double seconds = 0.0;
                 if (sr > 0) {
-                    seconds = static_cast<double>(app.playhead_sample) /
+                    seconds = static_cast<double>(ts_sample) /
                               static_cast<double>(sr);
                 }
                 {
