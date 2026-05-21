@@ -115,9 +115,6 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
               == static_cast<size_t>(kZoomTableSize),
               "kZoomMsPerPixel size must match kZoomTableSize");
 
-// Region width includes room for the A/B tab letter and the dirty indicator
-// past the timestamp text edge.
-constexpr int kTimestampRegionW           = 200;
 constexpr int kTimestampRegionH           = 30;
 constexpr double kDirtyGapPx              = 8.0;
 
@@ -330,14 +327,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-GuiRect timestamp_invalidate_rect(int window_height, int window_width,
-                                  bool wide_strip) {
-    if (wide_strip) {
-        return GuiRect{0, window_height - kTimestampRegionH,
-                       window_width, kTimestampRegionH};
-    }
+GuiRect timestamp_invalidate_rect(int window_height, int window_width) {
     return GuiRect{0, window_height - kTimestampRegionH,
-                   kTimestampRegionW, kTimestampRegionH};
+                   window_width, kTimestampRegionH};
 }
 
 

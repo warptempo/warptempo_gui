@@ -785,8 +785,7 @@ int     max_valid_numeric_level(int waveform_width_px,
                                 int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, int sample_rate, long long total_frames);
-GuiRect timestamp_invalidate_rect(int window_height, int window_width,
-                                  bool wide_strip);
+GuiRect timestamp_invalidate_rect(int window_height, int window_width);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
@@ -810,10 +809,12 @@ inline const ViewState& active_view_state(const AppState& a) {
 // when constructing the inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
 
-// X.7.8a: promoted from a lambda in main(). True iff the bottom strip
-// must paint full-width — when the prompt overlay is active or when a
-// queue progress message is showing. Drives timestamp_invalidate_rect
-// width selection in the redraw path. Pure read against AppState.
+// True iff the bottom strip is showing a modal overlay (prompt,
+// queue progress, settings editor) rather than the regular flowed
+// content. Consumed by the paint-time branch in on_redraw to pick
+// the right strip content. Pure read against AppState.
+// (Name is mildly stale — "wide" referred to the wide-vs-narrow
+// invalidation rect, which is gone. Rename rides its own commit.)
 bool bottom_strip_wide(const AppState& app);
 
 // X.7.8b-2: promoted from lambdas in main(). Mode-aware hit-tests against

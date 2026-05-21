@@ -76,8 +76,7 @@ void Viewport::invalidate_waveform_area() {
 }
 
 void Viewport::invalidate_timestamp_area() {
-    const GuiRect t = timestamp_invalidate_rect(
-        app.height, app.width, bottom_strip_wide(app));
+    const GuiRect t = timestamp_invalidate_rect(app.height, app.width);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 

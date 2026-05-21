@@ -976,8 +976,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // the regular elements (timestamp / tab letter / dirty / render
         // -view filename). The prompt is modal — while active, it
         // owns the strip and the regular elements are not visible.
-        const GuiRect ts = timestamp_invalidate_rect(
-            app.height, app.width, bottom_strip_wide(app));
+        const GuiRect ts = timestamp_invalidate_rect(app.height, app.width);
         if (rects_intersect(exposed, ts)) {
             const int baseline_y = app.height - kTimestampBaselineFromBottom;
             if (app.prompt.active) {
@@ -1235,17 +1234,25 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                            CAIRO_FONT_SLANT_NORMAL,
                                            CAIRO_FONT_WEIGHT_NORMAL);
                     cairo_set_font_size(cr, kFlagFontSize);
+                    cairo_text_extents_t star_ext;
+                    cairo_text_extents(cr, "*", &star_ext);
                     cairo_move_to(cr, cx, baseline_y);
                     cairo_show_text(cr, "*");
                     cairo_restore(cr);
+                    right_after_indicators = cx + star_ext.x_advance;
                     const auto d1 = clock::now();
                     t_dirty_ms =
                         std::chrono::duration<double, std::milli>(d1 - d0).count();
                 }
 
-                // Chunk W: render-view filename. Right-aligned in the
-                // bottom strip so it doesn't conflict with the
-                // timestamp / tab letter / dirty indicator on the left.
+                // Render-view filename. Flowed into the left-anchored
+                // sequence after the dirty asterisk (which is itself
+                // after the indicator letters, except indicator
+                // letters are suppressed in render-view — see the
+                // !render_view_enabled gate above). The filename thus
+                // sits right after the timestamp + (optional dirty *)
+                // in render-view, which is the only context where it
+                // paints at all.
                 if (app.render_view_enabled &&
                     app.render_view_index >= 0 &&
                     app.render_view_index <
@@ -1261,14 +1268,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                            CAIRO_FONT_SLANT_NORMAL,
                                            CAIRO_FONT_WEIGHT_NORMAL);
                     cairo_set_font_size(cr, kFlagFontSize);
-                    cairo_text_extents_t ext;
-                    cairo_text_extents(cr, label.c_str(), &ext);
-                    const double rx = static_cast<double>(app.width) -
-                                      static_cast<double>(kTimestampPadX) -
-                                      ext.x_advance;
-                    cairo_move_to(cr, rx, baseline_y);
+                    const double fx =
+                        right_after_indicators + kTabLetterGapPx;
+                    cairo_move_to(cr, fx, baseline_y);
                     cairo_show_text(cr, label.c_str());
                     cairo_restore(cr);
+                    // right_after_indicators isn't read again, so no
+                    // need to bump.
                 }
             }
         }
