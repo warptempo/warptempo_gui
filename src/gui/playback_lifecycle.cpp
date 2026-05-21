@@ -104,6 +104,30 @@ void GuiPlaybackLifecycle::toggle_playback() {
     playback.play(start, end);
 }
 
+// Click-keep-alive: reseek a live playback session to `sample` without
+// the stop-and-restart visual glitch. Mirrors toggle_playback's domain
+// translation (target-view buffer-local frame; source/render-view direct
+// trim_end_sample()) but is always-on rather than toggling. Called from
+// the press and motion handlers during a playhead-drag when playback was
+// alive at press time. Out-of-range positions in target view fall back to
+// stop — the brief specifies in-range-only semantics. No follow-scroll at
+// the reseek site: the user's click is a positional intent that takes
+// precedence over visual centering (unlike Space's start-of-listening).
+void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
+    if (app.active_audio_view == 'T' && !app.render_view_enabled) {
+        if (app.target_buffer_frames <= 0) { playback.stop(); return; }
+        const int64_t bias  = app.target_buffer_start_frame;
+        const int64_t local = sample - bias;
+        if (local < 0 || local >= app.target_buffer_frames) {
+            playback.stop();
+            return;
+        }
+        playback.play(local, app.target_buffer_frames);
+        return;
+    }
+    playback.play(sample, viewport.trim_end_sample());
+}
+
 // Helpers for Shift+<digit> speed selection. Refused silently in target
 // view: target view's audio is the warped target buffer, and adding
 // a playback-speed multiplier on top would defeat the brief's whole

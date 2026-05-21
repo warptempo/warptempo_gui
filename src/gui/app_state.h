@@ -226,11 +226,17 @@ struct UndoHistory {
 // State for the plain/Shift left-button playhead-drag gesture. The drag
 // only positions the playhead (with a 3px snap-to-marker magnet); selection
 // is set at press time and never mutated by motion. The gesture ends on
-// release (or on Escape, which ends at current position). The press site
-// already stopped playback (every cursor-moving gesture does, mouse or
-// keyboard), so the motion handler only positions the cursor.
+// release (or on Escape, which ends at current position).
+//
+// Mouse-side click-keep-alive: a waveform-area press during playback
+// reseeks audio to the clicked sample (Reaper-style) instead of stopping.
+// Motion during the drag continuously reseeks if playback was alive at
+// press time. `was_playing_at_press` is captured at press and gates the
+// motion-side reseek; the press-side reseek uses the value computed
+// locally before it propagates into this struct.
 struct PlayheadDragState {
     bool active                    = false;
+    bool was_playing_at_press      = false;
     // Marker index the press landed on, or -1 if pressed on empty space;
     // release uses it to suppress the snap-action when no actual drag
     // occurred.

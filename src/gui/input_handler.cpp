@@ -1914,10 +1914,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // before hit-testing so we don't attempt selection bookkeeping
         // on a non-existent flag pack.
         if (app.active_markers_view == 'P' && inside_top) return;
-        // Any waveform or top-strip click that moves the cursor stops
-        // playback first — same policy as the source-view branch and
-        // the keyboard navigation gestures.
-        if (inside_waveform || inside_top) playback_lifecycle.stop_playback_if_playing();
+        // Top-strip clicks stop playback first: they can open the iter/
+        // bpm/flag editors and continuing audio during text editing is
+        // the wrong default. Waveform clicks keep playback alive — the
+        // per-press reseek to the click sample happens at the playhead-
+        // drag press sites below, gated on was_playing && sample !=
+        // playhead_at_entry.
+        const bool was_playing_rv = playback.is_playing();
+        const int64_t playhead_at_entry_rv = app.playhead_cursor_sample;
+        if (inside_top) playback_lifecycle.stop_playback_if_playing();
         int hit = -1;
         if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
         else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
@@ -1966,7 +1971,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Brief F Section 2: any waveform-area press starts a
             // playhead-drag gesture. Top-strip flag-click does not.
             if (inside_waveform) {
+                if (was_playing_rv && sample != playhead_at_entry_rv) {
+                    playback_lifecycle.reseek_keeping_alive(sample);
+                }
                 app.playhead_drag.active = true;
+                app.playhead_drag.was_playing_at_press = was_playing_rv;
                 app.playhead_drag.press_marker_idx = hit;
             }
             return;
@@ -1990,21 +1999,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.viewport_start_sample +
                 static_cast<int64_t>(std::nearbyint(rel * spp));
             viewport.move_playhead_to(sample);
+            if (was_playing_rv && sample != playhead_at_entry_rv) {
+                playback_lifecycle.reseek_keeping_alive(sample);
+            }
             app.playhead_drag.active = true;
+            app.playhead_drag.was_playing_at_press = was_playing_rv;
             app.playhead_drag.press_marker_idx = -1;
         }
         return;
     }
 
     if (button == GuiMouseButton::Left) {
-        // Any waveform or top-strip click that moves the cursor stops
-        // playback first, matching the keyboard navigation model
-        // (left/right, Tab/Shift+Tab, Home/End). The previous keep-
-        // alive design treated the post-press motion as the stop
-        // signal, which mistook physical mouse jitter between mousedown
-        // and mouseup for a drag. The remaining "relocate while
-        // listening" workflow is click-then-Space.
-        if (inside_waveform || inside_top) playback_lifecycle.stop_playback_if_playing();
+        // Top-strip clicks stop playback first: they can open the iter/
+        // bpm/flag editors and continuing audio during text editing is
+        // the wrong default. Waveform clicks keep playback alive — the
+        // per-press reseek to the click sample happens at the playhead-
+        // drag press sites below, gated on was_playing && sample !=
+        // playhead_at_entry. Capture the entry state up front so all
+        // four downstream branches see the same snapshot.
+        const bool was_playing = playback.is_playing();
+        const int64_t playhead_at_entry = app.playhead_cursor_sample;
+        if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
         // V.A1 / V.B editor: mouse handling.
         //   click inside top strip on the editing target: re-position
@@ -2242,7 +2257,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     sample = to_domain_frame(app, src_sample, tmap);
                 }
                 viewport.move_playhead_to(sample);
+                if (was_playing && sample != playhead_at_entry) {
+                    playback_lifecycle.reseek_keeping_alive(sample);
+                }
                 app.playhead_drag.active = true;
+                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = hit;
             } else {
                 // Press on empty waveform.
@@ -2256,7 +2275,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static_cast<int64_t>(std::nearbyint(click_rel_x * spp));
                 if (!shift) selection.clear_selection();
                 viewport.move_playhead_to(sample);
+                if (was_playing && sample != playhead_at_entry) {
+                    playback_lifecycle.reseek_keeping_alive(sample);
+                }
                 app.playhead_drag.active = true;
+                app.playhead_drag.was_playing_at_press = was_playing;
                 app.playhead_drag.press_marker_idx = -1;
             }
         }
@@ -2450,6 +2473,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             }
             if (new_playhead != app.playhead_cursor_sample) {
                 viewport.move_playhead_to(new_playhead);
+                if (app.playhead_drag.was_playing_at_press) {
+                    playback_lifecycle.reseek_keeping_alive(new_playhead);
+                }
             }
             return;
         }
@@ -2520,6 +2546,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 
         if (new_playhead != app.playhead_cursor_sample) {
             viewport.move_playhead_to(new_playhead);
+            if (app.playhead_drag.was_playing_at_press) {
+                playback_lifecycle.reseek_keeping_alive(new_playhead);
+            }
         }
         return;
     }

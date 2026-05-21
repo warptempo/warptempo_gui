@@ -35,4 +35,15 @@ struct GuiPlaybackLifecycle {
     void restore_playhead_to_lsp();
     void toggle_playback();
     void set_playback_speed(float s);
+
+    // Reseek the active playback session to a new starting sample, keeping
+    // audio alive. The sample is expressed in the active playhead domain
+    // (source-domain in source view; target-domain in target view; render-
+    // domain in render-view). Handles the target-view target_buffer
+    // translation internally. Caller is responsible for the entry-state
+    // check (was_playing AND sample != playhead_at_entry); this function
+    // unconditionally reseeks when called. For target view, samples
+    // outside the target buffer's range fall back to playback.stop() —
+    // keep-alive intent is well-defined for in-range positions only.
+    void reseek_keeping_alive(int64_t sample);
 };
