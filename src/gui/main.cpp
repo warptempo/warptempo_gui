@@ -345,6 +345,11 @@ int main(int argc, char** argv) {
     GuiPlayback  playback;
     GuiPlatform  gui;
     WaveformCache wf_cache;
+    // Stage B: marker stems live on their own surface, rebuilt
+    // synchronously from on_tick. Constructed alongside wf_cache so they
+    // share the same lifetime; passed by reference into GuiPaintHandler
+    // and (for the destroy_surface hook) GuiFileLoader.
+    StemCache     stem_cache;
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
     }
@@ -400,7 +405,7 @@ int main(int argc, char** argv) {
                                   viewport);
     // file_loader's clear sites call target_render.cancel_for_load(),
     // so it must be constructed after target_render.
-    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache,
+    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, stem_cache,
                               waveform_worker, viewport, target_render);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle, target_render);
@@ -414,7 +419,7 @@ int main(int argc, char** argv) {
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache,
+    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
                                   waveform_worker, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render);
@@ -526,6 +531,15 @@ int main(int argc, char** argv) {
         // Runs first so the worker is kicked off before any of the
         // tick-time paint invalidations below.
         paint_handler.maybe_enqueue_waveform_render();
+
+        // Stage B: stem-cache dirty-detect. Runs AFTER the waveform's
+        // dirty-detect on purpose — both layers key their displayed-
+        // viewport inputs off wf_cache.fp_*, so on a viewport-change
+        // tick the waveform enqueues and the stems hold the OLD
+        // viewport; on a post-swap tick (eventfd handler runs before
+        // on_tick) wf_cache.fp_* already carries the new viewport, so
+        // stems snap together with the just-blitted waveform.
+        paint_handler.maybe_rebuild_stem_cache();
 
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate

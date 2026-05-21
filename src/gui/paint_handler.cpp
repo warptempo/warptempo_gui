@@ -432,49 +432,29 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
-            auto paint_markers_for_view = [&](
-                const std::vector<GuiWarpMarker>& warp_list,
-                const std::vector<GuiPhaseResetMarker>& phase_reset_list,
-                const std::vector<TimeMapSegment>* timemap) {
-                if (app.active_markers_view == 'P') {
-                    render_phase_reset_markers(
-                        cr, area, phase_reset_list,
-                        vp_start, vp_end, sr,
-                        trim_struct, timemap, drag_overlay);
-                } else {
-                    render_markers(
-                        cr, area, warp_list,
-                        vp_start, vp_end, sr,
-                        trim_struct, timemap, drag_overlay);
-                }
-            };
-            if (is_target) {
-                // Target view (brief 2): paint marker stems at their
-                // map_source_to_target-translated positions. No marker
-                // editing reaches here — input gates in input_handler.cpp
-                // block W/P-view edits while target view is active.
-                paint_markers_for_view(
-                    app.warpmarkers.markers(),
-                    app.phase_reset_markers.markers(),
-                    &target_timemap);
-            } else if (app.render_view_enabled) {
-                // Render-view: dark blue base, sky-tint when selected.
-                // The render's warpmarkers list is strict-monotonic on
-                // time_seconds (engine-written), so render_markers'
-                // usual ordering assumption holds. Selection is
-                // visual-only — it does not flow into commit.
-                // Brief F Section 3: when sub-mode is 'P', paint the
-                // render's phase reset list using the phase reset renderer
-                // (matches source-view's phase reset appearance).
-                paint_markers_for_view(
-                    app.render_view_markers,
-                    app.render_view_phase_resets,
-                    nullptr);
-            } else {
-                paint_markers_for_view(
-                    app.warpmarkers.markers(),
-                    app.phase_reset_markers.markers(),
-                    nullptr);
+            // Stage B: the marker stems live on stem_cache.surface,
+            // rebuilt synchronously from on_tick via
+            // maybe_rebuild_stem_cache. The paint path is blit-only.
+            // Like the waveform cache, this surface may be null on the
+            // very first paint after a load (before the first stem
+            // rebuild fires); the blit is skipped and the background
+            // shows through for that one frame. The surface's screen
+            // origin is `marker_paint_rect.x, marker_paint_rect.y`
+            // (i.e. area.x, area.y - kMarkerConnectorRows), matching
+            // the local-coord choice in maybe_rebuild_stem_cache.
+            if (stem_cache.surface) {
+                cairo_save(cr);
+                cairo_rectangle(cr,
+                                marker_paint_rect.x,
+                                marker_paint_rect.y,
+                                marker_paint_rect.w,
+                                marker_paint_rect.h);
+                cairo_clip(cr);
+                cairo_set_source_surface(cr, stem_cache.surface,
+                                         marker_paint_rect.x,
+                                         marker_paint_rect.y);
+                cairo_paint(cr);
+                cairo_restore(cr);
             }
             const auto m1 = clock::now();
             t_markers_ms =
@@ -1603,6 +1583,10 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio_gen      = app.audio_generation;
     job.target         = is_target;
     job.timemap_hash   = target_timemap_hash;
+    // Stage B: stash a copy of the timemap on the pending slot so the
+    // stem cache can read it at completion-swap time. The job consumes
+    // the original by move; the copy stays on the cache.
+    wf_cache.pending_fp_timemap = target_timemap;
     job.timemap        = std::move(target_timemap);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = channel_count;
@@ -1671,6 +1655,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
         job.timemap_hash   = wf_cache.supersede_timemap_hash;
+        // Stage B: thread the supersede timemap into both the job and
+        // pending_fp_timemap, the same way the idle-path dispatch does.
+        // Copy first, then move into the job — the cache keeps a
+        // displayable copy for the post-completion stem rebuild.
+        wf_cache.pending_fp_timemap = wf_cache.supersede_timemap;
         job.timemap        = std::move(wf_cache.supersede_timemap);
         job.surface        = wf_cache.pending_surface;
         job.channel_count  = audio.render_channels();
@@ -1710,12 +1699,185 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_timemap_hash = wf_cache.pending_fp_timemap_hash;
+    // Stage B: publish the in-flight job's timemap to the displayed slot
+    // so the next maybe_rebuild_stem_cache reads the same coordinate
+    // system the just-blitted waveform pixels were rendered against.
+    std::swap(wf_cache.fp_timemap,     wf_cache.pending_fp_timemap);
     wf_cache.dirty           = false;
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
+}
+
+// -- Stage B: marker stem cache dirty-detect and rebuild -----------------
+//
+// Called from on_tick AFTER maybe_enqueue_waveform_render. Reads displayed-
+// viewport inputs from wf_cache.fp_* (the LIVE waveform fingerprint — the
+// post-swap viewport, not necessarily the current app state); reads
+// marker-driven inputs from app state directly. Diverging fingerprint
+// triggers a synchronous offscreen rebuild + region invalidation.
+
+void GuiPaintHandler::maybe_rebuild_stem_cache() {
+    if (app.loading || audio.total_frames() <= 0) return;
+
+    // No live waveform yet → no stems. The first stem rebuild happens
+    // after the first waveform-completion swap (which sets
+    // wf_cache.fp_audio_gen >= 0); until then the displayed-viewport
+    // fields hold defaults that wouldn't agree with anything sensible
+    // on the marker side anyway.
+    if (wf_cache.fp_audio_gen < 0) return;
+
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return;
+
+    // Surface includes the connector rows above the waveform — see the
+    // geometry note in StemCache's class comment.
+    const int surface_w = area.w;
+    const int surface_h = area.h + static_cast<int>(kMarkerConnectorRows);
+
+    // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
+    const int64_t  vp_start     = wf_cache.fp_vp_start;
+    const int64_t  vp_end       = wf_cache.fp_vp_end;
+    const int64_t  trim_begin   = wf_cache.fp_trim_begin;
+    const int64_t  trim_end     = wf_cache.fp_trim_end;
+    const bool     is_target    = wf_cache.fp_target;
+    const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
+    const long long audio_gen   = wf_cache.fp_audio_gen;
+
+    // Marker-driven inputs: read live from app state.
+    const long long warp_gen   = app.warpmarkers.generation();
+    const long long phase_gen  = app.phase_reset_markers.generation();
+    const long long drag_gen   = app.drag_overlay_generation;
+    const bool     drag_active = app.drag.active;
+    const char     mv          = app.active_markers_view;
+    const bool     rve         = app.render_view_enabled;
+
+    const bool matches =
+        stem_cache.surface &&
+        stem_cache.fp_audio_gen               == audio_gen &&
+        stem_cache.fp_vp_start                == vp_start &&
+        stem_cache.fp_vp_end                  == vp_end &&
+        stem_cache.fp_trim_begin              == trim_begin &&
+        stem_cache.fp_trim_end                == trim_end &&
+        stem_cache.fp_area_w                  == surface_w &&
+        stem_cache.fp_area_h                  == surface_h &&
+        stem_cache.fp_target                  == is_target &&
+        stem_cache.fp_timemap_hash            == timemap_hash &&
+        stem_cache.fp_warpmarker_generation   == warp_gen &&
+        stem_cache.fp_phase_reset_generation  == phase_gen &&
+        stem_cache.fp_drag_overlay_generation == drag_gen &&
+        stem_cache.fp_drag_active             == drag_active &&
+        stem_cache.fp_active_markers_view     == mv &&
+        stem_cache.fp_render_view_enabled     == rve;
+
+    if (matches) return;
+
+    // Reuse-or-recreate the surface on dimension change.
+    if (!stem_cache.surface ||
+        stem_cache.width  != surface_w ||
+        stem_cache.height != surface_h) {
+        if (stem_cache.surface) {
+            cairo_surface_destroy(stem_cache.surface);
+            stem_cache.surface = nullptr;
+        }
+        stem_cache.surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, surface_w, surface_h);
+        stem_cache.width  = surface_w;
+        stem_cache.height = surface_h;
+    }
+
+    cairo_t* ccr = cairo_create(stem_cache.surface);
+    cairo_save(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+
+    // Local rect translates the screen-coord stem geometry into the
+    // cache surface's coordinate system. render_markers computes
+    // y_conn_top = waveform_area.y - kMarkerConnectorRows and
+    // y1 = waveform_area.y + waveform_area.h. Setting local.y =
+    // kMarkerConnectorRows makes y_conn_top = 0 (top of surface) and
+    // y1 = kMarkerConnectorRows + area.h = surface_h (bottom of surface).
+    // The blit at on_redraw time positions the surface at screen y =
+    // area.y - kMarkerConnectorRows so the connector rows land correctly.
+    const GuiRect local_area{
+        0,
+        static_cast<int>(kMarkerConnectorRows),
+        surface_w,
+        area.h
+    };
+    const TrimRange trim_struct{trim_begin, trim_end};
+    const int sr = audio.sample_rate();
+
+    // Target-view stems consume the displayed timemap (the one baked
+    // into the live waveform pixels), not a freshly-built one — keeps
+    // stem positions consistent with the displayed waveform during the
+    // worker's rebuild window.
+    const std::vector<TimeMapSegment>* tmap_arg =
+        (is_target && !wf_cache.fp_timemap.empty())
+            ? &wf_cache.fp_timemap : nullptr;
+
+    // Drag overlay: pass through only when a drag is live. During a
+    // drag the fingerprint mismatches every tick on
+    // drag_overlay_generation alone, so this rebuild reads the live
+    // moveable_times each pass.
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (drag_active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    if (mv == 'P') {
+        const auto& list = rve
+            ? app.render_view_phase_resets
+            : app.phase_reset_markers.markers();
+        render_phase_reset_markers(
+            ccr, local_area, list,
+            vp_start, vp_end, sr,
+            trim_struct, tmap_arg, drag_overlay);
+    } else {
+        const auto& list = rve
+            ? app.render_view_markers
+            : app.warpmarkers.markers();
+        render_markers(
+            ccr, local_area, list,
+            vp_start, vp_end, sr,
+            trim_struct, tmap_arg, drag_overlay);
+    }
+
+    cairo_destroy(ccr);
+
+    stem_cache.fp_audio_gen                 = audio_gen;
+    stem_cache.fp_vp_start                  = vp_start;
+    stem_cache.fp_vp_end                    = vp_end;
+    stem_cache.fp_trim_begin                = trim_begin;
+    stem_cache.fp_trim_end                  = trim_end;
+    stem_cache.fp_area_w                    = surface_w;
+    stem_cache.fp_area_h                    = surface_h;
+    stem_cache.fp_target                    = is_target;
+    stem_cache.fp_timemap_hash              = timemap_hash;
+    stem_cache.fp_warpmarker_generation     = warp_gen;
+    stem_cache.fp_phase_reset_generation    = phase_gen;
+    stem_cache.fp_drag_overlay_generation   = drag_gen;
+    stem_cache.fp_drag_active               = drag_active;
+    stem_cache.fp_active_markers_view       = mv;
+    stem_cache.fp_render_view_enabled       = rve;
+    stem_cache.dirty                        = false;
+
+    // Invalidate the stem region. Viewport-driven invalidations
+    // already cover this strip, but pure marker-store edits (warp_gen /
+    // phase_gen bumps) don't pass through the viewport's invalidator —
+    // damage the strip explicitly so the next paint blits the new
+    // pixels. Idempotent against the waveform's own damage.
+    gui.invalidate_region(
+        0,
+        area.y - static_cast<int>(kMarkerConnectorRows),
+        app.width,
+        surface_h);
 }
 
 // -- GuiPaintHandler::on_resize ------------------------------------------

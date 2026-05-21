@@ -26,6 +26,7 @@ struct GuiFileLoader {
     GuiPlatform&       gui;
     GuiPlayback&       playback;
     WaveformCache&     wf_cache;
+    StemCache&         stem_cache;
     GuiWaveformWorker& waveform_worker;
     Viewport&          viewport;
     GuiTargetRender&   target_render;
@@ -35,6 +36,7 @@ struct GuiFileLoader {
                   GuiPlatform&       gui_,
                   GuiPlayback&       playback_,
                   WaveformCache&     wf_cache_,
+                  StemCache&         stem_cache_,
                   GuiWaveformWorker& waveform_worker_,
                   Viewport&          viewport_,
                   GuiTargetRender&   target_render_)
@@ -43,6 +45,7 @@ struct GuiFileLoader {
           gui(gui_),
           playback(playback_),
           wf_cache(wf_cache_),
+          stem_cache(stem_cache_),
           waveform_worker(waveform_worker_),
           viewport(viewport_),
           target_render(target_render_) {}

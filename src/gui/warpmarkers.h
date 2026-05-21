@@ -99,26 +99,41 @@ public:
 
     // Mutable accessor for keyboard/mouse toggles that edit a single marker
     // in place without changing its time (so list order is preserved).
+    // Stage B: bumps generation_ on call. Contract is "you may mutate"; a
+    // spurious bump (caller read-only) costs one stem rebuild on the next
+    // tick — negligible.
     GuiWarpMarker* marker_mut(int index) {
+        ++generation_;
         if (index < 0 || index >= static_cast<int>(markers_.size())) return nullptr;
         return &markers_[index];
     }
 
     // Bulk-mutable accessor. Callers must not reorder by time_seconds; the
     // class assumes strict-monotonic order. Exposed for operations that
-    // twiddle a flag across many markers at once.
-    std::vector<GuiWarpMarker>& markers_mut() { return markers_; }
+    // twiddle a flag across many markers at once. Stage B: bumps
+    // generation_ on call (same rationale as marker_mut).
+    std::vector<GuiWarpMarker>& markers_mut() {
+        ++generation_;
+        return markers_;
+    }
 
     void clear() {
         markers_.clear();
         errors_.clear();
         had_nonstandard_content_ = false;
+        ++generation_;
     }
+
+    // Stage B: monotonically-increasing token bumped on every mutating
+    // method. Consumers (stem cache fingerprint) detect any marker-store
+    // change by comparing generations rather than diffing contents.
+    long long generation() const { return generation_; }
 
 private:
     std::vector<GuiWarpMarker>       markers_;
     std::vector<GuiWarpMarkerError>  errors_;
     bool                         had_nonstandard_content_ = false;
+    long long                    generation_ = 0;
 };
 
 // True if the marker at `idx` should render as disabled. Per chunk U

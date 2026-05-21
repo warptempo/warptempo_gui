@@ -61,21 +61,34 @@ public:
     // Removes the marker at `index`. No-op if out of range.
     void remove_marker(int index);
 
+    // Stage B: bumps generation_ on call. Same shape as GuiWarpMarkers
+    // — contract is "you may mutate"; a spurious bump (caller read-only)
+    // costs one stem rebuild on the next tick.
     GuiPhaseResetMarker* marker_mut(int index) {
+        ++generation_;
         if (index < 0 || index >= static_cast<int>(markers_.size())) return nullptr;
         return &markers_[index];
     }
 
-    std::vector<GuiPhaseResetMarker>& markers_mut() { return markers_; }
+    std::vector<GuiPhaseResetMarker>& markers_mut() {
+        ++generation_;
+        return markers_;
+    }
 
     void clear() {
         markers_.clear();
         errors_.clear();
         had_nonstandard_content_ = false;
+        ++generation_;
     }
+
+    // Stage B: monotonically-increasing token bumped on every mutating
+    // method. Mirrors GuiWarpMarkers::generation().
+    long long generation() const { return generation_; }
 
 private:
     std::vector<GuiPhaseResetMarker>      markers_;
     std::vector<GuiPhaseResetMarkerError> errors_;
     bool                           had_nonstandard_content_ = false;
+    long long                      generation_ = 0;
 };

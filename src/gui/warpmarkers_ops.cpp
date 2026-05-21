@@ -485,6 +485,9 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     d.hit_marker             = hit;
     d.pending_collapse_to_hit = pending_collapse;
     app.drag = std::move(d);
+    // Stage B (layered-paint): announce the new drag overlay so the stem
+    // cache rebuilds against the seeded moveable_times.
+    ++app.drag_overlay_generation;
     viewport.clear_hover_popup();
     return true;
 }
@@ -519,6 +522,10 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
         any_changed = true;
     }
     if (any_changed) {
+        // Stage B (layered-paint): publish the new drag overlay to the
+        // stem cache. The waveform cache is frozen during a drag (Stage A
+        // drag_freeze), so only the stem layer reacts here.
+        ++app.drag_overlay_generation;
         const bool first_motion = !app.drag.moved;
         app.drag.moved = true;
         // Apply the deferred selection collapse on the press-to-motion

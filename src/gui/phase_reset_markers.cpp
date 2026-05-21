@@ -105,6 +105,7 @@ bool GuiPhaseResetMarkers::load(const std::string& path) {
     markers_.clear();
     errors_.clear();
     had_nonstandard_content_ = false;
+    ++generation_;
 
     std::ifstream f(path);
     if (!f.is_open()) {
@@ -260,10 +261,12 @@ int GuiPhaseResetMarkers::insert_marker(GuiPhaseResetMarker m) {
         [](const GuiPhaseResetMarker& a, double t) { return a.time_seconds < t; });
     const int idx = static_cast<int>(it - markers_.begin());
     markers_.insert(it, std::move(m));
+    ++generation_;
     return idx;
 }
 
 void GuiPhaseResetMarkers::remove_marker(int index) {
     if (index < 0 || index >= static_cast<int>(markers_.size())) return;
     markers_.erase(markers_.begin() + index);
+    ++generation_;
 }

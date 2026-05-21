@@ -92,6 +92,14 @@ struct WaveformCache {
     bool      fp_target      = false;
     uint64_t  fp_timemap_hash = 0;
 
+    // Stage B (layered-paint): the timemap baked into the live waveform
+    // pixels. The stem cache reads this to render target-view stems
+    // against the same coordinate system the displayed waveform uses, so
+    // stems and waveform pixels snap together at the completion swap
+    // instead of diverging during the rebuild window. Empty in source
+    // view; empty before the first completion has fired.
+    std::vector<TimeMapSegment> fp_timemap;
+
     // Stage A: pending-slot surface and fingerprint. The worker renders
     // into pending_surface; the completion handler swaps it into surface
     // and copies pending_fp_* into fp_*. While a render is in flight,
@@ -111,6 +119,11 @@ struct WaveformCache {
     long long pending_fp_audio_gen   = -1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_timemap_hash = 0;
+
+    // Stage B: the timemap the in-flight job is consuming. Set at
+    // dispatch alongside the other pending_fp_*; swapped into fp_timemap
+    // at completion.
+    std::vector<TimeMapSegment> pending_fp_timemap;
 
     // Supersede slot: when dirty-detect sees a new viewport mid-render,
     // it stashes the desired fingerprint here instead of dispatching.
@@ -156,9 +169,72 @@ struct WaveformCache {
         pending_fp_audio_gen = -1;
         supersede = false;
         supersede_timemap.clear();
+        fp_timemap.clear();
+        pending_fp_timemap.clear();
     }
 
     ~WaveformCache() { destroy_surface(); }
+};
+
+// -- Off-screen pixel cache for the marker stems (Stage B) ---------------
+//
+// Mirrors WaveformCache's "live" side but with no pending/supersede plumbing
+// — stem rebuilds are synchronous on the main thread (sub-millisecond at
+// the marker counts the editor admits). The fingerprint is split into two
+// halves:
+//   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/timemap_hash/
+//      area dimensions/audio_gen): read from wf_cache.fp_*, NOT from
+//      current app state. This is how the stem layer snaps together with
+//      the waveform layer at the worker's completion swap — both sides
+//      key off the same set of displayed-viewport values, which the
+//      waveform's swap callback publishes atomically.
+//   2. Marker-driven inputs (warpmarker/phase_reset generations, drag
+//      overlay generation/active, marker view, render-view flag): read
+//      live from app state. These have no waveform coupling, so the stem
+//      layer reacts to them immediately on the next tick.
+//
+// Surface height differs from WaveformCache's: stem geometry spans from
+// `area.y - kMarkerConnectorRows` (connector top) down to `area.y + area.h`
+// (waveform bottom). The cache surface is sized to fit that full vertical
+// extent; the blit positions it at screen y = area.y - kMarkerConnectorRows.
+struct StemCache {
+    cairo_surface_t* surface = nullptr;
+    int              width   = 0;
+    int              height  = 0;
+
+    long long fp_audio_gen        = -1;     // -1 = never rendered
+    int64_t   fp_vp_start         = 0;
+    int64_t   fp_vp_end           = 0;
+    int64_t   fp_trim_begin       = 0;
+    int64_t   fp_trim_end         = 0;
+    int       fp_area_w           = 0;
+    int       fp_area_h           = 0;       // surface height (incl. connector rows)
+    bool      fp_target           = false;
+    uint64_t  fp_timemap_hash     = 0;
+
+    long long fp_warpmarker_generation       = -1;
+    long long fp_phase_reset_generation      = -1;
+    long long fp_drag_overlay_generation     = -1;
+    bool      fp_drag_active                 = false;
+    char      fp_active_markers_view         = '\0';
+    bool      fp_render_view_enabled         = false;
+
+    // Mirrors WaveformCache::dirty — "no pixels yet, skip blit." Set at
+    // construction and at destroy_surface; cleared by the first rebuild.
+    bool dirty = true;
+
+    void destroy_surface() {
+        if (surface) {
+            cairo_surface_destroy(surface);
+            surface = nullptr;
+        }
+        width  = 0;
+        height = 0;
+        dirty  = true;
+        fp_audio_gen = -1;
+    }
+
+    ~StemCache() { destroy_surface(); }
 };
 
 // -- Iteration popup geometry --------------------------------------------
@@ -228,6 +304,7 @@ struct GuiPaintHandler {
     const GuiAudio&    audio;
     GuiPlayback&       playback;
     WaveformCache&     wf_cache;
+    StemCache&         stem_cache;
     GuiWaveformWorker& waveform_worker;
     GuiPlatform&       gui;
 
@@ -235,12 +312,14 @@ struct GuiPaintHandler {
                     const GuiAudio&    audio_,
                     GuiPlayback&       playback_,
                     WaveformCache&     wf_cache_,
+                    StemCache&         stem_cache_,
                     GuiWaveformWorker& waveform_worker_,
                     GuiPlatform&       gui_)
         : app(app_),
           audio(audio_),
           playback(playback_),
           wf_cache(wf_cache_),
+          stem_cache(stem_cache_),
           waveform_worker(waveform_worker_),
           gui(gui_) {}
 
@@ -267,4 +346,13 @@ struct GuiPaintHandler {
     // a supersede job, or swaps the pending surface into the live slot
     // and invalidates the waveform area.
     void on_waveform_render_done(bool ok);
+
+    // Stage B: dirty-detect for the stem cache. Called from on_tick AFTER
+    // maybe_enqueue_waveform_render. Reads displayed-viewport inputs from
+    // wf_cache.fp_*; reads marker-driven inputs from app state. If the
+    // fingerprint matches, no-ops. Otherwise rebuilds the offscreen
+    // surface synchronously (sub-millisecond at observed marker counts)
+    // and invalidates the stem strip so the next paint blits the new
+    // pixels.
+    void maybe_rebuild_stem_cache();
 };

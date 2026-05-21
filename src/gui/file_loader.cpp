@@ -337,6 +337,10 @@ void GuiFileLoader::revert_to_blank() {
     audio = GuiAudio{};
     app.audio_generation++;
     wf_cache.destroy_surface();
+    // Stage B: stem cache mirrors the waveform cache's lifecycle. Safe
+    // to destroy on the main thread; the rebuild path is fully
+    // synchronous so no in-flight work to drain.
+    stem_cache.destroy_surface();
 
     app.playhead_cursor_sample  = 0;
     app.viewport_start_sample   = 0;
