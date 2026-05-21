@@ -11,6 +11,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -262,86 +264,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);
         const GuiRect exposed{x, y, w, h};
-        const double  spp        = current_samples_per_pixel(app, audio);
-        const int64_t vp_start   = app.viewport_start_sample;
-        const int64_t vp_end     = vp_start +
-            static_cast<int64_t>(std::nearbyint(spp * area.w));
         const int     sr         = audio.sample_rate();
 
-        // Target view: build the timemap on the fly from the live warp
-        // marker store + settings trim, mirroring the engine's
-        // resolve-then-build pipeline. Brief 1 recomputes every paint
-        // (cost is O(markers); the cache below short-circuits the
-        // pixel-level work when nothing changed). The timemap doubles as
-        // the waveform translator and the source-trim → target-trim
-        // translator below.
-        //
-        // Frozen-coord regime: while a drag is active, source the
-        // timemap from app.drag.frozen_timemap (captured at begin_drag)
-        // rather than rebuilding from the live store. This keeps the
-        // target-view coordinate system fixed for the duration of the
-        // drag — non-dragged markers don't jitter as the dragged
-        // marker's time mutates and the build_timemaps cascade can't
-        // overflow against a moving label_def. The drag_freeze gate
-        // below already pins the waveform cache; supplying the same
-        // frozen timemap downstream keeps stem / flag positions and
-        // the trim translation consistent with the cached waveform.
+        // Stage C: live viewport / target-timemap / trim computations
+        // that used to drive on_redraw's render_flags / render_markers
+        // calls have moved into the cache rebuild paths (waveform via
+        // Stage A's worker, stems via maybe_rebuild_stem_cache, flags
+        // via maybe_rebuild_flag_cache). on_redraw now reads
+        // wf_cache.fp_* for displayed-viewport inputs and treats every
+        // strip as a blit-then-overlay path. is_target stays as a live
+        // signal because the popup branch below dispatches on it.
         const bool is_target = (app.active_audio_view == 'T') &&
                                !app.render_view_enabled;
-        std::vector<TimeMapSegment> target_timemap;
-        if (is_target) {
-            if (app.drag.active) {
-                target_timemap = app.drag.frozen_timemap;
-            } else {
-                TimemapBuildInput tmin;
-                tmin.markers      = resolve_markers_for_render(
-                                         app.warpmarkers.markers());
-                tmin.scale        = app.engine_settings.scale;
-                tmin.sample_rate  = sr;
-                tmin.total_frames = static_cast<long>(audio.total_frames());
-                // Trim is a render-time cut, not a view-time concept. The
-                // target view paints the WHOLE song; the timemap must
-                // describe the whole song, with warp segments where markers
-                // exist and identity behavior outside. Threading the active
-                // tab's trim through here makes build_timemaps emit a
-                // trimmed segment list whose post-last-segment extrapolation
-                // mis-positions the post-trim tail (it identity-walks from
-                // the last in-trim segment's tgt_frame instead of from the
-                // un-warped source-frame position). Force trim off; the
-                // brightness boundary's translation below uses the same
-                // un-trimmed timemap so the dim band paints at the matching
-                // target-frame columns.
-                tmin.has_trim_begin = false;
-                tmin.trim_begin_sec = 0.0;
-                tmin.has_trim_end   = false;
-                tmin.trim_end_sec   = 0.0;
-                // Stage A: the timemap-hash fingerprint moved to
-                // maybe_enqueue_waveform_render (it's only consumed by
-                // the worker-cache dirty-detect). on_redraw still needs
-                // the segment list itself for marker stems / flag
-                // positions and for translating the source trim into
-                // target-frame coordinates below.
-                TimemapBuildResult tmres;
-                if (build_timemaps(tmin, tmres)) {
-                    target_timemap.reserve(tmres.standard.size());
-                    for (const auto& s : tmres.standard) {
-                        target_timemap.push_back(TimeMapSegment{
-                            s.src_frame, s.tgt_frame});
-                    }
-                }
-            }
-        }
 
         // Drag-time position overlay. Active for the duration of a
-        // ctrl-drag; non-null only when app.drag.active. Routed through
-        // every render / hit-rect call site below so dragged markers
-        // paint at their proposed (moveable_times) positions while the
-        // live store stays untouched until commit. The DragOverlay's
-        // index lookup is a no-op when a list's indices don't match
-        // (e.g. routing a warp drag's overlay through render_phase_reset
-        // -markers — phase reset indices never appear in dragging_markers
-        // for a warp drag), so the same overlay is safe to pass to
-        // every renderer.
+        // ctrl-drag; non-null only when app.drag.active. Threaded into
+        // render_one_editor_flag and the popup paint paths below so the
+        // editor flag and popups track the dragged marker's proposed
+        // (moveable_times) position.
         DragOverlay drag_overlay_storage;
         const DragOverlay* drag_overlay = nullptr;
         if (app.drag.active) {
@@ -349,40 +289,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             drag_overlay_storage.times   = &app.drag.moveable_times;
             drag_overlay = &drag_overlay_storage;
         }
-
-        // In render-view the audio buffer is already render-domain
-        // (trim baked in at render time). Source-view dims out-of-trim
-        // regions per the settings-side trim. Target view: read the
-        // source-side trim and forward-translate via the timemap so the
-        // brightness boundary lands at the matching target-frame column.
-        std::pair<long long, long long> trim;
-        if (app.render_view_enabled) {
-            trim = {0, audio.total_frames()};
-        } else if (is_target) {
-            const auto src_trim = compute_trim_samples(
-                app, sr, audio.total_frames());
-            if (!target_timemap.empty()) {
-                const long long t0 = static_cast<long long>(std::nearbyint(
-                    map_source_to_target(
-                        static_cast<size_t>(src_trim.first),
-                        target_timemap)));
-                const long long t1 = static_cast<long long>(std::nearbyint(
-                    map_source_to_target(
-                        static_cast<size_t>(src_trim.second),
-                        target_timemap)));
-                trim = {t0, t1};
-            } else {
-                // No timemap (no qualifying markers, identity deformity)
-                // — source trim values already coincide with target
-                // values frame-for-frame.
-                trim = src_trim;
-            }
-        } else {
-            trim = compute_trim_samples(app, sr, audio.total_frames());
-        }
-        const int64_t trim_begin = trim.first;
-        const int64_t trim_end   = trim.second;
-        const TrimRange trim_struct{trim_begin, trim_end};
 
         {
             const auto wf0 = clock::now();
@@ -463,27 +369,66 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         const double px_x = playhead_pixel_x(app, audio);
 
-        // Flag annotations in the top strip. Brief 2 lifts the target-view
-        // suppression for flag stems / rects; brief 3a lifts it for the
-        // hover / iter / BPM popups via the shared paint_popups lambda
-        // below. Source view calls paint_popups(nullptr); target view
-        // calls paint_popups(&target_timemap) so the same paint code
-        // walks the same hit-rect helper that hit_test_flag uses.
-        // The FlagEditorOverlay is built once below and threaded into
-        // both the source-view and target-view warp render_flags calls;
-        // render-view keeps FlagEditorOverlay{} (read-only, no editor
-        // target).
+        // Flag annotations in the top strip. After Stage C the steady-
+        // state flag-rect pixels live on flag_cache.surface (rebuilt
+        // from on_tick via maybe_rebuild_flag_cache); on_redraw blits
+        // the cache and then paints the per-frame live work — the
+        // FlagPayload editor's pending text + cursor, and the hover /
+        // iter / BPM popups. Source view calls paint_popups(nullptr);
+        // target view calls paint_popups(tmap_disp). The displayed-
+        // viewport timemap (tmap_disp = wf_cache.fp_timemap) keeps
+        // popup anchors aligned with the cached flag rects during the
+        // waveform worker's rebuild window.
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
+
+            // Stage C: the steady-state flag-rect pixels are cached on
+            // flag_cache.surface, rebuilt synchronously from on_tick via
+            // maybe_rebuild_flag_cache. The paint path blits the cache
+            // first; the per-frame live work that follows is the
+            // FlagPayload editor flag (pending text + cursor) and the
+            // hover / iter / BPM popups. Like the other caches, the
+            // surface may be null on the very first paint after a load
+            // (before the first rebuild fires); the blit is skipped and
+            // the background shows through for that one frame.
+            if (flag_cache.surface) {
+                cairo_save(cr);
+                cairo_rectangle(cr, top_strip.x, top_strip.y,
+                                top_strip.w, top_strip.h);
+                cairo_clip(cr);
+                cairo_set_source_surface(cr, flag_cache.surface,
+                                         top_strip.x, top_strip.y);
+                cairo_paint(cr);
+                cairo_restore(cr);
+            }
+
+            // Stage C: displayed-viewport locals for live items that
+            // must align with the cached flag pixels. The cache renders
+            // against wf_cache.fp_*; the live editor flag and popup
+            // anchor math reads these *_disp locals so it agrees with
+            // the cache during the worker's 1-2 frame rebuild window
+            // (after a viewport gesture, before the worker's swap).
+            const int64_t  vp_start_disp = wf_cache.fp_vp_start;
+            const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
+            const TrimRange trim_struct_disp{
+                wf_cache.fp_trim_begin, wf_cache.fp_trim_end};
+            const std::vector<TimeMapSegment>* tmap_disp =
+                (wf_cache.fp_target && !wf_cache.fp_timemap.empty())
+                    ? &wf_cache.fp_timemap : nullptr;
+
             // Brief 3a: shared hover / iter / BPM popup paint, parameterized
             // on the timemap pointer. Source-view callers pass nullptr;
-            // target-view callers pass &target_timemap. Body is a verbatim
+            // target-view callers pass tmap_disp. Body is a verbatim
             // lift of the W-mode popup blocks that previously lived inside
             // the source-view `else` branch, with the timemap forwarded into
             // compute_flag_hit_rects / compute_iter_popup_hits /
             // compute_bpm_popup_hits. The render-view branch keeps its own
             // hover popup paint (which reads from app.render_view_markers)
             // because render-view never goes through this lambda.
+            // Stage C: viewport / trim references inside the lambda read
+            // the *_disp locals above so popup anchors track the cached
+            // flag rects (lagging the live state by 1-2 frames during a
+            // viewport gesture).
             const auto paint_popups =
                 [&](const std::vector<TimeMapSegment>* timemap) {
                 if (app.hover_popup.visible &&
@@ -499,7 +444,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     if (eligible) {
                         auto rects = compute_flag_hit_rects(
                             cr, top_strip, mv,
-                            vp_start, vp_end, sr, kFlagFontSize,
+                            vp_start_disp, vp_end_disp, sr, kFlagFontSize,
                             timemap, drag_overlay);
                         GuiRect anchor{0, 0, 0, 0};
                         for (const auto& r : rects) {
@@ -518,7 +463,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                     mv[hidx].time_seconds *
                                     static_cast<double>(sr)));
                             const bool oot =
-                                marker_out_of_trim(pos, trim_struct);
+                                marker_out_of_trim(pos, trim_struct_disp);
                             text_display::State td;
                             td.anchor   = anchor;
                             td.content  = app.hover_popup.cached_text;
@@ -533,7 +478,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     const auto& mv = app.warpmarkers.markers();
                     auto hits = compute_iter_popup_hits(
                         cr, top_strip, mv,
-                        vp_start, vp_end, sr, kFlagFontSize,
+                        vp_start_disp, vp_end_disp, sr, kFlagFontSize,
                         timemap, drag_overlay);
                     const bool editor_on_iter =
                         text_editor::is_active(app.top_flag_editor) &&
@@ -553,7 +498,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 mv[h.marker_index].time_seconds *
                                 static_cast<double>(sr)));
                         const bool oot =
-                            marker_out_of_trim(pos, trim_struct);
+                            marker_out_of_trim(pos, trim_struct_disp);
                         if (editor_on_iter &&
                             app.top_flag_editor.target == h.marker_index) {
                             const std::string& pending =
@@ -693,7 +638,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     const auto& mv = app.warpmarkers.markers();
                     auto hits = compute_bpm_popup_hits(
                         cr, top_strip, mv,
-                        vp_start, vp_end, sr, kFlagFontSize,
+                        vp_start_disp, vp_end_disp, sr, kFlagFontSize,
                         timemap, drag_overlay);
                     const bool editor_on_bpm =
                         text_editor::is_active(app.top_flag_editor) &&
@@ -713,7 +658,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 mv[h.marker_index].time_seconds *
                                 static_cast<double>(sr)));
                         const bool oot =
-                            marker_out_of_trim(pos, trim_struct);
+                            marker_out_of_trim(pos, trim_struct_disp);
                         if (editor_on_bpm &&
                             app.top_flag_editor.target == h.marker_index) {
                             const std::string& pending =
@@ -889,59 +834,43 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     app.top_flag_editor.target;
             }
 
-            if (is_target) {
-                if (app.active_markers_view == 'P') {
-                    render_phase_reset_flags(
-                        cr, top_strip,
-                        app.phase_reset_markers.markers(),
-                        vp_start, vp_end, sr,
-                        kFlagFontSize,
-                        app.selected_markers,
-                        trim_struct,
-                        &target_timemap,
-                        drag_overlay);
-                } else {
-                    render_flags(cr, top_strip,
-                                 app.warpmarkers.markers(),
-                                 vp_start, vp_end, sr,
-                                 kFlagFontSize,
-                                 app.selected_markers,
-                                 trim_struct,
-                                 overlay,
-                                 &target_timemap,
-                                 drag_overlay);
-                    // Brief 3a: hover / iter / BPM popups in target view.
-                    // The lambda walks the same timemap-aware hit-rect
-                    // helper that hit_test_flag now uses, so popup anchors
-                    // line up with the translated flag rects above.
-                    paint_popups(&target_timemap);
-                }
-            } else if (app.render_view_enabled) {
-                // Render-view: dark-blue flags, no editor overlay.
-                // Selection is visual-only (sky-tint on selected,
-                // dark-blue otherwise). Iteration popups are
-                // suppressed by the iteration_mode_enabled toggle
-                // being forced false on entry to render-view.
-                // Sub-mode 'P' (phase resets): paint via
-                // render_phase_reset_flags from app.render_view_phase_resets
-                // (no popups; phase reset markers are not popup-eligible).
-                if (app.active_markers_view != 'P') {
-                render_flags(cr, top_strip, app.render_view_markers,
-                             vp_start, vp_end, sr,
-                             kFlagFontSize,
-                             app.selected_markers,
-                             trim_struct,
-                             FlagEditorOverlay{},
-                             nullptr,
-                             drag_overlay);
+            // Stage C: the flag-rect pass has moved into the cache
+            // rebuild above. What's left here is live work — the
+            // FlagPayload editor's pending text + cursor (which would
+            // otherwise drag the cache fingerprint on every keystroke
+            // and blink flip), and the hover / iter / BPM popups.
+            //
+            // Live editor flag: only paints in W marker-view and not
+            // render-view (FlagPayload editor isn't available in either
+            // 'P' or render-view paths). The cache leaves a hole over
+            // the editor target via the skip-guard in render_flags, so
+            // this fill is mandatory whenever overlay.marker_index >= 0
+            // — otherwise that flag's pixels would be missing entirely.
+            if (overlay.marker_index >= 0 &&
+                !app.render_view_enabled &&
+                app.active_markers_view != 'P') {
+                render_one_editor_flag(
+                    cr, top_strip,
+                    app.warpmarkers.markers(),
+                    vp_start_disp, vp_end_disp, sr,
+                    kFlagFontSize,
+                    app.selected_markers,
+                    trim_struct_disp,
+                    overlay,
+                    tmap_disp,
+                    drag_overlay);
+            }
 
-                // V.A3b hover popup paint, render-view variant.
-                // Mirrors the source-view branch below but reads
-                // from app.render_view_markers and uses the cached
-                // source sample rate (the render's audio sr is
-                // typically equal but the brief specifies source-
-                // axis presentation).
-                if (app.hover_popup.visible) {
+            // Live popups. Phase-reset markers are not popup-eligible,
+            // so the 'P' marker-view branches paint nothing here.
+            if (app.render_view_enabled) {
+                // V.A3b hover popup paint, render-view variant. Mirrors
+                // the source-view branch in paint_popups but reads from
+                // app.render_view_markers. Iteration popups are
+                // suppressed by iteration_mode_enabled being forced
+                // false on entry to render-view; BPM popups likewise.
+                if (app.active_markers_view != 'P' &&
+                    app.hover_popup.visible) {
                     const auto& mv = app.render_view_markers;
                     const int hidx = app.hover_popup.marker_index;
                     const bool eligible =
@@ -953,7 +882,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     if (eligible) {
                         auto rects = compute_flag_hit_rects(
                             cr, top_strip, mv,
-                            vp_start, vp_end, sr, kFlagFontSize,
+                            vp_start_disp, vp_end_disp, sr, kFlagFontSize,
                             nullptr, drag_overlay);
                         GuiRect anchor{0, 0, 0, 0};
                         for (const auto& r : rects) {
@@ -976,46 +905,26 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                     mv[hidx].time_seconds *
                                     static_cast<double>(sr)));
                             const bool oot =
-                                marker_out_of_trim(pos, trim_struct);
+                                marker_out_of_trim(pos, trim_struct_disp);
                             text_display::State td;
                             td.anchor   = anchor;
                             td.content  = app.hover_popup.cached_text;
                             td.visible  = true;
                             td.color    = oot ? dim(kText) : kText;
                             text_display::render(cr, td,
-                                                     kFlagFontSize);
+                                                 kFlagFontSize);
                         }
                     }
                 }
-                } else {
-                    render_phase_reset_flags(
-                        cr, top_strip, app.render_view_phase_resets,
-                        vp_start, vp_end, sr,
-                        kFlagFontSize,
-                        app.selected_markers,
-                        trim_struct,
-                        nullptr,
-                        drag_overlay);
+            } else if (is_target) {
+                if (app.active_markers_view != 'P') {
+                    // Brief 3a: hover / iter / BPM popups in target view.
+                    // tmap_disp is the displayed-viewport timemap (live
+                    // wf_cache.fp_timemap); popup anchors track the cached
+                    // flag rects throughout the rebuild window.
+                    paint_popups(tmap_disp);
                 }
-            } else if (app.active_markers_view == 'P') {
-                render_phase_reset_flags(
-                    cr, top_strip, app.phase_reset_markers.markers(),
-                    vp_start, vp_end, sr,
-                    kFlagFontSize,
-                    app.selected_markers,
-                    trim_struct,
-                    nullptr,
-                    drag_overlay);
-            } else {
-                render_flags(cr, top_strip, app.warpmarkers.markers(),
-                             vp_start, vp_end, sr,
-                             kFlagFontSize,
-                             app.selected_markers,
-                             trim_struct,
-                             overlay,
-                             nullptr,
-                             drag_overlay);
-
+            } else if (app.active_markers_view != 'P') {
                 paint_popups(nullptr);
             }
             const auto f1 = clock::now();
@@ -1719,6 +1628,56 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // marker-driven inputs from app state directly. Diverging fingerprint
 // triggers a synchronous offscreen rebuild + region invalidation.
 
+namespace {
+
+// FNV-1a over the live drag-overlay state. Folded into the StemCache
+// fingerprint in place of the old AppState::drag_overlay_generation
+// callsite bump counter — hashing the data directly removes the
+// requirement that every future mutation site of app.drag remember to
+// bump a counter. Cost is dominated by the loop over moveable_times,
+// which at observed selection sizes (0–5) is a handful of nanoseconds.
+uint64_t hash_drag_overlay(const DragState& d) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    h ^= static_cast<uint64_t>(d.active ? 1 : 0);
+    h *= 0x100000001b3ULL;
+    h ^= static_cast<uint64_t>(d.dragging_markers.size());
+    h *= 0x100000001b3ULL;
+    for (int idx : d.dragging_markers) {
+        h ^= static_cast<uint64_t>(idx);
+        h *= 0x100000001b3ULL;
+    }
+    // moveable_times is parallel to dragging_markers; equal-length by
+    // invariant. memcpy each double's bit pattern into a uint64 so the
+    // floating-point representation is captured exactly (no equality /
+    // NaN considerations).
+    for (double t : d.moveable_times) {
+        uint64_t bits;
+        std::memcpy(&bits, &t, sizeof(bits));
+        h ^= bits;
+        h *= 0x100000001b3ULL;
+    }
+    return h;
+}
+
+// FNV-1a over the live selection set + last-selected anchor. Folded
+// into the FlagCache fingerprint (Stage C) to avoid distributing a
+// generation-bump across the fifteen mutation sites of selected_markers.
+uint64_t hash_selection(const std::set<int>& s,
+                        int last_selected) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    h ^= static_cast<uint64_t>(s.size());
+    h *= 0x100000001b3ULL;
+    for (int idx : s) {
+        h ^= static_cast<uint64_t>(idx);
+        h *= 0x100000001b3ULL;
+    }
+    h ^= static_cast<uint64_t>(last_selected);
+    h *= 0x100000001b3ULL;
+    return h;
+}
+
+} // namespace
+
 void GuiPaintHandler::maybe_rebuild_stem_cache() {
     if (app.loading || audio.total_frames() <= 0) return;
 
@@ -1749,7 +1708,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // Marker-driven inputs: read live from app state.
     const long long warp_gen   = app.warpmarkers.generation();
     const long long phase_gen  = app.phase_reset_markers.generation();
-    const long long drag_gen   = app.drag_overlay_generation;
+    const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const bool     drag_active = app.drag.active;
     const char     mv          = app.active_markers_view;
     const bool     rve         = app.render_view_enabled;
@@ -1767,7 +1726,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_timemap_hash            == timemap_hash &&
         stem_cache.fp_warpmarker_generation   == warp_gen &&
         stem_cache.fp_phase_reset_generation  == phase_gen &&
-        stem_cache.fp_drag_overlay_generation == drag_gen &&
+        stem_cache.fp_drag_overlay_hash       == drag_hash &&
         stem_cache.fp_drag_active             == drag_active &&
         stem_cache.fp_active_markers_view     == mv &&
         stem_cache.fp_render_view_enabled     == rve;
@@ -1820,9 +1779,9 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             ? &wf_cache.fp_timemap : nullptr;
 
     // Drag overlay: pass through only when a drag is live. During a
-    // drag the fingerprint mismatches every tick on
-    // drag_overlay_generation alone, so this rebuild reads the live
-    // moveable_times each pass.
+    // drag the fingerprint mismatches every tick on the drag-overlay
+    // hash alone (moveable_times[k] changes on every motion event), so
+    // this rebuild reads the live moveable_times each pass.
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (drag_active) {
@@ -1862,7 +1821,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_timemap_hash              = timemap_hash;
     stem_cache.fp_warpmarker_generation     = warp_gen;
     stem_cache.fp_phase_reset_generation    = phase_gen;
-    stem_cache.fp_drag_overlay_generation   = drag_gen;
+    stem_cache.fp_drag_overlay_hash         = drag_hash;
     stem_cache.fp_drag_active               = drag_active;
     stem_cache.fp_active_markers_view       = mv;
     stem_cache.fp_render_view_enabled       = rve;
@@ -1878,6 +1837,210 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         area.y - static_cast<int>(kMarkerConnectorRows),
         app.width,
         surface_h);
+}
+
+// -- Stage C: flag-rect cache dirty-detect and rebuild -------------------
+//
+// Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
+// displayed-viewport half of the fingerprint; same live-app-state reads
+// for the marker-driven half (with selection + editor target additions).
+// The cache holds every flag rect EXCEPT the FlagPayload-editor target
+// (skipped via the render_flags skip-guard so the live editor render in
+// on_redraw owns those pixels — keeps the cache fingerprint independent
+// of pending-text width and cursor blink).
+
+void GuiPaintHandler::maybe_rebuild_flag_cache() {
+    if (app.loading || audio.total_frames() <= 0) return;
+
+    // No live waveform yet → no flags. Same pre-first-completion guard as
+    // the stem cache uses; until wf_cache.fp_audio_gen comes up after the
+    // first worker swap, the displayed-viewport fields hold defaults that
+    // wouldn't agree with anything sensible.
+    if (wf_cache.fp_audio_gen < 0) return;
+
+    const GuiRect top_strip = top_strip_area(app);
+    if (top_strip.w <= 0 || top_strip.h <= 0) return;
+
+    const int surface_w = top_strip.w;
+    const int surface_h = top_strip.h;
+
+    // Displayed-viewport inputs from wf_cache.fp_*.
+    const int64_t  vp_start     = wf_cache.fp_vp_start;
+    const int64_t  vp_end       = wf_cache.fp_vp_end;
+    const int64_t  trim_begin   = wf_cache.fp_trim_begin;
+    const int64_t  trim_end     = wf_cache.fp_trim_end;
+    const bool     is_target    = wf_cache.fp_target;
+    const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
+    const long long audio_gen   = wf_cache.fp_audio_gen;
+
+    // Marker-driven inputs from app state.
+    const long long warp_gen   = app.warpmarkers.generation();
+    const long long phase_gen  = app.phase_reset_markers.generation();
+    const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
+    const uint64_t  sel_hash   = hash_selection(
+                                     app.selected_markers,
+                                     app.last_selected_marker);
+    const char      mv         = app.active_markers_view;
+    const bool      rve        = app.render_view_enabled;
+
+    // Editor targets. The FlagPayload editor's target drives the skip-
+    // guard (cache leaves a hole for the live editor render to fill).
+    // The iter/BPM popup editor's target drives outline suppression on
+    // the underlying flag rect (cache paints the flag without its
+    // selected outline so the popup above is the only highlighted
+    // element). Modes are mutually exclusive per text_editor::Kind.
+    int popup_target = -1;
+    int flag_target  = -1;
+    if (text_editor::is_active(app.top_flag_editor)) {
+        switch (app.top_flag_editor.kind) {
+            case text_editor::Kind::FlagPayload:
+                flag_target = app.top_flag_editor.target;
+                break;
+            case text_editor::Kind::IterationBracket:
+            case text_editor::Kind::BpmBracket:
+                popup_target = app.top_flag_editor.target;
+                break;
+            default:
+                break;
+        }
+    }
+
+    const bool matches =
+        flag_cache.surface &&
+        flag_cache.fp_audio_gen               == audio_gen &&
+        flag_cache.fp_vp_start                == vp_start &&
+        flag_cache.fp_vp_end                  == vp_end &&
+        flag_cache.fp_trim_begin              == trim_begin &&
+        flag_cache.fp_trim_end                == trim_end &&
+        flag_cache.fp_area_w                  == surface_w &&
+        flag_cache.fp_area_h                  == surface_h &&
+        flag_cache.fp_target                  == is_target &&
+        flag_cache.fp_timemap_hash            == timemap_hash &&
+        flag_cache.fp_warpmarker_generation   == warp_gen &&
+        flag_cache.fp_phase_reset_generation  == phase_gen &&
+        flag_cache.fp_drag_overlay_hash       == drag_hash &&
+        flag_cache.fp_selection_hash          == sel_hash &&
+        flag_cache.fp_active_markers_view     == mv &&
+        flag_cache.fp_render_view_enabled     == rve &&
+        flag_cache.fp_popup_editor_target     == popup_target &&
+        flag_cache.fp_flag_editor_target      == flag_target;
+
+    if (matches) return;
+
+    if (!flag_cache.surface ||
+        flag_cache.width  != surface_w ||
+        flag_cache.height != surface_h) {
+        if (flag_cache.surface) {
+            cairo_surface_destroy(flag_cache.surface);
+            flag_cache.surface = nullptr;
+        }
+        flag_cache.surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, surface_w, surface_h);
+        flag_cache.width  = surface_w;
+        flag_cache.height = surface_h;
+    }
+
+    cairo_t* ccr = cairo_create(flag_cache.surface);
+    cairo_save(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+
+    // top_strip_area is anchored at (0, 0), so the local rect equals the
+    // surface rect. The blit at on_redraw time positions the surface back
+    // at screen (0, 0).
+    const GuiRect local_top_strip{0, 0, surface_w, surface_h};
+    const TrimRange trim_struct{trim_begin, trim_end};
+    const int sr = audio.sample_rate();
+
+    const std::vector<TimeMapSegment>* tmap_arg =
+        (is_target && !wf_cache.fp_timemap.empty())
+            ? &wf_cache.fp_timemap : nullptr;
+
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    // Cache overlay: popup_editor_target suppresses the iter/BPM-popup
+    // target's selection outline; marker_index activates the skip-guard
+    // for the FlagPayload editor target. Other fields stay defaulted —
+    // pending text, cursor state, selection range live in the live
+    // editor render only.
+    FlagEditorOverlay cache_overlay;
+    cache_overlay.popup_editor_target = popup_target;
+    cache_overlay.marker_index        = flag_target;
+
+    if (rve) {
+        if (mv == 'P') {
+            render_phase_reset_flags(
+                ccr, local_top_strip,
+                app.render_view_phase_resets,
+                vp_start, vp_end, sr,
+                kFlagFontSize,
+                app.selected_markers,
+                trim_struct,
+                nullptr,
+                drag_overlay);
+        } else {
+            render_flags(ccr, local_top_strip,
+                         app.render_view_markers,
+                         vp_start, vp_end, sr,
+                         kFlagFontSize,
+                         app.selected_markers,
+                         trim_struct,
+                         cache_overlay,
+                         nullptr,
+                         drag_overlay);
+        }
+    } else if (mv == 'P') {
+        render_phase_reset_flags(
+            ccr, local_top_strip,
+            app.phase_reset_markers.markers(),
+            vp_start, vp_end, sr,
+            kFlagFontSize,
+            app.selected_markers,
+            trim_struct,
+            tmap_arg,
+            drag_overlay);
+    } else {
+        render_flags(ccr, local_top_strip,
+                     app.warpmarkers.markers(),
+                     vp_start, vp_end, sr,
+                     kFlagFontSize,
+                     app.selected_markers,
+                     trim_struct,
+                     cache_overlay,
+                     tmap_arg,
+                     drag_overlay);
+    }
+
+    cairo_destroy(ccr);
+
+    flag_cache.fp_audio_gen               = audio_gen;
+    flag_cache.fp_vp_start                = vp_start;
+    flag_cache.fp_vp_end                  = vp_end;
+    flag_cache.fp_trim_begin              = trim_begin;
+    flag_cache.fp_trim_end                = trim_end;
+    flag_cache.fp_area_w                  = surface_w;
+    flag_cache.fp_area_h                  = surface_h;
+    flag_cache.fp_target                  = is_target;
+    flag_cache.fp_timemap_hash            = timemap_hash;
+    flag_cache.fp_warpmarker_generation   = warp_gen;
+    flag_cache.fp_phase_reset_generation  = phase_gen;
+    flag_cache.fp_drag_overlay_hash       = drag_hash;
+    flag_cache.fp_selection_hash          = sel_hash;
+    flag_cache.fp_active_markers_view     = mv;
+    flag_cache.fp_render_view_enabled     = rve;
+    flag_cache.fp_popup_editor_target     = popup_target;
+    flag_cache.fp_flag_editor_target      = flag_target;
+    flag_cache.dirty                      = false;
+
+    gui.invalidate_region(top_strip.x, top_strip.y,
+                          top_strip.w, top_strip.h);
 }
 
 // -- GuiPaintHandler::on_resize ------------------------------------------

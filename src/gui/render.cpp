@@ -613,6 +613,141 @@ void iterate_visible_flags_impl(
     }
 }
 
+// Stage C: paint body shared between render_flags' paint_one lambda and
+// render_one_editor_flag. Inputs (i, text_left, baseline_y, text, ext)
+// match the iterate_visible_flags_impl emit signature; the remaining
+// args carry through what was lambda-captured before. Behavior is
+// byte-identical to the pre-Stage-C paint_one lambda inside render_flags.
+void paint_one_flag_with_overlay(
+    cairo_t* cr,
+    int i,
+    double text_left,
+    double baseline_y,
+    const std::string& text,
+    const cairo_text_extents_t& ext,
+    const std::vector<GuiWarpMarker>& markers,
+    const std::set<int>& selected_set,
+    const TrimRange& trim,
+    const FlagEditorOverlay& editor,
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay,
+    double sr_d,
+    double hl_pad,
+    const cairo_text_extents_t& uniform_ext) {
+    // V.B Addendum 2 / Brief X.2: when the above-strip popup (iter
+    // or BPM) anchored on this flag owns the editor, suppress the
+    // flag's selection fill so the focused element (the popup) is
+    // the only one filled.
+    const bool is_popup_focus = (i == editor.popup_editor_target);
+    const bool is_selected    =
+        !is_popup_focus && selected_set.count(i) > 0;
+    const bool is_editing    = (i == editor.marker_index);
+    const bool is_parse_fail = is_editing && editor.is_red;
+
+    const double eff_time = drag_overlay
+        ? drag_overlay->effective_time(i, markers[i].time_seconds)
+        : markers[i].time_seconds;
+    const double pos_ms = sec_to_paint_sample(eff_time, sr_d, timemap);
+    const int64_t marker_pos =
+        static_cast<int64_t>(std::nearbyint(pos_ms));
+    const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
+
+    std::string draw_text = is_editing ? editor.pending : text;
+    cairo_text_extents_t draw_ext = ext;
+    if (is_editing) {
+        cairo_text_extents(cr, draw_text.c_str(), &draw_ext);
+    }
+
+    const double bg_top =
+        baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
+    const double bg_h_full =
+        uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
+    render_flag_text_bg_fill(cr,
+        text_left + hl_pad, draw_ext.x_advance, bg_top, bg_h_full);
+
+    if (is_selected) {
+        GuiColor stroke_col = is_parse_fail ? kAccent : kMarker;
+        if (out_of_trim) stroke_col = dim(stroke_col);
+        cairo_set_source_rgb(cr,
+            stroke_col.r, stroke_col.g, stroke_col.b);
+        const double rx = std::round(text_left) + 0.5;
+        const double ry = std::round(
+            baseline_y + uniform_ext.y_bearing
+          - hl_pad - kVPadExtraPx) + 0.5;
+        const int rw = static_cast<int>(std::round(
+            hl_pad + draw_ext.x_bearing + draw_ext.width + hl_pad));
+        const int rh = static_cast<int>(std::round(
+            uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx));
+        cairo_set_line_width(cr, 1.0);
+        cairo_rectangle(cr, rx, ry,
+                        static_cast<double>(rw),
+                        static_cast<double>(rh));
+        cairo_stroke(cr);
+    }
+
+    const GuiColor txt = out_of_trim ? dim(kText) : kText;
+    cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
+    cairo_move_to(cr, text_left + hl_pad, baseline_y);
+    cairo_show_text(cr, draw_text.c_str());
+
+    if (is_editing && editor.has_selection) {
+        const int sel_a = editor.selection_start;
+        const int sel_b = editor.selection_end;
+        cairo_text_extents_t a_ext;
+        cairo_text_extents(cr,
+            draw_text.substr(0,
+                static_cast<size_t>(sel_a)).c_str(),
+            &a_ext);
+        cairo_text_extents_t b_ext;
+        cairo_text_extents(cr,
+            draw_text.substr(0,
+                static_cast<size_t>(sel_b)).c_str(),
+            &b_ext);
+        const double hi_x = text_left + hl_pad + a_ext.x_advance;
+        const double hi_w = b_ext.x_advance - a_ext.x_advance;
+        const double hi_y = baseline_y + uniform_ext.y_bearing
+                          - hl_pad - kVPadExtraPx;
+        const double hi_h = uniform_ext.height + 2 * hl_pad
+                          + 2 * kVPadExtraPx;
+        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
+        cairo_rectangle(cr, hi_x, hi_y, hi_w, hi_h);
+        cairo_fill(cr);
+        const GuiColor bg_swap =
+            out_of_trim ? dim(kBackground) : kBackground;
+        cairo_set_source_rgb(cr,
+            bg_swap.r, bg_swap.g, bg_swap.b);
+        cairo_move_to(cr, hi_x, baseline_y);
+        cairo_show_text(cr,
+            draw_text.substr(static_cast<size_t>(sel_a),
+                             static_cast<size_t>(sel_b - sel_a))
+                .c_str());
+    }
+
+    if (is_editing && editor.cursor_visible) {
+        double cursor_x_offset = 0.0;
+        if (editor.cursor_pos > 0) {
+            cairo_text_extents_t pext;
+            const std::string before =
+                draw_text.substr(0,
+                    static_cast<size_t>(editor.cursor_pos));
+            cairo_text_extents(cr, before.c_str(), &pext);
+            cursor_x_offset = pext.x_advance;
+        }
+        const double cur_x =
+            text_left + hl_pad + cursor_x_offset;
+        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
+        cairo_set_line_width(cr, 1.0);
+        cairo_move_to(cr, std::round(cur_x) + 0.5,
+                      baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx);
+        cairo_line_to(cr, std::round(cur_x) + 0.5,
+                      baseline_y + uniform_ext.y_bearing
+                          + uniform_ext.height + hl_pad + kVPadExtraPx);
+        cairo_stroke(cr);
+    }
+
+    if constexpr (kDebugPerf) perf_counters::flag_drawn++;
+}
+
 } // namespace
 
 void render_flags(cairo_t* cr,
@@ -669,146 +804,74 @@ void render_flags(cairo_t* cr,
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
+            // Stage C: skip-guard. The flag-cache rebuild passes the
+            // FlagPayload-editor target through editor.marker_index so
+            // this branch fires and the cache leaves a transparent hole
+            // over the editor target's pixel column; the live editor
+            // render owns those pixels via render_one_editor_flag.
+            // Defensive against pre-Stage-C callers as well — when
+            // editor.marker_index == -1 (the default), the guard never
+            // fires, and behavior is identical to the pre-Stage-C path.
+            if (editor.marker_index == i) return;
             emits.push_back({i, text_left, baseline_y, text, ext});
         });
 
-    auto paint_one = [&](const FlagEmit& e) {
-        // V.B Addendum 2 / Brief X.2: when the above-strip popup (iter
-        // or BPM) anchored on this flag owns the editor, suppress the
-        // flag's selection fill so the focused element (the popup) is
-        // the only one filled.
-        const bool is_popup_focus = (e.i == editor.popup_editor_target);
-        const bool is_selected    =
-            !is_popup_focus && selected_set.count(e.i) > 0;
-        const bool is_editing    = (e.i == editor.marker_index);
-        const bool is_parse_fail = is_editing && editor.is_red;
-
-        // Translate per-marker frame to target-frame in target view so the
-        // out-of-trim comparison runs in the same domain as `trim`. Pulls
-        // the effective time from the drag overlay if this marker is in
-        // it — keeps the trim dim consistent with the displayed stem
-        // position throughout the drag.
-        const double eff_time = drag_overlay
-            ? drag_overlay->effective_time(
-                  e.i, markers[e.i].time_seconds)
-            : markers[e.i].time_seconds;
-        const double pos_ms = sec_to_paint_sample(eff_time, sr_d, timemap);
-        const int64_t marker_pos =
-            static_cast<int64_t>(std::nearbyint(pos_ms));
-        const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
-
-        std::string draw_text = is_editing ? editor.pending : e.text;
-        cairo_text_extents_t draw_ext = e.ext;
-        if (is_editing) {
-            cairo_text_extents(cr, draw_text.c_str(), &draw_ext);
-        }
-
-        // Brief Y.4 sub-bug A: opaque canvas-bg fill under the text,
-        // sized to the painted extent + kFlagInnerPadPx on each side.
-        // Drawn unconditionally — in non-edit states the fill matches
-        // the strip-clear color, so pixels stay identical; during an
-        // edit it occludes neighbor text once pending text widens
-        // past the original flag width. Y/height reuse the outline
-        // rect math below so the fill sits exactly under the outline.
-        const double bg_top =
-            e.baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
-        const double bg_h_full =
-            uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
-        render_flag_text_bg_fill(cr,
-            e.text_left + hl_pad, draw_ext.x_advance, bg_top, bg_h_full);
-
-        if (is_selected) {
-            GuiColor stroke_col = is_parse_fail ? kAccent : kMarker;
-            if (out_of_trim) stroke_col = dim(stroke_col);
-            cairo_set_source_rgb(cr,
-                stroke_col.r, stroke_col.g, stroke_col.b);
-            const double rx = std::round(e.text_left) + 0.5;
-            const double ry = std::round(
-                e.baseline_y + uniform_ext.y_bearing
-              - hl_pad - kVPadExtraPx) + 0.5;
-            const int rw = static_cast<int>(std::round(
-                hl_pad + draw_ext.x_bearing + draw_ext.width + hl_pad));
-            const int rh = static_cast<int>(std::round(
-                uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx));
-            cairo_set_line_width(cr, 1.0);
-            cairo_rectangle(cr, rx, ry,
-                            static_cast<double>(rw),
-                            static_cast<double>(rh));
-            cairo_stroke(cr);
-        }
-
-        const GuiColor txt = out_of_trim ? dim(kText) : kText;
-        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-        cairo_move_to(cr, e.text_left + hl_pad, e.baseline_y);
-        cairo_show_text(cr, draw_text.c_str());
-
-        // Brief seven: foreground/background swap over the selected
-        // substring. Drawn after the regular text paint and before the
-        // cursor so the cursor stays visible inside the highlight rect
-        // (standard inverted-cursor look). The fill color is the
-        // current text color (`txt`); the re-paint color is the canvas
-        // background, dimmed in lockstep when out-of-trim.
-        if (is_editing && editor.has_selection) {
-            const int sel_a = editor.selection_start;
-            const int sel_b = editor.selection_end;
-            cairo_text_extents_t a_ext;
-            cairo_text_extents(cr,
-                draw_text.substr(0,
-                    static_cast<size_t>(sel_a)).c_str(),
-                &a_ext);
-            cairo_text_extents_t b_ext;
-            cairo_text_extents(cr,
-                draw_text.substr(0,
-                    static_cast<size_t>(sel_b)).c_str(),
-                &b_ext);
-            const double hi_x = e.text_left + hl_pad + a_ext.x_advance;
-            const double hi_w = b_ext.x_advance - a_ext.x_advance;
-            const double hi_y = e.baseline_y + uniform_ext.y_bearing
-                              - hl_pad - kVPadExtraPx;
-            const double hi_h = uniform_ext.height + 2 * hl_pad
-                              + 2 * kVPadExtraPx;
-            cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-            cairo_rectangle(cr, hi_x, hi_y, hi_w, hi_h);
-            cairo_fill(cr);
-            const GuiColor bg_swap =
-                out_of_trim ? dim(kBackground) : kBackground;
-            cairo_set_source_rgb(cr,
-                bg_swap.r, bg_swap.g, bg_swap.b);
-            cairo_move_to(cr, hi_x, e.baseline_y);
-            cairo_show_text(cr,
-                draw_text.substr(static_cast<size_t>(sel_a),
-                                 static_cast<size_t>(sel_b - sel_a))
-                    .c_str());
-        }
-
-        if (is_editing && editor.cursor_visible) {
-            double cursor_x_offset = 0.0;
-            if (editor.cursor_pos > 0) {
-                cairo_text_extents_t pext;
-                const std::string before =
-                    draw_text.substr(0,
-                        static_cast<size_t>(editor.cursor_pos));
-                cairo_text_extents(cr, before.c_str(), &pext);
-                cursor_x_offset = pext.x_advance;
-            }
-            const double cur_x =
-                e.text_left + hl_pad + cursor_x_offset;
-            cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-            cairo_set_line_width(cr, 1.0);
-            cairo_move_to(cr, std::round(cur_x) + 0.5,
-                          e.baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx);
-            cairo_line_to(cr, std::round(cur_x) + 0.5,
-                          e.baseline_y + uniform_ext.y_bearing
-                              + uniform_ext.height + hl_pad + kVPadExtraPx);
-            cairo_stroke(cr);
-        }
-
-        if constexpr (kDebugPerf) perf_counters::flag_drawn++;
-    };
-
     for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
-        paint_one(*it);
+        paint_one_flag_with_overlay(cr, it->i, it->text_left, it->baseline_y,
+                                    it->text, it->ext,
+                                    markers, selected_set, trim, editor,
+                                    timemap, drag_overlay, sr_d, hl_pad,
+                                    uniform_ext);
     }
+
+    cairo_restore(cr);
+}
+
+void render_one_editor_flag(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    const std::vector<GuiWarpMarker>& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    double font_size,
+    const std::set<int>& selected_set,
+    const TrimRange& trim,
+    const FlagEditorOverlay& editor,
+    const std::vector<TimeMapSegment>* timemap,
+    const DragOverlay* drag_overlay) {
+    if (editor.marker_index < 0) return;
+    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+    if (sample_rate <= 0) return;
+
+    cairo_save(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, font_size);
+
+    const double hl_pad = kFlagInnerPadPx;
+    const double sr_d   = static_cast<double>(sample_rate);
+
+    cairo_text_extents_t uniform_ext;
+    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
+
+    iterate_visible_flags_impl(cr, top_strip_area, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               sample_rate, timemap, drag_overlay,
+        [&](int i) {
+            return flag_text(markers, i);
+        },
+        [&](int i, double text_left, double baseline_y,
+            const std::string& text, const cairo_text_extents_t& ext) {
+            if (i != editor.marker_index) return;
+            paint_one_flag_with_overlay(cr, i, text_left, baseline_y,
+                                        text, ext,
+                                        markers, selected_set, trim, editor,
+                                        timemap, drag_overlay, sr_d, hl_pad,
+                                        uniform_ext);
+        });
 
     cairo_restore(cr);
 }

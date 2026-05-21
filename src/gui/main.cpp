@@ -350,6 +350,10 @@ int main(int argc, char** argv) {
     // share the same lifetime; passed by reference into GuiPaintHandler
     // and (for the destroy_surface hook) GuiFileLoader.
     StemCache     stem_cache;
+    // Stage C: top-strip flag rects live on their own surface, rebuilt
+    // synchronously from on_tick alongside the stem cache. Same lifetime
+    // shape, same passed-by-reference plumbing.
+    FlagCache     flag_cache;
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
     }
@@ -406,7 +410,8 @@ int main(int argc, char** argv) {
     // file_loader's clear sites call target_render.cancel_for_load(),
     // so it must be constructed after target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, stem_cache,
-                              waveform_worker, viewport, target_render);
+                              flag_cache, waveform_worker, viewport,
+                              target_render);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle, target_render);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
@@ -420,7 +425,7 @@ int main(int argc, char** argv) {
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
-                                  waveform_worker, gui);
+                                  flag_cache, waveform_worker, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
@@ -540,6 +545,10 @@ int main(int argc, char** argv) {
         // on_tick) wf_cache.fp_* already carries the new viewport, so
         // stems snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_stem_cache();
+        // Stage C: flag-rect cache dirty-detect. Same ordering rule as
+        // the stem cache — keyed off wf_cache.fp_* so flags, stems, and
+        // waveform all snap together at the worker's completion swap.
+        paint_handler.maybe_rebuild_flag_cache();
 
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate

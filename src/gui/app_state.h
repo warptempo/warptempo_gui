@@ -413,15 +413,6 @@ struct AppState {
     // there and on button release / Escape.
     DragState     drag;
 
-    // Stage B (layered-paint): bumped on begin_drag and on every motion
-    // event that writes app.drag.moveable_times[k]. The stem cache's
-    // fingerprint reads this so a drag-overlay change triggers a stem
-    // rebuild on the next tick. Drop/cancel naturally invalidates the
-    // fingerprint via drag.active flipping false or via the marker store's
-    // generation bumping (commit writes through marker_mut/markers_mut),
-    // so no bump is needed at those edges.
-    long long     drag_overlay_generation = 0;
-
     // Playhead drag state (plain / Shift left-button). Cleared on button
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;

@@ -308,6 +308,33 @@ void render_flags(cairo_t* cr,
                   const std::vector<TimeMapSegment>* timemap = nullptr,
                   const DragOverlay* drag_overlay = nullptr);
 
+// Stage C: paints ONE flag — the FlagPayload-editor target — with the
+// live pending text, selection swap, and blinking cursor. Same greedy-
+// pack and elision rules as render_flags so the flag lands at the same
+// pixel column the cache rendered the other flags at. `editor.marker_
+// index` selects which flag emits paint; non-matching emit_indices are
+// skipped. Intended caller path: in on_redraw, after the flag-cache
+// blit, when overlay.marker_index >= 0 and the active marker-view
+// admits FlagPayload editing (not 'P', not render-view). The flag-
+// cache itself passes the editor target into the skip-guard inside
+// render_flags so the cache leaves a transparent hole over the editor
+// target's column; this helper fills the hole with fresh pixels every
+// paint, owning the ephemeral cursor blink and pending-text width
+// changes without dragging the cache fingerprint.
+void render_one_editor_flag(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    const std::vector<GuiWarpMarker>& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    double font_size,
+    const std::set<int>& selected_set,
+    const TrimRange& trim,
+    const FlagEditorOverlay& editor,
+    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const DragOverlay* drag_overlay = nullptr);
+
 // Same greedy-pack and elision logic as render_flags, without drawing —
 // returns the screen-coord rects of the flags that would be rendered. The
 // caller uses these for hit-testing. A minimal image-surface cairo_t works

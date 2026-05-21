@@ -341,6 +341,8 @@ void GuiFileLoader::revert_to_blank() {
     // to destroy on the main thread; the rebuild path is fully
     // synchronous so no in-flight work to drain.
     stem_cache.destroy_surface();
+    // Stage C: flag cache mirrors the same lifecycle as the stem cache.
+    flag_cache.destroy_surface();
 
     app.playhead_cursor_sample  = 0;
     app.viewport_start_sample   = 0;

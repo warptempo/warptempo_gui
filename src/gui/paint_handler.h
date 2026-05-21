@@ -189,9 +189,11 @@ struct WaveformCache {
 //      key off the same set of displayed-viewport values, which the
 //      waveform's swap callback publishes atomically.
 //   2. Marker-driven inputs (warpmarker/phase_reset generations, drag
-//      overlay generation/active, marker view, render-view flag): read
-//      live from app state. These have no waveform coupling, so the stem
-//      layer reacts to them immediately on the next tick.
+//      overlay hash/active, marker view, render-view flag): read live
+//      from app state. These have no waveform coupling, so the stem
+//      layer reacts to them immediately on the next tick. The drag
+//      overlay is hashed (not generation-counted) so future mutations
+//      of app.drag don't need to remember to bump a callsite counter.
 //
 // Surface height differs from WaveformCache's: stem geometry spans from
 // `area.y - kMarkerConnectorRows` (connector top) down to `area.y + area.h`
@@ -214,7 +216,7 @@ struct StemCache {
 
     long long fp_warpmarker_generation       = -1;
     long long fp_phase_reset_generation      = -1;
-    long long fp_drag_overlay_generation     = -1;
+    uint64_t  fp_drag_overlay_hash           = 0;
     bool      fp_drag_active                 = false;
     char      fp_active_markers_view         = '\0';
     bool      fp_render_view_enabled         = false;
@@ -235,6 +237,70 @@ struct StemCache {
     }
 
     ~StemCache() { destroy_surface(); }
+};
+
+// -- Off-screen pixel cache for the top-strip flag rects (Stage C) -------
+//
+// Mirrors StemCache's shape: synchronous main-thread rebuild fingerprinted
+// against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
+// generations, drag-overlay hash, selection hash, marker-view, and the
+// active editor target. The cache holds ALL flag pixels (the steady-state
+// flag rects); on_redraw paints the editor's live pending text/cursor and
+// the hover/iter/BPM popups on top per frame.
+//
+// Two editor-target signals fingerprint the cache:
+//   * fp_popup_editor_target — set to the marker index whose iter/BPM popup
+//     is being edited (or -1). Drives selection-outline suppression on the
+//     underlying flag rect, mirroring the FlagEditorOverlay::popup_editor_
+//     target channel render_flags already consumes.
+//   * fp_flag_editor_target — set to the marker index whose flag payload
+//     is being edited (or -1). Drives the cache to SKIP painting that flag
+//     so the live editor render in on_redraw owns those pixels entirely.
+//     Without the skip, a pending text shrunk below the original flag's
+//     width via backspace would leave the cache's original glyphs peeking
+//     past the live render's narrower bg-fill.
+//
+// The cache surface matches `top_strip_area(app)`: width = window width,
+// height = top_strip_height, origin (0,0). The blit at on_redraw time
+// positions the surface at screen (top_strip.x, top_strip.y) (= (0, 0)).
+struct FlagCache {
+    cairo_surface_t* surface = nullptr;
+    int              width   = 0;
+    int              height  = 0;
+
+    long long fp_audio_gen           = -1;
+    int64_t   fp_vp_start            = 0;
+    int64_t   fp_vp_end              = 0;
+    int64_t   fp_trim_begin          = 0;
+    int64_t   fp_trim_end            = 0;
+    int       fp_area_w              = 0;
+    int       fp_area_h              = 0;
+    bool      fp_target              = false;
+    uint64_t  fp_timemap_hash        = 0;
+
+    long long fp_warpmarker_generation    = -1;
+    long long fp_phase_reset_generation   = -1;
+    uint64_t  fp_drag_overlay_hash        = 0;
+    uint64_t  fp_selection_hash           = 0;
+    char      fp_active_markers_view      = '\0';
+    bool      fp_render_view_enabled      = false;
+    int       fp_popup_editor_target      = -1;
+    int       fp_flag_editor_target       = -1;
+
+    bool dirty = true;
+
+    void destroy_surface() {
+        if (surface) {
+            cairo_surface_destroy(surface);
+            surface = nullptr;
+        }
+        width  = 0;
+        height = 0;
+        dirty  = true;
+        fp_audio_gen = -1;
+    }
+
+    ~FlagCache() { destroy_surface(); }
 };
 
 // -- Iteration popup geometry --------------------------------------------
@@ -305,6 +371,7 @@ struct GuiPaintHandler {
     GuiPlayback&       playback;
     WaveformCache&     wf_cache;
     StemCache&         stem_cache;
+    FlagCache&         flag_cache;
     GuiWaveformWorker& waveform_worker;
     GuiPlatform&       gui;
 
@@ -313,6 +380,7 @@ struct GuiPaintHandler {
                     GuiPlayback&       playback_,
                     WaveformCache&     wf_cache_,
                     StemCache&         stem_cache_,
+                    FlagCache&         flag_cache_,
                     GuiWaveformWorker& waveform_worker_,
                     GuiPlatform&       gui_)
         : app(app_),
@@ -320,6 +388,7 @@ struct GuiPaintHandler {
           playback(playback_),
           wf_cache(wf_cache_),
           stem_cache(stem_cache_),
+          flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),
           gui(gui_) {}
 
@@ -355,4 +424,14 @@ struct GuiPaintHandler {
     // and invalidates the stem strip so the next paint blits the new
     // pixels.
     void maybe_rebuild_stem_cache();
+
+    // Stage C: dirty-detect for the flag-rect cache. Called from on_tick
+    // AFTER maybe_rebuild_stem_cache so all three layers (waveform, stems,
+    // flags) key off the same wf_cache.fp_* and snap together at the
+    // waveform's completion swap. Reads displayed-viewport inputs from
+    // wf_cache.fp_*; reads marker-driven inputs (warpmarker / phase_reset
+    // generations, drag-overlay hash, selection hash, marker-view,
+    // render-view flag, editor targets) live from app state. Rebuilds are
+    // synchronous (sub-millisecond at observed flag counts).
+    void maybe_rebuild_flag_cache();
 };
