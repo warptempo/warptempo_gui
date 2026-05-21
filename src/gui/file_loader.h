@@ -9,6 +9,7 @@
 
 #include <string>
 
+class GuiWaveformWorker;
 struct GuiTargetRender;
 
 // X.7.9: file-lifecycle operations, extracted from main.cpp's inline
@@ -20,26 +21,29 @@ struct GuiTargetRender;
 // produced by methods on this struct, so the platform wiring in main.cpp
 // is a single line each.
 struct GuiFileLoader {
-    AppState&        app;
-    GuiAudio&        audio;
-    GuiPlatform&     gui;
-    GuiPlayback&     playback;
-    WaveformCache&   wf_cache;
-    Viewport&        viewport;
-    GuiTargetRender& target_render;
+    AppState&          app;
+    GuiAudio&          audio;
+    GuiPlatform&       gui;
+    GuiPlayback&       playback;
+    WaveformCache&     wf_cache;
+    GuiWaveformWorker& waveform_worker;
+    Viewport&          viewport;
+    GuiTargetRender&   target_render;
 
-    GuiFileLoader(AppState&        app_,
-                  GuiAudio&        audio_,
-                  GuiPlatform&     gui_,
-                  GuiPlayback&     playback_,
-                  WaveformCache&   wf_cache_,
-                  Viewport&        viewport_,
-                  GuiTargetRender& target_render_)
+    GuiFileLoader(AppState&          app_,
+                  GuiAudio&          audio_,
+                  GuiPlatform&       gui_,
+                  GuiPlayback&       playback_,
+                  WaveformCache&     wf_cache_,
+                  GuiWaveformWorker& waveform_worker_,
+                  Viewport&          viewport_,
+                  GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
           gui(gui_),
           playback(playback_),
           wf_cache(wf_cache_),
+          waveform_worker(waveform_worker_),
           viewport(viewport_),
           target_render(target_render_) {}
 

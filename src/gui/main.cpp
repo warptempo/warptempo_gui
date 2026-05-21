@@ -19,6 +19,7 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
+#include "waveform_worker.h"
 #include "warpmarkers.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -380,6 +381,16 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start async renderer; exiting\n");
         return 1;
     }
+    // Stage A: waveform-cache rebuild runs on this dedicated worker; the
+    // paint thread becomes blit-only. Must be constructed before
+    // GuiPaintHandler (which takes it as a reference) and before
+    // GuiFileLoader (which calls wait_until_idle before swapping audio).
+    GuiWaveformWorker waveform_worker;
+    if (!waveform_worker.init()) {
+        std::fprintf(stderr,
+            "warptempo_gui: failed to start waveform worker; exiting\n");
+        return 1;
+    }
     // GuiTargetRender is the cancel-restart dispatcher for target-view
     // live audio. It must be constructed after async_renderer
     // (a dependency) and BEFORE the op clusters (which take it as a
@@ -389,8 +400,8 @@ int main(int argc, char** argv) {
                                   viewport);
     // file_loader's clear sites call target_render.cancel_for_load(),
     // so it must be constructed after target_render.
-    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, viewport,
-                              target_render);
+    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache,
+                              waveform_worker, viewport, target_render);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle, target_render);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
@@ -403,7 +414,8 @@ int main(int argc, char** argv) {
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, gui);
+    GuiPaintHandler paint_handler(app, audio, playback, wf_cache,
+                                  waveform_worker, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
@@ -413,6 +425,8 @@ int main(int argc, char** argv) {
                                       target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
+    gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),
+        [&waveform_worker]() { waveform_worker.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
                                   warpops, phase_resets, flag_editor,
@@ -506,6 +520,13 @@ int main(int argc, char** argv) {
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the atomic playing flag.
     gui.set_on_tick([&]() {
+        // Stage A: dirty-detect for the waveform cache. Compares the
+        // current desired fingerprint against pending_fp_* and either
+        // dispatches to the worker, sets the supersede slot, or no-ops.
+        // Runs first so the worker is kicked off before any of the
+        // tick-time paint invalidations below.
+        paint_handler.maybe_enqueue_waveform_render();
+
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
         // the top strip when it flips. Cheap: top_strip is small.

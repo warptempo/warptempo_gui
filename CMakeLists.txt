@@ -55,6 +55,7 @@ add_executable(warptempo_gui
     src/gui/main.cpp
     src/gui/app_state.cpp
     src/gui/async_renderer.cpp
+    src/gui/waveform_worker.cpp
     src/gui/platform_wayland.cpp
     src/gui/audio.cpp
     src/gui/render.cpp

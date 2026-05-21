@@ -6,10 +6,13 @@
 #include "render.h"
 #include "warpmarkers.h"
 #include "platform_wayland.h"
+#include "engine/stft_container.h"   // TimeMapSegment
 
 #include <cairo/cairo.h>
 #include <string>
 #include <vector>
+
+class GuiWaveformWorker;
 
 // X.7.8a: paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, extracted verbatim from main.cpp's lambdas. Bodies use the
@@ -71,14 +74,14 @@ struct WaveformCache {
     int              width   = 0;     // surface width  (== area.w when valid)
     int              height  = 0;     // surface height (== area.h when valid)
 
-    // Fingerprint of the last successful render. Compared against the
-    // current redraw's inputs to decide whether to re-render. fp_target
-    // discriminates the source-view and target-view caches: a `t` toggle
-    // flips it without disturbing the source-domain inputs, forcing a
-    // cache rebuild. fp_timemap_hash captures the warp marker / trim
-    // state baked into the timemap the target paint just consumed; any
-    // authoring edit in source view that would shift the deformity
-    // invalidates the target view's last cached paint on its next entry.
+    // Fingerprint of the LIVE surface (what the next blit will draw). Set
+    // at completion-swap time, not at dispatch. fp_target discriminates
+    // the source-view and target-view caches: a `t` toggle flips it
+    // without disturbing the source-domain inputs, forcing a cache rebuild.
+    // fp_timemap_hash captures the warp marker / trim state baked into
+    // the timemap the target paint just consumed; any authoring edit in
+    // source view that would shift the deformity invalidates the target
+    // view's last cached paint on its next entry.
     int64_t   fp_vp_start    = 0;
     int64_t   fp_vp_end      = 0;
     int64_t   fp_trim_begin  = 0;
@@ -89,6 +92,50 @@ struct WaveformCache {
     bool      fp_target      = false;
     uint64_t  fp_timemap_hash = 0;
 
+    // Stage A: pending-slot surface and fingerprint. The worker renders
+    // into pending_surface; the completion handler swaps it into surface
+    // and copies pending_fp_* into fp_*. While a render is in flight,
+    // pending_fp_* describes what the worker is producing — dirty-detect
+    // compares against pending_fp_* (not fp_*) so we don't enqueue a
+    // second render for the same target the worker is already working on.
+    cairo_surface_t* pending_surface = nullptr;
+    int              pending_width   = 0;
+    int              pending_height  = 0;
+
+    int64_t   pending_fp_vp_start    = 0;
+    int64_t   pending_fp_vp_end      = 0;
+    int64_t   pending_fp_trim_begin  = 0;
+    int64_t   pending_fp_trim_end    = 0;
+    int       pending_fp_area_w      = 0;
+    int       pending_fp_area_h      = 0;
+    long long pending_fp_audio_gen   = -1;
+    bool      pending_fp_target      = false;
+    uint64_t  pending_fp_timemap_hash = 0;
+
+    // Supersede slot: when dirty-detect sees a new viewport mid-render,
+    // it stashes the desired fingerprint here instead of dispatching.
+    // The completion handler consumes it — if set, the just-completed
+    // pending surface is discarded (its pixels will be overwritten by
+    // the next render) and a fresh job built from supersede_* is
+    // dispatched. Cleared at consumption.
+    bool      supersede             = false;
+    int64_t   supersede_vp_start    = 0;
+    int64_t   supersede_vp_end      = 0;
+    int64_t   supersede_trim_begin  = 0;
+    int64_t   supersede_trim_end    = 0;
+    int       supersede_area_w      = 0;
+    int       supersede_area_h      = 0;
+    long long supersede_audio_gen   = -1;
+    bool      supersede_target      = false;
+    uint64_t  supersede_timemap_hash = 0;
+    std::vector<TimeMapSegment> supersede_timemap;
+
+    // Stage A: `dirty` no longer drives the dispatch decision (the
+    // pending_fp_* comparison does). It remains as a startup/clear flag:
+    // set at construction and at destroy_surface to indicate "the live
+    // surface has no valid pixels yet, show nothing until the first
+    // worker completion publishes pixels." Not consulted by
+    // maybe_enqueue_waveform_render.
     bool dirty = true;
 
     void destroy_surface() {
@@ -96,10 +143,19 @@ struct WaveformCache {
             cairo_surface_destroy(surface);
             surface = nullptr;
         }
+        if (pending_surface) {
+            cairo_surface_destroy(pending_surface);
+            pending_surface = nullptr;
+        }
         width  = 0;
         height = 0;
+        pending_width  = 0;
+        pending_height = 0;
         dirty  = true;
-        fp_audio_gen = -1;
+        fp_audio_gen         = -1;
+        pending_fp_audio_gen = -1;
+        supersede = false;
+        supersede_timemap.clear();
     }
 
     ~WaveformCache() { destroy_surface(); }
@@ -172,19 +228,43 @@ struct GuiPaintHandler {
     const GuiAudio&    audio;
     GuiPlayback&       playback;
     WaveformCache&     wf_cache;
-    const GuiPlatform&      gui;
+    GuiWaveformWorker& waveform_worker;
+    GuiPlatform&       gui;
 
     GuiPaintHandler(AppState&          app_,
                     const GuiAudio&    audio_,
                     GuiPlayback&       playback_,
                     WaveformCache&     wf_cache_,
-                    const GuiPlatform&      gui_)
+                    GuiWaveformWorker& waveform_worker_,
+                    GuiPlatform&       gui_)
         : app(app_),
           audio(audio_),
           playback(playback_),
           wf_cache(wf_cache_),
+          waveform_worker(waveform_worker_),
           gui(gui_) {}
 
     void on_redraw(cairo_t* cr, int x, int y, int w, int h);
     void on_resize(int w, int h);
+
+    // Stage A: dirty-detect. Compares the current desired waveform
+    // fingerprint against pending_fp_* (the fingerprint the worker is
+    // producing, or the last published live fingerprint when idle).
+    // - Equal: return; the worker is already producing the right pixels
+    //   (or has just produced them).
+    // - Different and worker idle: dispatch a fresh render job, updating
+    //   pending_fp_* to the desired fingerprint and allocating/reusing
+    //   the pending surface.
+    // - Different and worker busy: set the supersede slot so the
+    //   completion handler dispatches a fresh job for the latest
+    //   fingerprint at completion time.
+    // Called from on_tick.
+    void maybe_enqueue_waveform_render();
+
+    // Stage A: invoked from the worker's DoneCallback (which fires on the
+    // main thread, via the eventfd handler the platform layer routes
+    // through GuiWaveformWorker::on_completion_event). Either dispatches
+    // a supersede job, or swaps the pending surface into the live slot
+    // and invalidates the waveform area.
+    void on_waveform_render_done(bool ok);
 };

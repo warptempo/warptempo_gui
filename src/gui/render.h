@@ -441,6 +441,10 @@ constexpr bool kDebugPerf = false;
 // helpers on every relevant inner-loop step; the caller zeroes them with
 // perf_counters::reset() before a measured pass and reads the totals
 // afterwards. Single-threaded, no synchronization.
+//
+// Stage A and beyond: the wf_cols / wf_pyramid_samples increments may
+// fire from the waveform worker thread when kDebugPerf=true. The
+// counters are not thread-safe — diagnostic use only.
 namespace perf_counters {
     extern int wf_cols;              // pixel columns drawn by render_waveform
     extern int wf_pyramid_samples;   // peak-pyramid samples read

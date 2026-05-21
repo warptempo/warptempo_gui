@@ -62,6 +62,12 @@ public:
     // GuiAsyncRenderer::on_completion_event).
     void set_worker_completion_fd(int fd, std::function<void()> on_event);
 
+    // Stage A: parallel hookup for the GuiWaveformWorker's completion
+    // eventfd. The poll set grows a fourth pollfd; on POLLIN the loop
+    // reads the counter and invokes this callback (routes to
+    // GuiWaveformWorker::on_completion_event).
+    void set_waveform_worker_completion_fd(int fd, std::function<void()> on_event);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -144,6 +150,11 @@ private:
     // registered.
     int  worker_completion_fd_ = -1;
     std::function<void()> on_worker_completion_;
+
+    // Stage A: waveform-worker completion fd. Same lifetime story as the
+    // async-renderer fd above. -1 when no waveform worker is registered.
+    int  waveform_worker_completion_fd_ = -1;
+    std::function<void()> on_waveform_worker_completion_;
 
     // -- Data device (drag-and-drop) --
     struct wl_data_device_manager* wl_data_device_manager_ = nullptr;

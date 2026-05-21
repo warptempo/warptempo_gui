@@ -2,6 +2,7 @@
 
 #include "settings_io.h"
 #include "target_render.h"
+#include "waveform_worker.h"
 
 #include <sndfile.h>
 
@@ -57,6 +58,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
         gui.invalidate_region(0, 0, app.width, app.height);
         return false;
     }
+
+    // Stage A: drain any in-flight waveform render before swapping the
+    // audio's internal buffers out from under it. The worker dereferences
+    // the GuiAudio via the pointer captured in its WaveformJob, and the
+    // move-assignment below replaces audio's pyramid vectors in place —
+    // reading them mid-move is UB.
+    waveform_worker.wait_until_idle();
 
     audio = std::move(next);
     app.audio_generation++;
@@ -320,6 +328,11 @@ void GuiFileLoader::revert_to_blank() {
     playback.shutdown();
     app.playhead_scanner_active      = false;
     app.playhead_scanner_sample = 0;
+
+    // Stage A: drain the waveform worker before discarding the audio.
+    // Same invariant as load_file — the worker holds a pointer into
+    // `audio`, and `audio = GuiAudio{}` will replace its internals.
+    waveform_worker.wait_until_idle();
 
     audio = GuiAudio{};
     app.audio_generation++;
