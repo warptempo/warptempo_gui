@@ -61,17 +61,25 @@ constexpr double kFlagInnerPadPx = 3.0;
 // here in Brief Q to share with main.cpp's iteration popup.
 constexpr double kVPadExtraPx = 1.0;
 
-// Brief J/K: the flag rect's painted bottom edge sits this many pixels above
-// the strip-bottom row (= waveform_area.y). Moving the rect off the strip-
-// boundary row eliminates the boundary-paint fragility from Brief I.
+// Vertical offset from the waveform area's top edge up to the flag rect's
+// painted bottom edge. The flag rect sits in overlay space above the
+// waveform; this is the height of its footprint there. The marker stem
+// emanates from the rect's left outline (bottom edge) and runs down to
+// the waveform bottom, so this constant also defines how far the stem
+// extends above the waveform. Consumed by render_flags' baseline
+// computation, by render_markers' stem geometry (via the equal-by-
+// construction kStemAboveWaveformPx), and by the iter/BPM popups in
+// main.cpp which mirror the flag rect's vertical position.
 constexpr double kFlagBottomLiftPx = 11.0;
 
-// Brief J: marker stems extend upward from the waveform area into the bottom
-// of the top strip by this many pixels via the connector rows. Tracks
-// kFlagBottomLiftPx — see render.cpp's flag-lift commentary. Consumed by
-// render_markers (stem geometry) and by the paint_handler markers-section
-// gate (to intersect damage rects against the actual marker pixel range).
-constexpr double kMarkerConnectorRows = 11.0;
+// Distance the marker stem extends above the waveform area, from the
+// waveform's top edge up to the stem's top. By construction this equals
+// kFlagBottomLiftPx — the stem starts at the flag rect's left outline
+// (bottom edge, same column as the marker), so its top sits flush with
+// the rect's bottom. Consumed by render_markers (stem geometry) and by
+// the paint_handler stem blit (surface_h = area.h + kStemAboveWaveformPx,
+// blit y = area.y - kStemAboveWaveformPx).
+constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default

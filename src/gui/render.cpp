@@ -18,9 +18,9 @@ namespace perf_counters {
     int flag_elided          = 0;
 }
 
-// kVPadExtraPx, kFlagBottomLiftPx, and kMarkerConnectorRows now live in
-// render.h so the iteration popup in main.cpp and the markers-section gate
-// in paint_handler.cpp can reference the same values.
+// kVPadExtraPx, kFlagBottomLiftPx, and kStemAboveWaveformPx now live in
+// render.h so the iter/BPM popups in main.cpp and the stem blit in
+// paint_handler.cpp can reference the same values.
 
 // Half-width of the inverted-triangle playhead asset (17×9, tip at column 8).
 // Mirrors the same-named constant in main.cpp's invalidation logic — both
@@ -118,8 +118,10 @@ void render_marker_stems_impl(
     if (samples_per_pixel <= 0.0) return;
 
     const double sr = static_cast<double>(sample_rate);
-    const double y_conn_top =
-        static_cast<double>(waveform_area.y) - kMarkerConnectorRows;
+    // Stem emanates from the flag rect's left outline (bottom edge, same
+    // column as the marker) and runs down to the waveform bottom.
+    const double y_stem_top =
+        static_cast<double>(waveform_area.y) - kStemAboveWaveformPx;
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);
@@ -157,7 +159,7 @@ void render_marker_stems_impl(
                 (ms - static_cast<double>(viewport_start_sample))
                     / samples_per_pixel;
             const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
-            cairo_move_to(cr, x_px, y_conn_top);
+            cairo_move_to(cr, x_px, y_stem_top);
             cairo_line_to(cr, x_px, y1);
         }
         cairo_stroke(cr);

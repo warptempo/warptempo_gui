@@ -195,10 +195,11 @@ struct WaveformCache {
 //      overlay is hashed (not generation-counted) so future mutations
 //      of app.drag don't need to remember to bump a callsite counter.
 //
-// Surface height differs from WaveformCache's: stem geometry spans from
-// `area.y - kMarkerConnectorRows` (connector top) down to `area.y + area.h`
-// (waveform bottom). The cache surface is sized to fit that full vertical
-// extent; the blit positions it at screen y = area.y - kMarkerConnectorRows.
+// Surface height differs from WaveformCache's: stems emanate from the
+// flag rect's left outline (at screen y = area.y - kStemAboveWaveformPx)
+// and run down to area.y + area.h (waveform bottom). The cache surface
+// is sized to that full vertical extent; the blit positions it at screen
+// y = area.y - kStemAboveWaveformPx.
 struct StemCache {
     cairo_surface_t* surface = nullptr;
     int              width   = 0;
@@ -210,7 +211,7 @@ struct StemCache {
     int64_t   fp_trim_begin       = 0;
     int64_t   fp_trim_end         = 0;
     int       fp_area_w           = 0;
-    int       fp_area_h           = 0;       // surface height (incl. connector rows)
+    int       fp_area_h           = 0;       // surface height (incl. stem overhang)
     bool      fp_target           = false;
     uint64_t  fp_timemap_hash     = 0;
 

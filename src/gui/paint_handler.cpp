@@ -323,18 +323,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 std::chrono::duration<double, std::milli>(wf1 - wf0).count();
         }
 
-        // Markers: vertical lines in the waveform area, beneath the
+        // Markers: vertical stems in the waveform area, beneath the
         // playhead. Cairo's outer clip confines painting to `exposed`.
-        // Gate against the actual marker pixel range: stems span the
-        // waveform's x-range vertically from `area.y - kMarkerConnectorRows`
-        // (connector top) down to `area.y + area.h`. Top-strip-only damage
-        // above the connector rows (popup edits, hover popup, cursor blink)
-        // would otherwise pay for an empty marker pass.
+        // Gate against the actual stem pixel range: stems emanate from
+        // the flag rect's left outline at `area.y - kStemAboveWaveformPx`
+        // and run down to `area.y + area.h`. Top-strip damage above the
+        // stems' tops (popup edits, hover popup, cursor blink) would
+        // otherwise pay for an empty marker pass.
         const GuiRect marker_paint_rect{
             area.x,
-            area.y - static_cast<int>(kMarkerConnectorRows),
+            area.y - static_cast<int>(kStemAboveWaveformPx),
             area.w,
-            area.h + static_cast<int>(kMarkerConnectorRows)
+            area.h + static_cast<int>(kStemAboveWaveformPx)
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
@@ -346,7 +346,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // rebuild fires); the blit is skipped and the background
             // shows through for that one frame. The surface's screen
             // origin is `marker_paint_rect.x, marker_paint_rect.y`
-            // (i.e. area.x, area.y - kMarkerConnectorRows), matching
+            // (i.e. area.x, area.y - kStemAboveWaveformPx), matching
             // the local-coord choice in maybe_rebuild_stem_cache.
             if (stem_cache.surface) {
                 cairo_save(cr);
@@ -1697,10 +1697,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || area.h <= 0) return;
 
-    // Surface includes the connector rows above the waveform — see the
+    // Surface includes the stem overhang above the waveform — see the
     // geometry note in StemCache's class comment.
     const int surface_w = area.w;
-    const int surface_h = area.h + static_cast<int>(kMarkerConnectorRows);
+    const int surface_h = area.h + static_cast<int>(kStemAboveWaveformPx);
 
     // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
@@ -1761,15 +1761,15 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 
     // Local rect translates the screen-coord stem geometry into the
     // cache surface's coordinate system. render_markers computes
-    // y_conn_top = waveform_area.y - kMarkerConnectorRows and
+    // y_stem_top = waveform_area.y - kStemAboveWaveformPx and
     // y1 = waveform_area.y + waveform_area.h. Setting local.y =
-    // kMarkerConnectorRows makes y_conn_top = 0 (top of surface) and
-    // y1 = kMarkerConnectorRows + area.h = surface_h (bottom of surface).
+    // kStemAboveWaveformPx makes y_stem_top = 0 (top of surface) and
+    // y1 = kStemAboveWaveformPx + area.h = surface_h (bottom of surface).
     // The blit at on_redraw time positions the surface at screen y =
-    // area.y - kMarkerConnectorRows so the connector rows land correctly.
+    // area.y - kStemAboveWaveformPx so the stem overhang lands correctly.
     const GuiRect local_area{
         0,
-        static_cast<int>(kMarkerConnectorRows),
+        static_cast<int>(kStemAboveWaveformPx),
         surface_w,
         area.h
     };
@@ -1840,7 +1840,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // pixels. Idempotent against the waveform's own damage.
     gui.invalidate_region(
         0,
-        area.y - static_cast<int>(kMarkerConnectorRows),
+        area.y - static_cast<int>(kStemAboveWaveformPx),
         app.width,
         surface_h);
 }
