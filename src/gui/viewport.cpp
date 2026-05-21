@@ -173,6 +173,14 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     if (audio.total_frames() <= 0) return;
     if (new_zoom_level == app.zoom_level) return;
 
+    // Capture the scanner's pre-reflow pixel-x under the OLD viewport so
+    // the next pre-paint can damage the actually-painted column. The
+    // recomputed scanner_pixel_x against the post-reflow viewport points
+    // at a column the scanner was never painted at, leaving a ghost.
+    if (app.playhead_scanner_active) {
+        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
+    }
+
     app.zoom_level = new_zoom_level;
 
     if (app.zoom_level == kFitFileLevel) {
@@ -254,6 +262,11 @@ void Viewport::center_viewport_on_playhead() {
         : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
+    // Stash the scanner's last painted pixel-x under the OLD viewport
+    // for the next pre-paint; see apply_zoom_change for rationale.
+    if (app.playhead_scanner_active) {
+        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
+    }
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {

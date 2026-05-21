@@ -344,6 +344,13 @@ struct AppState {
     bool    playhead_scanner_active = false;
     float   playback_speed          = 1.0f;
 
+    // One-shot stash of the scanner's last painted pixel-x under the
+    // OLD viewport, set by viewport-mutating operations during
+    // playback. The next pre-paint reads this in place of computing
+    // scanner_pixel_x against the new viewport, then clears it.
+    // Negative sentinel = no stash.
+    double playhead_scanner_old_px_stash = -1.0;
+
     // Companion files discovered alongside the loaded audio. Chunk E just
     // records these; later chunks will parse their contents.
     std::string warpmarkers_path;

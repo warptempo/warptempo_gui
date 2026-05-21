@@ -605,7 +605,18 @@ int main(int argc, char** argv) {
         }
         if (translated == app.playhead_scanner_sample) return;
 
-        const double old_px = scanner_pixel_x(app, audio);
+        // One-shot read of the viewport-mutation stash. When set, it
+        // holds the scanner's last painted pixel-x under the OLD
+        // viewport; the recomputed scanner_pixel_x against the new
+        // viewport would point at a column the scanner was never
+        // painted at, leaving a ghost.
+        double old_px;
+        if (app.playhead_scanner_old_px_stash >= 0.0) {
+            old_px = app.playhead_scanner_old_px_stash;
+            app.playhead_scanner_old_px_stash = -1.0;
+        } else {
+            old_px = scanner_pixel_x(app, audio);
+        }
         app.playhead_scanner_sample = translated;
         const double new_px  = scanner_pixel_x(app, audio);
 
