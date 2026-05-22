@@ -40,4 +40,16 @@ struct PhaseResetPropagate {
     // in lockstep with the clipboard, stops on the first name divergence,
     // and produces a single undo entry covering all materialized blocks.
     void paste_apply();
+
+    // Ctrl+Alt+Shift+P: propagate only the disabled/enabled *state* of
+    // clipboard placements onto matching destination phase resets,
+    // leaving positions untouched. Caller has verified W-mode + exactly
+    // one warp marker selected + non-empty clipboard. Walks the
+    // destination block list in lockstep with the clipboard, stops at
+    // the first label divergence or per-block phase-reset count
+    // mismatch, and produces at most one undo entry covering all
+    // aligned blocks. A divergence/mismatch is reported via
+    // AppState::transient_status_message; a clean or empty run is
+    // silent.
+    void paste_state_apply();
 };

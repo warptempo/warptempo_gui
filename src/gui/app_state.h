@@ -575,6 +575,14 @@ struct AppState {
     // fire while a prompt is up).
     std::string queue_progress_text;
 
+    // Transient one-line status message shown in the bottom strip after
+    // the dirty dot, alongside the S/T·W/P·A/B indicators. Set by a
+    // command that wants to report a non-fatal outcome (e.g. phase-reset
+    // state-paste divergence); cleared on the next keyboard press in
+    // on_key. Empty = nothing to show. General-purpose: not specific to
+    // any one command, so future commands can reuse it.
+    std::string transient_status_message;
+
     // Chunk W: in-memory queue of pending renders. Ctrl+E pushes a
     // snapshot of the current authoring state onto the back of this list;
     // Ctrl+Alt+E consumes it, materializing one batch folder per execution

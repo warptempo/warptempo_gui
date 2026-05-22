@@ -1282,6 +1282,30 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     t_dirty_ms =
                         std::chrono::duration<double, std::milli>(d1 - d0).count();
                 }
+
+                // Transient one-line status message. Painted after the
+                // dirty asterisk; cleared on the next keyboard press
+                // (see input_handler on_key top). Mirrors the
+                // dirty-asterisk paint shape exactly so the trailing
+                // element flows after whatever cursor position landed.
+                if (!app.transient_status_message.empty()) {
+                    const double mx =
+                        right_after_indicators + kTabLetterGapPx;
+                    cairo_save(cr);
+                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                    cairo_select_font_face(cr, "monospace",
+                                           CAIRO_FONT_SLANT_NORMAL,
+                                           CAIRO_FONT_WEIGHT_NORMAL);
+                    cairo_set_font_size(cr, kFlagFontSize);
+                    cairo_text_extents_t msg_ext;
+                    cairo_text_extents(cr,
+                        app.transient_status_message.c_str(), &msg_ext);
+                    cairo_move_to(cr, mx, baseline_y);
+                    cairo_show_text(cr,
+                        app.transient_status_message.c_str());
+                    cairo_restore(cr);
+                    right_after_indicators = mx + msg_ext.x_advance;
+                }
             }
         }
     }

@@ -3,14 +3,23 @@
 #include "phase_reset_clipboard.h"
 #include "phase_reset_markers.h"
 #include "target_render.h"
+#include "time_format.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace {
+
+// N-sample guard used by paste_state_apply's boundary-aware bucketing.
+// A near-end phase reset (within N before a section end, or within N
+// before a section start) is re-homed into the next chronological
+// labeled section by shifting every block's membership window backward
+// by N. Sole consumer is paste_state_apply; no need for a wider home.
+constexpr int64_t kPhaseResetBoundaryGuardSamples = 4096;
 
 // One named block resolved from a warp-marker walk. `label` is the
 // owning marker's label name (empty markers don't produce entries);
@@ -73,7 +82,9 @@ void PhaseResetPropagate::copy_from_selection() {
     clipboard_blocks.reserve(src_blocks.size());
     for (const auto& b : src_blocks) {
         ClipboardBlock cb;
-        cb.label_name = b.label;
+        cb.label_name   = b.label;
+        cb.source_start = b.start;
+        cb.source_end   = b.end;
         const double duration = b.end - b.start;
         if (duration <= 0.0) {
             clipboard_blocks.push_back(std::move(cb));
@@ -85,6 +96,7 @@ void PhaseResetPropagate::copy_from_selection() {
             if (t_time >= b.end)  continue;
             ClipboardPlacement p;
             p.fractional_position = (t_time - b.start) / duration;
+            p.source_time         = t_time;
             p.disabled            = t.disabled;
             cb.placements.push_back(p);
         }
@@ -169,4 +181,128 @@ void PhaseResetPropagate::paste_apply() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
+}
+
+void PhaseResetPropagate::paste_state_apply() {
+    if (app.phase_reset_clipboard.empty()) return;
+    if (app.selected_markers.size() != 1) return;
+    const int anchor = *app.selected_markers.begin();
+    const auto& mv = app.warpmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    if (anchor < 0 || anchor >= n) return;
+
+    const std::vector<DestBlock> dest_blocks =
+        walk_named_blocks(mv, anchor, n);
+    const auto& clip_blocks = app.phase_reset_clipboard.blocks();
+
+    // Boundary guard in source-rate seconds (phase reset time_seconds
+    // live in the source domain on both sides). sr <= 0 degrades to
+    // n_seconds = 0, i.e. the windows reduce to [start, end) on both
+    // sides — pre-rule behavior, symmetric, no count corruption.
+    const int sr = target_render.audio.sample_rate();
+    const double n_seconds =
+        sr > 0
+            ? static_cast<double>(kPhaseResetBoundaryGuardSamples) /
+              static_cast<double>(sr)
+            : 0.0;
+
+    // Flat list of every clipboard placement so we can bucket the
+    // clipboard side by absolute source_time against block windows,
+    // mirroring the destination-side bucketing. Capture produces
+    // block-ordered, within-block-time-ordered placements, so a flat
+    // concatenation is already source_time-ordered; sort defensively.
+    std::vector<const ClipboardPlacement*> all_placements;
+    for (const auto& cb : clip_blocks)
+        for (const auto& p : cb.placements)
+            all_placements.push_back(&p);
+    std::sort(all_placements.begin(), all_placements.end(),
+        [](const ClipboardPlacement* a, const ClipboardPlacement* b) {
+            return a->source_time < b->source_time;
+        });
+
+    // Snapshot pre-state up front; we commit a single undo entry only
+    // if at least one flag actually changes.
+    std::vector<GuiPhaseResetMarker> pre_state =
+        app.phase_reset_markers.markers();
+    const int hint_last = app.last_selected_marker;
+
+    auto& out = app.phase_reset_markers.markers_mut();
+
+    bool any_change = false;
+    std::string stop_message;
+
+    const size_t pair_count = std::min(clip_blocks.size(), dest_blocks.size());
+    for (size_t i = 0; i < pair_count; ++i) {
+        // Label first, then count — mirrors paste_apply's
+        // stop-on-divergence order.
+        if (clip_blocks[i].label_name != dest_blocks[i].label) {
+            stop_message = "stopped at " +
+                format_timestamp(dest_blocks[i].start) +
+                " (label name diverged)";
+            break;
+        }
+
+        // Shifted membership window [start - N, end - N) on both sides.
+        // A near-end marker of the previous interval (within N before
+        // this block's start) migrates into this block; a near-end
+        // marker of this block (within N before its end) migrates out
+        // into the next interval. If the next interval is unlabeled or
+        // past the compared range, the marker falls off — symmetrically
+        // on both sides. Clamp hi >= lo so a pathologically tiny block
+        // produces an empty window (count 0), not an inverted one.
+        const double dst_lo = dest_blocks[i].start - n_seconds;
+        const double dst_hi = std::max(dst_lo, dest_blocks[i].end - n_seconds);
+        const double src_lo = clip_blocks[i].source_start - n_seconds;
+        const double src_hi = std::max(src_lo, clip_blocks[i].source_end - n_seconds);
+
+        // Windowed clipboard placements (migration applied). Globally
+        // bucketed by source_time so a near-end placement originally
+        // captured under block i-1 lands in block i's window when i-1
+        // and i are adjacent labeled blocks.
+        std::vector<const ClipboardPlacement*> windowed_clip;
+        for (const auto* p : all_placements) {
+            const double t = p->source_time;
+            if (t < src_lo)  continue;
+            if (t >= src_hi) continue;
+            windowed_clip.push_back(p);
+        }
+
+        // Windowed destination markers (markers_ is time-ordered).
+        std::vector<int> dest_indices;
+        dest_indices.reserve(windowed_clip.size());
+        for (size_t k = 0; k < out.size(); ++k) {
+            const double t = out[k].time_seconds;
+            if (t < dst_lo)  continue;
+            if (t >= dst_hi) continue;
+            dest_indices.push_back(static_cast<int>(k));
+        }
+        if (dest_indices.size() != windowed_clip.size()) {
+            stop_message = "stopped at " +
+                format_timestamp(dest_blocks[i].start) +
+                " (marker count mismatch)";
+            break;
+        }
+        for (size_t j = 0; j < dest_indices.size(); ++j) {
+            const bool want = windowed_clip[j]->disabled;
+            auto& m = out[dest_indices[j]];
+            if (m.disabled != want) {
+                m.disabled = want;
+                any_change = true;
+            }
+        }
+    }
+
+    if (any_change) {
+        undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other,
+                                   hint_last);
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+    }
+
+    if (!stop_message.empty()) {
+        app.transient_status_message = std::move(stop_message);
+        viewport.invalidate_timestamp_area();
+    }
 }

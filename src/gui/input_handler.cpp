@@ -184,6 +184,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
+    // Transient bottom-strip status message clears on every real
+    // keypress, including the press that may set a new message later
+    // in this same on_key call (the handler that sets it does so at
+    // the very end of its branch, after this clear). Guarded so the
+    // bottom-strip invalidate fires only when there was a message to
+    // erase. See AppState::transient_status_message.
+    if (!app.transient_status_message.empty()) {
+        app.transient_status_message.clear();
+        viewport.invalidate_timestamp_area();
+    }
+
     // Bottom-strip prompt owns input while active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
     // marker edits / playback / viewport keys cannot sneak in while
@@ -1352,6 +1363,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         phase_reset_propagate.open_paste_confirmation();
+        return;
+    }
+
+    // Ctrl+Alt+Shift+P: propagate the enabled/disabled *state* of
+    // clipboard placements onto the matching destination region's
+    // phase resets, in order. Positions are not modified. W-mode only;
+    // phase reset mode is a silent no-op. Empty clipboard is a silent
+    // no-op. Unlike Ctrl+Alt+P, no confirmation prompt — applies
+    // directly. Divergence/mismatch is reported via the bottom-strip
+    // transient status message rather than a modal dialog.
+    if (key == GuiKeys::P && ctrl && shift && alt) {
+        if (app.active_markers_view != 'W') return;
+        if (app.phase_reset_clipboard.empty()) return;
+        if (app.selected_markers.size() != 1) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset state-paste: select exactly one "
+                "warp marker\n");
+            return;
+        }
+        phase_reset_propagate.paste_state_apply();
         return;
     }
 
