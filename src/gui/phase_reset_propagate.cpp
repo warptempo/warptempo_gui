@@ -14,12 +14,17 @@
 
 namespace {
 
-// N-sample guard used by paste_state_apply's boundary-aware bucketing.
-// A near-end phase reset (within N before a section end, or within N
+// Boundary guard for paste_state_apply's near-end bucketing, in
+// seconds. A phase reset within this distance before a section end (or
 // before a section start) is re-homed into the next chronological
 // labeled section by shifting every block's membership window backward
-// by N. Sole consumer is paste_state_apply; no need for a wider home.
-constexpr int64_t kPhaseResetBoundaryGuardSamples = 4096;
+// by this amount. This is an AUTHORING tolerance — the largest the user
+// ever nudges a destination phase reset off its true section boundary
+// (~2-10 ms typically, never more than ~92 ms) — deliberately NOT tied
+// to the engine N/window size, so a render-setting change cannot shift
+// which section a marker counts toward. Sole consumer is
+// paste_state_apply.
+constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
 // One named block resolved from a warp-marker walk. `label` is the
 // owning marker's label name (empty markers don't produce entries);
@@ -195,16 +200,10 @@ void PhaseResetPropagate::paste_state_apply() {
         walk_named_blocks(mv, anchor, n);
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
-    // Boundary guard in source-rate seconds (phase reset time_seconds
-    // live in the source domain on both sides). sr <= 0 degrades to
-    // n_seconds = 0, i.e. the windows reduce to [start, end) on both
-    // sides — pre-rule behavior, symmetric, no count corruption.
-    const int sr = target_render.audio.sample_rate();
-    const double n_seconds =
-        sr > 0
-            ? static_cast<double>(kPhaseResetBoundaryGuardSamples) /
-              static_cast<double>(sr)
-            : 0.0;
+    // Boundary guard in seconds (phase reset time_seconds live in the
+    // source domain on both sides). Fixed authoring tolerance, sample-
+    // rate independent.
+    const double n_seconds = kPhaseResetBoundaryGuardSeconds;
 
     // Flat list of every clipboard placement so we can bucket the
     // clipboard side by absolute source_time against block windows,
