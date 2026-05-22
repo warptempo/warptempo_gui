@@ -73,6 +73,17 @@ void GuiPlaybackLifecycle::toggle_playback() {
     app.follow_overridden_for_session = false;
     int64_t start;
     int64_t end;
+    // Launch position for the visible scanner, always in the active
+    // PAINT domain (full-target-frame in target view; source/render-frame
+    // otherwise) — the same domain as viewport_start_sample and as the
+    // value the pre-paint hook maintains during playback. Distinct from
+    // `start`, which in target view is a BUFFER-LOCAL index for
+    // playback.play(). Assigning the buffer-local `start` to the scanner
+    // here leaks a wrong-domain value into follow_scroll_if_needed below,
+    // which compares it against the full-domain viewport and, with a
+    // non-zero target_buffer_start_frame (trim set), wrongly judges the
+    // scanner offscreen and yanks the viewport to file/trim start.
+    int64_t scanner_launch;
     if (app.active_audio_view == 'T' &&
         !app.render_view_enabled) {
         // Target view: the target buffer is the live playback source.
@@ -89,14 +100,20 @@ void GuiPlaybackLifecycle::toggle_playback() {
         if (local >= app.target_buffer_frames) return;
         start = local;
         end   = app.target_buffer_frames;
+        // Full-target-frame launch = buffer-local start + buffer bias,
+        // i.e. exactly the validated cursor position.
+        scanner_launch = local + bias;
     } else {
         end = viewport.trim_end_sample();
         if (app.playhead_cursor_sample >= end) return;
         // Clamp the start position into the trim range in case the
         // cursor is sitting at trim_end - 1 (valid) or somehow slipped.
         start = std::max(app.playhead_cursor_sample, viewport.trim_begin_sample());
+        // Source/render view: paint domain == playback domain, so the
+        // scanner launch is the same value as start.
+        scanner_launch = start;
     }
-    app.playhead_scanner_sample = start;
+    app.playhead_scanner_sample = scanner_launch;
     app.playhead_scanner_active = true;
     // If the cursor is offscreen at play press, left-edge-align the
     // viewport on the cursor before the scanner issues forth. Follow
