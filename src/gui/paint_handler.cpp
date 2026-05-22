@@ -1225,6 +1225,44 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     cairo_restore(cr);
                 }
 
+                // Render-view filename. Flowed into the left-anchored
+                // sequence after the indicator letters (which are
+                // suppressed in render-view, so in practice the
+                // filename sits right after the timestamp). Painted
+                // before the dirty asterisk so the asterisk stays the
+                // last element in the strip across all views.
+                if (app.render_view_enabled &&
+                    app.render_view_index >= 0 &&
+                    app.render_view_index <
+                        static_cast<int>(app.render_view_list.size())) {
+                    const auto& e =
+                        app.render_view_list[app.render_view_index];
+                    const std::string label =
+                        e.batch_folder.filename().string() + "/" +
+                        e.basename + ".wav";
+                    cairo_save(cr);
+                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                    cairo_select_font_face(cr, "monospace",
+                                           CAIRO_FONT_SLANT_NORMAL,
+                                           CAIRO_FONT_WEIGHT_NORMAL);
+                    cairo_set_font_size(cr, kFlagFontSize);
+                    cairo_text_extents_t ext;
+                    cairo_text_extents(cr, label.c_str(), &ext);
+                    const double fx =
+                        right_after_indicators + kTabLetterGapPx;
+                    cairo_move_to(cr, fx, baseline_y);
+                    cairo_show_text(cr, label.c_str());
+                    cairo_restore(cr);
+                    right_after_indicators = fx + ext.x_advance;
+                }
+
+                // Dirty asterisk. Painted last so it stays the trailing
+                // element of the strip across every view — after
+                // S/T/W/P/A/B in source/target, after the filename in
+                // render-view. Cannot be cleared from within
+                // render-view (Ctrl+S is gated out by the render-view
+                // input gate); it remains visible as a reminder that
+                // source-view authoring state is unsaved.
                 if (app.dirty) {
                     const auto d0 = clock::now();
                     const double cx = right_after_indicators + kTabLetterGapPx;
@@ -1243,38 +1281,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     const auto d1 = clock::now();
                     t_dirty_ms =
                         std::chrono::duration<double, std::milli>(d1 - d0).count();
-                }
-
-                // Render-view filename. Flowed into the left-anchored
-                // sequence after the dirty asterisk (which is itself
-                // after the indicator letters, except indicator
-                // letters are suppressed in render-view — see the
-                // !render_view_enabled gate above). The filename thus
-                // sits right after the timestamp + (optional dirty *)
-                // in render-view, which is the only context where it
-                // paints at all.
-                if (app.render_view_enabled &&
-                    app.render_view_index >= 0 &&
-                    app.render_view_index <
-                        static_cast<int>(app.render_view_list.size())) {
-                    const auto& e =
-                        app.render_view_list[app.render_view_index];
-                    const std::string label =
-                        e.batch_folder.filename().string() + "/" +
-                        e.basename + ".wav";
-                    cairo_save(cr);
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_select_font_face(cr, "monospace",
-                                           CAIRO_FONT_SLANT_NORMAL,
-                                           CAIRO_FONT_WEIGHT_NORMAL);
-                    cairo_set_font_size(cr, kFlagFontSize);
-                    const double fx =
-                        right_after_indicators + kTabLetterGapPx;
-                    cairo_move_to(cr, fx, baseline_y);
-                    cairo_show_text(cr, label.c_str());
-                    cairo_restore(cr);
-                    // right_after_indicators isn't read again, so no
-                    // need to bump.
                 }
             }
         }
