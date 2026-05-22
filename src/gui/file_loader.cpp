@@ -2,11 +2,15 @@
 
 #include "settings_io.h"
 #include "target_render.h"
+#include "timemap.h"
 #include "waveform_worker.h"
+
+#include "engine/stft_container.h"
 
 #include <sndfile.h>
 
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -277,6 +281,29 @@ bool GuiFileLoader::load_file(const std::string& path) {
             return false;
         }
         app.engine_settings = std::move(*es);
+    }
+
+    // If the parsed .settings landed us in target view, populate the
+    // target-domain total-frame cache from the timemap before the
+    // viewport clamp below reads live_total_frames. The cache is
+    // otherwise only written by the S→T toggle handler; on a file that
+    // *opens* in target view, that toggle never runs, so without this
+    // step the clamp + first paint use the source length and the
+    // waveform renders short of the target length. The target *length*
+    // is a pure timemap computation — it does NOT require the audio
+    // render to finish. Mirrors the S→T toggle's computation exactly
+    // (trim-agnostic: full source frames in, fall back to source length
+    // if the timemap is degenerate).
+    if (app.active_audio_view == 'T') {
+        const auto tmap = build_target_view_timemap(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        const int64_t src_total = audio.total_frames();
+        const double tgt_total_d = map_source_to_target(
+            static_cast<size_t>(src_total < 0 ? 0 : src_total), tmap);
+        const int64_t tgt_total =
+            static_cast<int64_t>(std::nearbyint(tgt_total_d));
+        app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
     }
 
     // Activate the parsed-tab: copy its snapshot into the live AppState

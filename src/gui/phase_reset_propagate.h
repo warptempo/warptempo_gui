@@ -5,6 +5,7 @@
 #include "viewport.h"
 
 struct GuiTargetRender;
+struct GuiActiveViews;
 
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate
@@ -17,11 +18,20 @@ struct PhaseResetPropagate {
     Viewport&           viewport;
     Undo&               undo;
     GuiTargetRender& target_render;
+    // Owned end-of-paste view switch goes through switch_active_markers_view_to
+    // so the W↔P selection swap + hover-popup clear + live-selection prune
+    // stay consistent with the keyboard `p`-toggle path. The two call sites
+    // for paste_apply / paste_state_apply live in different files
+    // (prompt.cpp / input_handler.cpp), only one of which holds
+    // GuiActiveViews — keeping the dependency here covers both with one
+    // wiring.
+    GuiActiveViews&     active_views;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
-                        GuiTargetRender& target_render_)
+                        GuiTargetRender& target_render_,
+                        GuiActiveViews& active_views_)
         : app(app_), viewport(viewport_), undo(undo_),
-          target_render(target_render_) {}
+          target_render(target_render_), active_views(active_views_) {}
 
     // Ctrl+P copy. Caller has already verified W-mode + exactly two
     // warp markers selected. Replaces the clipboard with the named

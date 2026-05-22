@@ -431,7 +431,7 @@ int main(int argc, char** argv) {
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
                                   flag_cache, waveform_worker, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
-                                              target_render);
+                                              target_render, active_views);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);

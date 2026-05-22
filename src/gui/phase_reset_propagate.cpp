@@ -1,12 +1,16 @@
 #include "phase_reset_propagate.h"
 
+#include "active_views.h"
+#include "audio.h"
 #include "phase_reset_clipboard.h"
 #include "phase_reset_markers.h"
 #include "target_render.h"
 #include "time_format.h"
+#include "timemap.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -57,6 +61,40 @@ std::vector<DestBlock> walk_named_blocks(
         out.push_back(DestBlock{name, start, end});
     }
     return out;
+}
+
+// Format a stop-message timestamp in whichever audio domain the user is
+// currently in. The input is always a source-domain seconds value (warp
+// markers, clipboard blocks, and dest_blocks all live in source seconds).
+// In source view: identity, labeled " source time". In target view:
+// forward-translate via the live target-view timemap, labeled
+// " target time". Degenerate timemap / sample_rate falls back to the
+// untranslated source seconds + " source time" label.
+std::string format_domain_timestamp(double source_seconds,
+                                    const AppState& app,
+                                    const GuiAudio& audio) {
+    const int sr = audio.sample_rate();
+    const long total = static_cast<long>(audio.total_frames());
+    const bool in_target = (app.active_audio_view == 'T');
+
+    if (sr <= 0 || total <= 0 || !in_target) {
+        return format_timestamp(source_seconds) +
+               (in_target ? " target time" : " source time");
+    }
+
+    const auto tmap = build_target_view_timemap(app, sr, total);
+    if (tmap.empty()) {
+        // Degenerate timemap — fall back to untranslated source seconds
+        // with a source-time label so the message is still well-defined.
+        return format_timestamp(source_seconds) + " source time";
+    }
+    const int64_t src_frame =
+        static_cast<int64_t>(std::nearbyint(source_seconds *
+                                            static_cast<double>(sr)));
+    const int64_t dom_frame = to_domain_frame(app, src_frame, tmap);
+    const double dom_seconds =
+        static_cast<double>(dom_frame) / static_cast<double>(sr);
+    return format_timestamp(dom_seconds) + " target time";
 }
 
 }  // namespace
@@ -148,7 +186,33 @@ void PhaseResetPropagate::paste_apply() {
     for (; matched < pair_count; ++matched) {
         if (clip_blocks[matched].label_name != dest_blocks[matched].label) break;
     }
-    if (matched == 0) return;
+
+    // Distinguish "stopped on divergence" (matched < pair_count: the loop
+    // broke at a label mismatch) from "one side ran out" (matched ==
+    // pair_count: a clean partial walk — no message, mirroring
+    // paste_state's silent partial-run rule).
+    std::string stop_message;
+    if (matched < pair_count) {
+        stop_message = "stopped at " +
+            format_domain_timestamp(dest_blocks[matched].start, app,
+                                    target_render.audio) +
+            " (label name diverged)";
+    }
+
+    if (matched == 0) {
+        // Nothing to materialize: either a divergence at block 0
+        // (stop_message non-empty), or the destination produced zero
+        // labeled blocks (e.g., anchor at the last warp marker), which
+        // is a clean partial walk and stays silent. Either way: no undo
+        // entry, no waveform / render flush, but the view-switch fires
+        // per the always-switch rule.
+        if (!stop_message.empty()) {
+            app.transient_status_message = std::move(stop_message);
+            viewport.invalidate_timestamp_area();
+        }
+        active_views.switch_active_markers_view_to('P');
+        return;
+    }
 
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phase_reset_markers.markers();
@@ -186,6 +250,19 @@ void PhaseResetPropagate::paste_apply() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
+
+    // Partial paste that stopped on a divergence: matched prefix is
+    // pasted AND the divergence is reported. A clean full paste leaves
+    // stop_message empty and shows nothing.
+    if (!stop_message.empty()) {
+        app.transient_status_message = std::move(stop_message);
+        viewport.invalidate_timestamp_area();
+    }
+
+    // Always switch to P view on a completed paste. The helper is a no-op
+    // when already in P, so calling unconditionally is safe and keeps the
+    // W↔P selection slot / hover popup / live selection in sync.
+    active_views.switch_active_markers_view_to('P');
 }
 
 void PhaseResetPropagate::paste_state_apply() {
@@ -236,7 +313,8 @@ void PhaseResetPropagate::paste_state_apply() {
         // stop-on-divergence order.
         if (clip_blocks[i].label_name != dest_blocks[i].label) {
             stop_message = "stopped at " +
-                format_timestamp(dest_blocks[i].start) +
+                format_domain_timestamp(dest_blocks[i].start, app,
+                                        target_render.audio) +
                 " (label name diverged)";
             break;
         }
@@ -277,7 +355,8 @@ void PhaseResetPropagate::paste_state_apply() {
         }
         if (dest_indices.size() != windowed_clip.size()) {
             stop_message = "stopped at " +
-                format_timestamp(dest_blocks[i].start) +
+                format_domain_timestamp(dest_blocks[i].start, app,
+                                        target_render.audio) +
                 " (marker count mismatch)";
             break;
         }
@@ -291,10 +370,16 @@ void PhaseResetPropagate::paste_state_apply() {
         }
     }
 
+    // A completed paste-state run (one that passed its precondition
+    // gates and ran the walk) always occupies an undo slot, even if no
+    // flag actually flipped — otherwise a meaningless paste-state would
+    // silently swallow a later Undo gesture intended for it. The pixel /
+    // render flush stays gated on any_change: there is nothing to repaint
+    // when no flag changed.
+    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other,
+                               hint_last);
+    undo.recompute_dirty();
     if (any_change) {
-        undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other,
-                                   hint_last);
-        undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
@@ -304,4 +389,9 @@ void PhaseResetPropagate::paste_state_apply() {
         app.transient_status_message = std::move(stop_message);
         viewport.invalidate_timestamp_area();
     }
+
+    // Always switch to P view at the end of a completed paste-state run,
+    // including diverged/mismatched/no-change cases. The helper is a no-op
+    // when already in P.
+    active_views.switch_active_markers_view_to('P');
 }
