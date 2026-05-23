@@ -22,11 +22,11 @@ namespace perf_counters {
 // render.h so the iter/BPM popups in main.cpp and the stem blit in
 // paint_handler.cpp can reference the same values.
 
-// Half-width of the inverted-triangle playhead asset (17×9, tip at column 8).
+// Half-width of the inverted-triangle playhead asset (19×10, tip at column 9).
 // Mirrors the same-named constant in main.cpp's invalidation logic — both
 // describe the same asset, but each TU holds its own copy because main.cpp's
 // version is in an anonymous namespace.
-constexpr int kPlayheadHalfPx = 8;
+constexpr int kPlayheadHalfPx = 9;
 
 namespace {
 
@@ -119,9 +119,12 @@ void render_marker_stems_impl(
 
     const double sr = static_cast<double>(sample_rate);
     // Stem emanates from the flag rect's left outline (bottom edge, same
-    // column as the marker) and runs down to the waveform bottom.
+    // column as the marker) and runs down to the waveform bottom. The
+    // stroke tops out one row below the flag rect's bottom-border row,
+    // leaving that boundary row to the selection border (and empty when
+    // unselected). See kStemPaintTopPx in render.h.
     const double y_stem_top =
-        static_cast<double>(waveform_area.y) - kStemAboveWaveformPx;
+        static_cast<double>(waveform_area.y) - kStemPaintTopPx;
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);

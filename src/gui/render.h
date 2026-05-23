@@ -81,6 +81,17 @@ constexpr double kFlagBottomLiftPx = 11.0;
 // blit y = area.y - kStemAboveWaveformPx).
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
+// The marker stem's painted top sits ONE pixel below the overlay band's
+// boundary row (area.y - kStemAboveWaveformPx). That boundary row
+// (area.y - kFlagBottomLiftPx) is the flag rect's bottom-border row,
+// painted by the selection outline only when the marker is selected.
+// Stopping the stem one row short leaves that row to the border: when
+// selected the border owns it; when unselected it stays empty (and the
+// cursor triangle's top covers area.y - 10). The stem cache surface
+// overhang stays kStemAboveWaveformPx tall — only the stroke's starting
+// row moves; see render.cpp's y_stem_top.
+constexpr double kStemPaintTopPx = kStemAboveWaveformPx - 1.0;
+
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default
 // at non-HiDPI). warptempo_gui does not currently support HiDPI; this is
