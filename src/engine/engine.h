@@ -43,7 +43,7 @@ struct EngineParams {
 
     std::vector<std::pair<size_t, size_t>> timemap;  // src_frame, tgt_frame
 
-    int    N                          = 4096;
+    int    N                          = 2560;
     int    fftw_threads               = 0;   // 0 = auto
     LimiterMode limiter_mode          = LimiterMode::None;
     double limiter_ceiling_dbfs       = -0.3;   // spectral

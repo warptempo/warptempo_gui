@@ -115,9 +115,12 @@ struct AudioSTFT {
     // Source metadata
     SF_INFO src_info{};
     SNDFILE* src_snd = nullptr;
-    // Default matches CLI; eq_test_suite.cpp data collected at N=3328 but generalizes
-    // due to 1/3-octave Gaussian smoothing.
-    int N = 4096;
+    // Default N=2560 (2^9*5): ~40 Hz practical bass floor for this
+    // material gives 2.32 cycles/window, clearing the ~2-cycle phase-vocoder
+    // coherence floor; phase resets cover quiet-section onsets. 2^9*5 is the
+    // most FFTW-efficient factorization in the viable range. Must stay
+    // divisible by 4 (R_s = N/4).
+    int N = 2560;
     int R_s = 0;
     int channels = 0;
     double nyquist = 0.0;
