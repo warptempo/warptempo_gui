@@ -68,9 +68,21 @@ void Selection::sanitize_selection_after_restore(int n) {
 void Selection::cycle_selection(bool forward) {
     const int sr = audio.sample_rate();
     const bool phase_reset = (app.active_markers_view == 'P');
+
+    // Render-view cycles the displayed render-domain collections; normal
+    // authoring cycles the live authoring stores. Mirrors the branch in
+    // prune_live_selection. Bind const refs once so the count, frame_of,
+    // and is_disabled reads below all index the same vectors.
+    const std::vector<GuiWarpMarker>& warp_vec =
+        app.render_view_enabled ? app.render_view_markers
+                                : app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& reset_vec =
+        app.render_view_enabled ? app.render_view_phase_resets
+                                : app.phase_reset_markers.markers();
+
     const int n = phase_reset
-        ? static_cast<int>(app.phase_reset_markers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
+        ? static_cast<int>(reset_vec.size())
+        : static_cast<int>(warp_vec.size());
     if (n == 0) return;
 
     // Helper to read frame-of-index in the active domain. Source view:
@@ -86,11 +98,11 @@ void Selection::cycle_selection(bool forward) {
         int64_t src_f;
         if (phase_reset) {
             src_f = static_cast<int64_t>(std::nearbyint(
-                app.phase_reset_markers.markers()[i].time_seconds *
+                reset_vec[i].time_seconds *
                 static_cast<double>(sr)));
         } else {
             src_f = static_cast<int64_t>(std::nearbyint(
-                app.warpmarkers.markers()[i].time_seconds *
+                warp_vec[i].time_seconds *
                 static_cast<double>(sr)));
         }
         return to_domain_frame(app, src_f, tmap);
@@ -100,9 +112,9 @@ void Selection::cycle_selection(bool forward) {
     // effective_disabled; phase reset has no cascade and reads the bool.
     auto is_disabled = [&](int i) -> bool {
         if (phase_reset) {
-            return app.phase_reset_markers.markers()[i].disabled;
+            return reset_vec[i].disabled;
         }
-        return effective_disabled(app.warpmarkers.markers(), i);
+        return effective_disabled(warp_vec, i);
     };
 
     // Playhead is the sole anchor for cycle direction. Strict inequality

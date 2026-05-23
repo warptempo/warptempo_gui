@@ -304,6 +304,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              viewport.cpp trim_range)
     //   - Esc                    → top-level no-op (chunk Q)
     //   - p (no mods)            → toggle warp/phase reset sub-view (Brief F)
+    //   - Tab / Shift+Tab /      → cycle marker focus (no A/B tabs in
+    //     IsoLeftTab               render-view, so Ctrl+Tab / Ctrl+Shift+Tab
+    //                              stay no-ops; cycles the render-domain
+    //                              collection per the active p-state)
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing (Brief F)
     //   - Up/Down (no mods)      → zoom in/out (Brief S.2)
     //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
@@ -349,6 +353,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_esc = (key == GuiKeys::Escape);
         const bool is_sub_view_toggle =
             (key == GuiKeys::P && !ctrl && !shift && !alt);
+        const bool is_tab_cycle =
+            (!ctrl && !alt &&
+             (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab));
         const bool is_ctrl_q =
             (ctrl && !shift && !alt && key == GuiKeys::Q);
         const bool is_ctrl_w =
@@ -368,7 +375,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!(is_r || is_nav || is_render_view_nav_jump ||
               is_commit || is_playback ||
               is_scrub || is_jump || is_esc ||
-              is_sub_view_toggle || is_ctrl_q || is_ctrl_w ||
+              is_sub_view_toggle || is_tab_cycle ||
+              is_ctrl_q || is_ctrl_w ||
               is_zoom || is_zoom_symbol || is_zero || is_follow ||
               is_center)) {
             return;
@@ -1824,12 +1832,18 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     const int sr = audio.sample_rate();
     int64_t src_sample = 0;
     if (app.active_markers_view == 'P') {
-        const auto& tv = app.phase_reset_markers.markers();
+        // Render-view recenters on the displayed render-domain phase
+        // resets; authoring recenters on the live store.
+        const auto& tv = app.render_view_enabled
+            ? app.render_view_phase_resets
+            : app.phase_reset_markers.markers();
         if (idx >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
             tv[idx].time_seconds * static_cast<double>(sr)));
     } else {
-        const auto& mv = app.warpmarkers.markers();
+        const auto& mv = app.render_view_enabled
+            ? app.render_view_markers
+            : app.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
             mv[idx].time_seconds * static_cast<double>(sr)));
