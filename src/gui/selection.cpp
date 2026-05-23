@@ -139,27 +139,14 @@ void Selection::cycle_selection(bool forward) {
 
     if (new_sel < 0) return;
 
+    // Selection only. Viewport positioning is owned entirely by the sole
+    // caller (cycle_marker_focus_with_recenter), which centers the
+    // focused marker in one write. A scroll-into-view here would be a
+    // redundant intermediate viewport write — overridden by that
+    // centering in the same keypress — and the resulting damage,
+    // accumulated against a non-final viewport, is what produced the
+    // outline-blink / cursor-hop artifact.
     set_single_selection(new_sel);
-
-    const int64_t sample = frame_of(new_sel);
-    const int64_t visible = samples_visible(app, audio);
-    if (visible > 0) {
-        const int64_t old_vp = app.viewport_start_sample;
-        const int64_t vp_end = old_vp + visible;
-        if (sample < old_vp) {
-            app.viewport_start_sample = sample;
-        } else if (sample >= vp_end) {
-            const double spp = current_samples_per_pixel(app, audio);
-            const int64_t one_px =
-                static_cast<int64_t>(std::nearbyint(spp));
-            app.viewport_start_sample =
-                sample - (visible - std::max<int64_t>(one_px, 1));
-        }
-        clamp_viewport_start(app, audio);
-        if (app.viewport_start_sample != old_vp) {
-            viewport.invalidate_waveform_area();
-        }
-    }
 }
 
 void Selection::select_next_marker() { cycle_selection(true);  }

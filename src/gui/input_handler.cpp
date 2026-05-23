@@ -1860,12 +1860,42 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     }
 
     playback_lifecycle.stop_playback_if_playing();
-    viewport.move_playhead_to(sample);
-    // Mirror the GuiKeys::C body verbatim — apply_zoom_change(kMinNumericLevel)
-    // is a no-op when already at that level, in which case
-    // center_viewport_on_playhead alone carries the centering work.
+
+    // Capture the old playhead pixel-x before mutating, for the
+    // no-scroll invalidation branch below.
+    const double old_px = playhead_pixel_x(app, audio);
+    const int64_t old_vp = app.viewport_start_sample;
+
+    // Set the cursor directly — no move_playhead_to, which would scroll
+    // the viewport a second time before centering. Mirror move_playhead_to's
+    // scanner-sync invariant: when the scanner is inactive its sample
+    // tracks the cursor (Tab always runs with playback stopped, so the
+    // scanner is inactive here, but keep the guard for symmetry).
+    app.playhead_cursor_sample = sample;
+    if (!app.playhead_scanner_active) {
+        app.playhead_scanner_sample = sample;
+    }
+
+    // Zoom to max-numeric if not already there (no-op at max zoom, where
+    // this artifact occurs), then center. center_viewport_on_playhead is
+    // now the SOLE viewport write in this path: it reads the cursor we
+    // just set and scrolls once to center it, emitting one coherent set
+    // of waveform + top-strip damage against the final viewport.
     viewport.apply_zoom_change(kMinNumericLevel);
     viewport.center_viewport_on_playhead();
+
+    // center_viewport_on_playhead only invalidates when the viewport
+    // actually moved. At end-of-file (viewport already clamped) it does
+    // not move, so the cursor's column change still needs its own
+    // invalidation — mirror move_playhead_to's no-scroll branch. When the
+    // viewport did move, the playhead columns are already inside the
+    // waveform-area damage center emitted, so only invalidate columns in
+    // the unmoved case to avoid a redundant rect.
+    if (app.viewport_start_sample == old_vp) {
+        const double new_px = playhead_pixel_x(app, audio);
+        viewport.invalidate_playhead_columns(old_px, new_px);
+    }
+    viewport.invalidate_timestamp_area();
 }
 
 // X.7.8b-2: shared wheel handler. Verbatim from the lambda at the original
