@@ -303,7 +303,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              (render-view has no trim — see
     //                              viewport.cpp trim_range)
     //   - Esc                    → top-level no-op (chunk Q)
-    //   - t (no mods)            → toggle warp/phase reset sub-view (Brief F)
+    //   - p (no mods)            → toggle warp/phase reset sub-view (Brief F)
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing (Brief F)
     //   - Up/Down (no mods)      → zoom in/out (Brief S.2)
     //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
