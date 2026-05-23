@@ -601,8 +601,8 @@ bool validate_engine_setting(const std::string& key,
     if (key == "N") {
         int v;
         if (!parse_int_strict(value, v) ||
-            (v != 1024 && v != 2048 && v != 4096 && v != 8192)) {
-            reason = "must be one of {1024, 2048, 4096, 8192}";
+            v < 256 || v > 8192 || (v % 4 != 0)) {
+            reason = "must be an integer divisible by 4 in [256, 8192]";
             return false;
         }
         out.N = v;
