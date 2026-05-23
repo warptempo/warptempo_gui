@@ -34,6 +34,7 @@ namespace GuiKeys {
 
     // Punctuation (X11 keysym values).
     constexpr GuiKey Space        = 0x0020;
+    constexpr GuiKey Apostrophe   = 0x0027;
     constexpr GuiKey Asterisk     = 0x002a;
     constexpr GuiKey Plus         = 0x002b;
     constexpr GuiKey Comma        = 0x002c;

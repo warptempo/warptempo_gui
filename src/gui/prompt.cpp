@@ -48,9 +48,7 @@ void GuiPrompt::activate_response(char k) {
             return;
         }
         if (k == '\x1b') {
-            app.prompt.active = false;
-            app.pending_paste_anchor = -1;
-            viewport.invalidate_all();
+            cancel_paste_confirmation();
             return;
         }
         return;
@@ -86,6 +84,12 @@ void GuiPrompt::activate_response(char k) {
         }
         return;
     }
+}
+
+void GuiPrompt::cancel_paste_confirmation() {
+    app.prompt.active = false;
+    app.pending_paste_anchor = -1;
+    viewport.invalidate_all();
 }
 
 // Route a close / revert gesture through the prompt when history is

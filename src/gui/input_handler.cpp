@@ -203,6 +203,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Escape map to sentinel chars '\x7f' and '\x1b' so they participate
     // in the same vector<char> match as letter responses.
     if (app.prompt.active) {
+        // PASTE_CONFIRM only: Ctrl+Q / Ctrl+W abandon the pending paste
+        // (the real cancel, not a synthesized Esc) and then run the
+        // normal close/revert path. The unsaved-work dialogs
+        // (CLOSE_WINDOW / REVERT_TO_BLANK) deliberately fall through to
+        // the modal swallow below and keep blocking these chords.
+        if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
+            ctrl && !shift && !alt &&
+            (key == GuiKeys::Q || key == GuiKeys::W)) {
+            prompt.cancel_paste_confirmation();
+            prompt.request_close_or_revert(
+                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
+                                  : DialogTrigger::REVERT_TO_BLANK);
+            return;
+        }
         char k = 0;
         if (key >= GuiKeys::A && key <= GuiKeys::Z) {
             k = static_cast<char>('a' + (key - GuiKeys::A));
@@ -272,6 +286,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // edit. Routed before queue/drag/playhead Esc handlers so Esc
     // cancels the edit first.
     if (text_editor::is_active(app.settings_editor)) {
+        // Ctrl+Q / Ctrl+W escape the editor even mid-edit: discard the
+        // in-progress text (no commit) via the same teardown Esc uses,
+        // then run the normal close/revert path (which raises the
+        // unsaved-work dialog if history is dirty).
+        if (ctrl && !shift && !alt &&
+            (key == GuiKeys::Q || key == GuiKeys::W)) {
+            settings_editor.exit_no_commit();
+            prompt.request_close_or_revert(
+                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
+                                  : DialogTrigger::REVERT_TO_BLANK);
+            return;
+        }
         (void)ctrl; (void)alt;
         const auto action = text_editor::handle_key(
             app.settings_editor, key, mods);

@@ -42,6 +42,14 @@ struct GuiPrompt {
     void request_close_or_revert(DialogTrigger t);
     void activate_response(char k);
 
+    // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
+    // prompt and clear the pending paste anchor. Called from
+    // activate_response on Esc, and from the Ctrl+Q / Ctrl+W
+    // interception in input_handler so both cancels go through one
+    // path (no synthesized Esc keystroke). Safe to call only when a
+    // PASTE_CONFIRM prompt is up.
+    void cancel_paste_confirmation();
+
 private:
     void open_unsaved(DialogTrigger t);
     void proceed(DialogTrigger t);

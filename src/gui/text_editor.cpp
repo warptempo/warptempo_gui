@@ -27,19 +27,39 @@ char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind) {
     if (key == GuiKeys::Period && !shift && kind != Kind::BpmBracket) return '.';
 
     if (kind == Kind::SettingsAssignment) {
-        // Letters: lowercase only (case-folded at the platform boundary).
-        if (key >= GuiKeys::A && key <= GuiKeys::Z && !shift) {
-            return static_cast<char>('a' + (key - GuiKeys::A));
+        // Letters: lowercase bare, uppercase with Shift. Capitals are
+        // accepted for every settings line so `title=` can carry a
+        // human-readable value (e.g. "Symphony No. 40 (K. 550)"); keys
+        // that require lowercase (N, output_format, ...) are still guarded
+        // by their per-key validators in settings_io.cpp, which reject the
+        // bad value at commit. The title validator accepts any non-empty,
+        // newline-free string, so the full printable set below round-trips.
+        if (key >= GuiKeys::A && key <= GuiKeys::Z) {
+            return shift
+                ? static_cast<char>('A' + (key - GuiKeys::A))
+                : static_cast<char>('a' + (key - GuiKeys::A));
         }
-        // Settings lines have exactly one '='; both halves can contain
-        // identifier-shaped characters. Minus carries negative numbers
-        // in future render parameters; colon is needed for the MM:SS.mmm
-        // shape of trim values. Underscore arrives as Shift+Minus on US.
+        // Identifier / value punctuation. Settings lines have exactly one
+        // '='; both halves can contain identifier-shaped characters.
+        // Minus carries negative numbers; colon is needed for the
+        // MM:SS.mmm shape of trim values. Underscore arrives as
+        // Shift+Minus on US.
         if (key == GuiKeys::Equal     && !shift) return '=';
         if (key == GuiKeys::Minus     && !shift) return '-';
         if (key == GuiKeys::Minus     &&  shift) return '_';
         if (key == GuiKeys::Colon                ) return ':';
         if (key == GuiKeys::Semicolon &&  shift) return ':';
+        // Title punctuation. Space, parentheses, comma, apostrophe,
+        // ampersand — the characters a recording title needs. Period is
+        // handled by the common branch at the top of this function.
+        // US-layout shifted-digit forms match the convention used by the
+        // other Kind branches (e.g. Shift+2 → @ in BpmBracket).
+        if (key == GuiKeys::Space)                 return ' ';
+        if (key == GuiKeys::Comma      && !shift) return ',';
+        if (key == GuiKeys::Apostrophe && !shift) return '\'';
+        if (key == GuiKeys::Digit7     &&  shift) return '&';
+        if (key == GuiKeys::Digit9     &&  shift) return '(';
+        if (key == GuiKeys::Digit0     &&  shift) return ')';
         return 0;
     }
 
