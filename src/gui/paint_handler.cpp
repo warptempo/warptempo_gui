@@ -1377,16 +1377,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 // waveform fingerprint (mirrors the input computation on_redraw does), and
 // either dispatches a fresh job, sets the supersede slot, or no-ops.
 //
-// The input-computation block is duplicated with on_redraw on purpose: it
-// is the single source of truth for the waveform fingerprint. Keep them in
-// sync — when on_redraw's target_timemap / trim derivation changes, this
-// function changes the same way.
+// The input-computation block lives in compute_waveform_render_inputs(): it
+// is the single source of truth for the desired waveform fingerprint, and
+// is also consumed by force_synchronous_waveform_rebuild(). on_redraw's
+// consumer derivation must stay in sync with the helper the same way it
+// tracked the prior inline block.
 
-void GuiPaintHandler::maybe_enqueue_waveform_render() {
-    if (app.loading || audio.total_frames() <= 0) return;
+GuiPaintHandler::WaveformRenderInputs
+GuiPaintHandler::compute_waveform_render_inputs() const {
+    WaveformRenderInputs in;
+    if (app.loading || audio.total_frames() <= 0) return in;
 
-    const GuiRect area     = waveform_area(app);
-    if (area.w <= 0 || area.h <= 0) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return in;
 
     const double  spp      = current_samples_per_pixel(app, audio);
     const int64_t vp_start = app.viewport_start_sample;
@@ -1451,17 +1454,31 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     } else {
         trim = compute_trim_samples(app, sr, audio.total_frames());
     }
-    const int64_t trim_begin = trim.first;
-    const int64_t trim_end   = trim.second;
 
-    const int channel_count = audio.render_channels();
+    in.vp_start      = vp_start;
+    in.vp_end        = vp_end;
+    in.trim_begin    = trim.first;
+    in.trim_end      = trim.second;
+    in.area_w        = area.w;
+    in.area_h        = area.h;
+    in.is_target     = is_target;
+    in.timemap_hash  = target_timemap_hash;
+    in.channel_count = audio.render_channels();
+    in.timemap       = std::move(target_timemap);
+    in.valid         = true;
+    return in;
+}
+
+void GuiPaintHandler::maybe_enqueue_waveform_render() {
+    WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) return;
 
     // Drag-freeze gate: during a target-view drag the timemap-derived
     // inputs are excluded from the dirty-detect comparison, so non-drag
     // viewport changes (which would still update pending_fp_* if they
     // happened) trigger a render but pure drag-motion does not. See the
     // original brief 3b comment in on_redraw.
-    const bool drag_freeze = is_target && app.drag.active;
+    const bool drag_freeze = in.is_target && app.drag.active;
 
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
@@ -1470,15 +1487,15 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         long long fp_ag, bool    fp_t,
         uint64_t fp_h) -> bool {
         if (fp_ag != app.audio_generation) return true;
-        if (fp_vp_s != vp_start)           return true;
-        if (fp_vp_e != vp_end)             return true;
-        if (fp_aw   != area.w)             return true;
-        if (fp_ah   != area.h)             return true;
-        if (fp_t    != is_target)          return true;
+        if (fp_vp_s != in.vp_start)        return true;
+        if (fp_vp_e != in.vp_end)          return true;
+        if (fp_aw   != in.area_w)          return true;
+        if (fp_ah   != in.area_h)          return true;
+        if (fp_t    != in.is_target)       return true;
         if (!drag_freeze) {
-            if (fp_tb != trim_begin)          return true;
-            if (fp_te != trim_end)            return true;
-            if (fp_h  != target_timemap_hash) return true;
+            if (fp_tb != in.trim_begin)       return true;
+            if (fp_te != in.trim_end)         return true;
+            if (fp_h  != in.timemap_hash)     return true;
         }
         return false;
     };
@@ -1502,62 +1519,62 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
     if (waveform_worker.is_busy()) {
         wf_cache.supersede             = true;
-        wf_cache.supersede_vp_start    = vp_start;
-        wf_cache.supersede_vp_end      = vp_end;
-        wf_cache.supersede_trim_begin  = trim_begin;
-        wf_cache.supersede_trim_end    = trim_end;
-        wf_cache.supersede_area_w      = area.w;
-        wf_cache.supersede_area_h      = area.h;
+        wf_cache.supersede_vp_start    = in.vp_start;
+        wf_cache.supersede_vp_end      = in.vp_end;
+        wf_cache.supersede_trim_begin  = in.trim_begin;
+        wf_cache.supersede_trim_end    = in.trim_end;
+        wf_cache.supersede_area_w      = in.area_w;
+        wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_audio_gen   = app.audio_generation;
-        wf_cache.supersede_target      = is_target;
-        wf_cache.supersede_timemap_hash = target_timemap_hash;
-        wf_cache.supersede_timemap     = std::move(target_timemap);
+        wf_cache.supersede_target      = in.is_target;
+        wf_cache.supersede_timemap_hash = in.timemap_hash;
+        wf_cache.supersede_timemap     = std::move(in.timemap);
         return;
     }
 
     // Idle: dispatch immediately. Reuse pending_surface if dimensions
     // match; recreate on mismatch (window resize, first allocation).
     if (!wf_cache.pending_surface ||
-        wf_cache.pending_width  != area.w ||
-        wf_cache.pending_height != area.h) {
+        wf_cache.pending_width  != in.area_w ||
+        wf_cache.pending_height != in.area_h) {
         if (wf_cache.pending_surface) {
             cairo_surface_destroy(wf_cache.pending_surface);
             wf_cache.pending_surface = nullptr;
         }
         wf_cache.pending_surface = cairo_image_surface_create(
-            CAIRO_FORMAT_ARGB32, area.w, area.h);
-        wf_cache.pending_width  = area.w;
-        wf_cache.pending_height = area.h;
+            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+        wf_cache.pending_width  = in.area_w;
+        wf_cache.pending_height = in.area_h;
     }
 
     WaveformJob job;
-    job.vp_start       = vp_start;
-    job.vp_end         = vp_end;
-    job.trim_begin     = trim_begin;
-    job.trim_end       = trim_end;
-    job.area_w         = area.w;
-    job.area_h         = area.h;
+    job.vp_start       = in.vp_start;
+    job.vp_end         = in.vp_end;
+    job.trim_begin     = in.trim_begin;
+    job.trim_end       = in.trim_end;
+    job.area_w         = in.area_w;
+    job.area_h         = in.area_h;
     job.audio_gen      = app.audio_generation;
-    job.target         = is_target;
-    job.timemap_hash   = target_timemap_hash;
+    job.target         = in.is_target;
+    job.timemap_hash   = in.timemap_hash;
     // Stage B: stash a copy of the timemap on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
-    wf_cache.pending_fp_timemap = target_timemap;
-    job.timemap        = std::move(target_timemap);
+    wf_cache.pending_fp_timemap = in.timemap;
+    job.timemap        = std::move(in.timemap);
     job.surface        = wf_cache.pending_surface;
-    job.channel_count  = channel_count;
+    job.channel_count  = in.channel_count;
     job.audio          = &audio;
 
-    wf_cache.pending_fp_vp_start    = vp_start;
-    wf_cache.pending_fp_vp_end      = vp_end;
-    wf_cache.pending_fp_trim_begin  = trim_begin;
-    wf_cache.pending_fp_trim_end    = trim_end;
-    wf_cache.pending_fp_area_w      = area.w;
-    wf_cache.pending_fp_area_h      = area.h;
+    wf_cache.pending_fp_vp_start    = in.vp_start;
+    wf_cache.pending_fp_vp_end      = in.vp_end;
+    wf_cache.pending_fp_trim_begin  = in.trim_begin;
+    wf_cache.pending_fp_trim_end    = in.trim_end;
+    wf_cache.pending_fp_area_w      = in.area_w;
+    wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_audio_gen   = app.audio_generation;
-    wf_cache.pending_fp_target      = is_target;
-    wf_cache.pending_fp_timemap_hash = target_timemap_hash;
+    wf_cache.pending_fp_target      = in.is_target;
+    wf_cache.pending_fp_timemap_hash = in.timemap_hash;
 
     waveform_worker.dispatch(std::move(job),
         [this](bool ok) { on_waveform_render_done(ok); });
@@ -1664,6 +1681,95 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
+    const GuiRect a = waveform_area(app);
+    gui.invalidate_region(0, 0, app.width, a.y + a.h);
+}
+
+// -- Synchronous waveform rebuild (discrete marker-cycle jump) -----------
+//
+// Tab / Shift+Tab / Ctrl+Shift+Tab routes through here from the input
+// handler. The async worker rebuilds the waveform one frame late, so the
+// same-tick stem/flag rebuilds key off the lagging wf_cache.fp_* and the
+// selection rectangle on the newly focused marker blinks across the
+// worker window. Forcing a sync render + fp publish here makes the
+// stem/flag caches converge against the final viewport this tick.
+//
+// Writing into wf_cache.surface directly (not pending_surface + swap) is
+// safe only because wait_until_idle() ran first — the worker is Idle and
+// holds no reference to the live surface. Do not reorder the drain after
+// the render.
+
+void GuiPaintHandler::force_synchronous_waveform_rebuild() {
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) return;
+
+    // Drain any in-flight worker job so we own the cache surfaces.
+    // Cancels a Running job and synchronously consumes a
+    // CompletionPending one (same primitive file_loader uses before
+    // swapping audio). After this the worker is Idle and will not touch
+    // wf_cache surfaces underneath us.
+    waveform_worker.wait_until_idle();
+
+    // Clear any stale supersede request: wait_until_idle may have
+    // cancelled a job whose supersede slot was set; we are about to
+    // publish the current viewport ourselves, so the slot must not
+    // re-dispatch an old one on a later tick.
+    wf_cache.supersede = false;
+    wf_cache.supersede_timemap.clear();
+
+    // Render into the LIVE surface directly. Reuse-or-recreate on
+    // dimension mismatch, mirroring the dispatch path.
+    if (!wf_cache.surface ||
+        wf_cache.width  != in.area_w ||
+        wf_cache.height != in.area_h) {
+        if (wf_cache.surface) {
+            cairo_surface_destroy(wf_cache.surface);
+            wf_cache.surface = nullptr;
+        }
+        wf_cache.surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+        wf_cache.width  = in.area_w;
+        wf_cache.height = in.area_h;
+    }
+
+    render_waveform_to_cache_surface(
+        wf_cache.surface,
+        in.area_w, in.area_h,
+        in.channel_count,
+        audio,
+        in.vp_start, in.vp_end,
+        in.trim_begin, in.trim_end,
+        in.timemap.empty() ? nullptr : &in.timemap);
+
+    // Publish the displayed fingerprint NOW so this same tick's
+    // maybe_rebuild_stem_cache / maybe_rebuild_flag_cache read the
+    // current viewport. Keep pending_fp_* in lockstep so the next
+    // maybe_enqueue_waveform_render sees no diff and does not
+    // re-dispatch the same target on the worker.
+    wf_cache.fp_vp_start     = in.vp_start;
+    wf_cache.fp_vp_end       = in.vp_end;
+    wf_cache.fp_trim_begin   = in.trim_begin;
+    wf_cache.fp_trim_end     = in.trim_end;
+    wf_cache.fp_area_w       = in.area_w;
+    wf_cache.fp_area_h       = in.area_h;
+    wf_cache.fp_audio_gen    = app.audio_generation;
+    wf_cache.fp_target       = in.is_target;
+    wf_cache.fp_timemap_hash = in.timemap_hash;
+    wf_cache.fp_timemap      = in.timemap;
+
+    wf_cache.pending_fp_vp_start     = in.vp_start;
+    wf_cache.pending_fp_vp_end       = in.vp_end;
+    wf_cache.pending_fp_trim_begin   = in.trim_begin;
+    wf_cache.pending_fp_trim_end     = in.trim_end;
+    wf_cache.pending_fp_area_w       = in.area_w;
+    wf_cache.pending_fp_area_h       = in.area_h;
+    wf_cache.pending_fp_audio_gen    = app.audio_generation;
+    wf_cache.pending_fp_target       = in.is_target;
+    wf_cache.pending_fp_timemap_hash = in.timemap_hash;
+    wf_cache.pending_fp_timemap      = in.timemap;
+
+    wf_cache.dirty = false;
+
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }

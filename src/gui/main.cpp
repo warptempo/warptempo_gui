@@ -448,7 +448,8 @@ int main(int argc, char** argv) {
                                   phase_reset_propagate,
                                   async_renderer,
                                   playback_lifecycle, save_ops, prompt,
-                                  settings_editor, target_render);
+                                  settings_editor, target_render,
+                                  paint_handler);
 
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };

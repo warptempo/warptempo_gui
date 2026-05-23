@@ -435,4 +435,35 @@ struct GuiPaintHandler {
     // render-view flag, editor targets) live from app state. Rebuilds are
     // synchronous (sub-millisecond at observed flag counts).
     void maybe_rebuild_flag_cache();
+
+    // Force a synchronous waveform rebuild + fp_vp_* update for a single
+    // discrete viewport jump (the marker-focus cycle). Renders into the
+    // live surface on the calling (main) thread and publishes the
+    // displayed fingerprint immediately, so a same-tick stem/flag rebuild
+    // reads the current viewport instead of the lagging async one. NOT
+    // for continuous gestures — those stay on the worker.
+    void force_synchronous_waveform_rebuild();
+
+private:
+    // Waveform fingerprint inputs derived from current app state. This is
+    // the single source of truth for the desired waveform fingerprint —
+    // both maybe_enqueue_waveform_render (async path) and
+    // force_synchronous_waveform_rebuild (sync path) consume it. The
+    // on_redraw consumer-side derivation must stay in sync with this
+    // helper the same way it tracked the prior inline block.
+    struct WaveformRenderInputs {
+        int64_t  vp_start      = 0;
+        int64_t  vp_end        = 0;
+        int64_t  trim_begin    = 0;
+        int64_t  trim_end      = 0;
+        int      area_w        = 0;
+        int      area_h        = 0;
+        bool     is_target     = false;
+        uint64_t timemap_hash  = 0;
+        int      channel_count = 0;
+        std::vector<TimeMapSegment> timemap;   // empty in source view
+        bool     valid         = false;        // false if degenerate / loading
+    };
+
+    WaveformRenderInputs compute_waveform_render_inputs() const;
 };

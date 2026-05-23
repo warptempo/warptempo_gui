@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+struct GuiPaintHandler;
+
 // X.7.8b-1: keyboard input handler. Owns the on_key callback body extracted
 // verbatim from main.cpp's lambda at the original main.cpp:1588. Lifetime is
 // the same scope as the other operation structs.
@@ -112,6 +114,7 @@ struct GuiInputHandler {
     GuiPrompt&               prompt;
     GuiSettingsEditor&       settings_editor;
     GuiTargetRender&      target_render;
+    GuiPaintHandler&         paint_handler;
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -131,7 +134,8 @@ struct GuiInputHandler {
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
                     GuiSettingsEditor&       settings_editor_,
-                    GuiTargetRender&      target_render_)
+                    GuiTargetRender&      target_render_,
+                    GuiPaintHandler&         paint_handler_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -150,7 +154,8 @@ struct GuiInputHandler {
           save_ops(save_ops_),
           prompt(prompt_),
           settings_editor(settings_editor_),
-          target_render(target_render_) {}
+          target_render(target_render_),
+          paint_handler(paint_handler_) {}
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);

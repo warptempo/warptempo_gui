@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "paint_handler.h"
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -1896,6 +1897,14 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         viewport.invalidate_playhead_columns(old_px, new_px);
     }
     viewport.invalidate_timestamp_area();
+
+    // Discrete jump: render the waveform synchronously and publish the
+    // displayed fingerprint now, so this tick's stem/flag caches rebuild
+    // once against the final viewport instead of blinking across the
+    // async worker's rebuild window. The worker stays the path for
+    // continuous gestures; we just don't route this one-shot jump
+    // through it.
+    paint_handler.force_synchronous_waveform_rebuild();
 }
 
 // X.7.8b-2: shared wheel handler. Verbatim from the lambda at the original
