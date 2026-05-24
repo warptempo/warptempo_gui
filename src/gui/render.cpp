@@ -647,7 +647,6 @@ void iterate_visible_flags_impl(
       - base_ext.height
       - hl_pad_helper
       - kVPadExtraPx;
-    const double pad          = 4.0;
 
     double rightmost_right_edge = -1e18;
 
@@ -672,7 +671,12 @@ void iterate_visible_flags_impl(
             samples_per_pixel;
         const double text_left =
             static_cast<double>(top_strip_area.x) + std::round(x_raw);
-        if (text_left < rightmost_right_edge + pad) {
+        // Elide only on genuine overlap: a candidate is dropped only when its
+        // chip left edge (text_left - kFlagInnerPadPx) would fall left of the
+        // previous chip's right edge. Adjacent chips may share an edge (touch)
+        // without being elided — there is no inter-chip gutter. Reintroducing
+        // one is a single added term on the right-hand side here.
+        if (text_left < rightmost_right_edge + kFlagInnerPadPx) {
             if constexpr (kDebugPerf) perf_counters::flag_elided++;
             continue;
         }
@@ -685,7 +689,7 @@ void iterate_visible_flags_impl(
         if constexpr (kDebugPerf) perf_counters::flag_measure++;
 
         emit(static_cast<int>(i), text_left, baseline_y, text, ext);
-        rightmost_right_edge = text_left + ext.width;
+        rightmost_right_edge = text_left + ext.x_advance + kFlagInnerPadPx;
     }
 }
 
@@ -919,9 +923,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
             r.marker_index = i;
-            r.x = text_left;
+            r.x = std::round(text_left - hl_pad);
             r.y = baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
-            r.w = hl_pad + ext.x_bearing + ext.width + hl_pad;
+            r.w = std::round(ext.x_advance + 2.0 * hl_pad);
             r.h = uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
             out.push_back(r);
         });
