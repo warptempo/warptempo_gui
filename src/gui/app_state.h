@@ -34,6 +34,13 @@ constexpr int kMinNumericLevel  = 1;
 constexpr int kMaxNumericLevel  = 9;
 constexpr int kZoomTableSize    = 10;
 
+// Viewport lead/overlap fraction, expressed as a divisor of the visible
+// span. Follow mode keeps this much of the window as lead context when it
+// re-anchors; paged scroll (PageUp/PageDown) retains the same fraction as
+// overlap so the two behaviors stay visually consistent. One source of
+// truth — do not inline the divisor at either site.
+constexpr int64_t kViewportLeadDivisor = 10;
+
 // X.7.8b-2: hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them.

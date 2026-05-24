@@ -57,6 +57,8 @@ namespace GuiKeys {
     constexpr GuiKey Up         = 0xff52;
     constexpr GuiKey Right      = 0xff53;
     constexpr GuiKey Down       = 0xff54;
+    constexpr GuiKey PageUp     = 0xff55;   // XK_Prior
+    constexpr GuiKey PageDown   = 0xff56;   // XK_Next
     constexpr GuiKey End        = 0xff57;
     constexpr GuiKey IsoLeftTab = 0xfe20;
     constexpr GuiKey KpEnter    = 0xff8d;

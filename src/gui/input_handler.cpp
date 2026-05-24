@@ -455,6 +455,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_home_end =
             ((key == GuiKeys::Home || key == GuiKeys::End) &&
              !ctrl && !shift && !alt);
+        const bool is_page_updown =
+            ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
+             !ctrl && !shift && !alt);
         const bool is_zoom =
             ((key == GuiKeys::Up || key == GuiKeys::Down) &&
              !ctrl && !shift && !alt);
@@ -488,7 +491,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool is_copy_phase_resets =
             (ctrl && !shift && !alt && key == GuiKeys::P);
         if (!(is_o || is_play_pause || is_scrub || is_scrub_samples ||
-              is_home_end || is_zoom || is_zoom_symbol || is_zero ||
+              is_home_end || is_page_updown ||
+              is_zoom || is_zoom_symbol || is_zero ||
               is_follow || is_center || is_sub_t || is_sub_p ||
               is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
               is_esc || is_ctrl_q || is_ctrl_w || is_save ||
@@ -1813,6 +1817,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;
+    }
+
+    // PageUp / PageDown: page the viewport one screen back / forward,
+    // retaining the same lead fraction follow mode uses as overlap.
+    // Source-view only — the render-view allowlist above excludes them.
+    if (!ctrl && !alt && !shift && key == GuiKeys::PageDown) {
+        viewport.page_viewport(true);  return;
+    }
+    if (!ctrl && !alt && !shift && key == GuiKeys::PageUp) {
+        viewport.page_viewport(false); return;
     }
 
     // Bare-key dispatch. Every modifier-gated handler above this point

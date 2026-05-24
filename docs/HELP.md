@@ -108,7 +108,7 @@ The reference is grouped by function. Within the prose of this document a groupe
 
 **Playback and playhead.** `Space`, `Return`, or keypad `Enter` start and stop playback from the cursor to the trim end. `Left` and `Right` move the playhead one pixel; `Home` and `End` jump it to the trim begin and trim end. Any playhead move stops playback. `f` toggles follow mode, which scrolls the viewport to keep the playhead in view during playback. `Shift` plus a digit sets the playback speed: `Shift+0` is 1.00× (normal), and `Shift+1` through `Shift+9` set 0.10× through 0.90×; the change applies immediately whether or not playback is running.
 
-**Zoom and view.** `Up` and `Down` (equivalently `=` and `-`) zoom in and out. `0` toggles between fit-to-file and the most-zoomed-in numeric level (the same level `c` reaches). `c` zooms to the maximum numeric level and centers the viewport on the playhead.
+**Zoom and view.** `Up` and `Down` (equivalently `=` and `-`) zoom in and out. `0` toggles between fit-to-file and the most-zoomed-in numeric level (the same level `c` reaches). `c` zooms to the maximum numeric level and centers the viewport on the playhead. `PageUp` and `PageDown` page the viewport back and forward by one screen, retaining a small overlap so the edge of the previous view stays visible.
 
 **View toggles.** `t` switches the audio domain between source and target (S/T). `p` switches the marker collection between warp and phase reset (W/P). `o` toggles read-only on the active tab, which locks out every authoring key while leaving navigation, playback, view toggles, `Ctrl+P` copy, and `Ctrl+S` available. `Ctrl+Tab` switches the active A/B navigation tab; `Ctrl+Shift+Tab` advances both tabs' marker focus in lockstep and lands on the opposite tab.
 

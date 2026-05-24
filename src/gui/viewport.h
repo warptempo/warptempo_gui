@@ -40,6 +40,7 @@ struct Viewport {
     void zoom_in();
     void zoom_out();
     void scroll_viewport(int64_t delta_samples);
+    void page_viewport(bool forward);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();
 
