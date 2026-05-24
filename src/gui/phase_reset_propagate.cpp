@@ -18,16 +18,16 @@
 
 namespace {
 
-// Boundary guard for paste_state_apply's near-end bucketing, in
-// seconds. A phase reset within this distance before a section end (or
-// before a section start) is re-homed into the next chronological
-// labeled section by shifting every block's membership window backward
-// by this amount. This is an AUTHORING tolerance — the largest the user
-// ever nudges a destination phase reset off its true section boundary
-// (~2-10 ms typically, never more than ~92 ms) — deliberately NOT tied
-// to the engine N/window size, so a render-setting change cannot shift
-// which section a marker counts toward. Sole consumer is
-// paste_state_apply.
+// Boundary guard for near-end bucketing, in seconds. A phase reset
+// within this distance before a section end (or before a section start)
+// is re-homed into the next chronological labeled section by shifting
+// every block's membership window backward by this amount. This is an
+// AUTHORING tolerance — the largest the user ever nudges a destination
+// phase reset off its true section boundary (~2-10 ms typically, never
+// more than ~92 ms) — deliberately NOT tied to the engine N/window size,
+// so a render-setting change cannot shift which section a marker counts
+// toward. Shared membership window across all three propagate actions:
+// copy_from_selection, paste_apply, and paste_state_apply.
 constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
 // One named block resolved from a warp-marker walk. `label` is the
@@ -133,10 +133,18 @@ void PhaseResetPropagate::copy_from_selection() {
             clipboard_blocks.push_back(std::move(cb));
             continue;
         }
+        const double guard = kPhaseResetBoundaryGuardSeconds;
+        // Membership window shifts back by the guard so a lead-in phase
+        // reset (authored just before this block's owning marker) is
+        // captured as part of this block; the fractional anchor stays at
+        // the true marker time, so a lead-in reset gets a small negative
+        // fractional_position and round-trips to the same lead-in offset.
+        const double lo = b.start - guard;
+        const double hi = std::max(lo, b.end - guard);
         for (const auto& t : tv) {
             const double t_time = t.time_seconds;
-            if (t_time < b.start) continue;
-            if (t_time >= b.end)  continue;
+            if (t_time < lo)  continue;
+            if (t_time >= hi) continue;
             ClipboardPlacement p;
             p.fractional_position = (t_time - b.start) / duration;
             p.source_time         = t_time;
@@ -220,26 +228,33 @@ void PhaseResetPropagate::paste_apply() {
 
     auto& out = app.phase_reset_markers.markers_mut();
 
-    // Per-block clear of destination phase resets inside [start, end).
+    // Per-block clear of destination phase resets inside the shifted
+    // membership window [start - guard, end - guard). Adjacent matched
+    // blocks still tile without gap or overlap because every block's
+    // clear window shifts by the same guard.
+    const double guard = kPhaseResetBoundaryGuardSeconds;
     for (size_t i = 0; i < matched; ++i) {
-        const double start = dest_blocks[i].start;
-        const double end   = dest_blocks[i].end;
+        const double lo = dest_blocks[i].start - guard;
+        const double hi = std::max(lo, dest_blocks[i].end - guard);
         out.erase(std::remove_if(out.begin(), out.end(),
-            [start, end](const GuiPhaseResetMarker& m) {
-                return m.time_seconds >= start && m.time_seconds < end;
+            [lo, hi](const GuiPhaseResetMarker& m) {
+                return m.time_seconds >= lo && m.time_seconds < hi;
             }), out.end());
     }
 
-    // Per-block materialization. Insert via the monotonic-insertion
-    // path so list ordering and any defensive dedup behave identically
-    // to manual authoring.
+    // Per-block materialization. The fractional anchor and duration stay
+    // at the true dst_start / dst_end, so a negative fractional_position
+    // (captured from a lead-in placement) lands the marker in the lead-in
+    // before dst_start. Clamp to 0 per the universal no-negative-time
+    // rule; insert_marker does not clamp.
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
         const double dst_dur   = dest_blocks[i].end - dst_start;
         if (dst_dur <= 0.0) continue;
         for (const auto& p : clip_blocks[i].placements) {
             GuiPhaseResetMarker nm;
-            nm.time_seconds = dst_start + p.fractional_position * dst_dur;
+            nm.time_seconds =
+                std::max(0.0, dst_start + p.fractional_position * dst_dur);
             nm.disabled     = p.disabled;
             app.phase_reset_markers.insert_marker(std::move(nm));
         }

@@ -16,10 +16,15 @@
 // `source_time`, `source_start`, and `source_end` carry absolute source-
 // domain geometry so paste_state_apply can apply a boundary-aware count
 // using the same N-sample guard on both clipboard and destination sides.
-// They are ignored by paste_apply, which materializes every placement at
-// its fractional_position regardless of boundary proximity.
+// paste_apply materializes every placement at its fractional_position
+// regardless of boundary proximity; with the shared lead-in tolerance
+// applied at capture, fractional_position may be slightly negative for a
+// lead-in placement and paste_apply 0-clamps the materialized time.
 struct ClipboardPlacement {
-    double fractional_position = 0.0;  // [0.0, 1.0) into the source block
+    // Approximate range (-guard/duration, 1.0). A lead-in reset captured
+    // up to the guard before the block start yields a small negative
+    // fraction; paste_apply clamps the materialized time to 0.
+    double fractional_position = 0.0;
     double source_time         = 0.0;  // absolute capture-time seconds
     bool   disabled            = false;
 };
