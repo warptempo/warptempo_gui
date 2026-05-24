@@ -144,6 +144,7 @@ struct SettingDescriptor {
 constexpr SettingDescriptor kSettingsOrder[] = {
     { "title",                       SettingKind::EnginePassthrough,    EngineField::Title,                   nullptr },
     { "scale",                       SettingKind::EnginePassthrough,    EngineField::Scale,                   nullptr },
+    { "bpm",                         SettingKind::EnginePassthrough,    EngineField::Bpm,                     nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     { "N",                           SettingKind::EnginePassthrough,    EngineField::N,                       nullptr },
     { "fftw_threads",                SettingKind::EnginePassthrough,    EngineField::FftwThreads,             nullptr },
@@ -209,6 +210,14 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
         case EngineField::Scale:
             std::snprintf(buf, sizeof(buf), "%.6f", es.scale);
             out += buf;
+            break;
+        case EngineField::Bpm:
+            // Canonical unset form is empty (`bpm=`); 0 means unset.
+            if (es.bpm != 0) {
+                std::snprintf(buf, sizeof(buf), "%d", es.bpm);
+                out += buf;
+            }
+            // else: append nothing — the key line becomes `bpm=`.
             break;
         case EngineField::N:
             std::snprintf(buf, sizeof(buf), "%d", es.N);
@@ -596,6 +605,22 @@ bool validate_engine_setting(const std::string& key,
             return false;
         }
         out.scale = v;
+        return true;
+    }
+    if (key == "bpm") {
+        // Informational reference tempo. Empty value is the canonical
+        // "unset" form (written as `bpm=`); it parses to 0. A present
+        // value must be a non-negative integer.
+        if (value.empty()) {
+            out.bpm = 0;
+            return true;
+        }
+        int v;
+        if (!parse_int_strict(value, v) || v < 0) {
+            reason = "must be empty or an integer >= 0";
+            return false;
+        }
+        out.bpm = v;
         return true;
     }
     if (key == "N") {

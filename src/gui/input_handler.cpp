@@ -1103,6 +1103,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
             EngineSettings cell_settings = app.engine_settings;
             cell_settings.scale = computed->scale;
+            // Record the cell's swept BPM (informational) so the cell's
+            // .rendersettings carries it; Ctrl+Alt+C reads it back on
+            // commit. The sweep varies scale per cell, and bpm is the
+            // input that produced that scale — the two travel together.
+            cell_settings.bpm = bpm;
 
             char num_buf[16];
             std::snprintf(num_buf, sizeof(num_buf),
@@ -1238,10 +1243,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // appears in BPM folder names and in no other batch folder
         // name (queue is `_render_all_in_queue`, iter is
         // `_render_iterations`). On a BPM cell, read the per-cell
-        // `.rendersettings` sidecar's engine block and assign only
-        // `scale` into app.engine_settings — the BPM sweep varies
-        // only that field per cell; every other engine setting in
-        // the sidecar matches the user's dispatch-time engine state,
+        // `.rendersettings` sidecar's engine block and assign the
+        // per-cell `scale` and its originating `bpm` into
+        // app.engine_settings — the BPM sweep varies these two
+        // together per cell; every other engine setting in the
+        // sidecar matches the user's dispatch-time engine state,
         // and the user may have changed engine settings mid-batch.
         // On any other batch type, no engine commit happens — same
         // as today's iter / queue behavior. Settings has no undo by
@@ -1266,6 +1272,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                         sidecar.string().c_str());
                 } else {
                     app.engine_settings.scale = es->scale;
+                    app.engine_settings.bpm   = es->bpm;
                 }
             }
         }

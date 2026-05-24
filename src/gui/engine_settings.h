@@ -11,6 +11,7 @@ struct EngineSettings {
     std::string title;
     std::string output_format            = "wav";
     double      scale                    = 1.0;
+    int         bpm                      = 0;     // informational only; unused by engine/GUI
     int         N                        = 2560;
     int         fftw_threads             = 16;
     bool        limiter_enabled_on_render = true;
@@ -27,6 +28,7 @@ struct EngineSettings {
 enum class EngineField {
     Title,
     Scale,
+    Bpm,
     OutputFormat,
     N,
     FftwThreads,
