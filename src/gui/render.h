@@ -54,7 +54,7 @@ inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
 // 2 to 3 for breathing room. The single source of truth — both render and
 // hit-rect computation must use this value, and so must the iteration popup
 // in main.cpp.
-constexpr double kFlagInnerPadPx = 3.0;
+constexpr double kFlagInnerPadPx = 4.0;
 
 // Extra vertical inner padding added on top of kFlagInnerPadPx on each side.
 // (V.B Addendum 2: rects grow by 2*kVPadExtraPx in height; the horizontal
@@ -70,8 +70,10 @@ constexpr double kVPadExtraPx = 1.0;
 // extends above the waveform. Consumed by render_flags' baseline
 // computation, by render_markers' stem geometry (via the equal-by-
 // construction kStemAboveWaveformPx), and by the iter/BPM popups in
-// main.cpp which mirror the flag rect's vertical position.
-constexpr double kFlagBottomLiftPx = 11.0;
+// main.cpp which mirror the flag rect's vertical position. Doubles as the
+// waveform-to-flag-row gap; expected to become Brief F's waveform-side gap
+// constant when the strip layout is inverted to a fixed-pixel grid.
+constexpr double kFlagBottomLiftPx = 10.0;
 
 // Distance the marker stem extends above the waveform area, from the
 // waveform's top edge up to the stem's top. By construction this equals
@@ -82,16 +84,12 @@ constexpr double kFlagBottomLiftPx = 11.0;
 // blit y = area.y - kStemAboveWaveformPx).
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
-// The marker stem's painted top sits ONE pixel below the overlay band's
-// boundary row (area.y - kStemAboveWaveformPx). That boundary row
-// (area.y - kFlagBottomLiftPx) is the flag rect's bottom-border row,
-// painted by the selection outline only when the marker is selected.
-// Stopping the stem one row short leaves that row to the border: when
-// selected the border owns it; when unselected it stays empty (and the
-// cursor triangle's top covers area.y - 10). The stem cache surface
-// overhang stays kStemAboveWaveformPx tall — only the stroke's starting
-// row moves; see render.cpp's y_stem_top.
-constexpr double kStemPaintTopPx = kStemAboveWaveformPx - 1.0;
+// The marker stem's painted top sits flush with the flag box's bottom edge
+// (area.y - kStemAboveWaveformPx == area.y - kFlagBottomLiftPx), so the chip
+// and stem read as one continuous unit with no gap. The stem cache surface
+// overhang is kStemAboveWaveformPx tall; the stroke starts at the surface's
+// top row. See render.cpp's y_stem_top.
+constexpr double kStemPaintTopPx = kStemAboveWaveformPx;
 
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default

@@ -122,9 +122,8 @@ void render_marker_stems_impl(
     const double sr = static_cast<double>(sample_rate);
     // Stem emanates from the flag rect's left outline (bottom edge, same
     // column as the marker) and runs down to the waveform bottom. The
-    // stroke tops out one row below the flag rect's bottom-border row,
-    // leaving that boundary row to the selection border (and empty when
-    // unselected). See kStemPaintTopPx in render.h.
+    // stroke tops out flush with the flag rect's bottom edge — chip and
+    // stem read as one continuous unit. See kStemPaintTopPx in render.h.
     const double y_stem_top =
         static_cast<double>(waveform_area.y) - kStemPaintTopPx;
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
