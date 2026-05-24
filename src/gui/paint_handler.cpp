@@ -2,6 +2,7 @@
 
 #include "render.h"
 #include "text_editor.h"
+#include "time_format.h"
 #include "timemap.h"
 #include "waveform_worker.h"
 #include "engine/stft_container.h"
@@ -519,6 +520,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                 cairo_restore(cr);
             } else {
+                // Bottom-strip regular row (B.1): one assembled field
+                // drawn in a single cairo_show_text pass. Elements
+                // (timestamp, S/T, W/P, A/B, render-view filename,
+                // dirty *, transient message) are separated by single
+                // spaces in the string; the field paints uniformly in
+                // kText. Read-only on the active A/B tab is signaled
+                // by a 1px strikethrough over just the A/B character
+                // (geometry derived from monospace_advance()), not a
+                // color dim. Modal branches above (prompt / queue /
+                // settings editor) own the strip when active and
+                // bypass this code.
+                //
                 // In source-view, sr is the loaded file's sample rate
                 // and the playhead samples are in source-frames. In
                 // render-view the active `audio` is the render, so its
@@ -541,160 +554,80 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     seconds = static_cast<double>(ts_sample) /
                               static_cast<double>(sr);
                 }
-                {
-                    const auto s0 = clock::now();
-                    render_timestamp(cr, kTimestampPadX, baseline_y,
-                                     seconds, kText);
-                    const auto s1 = clock::now();
-                    t_ts_ms =
-                        std::chrono::duration<double, std::milli>(s1 - s0).count();
-                }
+                if (seconds < 0.0) seconds = 0.0;
+                if (seconds > 5999.999) seconds = 5999.999;
 
-                // Brief 3a: three single-letter indicators between the
-                // timestamp and the dirty asterisk, in domain-axis-first
-                // order: S/T (view-domain) → W/P (markers view) →
-                // A/B (tab within markers view). All three suppressed in
-                // render-view, matching the original A/B suppression
-                // (Tab key is gated out there, `t` is a silent no-op,
-                // and W/P meaning is render-view's own sub-view).
-                const double tw = measure_timestamp_width(cr, seconds);
-                double right_after_indicators =
-                    static_cast<double>(kTimestampPadX) + tw;
+                std::string assembled = format_timestamp(seconds);
+                int ab_char_index = -1;
                 if (!app.render_view_enabled) {
-                    cairo_save(cr);
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_select_font_face(cr, "monospace",
-                                           CAIRO_FONT_SLANT_NORMAL,
-                                           CAIRO_FONT_WEIGHT_NORMAL);
-                    cairo_set_font_size(cr, kFlagFontSize);
-
-                    const double st_x =
-                        right_after_indicators + kTabLetterGapPx;
-                    const char st_buf[2] = {
-                        app.active_audio_view == 'T' ? 'T' : 'S',
-                        '\0'
-                    };
-                    cairo_text_extents_t st_ext;
-                    cairo_text_extents(cr, st_buf, &st_ext);
-                    cairo_move_to(cr, st_x, baseline_y);
-                    cairo_show_text(cr, st_buf);
-                    right_after_indicators = st_x + st_ext.x_advance;
-
-                    const double wp_x =
-                        right_after_indicators + kTabLetterGapPx;
-                    const char wp_buf[2] = { app.active_markers_view, '\0' };
-                    cairo_text_extents_t wp_ext;
-                    cairo_text_extents(cr, wp_buf, &wp_ext);
-                    cairo_move_to(cr, wp_x, baseline_y);
-                    cairo_show_text(cr, wp_buf);
-                    right_after_indicators = wp_x + wp_ext.x_advance;
-
-                    const double ab_x =
-                        right_after_indicators + kTabLetterGapPx;
-                    const char ab_buf[2] = { app.active_tab_view, '\0' };
-                    cairo_text_extents_t ab_ext;
-                    cairo_text_extents(cr, ab_buf, &ab_ext);
-                    // Read-only dim: half-blend the A/B glyph toward the
-                    // background so the locked-out state is visible
-                    // without changing the active-tab marker (no glyph
-                    // change). Resets back to kText after the glyph so
-                    // the dirty-dot below renders at full strength.
-                    const bool ab_dim = active_view_state(app).read_only;
-                    if (ab_dim) {
-                        const GuiColor c = dim(kText);
-                        cairo_set_source_rgb(cr, c.r, c.g, c.b);
-                    }
-                    cairo_move_to(cr, ab_x, baseline_y);
-                    cairo_show_text(cr, ab_buf);
-                    if (ab_dim) {
-                        cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    }
-                    right_after_indicators = ab_x + ab_ext.x_advance;
-
-                    cairo_restore(cr);
-                }
-
-                // Render-view filename. Flowed into the left-anchored
-                // sequence after the indicator letters (which are
-                // suppressed in render-view, so in practice the
-                // filename sits right after the timestamp). Painted
-                // before the dirty asterisk so the asterisk stays the
-                // last element in the strip across all views.
-                if (app.render_view_enabled &&
-                    app.render_view_index >= 0 &&
-                    app.render_view_index <
-                        static_cast<int>(app.render_view_list.size())) {
+                    assembled += ' ';
+                    assembled += (app.active_audio_view == 'T'
+                                    ? 'T' : 'S');
+                    assembled += ' ';
+                    assembled += app.active_markers_view;
+                    assembled += ' ';
+                    ab_char_index = static_cast<int>(assembled.size());
+                    assembled += app.active_tab_view;
+                } else if (app.render_view_index >= 0 &&
+                           app.render_view_index <
+                               static_cast<int>(
+                                   app.render_view_list.size())) {
                     const auto& e =
                         app.render_view_list[app.render_view_index];
-                    const std::string label =
-                        e.batch_folder.filename().string() + "/" +
-                        e.basename + ".wav";
-                    cairo_save(cr);
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_select_font_face(cr, "monospace",
-                                           CAIRO_FONT_SLANT_NORMAL,
-                                           CAIRO_FONT_WEIGHT_NORMAL);
-                    cairo_set_font_size(cr, kFlagFontSize);
-                    cairo_text_extents_t ext;
-                    cairo_text_extents(cr, label.c_str(), &ext);
-                    const double fx =
-                        right_after_indicators + kTabLetterGapPx;
-                    cairo_move_to(cr, fx, baseline_y);
-                    cairo_show_text(cr, label.c_str());
-                    cairo_restore(cr);
-                    right_after_indicators = fx + ext.x_advance;
+                    assembled += ' ';
+                    assembled += e.batch_folder.filename().string();
+                    assembled += '/';
+                    assembled += e.basename;
+                    assembled += ".wav";
                 }
-
-                // Dirty asterisk. Painted last so it stays the trailing
-                // element of the strip across every view — after
-                // S/T/W/P/A/B in source/target, after the filename in
-                // render-view. Cannot be cleared from within
-                // render-view (Ctrl+S is gated out by the render-view
-                // input gate); it remains visible as a reminder that
-                // source-view authoring state is unsaved.
                 if (app.dirty) {
-                    const auto d0 = clock::now();
-                    const double cx = right_after_indicators + kTabLetterGapPx;
-                    cairo_save(cr);
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_select_font_face(cr, "monospace",
-                                           CAIRO_FONT_SLANT_NORMAL,
-                                           CAIRO_FONT_WEIGHT_NORMAL);
-                    cairo_set_font_size(cr, kFlagFontSize);
-                    cairo_text_extents_t star_ext;
-                    cairo_text_extents(cr, "*", &star_ext);
-                    cairo_move_to(cr, cx, baseline_y);
-                    cairo_show_text(cr, "*");
-                    cairo_restore(cr);
-                    right_after_indicators = cx + star_ext.x_advance;
-                    const auto d1 = clock::now();
-                    t_dirty_ms =
-                        std::chrono::duration<double, std::milli>(d1 - d0).count();
+                    assembled += ' ';
+                    assembled += '*';
+                }
+                if (!app.transient_status_message.empty()) {
+                    assembled += ' ';
+                    assembled += app.transient_status_message;
                 }
 
-                // Transient one-line status message. Painted after the
-                // dirty asterisk; cleared on the next keyboard press
-                // (see input_handler on_key top). Mirrors the
-                // dirty-asterisk paint shape exactly so the trailing
-                // element flows after whatever cursor position landed.
-                if (!app.transient_status_message.empty()) {
-                    const double mx =
-                        right_after_indicators + kTabLetterGapPx;
-                    cairo_save(cr);
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_select_font_face(cr, "monospace",
-                                           CAIRO_FONT_SLANT_NORMAL,
-                                           CAIRO_FONT_WEIGHT_NORMAL);
-                    cairo_set_font_size(cr, kFlagFontSize);
-                    cairo_text_extents_t msg_ext;
-                    cairo_text_extents(cr,
-                        app.transient_status_message.c_str(), &msg_ext);
-                    cairo_move_to(cr, mx, baseline_y);
-                    cairo_show_text(cr,
-                        app.transient_status_message.c_str());
-                    cairo_restore(cr);
-                    right_after_indicators = mx + msg_ext.x_advance;
+                const auto s0 = clock::now();
+                cairo_save(cr);
+                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+                cairo_select_font_face(cr, "monospace",
+                                       CAIRO_FONT_SLANT_NORMAL,
+                                       CAIRO_FONT_WEIGHT_NORMAL);
+                cairo_set_font_size(cr, kFlagFontSize);
+                cairo_move_to(cr, kTimestampPadX, baseline_y);
+                cairo_show_text(cr, assembled.c_str());
+
+                // Read-only strike: 1px horizontal line over the
+                // single A/B character span. Monospace advance is
+                // uniform so character-index → x is exact. Vertical
+                // position bisects the cap letter via y_bearing of
+                // "M"; the +0.5 half-pixel convention keeps the
+                // stroke crisp on one physical pixel row.
+                if (ab_char_index >= 0 &&
+                    active_view_state(app).read_only) {
+                    const double advance = monospace_advance();
+                    const double ab_left =
+                        static_cast<double>(kTimestampPadX) +
+                        advance *
+                            static_cast<double>(ab_char_index);
+                    const double ab_right = ab_left + advance;
+                    cairo_text_extents_t uniform_ext;
+                    cairo_text_extents(cr, "M", &uniform_ext);
+                    const double strike_y =
+                        std::round(
+                            static_cast<double>(baseline_y) +
+                            uniform_ext.y_bearing / 2.0) + 0.5;
+                    cairo_set_line_width(cr, 1.0);
+                    cairo_move_to(cr, ab_left, strike_y);
+                    cairo_line_to(cr, ab_right, strike_y);
+                    cairo_stroke(cr);
                 }
+                cairo_restore(cr);
+                const auto s1 = clock::now();
+                t_ts_ms =
+                    std::chrono::duration<double, std::milli>(s1 - s0).count();
             }
         }
     }
