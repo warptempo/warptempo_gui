@@ -221,6 +221,7 @@ struct StemCache {
     bool      fp_drag_active                 = false;
     char      fp_active_markers_view         = '\0';
     bool      fp_render_view_enabled         = false;
+    uint64_t  fp_selection_hash              = 0;
 
     // Mirrors WaveformCache::dirty — "no pixels yet, skip blit." Set at
     // construction and at destroy_surface; cleared by the first rebuild.

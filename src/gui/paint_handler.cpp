@@ -533,7 +533,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 static_cast<double>(h.hit_rect.h);
                             render_flag_text_bg_fill(cr,
                                 static_cast<double>(anchor.x),
-                                pext.x_advance, bg_y, bg_h);
+                                pext.x_advance, bg_y, bg_h,
+                                kBackground);
                             GuiColor bg_col = app.top_flag_editor.red
                                 ? kAccent : kMarker;
                             if (oot) bg_col = dim(bg_col);
@@ -631,7 +632,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 static_cast<double>(anchor.x),
                                 hext.x_advance,
                                 static_cast<double>(h.hit_rect.y),
-                                static_cast<double>(h.hit_rect.h));
+                                static_cast<double>(h.hit_rect.h),
+                                kBackground);
                             cairo_restore(cr);
 
                             text_display::State td;
@@ -693,7 +695,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 static_cast<double>(h.hit_rect.h);
                             render_flag_text_bg_fill(cr,
                                 static_cast<double>(anchor.x),
-                                pext.x_advance, bg_y, bg_h);
+                                pext.x_advance, bg_y, bg_h,
+                                kBackground);
                             GuiColor bg_col = app.top_flag_editor.red
                                 ? kAccent : kMarker;
                             if (oot) bg_col = dim(bg_col);
@@ -791,7 +794,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 static_cast<double>(anchor.x),
                                 hext.x_advance,
                                 static_cast<double>(h.hit_rect.y),
-                                static_cast<double>(h.hit_rect.h));
+                                static_cast<double>(h.hit_rect.h),
+                                kBackground);
                             cairo_restore(cr);
 
                             text_display::State td;
@@ -1049,7 +1053,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                 // Canvas-bg fill behind pending text and outline.
                 render_flag_text_bg_fill(cr, pending_x, pend_ext.x_advance,
-                                         bg_top, bg_h);
+                                         bg_top, bg_h, kBackground);
 
                 // Unconditional 1-px stroke; kAccent on parse failure,
                 // otherwise kBackground (invisible against the canvas).
@@ -1866,6 +1870,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const bool     drag_active = app.drag.active;
     const char     mv          = app.active_markers_view;
     const bool     rve         = app.render_view_enabled;
+    const uint64_t sel_hash    = hash_selection(app.selected_markers,
+                                                app.last_selected_marker);
 
     const bool matches =
         stem_cache.surface &&
@@ -1883,7 +1889,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_drag_overlay_hash       == drag_hash &&
         stem_cache.fp_drag_active             == drag_active &&
         stem_cache.fp_active_markers_view     == mv &&
-        stem_cache.fp_render_view_enabled     == rve;
+        stem_cache.fp_render_view_enabled     == rve &&
+        stem_cache.fp_selection_hash          == sel_hash;
 
     if (matches) return;
 
@@ -1951,7 +1958,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_phase_reset_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            trim_struct, tmap_arg, drag_overlay);
+            trim_struct, app.selected_markers, tmap_arg, drag_overlay);
     } else {
         const auto& list = rve
             ? app.render_view_markers
@@ -1959,7 +1966,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            trim_struct, tmap_arg, drag_overlay);
+            trim_struct, app.selected_markers, tmap_arg, drag_overlay);
     }
 
     cairo_destroy(ccr);
@@ -1979,6 +1986,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_drag_active               = drag_active;
     stem_cache.fp_active_markers_view       = mv;
     stem_cache.fp_render_view_enabled       = rve;
+    stem_cache.fp_selection_hash            = sel_hash;
     stem_cache.dirty                        = false;
 
     // Invalidate the stem region. Viewport-driven invalidations

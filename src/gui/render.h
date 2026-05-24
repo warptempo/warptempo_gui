@@ -43,6 +43,7 @@ struct TrimRange {
 inline constexpr GuiColor kBackground       = {0.10, 0.10, 0.12};
 inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
 inline constexpr GuiColor kMarker           = {0.57, 0.27, 0.68};
+inline constexpr GuiColor kSelected         = {0.239, 0.682, 0.914};  // #3DAEE9 Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = {0.95, 0.85, 0.35};
 inline constexpr GuiColor kPlayheadCursor   = {0.10, 0.74, 0.61};
 inline constexpr GuiColor kAccent           = {0.75, 0.20, 0.18};
@@ -135,7 +136,8 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
                                      double text_left,
                                      double text_x_advance,
                                      double bg_top,
-                                     double bg_height) {
+                                     double bg_height,
+                                     GuiColor fill) {
     const double pad = kFlagInnerPadPx;
     const double x = std::round(text_left - pad);
     const double y = std::round(bg_top);
@@ -143,8 +145,7 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
     const double h = std::round(bg_height);
     if (w <= 0.0 || h <= 0.0) return;
     cairo_save(cr);
-    cairo_set_source_rgb(cr,
-        kBackground.r, kBackground.g, kBackground.b);
+    cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -250,6 +251,7 @@ void render_markers(cairo_t* cr,
                     long long viewport_end_sample,
                     int sample_rate,
                     const TrimRange& trim,
+                    const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap = nullptr,
                     const DragOverlay* drag_overlay = nullptr);
 
@@ -385,6 +387,7 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_end_sample,
                               int sample_rate,
                               const TrimRange& trim,
+                              const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap = nullptr,
                               const DragOverlay* drag_overlay = nullptr);
 

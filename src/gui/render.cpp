@@ -32,8 +32,9 @@ namespace {
 
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe). All
 // metadata (b=/e=/#) is invisible in the rect; the `|` separator sits to
-// the left of the rect, anchoring it to the marker column. Disabled state
-// is conveyed by color (dimmed via `effective_disabled`), not by glyphs.
+// the left of the rect, anchoring it to the marker column. Disabled
+// markers are skipped entirely (no stem, no flag); color conveys
+// selection (kSelected) and out-of-trim (dim()), not disabled state.
 //
 // Variants:
 //   label_ref              → "a.42"
@@ -105,6 +106,7 @@ void render_marker_stems_impl(
     long long viewport_end_sample,
     int sample_rate,
     const TrimRange& trim,
+    const std::set<int>& selected_set,
     const std::vector<TimeMapSegment>* timemap,
     const DragOverlay* drag_overlay,
     IsVisuallyDisabled&& is_disabled) {
@@ -130,13 +132,13 @@ void render_marker_stems_impl(
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
 
-    // Two passes — one path per color — split by in-trim vs out-of-trim.
-    // Disabled markers are skipped entirely (no stem); selection has no
-    // effect on stems under the brief H palette rules.
+    // Two passes — split by in-trim vs out-of-trim. Per-marker color
+    // picks {kMarker, kSelected} from selected_set; the trim split lets
+    // each pass apply (or skip) dim() once. Disabled markers are skipped
+    // entirely (no stem). Per-marker stroke is fine at editor marker
+    // counts; do not introduce 4-bucket batching without profiling.
     for (int pass = 0; pass < 2; pass++) {
         const bool out_of_trim_pass = (pass == 1);
-        const GuiColor c = out_of_trim_pass ? dim(kMarker) : kMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
         for (size_t i = 0; i < markers.size(); ++i) {
             if (is_disabled(static_cast<int>(i))) continue;
             const auto& m = markers[i];
@@ -158,14 +160,18 @@ void render_marker_stems_impl(
             if (ms >= static_cast<double>(viewport_end_sample)) continue;
             const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
             if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
+            GuiColor c = selected_set.count(static_cast<int>(i)) > 0
+                ? kSelected : kMarker;
+            if (out_of_trim_pass) c = dim(c);
+            cairo_set_source_rgb(cr, c.r, c.g, c.b);
             const double x_raw =
                 (ms - static_cast<double>(viewport_start_sample))
                     / samples_per_pixel;
             const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
             cairo_move_to(cr, x_px, y_stem_top);
             cairo_line_to(cr, x_px, y1);
+            cairo_stroke(cr);
         }
-        cairo_stroke(cr);
     }
 
     cairo_restore(cr);
@@ -521,12 +527,13 @@ void render_markers(cairo_t* cr,
                     long long viewport_end_sample,
                     int sample_rate,
                     const TrimRange& trim,
+                    const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap,
                     const DragOverlay* drag_overlay) {
     render_marker_stems_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, trim, timemap, drag_overlay,
+        sample_rate, trim, selected_set, timemap, drag_overlay,
         [&](int i) {
             return effective_disabled(markers, i);
         });
@@ -667,11 +674,17 @@ void paint_one_flag_with_overlay(
         baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
     const double bg_h_full =
         uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
+    GuiColor fill_col;
+    if (is_parse_fail)      fill_col = kAccent;
+    else if (is_selected)   fill_col = kSelected;
+    else                    fill_col = kBackground;
+    if (out_of_trim) fill_col = dim(fill_col);
     render_flag_text_bg_fill(cr,
-        text_left + hl_pad, draw_ext.x_advance, bg_top, bg_h_full);
+        text_left + hl_pad, draw_ext.x_advance, bg_top, bg_h_full,
+        fill_col);
 
     if (is_selected) {
-        GuiColor stroke_col = is_parse_fail ? kAccent : kMarker;
+        GuiColor stroke_col = is_parse_fail ? kAccent : kSelected;
         if (out_of_trim) stroke_col = dim(stroke_col);
         cairo_set_source_rgb(cr,
             stroke_col.r, stroke_col.g, stroke_col.b);
@@ -971,12 +984,13 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_end_sample,
                               int sample_rate,
                               const TrimRange& trim,
+                              const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap,
                               const DragOverlay* drag_overlay) {
     render_marker_stems_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, trim, timemap, drag_overlay,
+        sample_rate, trim, selected_set, timemap, drag_overlay,
         [&](int i) {
             return phase_resets[i].disabled;
         });
@@ -1058,12 +1072,15 @@ void render_phase_reset_flags(cairo_t* cr,
             e.baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
         const double bg_h_full =
             uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
+        GuiColor fill_col = is_selected ? kSelected : kBackground;
+        if (out_of_trim) fill_col = dim(fill_col);
         render_flag_text_bg_fill(cr,
-            e.text_left + hl_pad, e.ext.x_advance, bg_top, bg_h_full);
+            e.text_left + hl_pad, e.ext.x_advance, bg_top, bg_h_full,
+            fill_col);
 
         if (is_selected) {
             const GuiColor stroke_col =
-                out_of_trim ? dim(kMarker) : kMarker;
+                out_of_trim ? dim(kSelected) : kSelected;
             cairo_set_source_rgb(cr,
                 stroke_col.r, stroke_col.g, stroke_col.b);
             const double rx = std::round(e.text_left) + 0.5;
