@@ -1,6 +1,7 @@
 #include "paint_handler.h"
 
 #include "render.h"
+#include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "timemap.h"
@@ -370,153 +371,61 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, ts)) {
             const int baseline_y = app.height - kTimestampBaselineFromBottom;
             if (app.prompt.active) {
-                cairo_save(cr);
-                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-                cairo_move_to(cr, kTimestampPadX, baseline_y);
-                cairo_show_text(cr, app.prompt.text.c_str());
-                cairo_text_extents_t pext;
-                cairo_text_extents(cr, app.prompt.text.c_str(), &pext);
+                // Plain tier: the prompt text followed by its response
+                // labels, each chained off the measured advance returned
+                // by draw_line so no separate measurement pass is needed.
                 const double label_gap = kTabLetterGapPx * 2.0;
-                double cursor_x = static_cast<double>(kTimestampPadX) +
-                                  pext.x_advance + label_gap;
+                double cursor_x = static_cast<double>(kTimestampPadX);
+                cursor_x += text_display::draw_line(
+                    cr, cursor_x, baseline_y, app.prompt.text,
+                    kText, kFlagFontSize);
+                cursor_x += label_gap;
                 for (const auto& label : app.prompt.response_labels) {
-                    cairo_move_to(cr, cursor_x, baseline_y);
-                    cairo_show_text(cr, label.c_str());
-                    cairo_text_extents_t lext;
-                    cairo_text_extents(cr, label.c_str(), &lext);
-                    cursor_x += lext.x_advance + label_gap;
+                    cursor_x += text_display::draw_line(
+                        cr, cursor_x, baseline_y, label,
+                        kText, kFlagFontSize) + label_gap;
                 }
-                cairo_restore(cr);
             } else if (!app.queue_progress_text.empty()) {
-                cairo_save(cr);
-                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-                cairo_move_to(cr, kTimestampPadX, baseline_y);
-                cairo_show_text(cr, app.queue_progress_text.c_str());
-                cairo_restore(cr);
+                text_display::draw_line(
+                    cr, static_cast<double>(kTimestampPadX), baseline_y,
+                    app.queue_progress_text, kText, kFlagFontSize);
             } else if (text_editor::is_active(app.settings_editor)) {
-                // Settings prompt overlay: "setting: <pending>" with a
-                // blink-gated 1-px cursor bar, optional selection swap,
-                // and an unconditional 1-px stroke whose color toggles
-                // on app.settings_editor.red. Mirrors the flag editor's
-                // iter-popup paint shape: bg fill, then stroke, then
-                // text with selection swap on top, then cursor. The
-                // non-red stroke is kBackground (invisible against the
-                // canvas) — the cost of structural symmetry with the
-                // flag editor primitive. The tab letter, dirty dot,
-                // and render-view filename are suppressed for the
-                // duration of the edit.
+                // Settings prompt overlay (Brief B.2): "setting: <pending>"
+                // through the shared editor text-box primitive. The bottom
+                // strip stays flat — the fill is kBackground normally, kAccent
+                // on parse failure — so it gets no top-strip kMarker chip
+                // treatment. The "setting: " prefix sits to the left of the
+                // box on the canvas. The tab letter, dirty dot, and
+                // render-view filename are suppressed for the edit's duration.
                 cairo_save(cr);
                 cairo_select_font_face(cr, "monospace",
                                        CAIRO_FONT_SLANT_NORMAL,
                                        CAIRO_FONT_WEIGHT_NORMAL);
                 cairo_set_font_size(cr, kFlagFontSize);
 
-                const std::string prefix  = "setting: ";
-                const std::string& pending = app.settings_editor.pending;
-
-                cairo_text_extents_t pre_ext;
-                cairo_text_extents(cr, prefix.c_str(), &pre_ext);
-                cairo_text_extents_t pend_ext;
-                cairo_text_extents(cr, pending.c_str(), &pend_ext);
                 cairo_text_extents_t uniform_ext;
                 cairo_text_extents(cr, "Mg", &uniform_ext);
 
-                const double pending_x =
-                    static_cast<double>(kTimestampPadX) + pre_ext.x_advance;
-                const double hl_pad = kFlagInnerPadPx;
-                const double bg_top = baseline_y + uniform_ext.y_bearing -
-                                      hl_pad - kVPadExtraPx;
-                const double bg_h   = uniform_ext.height +
-                                      2.0 * hl_pad + 2.0 * kVPadExtraPx;
-
-                // Canvas-bg fill behind pending text and outline.
-                render_flag_text_bg_fill(cr, pending_x, pend_ext.x_advance,
-                                         bg_top, bg_h, kBackground);
-
-                // Unconditional 1-px stroke; kAccent on parse failure,
-                // otherwise kBackground (invisible against the canvas).
-                GuiColor stroke_col = app.settings_editor.red
-                    ? kAccent : kBackground;
-                const double sx = std::round(pending_x - hl_pad) + 0.5;
-                const double sy = std::round(bg_top) + 0.5;
-                const int    sw = static_cast<int>(
-                    std::round(pend_ext.x_advance + 2.0 * hl_pad));
-                const int    sh = static_cast<int>(std::round(bg_h));
-                cairo_set_source_rgb(cr,
-                    stroke_col.r, stroke_col.g, stroke_col.b);
-                cairo_set_line_width(cr, 1.0);
-                cairo_rectangle(cr, sx, sy,
-                    static_cast<double>(sw),
-                    static_cast<double>(sh));
-                cairo_stroke(cr);
-
-                // Static prefix.
-                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                cairo_move_to(cr,
-                    static_cast<double>(kTimestampPadX), baseline_y);
-                cairo_show_text(cr, prefix.c_str());
-
-                // Pending text.
-                cairo_move_to(cr, pending_x, baseline_y);
-                cairo_show_text(cr, pending.c_str());
-
-                // Selection swap: kText fill over the selected pixel
-                // range, then re-paint the selected substring in
-                // kBackground for contrast. Mirrors the flag editor's
-                // iter-popup site.
-                if (text_editor::has_selection(app.settings_editor)) {
-                    const int sel_a = text_editor::selection_start(
-                        app.settings_editor);
-                    const int sel_b = text_editor::selection_end(
-                        app.settings_editor);
-                    cairo_text_extents_t a_ext;
-                    cairo_text_extents(cr,
-                        pending.substr(0,
-                            static_cast<size_t>(sel_a)).c_str(),
-                        &a_ext);
-                    cairo_text_extents_t b_ext;
-                    cairo_text_extents(cr,
-                        pending.substr(0,
-                            static_cast<size_t>(sel_b)).c_str(),
-                        &b_ext);
-                    const double hi_x = pending_x + a_ext.x_advance;
-                    const double hi_w = b_ext.x_advance - a_ext.x_advance;
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_rectangle(cr, hi_x, bg_top, hi_w, bg_h);
-                    cairo_fill(cr);
-                    cairo_set_source_rgb(cr,
-                        kBackground.r, kBackground.g, kBackground.b);
-                    cairo_move_to(cr, hi_x, baseline_y);
-                    cairo_show_text(cr,
-                        pending.substr(
-                            static_cast<size_t>(sel_a),
-                            static_cast<size_t>(sel_b - sel_a))
-                            .c_str());
-                }
-
-                // Cursor bar (blink-gated).
-                if (text_editor::cursor_visible_now(app.settings_editor)) {
-                    cairo_text_extents_t lext;
-                    cairo_text_extents(cr,
-                        pending.substr(0,
-                            static_cast<size_t>(
-                                app.settings_editor.cursor_pos)).c_str(),
-                        &lext);
-                    const double cx = pending_x + lext.x_advance;
-                    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                    cairo_set_line_width(cr, 1.0);
-                    cairo_move_to(cr, cx, bg_top);
-                    cairo_line_to(cr, cx, bg_top + bg_h);
-                    cairo_stroke(cr);
-                }
+                EditorTextBox box;
+                box.anchor_x        = static_cast<double>(kTimestampPadX);
+                box.baseline_y      = baseline_y;
+                box.prefix          = "setting: ";
+                box.text            = app.settings_editor.pending;
+                box.uniform_ext     = uniform_ext;
+                box.hl_pad          = kFlagInnerPadPx;
+                box.fill            = app.settings_editor.red
+                                          ? kAccent : kBackground;
+                box.text_color      = kText;
+                box.has_selection   =
+                    text_editor::has_selection(app.settings_editor);
+                box.selection_start =
+                    text_editor::selection_start(app.settings_editor);
+                box.selection_end   =
+                    text_editor::selection_end(app.settings_editor);
+                box.cursor_visible  =
+                    text_editor::cursor_visible_now(app.settings_editor);
+                box.cursor_pos      = app.settings_editor.cursor_pos;
+                render_editor_text_box(cr, box);
 
                 cairo_restore(cr);
             } else {
@@ -592,15 +501,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 }
 
                 const auto s0 = clock::now();
-                cairo_save(cr);
-                cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-                cairo_move_to(cr, kTimestampPadX, baseline_y);
-                cairo_show_text(cr, assembled.c_str());
-                cairo_restore(cr);
+                text_display::draw_line(
+                    cr, static_cast<double>(kTimestampPadX), baseline_y,
+                    assembled, kText, kFlagFontSize);
                 const auto s1 = clock::now();
                 t_ts_ms =
                     std::chrono::duration<double, std::milli>(s1 - s0).count();

@@ -147,6 +147,43 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
     cairo_restore(cr);
 }
 
+// Brief B.2 editor text-box primitive. Draws the full editable-text-box
+// anatomy shared by the flag-payload editor (top strip) and the settings
+// editor (bottom strip), in paint order: solid fill behind the editable
+// region, optional static prefix, editable text, selection swap, and a
+// blink-gated 1-px cursor. Killing the duplication between the two editors
+// is the point — both callers differ only in the resolved fill color, the
+// optional prefix, and the anchor.
+//
+// Geometry: `anchor_x` is the left edge of the prefix (or of the editable
+// text when `prefix` is empty). The editable region paints at
+// `anchor_x + prefix_advance`; the solid fill covers only the editable
+// region (the prefix, if any, sits to its left on the canvas), via
+// render_flag_text_bg_fill keyed off `uniform_ext` for a content-
+// independent box height. The cursor uses the std::round(x)+0.5 half-pixel
+// convention for a crisp single-pixel column.
+//
+// Colors are pre-resolved by the caller: `fill` already has dim() applied
+// when out-of-trim, and `text_color` is kText (or dim(kText)). The
+// selection swap fills the selected range with `text_color` and repaints
+// the selected substring in `fill` for contrast.
+struct EditorTextBox {
+    double               anchor_x        = 0.0;
+    double               baseline_y      = 0.0;
+    std::string          prefix;            // optional; "" = none
+    std::string          text;              // editable content
+    cairo_text_extents_t uniform_ext       = {};  // box height/y_bearing ref
+    double               hl_pad           = kFlagInnerPadPx;
+    GuiColor             fill             = kMarker;
+    GuiColor             text_color       = kText;
+    bool                 has_selection    = false;
+    int                  selection_start  = 0;
+    int                  selection_end    = 0;
+    bool                 cursor_visible   = false;
+    int                  cursor_pos       = 0;
+};
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
+
 // Out-of-trim predicate. Caller computes source-frame position from its
 // own native field (time_seconds*sample_rate for both GuiWarpMarker and
 // GuiPhaseResetMarker) and passes it through here.
@@ -219,14 +256,6 @@ void render_playhead(cairo_t* cr,
                      GuiColor color,
                      cairo_surface_t* triangle_surface,
                      bool draw_triangle = true);
-
-// Formats `seconds` as MM:SS.mmm and paints it with Cairo's monospace face.
-// Baseline of the text lands at (x, y).
-void render_timestamp(cairo_t* cr,
-                      int      x,
-                      int      y,
-                      double   seconds,
-                      GuiColor color);
 
 // Draws vertical 1-pixel lines across `waveform_area` for each marker whose
 // resolved sample falls inside [viewport_start_sample, viewport_end_sample).
@@ -438,10 +467,6 @@ std::string resolve_inherited_tempo_scale(
 // rendering-time text formatting role over GuiWarpMarker, same TU.
 std::string compute_hover_popup_text(
     const std::vector<GuiWarpMarker>& mv, int idx, int sample_rate);
-
-// Returns the pixel width of the baseline-style monospace timestamp at the
-// size used by render_timestamp. Needed so callers can position adjacent UI.
-double measure_timestamp_width(cairo_t* cr, double seconds);
 
 // Per-character pixel advance for the monospace font at kFlagFontSize.
 // Measured once at startup via init_monospace_grid_metrics(); returns

@@ -496,30 +496,6 @@ void render_playhead(cairo_t* cr,
     cairo_restore(cr);
 }
 
-void render_timestamp(cairo_t* cr,
-                      int      x,
-                      int      y,
-                      double   seconds,
-                      GuiColor color) {
-    if (seconds < 0.0) seconds = 0.0;
-    // Files longer than ~99 minutes wrap the two-digit minute field to 3
-    // digits. An absurdly long input is clamped here so the formatter stays
-    // within its fixed buffer.
-    if (seconds > 5999.999) seconds = 5999.999;
-
-    const std::string buf = format_timestamp(seconds);
-
-    cairo_save(cr);
-    cairo_set_source_rgb(cr, color.r, color.g, color.b);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, kFlagFontSize);
-    cairo_move_to(cr, x, y);
-    cairo_show_text(cr, buf.c_str());
-    cairo_restore(cr);
-}
-
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
@@ -537,6 +513,95 @@ void render_markers(cairo_t* cr,
         [&](int i) {
             return effective_disabled(markers, i);
         });
+}
+
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
+    cairo_save(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+
+    double prefix_adv = 0.0;
+    if (!s.prefix.empty()) {
+        cairo_text_extents_t pre_ext;
+        cairo_text_extents(cr, s.prefix.c_str(), &pre_ext);
+        prefix_adv = pre_ext.x_advance;
+    }
+    const double editable_left = s.anchor_x + prefix_adv;
+
+    cairo_text_extents_t text_ext;
+    cairo_text_extents(cr, s.text.c_str(), &text_ext);
+
+    const double bg_top =
+        s.baseline_y + s.uniform_ext.y_bearing - s.hl_pad - kVPadExtraPx;
+    const double bg_h =
+        s.uniform_ext.height + 2.0 * s.hl_pad + 2.0 * kVPadExtraPx;
+
+    // 1. Solid fill behind the editable region only.
+    render_flag_text_bg_fill(cr, editable_left, text_ext.x_advance,
+                             bg_top, bg_h, s.fill);
+
+    // 2. Optional static prefix, drawn on the canvas to the left of the box.
+    if (!s.prefix.empty()) {
+        cairo_set_source_rgb(cr,
+            s.text_color.r, s.text_color.g, s.text_color.b);
+        cairo_move_to(cr, s.anchor_x, s.baseline_y);
+        cairo_show_text(cr, s.prefix.c_str());
+    }
+
+    // 3. Editable text.
+    cairo_set_source_rgb(cr,
+        s.text_color.r, s.text_color.g, s.text_color.b);
+    cairo_move_to(cr, editable_left, s.baseline_y);
+    cairo_show_text(cr, s.text.c_str());
+
+    // 4. Selection swap: fill the selected range with text_color, repaint
+    //    the selected substring in the fill color for contrast.
+    if (s.has_selection) {
+        cairo_text_extents_t a_ext;
+        cairo_text_extents(cr,
+            s.text.substr(0, static_cast<size_t>(s.selection_start)).c_str(),
+            &a_ext);
+        cairo_text_extents_t b_ext;
+        cairo_text_extents(cr,
+            s.text.substr(0, static_cast<size_t>(s.selection_end)).c_str(),
+            &b_ext);
+        const double hi_x = editable_left + a_ext.x_advance;
+        const double hi_w = b_ext.x_advance - a_ext.x_advance;
+        cairo_set_source_rgb(cr,
+            s.text_color.r, s.text_color.g, s.text_color.b);
+        cairo_rectangle(cr, hi_x, bg_top, hi_w, bg_h);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
+        cairo_move_to(cr, hi_x, s.baseline_y);
+        cairo_show_text(cr,
+            s.text.substr(static_cast<size_t>(s.selection_start),
+                          static_cast<size_t>(s.selection_end -
+                                              s.selection_start))
+                .c_str());
+    }
+
+    // 5. Cursor (blink-gated), crisp single-pixel column.
+    if (s.cursor_visible) {
+        double cursor_x_offset = 0.0;
+        if (s.cursor_pos > 0) {
+            cairo_text_extents_t pext;
+            cairo_text_extents(cr,
+                s.text.substr(0,
+                    static_cast<size_t>(s.cursor_pos)).c_str(),
+                &pext);
+            cursor_x_offset = pext.x_advance;
+        }
+        const double cur_x = std::round(editable_left + cursor_x_offset) + 0.5;
+        cairo_set_source_rgb(cr,
+            s.text_color.r, s.text_color.g, s.text_color.b);
+        cairo_set_line_width(cr, 1.0);
+        cairo_move_to(cr, cur_x, bg_top);
+        cairo_line_to(cr, cur_x, bg_top + bg_h);
+        cairo_stroke(cr);
+    }
+
+    cairo_restore(cr);
 }
 
 namespace {
@@ -646,6 +711,7 @@ void paint_one_flag_with_overlay(
     double sr_d,
     double hl_pad,
     const cairo_text_extents_t& uniform_ext) {
+    (void)ext;  // editable text re-measured inside render_editor_text_box
     const bool is_selected = selected_set.count(i) > 0;
     const bool is_editing    = (i == editor.marker_index);
     const bool is_parse_fail = is_editing && editor.is_red;
@@ -658,104 +724,29 @@ void paint_one_flag_with_overlay(
         static_cast<int64_t>(std::nearbyint(pos_ms));
     const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
 
-    std::string draw_text = is_editing ? editor.pending : text;
-    cairo_text_extents_t draw_ext = ext;
-    if (is_editing) {
-        cairo_text_extents(cr, draw_text.c_str(), &draw_ext);
-    }
+    const std::string draw_text = is_editing ? editor.pending : text;
 
-    const double bg_top =
-        baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
-    const double bg_h_full =
-        uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
+    // Fill table (Brief B.2): parse-fail > selected > default(kMarker).
     GuiColor fill_col;
     if (is_parse_fail)      fill_col = kAccent;
     else if (is_selected)   fill_col = kSelected;
-    else                    fill_col = kBackground;
+    else                    fill_col = kMarker;
     if (out_of_trim) fill_col = dim(fill_col);
-    render_flag_text_bg_fill(cr,
-        text_left + hl_pad, draw_ext.x_advance, bg_top, bg_h_full,
-        fill_col);
 
-    if (is_selected) {
-        GuiColor stroke_col = is_parse_fail ? kAccent : kSelected;
-        if (out_of_trim) stroke_col = dim(stroke_col);
-        cairo_set_source_rgb(cr,
-            stroke_col.r, stroke_col.g, stroke_col.b);
-        const double rx = std::round(text_left) + 0.5;
-        const double ry = std::round(
-            baseline_y + uniform_ext.y_bearing
-          - hl_pad - kVPadExtraPx) + 0.5;
-        const int rw = static_cast<int>(std::round(
-            hl_pad + draw_ext.x_bearing + draw_ext.width + hl_pad));
-        const int rh = static_cast<int>(std::round(
-            uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx));
-        cairo_set_line_width(cr, 1.0);
-        cairo_rectangle(cr, rx, ry,
-                        static_cast<double>(rw),
-                        static_cast<double>(rh));
-        cairo_stroke(cr);
-    }
-
-    const GuiColor txt = out_of_trim ? dim(kText) : kText;
-    cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-    cairo_move_to(cr, text_left + hl_pad, baseline_y);
-    cairo_show_text(cr, draw_text.c_str());
-
-    if (is_editing && editor.has_selection) {
-        const int sel_a = editor.selection_start;
-        const int sel_b = editor.selection_end;
-        cairo_text_extents_t a_ext;
-        cairo_text_extents(cr,
-            draw_text.substr(0,
-                static_cast<size_t>(sel_a)).c_str(),
-            &a_ext);
-        cairo_text_extents_t b_ext;
-        cairo_text_extents(cr,
-            draw_text.substr(0,
-                static_cast<size_t>(sel_b)).c_str(),
-            &b_ext);
-        const double hi_x = text_left + hl_pad + a_ext.x_advance;
-        const double hi_w = b_ext.x_advance - a_ext.x_advance;
-        const double hi_y = baseline_y + uniform_ext.y_bearing
-                          - hl_pad - kVPadExtraPx;
-        const double hi_h = uniform_ext.height + 2 * hl_pad
-                          + 2 * kVPadExtraPx;
-        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-        cairo_rectangle(cr, hi_x, hi_y, hi_w, hi_h);
-        cairo_fill(cr);
-        const GuiColor bg_swap =
-            out_of_trim ? dim(kBackground) : kBackground;
-        cairo_set_source_rgb(cr,
-            bg_swap.r, bg_swap.g, bg_swap.b);
-        cairo_move_to(cr, hi_x, baseline_y);
-        cairo_show_text(cr,
-            draw_text.substr(static_cast<size_t>(sel_a),
-                             static_cast<size_t>(sel_b - sel_a))
-                .c_str());
-    }
-
-    if (is_editing && editor.cursor_visible) {
-        double cursor_x_offset = 0.0;
-        if (editor.cursor_pos > 0) {
-            cairo_text_extents_t pext;
-            const std::string before =
-                draw_text.substr(0,
-                    static_cast<size_t>(editor.cursor_pos));
-            cairo_text_extents(cr, before.c_str(), &pext);
-            cursor_x_offset = pext.x_advance;
-        }
-        const double cur_x =
-            text_left + hl_pad + cursor_x_offset;
-        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-        cairo_set_line_width(cr, 1.0);
-        cairo_move_to(cr, std::round(cur_x) + 0.5,
-                      baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx);
-        cairo_line_to(cr, std::round(cur_x) + 0.5,
-                      baseline_y + uniform_ext.y_bearing
-                          + uniform_ext.height + hl_pad + kVPadExtraPx);
-        cairo_stroke(cr);
-    }
+    EditorTextBox box;
+    box.anchor_x        = text_left + hl_pad;
+    box.baseline_y      = baseline_y;
+    box.text            = draw_text;
+    box.uniform_ext     = uniform_ext;
+    box.hl_pad          = hl_pad;
+    box.fill            = fill_col;
+    box.text_color      = out_of_trim ? dim(kText) : kText;
+    box.has_selection   = is_editing && editor.has_selection;
+    box.selection_start = editor.selection_start;
+    box.selection_end   = editor.selection_end;
+    box.cursor_visible  = is_editing && editor.cursor_visible;
+    box.cursor_pos      = editor.cursor_pos;
+    render_editor_text_box(cr, box);
 
     if constexpr (kDebugPerf) perf_counters::flag_drawn++;
 }
@@ -1057,45 +1048,21 @@ void render_phase_reset_flags(cairo_t* cr,
             static_cast<int64_t>(std::nearbyint(pos_ms));
         const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
 
-        // Brief Y.4 sub-bug A: opaque canvas-bg fill under the text.
-        // Phase reset flags have no editor (no growing pending text),
-        // but the fill is added for symmetry with warp flags — in the
-        // static states it sits under identical-color canvas pixels
-        // and is visually invisible.
-        const double bg_top =
-            e.baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
-        const double bg_h_full =
-            uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
-        GuiColor fill_col = is_selected ? kSelected : kBackground;
+        // Fill table (Brief B.2): no parse-fail state for phase resets,
+        // so selected > default(kMarker). Always a solid chip.
+        GuiColor fill_col = is_selected ? kSelected : kMarker;
         if (out_of_trim) fill_col = dim(fill_col);
-        render_flag_text_bg_fill(cr,
-            e.text_left + hl_pad, e.ext.x_advance, bg_top, bg_h_full,
-            fill_col);
 
-        if (is_selected) {
-            const GuiColor stroke_col =
-                out_of_trim ? dim(kSelected) : kSelected;
-            cairo_set_source_rgb(cr,
-                stroke_col.r, stroke_col.g, stroke_col.b);
-            const double rx = std::round(e.text_left) + 0.5;
-            const double ry = std::round(
-                e.baseline_y + uniform_ext.y_bearing
-              - hl_pad - kVPadExtraPx) + 0.5;
-            const int rw = static_cast<int>(std::round(
-                hl_pad + e.ext.x_bearing + e.ext.width + hl_pad));
-            const int rh = static_cast<int>(std::round(
-                uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx));
-            cairo_set_line_width(cr, 1.0);
-            cairo_rectangle(cr, rx, ry,
-                            static_cast<double>(rw),
-                            static_cast<double>(rh));
-            cairo_stroke(cr);
-        }
+        EditorTextBox box;
+        box.anchor_x    = e.text_left + hl_pad;
+        box.baseline_y  = e.baseline_y;
+        box.text        = e.text;
+        box.uniform_ext = uniform_ext;
+        box.hl_pad      = hl_pad;
+        box.fill        = fill_col;
+        box.text_color  = out_of_trim ? dim(kText) : kText;
+        render_editor_text_box(cr, box);
 
-        const GuiColor txt = out_of_trim ? dim(kText) : kText;
-        cairo_set_source_rgb(cr, txt.r, txt.g, txt.b);
-        cairo_move_to(cr, e.text_left + hl_pad, e.baseline_y);
-        cairo_show_text(cr, e.text.c_str());
         if constexpr (kDebugPerf) perf_counters::flag_drawn++;
     };
 
@@ -1122,28 +1089,6 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
         [&](int i) {
             return phase_reset_flag_text(phase_resets[i]);
         });
-}
-
-double measure_timestamp_width(cairo_t* cr, double seconds) {
-    if (seconds < 0.0) seconds = 0.0;
-    if (seconds > 5999.999) seconds = 5999.999;
-    int total_ms = static_cast<int>(seconds * 1000.0 + 0.5);
-    const int minutes = total_ms / 60000;
-    total_ms         -= minutes * 60000;
-    const int secs    = total_ms / 1000;
-    const int ms      = total_ms - secs * 1000;
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%02d:%02d.%03d", minutes, secs, ms);
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, kFlagFontSize);
-    cairo_text_extents_t ext;
-    cairo_text_extents(cr, buf, &ext);
-    cairo_restore(cr);
-    return ext.x_advance;
 }
 
 namespace {

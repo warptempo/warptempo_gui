@@ -1,9 +1,10 @@
 #pragma once
 
-// Brief B2: retained intentionally with no current callers. The hover /
-// iter / BPM popup surfaces that previously consumed this primitive have
-// been deleted; Brief F will re-home the hover readout to the bottom
-// strip and reuse this module unchanged. Do not delete.
+// Brief B.2: this is the live plain-text tier. `draw_line` is the plain
+// text-display primitive consumed by the bottom strip's assembled row and
+// the modal prompt / queue overlays (paint_handler.cpp). The anchored
+// `render` entry point below is retained for Brief F's bottom-strip hover
+// readout (currently caller-less). Do not delete.
 
 #include "render.h"
 
@@ -20,6 +21,20 @@
 // uses include settings dialogs and other hover hints.
 
 namespace text_display {
+
+// Plain text-display tier (Brief B.2). Draws `content` left-anchored with
+// its baseline at (x, baseline_y), in monospace at `font_size`, tinted
+// `color`. No fill, no outline, no cursor — those live in the editor tier
+// (render_editor_text_box). Returns the measured x_advance so flow callers
+// (e.g. the modal prompt's response labels) can chain draws without
+// re-measuring. Cairo state is saved/restored. A no-op returning 0 if
+// `content` is empty.
+double draw_line(cairo_t* cr,
+                 double x,
+                 double baseline_y,
+                 const std::string& content,
+                 GuiColor color,
+                 double font_size);
 
 struct State {
     // Anchor rectangle in screen coordinates. Popup is positioned above
