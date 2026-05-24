@@ -1,5 +1,6 @@
 title=Mozart - Symphony No. 40 in G Minor (K. 550) - I. Molto allegro (2024 Remaster, Tempo Warp)
 scale=0.996477
+bpm=220
 output_format=wav
 N=2560
 fftw_threads=16
