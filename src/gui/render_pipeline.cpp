@@ -71,6 +71,23 @@ bool write_midi_tempomap(const std::string& path,
 
 }  // namespace
 
+std::filesystem::path compose_sibling_output_path(
+    const std::string& source_audio_path,
+    const EngineSettings& es) {
+    const std::string ext =
+        (es.output_format == "timemap")  ? ".timemap" :
+        (es.output_format == "tempomap") ? ".tempomap" : ".wav";
+    std::filesystem::path src(source_audio_path);
+    std::filesystem::path dir = src.parent_path();
+    if (dir.empty()) dir = std::filesystem::path(".");
+    const bool output_unlimited =
+        es.output_format == "wav" && !es.limiter_enabled_on_render;
+    const std::string out_filename = output_unlimited
+        ? ("limiter_enabled_on_render=false;" + es.title + ext)
+        : (es.title + ext);
+    return dir / out_filename;
+}
+
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag) {
     if (req.source_audio_path.empty()) return RenderOutcome::Failed;
@@ -78,7 +95,6 @@ RenderOutcome do_render(const RenderRequest& req,
     // --- Read settings (typed; the live app.engine_settings is mutated
     // through strict-validated authoring paths, so every field is in
     // range by construction here). ---
-    const std::string& title         = req.engine_settings.title;
     const std::string& output_format = req.engine_settings.output_format;
     const double scale               = req.engine_settings.scale;
     const bool   user_limiter_en     = req.engine_settings.limiter_enabled_on_render;
@@ -137,18 +153,9 @@ RenderOutcome do_render(const RenderRequest& req,
             (std::filesystem::path(req.batch_folder) /
              (req.batch_basename + ext_for_format())).string();
     } else {
-        std::filesystem::path src(req.source_audio_path);
-        std::filesystem::path dir = src.parent_path();
-        if (dir.empty()) dir = std::filesystem::path(".");
-        // Prefix marks a wav that's genuinely unlimited on disk. Only
-        // applies to the wav path; timemap/tempomap outputs are text
-        // files and don't run any limiter.
-        const bool output_unlimited =
-            output_format == "wav" && !user_limiter_en;
-        std::string out_filename = output_unlimited
-            ? ("limiter_enabled_on_render=false;" + title + ext_for_format())
-            : (title + ext_for_format());
-        final_output_path = (dir / out_filename).string();
+        final_output_path =
+            compose_sibling_output_path(req.source_audio_path,
+                                        req.engine_settings).string();
     }
     // Staging path used by the wav engine path's atomic rename. Text-file
     // formats write final_output_path directly.

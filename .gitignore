@@ -11,7 +11,9 @@ CLAUDE.md
 
 # tmp
 tmp/
-src.tar.gz
+
+# docs
+*.pdf
 
 # Bungee Adapter Build Artifacts
 adapters/bungee/build/

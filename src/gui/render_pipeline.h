@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -104,3 +105,14 @@ struct RenderRequest {
 // outcome to count successes and to detect mid-render cancellation.
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag = nullptr);
+
+// Compose the single-render ("Ctrl+Alt+R") sibling output path for a given
+// source path and engine settings — the path do_render writes when
+// req.batch_folder is empty. Mirrors the inline composition in
+// do_render; both must stay in lockstep. Directory is the
+// source's parent ("." when the source has no parent). Extension is
+// selected by output_format; the unlimited-wav path carries the
+// `limiter_enabled_on_render=false;` filename prefix.
+std::filesystem::path compose_sibling_output_path(
+    const std::string& source_audio_path,
+    const EngineSettings& es);

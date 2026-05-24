@@ -1,5 +1,6 @@
 #include "settings_editor.h"
 
+#include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "text_editor.h"
@@ -8,7 +9,9 @@
 
 #include <cctype>
 #include <cstdio>
+#include <filesystem>
 #include <string>
+#include <system_error>
 #include <utility>
 
 namespace {
@@ -166,6 +169,31 @@ void GuiSettingsEditor::commit() {
             "value '%s': %s\n",
             key.c_str(), value.c_str(), reason.c_str());
         return;
+    }
+
+    // Source-clobber guard. The single-render output lands beside the
+    // source as <source_dir>/<title><ext>; an edit that makes that path
+    // resolve to the source file itself would overwrite the source on the
+    // next Ctrl+Alt+R. Refuse it here so the colliding value never reaches
+    // app.engine_settings.
+    if (!app.source_audio_path.empty()) {
+        const std::filesystem::path out =
+            compose_sibling_output_path(app.source_audio_path, candidate);
+        const std::filesystem::path src(app.source_audio_path);
+        std::error_code ec;
+        const bool same =
+            std::filesystem::equivalent(out, src, ec)
+            || out.lexically_normal() == src.lexically_normal();
+        if (same) {
+            app.settings_editor.red = true;
+            viewport.invalidate_timestamp_area();
+            std::fprintf(stderr,
+                "warptempo_gui: settings edit rejected: this would make the "
+                "render output overwrite the source file (%s); choose a "
+                "different title or output_format\n",
+                src.filename().string().c_str());
+            return;
+        }
     }
 
     SettingsSnapshot pre = capture_current_settings(app);
