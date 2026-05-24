@@ -1,7 +1,6 @@
 #include "paint_handler.h"
 
 #include "render.h"
-#include "text_display.h"
 #include "text_editor.h"
 #include "timemap.h"
 #include "waveform_worker.h"
@@ -25,155 +24,6 @@
 //     is identical so nothing else changes inside the bodies.
 //   - `bottom_strip_wide()` (the old lambda capture) is replaced with the
 //     free-function form `bottom_strip_wide(app)` declared in app_state.h.
-//
-// IterPopupHit / BpmPopupHit and the compute_*_popup_hits helpers below
-// were also extracted out of main.cpp's anonymous namespace because paint
-// uses them and other (non-paint) main.cpp callsites reach them through
-// the same paint_handler.h include.
-
-// -- compute_iter_popup_hits / compute_bpm_popup_hits --------------------
-//
-// Bodies copied verbatim from the original main.cpp anonymous-namespace
-// definitions; the only change is removing `inline` (these now have
-// external linkage as paint_handler.cpp is their sole TU of definition).
-
-std::vector<IterPopupHit> compute_iter_popup_hits(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
-    std::vector<IterPopupHit> out;
-    auto rects = compute_flag_hit_rects(
-        cr, top_strip_area, markers,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, timemap, drag_overlay);
-    if (rects.empty()) return out;
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, font_size);
-    // The widest possible iteration text drives a uniform hit-rect width
-    // so popups don't visibly jiggle in size as values change. Matches
-    // the [%+0.2f,%+0.2f] format with single-digit integer parts.
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "[+0.00,+0.00]", &uniform_ext);
-    const double hl_pad = kFlagInnerPadPx;
-
-    // Greedy left-to-right elision over popup positions. Brief Y.4 sub-bug
-    // B: collision is computed against the popup's actual painted-text
-    // width plus 2 * kFlagInnerPadPx — i.e., the on-screen extent of the
-    // bg-fill rect, not the uniform [+0.00,+0.00] hit_rect.w. The hit_rect
-    // stays uniform-width so click targets are stable as values change;
-    // pack and paint are separate concerns. With this rule, two adjacent
-    // owning markers whose painted popup texts (e.g. "[ ]") don't actually
-    // overlap will both render, even if their uniform hit rects do — which
-    // matches the flag pack in iterate_visible_flags_impl. No editor exemption.
-    const double pop_pad = 4.0;
-    double rightmost_right_edge = -1e18;
-    for (const auto& r : rects) {
-        const int idx = r.marker_index;
-        if (idx < 0 || idx >= static_cast<int>(markers.size())) continue;
-        if (!iter_popup_eligible_marker(markers[idx])) continue;
-        IterPopupHit h;
-        h.marker_index = idx;
-        h.flag_rect.x = static_cast<int>(std::lround(r.x));
-        h.flag_rect.y = static_cast<int>(std::lround(r.y));
-        h.flag_rect.w = static_cast<int>(std::lround(r.w));
-        h.flag_rect.h = static_cast<int>(std::lround(r.h));
-        h.text = format_iter_bracket_text(markers[idx]);
-        cairo_text_extents_t ext;
-        cairo_text_extents(cr, h.text.c_str(), &ext);
-        const int popup_w =
-            static_cast<int>(std::ceil(uniform_ext.x_advance + 2 * hl_pad));
-        const int popup_h = h.flag_rect.h;
-        h.hit_rect.x = h.flag_rect.x;
-        h.hit_rect.y = h.flag_rect.y -
-            static_cast<int>(std::lround(kIterPopupVerticalGapPx)) -
-            popup_h;
-        h.hit_rect.w = popup_w;
-        h.hit_rect.h = popup_h;
-
-        // Pack collision uses the painted-extent width (matches the bg-
-        // fill rect from sub-bug A), not h.hit_rect.w. By construction
-        // the pack rule and the visual occlusion rule agree.
-        const double pack_w = ext.x_advance + 2.0 * hl_pad;
-        const double left = static_cast<double>(h.hit_rect.x);
-        if (left < rightmost_right_edge + pop_pad) continue;
-        rightmost_right_edge = left + pack_w;
-        out.push_back(h);
-    }
-    cairo_restore(cr);
-    return out;
-}
-
-std::vector<BpmPopupHit> compute_bpm_popup_hits(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
-    std::vector<BpmPopupHit> out;
-    auto rects = compute_flag_hit_rects(
-        cr, top_strip_area, markers,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, timemap, drag_overlay);
-    if (rects.empty()) return out;
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, font_size);
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "99@[999,999]", &uniform_ext);
-    const double hl_pad = kFlagInnerPadPx;
-
-    const double pop_pad = 4.0;
-    double rightmost_right_edge = -1e18;
-    for (const auto& r : rects) {
-        const int idx = r.marker_index;
-        if (idx < 0 || idx >= static_cast<int>(markers.size())) continue;
-        if (!bpm_popup_eligible_marker(markers[idx])) continue;
-        if (!markers[idx].bpm_is_popup_owner) continue;
-        BpmPopupHit h;
-        h.marker_index = idx;
-        h.flag_rect.x = static_cast<int>(std::lround(r.x));
-        h.flag_rect.y = static_cast<int>(std::lround(r.y));
-        h.flag_rect.w = static_cast<int>(std::lround(r.w));
-        h.flag_rect.h = static_cast<int>(std::lround(r.h));
-        h.text = format_bpm_bracket_text(markers[idx]);
-        cairo_text_extents_t ext;
-        cairo_text_extents(cr, h.text.c_str(), &ext);
-        const int popup_w =
-            static_cast<int>(std::ceil(uniform_ext.x_advance + 2 * hl_pad));
-        const int popup_h = h.flag_rect.h;
-        h.hit_rect.x = h.flag_rect.x;
-        h.hit_rect.y = h.flag_rect.y -
-            static_cast<int>(std::lround(kIterPopupVerticalGapPx)) -
-            popup_h;
-        h.hit_rect.w = popup_w;
-        h.hit_rect.h = popup_h;
-
-        const double pack_w = ext.x_advance + 2.0 * hl_pad;
-        const double left = static_cast<double>(h.hit_rect.x);
-        if (left < rightmost_right_edge + pop_pad) continue;
-        rightmost_right_edge = left + pack_w;
-        out.push_back(h);
-    }
-    cairo_restore(cr);
-    return out;
-}
 
 // -- render_waveform_to_cache_surface ------------------------------------
 //
@@ -272,16 +122,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // Stage A's worker, stems via maybe_rebuild_stem_cache, flags
         // via maybe_rebuild_flag_cache). on_redraw now reads
         // wf_cache.fp_* for displayed-viewport inputs and treats every
-        // strip as a blit-then-overlay path. is_target stays as a live
-        // signal because the popup branch below dispatches on it.
-        const bool is_target = (app.active_audio_view == 'T') &&
-                               !app.render_view_enabled;
+        // strip as a blit-then-overlay path.
 
         // Drag-time position overlay. Active for the duration of a
         // ctrl-drag; non-null only when app.drag.active. Threaded into
-        // render_one_editor_flag and the popup paint paths below so the
-        // editor flag and popups track the dragged marker's proposed
-        // (moveable_times) position.
+        // render_one_editor_flag so the editor flag tracks the dragged
+        // marker's proposed (moveable_times) position.
         DragOverlay drag_overlay_storage;
         const DragOverlay* drag_overlay = nullptr;
         if (app.drag.active) {
@@ -383,12 +229,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // state flag-rect pixels live on flag_cache.surface (rebuilt
         // from on_tick via maybe_rebuild_flag_cache); on_redraw blits
         // the cache and then paints the per-frame live work — the
-        // FlagPayload editor's pending text + cursor, and the hover /
-        // iter / BPM popups. Source view calls paint_popups(nullptr);
-        // target view calls paint_popups(tmap_disp). The displayed-
-        // viewport timemap (tmap_disp = wf_cache.fp_timemap) keeps
-        // popup anchors aligned with the cached flag rects during the
-        // waveform worker's rebuild window.
+        // FlagPayload editor's pending text + cursor. Brief B2: the
+        // hover / iter / BPM popup paint paths and their dispatch are
+        // deleted; iter and BPM modes are presentation-dark until D / E
+        // re-home their surfaces.
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
 
@@ -426,392 +270,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 (wf_cache.fp_target && !wf_cache.fp_timemap.empty())
                     ? &wf_cache.fp_timemap : nullptr;
 
-            // Brief 3a: shared hover / iter / BPM popup paint, parameterized
-            // on the timemap pointer. Source-view callers pass nullptr;
-            // target-view callers pass tmap_disp. Body is a verbatim
-            // lift of the W-mode popup blocks that previously lived inside
-            // the source-view `else` branch, with the timemap forwarded into
-            // compute_flag_hit_rects / compute_iter_popup_hits /
-            // compute_bpm_popup_hits. The render-view branch keeps its own
-            // hover popup paint (which reads from app.render_view_markers)
-            // because render-view never goes through this lambda.
-            // Stage C: viewport / trim references inside the lambda read
-            // the *_disp locals above so popup anchors track the cached
-            // flag rects (lagging the live state by 1-2 frames during a
-            // viewport gesture).
-            const auto paint_popups =
-                [&](const std::vector<TimeMapSegment>* timemap) {
-                if (app.hover_popup.visible &&
-                    !app.iteration_mode_enabled) {
-                    const auto& mv = app.warpmarkers.markers();
-                    const int hidx = app.hover_popup.marker_index;
-                    const bool eligible =
-                        (hidx >= 0 &&
-                         hidx < static_cast<int>(mv.size()) &&
-                         (mv[hidx].tempo_inherits ||
-                          !mv[hidx].label_ref.empty()) &&
-                         !app.hover_popup.cached_text.empty());
-                    if (eligible) {
-                        auto rects = compute_flag_hit_rects(
-                            cr, top_strip, mv,
-                            vp_start_disp, vp_end_disp, sr, kFlagFontSize,
-                            timemap, drag_overlay);
-                        GuiRect anchor{0, 0, 0, 0};
-                        for (const auto& r : rects) {
-                            if (r.marker_index == hidx) {
-                                anchor.x = static_cast<int>(std::lround(r.x)) +
-                                           static_cast<int>(kFlagInnerPadPx);
-                                anchor.y = static_cast<int>(std::lround(r.y));
-                                anchor.w = static_cast<int>(std::lround(r.w));
-                                anchor.h = static_cast<int>(std::lround(r.h));
-                                break;
-                            }
-                        }
-                        if (anchor.w > 0 && anchor.h > 0) {
-                            const int64_t pos = static_cast<int64_t>(
-                                std::nearbyint(
-                                    mv[hidx].time_seconds *
-                                    static_cast<double>(sr)));
-                            const bool oot =
-                                marker_out_of_trim(pos, trim_struct_disp);
-                            text_display::State td;
-                            td.anchor   = anchor;
-                            td.content  = app.hover_popup.cached_text;
-                            td.visible  = true;
-                            td.color    = oot ? dim(kText) : kText;
-                            text_display::render(cr, td, kFlagFontSize);
-                        }
-                    }
-                }
-
-                if (app.iteration_mode_enabled) {
-                    const auto& mv = app.warpmarkers.markers();
-                    auto hits = compute_iter_popup_hits(
-                        cr, top_strip, mv,
-                        vp_start_disp, vp_end_disp, sr, kFlagFontSize,
-                        timemap, drag_overlay);
-                    const bool editor_on_iter =
-                        text_editor::is_active(app.top_flag_editor) &&
-                        app.top_flag_editor.kind ==
-                            text_editor::Kind::IterationBracket;
-                    for (auto it = hits.rbegin(); it != hits.rend(); ++it) {
-                        const auto& h = *it;
-                        GuiRect anchor{
-                            h.flag_rect.x +
-                                static_cast<int>(kFlagInnerPadPx),
-                            h.flag_rect.y,
-                            h.flag_rect.w,
-                            h.flag_rect.h
-                        };
-                        const int64_t pos = static_cast<int64_t>(
-                            std::nearbyint(
-                                mv[h.marker_index].time_seconds *
-                                static_cast<double>(sr)));
-                        const bool oot =
-                            marker_out_of_trim(pos, trim_struct_disp);
-                        if (editor_on_iter &&
-                            app.top_flag_editor.target == h.marker_index) {
-                            const std::string& pending =
-                                app.top_flag_editor.pending;
-                            cairo_save(cr);
-                            cairo_select_font_face(cr, "monospace",
-                                CAIRO_FONT_SLANT_NORMAL,
-                                CAIRO_FONT_WEIGHT_NORMAL);
-                            cairo_set_font_size(cr, kFlagFontSize);
-                            cairo_text_extents_t pext;
-                            cairo_text_extents(cr, pending.c_str(), &pext);
-                            cairo_text_extents_t uext;
-                            cairo_text_extents(cr, "[+0.00,+0.00]", &uext);
-                            const double hl_pad = kFlagInnerPadPx;
-                            const double bg_w =
-                                pext.x_advance + 2.0 * hl_pad;
-                            const double bg_x =
-                                static_cast<double>(anchor.x) - hl_pad;
-                            const double bg_y =
-                                static_cast<double>(h.hit_rect.y);
-                            const double bg_h =
-                                static_cast<double>(h.hit_rect.h);
-                            render_flag_text_bg_fill(cr,
-                                static_cast<double>(anchor.x),
-                                pext.x_advance, bg_y, bg_h,
-                                kBackground);
-                            GuiColor bg_col = app.top_flag_editor.red
-                                ? kAccent : kMarker;
-                            if (oot) bg_col = dim(bg_col);
-                            cairo_set_source_rgb(cr,
-                                bg_col.r, bg_col.g, bg_col.b);
-                            const double sx = std::round(bg_x) + 0.5;
-                            const double sy = std::round(bg_y) + 0.5;
-                            const int sw = static_cast<int>(
-                                std::round(bg_w));
-                            const int sh = static_cast<int>(
-                                std::round(bg_h));
-                            cairo_set_line_width(cr, 1.0);
-                            cairo_rectangle(cr, sx, sy,
-                                static_cast<double>(sw),
-                                static_cast<double>(sh));
-                            cairo_stroke(cr);
-
-                            const double baseline_y =
-                                static_cast<double>(anchor.y)
-                              - kIterPopupVerticalGapPx
-                              - kIterPopupVPadExtraPx
-                              - (uext.height + uext.y_bearing);
-                            const GuiColor txt = oot ? dim(kText) : kText;
-                            cairo_set_source_rgb(cr,
-                                txt.r, txt.g, txt.b);
-                            cairo_move_to(cr,
-                                static_cast<double>(anchor.x), baseline_y);
-                            cairo_show_text(cr, pending.c_str());
-
-                            if (text_editor::has_selection(
-                                    app.top_flag_editor)) {
-                                const int sel_a = text_editor::selection_start(
-                                    app.top_flag_editor);
-                                const int sel_b = text_editor::selection_end(
-                                    app.top_flag_editor);
-                                cairo_text_extents_t a_ext;
-                                cairo_text_extents(cr,
-                                    pending.substr(0,
-                                        static_cast<size_t>(sel_a)).c_str(),
-                                    &a_ext);
-                                cairo_text_extents_t b_ext;
-                                cairo_text_extents(cr,
-                                    pending.substr(0,
-                                        static_cast<size_t>(sel_b)).c_str(),
-                                    &b_ext);
-                                const double hi_x =
-                                    static_cast<double>(anchor.x) +
-                                    a_ext.x_advance;
-                                const double hi_w =
-                                    b_ext.x_advance - a_ext.x_advance;
-                                cairo_set_source_rgb(cr,
-                                    txt.r, txt.g, txt.b);
-                                cairo_rectangle(cr, hi_x, bg_y,
-                                                hi_w, bg_h);
-                                cairo_fill(cr);
-                                const GuiColor bg_swap =
-                                    oot ? dim(kBackground) : kBackground;
-                                cairo_set_source_rgb(cr,
-                                    bg_swap.r, bg_swap.g, bg_swap.b);
-                                cairo_move_to(cr, hi_x, baseline_y);
-                                cairo_show_text(cr,
-                                    pending.substr(
-                                        static_cast<size_t>(sel_a),
-                                        static_cast<size_t>(sel_b - sel_a))
-                                        .c_str());
-                            }
-
-                            if (text_editor::cursor_visible_now(
-                                    app.top_flag_editor)) {
-                                std::string left = pending.substr(
-                                    0, static_cast<size_t>(
-                                        app.top_flag_editor.cursor_pos));
-                                cairo_text_extents_t lext;
-                                cairo_text_extents(cr, left.c_str(), &lext);
-                                const double cx =
-                                    static_cast<double>(anchor.x) +
-                                    lext.x_advance;
-                                cairo_set_source_rgb(cr,
-                                    txt.r, txt.g, txt.b);
-                                cairo_set_line_width(cr, 1.0);
-                                cairo_move_to(cr, cx, bg_y);
-                                cairo_line_to(cr, cx, bg_y + bg_h);
-                                cairo_stroke(cr);
-                            }
-                            cairo_restore(cr);
-                        } else {
-                            cairo_save(cr);
-                            cairo_select_font_face(cr, "monospace",
-                                CAIRO_FONT_SLANT_NORMAL,
-                                CAIRO_FONT_WEIGHT_NORMAL);
-                            cairo_set_font_size(cr, kFlagFontSize);
-                            cairo_text_extents_t hext;
-                            cairo_text_extents(cr, h.text.c_str(), &hext);
-                            render_flag_text_bg_fill(cr,
-                                static_cast<double>(anchor.x),
-                                hext.x_advance,
-                                static_cast<double>(h.hit_rect.y),
-                                static_cast<double>(h.hit_rect.h),
-                                kBackground);
-                            cairo_restore(cr);
-
-                            text_display::State td;
-                            td.anchor   = anchor;
-                            td.content  = h.text;
-                            td.visible  = true;
-                            td.color    = oot ? dim(kText) : kText;
-                            text_display::render(cr, td, kFlagFontSize);
-                        }
-                    }
-                }
-
-                if (app.bpm_mode_enabled) {
-                    const auto& mv = app.warpmarkers.markers();
-                    auto hits = compute_bpm_popup_hits(
-                        cr, top_strip, mv,
-                        vp_start_disp, vp_end_disp, sr, kFlagFontSize,
-                        timemap, drag_overlay);
-                    const bool editor_on_bpm =
-                        text_editor::is_active(app.top_flag_editor) &&
-                        app.top_flag_editor.kind ==
-                            text_editor::Kind::BpmBracket;
-                    for (auto it = hits.rbegin(); it != hits.rend(); ++it) {
-                        const auto& h = *it;
-                        GuiRect anchor{
-                            h.flag_rect.x +
-                                static_cast<int>(kFlagInnerPadPx),
-                            h.flag_rect.y,
-                            h.flag_rect.w,
-                            h.flag_rect.h
-                        };
-                        const int64_t pos = static_cast<int64_t>(
-                            std::nearbyint(
-                                mv[h.marker_index].time_seconds *
-                                static_cast<double>(sr)));
-                        const bool oot =
-                            marker_out_of_trim(pos, trim_struct_disp);
-                        if (editor_on_bpm &&
-                            app.top_flag_editor.target == h.marker_index) {
-                            const std::string& pending =
-                                app.top_flag_editor.pending;
-                            cairo_save(cr);
-                            cairo_select_font_face(cr, "monospace",
-                                CAIRO_FONT_SLANT_NORMAL,
-                                CAIRO_FONT_WEIGHT_NORMAL);
-                            cairo_set_font_size(cr, kFlagFontSize);
-                            cairo_text_extents_t pext;
-                            cairo_text_extents(cr, pending.c_str(), &pext);
-                            cairo_text_extents_t uext;
-                            cairo_text_extents(cr, "99@[999,999]", &uext);
-                            const double hl_pad = kFlagInnerPadPx;
-                            const double bg_w =
-                                pext.x_advance + 2.0 * hl_pad;
-                            const double bg_x =
-                                static_cast<double>(anchor.x) - hl_pad;
-                            const double bg_y =
-                                static_cast<double>(h.hit_rect.y);
-                            const double bg_h =
-                                static_cast<double>(h.hit_rect.h);
-                            render_flag_text_bg_fill(cr,
-                                static_cast<double>(anchor.x),
-                                pext.x_advance, bg_y, bg_h,
-                                kBackground);
-                            GuiColor bg_col = app.top_flag_editor.red
-                                ? kAccent : kMarker;
-                            if (oot) bg_col = dim(bg_col);
-                            cairo_set_source_rgb(cr,
-                                bg_col.r, bg_col.g, bg_col.b);
-                            const double sx = std::round(bg_x) + 0.5;
-                            const double sy = std::round(bg_y) + 0.5;
-                            const int sw = static_cast<int>(
-                                std::round(bg_w));
-                            const int sh = static_cast<int>(
-                                std::round(bg_h));
-                            cairo_set_line_width(cr, 1.0);
-                            cairo_rectangle(cr, sx, sy,
-                                static_cast<double>(sw),
-                                static_cast<double>(sh));
-                            cairo_stroke(cr);
-
-                            const double baseline_y =
-                                static_cast<double>(anchor.y)
-                              - kIterPopupVerticalGapPx
-                              - kIterPopupVPadExtraPx
-                              - (uext.height + uext.y_bearing);
-                            const GuiColor txt = oot ? dim(kText) : kText;
-                            cairo_set_source_rgb(cr,
-                                txt.r, txt.g, txt.b);
-                            cairo_move_to(cr,
-                                static_cast<double>(anchor.x), baseline_y);
-                            cairo_show_text(cr, pending.c_str());
-
-                            if (text_editor::has_selection(
-                                    app.top_flag_editor)) {
-                                const int sel_a = text_editor::selection_start(
-                                    app.top_flag_editor);
-                                const int sel_b = text_editor::selection_end(
-                                    app.top_flag_editor);
-                                cairo_text_extents_t a_ext;
-                                cairo_text_extents(cr,
-                                    pending.substr(0,
-                                        static_cast<size_t>(sel_a)).c_str(),
-                                    &a_ext);
-                                cairo_text_extents_t b_ext;
-                                cairo_text_extents(cr,
-                                    pending.substr(0,
-                                        static_cast<size_t>(sel_b)).c_str(),
-                                    &b_ext);
-                                const double hi_x =
-                                    static_cast<double>(anchor.x) +
-                                    a_ext.x_advance;
-                                const double hi_w =
-                                    b_ext.x_advance - a_ext.x_advance;
-                                cairo_set_source_rgb(cr,
-                                    txt.r, txt.g, txt.b);
-                                cairo_rectangle(cr, hi_x, bg_y,
-                                                hi_w, bg_h);
-                                cairo_fill(cr);
-                                const GuiColor bg_swap =
-                                    oot ? dim(kBackground) : kBackground;
-                                cairo_set_source_rgb(cr,
-                                    bg_swap.r, bg_swap.g, bg_swap.b);
-                                cairo_move_to(cr, hi_x, baseline_y);
-                                cairo_show_text(cr,
-                                    pending.substr(
-                                        static_cast<size_t>(sel_a),
-                                        static_cast<size_t>(sel_b - sel_a))
-                                        .c_str());
-                            }
-
-                            if (text_editor::cursor_visible_now(
-                                    app.top_flag_editor)) {
-                                std::string left = pending.substr(
-                                    0, static_cast<size_t>(
-                                        app.top_flag_editor.cursor_pos));
-                                cairo_text_extents_t lext;
-                                cairo_text_extents(cr, left.c_str(), &lext);
-                                const double cx =
-                                    static_cast<double>(anchor.x) +
-                                    lext.x_advance;
-                                cairo_set_source_rgb(cr,
-                                    txt.r, txt.g, txt.b);
-                                cairo_set_line_width(cr, 1.0);
-                                cairo_move_to(cr, cx, bg_y);
-                                cairo_line_to(cr, cx, bg_y + bg_h);
-                                cairo_stroke(cr);
-                            }
-                            cairo_restore(cr);
-                        } else {
-                            cairo_save(cr);
-                            cairo_select_font_face(cr, "monospace",
-                                CAIRO_FONT_SLANT_NORMAL,
-                                CAIRO_FONT_WEIGHT_NORMAL);
-                            cairo_set_font_size(cr, kFlagFontSize);
-                            cairo_text_extents_t hext;
-                            cairo_text_extents(cr, h.text.c_str(), &hext);
-                            render_flag_text_bg_fill(cr,
-                                static_cast<double>(anchor.x),
-                                hext.x_advance,
-                                static_cast<double>(h.hit_rect.y),
-                                static_cast<double>(h.hit_rect.h),
-                                kBackground);
-                            cairo_restore(cr);
-
-                            text_display::State td;
-                            td.anchor   = anchor;
-                            td.content  = h.text;
-                            td.visible  = true;
-                            td.color    = oot ? dim(kText) : kText;
-                            text_display::render(cr, td, kFlagFontSize);
-                        }
-                    }
-                }
-            };
-
-            // Built once, threaded into both source-view and target-view
-            // warp render_flags calls below. Reads only app.top_flag_editor,
-            // which has no view-domain distinction.
+            // Built once, threaded into the live render_one_editor_flag
+            // call below. Reads only app.top_flag_editor, which has no
+            // view-domain distinction.
             FlagEditorOverlay overlay;
             if (text_editor::is_active(app.top_flag_editor) &&
                 app.top_flag_editor.kind ==
@@ -832,27 +293,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 overlay.selection_end =
                     text_editor::selection_end(
                         app.top_flag_editor);
-            } else if (text_editor::is_active(app.top_flag_editor) &&
-                       app.top_flag_editor.kind ==
-                           text_editor::Kind::IterationBracket) {
-                overlay.popup_editor_target =
-                    app.top_flag_editor.target;
-            } else if (text_editor::is_active(app.top_flag_editor) &&
-                       app.top_flag_editor.kind ==
-                           text_editor::Kind::BpmBracket) {
-                // Brief X.2: same flag-rect highlight suppression as
-                // iter — the popup above owns the highlight. Modes are
-                // mutually exclusive so the shared popup_editor_target
-                // channel is safe.
-                overlay.popup_editor_target =
-                    app.top_flag_editor.target;
             }
 
             // Stage C: the flag-rect pass has moved into the cache
             // rebuild above. What's left here is live work — the
             // FlagPayload editor's pending text + cursor (which would
             // otherwise drag the cache fingerprint on every keystroke
-            // and blink flip), and the hover / iter / BPM popups.
+            // and blink flip). Brief B2: the hover / iter / BPM popup
+            // surfaces are deleted; iteration and BPM modes are
+            // presentation-dark until D / E re-home their entries, and
+            // the hover dwell mechanism still runs but has no on-screen
+            // reader until Brief F.
             //
             // Live editor flag: only paints in W marker-view and not
             // render-view (FlagPayload editor isn't available in either
@@ -875,72 +326,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     drag_overlay);
             }
 
-            // Live popups. Phase-reset markers are not popup-eligible,
-            // so the 'P' marker-view branches paint nothing here.
-            if (app.render_view_enabled) {
-                // V.A3b hover popup paint, render-view variant. Mirrors
-                // the source-view branch in paint_popups but reads from
-                // app.render_view_markers. Iteration popups are
-                // suppressed by iteration_mode_enabled being forced
-                // false on entry to render-view; BPM popups likewise.
-                if (app.active_markers_view != 'P' &&
-                    app.hover_popup.visible) {
-                    const auto& mv = app.render_view_markers;
-                    const int hidx = app.hover_popup.marker_index;
-                    const bool eligible =
-                        (hidx >= 0 &&
-                         hidx < static_cast<int>(mv.size()) &&
-                         (mv[hidx].tempo_inherits ||
-                          !mv[hidx].label_ref.empty()) &&
-                         !app.hover_popup.cached_text.empty());
-                    if (eligible) {
-                        auto rects = compute_flag_hit_rects(
-                            cr, top_strip, mv,
-                            vp_start_disp, vp_end_disp, sr, kFlagFontSize,
-                            nullptr, drag_overlay);
-                        GuiRect anchor{0, 0, 0, 0};
-                        for (const auto& r : rects) {
-                            if (r.marker_index == hidx) {
-                                anchor.x = static_cast<int>(
-                                    std::lround(r.x)) +
-                                    static_cast<int>(kFlagInnerPadPx);
-                                anchor.y = static_cast<int>(
-                                    std::lround(r.y));
-                                anchor.w = static_cast<int>(
-                                    std::lround(r.w));
-                                anchor.h = static_cast<int>(
-                                    std::lround(r.h));
-                                break;
-                            }
-                        }
-                        if (anchor.w > 0 && anchor.h > 0) {
-                            const int64_t pos = static_cast<int64_t>(
-                                std::nearbyint(
-                                    mv[hidx].time_seconds *
-                                    static_cast<double>(sr)));
-                            const bool oot =
-                                marker_out_of_trim(pos, trim_struct_disp);
-                            text_display::State td;
-                            td.anchor   = anchor;
-                            td.content  = app.hover_popup.cached_text;
-                            td.visible  = true;
-                            td.color    = oot ? dim(kText) : kText;
-                            text_display::render(cr, td,
-                                                 kFlagFontSize);
-                        }
-                    }
-                }
-            } else if (is_target) {
-                if (app.active_markers_view != 'P') {
-                    // Brief 3a: hover / iter / BPM popups in target view.
-                    // tmap_disp is the displayed-viewport timemap (live
-                    // wf_cache.fp_timemap); popup anchors track the cached
-                    // flag rects throughout the rebuild window.
-                    paint_popups(tmap_disp);
-                }
-            } else if (app.active_markers_view != 'P') {
-                paint_popups(nullptr);
-            }
             const auto f1 = clock::now();
             t_flags_ms =
                 std::chrono::duration<double, std::milli>(f1 - f0).count();
@@ -2045,26 +1430,16 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const char      mv         = app.active_markers_view;
     const bool      rve        = app.render_view_enabled;
 
-    // Editor targets. The FlagPayload editor's target drives the skip-
-    // guard (cache leaves a hole for the live editor render to fill).
-    // The iter/BPM popup editor's target drives outline suppression on
-    // the underlying flag rect (cache paints the flag without its
-    // selected outline so the popup above is the only highlighted
-    // element). Modes are mutually exclusive per text_editor::Kind.
-    int popup_target = -1;
-    int flag_target  = -1;
-    if (text_editor::is_active(app.top_flag_editor)) {
-        switch (app.top_flag_editor.kind) {
-            case text_editor::Kind::FlagPayload:
-                flag_target = app.top_flag_editor.target;
-                break;
-            case text_editor::Kind::IterationBracket:
-            case text_editor::Kind::BpmBracket:
-                popup_target = app.top_flag_editor.target;
-                break;
-            default:
-                break;
-        }
+    // FlagPayload editor target drives the skip-guard (cache leaves a
+    // hole for the live editor render to fill). Brief B2: the iter/BPM
+    // popup-editor outline-suppression channel was removed along with
+    // the popup surfaces; the IterationBracket / BpmBracket kinds no
+    // longer feed the cache fingerprint.
+    int flag_target = -1;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind ==
+            text_editor::Kind::FlagPayload) {
+        flag_target = app.top_flag_editor.target;
     }
 
     const bool matches =
@@ -2084,7 +1459,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_render_view_enabled     == rve &&
-        flag_cache.fp_popup_editor_target     == popup_target &&
         flag_cache.fp_flag_editor_target      == flag_target;
 
     if (matches) return;
@@ -2127,13 +1501,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // Cache overlay: popup_editor_target suppresses the iter/BPM-popup
-    // target's selection outline; marker_index activates the skip-guard
-    // for the FlagPayload editor target. Other fields stay defaulted —
-    // pending text, cursor state, selection range live in the live
-    // editor render only.
+    // Cache overlay: marker_index activates the skip-guard for the
+    // FlagPayload editor target. Other fields stay defaulted — pending
+    // text, cursor state, selection range live in the live editor
+    // render only.
     FlagEditorOverlay cache_overlay;
-    cache_overlay.popup_editor_target = popup_target;
     cache_overlay.marker_index        = flag_target;
 
     if (rve) {
@@ -2197,7 +1569,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_render_view_enabled     = rve;
-    flag_cache.fp_popup_editor_target     = popup_target;
     flag_cache.fp_flag_editor_target      = flag_target;
     flag_cache.dirty                      = false;
 

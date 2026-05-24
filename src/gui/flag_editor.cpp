@@ -633,12 +633,13 @@ void GuiFlagEditor::enter_bpm_mode() {
             mv[i].bpm_hi             = 0;
         }
     }
-    // Tag owner with bpm_is_popup_owner=true if not already set so the
-    // popup-walk in compute_bpm_popup_hits picks it up. Sentinel-zero
-    // values stay zero; format_bpm_bracket_text renders "[]" for
-    // that state. Re-toggling on the same owner preserves any
-    // previously-committed values (the flag stays true and the
-    // values aren't touched).
+    // Tag owner with bpm_is_popup_owner=true if not already set. Brief
+    // B2: this flag is currently surface-orphaned (the popup geometry
+    // walks were deleted); E will re-wire BPM mode against a modal and
+    // may rename the field. Sentinel-zero values stay zero;
+    // format_bpm_bracket_text renders "[]" for that state. Re-toggling
+    // on the same owner preserves any previously-committed values (the
+    // flag stays true and the values aren't touched).
     if (!mv[owner].bpm_is_popup_owner) {
         mv[owner].bpm_is_popup_owner = true;
         mv[owner].bpm_beats          = 0;

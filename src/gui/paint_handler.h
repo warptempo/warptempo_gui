@@ -54,13 +54,6 @@ constexpr int      kTimestampPadX            = 8;
 constexpr int      kTimestampBaselineFromBottom = 12;
 constexpr double   kTabLetterGapPx           = 10.0;
 
-// V.B / V.B Addendum 2: iteration popup vertical geometry. The popup sits
-// kIterPopupVerticalGapPx above its flag's top edge; the edit-state text
-// baseline is shifted up by kIterPopupVPadExtraPx so the pending text
-// clears the popup rect's bottom inner padding.
-constexpr double   kIterPopupVerticalGapPx   = 4.0;
-constexpr double   kIterPopupVPadExtraPx     = 1.0;
-
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //
 // Lives for the life of main(); recreated when the waveform area is
@@ -247,20 +240,15 @@ struct StemCache {
 // against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
 // generations, drag-overlay hash, selection hash, marker-view, and the
 // active editor target. The cache holds ALL flag pixels (the steady-state
-// flag rects); on_redraw paints the editor's live pending text/cursor and
-// the hover/iter/BPM popups on top per frame.
+// flag rects); on_redraw paints the FlagPayload editor's live pending
+// text/cursor on top per frame.
 //
-// Two editor-target signals fingerprint the cache:
-//   * fp_popup_editor_target — set to the marker index whose iter/BPM popup
-//     is being edited (or -1). Drives selection-outline suppression on the
-//     underlying flag rect, mirroring the FlagEditorOverlay::popup_editor_
-//     target channel render_flags already consumes.
-//   * fp_flag_editor_target — set to the marker index whose flag payload
-//     is being edited (or -1). Drives the cache to SKIP painting that flag
-//     so the live editor render in on_redraw owns those pixels entirely.
-//     Without the skip, a pending text shrunk below the original flag's
-//     width via backspace would leave the cache's original glyphs peeking
-//     past the live render's narrower bg-fill.
+// fp_flag_editor_target — set to the marker index whose flag payload is
+// being edited (or -1). Drives the cache to SKIP painting that flag so
+// the live editor render in on_redraw owns those pixels entirely.
+// Without the skip, a pending text shrunk below the original flag's
+// width via backspace would leave the cache's original glyphs peeking
+// past the live render's narrower bg-fill.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -286,7 +274,6 @@ struct FlagCache {
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
     bool      fp_render_view_enabled      = false;
-    int       fp_popup_editor_target      = -1;
     int       fp_flag_editor_target       = -1;
 
     bool dirty = true;
@@ -304,62 +291,6 @@ struct FlagCache {
 
     ~FlagCache() { destroy_surface(); }
 };
-
-// -- Iteration popup geometry --------------------------------------------
-//
-// On-screen geometry for one iteration popup. `flag_rect` is the
-// underlying flag's rect (used to anchor); `hit_rect` is the clickable
-// region; `text` is the current popup text (for paint and seed-on-edit).
-struct IterPopupHit {
-    int          marker_index;
-    GuiRect      flag_rect;
-    GuiRect      hit_rect;
-    std::string  text;
-};
-
-// Compute iteration popup hit-rects for visible owning markers in
-// `top_strip_area`. Uses `compute_flag_hit_rects` for the underlying flag
-// positions (so popups inherit the flag-strip greedy elision). Each
-// popup sits kIterPopupVerticalGapPx above its flag's top edge. The
-// hit_rect height matches the flag's height; width is the monospace
-// extent of the popup's current text plus a small horizontal pad so
-// edits with longer pending strings stay clickable.
-std::vector<IterPopupHit> compute_iter_popup_hits(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
-
-// -- BPM popup geometry --------------------------------------------------
-//
-// Brief X.2 BPM popup geometry. Mirrors IterPopupHit.
-struct BpmPopupHit {
-    int          marker_index;
-    GuiRect      flag_rect;
-    GuiRect      hit_rect;
-    std::string  text;
-};
-
-// Brief X.2: compute BPM popup hit-rects for visible owning markers that
-// carry a stored BPM value. Mirrors compute_iter_popup_hits in shape:
-// uniform hit_rect.w sized to "99@[999,999]" so click targets are stable
-// as values change; pack collision uses the painted-text width so static
-// states pixel-match neighbors.
-std::vector<BpmPopupHit> compute_bpm_popup_hits(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
 
 // -- GuiPaintHandler -----------------------------------------------------
 //

@@ -78,10 +78,9 @@
 namespace {
 
 // X.7.8a: kProgressBarHeight, kChannelGapPx, kFlagFontSize, kTimestampPadX,
-// kTimestampBaselineFromBottom, kTabLetterGapPx, kIterPopupVerticalGapPx,
-// and kIterPopupVPadExtraPx now live in paint_handler.h so paint_handler.cpp
-// can reach them; the constants below are paint-handler-independent and
-// stay file-local.
+// kTimestampBaselineFromBottom, and kTabLetterGapPx now live in
+// paint_handler.h so paint_handler.cpp can reach them; the constants below
+// are paint-handler-independent and stay file-local.
 
 constexpr double   kTopStripRatio     = 0.10;
 constexpr double   kBottomStripRatio  = 0.10;
@@ -128,11 +127,6 @@ constexpr int kPlayheadHalfPx = 9;
 // compute_base_tempo_scale) moved out of this anonymous namespace into
 // input_handler.h so input_handler.cpp can reach it. on_key (Ctrl+Alt+M)
 // is the sole caller after this brief.
-
-// X.7.8a: IterPopupHit, BpmPopupHit, and the compute_*_popup_hits
-// helpers were promoted to paint_handler.{h,cpp} so paint_handler.cpp
-// can reach them. They remain reachable from this TU via
-// `#include "paint_handler.h"` below.
 
 // X.7.8b-3: compute_hover_popup_text moved to render.{h,cpp} so
 // input_handler.cpp can reach it from on_motion. It sits next to

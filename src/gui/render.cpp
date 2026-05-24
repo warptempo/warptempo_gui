@@ -646,13 +646,7 @@ void paint_one_flag_with_overlay(
     double sr_d,
     double hl_pad,
     const cairo_text_extents_t& uniform_ext) {
-    // V.B Addendum 2 / Brief X.2: when the above-strip popup (iter
-    // or BPM) anchored on this flag owns the editor, suppress the
-    // flag's selection fill so the focused element (the popup) is
-    // the only one filled.
-    const bool is_popup_focus = (i == editor.popup_editor_target);
-    const bool is_selected    =
-        !is_popup_focus && selected_set.count(i) > 0;
+    const bool is_selected = selected_set.count(i) > 0;
     const bool is_editing    = (i == editor.marker_index);
     const bool is_parse_fail = is_editing && editor.is_red;
 

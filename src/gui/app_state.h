@@ -850,20 +850,6 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// hit_test_iter_popup: V.B iteration-popup hit-test. Returns the marker
-// index whose iteration popup contains (mouse_x, mouse_y), or -1. Always
-// -1 when iteration mode is off, in phase reset view, or in render-view.
-int hit_test_iter_popup(const AppState& app, const GuiAudio& audio,
-                        int mouse_x, int mouse_y,
-                        double* out_text_left_x = nullptr);
-
-// hit_test_bpm_popup: brief X.2 BPM-popup hit-test. Mirrors
-// hit_test_iter_popup. Iter and BPM modes are mutually exclusive so at
-// most one of these returns >= 0 for a given (x, y).
-int hit_test_bpm_popup(const AppState& app, const GuiAudio& audio,
-                       int mouse_x, int mouse_y,
-                       double* out_text_left_x = nullptr);
-
 // X.7.8b-3: promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
 // display a numeric tempo (pass markers and label_ref markers qualify;

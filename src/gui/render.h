@@ -121,11 +121,7 @@ constexpr GuiColor dim(GuiColor c) {
 // occlusion work once pending text widens past the original flag width.
 //
 // Drawn before any outline (selection purple, editor parse-fail red) and
-// before the text glyphs. Applies symmetrically to top-strip flags and
-// iter popups (the symmetry is the architectural target — pack collision
-// in compute_iter_popup_hits uses the same x_advance + 2 * kFlagInnerPadPx
-// width by construction, so the pack rule and the visual occlusion rule
-// agree).
+// before the text glyphs.
 //
 // `text_left` is the actual text painting x — i.e., where cairo_move_to
 // would place the cursor for cairo_show_text. The helper subtracts
@@ -262,17 +258,8 @@ void render_markers(cairo_t* cr,
 // drawn at the x-position corresponding to `cursor_pos` (byte index into
 // `pending`). `cursor_visible` toggles the bar on/off for blink. Pass
 // marker_index = -1 to disable the overlay (normal rendering).
-//
-// V.B Addendum 2 / Brief X.2: `popup_editor_target` carries the marker
-// index whose above-strip popup (iter or BPM) currently owns the
-// IterationBracket- or BpmBracket-kind editor. The flag rect for that
-// marker must suppress its last-selected background highlight so only
-// the focused element (the popup) shows the highlight. -1 means "no
-// popup is being edited". Iter and BPM modes are mutually exclusive, so
-// at most one of them populates this field at a time.
 struct FlagEditorOverlay {
     int         marker_index        = -1;
-    int         popup_editor_target = -1;
     std::string pending;
     int         cursor_pos          = 0;
     // Brief seven: selection range within `pending`. When
@@ -303,10 +290,6 @@ struct FlagEditorOverlay {
 // Parse-fail variant of state 2/3: fill is `kAccent` instead of `kMarker`.
 // Markers whose source-frame position lies outside `trim` wrap every
 // color in `dim()` uniformly — no element of the flag escapes the dim.
-//
-// V.B Addendum 2 / Brief X.2: when `editor.popup_editor_target == i`,
-// that flag's selection fill is suppressed so the above-strip popup
-// (iter or BPM) owns the highlight exclusively.
 //
 // Disabled markers render identically to enabled markers in the top strip;
 // the only disabled signal lives in the marker stem (handled by

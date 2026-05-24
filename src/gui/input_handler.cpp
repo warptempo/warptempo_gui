@@ -2152,42 +2152,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
-        // V.A1 / V.B editor: mouse handling.
+        // V.A1 editor: mouse handling.
         //   click inside top strip on the editing target: re-position
         //     cursor at the clicked byte (handled inside enter_*_edit)
-        //   click inside top strip on a different popup/flag: switch
-        //     target (iter popup wins over the flag below it when
-        //     iteration mode is on)
+        //   click inside top strip on a different flag: switch target
         //   click anywhere else: exit edit (no commit), then fall
         //     through so the click routes through normal handling.
+        // Brief B2: the iter/BPM bracket-popup switch routes have been
+        // deleted along with the popup surfaces. A click in the top
+        // strip while a bracket editor is active falls through to the
+        // normal flag hit-test; D / E will re-wire bracket entry once
+        // those modes are re-homed.
         if (text_editor::is_active(app.top_flag_editor)) {
             if (inside_top) {
-                double iter_text_left = -1.0;
-                const int iter_hit = hit_test_iter_popup(
-                    app, audio, x, y, &iter_text_left);
-                if (iter_hit >= 0) {
-                    flag_editor.enter_iter_edit(
-                        iter_hit, static_cast<double>(x),
-                        iter_text_left);
-                    return;
-                }
-                double bpm_text_left = -1.0;
-                const int bpm_hit = hit_test_bpm_popup(
-                    app, audio, x, y, &bpm_text_left);
-                if (bpm_hit >= 0) {
-                    flag_editor.enter_bpm_edit(
-                        bpm_hit, static_cast<double>(x),
-                        bpm_text_left);
-                    return;
-                }
                 const int hit_now = hit_test_flag(app, audio, x, y);
                 if (hit_now >= 0 && app.active_markers_view != 'P') {
                     flag_editor.enter_top_flag_edit(
                         hit_now, static_cast<double>(x));
                     return;
                 }
-                // Top strip click that isn't on a popup or flag: exit
-                // and fall through to normal handling.
+                // Top strip click that isn't on a flag: exit and fall
+                // through to normal handling.
                 flag_editor.exit_top_flag_edit_no_commit();
             } else {
                 flag_editor.exit_top_flag_edit_no_commit();
@@ -2256,31 +2241,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         app.last_click_y        = y;
         app.last_click_consumed = false;
 
-        // Iteration popup click takes priority over flag click when
-        // iteration mode is on. The popup sits above the flag rect so
-        // their hit zones don't overlap, but checking the popup first
-        // makes the intent unambiguous when the flag-strip extents
-        // change shape. Read-only refuses both popup entries (both
-        // open mutating editors); a top-strip popup click in read-only
-        // mode is a silent no-op.
-        if (inside_top && !ctrl && !active_view_state(app).read_only) {
-            double iter_text_left = -1.0;
-            const int iter_hit = hit_test_iter_popup(
-                app, audio, x, y, &iter_text_left);
-            if (iter_hit >= 0) {
-                flag_editor.enter_iter_edit(
-                    iter_hit, static_cast<double>(x), iter_text_left);
-                return;
-            }
-            double bpm_text_left = -1.0;
-            const int bpm_hit = hit_test_bpm_popup(
-                app, audio, x, y, &bpm_text_left);
-            if (bpm_hit >= 0) {
-                flag_editor.enter_bpm_edit(
-                    bpm_hit, static_cast<double>(x), bpm_text_left);
-                return;
-            }
-        }
+        // Brief B2: the iter/BPM popup-click priority block has been
+        // deleted along with the popup surfaces. Clicks in iter/BPM
+        // mode fall through to the consolidated flag/marker hit-test
+        // below until D / E re-wire bracket entry.
 
         // Consolidated hit-test across waveform (marker line) and top
         // strip (flag rect). A flag click behaves exactly like a click

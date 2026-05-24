@@ -1,5 +1,10 @@
 #pragma once
 
+// Brief B2: retained intentionally with no current callers. The hover /
+// iter / BPM popup surfaces that previously consumed this primitive have
+// been deleted; Brief F will re-home the hover readout to the bottom
+// strip and reuse this module unchanged. Do not delete.
+
 #include "render.h"
 
 #include <cairo/cairo.h>
