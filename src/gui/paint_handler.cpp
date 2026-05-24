@@ -526,9 +526,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 // dirty *, transient message) are separated by single
                 // spaces in the string; the field paints uniformly in
                 // kText. Read-only on the active A/B tab is signaled
-                // by a 1px strikethrough over just the A/B character
-                // (geometry derived from monospace_advance()), not a
-                // color dim. Modal branches above (prompt / queue /
+                // by appending the literal "(read-only)" token after
+                // the A/B letter, not a color dim or strikethrough.
+                // Modal branches above (prompt / queue /
                 // settings editor) own the strip when active and
                 // bypass this code.
                 //
@@ -558,7 +558,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 if (seconds > 5999.999) seconds = 5999.999;
 
                 std::string assembled = format_timestamp(seconds);
-                int ab_char_index = -1;
                 if (!app.render_view_enabled) {
                     assembled += ' ';
                     assembled += (app.active_audio_view == 'T'
@@ -566,8 +565,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     assembled += ' ';
                     assembled += app.active_markers_view;
                     assembled += ' ';
-                    ab_char_index = static_cast<int>(assembled.size());
                     assembled += app.active_tab_view;
+                    if (active_view_state(app).read_only) {
+                        assembled += ' ';
+                        assembled += "(read-only)";
+                    }
                 } else if (app.render_view_index >= 0 &&
                            app.render_view_index <
                                static_cast<int>(
@@ -598,30 +600,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_set_font_size(cr, kFlagFontSize);
                 cairo_move_to(cr, kTimestampPadX, baseline_y);
                 cairo_show_text(cr, assembled.c_str());
-
-                // Read-only strike: 1px horizontal line over the
-                // single A/B character span. Unsnapped y lets cairo
-                // antialias the stroke so its edges match the glyph
-                // bodies it crosses, rather than landing hard on one
-                // physical pixel row.
-                if (ab_char_index >= 0 &&
-                    active_view_state(app).read_only) {
-                    const double advance = monospace_advance();
-                    const double ab_left =
-                        static_cast<double>(kTimestampPadX) +
-                        advance *
-                            static_cast<double>(ab_char_index);
-                    const double ab_right = ab_left + advance;
-                    cairo_text_extents_t uniform_ext;
-                    cairo_text_extents(cr, "M", &uniform_ext);
-                    const double strike_y =
-                        static_cast<double>(baseline_y) +
-                        uniform_ext.y_bearing / 2.0;
-                    cairo_set_line_width(cr, 1.0);
-                    cairo_move_to(cr, ab_left, strike_y);
-                    cairo_line_to(cr, ab_right, strike_y);
-                    cairo_stroke(cr);
-                }
                 cairo_restore(cr);
                 const auto s1 = clock::now();
                 t_ts_ms =
