@@ -600,11 +600,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_show_text(cr, assembled.c_str());
 
                 // Read-only strike: 1px horizontal line over the
-                // single A/B character span. Monospace advance is
-                // uniform so character-index → x is exact. Vertical
-                // position bisects the cap letter via y_bearing of
-                // "M"; the +0.5 half-pixel convention keeps the
-                // stroke crisp on one physical pixel row.
+                // single A/B character span. Unsnapped y lets cairo
+                // antialias the stroke so its edges match the glyph
+                // bodies it crosses, rather than landing hard on one
+                // physical pixel row.
                 if (ab_char_index >= 0 &&
                     active_view_state(app).read_only) {
                     const double advance = monospace_advance();
@@ -616,9 +615,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     cairo_text_extents_t uniform_ext;
                     cairo_text_extents(cr, "M", &uniform_ext);
                     const double strike_y =
-                        std::round(
-                            static_cast<double>(baseline_y) +
-                            uniform_ext.y_bearing / 2.0) + 0.5;
+                        static_cast<double>(baseline_y) +
+                        uniform_ext.y_bearing / 2.0;
                     cairo_set_line_width(cr, 1.0);
                     cairo_move_to(cr, ab_left, strike_y);
                     cairo_line_to(cr, ab_right, strike_y);
