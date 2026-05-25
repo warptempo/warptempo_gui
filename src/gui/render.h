@@ -67,34 +67,41 @@ constexpr double kFlagInnerPadPx = 4.0;
 // here in Brief Q to share with main.cpp's iteration popup.
 constexpr double kVPadExtraPx = 1.0;
 
-// Vertical offset from the waveform area's top edge up to the flag rect's
-// painted bottom edge. The flag rect sits in overlay space above the
-// waveform; this is the height of its footprint there. The marker stem
-// emanates from the rect's left outline (bottom edge) and runs down to
-// the waveform bottom, so this constant also defines how far the stem
-// extends above the waveform. Consumed by render_flags' baseline
-// computation, by render_markers' stem geometry (via the equal-by-
-// construction kStemAboveWaveformPx), and by the iter/BPM popups in
-// main.cpp which mirror the flag rect's vertical position. Doubles as the
-// waveform-to-flag-row gap; expected to become Brief F's waveform-side gap
-// constant when the strip layout is inverted to a fixed-pixel grid.
+// Sole authored value for the flag chip's vertical anchor: the offset from
+// the waveform area's top edge up to the flag rect's painted bottom edge.
+// The flag rect sits in overlay space above the waveform; this is the height
+// of its footprint there. The marker stem emanates from the rect's bottom
+// edge (via flag_chip_bottom_y) and runs down to the waveform bottom, so the
+// chip and stem read as one continuous unit. Consumed by render_flags'
+// baseline computation and by the stem renderers (both through
+// flag_chip_bottom_y), by the stem-cache overhang (via kStemAboveWaveformPx,
+// defined off this value), and by the iter/BPM popups in main.cpp which
+// mirror the flag rect's vertical position. Doubles as the waveform-to-flag-
+// row gap; expected to become Brief F's waveform-side gap constant when the
+// strip layout is inverted to a fixed-pixel grid.
 constexpr double kFlagBottomLiftPx = 10.0;
 
-// Distance the marker stem extends above the waveform area, from the
-// waveform's top edge up to the stem's top. By construction this equals
-// kFlagBottomLiftPx — the stem starts at the flag rect's left outline
-// (bottom edge, same column as the marker), so its top sits flush with
-// the rect's bottom. Consumed by render_markers (stem geometry) and by
-// the paint_handler stem blit (surface_h = area.h + kStemAboveWaveformPx,
-// blit y = area.y - kStemAboveWaveformPx).
+// Exists only to size the stem-cache overhang so it reaches up to the flag
+// chip's bottom edge. The stem geometry itself no longer originates here —
+// the stem top is derived from the flag chip's bottom (flag_chip_bottom_y),
+// not from this constant. It survives solely for the paint_handler stem blit
+// (surface_h = area.h + kStemAboveWaveformPx, blit y = area.y -
+// kStemAboveWaveformPx), where the surface must be tall enough to hold the
+// overhang up to the chip bottom. Defined off kFlagBottomLiftPx so the
+// overhang tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
-// The marker stem's painted top sits flush with the flag box's bottom edge
-// (area.y - kStemAboveWaveformPx == area.y - kFlagBottomLiftPx), so the chip
-// and stem read as one continuous unit with no gap. The stem cache surface
-// overhang is kStemAboveWaveformPx tall; the stroke starts at the surface's
-// top row. See render.cpp's y_stem_top.
-constexpr double kStemPaintTopPx = kStemAboveWaveformPx;
+// The flag chip's painted bottom edge for the current layout. The flag chip
+// sits in overlay space above the waveform with its bottom edge lifted
+// kFlagBottomLiftPx above the waveform top. This is the single source of
+// truth that both the flag baseline solve and the stem renderers
+// (render_marker_stems_impl, render_trim_stems) read: the stem is an
+// extension of the flag, so its top originates here and runs down to the
+// waveform bottom. Length is whatever connects the chip bottom to the
+// waveform bottom.
+inline double flag_chip_bottom_y(const GuiRect& waveform_area) {
+    return static_cast<double>(waveform_area.y) - kFlagBottomLiftPx;
+}
 
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
 // popup. Computed as 11 pt at 96 DPI (the conventional Linux default
@@ -256,7 +263,8 @@ void render_markers(cairo_t* cr,
 // Brief C: draws the trim begin/end boundary stems. Each set bound
 // (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
 // domain-frame column, spanning the same vertical extent as marker stems
-// (waveform top minus kStemPaintTopPx down to waveform bottom). Color is
+// (the flag chip's bottom, via flag_chip_bottom_y, down to waveform bottom).
+// Color is
 // kTrimMarker, or kSelected when that bound is selected. `trim.begin` /
 // `trim.end` are in the displayed domain (already timemap-translated by
 // the caller), so no further translation happens here — the columns are

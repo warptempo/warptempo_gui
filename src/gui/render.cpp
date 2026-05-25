@@ -119,12 +119,11 @@ void render_marker_stems_impl(
     if (samples_per_pixel <= 0.0) return;
 
     const double sr = static_cast<double>(sample_rate);
-    // Stem emanates from the flag rect's left outline (bottom edge, same
-    // column as the marker) and runs down to the waveform bottom. The
-    // stroke tops out flush with the flag rect's bottom edge — chip and
-    // stem read as one continuous unit. See kStemPaintTopPx in render.h.
-    const double y_stem_top =
-        static_cast<double>(waveform_area.y) - kStemPaintTopPx;
+    // Stem emanates from the flag chip's bottom edge (same column as the
+    // marker) and runs down to the waveform bottom. The stem is an extension
+    // of the flag: its top originates at the chip bottom, not from an
+    // independent waveform-relative offset. See flag_chip_bottom_y in render.h.
+    const double y_stem_top = flag_chip_bottom_y(waveform_area);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);
@@ -529,10 +528,9 @@ void render_trim_stems(cairo_t* cr,
     const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    // Same stem geometry as render_marker_stems_impl: top flush with the
-    // flag box bottom, bottom at the waveform's lower edge.
-    const double y_stem_top =
-        static_cast<double>(waveform_area.y) - kStemPaintTopPx;
+    // Same stem geometry as render_marker_stems_impl: top originates at the
+    // flag chip's bottom, bottom at the waveform's lower edge.
+    const double y_stem_top = flag_chip_bottom_y(waveform_area);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);
@@ -676,18 +674,23 @@ void iterate_visible_flags_impl(
     if (samples_per_pixel <= 0.0) return;
 
     const double sr           = static_cast<double>(sample_rate);
-    // Place the rect's bottom edge exactly at the strip bottom (which is
-    // the waveform area top, since the strips are contiguous). Solving the
-    // rect formula (rect_bottom = baseline_y + y_bearing + height + hl_pad
-    // + kVPadExtraPx) for baseline_y, using a representative monospace
-    // measurement so the result tracks font metrics rather than a magic
-    // constant.
+    // Place the rect's bottom edge exactly at the flag chip bottom (the
+    // single source of truth shared with the stem renderers). The strip
+    // bottom is the waveform area top, since the strips are contiguous, so
+    // flag_chip_bottom_y reads off that boundary. Solving the rect formula
+    // (rect_bottom = baseline_y + y_bearing + height + hl_pad + kVPadExtraPx)
+    // for baseline_y, using a representative monospace measurement so the
+    // result tracks font metrics rather than a magic constant.
     cairo_text_extents_t base_ext;
     cairo_text_extents(cr, "1.23*1.2345:a.aa", &base_ext);
     const double hl_pad_helper = kFlagInnerPadPx;
+    const GuiRect waveform_area_for_chip{
+        top_strip_area.x,
+        top_strip_area.y + top_strip_area.h,
+        top_strip_area.w,
+        0};
     const double baseline_y =
-        static_cast<double>(top_strip_area.y + top_strip_area.h)
-      - kFlagBottomLiftPx
+        flag_chip_bottom_y(waveform_area_for_chip)
       - base_ext.y_bearing
       - base_ext.height
       - hl_pad_helper
