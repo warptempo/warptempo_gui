@@ -457,7 +457,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         if (action == text_editor::KeyAction::Consumed) {
-            viewport.invalidate_top_strip();
+            // The BpmBracket editor draws in the bottom strip (like the
+            // settings editor); FlagPayload / IterationBracket draw in the
+            // top strip. Invalidate whichever strip the editor lives in.
+            if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
+                viewport.invalidate_timestamp_area();
+            else
+                viewport.invalidate_top_strip();
             return;
         }
         // NotConsumed: editor saw nothing useful; fall through is wrong
@@ -2064,6 +2070,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the keyboard.
     if (app.prompt.active) return;
     if (text_editor::is_active(app.settings_editor)) return;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+        // The BPM editor is a bottom-strip modal owner (like the settings
+        // editor). Mouse input does not interact with it; it is dismissed
+        // only by Enter (commit+render), Esc, or re-pressing M. Swallow the
+        // press so it cannot drive a playhead drag / marker click / or tear
+        // the editor down through the top-strip flag-edit routine below.
+        return;
+    }
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);

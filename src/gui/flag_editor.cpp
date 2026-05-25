@@ -475,6 +475,10 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
         format_bpm_bracket_text(mv[idx]),
         click_x,
         text_left_x);
+    // enter_text_edit's tail invalidates the top strip, but the BPM editor
+    // draws in the bottom strip. Invalidate it so the freshly opened editor
+    // actually paints.
+    viewport.invalidate_timestamp_area();
 }
 
 // Commit the BPM editor's pending buffer. Strict syntax via
@@ -492,14 +496,14 @@ bool GuiFlagEditor::commit_bpm_edit() {
     const auto& mv_const = app.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
         text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_top_strip();
+        viewport.invalidate_timestamp_area();
         return false;
     }
     const std::string& s = app.top_flag_editor.pending;
     int beats = 0, lo = 0, hi = 0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         app.top_flag_editor.red = true;
-        viewport.invalidate_top_strip();
+        viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
             "warptempo_gui: bpm edit rejected: invalid syntax: %s\n",
             s.c_str());
@@ -508,7 +512,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
     if (!m) {
         text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_top_strip();
+        viewport.invalidate_timestamp_area();
         return false;
     }
     // Single-owner invariant: clear bpm_owner on every other marker before
@@ -530,7 +534,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     m->bpm_lo    = lo;
     m->bpm_hi    = hi;
     text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
     return true;
 }
 
