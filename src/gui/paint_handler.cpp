@@ -46,8 +46,6 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    int64_t trim_begin,
-    int64_t trim_end,
     const std::vector<TimeMapSegment>* timemap_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
@@ -62,8 +60,7 @@ void render_waveform_to_cache_surface(
     if (channel_count == 1) {
         render_waveform(ccr, cache_area, audio, 0,
                         vp_start, vp_end,
-                        trim_begin, trim_end,
-                        kWaveform, dim(kWaveform),
+                        kWaveform,
                         timemap_or_null);
     } else if (channel_count >= 2) {
         const int ch_h = (cache_area.h - kChannelGapPx) / 2;
@@ -72,13 +69,11 @@ void render_waveform_to_cache_surface(
                           cache_area.w, ch_h};
         render_waveform(ccr, ch0, audio, 0,
                         vp_start, vp_end,
-                        trim_begin, trim_end,
-                        kWaveform, dim(kWaveform),
+                        kWaveform,
                         timemap_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         vp_start, vp_end,
-                        trim_begin, trim_end,
-                        kWaveform, dim(kWaveform),
+                        kWaveform,
                         timemap_or_null);
     }
     cairo_destroy(ccr);
@@ -266,8 +261,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // (after a viewport gesture, before the worker's swap).
             const int64_t  vp_start_disp = wf_cache.fp_vp_start;
             const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
-            const TrimRange trim_struct_disp{
-                wf_cache.fp_trim_begin, wf_cache.fp_trim_end};
             const std::vector<TimeMapSegment>* tmap_disp =
                 (wf_cache.fp_target && !wf_cache.fp_timemap.empty())
                     ? &wf_cache.fp_timemap : nullptr;
@@ -322,7 +315,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     vp_start_disp, vp_end_disp, sr,
                     kFlagFontSize,
                     app.selected_markers,
-                    trim_struct_disp,
                     overlay,
                     tmap_disp,
                     drag_overlay);
@@ -633,33 +625,8 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         }
     }
 
-    std::pair<long long, long long> trim;
-    if (app.render_view_enabled) {
-        trim = {0, audio.total_frames()};
-    } else if (is_target) {
-        const auto src_trim = compute_trim_samples(
-            app, sr, audio.total_frames());
-        if (!target_timemap.empty()) {
-            const long long t0 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.first),
-                    target_timemap)));
-            const long long t1 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.second),
-                    target_timemap)));
-            trim = {t0, t1};
-        } else {
-            trim = src_trim;
-        }
-    } else {
-        trim = compute_trim_samples(app, sr, audio.total_frames());
-    }
-
     in.vp_start      = vp_start;
     in.vp_end        = vp_end;
-    in.trim_begin    = trim.first;
-    in.trim_end      = trim.second;
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.is_target     = is_target;
@@ -683,7 +650,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
-        int64_t fp_tb,   int64_t fp_te,
         int     fp_aw,   int     fp_ah,
         long long fp_ag, bool    fp_t,
         uint64_t fp_h) -> bool {
@@ -694,8 +660,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_ah   != in.area_h)          return true;
         if (fp_t    != in.is_target)       return true;
         if (!drag_freeze) {
-            if (fp_tb != in.trim_begin)       return true;
-            if (fp_te != in.trim_end)         return true;
             if (fp_h  != in.timemap_hash)     return true;
         }
         return false;
@@ -704,8 +668,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     const bool diff_vs_pending = fingerprint_differs(
         wf_cache.pending_fp_vp_start,
         wf_cache.pending_fp_vp_end,
-        wf_cache.pending_fp_trim_begin,
-        wf_cache.pending_fp_trim_end,
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_audio_gen,
@@ -722,8 +684,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede             = true;
         wf_cache.supersede_vp_start    = in.vp_start;
         wf_cache.supersede_vp_end      = in.vp_end;
-        wf_cache.supersede_trim_begin  = in.trim_begin;
-        wf_cache.supersede_trim_end    = in.trim_end;
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_audio_gen   = app.audio_generation;
@@ -751,8 +711,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformJob job;
     job.vp_start       = in.vp_start;
     job.vp_end         = in.vp_end;
-    job.trim_begin     = in.trim_begin;
-    job.trim_end       = in.trim_end;
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
     job.audio_gen      = app.audio_generation;
@@ -769,8 +727,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
     wf_cache.pending_fp_vp_start    = in.vp_start;
     wf_cache.pending_fp_vp_end      = in.vp_end;
-    wf_cache.pending_fp_trim_begin  = in.trim_begin;
-    wf_cache.pending_fp_trim_end    = in.trim_end;
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_audio_gen   = app.audio_generation;
@@ -823,8 +779,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         WaveformJob job;
         job.vp_start       = wf_cache.supersede_vp_start;
         job.vp_end         = wf_cache.supersede_vp_end;
-        job.trim_begin     = wf_cache.supersede_trim_begin;
-        job.trim_end       = wf_cache.supersede_trim_end;
         job.area_w         = sw;
         job.area_h         = sh;
         job.audio_gen      = wf_cache.supersede_audio_gen;
@@ -842,8 +796,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
         wf_cache.pending_fp_vp_start    = wf_cache.supersede_vp_start;
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
-        wf_cache.pending_fp_trim_begin  = wf_cache.supersede_trim_begin;
-        wf_cache.pending_fp_trim_end    = wf_cache.supersede_trim_end;
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_audio_gen   = wf_cache.supersede_audio_gen;
@@ -867,8 +819,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
     wf_cache.fp_vp_start     = wf_cache.pending_fp_vp_start;
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
-    wf_cache.fp_trim_begin   = wf_cache.pending_fp_trim_begin;
-    wf_cache.fp_trim_end     = wf_cache.pending_fp_trim_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
@@ -939,7 +889,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.channel_count,
         audio,
         in.vp_start, in.vp_end,
-        in.trim_begin, in.trim_end,
         in.timemap.empty() ? nullptr : &in.timemap);
 
     // Publish the displayed fingerprint NOW so this same tick's
@@ -949,8 +898,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // re-dispatch the same target on the worker.
     wf_cache.fp_vp_start     = in.vp_start;
     wf_cache.fp_vp_end       = in.vp_end;
-    wf_cache.fp_trim_begin   = in.trim_begin;
-    wf_cache.fp_trim_end     = in.trim_end;
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_audio_gen    = app.audio_generation;
@@ -960,8 +907,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
-    wf_cache.pending_fp_trim_begin   = in.trim_begin;
-    wf_cache.pending_fp_trim_end     = in.trim_end;
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_audio_gen    = app.audio_generation;
@@ -1054,8 +999,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
-    const int64_t  trim_begin   = wf_cache.fp_trim_begin;
-    const int64_t  trim_end     = wf_cache.fp_trim_end;
     const bool     is_target    = wf_cache.fp_target;
     const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
     const long long audio_gen   = wf_cache.fp_audio_gen;
@@ -1069,6 +1012,49 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const bool     rve         = app.render_view_enabled;
     const uint64_t sel_hash    = hash_selection(app.selected_markers,
                                                 app.last_selected_marker);
+
+    // Brief C: trim boundary stems. Positions ride trim_begin / trim_end
+    // (displayed domain). The has-set + selected bits come live from the
+    // active A/B tab; render-view forces them off (trim is a source-view
+    // authoring concept and the render waveform has no trim).
+    const ViewState& tvs = active_view_state(app);
+    const bool trim_has_begin = !rve && tvs.has_trim_begin;
+    const bool trim_has_end   = !rve && tvs.has_trim_end;
+    const bool trim_begin_sel = trim_has_begin && tvs.trim_begin_selected;
+    const bool trim_end_sel   = trim_has_end   && tvs.trim_end_selected;
+
+    // Trim stem positions read LIVE from app state (no waveform-cache
+    // coupling): trim no longer affects waveform pixels, so the trim stems
+    // must follow the cursor every motion tick rather than lagging a
+    // worker-completion swap. Target-view positions map through the
+    // displayed timemap (wf_cache.fp_timemap) — the same coordinate system
+    // the marker stems below use — which trim does not perturb, so it is
+    // stable across a trim drag.
+    const int sr_trim = audio.sample_rate();
+    std::pair<long long, long long> stem_trim;
+    if (rve) {
+        stem_trim = {0, audio.total_frames()};
+    } else if (is_target) {
+        const auto src_trim = compute_trim_samples(
+            app, sr_trim, audio.total_frames());
+        if (!wf_cache.fp_timemap.empty()) {
+            const long long t0 = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<size_t>(src_trim.first),
+                    wf_cache.fp_timemap)));
+            const long long t1 = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<size_t>(src_trim.second),
+                    wf_cache.fp_timemap)));
+            stem_trim = {t0, t1};
+        } else {
+            stem_trim = src_trim;
+        }
+    } else {
+        stem_trim = compute_trim_samples(app, sr_trim, audio.total_frames());
+    }
+    const int64_t trim_begin = stem_trim.first;
+    const int64_t trim_end   = stem_trim.second;
 
     const bool matches =
         stem_cache.surface &&
@@ -1087,7 +1073,11 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_drag_active             == drag_active &&
         stem_cache.fp_active_markers_view     == mv &&
         stem_cache.fp_render_view_enabled     == rve &&
-        stem_cache.fp_selection_hash          == sel_hash;
+        stem_cache.fp_selection_hash          == sel_hash &&
+        stem_cache.fp_trim_has_begin          == trim_has_begin &&
+        stem_cache.fp_trim_has_end            == trim_has_end &&
+        stem_cache.fp_trim_begin_selected     == trim_begin_sel &&
+        stem_cache.fp_trim_end_selected       == trim_end_sel;
 
     if (matches) return;
 
@@ -1155,7 +1145,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_phase_reset_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            trim_struct, app.selected_markers, tmap_arg, drag_overlay);
+            app.selected_markers, tmap_arg, drag_overlay);
     } else {
         const auto& list = rve
             ? app.render_view_markers
@@ -1163,8 +1153,18 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            trim_struct, app.selected_markers, tmap_arg, drag_overlay);
+            app.selected_markers, tmap_arg, drag_overlay);
     }
+
+    // Brief C: trim boundary stems, painted in both 'W' and 'P' views.
+    // Positions are the displayed-domain trim frames (already translated);
+    // the has-set / selected bits decide which stems draw and in what
+    // color.
+    render_trim_stems(
+        ccr, local_area, vp_start, vp_end,
+        trim_struct,
+        trim_has_begin, trim_begin_sel,
+        trim_has_end, trim_end_sel);
 
     cairo_destroy(ccr);
 
@@ -1184,6 +1184,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_active_markers_view       = mv;
     stem_cache.fp_render_view_enabled       = rve;
     stem_cache.fp_selection_hash            = sel_hash;
+    stem_cache.fp_trim_has_begin            = trim_has_begin;
+    stem_cache.fp_trim_has_end              = trim_has_end;
+    stem_cache.fp_trim_begin_selected       = trim_begin_sel;
+    stem_cache.fp_trim_end_selected         = trim_end_sel;
     stem_cache.dirty                        = false;
 
     // Invalidate the stem region. Viewport-driven invalidations
@@ -1223,11 +1227,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int surface_w = top_strip.w;
     const int surface_h = top_strip.h;
 
-    // Displayed-viewport inputs from wf_cache.fp_*.
+    // Displayed-viewport inputs from wf_cache.fp_*. Flags are positioned at
+    // marker times only — trim never affects a flag pixel, so it is not part
+    // of the flag cache's identity.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
-    const int64_t  trim_begin   = wf_cache.fp_trim_begin;
-    const int64_t  trim_end     = wf_cache.fp_trim_end;
     const bool     is_target    = wf_cache.fp_target;
     const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
     const long long audio_gen   = wf_cache.fp_audio_gen;
@@ -1259,8 +1263,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_audio_gen               == audio_gen &&
         flag_cache.fp_vp_start                == vp_start &&
         flag_cache.fp_vp_end                  == vp_end &&
-        flag_cache.fp_trim_begin              == trim_begin &&
-        flag_cache.fp_trim_end                == trim_end &&
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_target                  == is_target &&
@@ -1298,7 +1300,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // surface rect. The blit at on_redraw time positions the surface back
     // at screen (0, 0).
     const GuiRect local_top_strip{0, 0, surface_w, surface_h};
-    const TrimRange trim_struct{trim_begin, trim_end};
     const int sr = audio.sample_rate();
 
     const std::vector<TimeMapSegment>* tmap_arg =
@@ -1328,7 +1329,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                 vp_start, vp_end, sr,
                 kFlagFontSize,
                 app.selected_markers,
-                trim_struct,
                 nullptr,
                 drag_overlay);
         } else {
@@ -1337,7 +1337,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                          vp_start, vp_end, sr,
                          kFlagFontSize,
                          app.selected_markers,
-                         trim_struct,
                          cache_overlay,
                          nullptr,
                          drag_overlay);
@@ -1349,7 +1348,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             kFlagFontSize,
             app.selected_markers,
-            trim_struct,
             tmap_arg,
             drag_overlay);
     } else {
@@ -1358,7 +1356,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      vp_start, vp_end, sr,
                      kFlagFontSize,
                      app.selected_markers,
-                     trim_struct,
                      cache_overlay,
                      tmap_arg,
                      drag_overlay);
@@ -1369,8 +1366,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_audio_gen               = audio_gen;
     flag_cache.fp_vp_start                = vp_start;
     flag_cache.fp_vp_end                  = vp_end;
-    flag_cache.fp_trim_begin              = trim_begin;
-    flag_cache.fp_trim_end                = trim_end;
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_target                  = is_target;

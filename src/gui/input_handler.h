@@ -245,6 +245,19 @@ private:
     void handle_trim_set_at_playhead(TrimSide side);
     void handle_trim_unset(TrimSide side);
 
+    // Brief C: mouse gestures on the trim boundary stems. on_press routes a
+    // waveform-area press that misses every marker but lands on a trim
+    // boundary here. Ctrl begins a drag; plain/Shift selects within the
+    // trim group. All update app.last_sel_group = Trim.
+    void handle_trim_boundary_press(TrimHit which, bool ctrl, bool shift);
+    void select_trim_boundary(TrimHit which, bool additive);
+    void begin_trim_drag(TrimHit which);
+    void update_trim_drag(int mouse_x);   // motion: writes the live store
+    void commit_trim_drag();               // release: undo push + render
+    // Delete on the trim group: unset each selected bound (reuses
+    // handle_trim_unset) and clears the trim-selected flags.
+    void delete_selected_trim();
+
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Translates app.viewport_start_sample / playhead_cursor_sample / zoom_level
     // through the current timemap in place (forward on S→T, inverse on

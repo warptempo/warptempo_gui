@@ -124,6 +124,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
+    app.trim_drag = TrimDragState{};
+    app.last_sel_group = LastSelGroup::Markers;
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
     app.history.reset();
@@ -384,6 +386,8 @@ void GuiFileLoader::revert_to_blank() {
     app.last_selected_marker = -1;
     app.drag          = DragState{};
     app.playhead_drag = PlayheadDragState{};
+    app.trim_drag     = TrimDragState{};
+    app.last_sel_group = LastSelGroup::Markers;
     app.hover_popup   = HoverPopupState{};
     app.history.reset();
     app.dirty              = false;

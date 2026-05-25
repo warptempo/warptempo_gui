@@ -27,19 +27,18 @@ struct GuiColor {
     double b;
 };
 
-// Trim boundaries in source-frame samples. Threaded through the marker /
-// flag renderers so they can apply uniform out-of-trim dimming under the
-// brief H palette consolidation. Values match the convention in
-// compute_trim_samples (main.cpp).
+// Trim boundaries in domain-frame samples (source-frame in source view,
+// target-frame in target view). After Brief C, trim no longer dims any
+// renderer — it is consumed only by render_trim_stems to place the two
+// boundary stems. Values match the convention in compute_trim_samples
+// (main.cpp).
 struct TrimRange {
     int64_t begin;
     int64_t end;
 };
 
 // Brief H palette: bases shared across the renderer module and
-// main.cpp. kPlayheadCursor and kPlayheadScanner are foreground
-// references and must never be passed to dim() — preserve that
-// invariant in subsequent phases.
+// main.cpp.
 inline constexpr GuiColor kBackground       = {0.10, 0.10, 0.12};
 inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
 inline constexpr GuiColor kMarker           = {0.57, 0.27, 0.68};
@@ -48,6 +47,12 @@ inline constexpr GuiColor kPlayheadScanner  = {0.95, 0.85, 0.35};
 inline constexpr GuiColor kPlayheadCursor   = {0.10, 0.74, 0.61};
 inline constexpr GuiColor kAccent           = {0.75, 0.20, 0.18};
 inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
+
+// Brief C: trim boundary stem color (#FDBC4B amber). Distinct from
+// kMarker, kSelected, the teal cursor, and the yellow scanner. A set
+// trim begin/end paints as a vertical stem in this color, or kSelected
+// when that boundary is selected.
+inline constexpr GuiColor kTrimMarker       = {0.992, 0.737, 0.294};
 
 // Flag rect geometry. Internal padding around the text glyph bounding box,
 // applied symmetrically (horizontal and vertical). Brief Q raised this from
@@ -98,16 +103,6 @@ constexpr double kStemPaintTopPx = kStemAboveWaveformPx;
 // literal computation form makes the pt origin self-documenting --
 // the compiler folds it to a constant at compile time.
 constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
-
-// Half-blend toward background. The single derivation function for
-// "subordinate" / "out-of-trim" state under the new palette.
-constexpr GuiColor dim(GuiColor c) {
-    return GuiColor{
-        c.r * 0.5 + kBackground.r * 0.5,
-        c.g * 0.5 + kBackground.g * 0.5,
-        c.b * 0.5 + kBackground.b * 0.5,
-    };
-}
 
 // Brief Y.4 sub-bug A: paints an opaque kBackground-colored rect under
 // flag and iter popup text glyphs so the editor's growing pending text
@@ -161,10 +156,10 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
 // independent box height. The cursor uses the std::round(x)+0.5 half-pixel
 // convention for a crisp single-pixel column.
 //
-// Colors are pre-resolved by the caller: `fill` already has dim() applied
-// when out-of-trim, and `text_color` is kText (or dim(kText)). The
-// selection swap fills the selected range with `text_color` and repaints
-// the selected substring in `fill` for contrast.
+// Colors are pre-resolved by the caller: `fill` is the resolved chip
+// color and `text_color` is kText. The selection swap fills the selected
+// range with `text_color` and repaints the selected substring in `fill`
+// for contrast.
 struct EditorTextBox {
     double               anchor_x        = 0.0;
     double               baseline_y      = 0.0;
@@ -181,20 +176,6 @@ struct EditorTextBox {
     int                  cursor_pos       = 0;
 };
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
-
-// Out-of-trim predicate. Caller computes source-frame position from its
-// own native field (time_seconds*sample_rate for both GuiWarpMarker and
-// GuiPhaseResetMarker) and passes it through here.
-// The trim is treated as the closed interval [begin, end] for the dim-
-// vs-active flag-color decision, so a marker landing exactly on the end
-// boundary (the e=-marker itself) renders active, not dimmed. Other
-// trim consumers (heatmap stripe, playback bounds, engine timemap) use
-// their own direct comparisons against trim.begin / trim.end and are
-// unaffected by this predicate.
-inline bool marker_out_of_trim(int64_t source_frame_pos,
-                               const TrimRange& trim) {
-    return source_frame_pos < trim.begin || source_frame_pos > trim.end;
-}
 
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right.
@@ -225,19 +206,16 @@ void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
 // is interpreted in the SAME domain as the viewport: source-frame in
 // source view, target-frame in target view.
 //
-// Columns whose midpoint falls inside [trim_begin_sample,
-// trim_end_sample) paint with `bright_color`; the rest paint with
-// `dim_color`. Pass a wide range to disable dimming.
+// Brief C: the waveform paints uniformly in `color`; there is no
+// out-of-trim brightness split (trim is signified only by the boundary
+// stems, see render_trim_stems).
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
                      int channel,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
-                     long long trim_begin_sample,
-                     long long trim_end_sample,
-                     GuiColor bright_color,
-                     GuiColor dim_color,
+                     GuiColor color,
                      const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
@@ -259,24 +237,40 @@ void render_playhead(cairo_t* cr,
 // resolved sample falls inside [viewport_start_sample, viewport_end_sample).
 // Effective disabled state is computed inline from the marker list (a label
 // reference inherits the disabled flag of its defining marker). Disabled
-// markers are skipped entirely; selection has no effect on stems under the
-// brief H palette rules.
+// markers are skipped entirely. Selected markers paint kSelected, the rest
+// kMarker; trim membership has no effect (Brief C retired out-of-trim dim).
 // `timemap` (default null) shifts marker positioning into the target-frame
 // domain when target view is active: each marker's source-frame position is
 // run through `map_source_to_target` before viewport clipping and column
-// placement. Trim brightness uses the translated position so it stays
-// consistent with `trim` (which paint_handler also forwards in the same
-// domain). Null timemap = identity, exact pre-brief-2 behavior.
+// placement. Null timemap = identity, exact pre-brief-2 behavior.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
                     long long viewport_start_sample,
                     long long viewport_end_sample,
                     int sample_rate,
-                    const TrimRange& trim,
                     const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap = nullptr,
                     const DragOverlay* drag_overlay = nullptr);
+
+// Brief C: draws the trim begin/end boundary stems. Each set bound
+// (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
+// domain-frame column, spanning the same vertical extent as marker stems
+// (waveform top minus kStemPaintTopPx down to waveform bottom). Color is
+// kTrimMarker, or kSelected when that bound is selected. `trim.begin` /
+// `trim.end` are in the displayed domain (already timemap-translated by
+// the caller), so no further translation happens here — the columns are
+// placed exactly like marker stems against the same viewport. View-
+// independent: drawn identically in 'W' and 'P' views.
+void render_trim_stems(cairo_t* cr,
+                       GuiRect waveform_area,
+                       long long viewport_start_sample,
+                       long long viewport_end_sample,
+                       const TrimRange& trim,
+                       bool has_begin,
+                       bool begin_selected,
+                       bool has_end,
+                       bool end_selected);
 
 // Editor overlay used by V.A1's top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is
@@ -315,8 +309,8 @@ struct FlagEditorOverlay {
 //      in `kText`. No cursor.
 //   3. Selected, editor engaged: state 2 plus a 1-px blinking cursor.
 // Parse-fail variant of state 2/3: fill is `kAccent` instead of `kMarker`.
-// Markers whose source-frame position lies outside `trim` wrap every
-// color in `dim()` uniformly — no element of the flag escapes the dim.
+// Brief C: trim membership has no effect on flags — they always paint
+// full-brightness.
 //
 // Disabled markers render identically to enabled markers in the top strip;
 // the only disabled signal lives in the marker stem (handled by
@@ -334,7 +328,6 @@ void render_flags(cairo_t* cr,
                   int sample_rate,
                   double font_size,
                   const std::set<int>& selected_set,
-                  const TrimRange& trim,
                   const FlagEditorOverlay& editor = {},
                   const std::vector<TimeMapSegment>* timemap = nullptr,
                   const DragOverlay* drag_overlay = nullptr);
@@ -361,7 +354,6 @@ void render_one_editor_flag(
     int sample_rate,
     double font_size,
     const std::set<int>& selected_set,
-    const TrimRange& trim,
     const FlagEditorOverlay& editor,
     const std::vector<TimeMapSegment>* timemap = nullptr,
     const DragOverlay* drag_overlay = nullptr);
@@ -396,7 +388,6 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_start_sample,
                               long long viewport_end_sample,
                               int sample_rate,
-                              const TrimRange& trim,
                               const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap = nullptr,
                               const DragOverlay* drag_overlay = nullptr);
@@ -407,8 +398,8 @@ void render_phase_reset_markers(cairo_t* cr,
 // Brief H two-state model (no flag editor exists for phase resets):
 //   1. Not selected: text in `kText`, no background fill.
 //   2. Selected: background fill in `kMarker`, text in `kText`.
-// Markers whose time_seconds (converted to source frames) lies outside
-// `trim` wrap every color in `dim()` uniformly.
+// Brief C: trim membership has no effect — flags always paint full-
+// brightness.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
@@ -417,7 +408,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const TrimRange& trim,
                             const std::vector<TimeMapSegment>* timemap = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 

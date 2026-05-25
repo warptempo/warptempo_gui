@@ -106,9 +106,11 @@ void GuiPlaybackLifecycle::toggle_playback() {
     } else {
         end = viewport.trim_end_sample();
         if (app.playhead_cursor_sample >= end) return;
-        // Clamp the start position into the trim range in case the
-        // cursor is sitting at trim_end - 1 (valid) or somehow slipped.
-        start = std::max(app.playhead_cursor_sample, viewport.trim_begin_sample());
+        // Cursor outside the trim region (either side) is a silent no-op.
+        // For unset trim, trim_begin_sample() is 0, so this never bites.
+        if (app.playhead_cursor_sample < viewport.trim_begin_sample()) return;
+        // Cursor is now guaranteed in [trim_begin, trim_end).
+        start = app.playhead_cursor_sample;
         // Source/render view: paint domain == playback domain, so the
         // scanner launch is the same value as start.
         scanner_launch = start;

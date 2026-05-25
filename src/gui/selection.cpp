@@ -27,18 +27,42 @@ void Selection::set_single_selection(int idx) {
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
+    // Brief C: a marker-selecting gesture makes Markers the group that
+    // Delete / Ctrl+drag act on.
+    app.last_sel_group = LastSelGroup::Markers;
+    // A fresh single-select in the marker group drops any trim-boundary
+    // selection — the two groups are orthogonal, but selecting a marker as
+    // the sole selection means trim is no longer selected.
+    ViewState& vs = active_view_state(app);
+    const bool had_trim = vs.trim_begin_selected || vs.trim_end_selected;
+    vs.trim_begin_selected = false;
+    vs.trim_end_selected   = false;
     viewport.invalidate_top_strip();
+    if (had_trim) viewport.invalidate_waveform_area();
 }
 
 void Selection::clear_selection() {
-    if (app.selected_markers.empty() && app.last_selected_marker == -1) return;
+    ViewState& vs = active_view_state(app);
+    const bool had_trim = vs.trim_begin_selected || vs.trim_end_selected;
+    const bool had_markers =
+        !app.selected_markers.empty() || app.last_selected_marker != -1;
+    if (!had_trim && !had_markers) return;   // nothing selected anywhere
+
     app.selected_markers.clear();
     app.last_selected_marker = -1;
+    vs.trim_begin_selected = false;
+    vs.trim_end_selected   = false;
+    app.last_sel_group = LastSelGroup::Markers;
+
     viewport.invalidate_top_strip();
+    // Trim stems live in the stem/waveform-area cache, so repaint it when a
+    // trim bound was deselected (amber stem returns from kSelected).
+    if (had_trim) viewport.invalidate_waveform_area();
 }
 
 bool Selection::toggle_selection_membership(int idx) {
     if (idx < 0) return false;
+    app.last_sel_group = LastSelGroup::Markers;
     bool added;
     auto it = app.selected_markers.find(idx);
     if (it == app.selected_markers.end()) {

@@ -34,7 +34,7 @@ namespace {
 // metadata (b=/e=/#) is invisible in the rect; the `|` separator sits to
 // the left of the rect, anchoring it to the marker column. Disabled
 // markers are skipped entirely (no stem, no flag); color conveys
-// selection (kSelected) and out-of-trim (dim()), not disabled state.
+// selection (kSelected), not disabled state.
 //
 // Variants:
 //   label_ref              → "a.42"
@@ -105,7 +105,6 @@ void render_marker_stems_impl(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    const TrimRange& trim,
     const std::set<int>& selected_set,
     const std::vector<TimeMapSegment>* timemap,
     const DragOverlay* drag_overlay,
@@ -131,46 +130,38 @@ void render_marker_stems_impl(
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
 
-    // Two passes — split by in-trim vs out-of-trim. Per-marker color
-    // picks {kMarker, kSelected} from selected_set; the trim split lets
-    // each pass apply (or skip) dim() once. Disabled markers are skipped
-    // entirely (no stem). Per-marker stroke is fine at editor marker
-    // counts; do not introduce 4-bucket batching without profiling.
-    for (int pass = 0; pass < 2; pass++) {
-        const bool out_of_trim_pass = (pass == 1);
-        for (size_t i = 0; i < markers.size(); ++i) {
-            if (is_disabled(static_cast<int>(i))) continue;
-            const auto& m = markers[i];
-            // Effective time: when a drag is active and this marker is
-            // in the overlay, read its proposed time from the overlay
-            // instead of the live store. The frozen timemap (passed in
-            // via `timemap`) is the matching pre-drag coordinate system
-            // for forward translation.
-            const double eff_time = drag_overlay
-                ? drag_overlay->effective_time(
-                      static_cast<int>(i), m.time_seconds)
-                : m.time_seconds;
-            // Translate per-marker source-frame to target-frame in target view
-            // (timemap non-null/non-empty); identity otherwise. Viewport and
-            // trim are passed in the same domain (source in source view,
-            // target in target view), so the comparisons stay consistent.
-            const double ms = sec_to_paint_sample(eff_time, sr, timemap);
-            if (ms < static_cast<double>(viewport_start_sample)) continue;
-            if (ms >= static_cast<double>(viewport_end_sample)) continue;
-            const int64_t pos = static_cast<int64_t>(std::nearbyint(ms));
-            if (marker_out_of_trim(pos, trim) != out_of_trim_pass) continue;
-            GuiColor c = selected_set.count(static_cast<int>(i)) > 0
-                ? kSelected : kMarker;
-            if (out_of_trim_pass) c = dim(c);
-            cairo_set_source_rgb(cr, c.r, c.g, c.b);
-            const double x_raw =
-                (ms - static_cast<double>(viewport_start_sample))
-                    / samples_per_pixel;
-            const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
-            cairo_move_to(cr, x_px, y_stem_top);
-            cairo_line_to(cr, x_px, y1);
-            cairo_stroke(cr);
-        }
+    // Per-marker color picks {kMarker, kSelected} from selected_set.
+    // Disabled markers are skipped entirely (no stem). Brief C retired
+    // the out-of-trim dim, so there is a single pass. Per-marker stroke
+    // is fine at editor marker counts; do not introduce batching without
+    // profiling.
+    for (size_t i = 0; i < markers.size(); ++i) {
+        if (is_disabled(static_cast<int>(i))) continue;
+        const auto& m = markers[i];
+        // Effective time: when a drag is active and this marker is
+        // in the overlay, read its proposed time from the overlay
+        // instead of the live store. The frozen timemap (passed in
+        // via `timemap`) is the matching pre-drag coordinate system
+        // for forward translation.
+        const double eff_time = drag_overlay
+            ? drag_overlay->effective_time(
+                  static_cast<int>(i), m.time_seconds)
+            : m.time_seconds;
+        // Translate per-marker source-frame to target-frame in target view
+        // (timemap non-null/non-empty); identity otherwise.
+        const double ms = sec_to_paint_sample(eff_time, sr, timemap);
+        if (ms < static_cast<double>(viewport_start_sample)) continue;
+        if (ms >= static_cast<double>(viewport_end_sample)) continue;
+        const GuiColor c = selected_set.count(static_cast<int>(i)) > 0
+            ? kSelected : kMarker;
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        const double x_raw =
+            (ms - static_cast<double>(viewport_start_sample))
+                / samples_per_pixel;
+        const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
+        cairo_move_to(cr, x_px, y_stem_top);
+        cairo_line_to(cr, x_px, y1);
+        cairo_stroke(cr);
     }
 
     cairo_restore(cr);
@@ -324,10 +315,7 @@ void render_waveform(cairo_t* cr,
                      int channel,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
-                     long long trim_begin_sample,
-                     long long trim_end_sample,
-                     GuiColor bright_color,
-                     GuiColor dim_color,
+                     GuiColor color,
                      const std::vector<TimeMapSegment>* timemap) {
     if (area.w <= 0 || area.h <= 2) return;
     if (viewport_end_sample <= viewport_start_sample) return;
@@ -358,7 +346,7 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    struct ColLine { double x, y0, y1; bool bright; };
+    struct ColLine { double x, y0, y1; };
     std::vector<ColLine> lines;
     lines.reserve(static_cast<size_t>(area.w));
 
@@ -406,34 +394,14 @@ void render_waveform(cairo_t* cr,
         const double y_bottom = y_center - min_val * half_h;
         const double x_px     = area.x + i + 0.5;
 
-        // Per spec: a column that straddles a trim boundary is assigned by
-        // the midpoint of its DOMAIN-frame range. In source view that's
-        // the source-sample midpoint; in target view it's the target-frame
-        // midpoint. trim_*_sample is interpreted in the same domain as the
-        // viewport, so the comparison is correct in both views (no extra
-        // translation).
-        const long long mid_domain =
-            static_cast<long long>(std::nearbyint((f0 + f1) * 0.5));
-        const bool bright = (mid_domain >= trim_begin_sample &&
-                             mid_domain <  trim_end_sample);
-
-        lines.push_back({x_px, y_top, y_bottom, bright});
+        lines.push_back({x_px, y_top, y_bottom});
     }
 
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
 
-    cairo_set_source_rgb(cr, bright_color.r, bright_color.g, bright_color.b);
+    cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& L : lines) {
-        if (!L.bright) continue;
-        cairo_move_to(cr, L.x, L.y0);
-        cairo_line_to(cr, L.x, L.y1);
-    }
-    cairo_stroke(cr);
-
-    cairo_set_source_rgb(cr, dim_color.r, dim_color.g, dim_color.b);
-    for (const auto& L : lines) {
-        if (L.bright) continue;
         cairo_move_to(cr, L.x, L.y0);
         cairo_line_to(cr, L.x, L.y1);
     }
@@ -501,17 +469,64 @@ void render_markers(cairo_t* cr,
                     long long viewport_start_sample,
                     long long viewport_end_sample,
                     int sample_rate,
-                    const TrimRange& trim,
                     const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap,
                     const DragOverlay* drag_overlay) {
     render_marker_stems_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, trim, selected_set, timemap, drag_overlay,
+        sample_rate, selected_set, timemap, drag_overlay,
         [&](int i) {
             return effective_disabled(markers, i);
         });
+}
+
+void render_trim_stems(cairo_t* cr,
+                       GuiRect waveform_area,
+                       long long viewport_start_sample,
+                       long long viewport_end_sample,
+                       const TrimRange& trim,
+                       bool has_begin,
+                       bool begin_selected,
+                       bool has_end,
+                       bool end_selected) {
+    if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+    if (!has_begin && !has_end) return;
+
+    const double span = static_cast<double>(viewport_end_sample -
+                                            viewport_start_sample);
+    const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
+    if (samples_per_pixel <= 0.0) return;
+
+    // Same stem geometry as render_marker_stems_impl: top flush with the
+    // flag box bottom, bottom at the waveform's lower edge.
+    const double y_stem_top =
+        static_cast<double>(waveform_area.y) - kStemPaintTopPx;
+    const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
+
+    cairo_save(cr);
+    cairo_set_line_width(cr, 1.0);
+
+    auto paint_bound = [&](int64_t frame, bool selected) {
+        const double ms = static_cast<double>(frame);
+        if (ms < static_cast<double>(viewport_start_sample)) return;
+        if (ms >= static_cast<double>(viewport_end_sample)) return;
+        const GuiColor c = selected ? kSelected : kTrimMarker;
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        const double x_raw =
+            (ms - static_cast<double>(viewport_start_sample))
+                / samples_per_pixel;
+        const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
+        cairo_move_to(cr, x_px, y_stem_top);
+        cairo_line_to(cr, x_px, y1);
+        cairo_stroke(cr);
+    };
+
+    if (has_begin) paint_bound(trim.begin, begin_selected);
+    if (has_end)   paint_bound(trim.end, end_selected);
+
+    cairo_restore(cr);
 }
 
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
@@ -704,37 +719,22 @@ void paint_one_flag_with_overlay(
     double text_left,
     double baseline_y,
     const std::string& text,
-    const cairo_text_extents_t& ext,
-    const std::vector<GuiWarpMarker>& markers,
     const std::set<int>& selected_set,
-    const TrimRange& trim,
     const FlagEditorOverlay& editor,
-    const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay,
-    double sr_d,
     double hl_pad,
     const cairo_text_extents_t& uniform_ext) {
-    (void)ext;  // editable text re-measured inside render_editor_text_box
     const bool is_selected = selected_set.count(i) > 0;
     const bool is_editing    = (i == editor.marker_index);
     const bool is_parse_fail = is_editing && editor.is_red;
 
-    const double eff_time = drag_overlay
-        ? drag_overlay->effective_time(i, markers[i].time_seconds)
-        : markers[i].time_seconds;
-    const double pos_ms = sec_to_paint_sample(eff_time, sr_d, timemap);
-    const int64_t marker_pos =
-        static_cast<int64_t>(std::nearbyint(pos_ms));
-    const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
-
     const std::string draw_text = is_editing ? editor.pending : text;
 
     // Fill table (Brief B.2): parse-fail > selected > default(kMarker).
+    // Brief C: trim membership no longer dims the chip.
     GuiColor fill_col;
     if (is_parse_fail)      fill_col = kAccent;
     else if (is_selected)   fill_col = kSelected;
     else                    fill_col = kMarker;
-    if (out_of_trim) fill_col = dim(fill_col);
 
     EditorTextBox box;
     box.anchor_x        = text_left + hl_pad;
@@ -743,7 +743,7 @@ void paint_one_flag_with_overlay(
     box.uniform_ext     = uniform_ext;
     box.hl_pad          = hl_pad;
     box.fill            = fill_col;
-    box.text_color      = out_of_trim ? dim(kText) : kText;
+    box.text_color      = kText;
     box.has_selection   = is_editing && editor.has_selection;
     box.selection_start = editor.selection_start;
     box.selection_end   = editor.selection_end;
@@ -764,7 +764,6 @@ void render_flags(cairo_t* cr,
                   int sample_rate,
                   double font_size,
                   const std::set<int>& selected_set,
-                  const TrimRange& trim,
                   const FlagEditorOverlay& editor,
                   const std::vector<TimeMapSegment>* timemap,
                   const DragOverlay* drag_overlay) {
@@ -779,7 +778,6 @@ void render_flags(cairo_t* cr,
     cairo_set_font_size(cr, font_size);
 
     const double hl_pad = kFlagInnerPadPx;
-    const double sr_d   = static_cast<double>(sample_rate);
 
     cairo_text_extents_t uniform_ext;
     cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
@@ -824,10 +822,8 @@ void render_flags(cairo_t* cr,
 
     for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
         paint_one_flag_with_overlay(cr, it->i, it->text_left, it->baseline_y,
-                                    it->text, it->ext,
-                                    markers, selected_set, trim, editor,
-                                    timemap, drag_overlay, sr_d, hl_pad,
-                                    uniform_ext);
+                                    it->text, selected_set, editor,
+                                    hl_pad, uniform_ext);
     }
 
     cairo_restore(cr);
@@ -842,7 +838,6 @@ void render_one_editor_flag(
     int sample_rate,
     double font_size,
     const std::set<int>& selected_set,
-    const TrimRange& trim,
     const FlagEditorOverlay& editor,
     const std::vector<TimeMapSegment>* timemap,
     const DragOverlay* drag_overlay) {
@@ -858,7 +853,6 @@ void render_one_editor_flag(
     cairo_set_font_size(cr, font_size);
 
     const double hl_pad = kFlagInnerPadPx;
-    const double sr_d   = static_cast<double>(sample_rate);
 
     cairo_text_extents_t uniform_ext;
     cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
@@ -871,12 +865,11 @@ void render_one_editor_flag(
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
+            (void)ext;
             if (i != editor.marker_index) return;
             paint_one_flag_with_overlay(cr, i, text_left, baseline_y,
-                                        text, ext,
-                                        markers, selected_set, trim, editor,
-                                        timemap, drag_overlay, sr_d, hl_pad,
-                                        uniform_ext);
+                                        text, selected_set, editor,
+                                        hl_pad, uniform_ext);
         });
 
     cairo_restore(cr);
@@ -971,14 +964,13 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_start_sample,
                               long long viewport_end_sample,
                               int sample_rate,
-                              const TrimRange& trim,
                               const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap,
                               const DragOverlay* drag_overlay) {
     render_marker_stems_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, trim, selected_set, timemap, drag_overlay,
+        sample_rate, selected_set, timemap, drag_overlay,
         [&](int i) {
             return phase_resets[i].disabled;
         });
@@ -992,7 +984,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const TrimRange& trim,
                             const std::vector<TimeMapSegment>* timemap,
                             const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1035,26 +1026,13 @@ void render_phase_reset_flags(cairo_t* cr,
             emits.push_back({i, text_left, baseline_y, text, ext});
         });
 
-    const double sr = static_cast<double>(sample_rate);
     auto paint_one = [&](const PhaseResetEmit& e) {
         const bool is_selected = selected_set.count(e.i) > 0;
-        // Effective time: drag overlay > live store. Keeps out-of-trim
-        // dim consistent with displayed stem during drag.
-        const double eff_time = drag_overlay
-            ? drag_overlay->effective_time(
-                  e.i, phase_resets[e.i].time_seconds)
-            : phase_resets[e.i].time_seconds;
-        // Translate per-marker frame to target-frame in target view so the
-        // out-of-trim comparison runs in the same domain as `trim`.
-        const double pos_ms = sec_to_paint_sample(eff_time, sr, timemap);
-        const int64_t marker_pos =
-            static_cast<int64_t>(std::nearbyint(pos_ms));
-        const bool out_of_trim = marker_out_of_trim(marker_pos, trim);
 
         // Fill table (Brief B.2): no parse-fail state for phase resets,
-        // so selected > default(kMarker). Always a solid chip.
+        // so selected > default(kMarker). Always a solid chip. Brief C:
+        // trim membership no longer dims the chip.
         GuiColor fill_col = is_selected ? kSelected : kMarker;
-        if (out_of_trim) fill_col = dim(fill_col);
 
         EditorTextBox box;
         box.anchor_x    = e.text_left + hl_pad;
@@ -1063,7 +1041,7 @@ void render_phase_reset_flags(cairo_t* cr,
         box.uniform_ext = uniform_ext;
         box.hl_pad      = hl_pad;
         box.fill        = fill_col;
-        box.text_color  = out_of_trim ? dim(kText) : kText;
+        box.text_color  = kText;
         render_editor_text_box(cr, box);
 
         if constexpr (kDebugPerf) perf_counters::flag_drawn++;

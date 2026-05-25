@@ -32,8 +32,6 @@ struct WaveformJob {
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
     int64_t   vp_start         = 0;
     int64_t   vp_end           = 0;
-    int64_t   trim_begin       = 0;
-    int64_t   trim_end         = 0;
     int       area_w           = 0;
     int       area_h           = 0;
     long long audio_gen        = -1;
@@ -155,6 +153,4 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    int64_t trim_begin,
-    int64_t trim_end,
     const std::vector<TimeMapSegment>* timemap_or_null);

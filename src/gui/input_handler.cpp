@@ -567,6 +567,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // Escape during a trim-boundary drag reverts the dragged bound to its
+    // pre-drag value (the drag mutated the live store per motion event)
+    // and ends the gesture without an undo entry.
+    if (key == GuiKeys::Escape && app.trim_drag.active) {
+        ViewState& vs = active_view_state(app);
+        double& field = app.trim_drag.is_begin ? vs.trim_begin_seconds
+                                                : vs.trim_end_seconds;
+        double& other = app.trim_drag.is_begin ? vs.trim_end_seconds
+                                                : vs.trim_begin_seconds;
+        bool changed = false;
+        if (field != app.trim_drag.orig_seconds) {
+            field = app.trim_drag.orig_seconds;
+            changed = true;
+        }
+        // Group drag moved both bounds; restore the other one too.
+        if (app.trim_drag.group && other != app.trim_drag.orig_other_seconds) {
+            other = app.trim_drag.orig_other_seconds;
+            changed = true;
+        }
+        if (changed) {
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+            target_render.trigger();
+        }
+        app.trim_drag = TrimDragState{};
+        return;
+    }
+
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
         prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
@@ -1621,6 +1649,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     if (key == GuiKeys::Delete && !ctrl) {
+        // Brief C: Delete acts on the group named by last_sel_group. With
+        // a trim boundary last-selected, clear the selected bound(s) and
+        // leave markers untouched; otherwise the marker-delete runs.
+        if (app.last_sel_group == LastSelGroup::Trim) {
+            delete_selected_trim();
+            return;
+        }
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
@@ -1690,10 +1725,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             ViewState& vs = active_view_state(app);
             if (vs.has_trim_begin || vs.has_trim_end) {
                 SettingsSnapshot pre = capture_current_settings(app);
-                vs.has_trim_begin     = false;
-                vs.has_trim_end       = false;
-                vs.trim_begin_seconds = 0.0;
-                vs.trim_end_seconds   = 0.0;
+                vs.has_trim_begin      = false;
+                vs.has_trim_end        = false;
+                vs.trim_begin_seconds  = 0.0;
+                vs.trim_end_seconds    = 0.0;
+                vs.trim_begin_selected = false;
+                vs.trim_end_selected   = false;
                 undo.push_settings_undo(std::move(pre));
                 viewport.invalidate_waveform_area();
                 viewport.invalidate_timestamp_area();
@@ -2015,6 +2052,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Defensive: a second press during a drag is ignored (left button
     // should still be held down for a drag to exist).
     if (app.drag.active) return;
+    if (app.trim_drag.active) return;
 
     // Chunk W: render-view mouse gate. Left-click on a marker line
     // (in the waveform area) or a flag rect (in the top strip)
@@ -2253,6 +2291,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         bool in_click_region = false;
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
+            // Brief C: a waveform press that misses every marker but lands
+            // on a trim boundary stem routes to the trim gesture path.
+            // Markers take priority on a shared column.
+            if (hit < 0) {
+                const TrimHit th = hit_test_trim_boundary(app, audio, x);
+                if (th != TrimHit::None) {
+                    handle_trim_boundary_press(th, ctrl, shift);
+                    if (app.trim_drag.active && was_playing)
+                        app.follow_overridden_for_session = true;
+                    return;
+                }
+            }
             in_click_region = true;
         } else if (inside_top) {
             hit = hit_test_flag(app, audio, x, y);
@@ -2499,6 +2549,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
         app.playhead_drag = PlayheadDragState{};
         return;
     }
+    if (app.trim_drag.active) {
+        commit_trim_drag();
+        return;
+    }
     if (!app.drag.active) return;
     warpops.commit_drag();
 }
@@ -2526,6 +2580,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     if (text_editor::is_active(app.settings_editor)) {
         viewport.clear_hover_popup();
+        return;
+    }
+    // Brief C: trim-boundary drag motion. Handled before the render-view
+    // and marker-drag branches; only ever active in source view (the only
+    // place begin_trim_drag fires). A lost button commits at the current
+    // position, mirroring the marker-drag motion handler.
+    if (app.trim_drag.active) {
+        viewport.clear_hover_popup();
+        if (!mods.primary_button_held) {
+            commit_trim_drag();
+            return;
+        }
+        update_trim_drag(mouse_x);
         return;
     }
     // Brief 3b: target-view motion authoring is unblocked. Fall through
@@ -2779,6 +2846,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
 
     bool&   this_has      = (side == TrimSide::Begin) ? vs.has_trim_begin     : vs.has_trim_end;
     double& this_seconds  = (side == TrimSide::Begin) ? vs.trim_begin_seconds : vs.trim_end_seconds;
+    bool&   this_sel      = (side == TrimSide::Begin) ? vs.trim_begin_selected : vs.trim_end_selected;
     bool&   other_has     = (side == TrimSide::Begin) ? vs.has_trim_end       : vs.has_trim_begin;
     double& other_seconds = (side == TrimSide::Begin) ? vs.trim_end_seconds   : vs.trim_begin_seconds;
     const char letter     = (side == TrimSide::Begin) ? 'b' : 'e';
@@ -2791,6 +2859,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
             SettingsSnapshot pre = capture_current_settings(app);
             this_has     = false;
             this_seconds = 0.0;
+            this_sel     = false;
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -2850,10 +2919,12 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     ViewState& vs = active_view_state(app);
     bool&   this_has     = (side == TrimSide::Begin) ? vs.has_trim_begin     : vs.has_trim_end;
     double& this_seconds = (side == TrimSide::Begin) ? vs.trim_begin_seconds : vs.trim_end_seconds;
+    bool&   this_sel     = (side == TrimSide::Begin) ? vs.trim_begin_selected : vs.trim_end_selected;
     if (!this_has) return;
     SettingsSnapshot pre = capture_current_settings(app);
     this_has     = false;
     this_seconds = 0.0;
+    this_sel     = false;  // an unset bound can't stay selected
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -2866,6 +2937,191 @@ void GuiInputHandler::handle_trim_unset_begin() {
 
 void GuiInputHandler::handle_trim_unset_end() {
     handle_trim_unset(TrimSide::End);
+}
+
+// --- Brief C: trim boundary mouse gestures ------------------------------
+
+void GuiInputHandler::select_trim_boundary(TrimHit which, bool additive) {
+    if (which == TrimHit::None) return;
+    ViewState& vs = active_view_state(app);
+    bool& this_sel  = (which == TrimHit::Begin) ? vs.trim_begin_selected
+                                                : vs.trim_end_selected;
+    bool& other_sel = (which == TrimHit::Begin) ? vs.trim_end_selected
+                                                : vs.trim_begin_selected;
+    if (additive) {
+        // Toggle this bound's membership; leave the other bound as-is.
+        this_sel = !this_sel;
+    } else {
+        // Single-select within the trim group: this bound on, other off.
+        this_sel  = true;
+        other_sel = false;
+        // A fresh sole selection in the trim group drops marker selection —
+        // orthogonal groups, but a single-select in one clears the other
+        // (the symmetric counterpart of set_single_selection clearing trim).
+        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+            app.selected_markers.clear();
+            app.last_selected_marker = -1;
+            viewport.invalidate_top_strip();
+        }
+    }
+    app.last_sel_group = LastSelGroup::Trim;
+    viewport.invalidate_waveform_area();
+}
+
+void GuiInputHandler::begin_trim_drag(TrimHit which) {
+    if (which == TrimHit::None) return;
+    ViewState& vs = active_view_state(app);
+    const bool is_begin = (which == TrimHit::Begin);
+    if (is_begin ? !vs.has_trim_begin : !vs.has_trim_end) return;
+    app.trim_drag.active       = true;
+    app.trim_drag.is_begin     = is_begin;
+    app.trim_drag.moved        = false;
+    // Group drag when both bounds are set AND both selected: dragging either
+    // one rigidly translates the pair (region width preserved).
+    app.trim_drag.group        = vs.trim_begin_selected && vs.trim_end_selected
+                              && vs.has_trim_begin && vs.has_trim_end;
+    app.trim_drag.orig_seconds = is_begin ? vs.trim_begin_seconds
+                                          : vs.trim_end_seconds;
+    app.trim_drag.orig_other_seconds = is_begin ? vs.trim_end_seconds
+                                                 : vs.trim_begin_seconds;
+    app.trim_drag.pre          = capture_current_settings(app);
+    app.last_sel_group         = LastSelGroup::Trim;
+}
+
+void GuiInputHandler::update_trim_drag(int mouse_x) {
+    if (!app.trim_drag.active) return;
+    const int sr = audio.sample_rate();
+    if (sr <= 0 || audio.total_frames() <= 0) return;
+    const double sr_d = static_cast<double>(sr);
+    const GuiRect area = waveform_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+
+    int rel = mouse_x - area.x;
+    if (rel < 0) rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const int64_t domain_frame = app.viewport_start_sample +
+        static_cast<int64_t>(std::nearbyint(rel * spp));
+
+    // Target view: the cursor column is an active-domain frame; the trim
+    // store is source-domain. Inverse-translate at the boundary, mirroring
+    // handle_trim_set_at_playhead.
+    std::vector<TimeMapSegment> tmap;
+    if (app.active_audio_view == 'T') {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    int64_t src_frame = to_source_frame(app, domain_frame, tmap);
+
+    const int64_t total = static_cast<int64_t>(audio.total_frames());
+    ViewState& vs = active_view_state(app);
+
+    if (app.trim_drag.group) {
+        // Rigid pair translation: the dragged bound's desired source frame
+        // sets a delta that both bounds move by, preserving region width.
+        // The delta is clamped against both file edges so the region stops
+        // as a unit rather than one bound collapsing into the other.
+        const int64_t orig_dragged_f = static_cast<int64_t>(
+            std::nearbyint(app.trim_drag.orig_seconds * sr_d));
+        const int64_t orig_begin_f = static_cast<int64_t>(std::nearbyint(
+            (app.trim_drag.is_begin ? app.trim_drag.orig_seconds
+                                    : app.trim_drag.orig_other_seconds) * sr_d));
+        const int64_t orig_end_f = static_cast<int64_t>(std::nearbyint(
+            (app.trim_drag.is_begin ? app.trim_drag.orig_other_seconds
+                                    : app.trim_drag.orig_seconds) * sr_d));
+
+        int64_t delta = src_frame - orig_dragged_f;
+        const int64_t min_delta = -orig_begin_f;        // begin >= 0
+        const int64_t max_delta = total - orig_end_f;    // end   <= total
+        if (delta < min_delta) delta = min_delta;
+        if (delta > max_delta) delta = max_delta;
+
+        const double new_begin = static_cast<double>(orig_begin_f + delta) / sr_d;
+        const double new_end   = static_cast<double>(orig_end_f   + delta) / sr_d;
+        if (vs.trim_begin_seconds != new_begin ||
+            vs.trim_end_seconds   != new_end) {
+            vs.trim_begin_seconds = new_begin;
+            vs.trim_end_seconds   = new_end;
+            app.trim_drag.moved = true;
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+        }
+        return;
+    }
+
+    if (src_frame < 0) src_frame = 0;
+    if (src_frame > total) src_frame = total;
+
+    // Clamp against the other bound: a dragged begin stops one frame short
+    // of end, a dragged end stops one frame past begin (the continuous
+    // analogue of the keyboard collision-refuse).
+    if (app.trim_drag.is_begin) {
+        if (vs.has_trim_end) {
+            const int64_t end_f = static_cast<int64_t>(
+                std::nearbyint(vs.trim_end_seconds * sr_d));
+            if (src_frame > end_f - 1) src_frame = end_f - 1;
+            if (src_frame < 0) src_frame = 0;
+        }
+    } else {
+        if (vs.has_trim_begin) {
+            const int64_t begin_f = static_cast<int64_t>(
+                std::nearbyint(vs.trim_begin_seconds * sr_d));
+            if (src_frame < begin_f + 1) src_frame = begin_f + 1;
+            if (src_frame > total) src_frame = total;
+        }
+    }
+
+    const double new_seconds = static_cast<double>(src_frame) / sr_d;
+    double& field = app.trim_drag.is_begin ? vs.trim_begin_seconds
+                                           : vs.trim_end_seconds;
+    if (field != new_seconds) {
+        field = new_seconds;
+        app.trim_drag.moved = true;
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+    }
+}
+
+void GuiInputHandler::commit_trim_drag() {
+    if (!app.trim_drag.active) return;
+    if (app.trim_drag.moved) {
+        undo.push_settings_undo(std::move(app.trim_drag.pre));
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+    } else {
+        // Ctrl+press with no motion is a Ctrl+click: toggle the boundary's
+        // selection (additive — coexists with marker selection).
+        const TrimHit which = app.trim_drag.is_begin ? TrimHit::Begin
+                                                      : TrimHit::End;
+        select_trim_boundary(which, /*additive=*/true);
+    }
+    app.trim_drag = TrimDragState{};
+}
+
+void GuiInputHandler::delete_selected_trim() {
+    ViewState& vs = active_view_state(app);
+    if (vs.trim_begin_selected && vs.has_trim_begin) {
+        handle_trim_unset(TrimSide::Begin);
+    }
+    if (vs.trim_end_selected && vs.has_trim_end) {
+        handle_trim_unset(TrimSide::End);
+    }
+    vs.trim_begin_selected = false;
+    vs.trim_end_selected   = false;
+}
+
+void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
+                                                 bool shift) {
+    if (which == TrimHit::None) return;
+    if (ctrl) {
+        // Read-only refuses the drag-begin so app.trim_drag.active never
+        // enters flight; motion / release / Escape all short-circuit on it.
+        if (active_view_state(app).read_only) return;
+        begin_trim_drag(which);
+        return;
+    }
+    select_trim_boundary(which, /*additive=*/shift);
 }
 
 void GuiInputHandler::handle_active_audio_view_toggle() {

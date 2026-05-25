@@ -113,6 +113,58 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     return best_hit;
 }
 
+TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
+                               int mouse_x) {
+    // Trim editing is a source-view authoring gesture against the active
+    // A/B tab; render-view has its own (trim-less) display.
+    if (app.render_view_enabled) return TrimHit::None;
+    const ViewState& vs = active_view_state(app);
+    if (!vs.has_trim_begin && !vs.has_trim_end) return TrimHit::None;
+
+    const GuiRect area = waveform_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return TrimHit::None;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return TrimHit::None;
+    const double sr_d = static_cast<double>(sr);
+    const int click_rel_x = mouse_x - area.x;
+    const double vp = static_cast<double>(app.viewport_start_sample);
+    const int64_t visible = samples_visible(app, audio);
+
+    // Same target-view translation as hit_test_marker_line: trim is stored
+    // source-domain, painted at map_source_to_target columns in target view.
+    std::vector<TimeMapSegment> target_timemap;
+    if (app.active_audio_view == 'T') {
+        target_timemap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const bool use_tmap = !target_timemap.empty();
+
+    auto bound_dist = [&](double seconds, bool present) -> int {
+        if (!present) return kMarkerHitHalfPx + 1;
+        double ms = std::nearbyint(seconds * sr_d);
+        if (use_tmap) {
+            const size_t q = (ms < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(ms));
+            ms = map_source_to_target(q, target_timemap);
+        }
+        if (ms < vp) return kMarkerHitHalfPx + 1;
+        if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
+        const int b_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
+        return std::abs(b_px - click_rel_x);
+    };
+
+    const int db = bound_dist(vs.trim_begin_seconds, vs.has_trim_begin);
+    const int de = bound_dist(vs.trim_end_seconds, vs.has_trim_end);
+    const bool begin_ok = db <= kMarkerHitHalfPx;
+    const bool end_ok   = de <= kMarkerHitHalfPx;
+    if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
+    if (begin_ok) return TrimHit::Begin;
+    if (end_ok)   return TrimHit::End;
+    return TrimHit::None;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     // Brief F Section 3: render-view's phase reset sub-view paints no

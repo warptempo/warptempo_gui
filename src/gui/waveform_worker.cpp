@@ -130,8 +130,6 @@ void GuiWaveformWorker::worker_loop() {
                 *job.audio,
                 job.vp_start,
                 job.vp_end,
-                job.trim_begin,
-                job.trim_end,
                 job.timemap.empty() ? nullptr : &job.timemap);
             ok = !cancel_flag_.load();
         }

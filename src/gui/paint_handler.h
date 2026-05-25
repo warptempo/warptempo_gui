@@ -77,8 +77,6 @@ struct WaveformCache {
     // view's last cached paint on its next entry.
     int64_t   fp_vp_start    = 0;
     int64_t   fp_vp_end      = 0;
-    int64_t   fp_trim_begin  = 0;
-    int64_t   fp_trim_end    = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
     long long fp_audio_gen   = -1;     // -1 = never rendered
@@ -105,8 +103,6 @@ struct WaveformCache {
 
     int64_t   pending_fp_vp_start    = 0;
     int64_t   pending_fp_vp_end      = 0;
-    int64_t   pending_fp_trim_begin  = 0;
-    int64_t   pending_fp_trim_end    = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     long long pending_fp_audio_gen   = -1;
@@ -127,8 +123,6 @@ struct WaveformCache {
     bool      supersede             = false;
     int64_t   supersede_vp_start    = 0;
     int64_t   supersede_vp_end      = 0;
-    int64_t   supersede_trim_begin  = 0;
-    int64_t   supersede_trim_end    = 0;
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     long long supersede_audio_gen   = -1;
@@ -216,6 +210,15 @@ struct StemCache {
     bool      fp_render_view_enabled         = false;
     uint64_t  fp_selection_hash              = 0;
 
+    // Brief C: trim boundary stems share this cache. The begin/end frame
+    // positions ride fp_trim_begin / fp_trim_end above; these capture the
+    // per-tab has-set + selected bits so the cache rebuilds when a bound
+    // appears/disappears or its selection toggles.
+    bool      fp_trim_has_begin              = false;
+    bool      fp_trim_has_end                = false;
+    bool      fp_trim_begin_selected         = false;
+    bool      fp_trim_end_selected           = false;
+
     // Mirrors WaveformCache::dirty — "no pixels yet, skip blit." Set at
     // construction and at destroy_surface; cleared by the first rebuild.
     bool dirty = true;
@@ -261,8 +264,6 @@ struct FlagCache {
     long long fp_audio_gen           = -1;
     int64_t   fp_vp_start            = 0;
     int64_t   fp_vp_end              = 0;
-    int64_t   fp_trim_begin          = 0;
-    int64_t   fp_trim_end            = 0;
     int       fp_area_w              = 0;
     int       fp_area_h              = 0;
     bool      fp_target              = false;
@@ -386,8 +387,6 @@ private:
     struct WaveformRenderInputs {
         int64_t  vp_start      = 0;
         int64_t  vp_end        = 0;
-        int64_t  trim_begin    = 0;
-        int64_t  trim_end      = 0;
         int      area_w        = 0;
         int      area_h        = 0;
         bool     is_target     = false;

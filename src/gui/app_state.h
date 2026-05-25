@@ -248,6 +248,27 @@ struct PlayheadDragState {
     int  press_marker_idx          = -1;
 };
 
+// Brief C: which selection group the most recent selecting gesture
+// targeted. Group-acting gestures (Delete, Ctrl+drag) act on exactly one
+// group, chosen by this tag. Set to Trim when a click/gesture lands on a
+// trim boundary, Markers when it lands on a marker.
+enum class LastSelGroup { Markers, Trim };
+
+// Brief C: Ctrl+drag of a trim boundary stem. Parallel to DragState but
+// writes the per-tab trim store directly (no overlay): motion mutates the
+// dragged bound's seconds live, release pushes a single SettingsSnapshot
+// undo. `pre` is captured at drag-begin so release can push the inverse.
+// Session-only.
+struct TrimDragState {
+    bool active   = false;
+    bool is_begin = false;   // which bound the cursor is dragging
+    bool moved    = false;   // whether motion actually changed the bound
+    bool group    = false;   // true = both bounds move rigidly together
+    double orig_seconds       = 0.0;  // dragged bound's pre-drag value (Escape-restore)
+    double orig_other_seconds = 0.0;  // other bound's pre-drag value (group drag)
+    SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
+};
+
 // V.A3b hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor for kHoverDelayMs becomes a tooltip showing
 // the resolved tempo. The motion handler sets `marker_index` + `entry_time`
@@ -324,6 +345,16 @@ struct ViewState {
     double trim_end_seconds   = 0.0;
     bool   has_trim_begin     = false;
     bool   has_trim_end       = false;
+
+    // Brief C: transient per-tab selection of the trim boundary stems.
+    // A separate selection channel from the marker sets (selected_markers
+    // / phase_reset_selected) — the two groups are orthogonal and can be
+    // co-selected. Not persisted to .settings; defaults false and resets
+    // on file load (the ViewState{} default covers it). Which group a
+    // group-acting gesture (Delete, Ctrl+drag) targets is decided by
+    // AppState::last_sel_group.
+    bool   trim_begin_selected = false;
+    bool   trim_end_selected   = false;
 
     // Per-tab read-only lock. Toggled by bare `o`. While true, the active
     // tab admits a subset of keys (navigation, playback, view-switch) and
@@ -433,6 +464,14 @@ struct AppState {
     // Playhead drag state (plain / Shift left-button). Cleared on button
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;
+
+    // Brief C: Ctrl+drag of a trim boundary stem. Cleared on button
+    // release, Escape, and file load.
+    TrimDragState trim_drag;
+
+    // Brief C: which selection group the last selecting gesture targeted.
+    // Drives Delete / Ctrl+drag group dispatch. Session-only.
+    LastSelGroup last_sel_group = LastSelGroup::Markers;
 
     // V.A3b hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
@@ -849,6 +888,18 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 // in render-view's phase reset sub-view (no flag rects there).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
+
+// Brief C: which trim boundary, if any, a waveform-area click lands on.
+enum class TrimHit { None, Begin, End };
+
+// hit_test_trim_boundary: return which set trim boundary's painted
+// column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
+// bounds (has_trim_begin / has_trim_end) are testable. Walks the same
+// timemap as hit_test_marker_line in target view so the hit lands on the
+// visually-drawn stem. Trim is the active tab's, and applies in both 'W'
+// and 'P' views. When both bounds are within reach, the nearer wins.
+TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
+                               int mouse_x);
 
 // X.7.8b-3: promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
