@@ -907,6 +907,18 @@ enum class TrimHit { None, Begin, End };
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 
+// hit_test_trim_chip: like hit_test_trim_boundary, but tests the press
+// against each set bound's painted CHIP RECT in the upper top row rather
+// than the stem column. The chip glyph ("b"/"e") is drawn hl_pad to the
+// right of the bound's column, so a column-only test misses clicks on the
+// visible chip (F.trim.4). The rect mirrors regular-flag hit geometry
+// (compute_flag_hit_rects): x = round(text_left - kFlagInnerPadPx),
+// w = round(glyph_advance + 2*kFlagInnerPadPx), with y/h from
+// top_upper_row_area. Tests both mouse_x and mouse_y. Used for upper-row
+// presses; the stem elsewhere still routes through hit_test_trim_boundary.
+TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
+                           int mouse_x, int mouse_y);
+
 // X.7.8b-3: promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
 // display a numeric tempo (pass markers and label_ref markers qualify;

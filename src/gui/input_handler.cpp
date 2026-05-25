@@ -2408,14 +2408,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // F.trim.1: the trim stem is grabbable along its whole visible
             // extent in the top strip, mirroring the in-waveform stem.
             // Markers take priority on a shared column, so try the flag
-            // hit-test first; only on a miss does the trim stem fill in.
-            // This makes the chip, the lower-row stem segment, and the gap
-            // regions all grab the bound. Hit precision is the same
-            // column tolerance the stem uses (hit_test_trim_boundary is
-            // column-only) — consistent with trim hit-testing everywhere else.
+            // hit-test first; only on a miss does the trim path fill in.
             hit = hit_test_flag(app, audio, x, y);
             if (hit < 0) {
-                const TrimHit th = hit_test_trim_boundary(app, audio, x);
+                // F.trim.4: the b/e chip glyph is painted hl_pad RIGHT of the
+                // bound's column, so a column-only test misses clicks on the
+                // visible chip. In the upper row, test the painted chip RECT
+                // first (mirroring regular-flag hit geometry); fall through to
+                // the column test for the stem in the lower row, the inter-row
+                // gap, and the rest of the strip, where the stem sits at the
+                // true column. Both route to handle_trim_boundary_press.
+                TrimHit th = hit_test_trim_chip(app, audio, x, y);
+                if (th == TrimHit::None)
+                    th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None) {
                     handle_trim_boundary_press(th, ctrl, shift);
                     if (app.trim_drag.active && was_playing)
@@ -3091,7 +3096,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which) {
     if (which == TrimHit::None) return;
     ViewState& vs = active_view_state(app);
     const bool is_begin = (which == TrimHit::Begin);
-    if (is_begin ? !vs.has_trim_begin : !vs.has_trim_end) return;
+    if (is_begin ? !vs.has_trim_begin : !vs.has_trim_end) {
+        return;
+    }
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.moved        = false;

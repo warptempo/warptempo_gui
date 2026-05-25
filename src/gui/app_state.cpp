@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -169,6 +170,96 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
     if (begin_ok) return TrimHit::Begin;
     if (end_ok)   return TrimHit::End;
+    return TrimHit::None;
+}
+
+TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
+                           int mouse_x, int mouse_y) {
+    // Same gating as hit_test_trim_boundary: source-view authoring against
+    // the active A/B tab, only set bounds are testable.
+    if (app.render_view_enabled) return TrimHit::None;
+    const ViewState& vs = active_view_state(app);
+    if (!vs.has_trim_begin && !vs.has_trim_end) return TrimHit::None;
+
+    // The b/e chips fill top_upper_row_area exactly (Defect B: the painted
+    // chip box top/height equal this row). A press outside that vertical band
+    // is not on a chip — the column-based stem test handles the rest.
+    const GuiRect row = top_upper_row_area(app);
+    if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
+
+    const GuiRect top = top_strip_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return TrimHit::None;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return TrimHit::None;
+    const double sr_d = static_cast<double>(sr);
+    const double vp = static_cast<double>(app.viewport_start_sample);
+    const int64_t visible = samples_visible(app, audio);
+
+    // Same target-view translation as hit_test_trim_boundary so the chip
+    // column lands where the stem (and chip) are painted in target view.
+    std::vector<TimeMapSegment> target_timemap;
+    if (app.active_audio_view == 'T') {
+        target_timemap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const bool use_tmap = !target_timemap.empty();
+
+    cairo_surface_t* scratch_s = cairo_image_surface_create(
+        CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* scratch_cr = cairo_create(scratch_s);
+    cairo_select_font_face(scratch_cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(scratch_cr, kFlagFontSize);
+
+    const double hl_pad = kFlagInnerPadPx;
+    const int kMiss = std::numeric_limits<int>::max();
+
+    // Per-bound chip rect, computed exactly as render_trim_flags paints it:
+    // text_left at the bound's integer pixel column (top.x + round(x_raw)),
+    // the rect spanning [text_left - hl_pad, text_left + advance + hl_pad] —
+    // the same horizontal geometry compute_flag_hit_rects derives for regular
+    // flags. The vertical band (top_upper_row_area) was checked above, so only
+    // horizontal containment is tested here. Returns the bound's distance from
+    // the press to its column when the press is inside the chip (for the
+    // both-hit tie-break), else kMiss.
+    auto chip_dist = [&](double seconds, bool present, const char* glyph) -> int {
+        if (!present) return kMiss;
+        double ms = std::nearbyint(seconds * sr_d);
+        if (use_tmap) {
+            const size_t q = (ms < 0.0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(std::llrint(ms));
+            ms = map_source_to_target(q, target_timemap);
+        }
+        if (ms < vp) return kMiss;
+        if (ms >= vp + static_cast<double>(visible)) return kMiss;
+        const double x_raw = (ms - vp) / spp;
+        const double text_left =
+            static_cast<double>(top.x) + std::round(x_raw);
+        cairo_text_extents_t ext;
+        cairo_text_extents(scratch_cr, glyph, &ext);
+        const int rx = static_cast<int>(std::round(text_left - hl_pad));
+        const int rw =
+            static_cast<int>(std::round(ext.x_advance + 2.0 * hl_pad));
+        if (mouse_x < rx || mouse_x >= rx + rw) return kMiss;
+        return std::abs(mouse_x - static_cast<int>(std::round(text_left)));
+    };
+
+    const int db = chip_dist(vs.trim_begin_seconds, vs.has_trim_begin, "b");
+    const int de = chip_dist(vs.trim_end_seconds,   vs.has_trim_end,   "e");
+
+    cairo_destroy(scratch_cr);
+    cairo_surface_destroy(scratch_s);
+
+    // Overlapping chips: the renderer elides the right one, but guard the tie
+    // by preferring the bound whose column is nearer the press, mirroring
+    // hit_test_trim_boundary.
+    if (db != kMiss && de != kMiss) return (db <= de) ? TrimHit::Begin
+                                                      : TrimHit::End;
+    if (db != kMiss) return TrimHit::Begin;
+    if (de != kMiss) return TrimHit::End;
     return TrimHit::None;
 }
 
