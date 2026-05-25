@@ -588,20 +588,16 @@ void render_trim_flags(cairo_t* cr,
 
     const double hl_pad = kFlagInnerPadPx;
 
-    // Uniform box height — the same representative measurement render_flags
-    // uses, so the single-glyph chip occupies the standard row footprint and
-    // aligns with top_upper_row_area regardless of its own glyph extents.
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
-
     // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
-    // iterate_visible_flags_impl does for the lower row, one row higher.
+    // iterate_visible_flags_impl does for the lower row, one row higher. The
+    // box is monospace_row_h() tall (Defect B) and baseline sits
+    // monospace_row_baseline_offset() below its top, so placing the box bottom
+    // (= baseline_y - baseline_off + row_h) at flag_chip_bottom_y gives this
+    // baseline. The chip thus fills its full upper-row slot.
     const double baseline_y =
         flag_chip_bottom_y(waveform_area, ChipRow::Upper)
-      - uniform_ext.y_bearing
-      - uniform_ext.height
-      - hl_pad
-      - kVPadExtraPx;
+      - static_cast<double>(monospace_row_h())
+      + monospace_row_baseline_offset();
 
     // Column placement mirrors render_trim_stems / render_flags: text_left at
     // the bound's integer pixel column, chip extends right via the shared
@@ -649,7 +645,6 @@ void render_trim_flags(cairo_t* cr,
         box.anchor_x    = chip.text_left + hl_pad;
         box.baseline_y  = baseline_y;
         box.text        = chip.glyph;
-        box.uniform_ext = uniform_ext;
         box.hl_pad      = hl_pad;
         box.fill        = chip.selected ? kSelected : kTrimMarker;
         box.text_color  = kText;
@@ -677,10 +672,19 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);
 
-    const double bg_top =
-        s.baseline_y + s.uniform_ext.y_bearing - s.hl_pad - kVPadExtraPx;
-    const double bg_h =
-        s.uniform_ext.height + 2.0 * s.hl_pad + 2.0 * kVPadExtraPx;
+    // Defect B (F.trim.3): the fill box fills its full row slot rather than the
+    // tight glyph bounding box. Height is the cached monospace_row_h() (font
+    // ascent+descent + 2*(kFlagInnerPadPx+kVPadExtraPx)) — the same metric the
+    // strip-row geometry uses — and the top is the baseline lifted by
+    // monospace_row_baseline_offset(), so baseline_y sits centered in the row
+    // and the box's bottom lands flush at the slot bottom. Callers solve
+    // baseline_y so the box bottom coincides with flag_chip_bottom_y (chips) or
+    // the row rect (bottom-strip editors). The horizontal extent (fill width)
+    // is unchanged. Previously this used the tight cairo_text_extents.height of
+    // a representative string, which is ~7px shorter than the row, leaving a
+    // gap at the top of every chip.
+    const double bg_top = s.baseline_y - monospace_row_baseline_offset();
+    const double bg_h   = static_cast<double>(monospace_row_h());
 
     // 1. Solid fill behind the editable region only.
     render_flag_text_bg_fill(cr, editable_left, text_ext.x_advance,
@@ -780,13 +784,12 @@ void iterate_visible_flags_impl(
     // Place the rect's bottom edge exactly at the flag chip bottom (the
     // single source of truth shared with the stem renderers). The strip
     // bottom is the waveform area top, since the strips are contiguous, so
-    // flag_chip_bottom_y reads off that boundary. Solving the rect formula
-    // (rect_bottom = baseline_y + y_bearing + height + hl_pad + kVPadExtraPx)
-    // for baseline_y, using a representative monospace measurement so the
-    // result tracks font metrics rather than a magic constant.
-    cairo_text_extents_t base_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &base_ext);
-    const double hl_pad_helper = kFlagInnerPadPx;
+    // flag_chip_bottom_y reads off that boundary. Defect B (F.trim.3): the box
+    // is monospace_row_h() tall and the baseline sits
+    // monospace_row_baseline_offset() below its top, so solving for the box
+    // bottom (= baseline_y - baseline_off + row_h) at flag_chip_bottom_y gives
+    // this baseline. The chip fills its full lower-row slot rather than the
+    // tight glyph extent.
     const GuiRect waveform_area_for_chip{
         top_strip_area.x,
         top_strip_area.y + top_strip_area.h,
@@ -794,10 +797,8 @@ void iterate_visible_flags_impl(
         0};
     const double baseline_y =
         flag_chip_bottom_y(waveform_area_for_chip, ChipRow::Lower)
-      - base_ext.y_bearing
-      - base_ext.height
-      - hl_pad_helper
-      - kVPadExtraPx;
+      - static_cast<double>(monospace_row_h())
+      + monospace_row_baseline_offset();
 
     double rightmost_right_edge = -1e18;
 
@@ -857,8 +858,7 @@ void paint_one_flag_with_overlay(
     const std::string& text,
     const std::set<int>& selected_set,
     const FlagEditorOverlay& editor,
-    double hl_pad,
-    const cairo_text_extents_t& uniform_ext) {
+    double hl_pad) {
     const bool is_selected = selected_set.count(i) > 0;
     const bool is_editing    = (i == editor.marker_index);
     const bool is_parse_fail = is_editing && editor.is_red;
@@ -876,7 +876,6 @@ void paint_one_flag_with_overlay(
     box.anchor_x        = text_left + hl_pad;
     box.baseline_y      = baseline_y;
     box.text            = draw_text;
-    box.uniform_ext     = uniform_ext;
     box.hl_pad          = hl_pad;
     box.fill            = fill_col;
     box.text_color      = kText;
@@ -915,9 +914,6 @@ void render_flags(cairo_t* cr,
     cairo_set_font_size(cr, font_size);
 
     const double hl_pad = kFlagInnerPadPx;
-
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
 
     // Brief Y.5: collect emit args during the left-to-right iterate pass,
     // then paint the collected list in REVERSE order. The pack rule inside
@@ -960,7 +956,7 @@ void render_flags(cairo_t* cr,
     for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
         paint_one_flag_with_overlay(cr, it->i, it->text_left, it->baseline_y,
                                     it->text, selected_set, editor,
-                                    hl_pad, uniform_ext);
+                                    hl_pad);
     }
 
     cairo_restore(cr);
@@ -992,9 +988,6 @@ void render_one_editor_flag(
 
     const double hl_pad = kFlagInnerPadPx;
 
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
-
     iterate_visible_flags_impl(cr, top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
                                sample_rate, timemap, drag_overlay,
@@ -1007,7 +1000,7 @@ void render_one_editor_flag(
             if (i != editor.marker_index) return;
             paint_one_flag_with_overlay(cr, i, text_left, baseline_y,
                                         text, selected_set, editor,
-                                        hl_pad, uniform_ext);
+                                        hl_pad);
         });
 
     cairo_restore(cr);
@@ -1041,9 +1034,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // Mirror render_flags: uniform y/height for the hit rect so clicks
     // register consistently across flag types. Left edge + width match the
     // corrected visual highlight box so clicks anywhere inside the painted
-    // background register on the marker.
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
+    // background register on the marker. Defect B (F.trim.3): the y/height use
+    // the same font-metric box geometry as render_editor_text_box (full
+    // monospace_row_h() slot), so the hit band tracks the painted chip exactly.
     const double hl_pad = kFlagInnerPadPx;
 
     iterate_visible_flags_impl(cr, top_strip_area, markers,
@@ -1055,9 +1048,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
             FlagHitRect r;
             r.marker_index = i;
             r.x = std::round(text_left - hl_pad);
-            r.y = baseline_y + uniform_ext.y_bearing - hl_pad - kVPadExtraPx;
+            r.y = baseline_y - monospace_row_baseline_offset();
             r.w = std::round(ext.x_advance + 2.0 * hl_pad);
-            r.h = uniform_ext.height + 2 * hl_pad + 2 * kVPadExtraPx;
+            r.h = static_cast<double>(monospace_row_h());
             out.push_back(r);
         });
 
@@ -1137,9 +1130,6 @@ void render_phase_reset_flags(cairo_t* cr,
 
     const double hl_pad = kFlagInnerPadPx;
 
-    cairo_text_extents_t uniform_ext;
-    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
-
     // Brief Y.5: collect-then-reverse-paint, mirroring render_flags.
     // Phase reset flags have no editor and thus no widening-text case, so
     // visually this is a no-op today (all bg-fills are kBackground; all
@@ -1177,7 +1167,6 @@ void render_phase_reset_flags(cairo_t* cr,
         box.anchor_x    = e.text_left + hl_pad;
         box.baseline_y  = e.baseline_y;
         box.text        = e.text;
-        box.uniform_ext = uniform_ext;
         box.hl_pad      = hl_pad;
         box.fill        = fill_col;
         box.text_color  = kText;

@@ -212,9 +212,12 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
 // text when `prefix` is empty). The editable region paints at
 // `anchor_x + prefix_advance`; the solid fill covers only the editable
 // region (the prefix, if any, sits to its left on the canvas), via
-// render_flag_text_bg_fill keyed off `uniform_ext` for a content-
-// independent box height. The cursor uses the std::round(x)+0.5 half-pixel
-// convention for a crisp single-pixel column.
+// render_flag_text_bg_fill. Defect B (F.trim.3): the box height is the cached
+// monospace_row_h() (the same metric the strip rows use) and the top is
+// `baseline_y - monospace_row_baseline_offset()`, so the box fills its full
+// row slot — callers solve baseline_y so the box bottom lands at the slot
+// bottom. The cursor uses the std::round(x)+0.5 half-pixel convention for a
+// crisp single-pixel column.
 //
 // Colors are pre-resolved by the caller: `fill` is the resolved chip
 // color and `text_color` is kText. The selection swap fills the selected
@@ -225,7 +228,6 @@ struct EditorTextBox {
     double               baseline_y      = 0.0;
     std::string          prefix;            // optional; "" = none
     std::string          text;              // editable content
-    cairo_text_extents_t uniform_ext       = {};  // box height/y_bearing ref
     double               hl_pad           = kFlagInnerPadPx;
     GuiColor             fill             = kMarker;
     GuiColor             text_color       = kText;

@@ -479,15 +479,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                        CAIRO_FONT_WEIGHT_NORMAL);
                 cairo_set_font_size(cr, kFlagFontSize);
 
-                cairo_text_extents_t uniform_ext;
-                cairo_text_extents(cr, "Mg", &uniform_ext);
-
                 EditorTextBox box;
                 box.anchor_x        = static_cast<double>(kTimestampPadX);
                 box.baseline_y      = upper_baseline;
                 box.prefix          = "setting: ";
                 box.text            = app.settings_editor.pending;
-                box.uniform_ext     = uniform_ext;
                 box.hl_pad          = kFlagInnerPadPx;
                 box.fill            = app.settings_editor.red
                                           ? kAccent : kBackground;
@@ -520,15 +516,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                        CAIRO_FONT_WEIGHT_NORMAL);
                 cairo_set_font_size(cr, kFlagFontSize);
 
-                cairo_text_extents_t uniform_ext;
-                cairo_text_extents(cr, "Mg", &uniform_ext);
-
                 EditorTextBox box;
                 box.anchor_x        = static_cast<double>(kTimestampPadX);
                 box.baseline_y      = upper_baseline;
                 box.prefix          = "bpm: ";
                 box.text            = app.top_flag_editor.pending;
-                box.uniform_ext     = uniform_ext;
                 box.hl_pad          = kFlagInnerPadPx;
                 box.fill            = app.top_flag_editor.red
                                           ? kAccent : kBackground;
