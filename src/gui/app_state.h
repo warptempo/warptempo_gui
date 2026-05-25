@@ -719,8 +719,14 @@ struct AppState {
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
 // here so viewport.cpp can call them.
+int     strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
+GuiRect bottom_strip_area(const AppState& a);
+GuiRect top_upper_row_area(const AppState& a);
+GuiRect top_lower_row_area(const AppState& a);
+GuiRect bottom_upper_row_area(const AppState& a);
+GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 
@@ -839,7 +845,7 @@ int     max_valid_numeric_level(int waveform_width_px,
                                 int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, int sample_rate, long long total_frames);
-GuiRect timestamp_invalidate_rect(int window_height, int window_width);
+GuiRect timestamp_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);

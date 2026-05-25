@@ -76,7 +76,7 @@ void Viewport::invalidate_waveform_area() {
 }
 
 void Viewport::invalidate_timestamp_area() {
-    const GuiRect t = timestamp_invalidate_rect(app.height, app.width);
+    const GuiRect t = timestamp_invalidate_rect(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
@@ -199,8 +199,9 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
 
     invalidate_waveform_area();
     invalidate_timestamp_area();
-    // Flags / hover popup live in the top strip — rect positions
-    // change when the viewport scale changes.
+    // Flags live in the top strip — rect positions change when the viewport
+    // scale changes. (The hover readout is left-anchored on the bottom strip,
+    // already covered by invalidate_timestamp_area above.)
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     // V.A3b Addendum 3: rects shifted under the (possibly stationary)
@@ -240,8 +241,10 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
         invalidate_waveform_area();
-        // Flag positions move with the viewport; the hover popup rides
-        // along, so the top strip must repaint too.
+        // Flag positions move with the viewport, so the top strip must
+        // repaint too. (The hover readout is left-anchored on the bottom
+        // strip; recompute_hover_at_cursor below damages it if the hit
+        // changes.)
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         // V.A3b Addendum 3: rects shifted under the (possibly
@@ -328,11 +331,12 @@ void Viewport::follow_scroll_if_needed() {
 }
 
 // Reset the hover popup state. If the popup was visible, invalidate the
-// top strip so the next paint erases it. Safe to call from any path.
+// bottom strip so the next paint erases it (Brief F moved the hover readout
+// to bottom_upper_row_area). Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.visible;
     app.hover_popup = HoverPopupState{};
-    if (was_visible) invalidate_top_strip();
+    if (was_visible) invalidate_timestamp_area();
 }
 
 // V.A3b Addendum 3: re-evaluate hover at the cursor's last on_motion
@@ -367,7 +371,7 @@ void Viewport::recompute_hover_at_cursor() {
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);
     if (hit != app.hover_popup.marker_index) {
-        if (app.hover_popup.visible) invalidate_top_strip();
+        if (app.hover_popup.visible) invalidate_timestamp_area();
         app.hover_popup.marker_index = hit;
         app.hover_popup.visible      = false;
         app.hover_popup.entry_time   =

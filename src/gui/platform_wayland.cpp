@@ -1,6 +1,7 @@
 #include "platform_wayland.h"
 
 #include "playhead_cursor_data.h"
+#include "render.h"   // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
 #include <wayland-cursor.h>
@@ -547,6 +548,11 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo_gui");
     xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo_gui");
     xdg_toplevel_set_maximized(xdg_toplevel_);
+    // Brief F: ask the compositor to refuse sizing the surface below the
+    // 640x480 floor. The geometry helpers also clamp internally, so the
+    // waveform arithmetic stays valid even if a compositor ignores the hint.
+    xdg_toplevel_set_min_size(xdg_toplevel_,
+                              kMinWindowWidthPx, kMinWindowHeightPx);
 
     if (xdg_decoration_manager_) {
         xdg_toplevel_decoration_ = zxdg_decoration_manager_v1_get_toplevel_decoration(

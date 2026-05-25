@@ -357,139 +357,40 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 std::chrono::duration<double, std::milli>(p1 - p0).count();
         }
 
-        // Bottom strip: either the prompt overlay (when active) or
-        // the regular elements (timestamp / tab letter / dirty / render
-        // -view filename). The prompt is modal — while active, it
-        // owns the strip and the regular elements are not visible.
-        const GuiRect ts = timestamp_invalidate_rect(app.height, app.width);
-        if (rects_intersect(exposed, ts)) {
-            const int baseline_y = app.height - kTimestampBaselineFromBottom;
-            if (app.prompt.active) {
-                // Plain tier: the prompt text followed by its response
-                // labels, each chained off the measured advance returned
-                // by draw_line so no separate measurement pass is needed.
-                const double label_gap = kTabLetterGapPx * 2.0;
-                double cursor_x = static_cast<double>(kTimestampPadX);
-                cursor_x += text_display::draw_line(
-                    cr, cursor_x, baseline_y, app.prompt.text,
-                    kText, kFlagFontSize);
-                cursor_x += label_gap;
-                for (const auto& label : app.prompt.response_labels) {
-                    cursor_x += text_display::draw_line(
-                        cr, cursor_x, baseline_y, label,
-                        kText, kFlagFontSize) + label_gap;
-                }
-            } else if (!app.queue_progress_text.empty()) {
-                text_display::draw_line(
-                    cr, static_cast<double>(kTimestampPadX), baseline_y,
-                    app.queue_progress_text, kText, kFlagFontSize);
-            } else if (text_editor::is_active(app.settings_editor)) {
-                // Settings prompt overlay (Brief B.2): "setting: <pending>"
-                // through the shared editor text-box primitive. The bottom
-                // strip stays flat — the fill is kBackground normally, kAccent
-                // on parse failure — so it gets no top-strip kMarker chip
-                // treatment. The "setting: " prefix sits to the left of the
-                // box on the canvas. The tab letter, dirty dot, and
-                // render-view filename are suppressed for the edit's duration.
-                cairo_save(cr);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
+        // Bottom strip (Brief F): two text rows of equal height mirroring
+        // the top strip. The status line lives on the lower (outer) row and
+        // paints UNCONDITIONALLY — it is no longer the trailing else of a
+        // chain, so it stays visible while an editor is open on the upper
+        // (inner) row, letting the user keep their timestamp / S-T / W-P /
+        // A-B bearings while typing. The upper row carries the transient /
+        // modal chain in precedence order: prompt > queue > settings editor
+        // > BPM editor > hover readout. The prompt is a one-key-answer modal
+        // and owns the upper row; status stays visible under it (harmless
+        // context). Each row's baseline is derived from its row rect, not
+        // from the window bottom.
+        const GuiRect bottom_strip = timestamp_invalidate_rect(app);
+        if (rects_intersect(exposed, bottom_strip)) {
+            const GuiRect lower_row = bottom_lower_row_area(app);
+            const GuiRect upper_row = bottom_upper_row_area(app);
+            const double lower_baseline =
+                lower_row.y + monospace_row_baseline_offset();
+            const double upper_baseline =
+                upper_row.y + monospace_row_baseline_offset();
 
-                cairo_text_extents_t uniform_ext;
-                cairo_text_extents(cr, "Mg", &uniform_ext);
-
-                EditorTextBox box;
-                box.anchor_x        = static_cast<double>(kTimestampPadX);
-                box.baseline_y      = baseline_y;
-                box.prefix          = "setting: ";
-                box.text            = app.settings_editor.pending;
-                box.uniform_ext     = uniform_ext;
-                box.hl_pad          = kFlagInnerPadPx;
-                box.fill            = app.settings_editor.red
-                                          ? kAccent : kBackground;
-                box.text_color      = kText;
-                box.has_selection   =
-                    text_editor::has_selection(app.settings_editor);
-                box.selection_start =
-                    text_editor::selection_start(app.settings_editor);
-                box.selection_end   =
-                    text_editor::selection_end(app.settings_editor);
-                box.cursor_visible  =
-                    text_editor::cursor_visible_now(app.settings_editor);
-                box.cursor_pos      = app.settings_editor.cursor_pos;
-                render_editor_text_box(cr, box);
-
-                cairo_restore(cr);
-            } else if (text_editor::is_active(app.top_flag_editor) &&
-                       app.top_flag_editor.kind ==
-                           text_editor::Kind::BpmBracket) {
-                // Brief E: BPM editor overlay. Same bottom-strip primitive
-                // and shape as the settings-editor branch above (so Brief F
-                // can fold both into one row helper), differing only in the
-                // "bpm: " prefix and the editor it reads. top_flag_editor
-                // with kind==BpmBracket only ever paints here, never over
-                // the flag in the top strip. Fill is kBackground normally,
-                // kAccent on parse failure.
-                cairo_save(cr);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-
-                cairo_text_extents_t uniform_ext;
-                cairo_text_extents(cr, "Mg", &uniform_ext);
-
-                EditorTextBox box;
-                box.anchor_x        = static_cast<double>(kTimestampPadX);
-                box.baseline_y      = baseline_y;
-                box.prefix          = "bpm: ";
-                box.text            = app.top_flag_editor.pending;
-                box.uniform_ext     = uniform_ext;
-                box.hl_pad          = kFlagInnerPadPx;
-                box.fill            = app.top_flag_editor.red
-                                          ? kAccent : kBackground;
-                box.text_color      = kText;
-                box.has_selection   =
-                    text_editor::has_selection(app.top_flag_editor);
-                box.selection_start =
-                    text_editor::selection_start(app.top_flag_editor);
-                box.selection_end   =
-                    text_editor::selection_end(app.top_flag_editor);
-                box.cursor_visible  =
-                    text_editor::cursor_visible_now(app.top_flag_editor);
-                box.cursor_pos      = app.top_flag_editor.cursor_pos;
-                render_editor_text_box(cr, box);
-
-                cairo_restore(cr);
-            } else {
-                // Bottom-strip regular row (B.1): one assembled field
-                // drawn in a single cairo_show_text pass. Elements
-                // (timestamp, S/T, W/P, A/B, render-view filename,
-                // dirty *, transient message) are separated by single
-                // spaces in the string; the field paints uniformly in
-                // kText. Read-only on the active A/B tab is signaled
-                // by appending the literal "(read-only)" token after
-                // the A/B letter, not a color dim or strikethrough.
-                // Modal branches above (prompt / queue /
-                // settings editor) own the strip when active and
-                // bypass this code.
-                //
-                // In source-view, sr is the loaded file's sample rate
-                // and the playhead samples are in source-frames. In
-                // render-view the active `audio` is the render, so its
-                // sr is what the engine wrote out — but the playhead is
-                // in render-frame coords. Render-view timestamp is
-                // render-domain (zero at render sample 0); source-time
-                // and render-time advance at different rates because
-                // of warping, so the same arithmetic suffices.
-                //
-                // Split-playhead: track the scanner during playback
-                // (what the user is hearing) and the cursor otherwise.
-                // The two are equal by invariant when the scanner is
-                // inactive, so the conditional only matters during
-                // playback.
+            // --- Lower row: status line (always on). One assembled field
+            //     drawn in a single pass; elements (timestamp, S/T, W/P,
+            //     A/B, render-view filename, dirty *, transient message) are
+            //     space-separated and paint uniformly in kText. Read-only on
+            //     the active A/B tab is the literal "(read-only)" token.
+            //
+            //     In source-view, sr is the loaded file's sample rate and the
+            //     playhead samples are source-frames. In render-view the
+            //     active `audio` is the render; its sr is what the engine
+            //     wrote and the playhead is render-frame coords. The same
+            //     arithmetic suffices. Split-playhead: track the scanner
+            //     during playback (what the user hears), the cursor otherwise
+            //     (equal by invariant when the scanner is inactive).
+            {
                 const int64_t ts_sample = app.playhead_scanner_active
                     ? app.playhead_scanner_sample
                     : app.playhead_cursor_sample;
@@ -537,11 +438,118 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
                 const auto s0 = clock::now();
                 text_display::draw_line(
-                    cr, static_cast<double>(kTimestampPadX), baseline_y,
+                    cr, static_cast<double>(kTimestampPadX), lower_baseline,
                     assembled, kText, kFlagFontSize);
                 const auto s1 = clock::now();
                 t_ts_ms =
                     std::chrono::duration<double, std::milli>(s1 - s0).count();
+            }
+
+            // --- Upper row: transient / modal chain. ---
+            if (app.prompt.active) {
+                // Plain tier: the prompt text followed by its response
+                // labels, each chained off the measured advance returned
+                // by draw_line so no separate measurement pass is needed.
+                const double label_gap = kTabLetterGapPx * 2.0;
+                double cursor_x = static_cast<double>(kTimestampPadX);
+                cursor_x += text_display::draw_line(
+                    cr, cursor_x, upper_baseline, app.prompt.text,
+                    kText, kFlagFontSize);
+                cursor_x += label_gap;
+                for (const auto& label : app.prompt.response_labels) {
+                    cursor_x += text_display::draw_line(
+                        cr, cursor_x, upper_baseline, label,
+                        kText, kFlagFontSize) + label_gap;
+                }
+            } else if (!app.queue_progress_text.empty()) {
+                text_display::draw_line(
+                    cr, static_cast<double>(kTimestampPadX), upper_baseline,
+                    app.queue_progress_text, kText, kFlagFontSize);
+            } else if (text_editor::is_active(app.settings_editor)) {
+                // Settings prompt overlay (Brief B.2): "setting: <pending>"
+                // through the shared editor text-box primitive. The fill is
+                // kBackground normally, kAccent on parse failure. The
+                // "setting: " prefix sits to the left of the box.
+                cairo_save(cr);
+                cairo_select_font_face(cr, "monospace",
+                                       CAIRO_FONT_SLANT_NORMAL,
+                                       CAIRO_FONT_WEIGHT_NORMAL);
+                cairo_set_font_size(cr, kFlagFontSize);
+
+                cairo_text_extents_t uniform_ext;
+                cairo_text_extents(cr, "Mg", &uniform_ext);
+
+                EditorTextBox box;
+                box.anchor_x        = static_cast<double>(kTimestampPadX);
+                box.baseline_y      = upper_baseline;
+                box.prefix          = "setting: ";
+                box.text            = app.settings_editor.pending;
+                box.uniform_ext     = uniform_ext;
+                box.hl_pad          = kFlagInnerPadPx;
+                box.fill            = app.settings_editor.red
+                                          ? kAccent : kBackground;
+                box.text_color      = kText;
+                box.has_selection   =
+                    text_editor::has_selection(app.settings_editor);
+                box.selection_start =
+                    text_editor::selection_start(app.settings_editor);
+                box.selection_end   =
+                    text_editor::selection_end(app.settings_editor);
+                box.cursor_visible  =
+                    text_editor::cursor_visible_now(app.settings_editor);
+                box.cursor_pos      = app.settings_editor.cursor_pos;
+                render_editor_text_box(cr, box);
+
+                cairo_restore(cr);
+            } else if (text_editor::is_active(app.top_flag_editor) &&
+                       app.top_flag_editor.kind ==
+                           text_editor::Kind::BpmBracket) {
+                // Brief E: BPM editor overlay. Same bottom-strip primitive
+                // and shape as the settings-editor branch above (F2 folds
+                // both into one row helper), differing only in the "bpm: "
+                // prefix and the editor it reads. top_flag_editor with
+                // kind==BpmBracket only ever paints here, never over the flag
+                // in the top strip. Fill is kBackground normally, kAccent on
+                // parse failure.
+                cairo_save(cr);
+                cairo_select_font_face(cr, "monospace",
+                                       CAIRO_FONT_SLANT_NORMAL,
+                                       CAIRO_FONT_WEIGHT_NORMAL);
+                cairo_set_font_size(cr, kFlagFontSize);
+
+                cairo_text_extents_t uniform_ext;
+                cairo_text_extents(cr, "Mg", &uniform_ext);
+
+                EditorTextBox box;
+                box.anchor_x        = static_cast<double>(kTimestampPadX);
+                box.baseline_y      = upper_baseline;
+                box.prefix          = "bpm: ";
+                box.text            = app.top_flag_editor.pending;
+                box.uniform_ext     = uniform_ext;
+                box.hl_pad          = kFlagInnerPadPx;
+                box.fill            = app.top_flag_editor.red
+                                          ? kAccent : kBackground;
+                box.text_color      = kText;
+                box.has_selection   =
+                    text_editor::has_selection(app.top_flag_editor);
+                box.selection_start =
+                    text_editor::selection_start(app.top_flag_editor);
+                box.selection_end   =
+                    text_editor::selection_end(app.top_flag_editor);
+                box.cursor_visible  =
+                    text_editor::cursor_visible_now(app.top_flag_editor);
+                box.cursor_pos      = app.top_flag_editor.cursor_pos;
+                render_editor_text_box(cr, box);
+
+                cairo_restore(cr);
+            } else if (app.hover_popup.visible) {
+                // B2 deleted the floating hover popup paint but kept the
+                // dwell mechanism; Brief F gives it a home as the
+                // lowest-priority upper-row branch. cached_text is the
+                // resolved-tempo string from compute_hover_popup_text.
+                text_display::draw_line(
+                    cr, static_cast<double>(kTimestampPadX), upper_baseline,
+                    app.hover_popup.cached_text, kText, kFlagFontSize);
             }
         }
     }

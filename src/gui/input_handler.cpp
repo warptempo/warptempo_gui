@@ -2743,7 +2743,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
         if (hit != app.hover_popup.marker_index) {
-            if (app.hover_popup.visible) viewport.invalidate_top_strip();
+            // Brief F: hover readout lives on the bottom strip now.
+            if (app.hover_popup.visible) viewport.invalidate_timestamp_area();
             app.hover_popup.marker_index = hit;
             app.hover_popup.visible      = false;
             app.hover_popup.entry_time   =
@@ -2823,7 +2824,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             !app.queue_running) {
             const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
             if (hit != app.hover_popup.marker_index) {
-                if (app.hover_popup.visible) viewport.invalidate_top_strip();
+                // Brief F: hover readout lives on the bottom strip now.
+                if (app.hover_popup.visible) viewport.invalidate_timestamp_area();
                 app.hover_popup.marker_index = hit;
                 app.hover_popup.visible      = false;
                 app.hover_popup.entry_time   =

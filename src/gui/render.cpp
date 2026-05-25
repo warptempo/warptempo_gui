@@ -1110,10 +1110,14 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 
 namespace {
     double g_advance = 0.0;
+    int    g_row_h            = kRowHFallbackPx;
+    double g_row_baseline_off = kRowBaselineOffFallbackPx;
     bool   g_metrics_initialized = false;
 } // namespace
 
 double monospace_advance() { return g_advance; }
+int    monospace_row_h()   { return g_row_h; }
+double monospace_row_baseline_offset() { return g_row_baseline_off; }
 
 void init_monospace_grid_metrics(cairo_t* cr) {
     if (g_metrics_initialized) return;
@@ -1124,6 +1128,12 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_text_extents_t ext;
     cairo_text_extents(cr, "M", &ext);
     g_advance = ext.x_advance;
+    cairo_font_extents_t fe;
+    cairo_font_extents(cr, &fe);
+    const double font_height = fe.ascent + fe.descent;
+    g_row_h = static_cast<int>(std::nearbyint(
+        font_height + 2.0 * (kFlagInnerPadPx + kVPadExtraPx)));
+    g_row_baseline_off = (kFlagInnerPadPx + kVPadExtraPx) + fe.ascent;
     cairo_restore(cr);
     g_metrics_initialized = true;
 }

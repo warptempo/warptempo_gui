@@ -40,18 +40,20 @@ class GuiWaveformWorker;
 //
 // X.7.8a: hoisted from main.cpp's anonymous namespace so paint_handler.cpp
 // can reach them. Other constants (kHoverDelayMs, kMarkerHitHalfPx,
-// kDoubleClickMs, kDoubleClickPixels, kPlayheadHalfPx, kTimestampRegionH,
-// kDirtyGapPx, kZoomMsPerPixel) are paint-handler-independent and stay
-// in main.cpp's anonymous namespace.
+// kDoubleClickMs, kDoubleClickPixels, kPlayheadHalfPx, kDirtyGapPx,
+// kZoomMsPerPixel) are paint-handler-independent and stay in main.cpp's
+// anonymous namespace.
 
 constexpr int      kProgressBarHeight        = 4;
 constexpr int      kChannelGapPx             = 2;
 // kFlagFontSize lives in render.h so render.cpp can reach it without
 // pulling paint_handler.h into the lower-layer include graph.
 
-// Timestamp text layout (bottom-left of the status strip).
+// Timestamp text layout (bottom-left of the status strip). Brief F replaced
+// the window-bottom baseline anchor (kTimestampBaselineFromBottom) with
+// row-relative baselines derived from bottom_lower_row_area /
+// bottom_upper_row_area.
 constexpr int      kTimestampPadX            = 8;
-constexpr int      kTimestampBaselineFromBottom = 12;
 constexpr double   kTabLetterGapPx           = 10.0;
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------

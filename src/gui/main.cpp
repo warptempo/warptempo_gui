@@ -78,12 +78,13 @@
 namespace {
 
 // X.7.8a: kProgressBarHeight, kChannelGapPx, kFlagFontSize, kTimestampPadX,
-// kTimestampBaselineFromBottom, and kTabLetterGapPx now live in
-// paint_handler.h so paint_handler.cpp can reach them; the constants below
-// are paint-handler-independent and stay file-local.
+// and kTabLetterGapPx now live in paint_handler.h so paint_handler.cpp can
+// reach them; the constants below are paint-handler-independent and stay
+// file-local.
 
-constexpr double   kTopStripRatio     = 0.10;
-constexpr double   kBottomStripRatio  = 0.10;
+// Brief F replaced the window-proportional strip ratios with a fixed-pixel
+// mirrored grid; the strip/row geometry now derives from monospace_row_h(),
+// kRowGapPx, and kFlagBottomLiftPx (see the geometry helpers below).
 
 // X.7.8b-2: kMarkerHitHalfPx, kDoubleClickMs, kDoubleClickPixels moved to
 // app_state.h so the hit_test_* free functions and the GuiInputHandler
@@ -114,7 +115,6 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
               == static_cast<size_t>(kZoomTableSize),
               "kZoomMsPerPixel size must match kZoomTableSize");
 
-constexpr int kTimestampRegionH           = 30;
 constexpr double kDirtyGapPx              = 8.0;
 
 // Half-width of the column invalidated around a playhead position. Wide
@@ -148,25 +148,94 @@ constexpr int kPlayheadHalfPx = 9;
 
 } // namespace
 
-// Geometry helpers — public to viewport.cpp via app_state.h. The strip-height
-// helpers and samples_per_pixel_at remain main-private (`static`).
+// Geometry helpers — public to viewport.cpp via app_state.h. samples_per_pixel_at
+// remains main-private (`static`).
+//
+// Brief F: fixed-pixel mirrored four-row grid. Top and bottom strips are equal
+// pixel height regardless of window size; the waveform flexes in the middle.
+// Each strip is two text rows of the cached row height monospace_row_h(),
+// separated by the inter-row gap kRowGapPx (G), with a kFlagBottomLiftPx (=10)
+// gap on the waveform side and an equal gap on the window-edge side (a true
+// mirror). The four row rects are the same formula with the y flipped about the
+// window midline: a bottom row's y is `h - <top row's y> - row_h`.
 
-static int top_strip_height(int window_height) {
-    return static_cast<int>(std::lround(window_height * kTopStripRatio));
+// Defensive backstop only: floor the window dims to the 640x480 minimum before
+// any geometry arithmetic so no code path can compute a negative/zero waveform,
+// regardless of what the compositor sends. Mirrors the set_min_size hint.
+static void clamp_dims(int& w, int& h) {
+    if (w < kMinWindowWidthPx)  w = kMinWindowWidthPx;
+    if (h < kMinWindowHeightPx) h = kMinWindowHeightPx;
 }
 
-static int bottom_strip_height(int window_height) {
-    return static_cast<int>(std::lround(window_height * kBottomStripRatio));
-}
-
-GuiRect waveform_area(const AppState& a) {
-    const int top_h = top_strip_height(a.height);
-    const int bot_h = bottom_strip_height(a.height);
-    return GuiRect{0, top_h, a.width, a.height - top_h - bot_h};
+// outer_gap(10) + row_h + G + row_h + waveform_gap(10). Dimension-independent.
+int strip_h(const AppState&) {
+    return 2 * monospace_row_h()
+         + static_cast<int>(kRowGapPx)
+         + 2 * static_cast<int>(kFlagBottomLiftPx);
 }
 
 GuiRect top_strip_area(const AppState& a) {
-    return GuiRect{0, 0, a.width, top_strip_height(a.height)};
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    return GuiRect{0, 0, w, strip_h(a)};
+}
+
+GuiRect bottom_strip_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int sh = strip_h(a);
+    return GuiRect{0, h - sh, w, sh};
+}
+
+GuiRect waveform_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int sh = strip_h(a);
+    return GuiRect{0, sh, w, h - 2 * sh};
+}
+
+// Top strip rows, counted down from the window top: outer gap, top_upper_row
+// (reserved for F.trim's b/e flags — empty in F), gap G, top_lower_row (the
+// regular warp/phase-reset flag chips, whose bottom edge sits kFlagBottomLiftPx
+// above the waveform — exactly flag_chip_bottom_y, so flag/stem rendering is
+// unchanged).
+GuiRect top_upper_row_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int row_h = monospace_row_h();
+    const int y = static_cast<int>(kFlagBottomLiftPx);
+    return GuiRect{0, y, w, row_h};
+}
+
+GuiRect top_lower_row_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int row_h = monospace_row_h();
+    const int y = static_cast<int>(kFlagBottomLiftPx)
+                + row_h + static_cast<int>(kRowGapPx);
+    return GuiRect{0, y, w, row_h};
+}
+
+// Bottom strip rows, each the mirror of a top row about the window midline
+// (bottom_y = h - top_y - row_h). bottom_upper_row (inner, nearest waveform) is
+// the mirror of top_lower_row and carries the modal/editor/queue/hover chain;
+// bottom_lower_row (outer, nearest window edge) is the mirror of top_upper_row
+// and carries the always-on status line.
+GuiRect bottom_upper_row_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int row_h = monospace_row_h();
+    const int top_y = static_cast<int>(kFlagBottomLiftPx)
+                    + row_h + static_cast<int>(kRowGapPx);
+    return GuiRect{0, h - top_y - row_h, w, row_h};
+}
+
+GuiRect bottom_lower_row_area(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    const int row_h = monospace_row_h();
+    const int top_y = static_cast<int>(kFlagBottomLiftPx);
+    return GuiRect{0, h - top_y - row_h, w, row_h};
 }
 
 // Resolve the trim region from AppState's settings-side trim fields.
@@ -321,9 +390,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-GuiRect timestamp_invalidate_rect(int window_height, int window_width) {
-    return GuiRect{0, window_height - kTimestampRegionH,
-                   window_width, kTimestampRegionH};
+// Brief F: the status line and the transient/modal chain now occupy the two
+// rows of the bottom strip, so the invalidation region is the whole bottom
+// strip rect (both rows repaint together).
+GuiRect timestamp_invalidate_rect(const AppState& a) {
+    return bottom_strip_area(a);
 }
 
 
@@ -586,7 +657,9 @@ int main(int argc, char** argv) {
                 now - app.hover_popup.entry_time).count();
             if (ms >= kHoverDelayMs) {
                 app.hover_popup.visible = true;
-                invalidate_top_strip();
+                // Brief F: the hover readout paints on bottom_upper_row_area,
+                // so the bottom strip is what needs damage to show it.
+                invalidate_timestamp_area();
             }
         }
 

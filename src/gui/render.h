@@ -91,6 +91,29 @@ constexpr double kFlagBottomLiftPx = 10.0;
 // overhang tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
+// Brief F: fixed-pixel mirrored four-row strip grid. G is the single tunable
+// inter-row gap, shared between the two rows of each strip; it doubles as the
+// trim-flag-to-regular-flag distance consumed later by F.trim. One named
+// constant, one place to change it. kFlagBottomLiftPx (=10) is promoted to the
+// shared waveform-side AND outer (window-edge) gap.
+constexpr double kRowGapPx = 4.0;
+
+// Defensive window floor (the canonical XRandR minimum). Enforced two ways:
+// the Wayland set_min_size hint at toplevel creation, and an internal clamp in
+// the geometry helpers so the waveform arithmetic is always valid regardless of
+// what the compositor sends. Not sized to fit content — the longest dialogue
+// may clip at the floor, which is acceptable (nobody authors at 640x480).
+constexpr int kMinWindowWidthPx  = 640;
+constexpr int kMinWindowHeightPx = 480;
+
+// Pre-first-paint fallback for the measured monospace row height and baseline
+// offset (Liberation Mono 11pt). on_resize can fire before the first redraw
+// measures the real font; these seed the geometry so it is sane (never a
+// negative waveform) until init_monospace_grid_metrics overwrites them.
+constexpr int    kRowHFallbackPx       = 28;
+constexpr double kRowBaselineOffFallbackPx =
+    kFlagInnerPadPx + kVPadExtraPx + 14.0;
+
 // The flag chip's painted bottom edge for the current layout. The flag chip
 // sits in overlay space above the waveform with its bottom edge lifted
 // kFlagBottomLiftPx above the waveform top. This is the single source of
@@ -481,6 +504,18 @@ std::string compute_hover_popup_text(
 // 0 if not yet measured. Used by click-to-position-cursor in the
 // editor (input_handler.cpp -> flag_editor.cpp).
 double monospace_advance();
+
+// Fixed-pixel row height for the strip grid, measured from cairo_font_extents
+// (ascent + descent) at kFlagFontSize plus 2*(kFlagInnerPadPx + kVPadExtraPx).
+// Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
+// real font. The vertical twin of monospace_advance(); consumed by the
+// strip/row geometry helpers (which have no cairo context of their own).
+int monospace_row_h();
+
+// Baseline offset from a row rect's top edge: (kFlagInnerPadPx + kVPadExtraPx)
+// + font ascent. baseline_y = row.y + monospace_row_baseline_offset() centers
+// the text in the row the same way the flag chip sits in the top strip.
+double monospace_row_baseline_offset();
 
 // Measure and cache the advance width. Idempotent. Called once at
 // GUI startup after the cairo context exists. The supplied cairo_t*
