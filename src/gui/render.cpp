@@ -607,7 +607,16 @@ void render_trim_flags(cairo_t* cr,
     // the bound's integer pixel column, chip extends right via the shared
     // text-box primitive. Color mirrors the stem (selected ? kSelected :
     // kTrimMarker) so chip and stem are one continuous unit.
-    auto paint_chip = [&](int64_t frame, bool selected, const char* glyph) {
+    // Build the visible-bounds list, sorted by painted column ascending.
+    // Order is by position, NOT begin/end identity: in target view or a
+    // degenerate inverted trim the painted order can differ from b/e.
+    struct TrimChip {
+        double      text_left;
+        bool        selected;
+        const char* glyph;
+    };
+    std::vector<TrimChip> chips;
+    auto add_chip = [&](int64_t frame, bool selected, const char* glyph) {
         const double ms = static_cast<double>(frame);
         if (ms < static_cast<double>(viewport_start_sample)) return;
         if (ms >= static_cast<double>(viewport_end_sample)) return;
@@ -616,19 +625,37 @@ void render_trim_flags(cairo_t* cr,
                 / samples_per_pixel;
         const double text_left =
             static_cast<double>(top_strip_area.x) + std::round(x_raw);
+        chips.push_back({text_left, selected, glyph});
+    };
+    if (has_begin) add_chip(trim.begin, begin_selected, "b");
+    if (has_end)   add_chip(trim.end, end_selected, "e");
+    std::sort(chips.begin(), chips.end(),
+              [](const TrimChip& a, const TrimChip& b) {
+                  return a.text_left < b.text_left;
+              });
+
+    // Greedy-pack elision, identical to iterate_visible_flags_impl: walk
+    // left-to-right, elide a candidate only on genuine overlap (its chip
+    // left edge falls left of the previous chip's right edge). Adjacent
+    // chips may touch without eliding; on overlap the RIGHT chip drops.
+    // Each chip's right edge uses its own glyph advance — the height
+    // reference string above is only for vertical metrics.
+    double rightmost_right_edge = -1e18;
+    for (const TrimChip& chip : chips) {
+        if (chip.text_left < rightmost_right_edge + hl_pad) continue;
+        cairo_text_extents_t g_ext;
+        cairo_text_extents(cr, chip.glyph, &g_ext);
         EditorTextBox box;
-        box.anchor_x    = text_left + hl_pad;
+        box.anchor_x    = chip.text_left + hl_pad;
         box.baseline_y  = baseline_y;
-        box.text        = glyph;
+        box.text        = chip.glyph;
         box.uniform_ext = uniform_ext;
         box.hl_pad      = hl_pad;
-        box.fill        = selected ? kSelected : kTrimMarker;
+        box.fill        = chip.selected ? kSelected : kTrimMarker;
         box.text_color  = kText;
         render_editor_text_box(cr, box);
-    };
-
-    if (has_begin) paint_chip(trim.begin, begin_selected, "b");
-    if (has_end)   paint_chip(trim.end, end_selected, "e");
+        rightmost_right_edge = chip.text_left + g_ext.x_advance + hl_pad;
+    }
 
     cairo_restore(cr);
 }

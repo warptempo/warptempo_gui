@@ -2405,15 +2405,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             in_click_region = true;
         } else if (inside_top) {
-            // F.trim: a press in the upper top row that lands on a b/e trim
-            // chip routes to the trim gesture path (select + drag), exactly
-            // like a press on the bound's stem in the waveform. The regular
-            // flag chips live in the lower row, so the two rows partition
-            // cleanly with no priority contest. Hit precision is the same
+            // F.trim.1: the trim stem is grabbable along its whole visible
+            // extent in the top strip, mirroring the in-waveform stem.
+            // Markers take priority on a shared column, so try the flag
+            // hit-test first; only on a miss does the trim stem fill in.
+            // This makes the chip, the lower-row stem segment, and the gap
+            // regions all grab the bound. Hit precision is the same
             // column tolerance the stem uses (hit_test_trim_boundary is
             // column-only) — consistent with trim hit-testing everywhere else.
-            const GuiRect ur = top_upper_row_area(app);
-            if (y >= ur.y && y < ur.y + ur.h) {
+            hit = hit_test_flag(app, audio, x, y);
+            if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None) {
                     handle_trim_boundary_press(th, ctrl, shift);
@@ -2422,7 +2423,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
             }
-            hit = hit_test_flag(app, audio, x, y);
             in_click_region = true;
         }
 
