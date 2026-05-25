@@ -32,6 +32,62 @@ int byte_index_from_click_x(double click_x, double text_left_x,
     return std::clamp(idx, 0, pending_size);
 }
 
+// Brief D: strict signed two-decimal parse (sign, >=1 integer digit, '.',
+// exactly two fraction digits). Leading/trailing ASCII whitespace is
+// trimmed first so the bracket's `, ` separator round-trips. Lifted from
+// the retired commit_iter_edit lambda.
+bool parse_signed_2dp(const std::string& raw, double& out) {
+    size_t a = 0, b = raw.size();
+    while (a < b && std::isspace(static_cast<unsigned char>(raw[a]))) ++a;
+    while (b > a && std::isspace(static_cast<unsigned char>(raw[b - 1]))) --b;
+    const std::string v = raw.substr(a, b - a);
+    if (v.size() < 4) return false;
+    if (v[0] != '+' && v[0] != '-') return false;
+    const auto dot = v.find('.', 1);
+    if (dot == std::string::npos) return false;
+    if (dot == 1) return false;
+    if (v.size() - dot - 1 != 2) return false;
+    for (size_t i = 1; i < v.size(); ++i) {
+        if (i == dot) continue;
+        if (!std::isdigit(static_cast<unsigned char>(v[i]))) return false;
+    }
+    try { out = std::stod(v); }
+    catch (...) { return false; }
+    return true;
+}
+
+// Brief D: extract the inline iteration bracket from a flag payload edited
+// under the widened grammar. Searches for the `+[` segment after the
+// tempo token; on match, removes `+[ ... ]` from `payload` and writes the
+// parsed bounds (lo <= hi) to `lo_out`/`hi_out`. The all-zero blank
+// (`+[+0.00, +0.00]`) and an absent bracket both yield NaN (clear). The
+// FlagPayload tempo/scale/label vocabulary never produces a `+`, so `+[`
+// is an unambiguous marker. Returns false on a malformed bracket (caller
+// red-flashes); true otherwise.
+bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) {
+    const double kNaN = std::numeric_limits<double>::quiet_NaN();
+    lo_out = kNaN;
+    hi_out = kNaN;
+    const auto open = payload.find("+[");
+    if (open == std::string::npos) return true;          // absent → clear
+    const auto close = payload.find(']', open + 2);
+    if (close == std::string::npos) return false;        // unterminated
+    const std::string inner = payload.substr(open + 2, close - (open + 2));
+    const auto comma = inner.find(',');
+    if (comma == std::string::npos) return false;
+    double lo, hi;
+    if (!parse_signed_2dp(inner.substr(0, comma), lo)) return false;
+    if (!parse_signed_2dp(inner.substr(comma + 1), hi)) return false;
+    if (lo > hi) return false;
+    payload.erase(open, close - open + 1);
+    // All-zero blank is the cleared state, not a zero-width sweep.
+    if (lo != 0.0 || hi != 0.0) {
+        lo_out = lo;
+        hi_out = hi;
+    }
+    return true;
+}
+
 } // namespace
 
 // X.7.5b: flag-editor cluster. Method bodies are byte-identical to the
@@ -48,8 +104,8 @@ int byte_index_from_click_x(double click_x, double text_left_x,
 //   build_locked_prefix            → this->build_locked_prefix
 //
 // Free-function calls (text_editor::*, iter_popup_eligible_marker,
-// bpm_popup_eligible_marker, format_iter_bracket_text,
-// format_bpm_bracket_text, flag_text_for_marker,
+// bpm_popup_eligible_marker, format_iter_bracket_inline,
+// format_bpm_bracket_text, flag_text_for_marker, flag_text_iter,
 // warpmarkers_internal::parse_single_canonical_line, parse_bpm_bracket,
 // effective_disabled) keep their original spelling — the popup helpers
 // moved from main.cpp's anonymous namespace into warpmarkers.h alongside
@@ -75,10 +131,11 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     viewport.invalidate_top_strip();
 }
 
-// Shared core for the three enter-editor flows. Wrappers below
-// (enter_top_flag_edit, enter_iter_edit, enter_bpm_edit) own the
-// kind-specific eligibility gates and seed-text builders, then
-// delegate here. `text_left_x < 0` falls back to
+// Shared core for the enter-editor flows. Wrappers below
+// (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
+// gates and seed-text builders, then delegate here. `iter_grammar` widens
+// the FlagPayload editor's accepted vocabulary/cap for the inline
+// iteration bracket (Brief D). `text_left_x < 0` falls back to
 // flag_pending_text_left_x(app, audio, idx) — that path serves the
 // top-flag editor whose layout is computed on the fly; the popup
 // editors get the value from the click hit-test and pass it in.
@@ -87,7 +144,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
                                     std::string locked_prefix,
                                     std::string initial_pending,
                                     double click_x,
-                                    double text_left_x) {
+                                    double text_left_x,
+                                    bool iter_grammar) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
@@ -148,7 +206,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
         app.top_flag_editor, idx,
         std::move(locked_prefix),
         std::move(initial_pending),
-        kind);
+        kind,
+        iter_grammar);
 
     if (click_x >= 0.0) {
         const double advance = monospace_advance();
@@ -172,13 +231,22 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
+    // Brief D: in iteration mode the whole-flag editor opens over the
+    // bracketed flag (seed = the iteration-aware composed text) and runs
+    // the widened grammar. Eligibility mirrors the display gate so pass /
+    // label_ref flags edit as plain canonical lines even with iter on.
+    const bool iter_on =
+        app.iteration_mode_enabled &&
+        app.active_markers_view == 'W' &&
+        iter_popup_eligible_marker(mv[idx]);
     this->enter_text_edit(
         idx,
         text_editor::Kind::FlagPayload,
         this->build_locked_prefix(mv[idx]),
-        flag_text_for_marker(mv, idx),
+        flag_text_iter(mv, idx, iter_on),
         click_x,
-        /*text_left_x=*/-1.0);
+        /*text_left_x=*/-1.0,
+        /*iter_grammar=*/iter_on);
 }
 
 // Validate `pending` as a single canonical line and, on success, write
@@ -198,8 +266,28 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
+    // Brief D: in iteration mode the buffer may carry the inline bracket
+    // after `tempo_base`. Strip and capture it here (iteration-mode
+    // wrapper) so parse_single_canonical_line stays bracket-unaware. NaN
+    // bounds mean "blank/clear"; a malformed bracket red-flashes without
+    // touching the marker.
+    const bool iter_grammar = app.top_flag_editor.iter_grammar;
+    std::string payload = app.top_flag_editor.pending;
+    double iter_lo = std::numeric_limits<double>::quiet_NaN();
+    double iter_hi = std::numeric_limits<double>::quiet_NaN();
+    if (iter_grammar) {
+        if (!extract_iter_bracket(payload, iter_lo, iter_hi)) {
+            app.top_flag_editor.red = true;
+            viewport.invalidate_top_strip();
+            std::fprintf(stderr,
+                "warptempo_gui: edit rejected: malformed iteration "
+                "bracket: %s\n", app.top_flag_editor.pending.c_str());
+            return;
+        }
+    }
+
     const std::string candidate =
-        app.top_flag_editor.locked_prefix + app.top_flag_editor.pending;
+        app.top_flag_editor.locked_prefix + payload;
 
     GuiWarpMarker parsed;
     std::string err;
@@ -253,6 +341,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
+    // Snapshot the canonical (serialized) fields before writing so we can
+    // tell whether the engine/dirty state actually moved. Iteration-only
+    // commits (bracket changed, tempo/scale/label unchanged) must not mark
+    // dirty or trigger a render — iter values are session-only.
+    const GuiWarpMarker before = *m;
+
     // Time stays locked; preserve it (parse already produced the
     // same value via the locked prefix, but be explicit).
     const double preserved_time = m->time_seconds;
@@ -300,187 +394,40 @@ void GuiFlagEditor::commit_top_flag_edit() {
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
+    // Brief D: apply the parsed iteration bracket. Session-only; NaN
+    // bounds clear the sweep. The marker_mut above already bumped the
+    // warp generation, so the flag cache repaints the bracket regardless
+    // of whether the canonical fields moved.
+    if (iter_grammar) {
+        m->iter_start = iter_lo;
+        m->iter_end   = iter_hi;
+    }
+
+    // Did any serialized field change? Cascade renames imply a label_def
+    // change, already covered by the field compare below.
+    const bool canonical_changed =
+        m->tempo_inherits != before.tempo_inherits ||
+        m->tempo_base     != before.tempo_base ||
+        m->tempo_scale    != before.tempo_scale ||
+        m->label_def      != before.label_def ||
+        m->label_ref      != before.label_ref ||
+        m->disabled       != before.disabled ||
+        n_refs_renamed > 0;
+
     undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
-    undo.recompute_dirty();
 
     text_editor::deactivate(app.top_flag_editor);
 
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-}
-
-// Open an iteration popup edit on `idx`. The seed pending is the
-// current popup display ("[]" or "[+0.10,-0.05]") so the user can
-// backspace into a valid edit position. Reuses `top_flag_editor`
-// state but with Kind::IterationBracket so the editor's keyboard
-// vocabulary swaps to `[]+-,.` and digits.
-void GuiFlagEditor::enter_iter_edit(int idx, double click_x,
-                                    double text_left_x) {
-    if (idx < 0) return;
-    if (!app.iteration_mode_enabled) return;
-    const auto& mv = app.warpmarkers.markers();
-    if (idx >= static_cast<int>(mv.size())) return;
-    if (!iter_popup_eligible_marker(mv[idx])) return;
-    this->enter_text_edit(
-        idx,
-        text_editor::Kind::IterationBracket,
-        /*locked_prefix=*/"",
-        format_iter_bracket_text(mv[idx]),
-        click_x,
-        text_left_x);
-}
-
-// Commit the iteration popup's pending buffer. Four accepted forms:
-//   1. ""           → iter_start/iter_end := NaN (clear).
-//   2. "[]"         → iter_start/iter_end := NaN (clear).
-//   3. "[%+0.2f,%+0.2f]" with start <= end → set iter values.
-//   4. signed decimal "[+|-]NN[.NN]" → additive offset to tempo_base,
-//      clamped to [0.01, 9.99]; iter values cleared.
-// Anything else: red flash, stay in edit. Each accepted commit
-// pushes one undo entry. Only case 4 affects the on-disk dirty flag
-// (iter values are session-only and never serialized).
-void GuiFlagEditor::commit_iter_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (app.top_flag_editor.kind !=
-            text_editor::Kind::IterationBracket) return;
-    const int idx = app.top_flag_editor.target;
-    const auto& mv_const = app.warpmarkers.markers();
-    if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
-        text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_top_strip();
-        return;
-    }
-    const std::string& s = app.top_flag_editor.pending;
-
-    bool   clear_iter   = false;
-    bool   set_iter     = false;
-    double new_start    = 0.0;
-    double new_end      = 0.0;
-    bool   offset_tempo = false;
-    double tempo_delta  = 0.0;
-
-    if (s.empty() || s == "[]") {
-        clear_iter = true;
-    } else {
-        // Case 3: bracketed pair. Strict format — sign, digits, '.',
-        // exactly 2 digits — and start <= end.
-        auto parse_signed_2dp = [](const std::string& v,
-                                   double& out) -> bool {
-            if (v.size() < 4) return false;
-            if (v[0] != '+' && v[0] != '-') return false;
-            const auto dot = v.find('.', 1);
-            if (dot == std::string::npos) return false;
-            if (dot == 1) return false;
-            if (v.size() - dot - 1 != 2) return false;
-            for (size_t i = 1; i < v.size(); ++i) {
-                if (i == dot) continue;
-                if (!std::isdigit(
-                        static_cast<unsigned char>(v[i]))) return false;
-            }
-            try { out = std::stod(v); }
-            catch (...) { return false; }
-            return true;
-        };
-        bool tried_pair = false;
-        if (s.size() >= 2 && s.front() == '[' && s.back() == ']') {
-            const std::string inner = s.substr(1, s.size() - 2);
-            const auto comma = inner.find(',');
-            if (comma != std::string::npos) {
-                double pa, pb;
-                if (parse_signed_2dp(inner.substr(0, comma), pa) &&
-                    parse_signed_2dp(inner.substr(comma + 1), pb) &&
-                    pa <= pb) {
-                    new_start = pa;
-                    new_end   = pb;
-                    set_iter  = true;
-                }
-                tried_pair = true;
-            }
-        }
-        // Case 4: signed decimal additive offset to tempo_base.
-        // Recognized only when bracket-pair parse failed; both cases
-        // are mutually exclusive by syntax.
-        if (!set_iter && !tried_pair) {
-            if (s.size() >= 2 && (s[0] == '+' || s[0] == '-')) {
-                bool seen_dot = false;
-                int  digit_count = 0;
-                bool ok = true;
-                for (size_t i = 1; i < s.size(); ++i) {
-                    const char c = s[i];
-                    if (c == '.') {
-                        if (seen_dot) { ok = false; break; }
-                        seen_dot = true;
-                        continue;
-                    }
-                    if (!std::isdigit(
-                            static_cast<unsigned char>(c))) {
-                        ok = false; break;
-                    }
-                    ++digit_count;
-                }
-                if (ok && digit_count > 0) {
-                    try { tempo_delta = std::stod(s); offset_tempo = true; }
-                    catch (...) { offset_tempo = false; }
-                }
-            }
-        }
-    }
-
-    if (!clear_iter && !set_iter && !offset_tempo) {
-        app.top_flag_editor.red = true;
-        viewport.invalidate_top_strip();
-        std::fprintf(stderr,
-            "warptempo_gui: iter edit rejected: invalid syntax: %s\n",
-            s.c_str());
-        return;
-    }
-
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
-
-    GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-    if (!m) {
-        text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    bool tempo_changed = false;
-    if (offset_tempo) {
-        double new_tempo = m->tempo_base + tempo_delta;
-        if (new_tempo < 0.01) new_tempo = 0.01;
-        if (new_tempo > 9.99) new_tempo = 9.99;
-        // Snap to 2 decimals to mirror the owning-marker precision
-        // used elsewhere (drop-marker, nudge, etc.).
-        new_tempo = std::round(new_tempo * 100.0) / 100.0;
-        if (new_tempo != m->tempo_base) {
-            m->tempo_base = new_tempo;
-            tempo_changed = true;
-        }
-        m->iter_start = std::numeric_limits<double>::quiet_NaN();
-        m->iter_end   = std::numeric_limits<double>::quiet_NaN();
-    } else if (set_iter) {
-        m->iter_start = new_start;
-        m->iter_end   = new_end;
-    } else if (clear_iter) {
-        m->iter_start = std::numeric_limits<double>::quiet_NaN();
-        m->iter_end   = std::numeric_limits<double>::quiet_NaN();
-    }
-
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
-    if (tempo_changed) {
+    // The non-iteration commit path is untouched: it always recomputes
+    // dirty and fires a render (existing behavior). Only the iteration-
+    // mode wrapper gates on canonical_changed so a bracket-only edit
+    // stays session-only — no dirty, no engine render.
+    if (!iter_grammar || canonical_changed) {
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        target_render.trigger();
     }
-
-    text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_top_strip();
-    // iter range values are session-only and don't affect engine
-    // output. Only the case-4 additive tempo_base offset hits the
-    // engine — fire only when that branch ran.
-    if (tempo_changed) target_render.trigger();
 }
 
 // Bulk-clear the session-only iter values across all warp markers.

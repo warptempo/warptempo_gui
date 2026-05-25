@@ -317,7 +317,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     app.selected_markers,
                     overlay,
                     tmap_disp,
-                    drag_overlay);
+                    drag_overlay,
+                    app.iteration_mode_enabled &&
+                        app.active_markers_view == 'W');
             }
 
             const auto f1 = clock::now();
@@ -1245,6 +1247,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
     const bool      rve        = app.render_view_enabled;
+    // Brief D: iteration mode only affects warp-view (non-render) flags;
+    // render view resets the toggle off, so this is false there.
+    const bool      iter_on    = app.iteration_mode_enabled &&
+                                 mv == 'W' && !rve;
 
     // FlagPayload editor target drives the skip-guard (cache leaves a
     // hole for the live editor render to fill). Brief B2: the iter/BPM
@@ -1273,7 +1279,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_render_view_enabled     == rve &&
-        flag_cache.fp_flag_editor_target      == flag_target;
+        flag_cache.fp_flag_editor_target      == flag_target &&
+        flag_cache.fp_iteration_mode_enabled  == iter_on;
 
     if (matches) return;
 
@@ -1358,7 +1365,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.selected_markers,
                      cache_overlay,
                      tmap_arg,
-                     drag_overlay);
+                     drag_overlay,
+                     iter_on);
     }
 
     cairo_destroy(ccr);
@@ -1377,6 +1385,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_render_view_enabled     = rve;
     flag_cache.fp_flag_editor_target      = flag_target;
+    flag_cache.fp_iteration_mode_enabled  = iter_on;
     flag_cache.dirty                      = false;
 
     gui.invalidate_region(top_strip.x, top_strip.y,

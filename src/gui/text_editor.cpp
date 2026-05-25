@@ -12,7 +12,8 @@ namespace {
 // a GuiKey (paired with mods) to the literal char to insert; returns 0
 // for "not a printable in this vocabulary". `kind` selects between the
 // flag-payload, iteration-bracket, and BPM-bracket alphabets.
-char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind) {
+char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind,
+                    bool iter_grammar) {
     const bool shift = mods.shift;
 
     // Digits are common to all kinds.
@@ -99,6 +100,19 @@ char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind) {
     if (key == GuiKeys::Semicolon && shift)  return ':';
     // Shift+8 also produces asterisk on US layouts. Let it through.
     if (key == GuiKeys::Digit8 && shift)     return '*';
+    // Brief D: iteration-mode FlagPayload editing widens the vocabulary
+    // to admit the inline bracket characters. The bracket's space after
+    // the comma is part of the seeded display but is not typeable (and
+    // the commit-side parser tolerates its absence).
+    if (iter_grammar) {
+        if (key == GuiKeys::BracketLeft  && !shift) return '[';
+        if (key == GuiKeys::BracketRight && !shift) return ']';
+        if (key == GuiKeys::Comma        && !shift) return ',';
+        if (key == GuiKeys::Minus        && !shift) return '-';
+        if (key == GuiKeys::Plus)                   return '+';
+        // US layout: Shift+= produces +.
+        if (key == GuiKeys::Equal && shift)         return '+';
+    }
     return 0;
 }
 
@@ -123,6 +137,7 @@ void erase_selection(State& s) {
 void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;
+    s.iter_grammar      = false;
     s.pending.clear();
     s.locked_prefix.clear();
     s.cursor_pos        = 0;
@@ -133,9 +148,11 @@ void deactivate(State& s) {
 void enter(State& s, int target,
            std::string locked_prefix,
            std::string initial_pending,
-           Kind kind) {
+           Kind kind,
+           bool iter_grammar) {
     s.target            = target;
     s.kind              = kind;
+    s.iter_grammar      = iter_grammar;
     s.locked_prefix     = std::move(locked_prefix);
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
@@ -252,11 +269,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // Printable insertion (length-capped). BpmBracket gets a tighter cap
     // than the default (brief X.2): the strict format `<beats>@[<lo>,<hi>]`
     // tops out at 12 chars, so 13 leaves one char of typo slack.
-    const char ch = keysym_to_char(key, mods, s.kind);
+    const char ch = keysym_to_char(key, mods, s.kind, s.iter_grammar);
     if (ch != 0) {
         int cap = kMaxPendingChars;
         if (s.kind == Kind::BpmBracket)        cap = kMaxPendingCharsBpm;
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
+        if (s.kind == Kind::FlagPayload && s.iter_grammar)
+            cap = kMaxPendingCharsFlagIter;
         // Replace-on-type: erase before the cap check so the typed
         // char can land inside the cap when a max-length pending is
         // entirely selected.

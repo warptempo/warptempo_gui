@@ -226,10 +226,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             tmap_arg, drag_overlay);
     } else {
+        // Brief D: warp hit-rects must track the bracketed flag width so
+        // clicks land on the iteration-mode chip. This branch is reached
+        // only in warp view (not render view, not 'P').
         rects = compute_flag_hit_rects(
             scratch_cr, top, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
-            tmap_arg, drag_overlay);
+            tmap_arg, drag_overlay,
+            app.iteration_mode_enabled);
     }
     cairo_destroy(scratch_cr);
     cairo_surface_destroy(scratch_s);

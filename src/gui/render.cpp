@@ -174,6 +174,36 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
     return flag_text(markers, idx);
 }
 
+// Brief D: the single iteration-aware text composer. Returns the plain
+// flag_text for ineligible markers or when iteration mode is off; for an
+// eligible owning marker with iteration on, splices the inline bracket
+// after `tempo_base` and before any `*scale`/`:label`
+// (e.g. `1.23+[+1.50, -0.50]*1.2345:a.aa`). All warp flag callers route
+// through here so display, hit-rects, and the editor seed stay in sync.
+std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
+                           int idx, bool iteration_on) {
+    if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
+    const auto& m = markers[idx];
+    if (!iteration_on || !iter_popup_eligible_marker(m)) {
+        return flag_text(markers, idx);
+    }
+    // Eligible owning marker (tempo_inherits == false, no label_ref):
+    // tempo, then the bracket, then optional scale and label.
+    char tbuf[32];
+    std::snprintf(tbuf, sizeof(tbuf), "%.2f", m.tempo_base);
+    std::string text = tbuf;
+    text += format_iter_bracket_inline(m);
+    if (!m.tempo_scale.empty()) {
+        text += "*";
+        text += m.tempo_scale;
+    }
+    if (!m.label_def.empty()) {
+        text += ":";
+        text += m.label_def;
+    }
+    return text;
+}
+
 double resolve_inherited_tempo(const std::vector<GuiWarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const auto& m = markers[i];
@@ -766,7 +796,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const FlagEditorOverlay& editor,
                   const std::vector<TimeMapSegment>* timemap,
-                  const DragOverlay* drag_overlay) {
+                  const DragOverlay* drag_overlay,
+                  bool iteration_on) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -804,7 +835,7 @@ void render_flags(cairo_t* cr,
                                viewport_start_sample, viewport_end_sample,
                                sample_rate, timemap, drag_overlay,
         [&](int i) {
-            return flag_text(markers, i);
+            return flag_text_iter(markers, i, iteration_on);
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
@@ -840,7 +871,8 @@ void render_one_editor_flag(
     const std::set<int>& selected_set,
     const FlagEditorOverlay& editor,
     const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
+    const DragOverlay* drag_overlay,
+    bool iteration_on) {
     if (editor.marker_index < 0) return;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
@@ -861,7 +893,7 @@ void render_one_editor_flag(
                                viewport_start_sample, viewport_end_sample,
                                sample_rate, timemap, drag_overlay,
         [&](int i) {
-            return flag_text(markers, i);
+            return flag_text_iter(markers, i, iteration_on);
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
@@ -938,12 +970,13 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     double font_size,
     const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
+    const DragOverlay* drag_overlay,
+    bool iteration_on) {
     return compute_flag_hit_rects_impl(cr, top_strip_area, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate, font_size, timemap, drag_overlay,
         [&](int i) {
-            return flag_text(markers, i);
+            return flag_text_iter(markers, i, iteration_on);
         });
 }
 

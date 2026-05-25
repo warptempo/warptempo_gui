@@ -330,7 +330,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const FlagEditorOverlay& editor = {},
                   const std::vector<TimeMapSegment>* timemap = nullptr,
-                  const DragOverlay* drag_overlay = nullptr);
+                  const DragOverlay* drag_overlay = nullptr,
+                  bool iteration_on = false);
 
 // Stage C: paints ONE flag — the FlagPayload-editor target — with the
 // live pending text, selection swap, and blinking cursor. Same greedy-
@@ -356,7 +357,8 @@ void render_one_editor_flag(
     const std::set<int>& selected_set,
     const FlagEditorOverlay& editor,
     const std::vector<TimeMapSegment>* timemap = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
+    const DragOverlay* drag_overlay = nullptr,
+    bool iteration_on = false);
 
 // Same greedy-pack and elision logic as render_flags, without drawing —
 // returns the screen-coord rects of the flags that would be rendered. The
@@ -376,7 +378,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     double font_size,
     const std::vector<TimeMapSegment>* timemap = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
+    const DragOverlay* drag_overlay = nullptr,
+    bool iteration_on = false);
 
 // Phase reset marker analogues (chunk S.2.2). Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
@@ -426,6 +429,15 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 // by the GUI text editor to seed the editable payload (the on-screen rect
 // content) when entering edit mode on a flag.
 std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int idx);
+
+// Brief D: iteration-aware sibling of flag_text_for_marker. Returns the
+// plain flag text when `iteration_on` is false or the marker is iter-
+// ineligible; otherwise splices the inline `+[lo, hi]` bracket after
+// `tempo_base`. The single canonical composer for warp flag text — used
+// by render_flags / render_one_editor_flag / compute_flag_hit_rects and
+// to seed the flag editor in iteration mode.
+std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
+                           int idx, bool iteration_on);
 
 // Walks backward from `index` through `markers` to find the nearest marker
 // that owns its tempo (tempo_inherits == false and not a label reference).

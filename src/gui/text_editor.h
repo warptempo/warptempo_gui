@@ -26,6 +26,10 @@ namespace text_editor {
 // remain available so an over-cap pending (loaded from a hand-edited
 // file) can be trimmed back to canonical form.
 constexpr int kMaxPendingChars = 16;
+// Brief D: iteration-mode FlagPayload editing widens the accepted grammar
+// to admit the inline `+[lo, hi]` bracket, so the cap must clear the
+// longest bracketed flag (`9.99+[-99.99, +99.99]*1.2345:a.aa` ≈ 35 chars).
+constexpr int kMaxPendingCharsFlagIter = 40;
 // Brief X.2 BPM popup. Cap matches the brief's per-Kind tightening for
 // `<beats>@[<lo>,<hi>]` editing.
 constexpr int kMaxPendingCharsBpm = 13;
@@ -57,6 +61,12 @@ struct State {
     // Vocabulary discriminator. The caller sets this in `enter()` and
     // the keystroke handler routes printable detection accordingly.
     Kind kind = Kind::FlagPayload;
+
+    // Brief D: when true on a FlagPayload editor, the accepted grammar is
+    // widened to admit the inline iteration bracket characters
+    // (`+ - [ ] ,`) and the longer FlagIter length cap. Set at `enter()`
+    // from iteration_mode_enabled; does nothing for other kinds.
+    bool iter_grammar = false;
 
     // Editable text — currently the canonical post-pipe payload.
     std::string pending;
@@ -110,7 +120,8 @@ void deactivate(State& s);
 void enter(State& s, int target,
            std::string locked_prefix,
            std::string initial_pending,
-           Kind kind = Kind::FlagPayload);
+           Kind kind = Kind::FlagPayload,
+           bool iter_grammar = false);
 
 // Apply a key event to the editor. Returns true if the key was consumed
 // — the caller should NOT route a consumed key to other handlers.

@@ -254,10 +254,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const auto action = text_editor::handle_key(
             app.top_flag_editor, key, mods);
         if (action == text_editor::KeyAction::CommitRequested) {
+            // Brief D: iteration editing is a widened-grammar FlagPayload
+            // commit (commit_top_flag_edit), not a separate bracket editor.
             if (app.top_flag_editor.kind ==
-                    text_editor::Kind::IterationBracket) {
-                flag_editor.commit_iter_edit();
-            } else if (app.top_flag_editor.kind ==
                     text_editor::Kind::BpmBracket) {
                 flag_editor.commit_bpm_edit();
             } else {
@@ -846,7 +845,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     std::lround(m.iter_start * 100.0));
                 const int end_cents = static_cast<int>(
                     std::lround(m.iter_end * 100.0));
-                // commit_iter_edit enforces start <= end, but a stray
+                // The bracket commit enforces start <= end, but a stray
                 // hand-edit of memory could violate it. Treat that as
                 // no sweep rather than producing zero cells.
                 if (start_cents > end_cents) {

@@ -276,6 +276,12 @@ struct FlagCache {
     char      fp_active_markers_view      = '\0';
     bool      fp_render_view_enabled      = false;
     int       fp_flag_editor_target       = -1;
+    // Brief D: iteration mode splices the inline bracket into eligible
+    // flags. Toggling `i` changes the painted text without bumping any
+    // generation, so it must be part of the cache identity. (Iter-value
+    // edits route through marker_mut and already bump the warp generation
+    // above, so they need no separate hash here.)
+    bool      fp_iteration_mode_enabled   = false;
 
     bool dirty = true;
 
