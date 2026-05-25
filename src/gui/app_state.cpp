@@ -218,9 +218,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Per-bound chip rect, computed exactly as render_trim_flags paints it:
     // text_left at the bound's integer pixel column (top.x + round(x_raw)),
-    // the rect spanning [text_left - hl_pad, text_left + advance + hl_pad] —
-    // the same horizontal geometry compute_flag_hit_rects derives for regular
-    // flags. The vertical band (top_upper_row_area) was checked above, so only
+    // the rect spanning [text_left, text_left + advance + 2*hl_pad] — the
+    // painted chip's left edge through its right pad, the same horizontal
+    // geometry compute_flag_hit_rects derives for regular flags. The vertical band (top_upper_row_area) was checked above, so only
     // horizontal containment is tested here. Returns the bound's distance from
     // the press to its column when the press is inside the chip (for the
     // both-hit tie-break), else kMiss.
@@ -240,7 +240,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             static_cast<double>(top.x) + std::round(x_raw);
         cairo_text_extents_t ext;
         cairo_text_extents(scratch_cr, glyph, &ext);
-        const int rx = static_cast<int>(std::round(text_left - hl_pad));
+        const int rx = static_cast<int>(std::round(text_left));
         const int rw =
             static_cast<int>(std::round(ext.x_advance + 2.0 * hl_pad));
         if (mouse_x < rx || mouse_x >= rx + rw) return kMiss;

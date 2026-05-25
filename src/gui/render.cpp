@@ -1047,7 +1047,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
             FlagHitRect r;
             r.marker_index = i;
-            r.x = std::round(text_left - hl_pad);
+            r.x = std::round(text_left);
             r.y = baseline_y - monospace_row_baseline_offset();
             r.w = std::round(ext.x_advance + 2.0 * hl_pad);
             r.h = static_cast<double>(monospace_row_h());
