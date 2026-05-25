@@ -557,7 +557,10 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.top_flag_editor);
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
-                invalidate_top_strip();
+                if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
+                    invalidate_timestamp_area();
+                else
+                    invalidate_top_strip();
             }
         }
         // Same shape for the bottom-strip settings prompt; invalidate the

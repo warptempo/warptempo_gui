@@ -453,7 +453,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         if (action == text_editor::KeyAction::CancelRequested) {
-            flag_editor.exit_top_flag_edit_no_commit();
+            if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+                flag_editor.exit_top_flag_edit_no_commit();
+                flag_editor.exit_bpm_mode();
+                viewport.invalidate_timestamp_area();
+            } else {
+                flag_editor.exit_top_flag_edit_no_commit();
+            }
             return;
         }
         if (action == text_editor::KeyAction::Consumed) {
@@ -1534,6 +1540,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 flag_editor.exit_top_flag_edit_no_commit();
             }
             flag_editor.exit_bpm_mode();
+            viewport.invalidate_timestamp_area();
             return;
         }
         if (app.selected_markers.size() != 1) return;
