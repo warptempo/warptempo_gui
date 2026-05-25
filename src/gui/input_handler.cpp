@@ -431,6 +431,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
     // first; Esc with no active edit falls through to the rest.
     if (text_editor::is_active(app.top_flag_editor)) {
+        // BPM editor (bottom-strip) honors Ctrl+Q / Ctrl+W like the settings
+        // editor: discard the in-progress edit, exit BPM mode, then run the
+        // normal close/revert path. Scoped to BpmBracket so the top-strip
+        // FlagPayload / IterationBracket editors keep swallowing these chords.
+        if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket &&
+            ctrl && !shift && !alt &&
+            (key == GuiKeys::Q || key == GuiKeys::W)) {
+            flag_editor.exit_top_flag_edit_no_commit();
+            flag_editor.exit_bpm_mode();
+            viewport.invalidate_timestamp_area();
+            prompt.request_close_or_revert(
+                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
+                                  : DialogTrigger::REVERT_TO_BLANK);
+            return;
+        }
         (void)ctrl; (void)alt; // Modifiers swallowed except Shift→colon.
         const auto action = text_editor::handle_key(
             app.top_flag_editor, key, mods);
@@ -445,7 +460,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 // parse failure leaves the editor open (red) and renders
                 // nothing.
                 if (flag_editor.commit_bpm_edit()) {
+                    // Ordering is load-bearing: render_bpm_sweep early-bails
+                    // on !bpm_mode_enabled, so the sweep MUST fire before
+                    // exit_bpm_mode clears the flag. Then close out the mode
+                    // and repaint the bottom strip without the editor.
                     render_bpm_sweep();
+                    flag_editor.exit_bpm_mode();
+                    viewport.invalidate_timestamp_area();
                 }
             } else {
                 flag_editor.commit_top_flag_edit();
