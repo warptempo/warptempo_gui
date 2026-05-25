@@ -266,6 +266,11 @@ struct TrimDragState {
     bool group    = false;   // true = both bounds move rigidly together
     double orig_seconds       = 0.0;  // dragged bound's pre-drag value (Escape-restore)
     double orig_other_seconds = 0.0;  // other bound's pre-drag value (group drag)
+    // Press position in source-domain seconds, captured at drag-begin.
+    // Motion applies the cursor's displacement from here (anchor-relative),
+    // matching warp-marker drag — so the bound tracks the grab point with no
+    // initial snap. See DragState::anchor_mouse_time_seconds.
+    double anchor_seconds     = 0.0;
     SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
 };
 

@@ -2397,7 +2397,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None) {
-                    handle_trim_boundary_press(th, ctrl, shift);
+                    handle_trim_boundary_press(th, ctrl, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -2418,11 +2418,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // the column test for the stem in the lower row, the inter-row
                 // gap, and the rest of the strip, where the stem sits at the
                 // true column. Both route to handle_trim_boundary_press.
-                TrimHit th = hit_test_trim_chip(app, audio, x, y);
-                if (th == TrimHit::None)
-                    th = hit_test_trim_boundary(app, audio, x);
+                const TrimHit chip = hit_test_trim_chip(app, audio, x, y);
+                const TrimHit th = (chip != TrimHit::None)
+                                       ? chip
+                                       : hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None) {
-                    handle_trim_boundary_press(th, ctrl, shift);
+                    handle_trim_boundary_press(th, ctrl, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -2438,7 +2439,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Read-only refuses the drag-begin so app.drag.active never
             // enters flight state; motion / release / Escape paths all
             // short-circuit on !app.drag.active.
-            if (active_view_state(app).read_only) return;
+            if (active_view_state(app).read_only) {
+                return;
+            }
             if (hit >= 0) {
                 // begin_drag preserves the multi-selection if `hit` is in
                 // it, else collapses to just `hit`. Motion decides whether
@@ -2468,7 +2471,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // (the Shift branch) still run on the
                     // phase-reset-mode fallthrough but the editor
                     // entry itself is a silent no-op.
-                    if (active_view_state(app).read_only) return;
+                    if (active_view_state(app).read_only) {
+                        return;
+                    }
                     flag_editor.enter_top_flag_edit(
                         hit, static_cast<double>(x));
                     return;
@@ -3092,7 +3097,35 @@ void GuiInputHandler::select_trim_boundary(TrimHit which, bool additive) {
     viewport.invalidate_waveform_area();
 }
 
-void GuiInputHandler::begin_trim_drag(TrimHit which) {
+bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
+                                                     double& out_seconds) {
+    const int sr = audio.sample_rate();
+    if (sr <= 0 || audio.total_frames() <= 0) return false;
+    const double sr_d = static_cast<double>(sr);
+    const GuiRect area = waveform_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return false;
+
+    int rel = mouse_x - area.x;
+    if (rel < 0) rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const int64_t domain_frame = app.viewport_start_sample +
+        static_cast<int64_t>(std::nearbyint(rel * spp));
+
+    // Target view: the cursor column is an active-domain frame; the trim
+    // store is source-domain. Inverse-translate at the boundary, mirroring
+    // handle_trim_set_at_playhead.
+    std::vector<TimeMapSegment> tmap;
+    if (app.active_audio_view == 'T') {
+        tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+    }
+    const int64_t src_frame = to_source_frame(app, domain_frame, tmap);
+    out_seconds = static_cast<double>(src_frame) / sr_d;
+    return true;
+}
+
+void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x) {
     if (which == TrimHit::None) return;
     ViewState& vs = active_view_state(app);
     const bool is_begin = (which == TrimHit::Begin);
@@ -3110,6 +3143,14 @@ void GuiInputHandler::begin_trim_drag(TrimHit which) {
                                           : vs.trim_end_seconds;
     app.trim_drag.orig_other_seconds = is_begin ? vs.trim_end_seconds
                                                  : vs.trim_begin_seconds;
+    // Grab anchor: the press position in source-domain seconds. Motion moves
+    // the bound by the cursor's displacement from here, so it tracks the grab
+    // point with no snap (mirrors begin_drag's anchor_mouse_time_seconds).
+    // A bad conversion leaves anchor_seconds at 0; harmless since the same
+    // unusable state makes update_trim_drag early-return too.
+    double anchor = 0.0;
+    if (trim_mouse_x_to_source_seconds(mouse_x, anchor))
+        app.trim_drag.anchor_seconds = anchor;
     app.trim_drag.pre          = capture_current_settings(app);
     app.last_sel_group         = LastSelGroup::Trim;
 }
@@ -3119,36 +3160,26 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     const int sr = audio.sample_rate();
     if (sr <= 0 || audio.total_frames() <= 0) return;
     const double sr_d = static_cast<double>(sr);
-    const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;
 
-    int rel = mouse_x - area.x;
-    if (rel < 0) rel = 0;
-    if (rel >= area.w) rel = area.w - 1;
-    const int64_t domain_frame = app.viewport_start_sample +
-        static_cast<int64_t>(std::nearbyint(rel * spp));
-
-    // Target view: the cursor column is an active-domain frame; the trim
-    // store is source-domain. Inverse-translate at the boundary, mirroring
-    // handle_trim_set_at_playhead.
-    std::vector<TimeMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
-    int64_t src_frame = to_source_frame(app, domain_frame, tmap);
+    // Anchor-relative motion: the dragged bound moves by the cursor's
+    // displacement from the grab point, not to the absolute cursor column.
+    // cursor_seconds is converted identically to the begin-drag anchor, so
+    // the bound stays the same distance under the cursor for the whole drag.
+    double cursor_seconds = 0.0;
+    if (!trim_mouse_x_to_source_seconds(mouse_x, cursor_seconds)) return;
+    const double delta_seconds = cursor_seconds - app.trim_drag.anchor_seconds;
 
     const int64_t total = static_cast<int64_t>(audio.total_frames());
     ViewState& vs = active_view_state(app);
 
     if (app.trim_drag.group) {
-        // Rigid pair translation: the dragged bound's desired source frame
-        // sets a delta that both bounds move by, preserving region width.
-        // The delta is clamped against both file edges so the region stops
-        // as a unit rather than one bound collapsing into the other.
-        const int64_t orig_dragged_f = static_cast<int64_t>(
-            std::nearbyint(app.trim_drag.orig_seconds * sr_d));
+        // Rigid pair translation: the dragged bound's desired source frame is
+        // its pre-drag frame plus the anchor-relative delta; that delta moves
+        // both bounds, preserving region width. The delta is clamped against
+        // both file edges so the region stops as a unit rather than one bound
+        // collapsing into the other.
         const int64_t orig_begin_f = static_cast<int64_t>(std::nearbyint(
             (app.trim_drag.is_begin ? app.trim_drag.orig_seconds
                                     : app.trim_drag.orig_other_seconds) * sr_d));
@@ -3156,7 +3187,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             (app.trim_drag.is_begin ? app.trim_drag.orig_other_seconds
                                     : app.trim_drag.orig_seconds) * sr_d));
 
-        int64_t delta = src_frame - orig_dragged_f;
+        int64_t delta = static_cast<int64_t>(std::nearbyint(delta_seconds * sr_d));
         const int64_t min_delta = -orig_begin_f;        // begin >= 0
         const int64_t max_delta = total - orig_end_f;    // end   <= total
         if (delta < min_delta) delta = min_delta;
@@ -3175,6 +3206,11 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         return;
     }
 
+    // Single-bound: pre-drag frame plus the anchor-relative delta.
+    const int64_t orig_f = static_cast<int64_t>(
+        std::nearbyint(app.trim_drag.orig_seconds * sr_d));
+    int64_t src_frame = orig_f +
+        static_cast<int64_t>(std::nearbyint(delta_seconds * sr_d));
     if (src_frame < 0) src_frame = 0;
     if (src_frame > total) src_frame = total;
 
@@ -3244,13 +3280,13 @@ void GuiInputHandler::delete_selected_trim() {
 }
 
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
-                                                 bool shift) {
+                                                 bool shift, int mouse_x) {
     if (which == TrimHit::None) return;
     if (ctrl) {
         // Read-only refuses the drag-begin so app.trim_drag.active never
         // enters flight; motion / release / Escape all short-circuit on it.
         if (active_view_state(app).read_only) return;
-        begin_trim_drag(which);
+        begin_trim_drag(which, mouse_x);
         return;
     }
     select_trim_boundary(which, /*additive=*/shift);
