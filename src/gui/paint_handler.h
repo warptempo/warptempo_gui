@@ -285,6 +285,19 @@ struct FlagCache {
     // above, so they need no separate hash here.)
     bool      fp_iteration_mode_enabled   = false;
 
+    // F.trim: the begin/end trim flag chips ride this cache (they live in
+    // top_upper_row_area, inside top_strip_area). Their pixels depend on the
+    // displayed-domain bound positions, whether each bound is set, and each
+    // bound's selected bit — none of which bump any marker generation, so
+    // they are part of the cache identity. Mirrors the StemCache fp_trim_*
+    // fields so chip and stem rebuild on the same triggers.
+    int64_t   fp_trim_begin               = 0;
+    int64_t   fp_trim_end                 = 0;
+    bool      fp_trim_has_begin           = false;
+    bool      fp_trim_has_end             = false;
+    bool      fp_trim_begin_selected      = false;
+    bool      fp_trim_end_selected        = false;
+
     bool dirty = true;
 
     void destroy_surface() {
@@ -405,4 +418,22 @@ private:
     };
 
     WaveformRenderInputs compute_waveform_render_inputs() const;
+
+    // Displayed-domain trim boundary state, shared by the stem cache (which
+    // paints the begin/end stems) and the flag cache (which paints the b/e
+    // chips that cap them). Computing it in one place keeps chip and stem in
+    // lockstep — same positions, same has/selected bits — so they always read
+    // as one continuous unit. Positions are translated into the displayed
+    // domain (target-view timemap from wf_cache.fp_timemap, or source-frame),
+    // matching the marker stems' coordinate system. Render view forces the
+    // bounds off (trim is a source-view authoring concept).
+    struct DisplayedTrim {
+        int64_t begin          = 0;
+        int64_t end            = 0;
+        bool    has_begin      = false;
+        bool    has_end        = false;
+        bool    begin_selected = false;
+        bool    end_selected   = false;
+    };
+    DisplayedTrim compute_displayed_trim() const;
 };

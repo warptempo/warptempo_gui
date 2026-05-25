@@ -48,11 +48,11 @@ inline constexpr GuiColor kPlayheadCursor   = {0.10, 0.74, 0.61};
 inline constexpr GuiColor kAccent           = {0.75, 0.20, 0.18};
 inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
 
-// Brief C: trim boundary stem color (#FDBC4B amber). Distinct from
+// Brief C: trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
 // trim begin/end paints as a vertical stem in this color, or kSelected
 // when that boundary is selected.
-inline constexpr GuiColor kTrimMarker       = {0.992, 0.737, 0.294};
+inline constexpr GuiColor kTrimMarker       = {0.965, 0.455, 0.000};
 
 // Flag rect geometry. Internal padding around the text glyph bounding box,
 // applied symmetrically (horizontal and vertical). Brief Q raised this from
@@ -81,14 +81,14 @@ constexpr double kVPadExtraPx = 1.0;
 // strip layout is inverted to a fixed-pixel grid.
 constexpr double kFlagBottomLiftPx = 10.0;
 
-// Exists only to size the stem-cache overhang so it reaches up to the flag
-// chip's bottom edge. The stem geometry itself no longer originates here —
-// the stem top is derived from the flag chip's bottom (flag_chip_bottom_y),
-// not from this constant. It survives solely for the paint_handler stem blit
-// (surface_h = area.h + kStemAboveWaveformPx, blit y = area.y -
-// kStemAboveWaveformPx), where the surface must be tall enough to hold the
-// overhang up to the chip bottom. Defined off kFlagBottomLiftPx so the
-// overhang tracks the one authored lift value.
+// The lower-row component of the stem-cache overhang: the distance from the
+// waveform top up to the regular (lower-row) flag chip's bottom edge. The
+// stem geometry itself no longer originates here — stem tops derive from
+// flag_chip_bottom_y. After F.trim the full stem-cache overhang is the
+// TALLER trim value (see stem_cache_overhang_px, which adds one row + gap on
+// top of this), since trim stems reach up to the upper-row chip bottom and
+// share the same cache surface. Defined off kFlagBottomLiftPx so the
+// lower-row component tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
 // Brief F: fixed-pixel mirrored four-row strip grid. G is the single tunable
@@ -114,16 +114,46 @@ constexpr int    kRowHFallbackPx       = 28;
 constexpr double kRowBaselineOffFallbackPx =
     kFlagInnerPadPx + kVPadExtraPx + 14.0;
 
+// Forward declaration: defined with its full doc comment below. Needed here
+// because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
+int monospace_row_h();
+
+// Which strip row a chip's bottom edge sits at. Lower is the regular
+// warp/phase-reset flag row (kFlagBottomLiftPx above the waveform top);
+// Upper is the F.trim begin/end row, one row + one inter-row gap higher.
+enum class ChipRow { Lower, Upper };
+
 // The flag chip's painted bottom edge for the current layout. The flag chip
 // sits in overlay space above the waveform with its bottom edge lifted
 // kFlagBottomLiftPx above the waveform top. This is the single source of
 // truth that both the flag baseline solve and the stem renderers
-// (render_marker_stems_impl, render_trim_stems) read: the stem is an
-// extension of the flag, so its top originates here and runs down to the
-// waveform bottom. Length is whatever connects the chip bottom to the
+// (render_marker_stems_impl, render_trim_stems, render_trim_flags) read: the
+// stem is an extension of the flag, so its top originates here and runs down
+// to the waveform bottom. Length is whatever connects the chip bottom to the
 // waveform bottom.
-inline double flag_chip_bottom_y(const GuiRect& waveform_area) {
-    return static_cast<double>(waveform_area.y) - kFlagBottomLiftPx;
+//
+// `row` selects which strip row the chip caps. Lower reproduces the original
+// value exactly (regular flags/stems, no pixel drift). Upper sits one row +
+// one inter-row gap higher — the trim begin/end flags, whose stems are
+// therefore longer by that amount automatically.
+inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
+    const double lower =
+        static_cast<double>(waveform_area.y) - kFlagBottomLiftPx;
+    if (row == ChipRow::Lower) return lower;
+    return lower - (static_cast<double>(monospace_row_h()) + kRowGapPx);
+}
+
+// Stem-cache surface overhang above the waveform top, in pixels. Sized for
+// the TALLER trim stem (whose top reaches the upper-row chip bottom), so the
+// single shared stem-cache surface holds both marker stems (originating at
+// the lower-row chip bottom) and trim stems without clipping. Marker stems
+// land transparently lower within the same surface; their absolute screen
+// position is unchanged. Used by maybe_rebuild_stem_cache (surface height,
+// local-area offset) and the on_redraw blit/gate, which must agree.
+inline int stem_cache_overhang_px() {
+    return static_cast<int>(kStemAboveWaveformPx)
+         + monospace_row_h()
+         + static_cast<int>(kRowGapPx);
 }
 
 // Editor pixel size for the flag-payload editor, iter popup, and BPM
@@ -297,6 +327,30 @@ void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
+                       const TrimRange& trim,
+                       bool has_begin,
+                       bool begin_selected,
+                       bool has_end,
+                       bool end_selected);
+
+// F.trim: draws the begin/end trim-boundary flag chips in the upper top row.
+// Each set bound (gated by `has_begin` / `has_end`) paints a single-glyph
+// chip — `b` for begin, `e` for end — capping its stem as one continuous
+// unit. Chip color mirrors the stem exactly: kTrimMarker, or kSelected when
+// that bound is selected. The chip's bottom edge sits at
+// flag_chip_bottom_y(waveform_area, ChipRow::Upper); `waveform_area` is the
+// real waveform rect (the chip's vertical anchor is derived from its top
+// edge, the same convention the stem renderer uses). Column placement matches
+// render_trim_stems against the same viewport — `trim.begin` / `trim.end` are
+// already in the displayed domain, so no further translation happens here.
+// The chip has NO editable payload; it is select/drag only and is never a
+// text_editor target.
+void render_trim_flags(cairo_t* cr,
+                       GuiRect top_strip_area,
+                       GuiRect waveform_area,
+                       long long viewport_start_sample,
+                       long long viewport_end_sample,
+                       double font_size,
                        const TrimRange& trim,
                        bool has_begin,
                        bool begin_selected,

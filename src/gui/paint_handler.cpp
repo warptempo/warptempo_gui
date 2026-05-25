@@ -168,16 +168,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         // Markers: vertical stems in the waveform area, beneath the
         // playhead. Cairo's outer clip confines painting to `exposed`.
-        // Gate against the actual stem pixel range: stems emanate from
-        // the flag rect's left outline at `area.y - kStemAboveWaveformPx`
-        // and run down to `area.y + area.h`. Top-strip damage above the
-        // stems' tops (popup edits, hover popup, cursor blink) would
-        // otherwise pay for an empty marker pass.
+        // Gate against the actual stem pixel range: stems emanate from the
+        // chip bottom at `area.y - stem_cache_overhang_px()` (the tallest is
+        // the upper-row trim stem) and run down to `area.y + area.h`. Must
+        // match the stem-cache surface height and origin in
+        // maybe_rebuild_stem_cache. Top-strip damage above the stems' tops
+        // (popup edits, hover popup, cursor blink) would otherwise pay for an
+        // empty marker pass.
+        const int stem_overhang = stem_cache_overhang_px();
         const GuiRect marker_paint_rect{
             area.x,
-            area.y - static_cast<int>(kStemAboveWaveformPx),
+            area.y - stem_overhang,
             area.w,
-            area.h + static_cast<int>(kStemAboveWaveformPx)
+            area.h + stem_overhang
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
@@ -1029,6 +1032,53 @@ uint64_t hash_selection(const std::set<int>& s,
 
 } // namespace
 
+GuiPaintHandler::DisplayedTrim
+GuiPaintHandler::compute_displayed_trim() const {
+    DisplayedTrim out;
+    const bool rve = app.render_view_enabled;
+
+    // has-set + selected bits come live from the active A/B tab; render view
+    // forces them off (the render waveform has no trim).
+    const ViewState& tvs = active_view_state(app);
+    out.has_begin      = !rve && tvs.has_trim_begin;
+    out.has_end        = !rve && tvs.has_trim_end;
+    out.begin_selected = out.has_begin && tvs.trim_begin_selected;
+    out.end_selected   = out.has_end   && tvs.trim_end_selected;
+
+    // Positions read LIVE from app state (no waveform-cache coupling): trim
+    // no longer affects waveform pixels, so they must follow the cursor every
+    // motion tick rather than lagging a worker-completion swap. Target-view
+    // positions map through the displayed timemap (wf_cache.fp_timemap) — the
+    // same coordinate system the marker stems use — which trim does not
+    // perturb, so it is stable across a trim drag.
+    const int sr = audio.sample_rate();
+    std::pair<long long, long long> t;
+    if (rve) {
+        t = {0, audio.total_frames()};
+    } else if (wf_cache.fp_target) {
+        const auto src_trim = compute_trim_samples(
+            app, sr, audio.total_frames());
+        if (!wf_cache.fp_timemap.empty()) {
+            const long long t0 = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<size_t>(src_trim.first),
+                    wf_cache.fp_timemap)));
+            const long long t1 = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<size_t>(src_trim.second),
+                    wf_cache.fp_timemap)));
+            t = {t0, t1};
+        } else {
+            t = src_trim;
+        }
+    } else {
+        t = compute_trim_samples(app, sr, audio.total_frames());
+    }
+    out.begin = t.first;
+    out.end   = t.second;
+    return out;
+}
+
 void GuiPaintHandler::maybe_rebuild_stem_cache() {
     if (app.loading || audio.total_frames() <= 0) return;
 
@@ -1043,9 +1093,13 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     if (area.w <= 0 || area.h <= 0) return;
 
     // Surface includes the stem overhang above the waveform — see the
-    // geometry note in StemCache's class comment.
+    // geometry note in StemCache's class comment. After F.trim the overhang
+    // is the TALLER trim value (stem_cache_overhang_px = kStemAboveWaveformPx
+    // + row_h + gap) so the upper-row trim stem is not clipped at its top;
+    // marker stems land transparently lower in the same surface.
+    const int overhang = stem_cache_overhang_px();
     const int surface_w = area.w;
-    const int surface_h = area.h + static_cast<int>(kStemAboveWaveformPx);
+    const int surface_h = area.h + overhang;
 
     // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
@@ -1065,47 +1119,16 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
                                                 app.last_selected_marker);
 
     // Brief C: trim boundary stems. Positions ride trim_begin / trim_end
-    // (displayed domain). The has-set + selected bits come live from the
-    // active A/B tab; render-view forces them off (trim is a source-view
-    // authoring concept and the render waveform has no trim).
-    const ViewState& tvs = active_view_state(app);
-    const bool trim_has_begin = !rve && tvs.has_trim_begin;
-    const bool trim_has_end   = !rve && tvs.has_trim_end;
-    const bool trim_begin_sel = trim_has_begin && tvs.trim_begin_selected;
-    const bool trim_end_sel   = trim_has_end   && tvs.trim_end_selected;
-
-    // Trim stem positions read LIVE from app state (no waveform-cache
-    // coupling): trim no longer affects waveform pixels, so the trim stems
-    // must follow the cursor every motion tick rather than lagging a
-    // worker-completion swap. Target-view positions map through the
-    // displayed timemap (wf_cache.fp_timemap) — the same coordinate system
-    // the marker stems below use — which trim does not perturb, so it is
-    // stable across a trim drag.
-    const int sr_trim = audio.sample_rate();
-    std::pair<long long, long long> stem_trim;
-    if (rve) {
-        stem_trim = {0, audio.total_frames()};
-    } else if (is_target) {
-        const auto src_trim = compute_trim_samples(
-            app, sr_trim, audio.total_frames());
-        if (!wf_cache.fp_timemap.empty()) {
-            const long long t0 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.first),
-                    wf_cache.fp_timemap)));
-            const long long t1 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.second),
-                    wf_cache.fp_timemap)));
-            stem_trim = {t0, t1};
-        } else {
-            stem_trim = src_trim;
-        }
-    } else {
-        stem_trim = compute_trim_samples(app, sr_trim, audio.total_frames());
-    }
-    const int64_t trim_begin = stem_trim.first;
-    const int64_t trim_end   = stem_trim.second;
+    // (displayed domain), has-set + selected bits from the active A/B tab.
+    // Computed by the shared helper so the flag cache's b/e chips read the
+    // exact same values (chip + stem are one unit).
+    const DisplayedTrim dtrim   = compute_displayed_trim();
+    const bool trim_has_begin   = dtrim.has_begin;
+    const bool trim_has_end     = dtrim.has_end;
+    const bool trim_begin_sel   = dtrim.begin_selected;
+    const bool trim_end_sel     = dtrim.end_selected;
+    const int64_t trim_begin    = dtrim.begin;
+    const int64_t trim_end      = dtrim.end;
 
     const bool matches =
         stem_cache.surface &&
@@ -1152,17 +1175,17 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     cairo_paint(ccr);
     cairo_restore(ccr);
 
-    // Local rect translates the screen-coord stem geometry into the
-    // cache surface's coordinate system. render_markers computes
-    // y_stem_top = waveform_area.y - kStemAboveWaveformPx and
-    // y1 = waveform_area.y + waveform_area.h. Setting local.y =
-    // kStemAboveWaveformPx makes y_stem_top = 0 (top of surface) and
-    // y1 = kStemAboveWaveformPx + area.h = surface_h (bottom of surface).
-    // The blit at on_redraw time positions the surface at screen y =
-    // area.y - kStemAboveWaveformPx so the stem overhang lands correctly.
+    // Local rect translates the screen-coord stem geometry into the cache
+    // surface's coordinate system. Setting local.y = overhang puts the
+    // waveform top at that offset, so the TALLEST stem (the upper-row trim
+    // stem, top = local.y - kFlagBottomLiftPx - (row_h + gap)) lands at
+    // surface y = 0, marker stems (top = local.y - kFlagBottomLiftPx) land
+    // transparently lower, and y1 = overhang + area.h = surface_h. The blit
+    // at on_redraw time positions the surface at screen y = area.y - overhang
+    // so everything lands correctly.
     const GuiRect local_area{
         0,
-        static_cast<int>(kStemAboveWaveformPx),
+        overhang,
         surface_w,
         area.h
     };
@@ -1248,7 +1271,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // pixels. Idempotent against the waveform's own damage.
     gui.invalidate_region(
         0,
-        area.y - static_cast<int>(kStemAboveWaveformPx),
+        area.y - overhang,
         app.width,
         surface_h);
 }
@@ -1278,9 +1301,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int surface_w = top_strip.w;
     const int surface_h = top_strip.h;
 
-    // Displayed-viewport inputs from wf_cache.fp_*. Flags are positioned at
-    // marker times only — trim never affects a flag pixel, so it is not part
-    // of the flag cache's identity.
+    // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
+    // positioned at marker times only. F.trim adds the b/e trim chips to this
+    // strip, so the displayed-domain trim positions + has/selected bits (from
+    // the shared helper, identical to the stem cache's) are now part of the
+    // flag cache's identity.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
     const bool     is_target    = wf_cache.fp_target;
@@ -1313,6 +1338,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_target = app.top_flag_editor.target;
     }
 
+    // F.trim: displayed-domain trim state for the b/e chips (shared helper,
+    // same values the stem cache paints its stems at).
+    const DisplayedTrim dtrim = compute_displayed_trim();
+
     const bool matches =
         flag_cache.surface &&
         flag_cache.fp_audio_gen               == audio_gen &&
@@ -1329,7 +1358,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_render_view_enabled     == rve &&
         flag_cache.fp_flag_editor_target      == flag_target &&
-        flag_cache.fp_iteration_mode_enabled  == iter_on;
+        flag_cache.fp_iteration_mode_enabled  == iter_on &&
+        flag_cache.fp_trim_begin              == dtrim.begin &&
+        flag_cache.fp_trim_end                == dtrim.end &&
+        flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
+        flag_cache.fp_trim_has_end            == dtrim.has_end &&
+        flag_cache.fp_trim_begin_selected     == dtrim.begin_selected &&
+        flag_cache.fp_trim_end_selected       == dtrim.end_selected;
 
     if (matches) return;
 
@@ -1418,6 +1453,19 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      iter_on);
     }
 
+    // F.trim: the b/e trim chips cap their stems in the upper top row. Painted
+    // in both 'W' and 'P' views (like the stems); the dtrim has-bits force
+    // them off in render view, so render_trim_flags early-returns there. The
+    // real waveform_area sets the upper-row chip bottom; the top strip's
+    // screen origin equals the cache surface origin (0,0), so local_top_strip
+    // and the real waveform rect need no translation.
+    render_trim_flags(
+        ccr, local_top_strip, waveform_area(app),
+        vp_start, vp_end, kFlagFontSize,
+        TrimRange{dtrim.begin, dtrim.end},
+        dtrim.has_begin, dtrim.begin_selected,
+        dtrim.has_end, dtrim.end_selected);
+
     cairo_destroy(ccr);
 
     flag_cache.fp_audio_gen               = audio_gen;
@@ -1435,6 +1483,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_render_view_enabled     = rve;
     flag_cache.fp_flag_editor_target      = flag_target;
     flag_cache.fp_iteration_mode_enabled  = iter_on;
+    flag_cache.fp_trim_begin              = dtrim.begin;
+    flag_cache.fp_trim_end                = dtrim.end;
+    flag_cache.fp_trim_has_begin          = dtrim.has_begin;
+    flag_cache.fp_trim_has_end            = dtrim.has_end;
+    flag_cache.fp_trim_begin_selected     = dtrim.begin_selected;
+    flag_cache.fp_trim_end_selected       = dtrim.end_selected;
     flag_cache.dirty                      = false;
 
     gui.invalidate_region(top_strip.x, top_strip.y,

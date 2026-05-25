@@ -123,7 +123,7 @@ void render_marker_stems_impl(
     // marker) and runs down to the waveform bottom. The stem is an extension
     // of the flag: its top originates at the chip bottom, not from an
     // independent waveform-relative offset. See flag_chip_bottom_y in render.h.
-    const double y_stem_top = flag_chip_bottom_y(waveform_area);
+    const double y_stem_top = flag_chip_bottom_y(waveform_area, ChipRow::Lower);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);
@@ -528,9 +528,11 @@ void render_trim_stems(cairo_t* cr,
     const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    // Same stem geometry as render_marker_stems_impl: top originates at the
-    // flag chip's bottom, bottom at the waveform's lower edge.
-    const double y_stem_top = flag_chip_bottom_y(waveform_area);
+    // Same stem geometry as render_marker_stems_impl, but the trim stem
+    // originates one row higher: its top is the UPPER-row chip bottom (the
+    // b/e flag), so the stem reads as flag-plus-stem like a marker, only
+    // taller. The extra length is automatic via ChipRow::Upper.
+    const double y_stem_top = flag_chip_bottom_y(waveform_area, ChipRow::Upper);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
     cairo_save(cr);
@@ -553,6 +555,80 @@ void render_trim_stems(cairo_t* cr,
 
     if (has_begin) paint_bound(trim.begin, begin_selected);
     if (has_end)   paint_bound(trim.end, end_selected);
+
+    cairo_restore(cr);
+}
+
+void render_trim_flags(cairo_t* cr,
+                       GuiRect top_strip_area,
+                       GuiRect waveform_area,
+                       long long viewport_start_sample,
+                       long long viewport_end_sample,
+                       double font_size,
+                       const TrimRange& trim,
+                       bool has_begin,
+                       bool begin_selected,
+                       bool has_end,
+                       bool end_selected) {
+    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+    if (!has_begin && !has_end) return;
+
+    const double span = static_cast<double>(viewport_end_sample -
+                                            viewport_start_sample);
+    const double samples_per_pixel =
+        span / static_cast<double>(top_strip_area.w);
+    if (samples_per_pixel <= 0.0) return;
+
+    cairo_save(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, font_size);
+
+    const double hl_pad = kFlagInnerPadPx;
+
+    // Uniform box height — the same representative measurement render_flags
+    // uses, so the single-glyph chip occupies the standard row footprint and
+    // aligns with top_upper_row_area regardless of its own glyph extents.
+    cairo_text_extents_t uniform_ext;
+    cairo_text_extents(cr, "1.23*1.2345:a.aa", &uniform_ext);
+
+    // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
+    // iterate_visible_flags_impl does for the lower row, one row higher.
+    const double baseline_y =
+        flag_chip_bottom_y(waveform_area, ChipRow::Upper)
+      - uniform_ext.y_bearing
+      - uniform_ext.height
+      - hl_pad
+      - kVPadExtraPx;
+
+    // Column placement mirrors render_trim_stems / render_flags: text_left at
+    // the bound's integer pixel column, chip extends right via the shared
+    // text-box primitive. Color mirrors the stem (selected ? kSelected :
+    // kTrimMarker) so chip and stem are one continuous unit.
+    auto paint_chip = [&](int64_t frame, bool selected, const char* glyph) {
+        const double ms = static_cast<double>(frame);
+        if (ms < static_cast<double>(viewport_start_sample)) return;
+        if (ms >= static_cast<double>(viewport_end_sample)) return;
+        const double x_raw =
+            (ms - static_cast<double>(viewport_start_sample))
+                / samples_per_pixel;
+        const double text_left =
+            static_cast<double>(top_strip_area.x) + std::round(x_raw);
+        EditorTextBox box;
+        box.anchor_x    = text_left + hl_pad;
+        box.baseline_y  = baseline_y;
+        box.text        = glyph;
+        box.uniform_ext = uniform_ext;
+        box.hl_pad      = hl_pad;
+        box.fill        = selected ? kSelected : kTrimMarker;
+        box.text_color  = kText;
+        render_editor_text_box(cr, box);
+    };
+
+    if (has_begin) paint_chip(trim.begin, begin_selected, "b");
+    if (has_end)   paint_chip(trim.end, end_selected, "e");
 
     cairo_restore(cr);
 }
@@ -690,7 +766,7 @@ void iterate_visible_flags_impl(
         top_strip_area.w,
         0};
     const double baseline_y =
-        flag_chip_bottom_y(waveform_area_for_chip)
+        flag_chip_bottom_y(waveform_area_for_chip, ChipRow::Lower)
       - base_ext.y_bearing
       - base_ext.height
       - hl_pad_helper
