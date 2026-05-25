@@ -466,6 +466,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     // and repaint the bottom strip without the editor.
                     render_bpm_sweep();
                     flag_editor.exit_bpm_mode();
+                    // Behavior 1: the fired sweep consumes its values. The
+                    // render already snapshotted the owner into its
+                    // RenderRequest, so clearing here doesn't disturb it.
+                    // Next M on this marker seeds [].
+                    auto& mv = app.warpmarkers.markers_mut();
+                    for (auto& m : mv) {
+                        if (m.bpm_owner) {
+                            m.bpm_owner = false;
+                            m.bpm_beats = 0;
+                            m.bpm_lo    = 0;
+                            m.bpm_hi    = 0;
+                        }
+                    }
                     viewport.invalidate_timestamp_area();
                 }
             } else {
@@ -1228,6 +1241,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
         if (async_renderer.is_busy()) return;
         start_render_batch(std::move(reqs), "render iterations");
+        app.iteration_mode_enabled = false;   // behavior 2: mode off after fire
+        viewport.invalidate_top_strip();
         return;
     }
 
@@ -1358,6 +1373,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (src_parent.empty()) src_parent = std::filesystem::path(".");
         const std::filesystem::path renders_root =
             src_parent / "renders";
+
+        // Behavior 4: committing a render is a wholesale authoring reset.
+        // Clear every marker's session-only iteration values and turn off
+        // both sweep modes' visibility. (BPM values were already consumed
+        // when the sweep that produced this render fired — behavior 1.)
+        // No separate undo entry: the commit pushes its own cross-file undo
+        // and wipes renders/; iter values are session-only, never serialized.
+        {
+            auto& mv = app.warpmarkers.markers_mut();
+            for (auto& m : mv) {
+                m.iter_start = std::numeric_limits<double>::quiet_NaN();
+                m.iter_end   = std::numeric_limits<double>::quiet_NaN();
+            }
+        }
+        app.iteration_mode_enabled = false;
+        app.bpm_mode_enabled       = false;
 
         render_view.restore_source_audio();
         app.render_view_enabled = false;
@@ -1645,12 +1676,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             app.render_view_src_sr    = audio.sample_rate();
             app.render_view_src_total = audio.total_frames();
             app.render_view_list      = std::move(list);
-            app.iteration_mode_enabled = false;
-            // Brief X.2: BPM mode is force-off on render-view entry,
-            // mirroring iter. Stored values persist (in-memory only,
-            // never serialized) and re-appear if the user toggles
-            // BPM mode back on after exiting render-view.
-            app.bpm_mode_enabled       = false;
+            // E.4 behavior 3: iter/BPM modes persist across render-view
+            // enter/leave. The flags are inert inside render view (input
+            // gate drops i/M; paint gates on !render_view_enabled) and are
+            // restored on exit. Ctrl+Alt+C is now the only forced reset.
             app.render_view_enabled    = true;
             // Brief J.2: render-view shares the global active_markers_view
             // flag, so the user's chosen mode carries across the
