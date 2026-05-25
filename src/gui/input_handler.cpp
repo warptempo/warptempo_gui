@@ -3171,21 +3171,27 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (src_frame < 0) src_frame = 0;
     if (src_frame > total) src_frame = total;
 
-    // Clamp against the other bound: a dragged begin stops one frame short
-    // of end, a dragged end stops one frame past begin (the continuous
-    // analogue of the keyboard collision-refuse).
+    // Clamp against the other bound. F.trim.2 Defect 2: the dragged bound
+    // stops kMarkerHitHalfPx pixels (at the current zoom) short of the other
+    // bound, the same eps the warp drag uses (warpmarkers_ops.cpp ~429), so
+    // the b/e stems never reach visual coincidence — matching the tightest
+    // gap two regular marker stems can hold. This replaces the former
+    // 1-frame clamp, which was sub-pixel at any normal zoom. This is the
+    // trim-internal eps (begin vs end only), orthogonal to warp/phase eps.
+    const int64_t eps_frames = static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
     if (app.trim_drag.is_begin) {
         if (vs.has_trim_end) {
             const int64_t end_f = static_cast<int64_t>(
                 std::nearbyint(vs.trim_end_seconds * sr_d));
-            if (src_frame > end_f - 1) src_frame = end_f - 1;
+            if (src_frame > end_f - eps_frames) src_frame = end_f - eps_frames;
             if (src_frame < 0) src_frame = 0;
         }
     } else {
         if (vs.has_trim_begin) {
             const int64_t begin_f = static_cast<int64_t>(
                 std::nearbyint(vs.trim_begin_seconds * sr_d));
-            if (src_frame < begin_f + 1) src_frame = begin_f + 1;
+            if (src_frame < begin_f + eps_frames) src_frame = begin_f + eps_frames;
             if (src_frame > total) src_frame = total;
         }
     }

@@ -1204,6 +1204,20 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
+    // Brief C: trim boundary stems, painted in both 'W' and 'P' views.
+    // Positions are the displayed-domain trim frames (already translated);
+    // the has-set / selected bits decide which stems draw and in what
+    // color.
+    // F.trim.2 Defect 3: painted BEFORE the regular marker stems so that
+    // where a trim bound and a regular marker share a column the regular
+    // stem (painted last on this shared surface) sits in front; the taller
+    // trim stem reads as "underneath," reachable by its hotkey.
+    render_trim_stems(
+        ccr, local_area, vp_start, vp_end,
+        trim_struct,
+        trim_has_begin, trim_begin_sel,
+        trim_has_end, trim_end_sel);
+
     if (mv == 'P') {
         const auto& list = rve
             ? app.render_view_phase_resets
@@ -1221,16 +1235,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             vp_start, vp_end, sr,
             app.selected_markers, tmap_arg, drag_overlay);
     }
-
-    // Brief C: trim boundary stems, painted in both 'W' and 'P' views.
-    // Positions are the displayed-domain trim frames (already translated);
-    // the has-set / selected bits decide which stems draw and in what
-    // color.
-    render_trim_stems(
-        ccr, local_area, vp_start, vp_end,
-        trim_struct,
-        trim_has_begin, trim_begin_sel,
-        trim_has_end, trim_end_sel);
 
     cairo_destroy(ccr);
 
