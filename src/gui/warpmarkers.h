@@ -146,14 +146,15 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 // Brief D iteration mode: format the inline bracket segment spliced into
 // an eligible flag after `tempo_base`. The leading `+` is the
 // "relative to base" cue; the blank (both iter values NaN) renders as the
-// zero-filled `+[+0.00, +0.00]`, set values as `+[%+0.2f, %+0.2f]` (note
-// the space after the comma). This is the single locked display form.
+// zero-filled `+[+0.00,+0.00]`, set values as `+[%+0.2f,%+0.2f]` (no
+// space after the comma, so the display form matches the typeable form).
+// This is the single locked display form.
 inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
     if (std::isnan(m.iter_start) || std::isnan(m.iter_end)) {
-        return "+[+0.00, +0.00]";
+        return "+[+0.00,+0.00]";
     }
     char buf[48];
-    std::snprintf(buf, sizeof(buf), "+[%+0.2f, %+0.2f]",
+    std::snprintf(buf, sizeof(buf), "+[%+0.2f,%+0.2f]",
                   m.iter_start, m.iter_end);
     return buf;
 }
