@@ -33,7 +33,7 @@ void GuiTargetRender::trigger() {
     }
 
     // Drop any pending archival batch entries. The current Ctrl+Alt+R /
-    // Ctrl+Alt+E / Ctrl+Alt+I / Ctrl+Alt+M flows are sacrificed — the
+    // Ctrl+Alt+E / Ctrl+Alt+I / BPM-sweep flows are sacrificed — the
     // user can re-fire them later. The batch state machine consults
     // queue_cancel_requested at on_batch_entry_complete time and
     // finalizes instead of dispatching the next entry, so setting it

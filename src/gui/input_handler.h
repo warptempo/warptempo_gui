@@ -42,8 +42,8 @@ struct GuiPaintHandler;
 // -- Brief X.3 BPM-sweep math primitive ---------------------------------
 //
 // X.7.8b-1: promoted out of main.cpp's anonymous namespace so
-// input_handler.cpp can reach it. on_key (Ctrl+Alt+M) is the sole caller
-// after this brief; if a future TU needs it the home is open for relocation.
+// input_handler.cpp can reach it. render_bpm_sweep() is the sole caller;
+// if a future TU needs it the home is open for relocation.
 //
 // Given a span's measured duration (seconds), the user-asserted beat count
 // for that span, and a target BPM, return the (base_tempo, scale) pair the
@@ -205,6 +205,16 @@ private:
     // clear queue_running / queue_progress_text, invalidate the bottom
     // strip. The summary log is the caller's concern.
     void finalize_render_run();
+
+    // Brief E: sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
+    // computing (base_tempo, scale) per cell and rendering one .wav per
+    // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The
+    // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
+    // gate; it is now fired by Enter in the bottom-strip BPM editor (after
+    // a successful commit). Returns true if a render batch was dispatched;
+    // false on any guard bail (wrong view / mode off / no owner / blank
+    // values / zero-duration span / no valid cells / renderer busy).
+    bool render_bpm_sweep();
 
     // X.7.8b-2: shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is

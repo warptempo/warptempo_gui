@@ -422,6 +422,47 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 render_editor_text_box(cr, box);
 
                 cairo_restore(cr);
+            } else if (text_editor::is_active(app.top_flag_editor) &&
+                       app.top_flag_editor.kind ==
+                           text_editor::Kind::BpmBracket) {
+                // Brief E: BPM editor overlay. Same bottom-strip primitive
+                // and shape as the settings-editor branch above (so Brief F
+                // can fold both into one row helper), differing only in the
+                // "bpm: " prefix and the editor it reads. top_flag_editor
+                // with kind==BpmBracket only ever paints here, never over
+                // the flag in the top strip. Fill is kBackground normally,
+                // kAccent on parse failure.
+                cairo_save(cr);
+                cairo_select_font_face(cr, "monospace",
+                                       CAIRO_FONT_SLANT_NORMAL,
+                                       CAIRO_FONT_WEIGHT_NORMAL);
+                cairo_set_font_size(cr, kFlagFontSize);
+
+                cairo_text_extents_t uniform_ext;
+                cairo_text_extents(cr, "Mg", &uniform_ext);
+
+                EditorTextBox box;
+                box.anchor_x        = static_cast<double>(kTimestampPadX);
+                box.baseline_y      = baseline_y;
+                box.prefix          = "bpm: ";
+                box.text            = app.top_flag_editor.pending;
+                box.uniform_ext     = uniform_ext;
+                box.hl_pad          = kFlagInnerPadPx;
+                box.fill            = app.top_flag_editor.red
+                                          ? kAccent : kBackground;
+                box.text_color      = kText;
+                box.has_selection   =
+                    text_editor::has_selection(app.top_flag_editor);
+                box.selection_start =
+                    text_editor::selection_start(app.top_flag_editor);
+                box.selection_end   =
+                    text_editor::selection_end(app.top_flag_editor);
+                box.cursor_visible  =
+                    text_editor::cursor_visible_now(app.top_flag_editor);
+                box.cursor_pos      = app.top_flag_editor.cursor_pos;
+                render_editor_text_box(cr, box);
+
+                cairo_restore(cr);
             } else {
                 // Bottom-strip regular row (B.1): one assembled field
                 // drawn in a single cairo_show_text pass. Elements

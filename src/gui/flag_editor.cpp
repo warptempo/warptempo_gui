@@ -456,10 +456,11 @@ void GuiFlagEditor::bulk_clear_iter_values() {
     viewport.invalidate_top_strip();
 }
 
-// Open a BPM popup edit on `idx`. Seed pending is the current popup
-// text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`). Reuses
-// top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
-// swaps to digits + `@`/`,`/`[`/`]`.
+// Brief E: open the bottom-strip BPM editor on `idx`. Seed pending is the
+// current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
+// Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
+// swaps to digits + `@`/`,`/`[`/`]`; the bottom-strip paint branch supplies
+// the visible "bpm: " prefix, so the editor's locked_prefix stays "".
 void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
                                    double text_left_x) {
     if (idx < 0) return;
@@ -476,21 +477,23 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
         text_left_x);
 }
 
-// Commit the BPM popup's pending buffer. Strict syntax via
-// parse_bpm_bracket. On parse failure the editor stays open with
-// a red outline; on success the parsed values are stored on the
-// marker (the marker is already the popup owner). Brief X.2: no
-// undo entry — BPM values are session-only, treated like view state.
-void GuiFlagEditor::commit_bpm_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
+// Commit the BPM editor's pending buffer. Strict syntax via
+// parse_bpm_bracket. On parse failure the editor stays open with a red
+// outline and false is returned; on success the parsed values are stored
+// on the marker (the marker is already the BPM owner), the editor closes,
+// and true is returned. Brief X.2: no undo entry — BPM values are
+// session-only, treated like view state. Brief E: the Enter dispatch fires
+// render_bpm_sweep() when this returns true.
+bool GuiFlagEditor::commit_bpm_edit() {
+    if (!text_editor::is_active(app.top_flag_editor)) return false;
     if (app.top_flag_editor.kind !=
-            text_editor::Kind::BpmBracket) return;
+            text_editor::Kind::BpmBracket) return false;
     const int idx = app.top_flag_editor.target;
     const auto& mv_const = app.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
         text_editor::deactivate(app.top_flag_editor);
         viewport.invalidate_top_strip();
-        return;
+        return false;
     }
     const std::string& s = app.top_flag_editor.pending;
     int beats = 0, lo = 0, hi = 0;
@@ -500,63 +503,44 @@ void GuiFlagEditor::commit_bpm_edit() {
         std::fprintf(stderr,
             "warptempo_gui: bpm edit rejected: invalid syntax: %s\n",
             s.c_str());
-        return;
+        return false;
     }
     GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
     if (!m) {
         text_editor::deactivate(app.top_flag_editor);
         viewport.invalidate_top_strip();
-        return;
+        return false;
     }
-    // Single-owner invariant: clear bpm_is_popup_owner on every other
-    // marker before stamping this one. The toggle handler maintains
-    // the invariant on mode entry, but the editor can target a
-    // different marker than the one originally stamped (via click
-    // -switching across popups), so reassert it here.
+    // Single-owner invariant: clear bpm_owner on every other marker before
+    // stamping this one. The toggle handler maintains the invariant on mode
+    // entry, but the editor can target a different marker than the one
+    // originally stamped, so reassert it here.
     auto& mv = app.warpmarkers.markers_mut();
     for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
         if (i == idx) continue;
-        if (mv[i].bpm_is_popup_owner) {
-            mv[i].bpm_is_popup_owner = false;
-            mv[i].bpm_beats          = 0;
-            mv[i].bpm_lo             = 0;
-            mv[i].bpm_hi             = 0;
+        if (mv[i].bpm_owner) {
+            mv[i].bpm_owner = false;
+            mv[i].bpm_beats = 0;
+            mv[i].bpm_lo    = 0;
+            mv[i].bpm_hi    = 0;
         }
     }
-    m->bpm_is_popup_owner = true;
-    m->bpm_beats     = beats;
-    m->bpm_lo        = lo;
-    m->bpm_hi        = hi;
+    m->bpm_owner = true;
+    m->bpm_beats = beats;
+    m->bpm_lo    = lo;
+    m->bpm_hi    = hi;
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
+    return true;
 }
 
-// Bulk-clear every marker's BPM values. Triggered by Shift+M
-// (regardless of mode state). Brief X.2: no undo entry; in-memory
-// only, no .warpmarkers write.
-void GuiFlagEditor::bulk_clear_bpm_values() {
-    if (app.active_markers_view != 'W') return;
-    auto& mv = app.warpmarkers.markers_mut();
-    bool any = false;
-    for (const auto& m : mv) {
-        if (m.bpm_is_popup_owner) { any = true; break; }
-    }
-    if (!any) return;
-    for (auto& m : mv) {
-        m.bpm_is_popup_owner = false;
-        m.bpm_beats          = 0;
-        m.bpm_lo             = 0;
-        m.bpm_hi             = 0;
-    }
-    viewport.invalidate_top_strip();
-}
-
-// Brief X.2: full mode-on transition for BPM mode. Validates the
+// Brief X.2 / E: full mode-on transition for BPM mode. Validates the
 // activation gate, toggles iter mode off if active, maintains the
-// single-owner invariant, marks the selected marker as the popup
-// owner (preserving prior values when re-toggling on the same
-// owner), auto-selects the next eligible+enabled marker as the
-// visual endpoint cue, and flips the mode flag.
+// single-owner invariant, marks the selected marker as the BPM owner
+// (preserving prior values when re-toggling on the same owner),
+// auto-selects the next eligible+enabled marker as the visual endpoint
+// cue, and flips the mode flag. Brief E's `m` handler calls this and then
+// opens the bottom-strip BPM editor on the owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;
@@ -573,22 +557,20 @@ void GuiFlagEditor::enter_bpm_mode() {
     auto& mv = app.warpmarkers.markers_mut();
     for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
         if (i == owner) continue;
-        if (mv[i].bpm_is_popup_owner) {
-            mv[i].bpm_is_popup_owner = false;
+        if (mv[i].bpm_owner) {
+            mv[i].bpm_owner = false;
             mv[i].bpm_beats          = 0;
             mv[i].bpm_lo             = 0;
             mv[i].bpm_hi             = 0;
         }
     }
-    // Tag owner with bpm_is_popup_owner=true if not already set. Brief
-    // B2: this flag is currently surface-orphaned (the popup geometry
-    // walks were deleted); E will re-wire BPM mode against a modal and
-    // may rename the field. Sentinel-zero values stay zero;
-    // format_bpm_bracket_text renders "[]" for that state. Re-toggling
-    // on the same owner preserves any previously-committed values (the
-    // flag stays true and the values aren't touched).
-    if (!mv[owner].bpm_is_popup_owner) {
-        mv[owner].bpm_is_popup_owner = true;
+    // Tag owner with bpm_owner=true if not already set. Sentinel-zero
+    // values stay zero; format_bpm_bracket_text renders "[]" for that
+    // state, which seeds the bottom-strip editor. Re-toggling on the same
+    // owner preserves any previously-committed values (the flag stays true
+    // and the values aren't touched).
+    if (!mv[owner].bpm_owner) {
+        mv[owner].bpm_owner = true;
         mv[owner].bpm_beats          = 0;
         mv[owner].bpm_lo             = 0;
         mv[owner].bpm_hi             = 0;
@@ -596,7 +578,7 @@ void GuiFlagEditor::enter_bpm_mode() {
 
     // Auto-select endpoint: next non-disabled marker after owner.
     // Endpoint is purely informational (visual span boundary); pass
-    // markers and label_refs are valid endpoints since the popup never
+    // markers and label_refs are valid endpoints since the BPM owner never
     // lives there. Only effectively-disabled markers are skipped.
     for (int i = owner + 1; i < static_cast<int>(mv.size()); ++i) {
         if (effective_disabled(mv, i)) continue;

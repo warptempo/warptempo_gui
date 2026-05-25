@@ -463,8 +463,9 @@ bool GuiRenderView::refresh_render_view_list() {
 // matches app.last_render_view_path.
 //
 // Per the input-handler gatekeeper invariant (S / E / Ctrl+Alt+R /
-// Ctrl+Alt+E / Ctrl+Alt+I / Ctrl+Alt+M are all dropped while
-// render-view is active), this method is reachable only when
+// Ctrl+Alt+E / Ctrl+Alt+I are all dropped while render-view is active,
+// and the BPM sweep render fires only from the BPM editor's Enter, which
+// cannot be open in render-view), this method is reachable only when
 // render-view is off. The defensive early-return guards against
 // a future change that breaks the invariant — entering twice
 // would corrupt the existing session.

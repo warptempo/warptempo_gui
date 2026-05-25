@@ -78,7 +78,7 @@ struct RenderRequest {
     // speakers gets brick-walled at the configured ceiling on every
     // update. Reading peak_limiter_ceiling_dbfs / attack_ms / release_ms
     // from engine_settings as usual. Defaults to false — archival renders
-    // (Ctrl+Alt+R, Ctrl+Alt+E, Ctrl+Alt+I, Ctrl+Alt+M) keep their
+    // (Ctrl+Alt+R, Ctrl+Alt+E, Ctrl+Alt+I, and the BPM sweep) keep their
     // user-controlled limiter routing.
     bool force_peak_limiter = false;
 

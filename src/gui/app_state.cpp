@@ -35,7 +35,14 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
 bool bottom_strip_wide(const AppState& app) {
     return app.prompt.active ||
            !app.queue_progress_text.empty() ||
-           text_editor::is_active(app.settings_editor);
+           text_editor::is_active(app.settings_editor) ||
+           // Brief E: the BPM editor reuses top_flag_editor with the
+           // BpmBracket kind but paints in the bottom strip, so it widens
+           // the strip like the settings editor. A FlagPayload /
+           // IterationBracket top_flag_editor edits over the flag in the
+           // top strip and must NOT widen the bottom strip.
+           (text_editor::is_active(app.top_flag_editor) &&
+            app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
 // X.7.8b-2: hit_test_* promoted from lambdas at main.cpp:1214-1368. Bodies

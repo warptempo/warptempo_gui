@@ -46,16 +46,16 @@ struct GuiWarpMarker {
 
     // Brief X.2 BPM mode. Session-only authoring state for basetempo-scale
     // sweeps; never serialized, lost on app close. At most one marker at a
-    // time has bpm_is_popup_owner=true (invariant maintained by the `m`
+    // time has bpm_owner=true (invariant maintained by the `m`
     // toggle handler). "Committed" is implicit: bpm_beats > 0 means the
     // owner has authored a value (parser guarantees all three of bpm_beats,
     // bpm_lo, bpm_hi are set together). The value form is
     // "<beats>@[<lo>,<hi>]" with positive integers and lo <= hi.
     // Math/render is X.3.
-    bool bpm_is_popup_owner = false;
-    int  bpm_beats          = 0;
-    int  bpm_lo             = 0;
-    int  bpm_hi             = 0;
+    bool bpm_owner = false;
+    int  bpm_beats = 0;
+    int  bpm_lo    = 0;
+    int  bpm_hi    = 0;
 };
 
 struct GuiWarpMarkerError {
@@ -173,15 +173,15 @@ inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
 
-// Brief X.2 BPM mode: format the popup's bracket text for marker `m`.
-// "[]" when this marker is not the popup owner (matches iter's empty form
+// Brief X.2 BPM mode: format the bracket-editor text for marker `m`.
+// "[]" when this marker is not the BPM owner (matches iter's empty form
 // exactly), or when it is the owner with bpm_beats == 0 (owner-but-blank,
 // set by the `m`-toggle-on transition before any commit; bpm_beats > 0 is
 // the implicit "committed" sentinel — the parser sets all three of
 // bpm_beats/bpm_lo/bpm_hi together, mirroring iter's NaN convention).
 // The non-empty form is the strict syntax `<beats>@[<lo>,<hi>]`.
 inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
-    if (!m.bpm_is_popup_owner || m.bpm_beats == 0) {
+    if (!m.bpm_owner || m.bpm_beats == 0) {
         return "[]";
     }
     char buf[48];

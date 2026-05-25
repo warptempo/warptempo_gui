@@ -45,8 +45,10 @@ struct GuiFlagEditor {
     void bulk_clear_iter_values();
     void enter_bpm_edit(int idx, double click_x = -1.0,
                                  double text_left_x = -1.0);
-    void commit_bpm_edit();
-    void bulk_clear_bpm_values();
+    // Returns true iff the pending buffer parsed and committed (editor
+    // closed). False on parse failure (editor stays open, red) or an
+    // invalid target. Brief E: the caller fires render_bpm_sweep() on true.
+    bool commit_bpm_edit();
     void enter_bpm_mode();
     void exit_bpm_mode();
 

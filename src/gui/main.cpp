@@ -125,8 +125,8 @@ constexpr int kPlayheadHalfPx = 9;
 
 // X.7.8b-1: Brief X.3 BPM-sweep math primitive (BaseTempoScale +
 // compute_base_tempo_scale) moved out of this anonymous namespace into
-// input_handler.h so input_handler.cpp can reach it. on_key (Ctrl+Alt+M)
-// is the sole caller after this brief.
+// input_handler.h so input_handler.cpp can reach it.
+// GuiInputHandler::render_bpm_sweep is the sole caller.
 
 // X.7.8b-3: compute_hover_popup_text moved to render.{h,cpp} so
 // input_handler.cpp can reach it from on_motion. It sits next to

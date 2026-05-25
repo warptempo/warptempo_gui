@@ -660,8 +660,8 @@ struct AppState {
 
     // Brief X.2 BPM mode. Toggled by plain `m` in warp view. Mutually
     // exclusive with iteration_mode_enabled (toggling one ON forces the
-    // other OFF). Session-only. The popup owner is identified at runtime
-    // by walking markers for bpm_is_popup_owner=true; at most one marker holds
+    // other OFF). Session-only. The BPM owner is identified at runtime
+    // by walking markers for bpm_owner=true; at most one marker holds
     // the flag at a time, maintained as an invariant by the toggle.
     bool bpm_mode_enabled = false;
 
