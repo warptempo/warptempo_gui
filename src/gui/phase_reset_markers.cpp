@@ -93,7 +93,37 @@ bool parse_line(const std::string& raw, GuiPhaseResetMarker& out, std::string& e
         return false;
     }
 
-    if (!parse_timestamp_token(toks[0], out.time_seconds, err_msg)) {
+    // The mode rides inside the single whitespace token after a `|`:
+    // `TIMESTAMP[|MODE]`. Split once on the first `|` — the half before is
+    // the timestamp (validated exactly as before), the half after (if any)
+    // selects the phase-propagation model. A `#` strip already happened
+    // above, so `#TS|MODE` composes with no extra code. Exact lowercase
+    // only (peak/heap/pass), matching the warp file's lowercase `pass`; no
+    // case-folding, consistent with the strict-by-default parser.
+    const std::string& token = toks[0];
+    const auto bar = token.find('|');
+    const std::string ts_str =
+        (bar == std::string::npos) ? token : token.substr(0, bar);
+
+    if (!parse_timestamp_token(ts_str, out.time_seconds, err_msg)) {
+        return false;
+    }
+
+    if (bar == std::string::npos) {
+        out.mode = Mode::Pass;  // untagged / bare timestamp -> implicit pass
+        return true;
+    }
+
+    const std::string mode_str = token.substr(bar + 1);
+    if (mode_str == "pass") {
+        out.mode = Mode::Pass;
+    } else if (mode_str == "peak") {
+        out.mode = Mode::Peak;
+    } else if (mode_str == "heap") {
+        out.mode = Mode::Heap;
+    } else {
+        err_msg = "unknown phase-reset mode (expected peak/heap/pass): " +
+                  mode_str;
         return false;
     }
     return true;
