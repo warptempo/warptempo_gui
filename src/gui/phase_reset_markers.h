@@ -4,12 +4,27 @@
 #include <string>
 #include <vector>
 
+#include "engine/engine.h"  // Mode
+
 // One phase reset marker, the GUI's authoring view: a phase reset authored at
-// `time_seconds`, with an optional `disabled` flag.
+// `time_seconds`, with an optional `disabled` flag. `mode` is the authored
+// phase-propagation model (Peak/Heap/Pass); it defaults to Pass ("inherit the
+// previous owning marker's mode"), mirroring the warp side's `pass` tempo.
+// Inheritance is resolved to a concrete Peak/Heap by resolve_inherited_mode
+// before the engine ever sees it.
 struct GuiPhaseResetMarker {
     double time_seconds  = 0.0;
     bool   disabled      = false;
+    Mode   mode          = Mode::Pass;
 };
+
+// Backward inheritance walk, structurally identical to resolve_inherited_tempo
+// (render.cpp): returns the resolved concrete mode for the marker at `index`
+// by walking backward to the last mode-OWNING (Peak or Heap), non-disabled
+// marker. Disabled markers are inert in resolution. Defaults to Peak (the
+// global default == L-D == untagged behavior) when no owner precedes `index`.
+Mode resolve_inherited_mode(const std::vector<GuiPhaseResetMarker>& markers,
+                            int index);
 
 struct GuiPhaseResetMarkerError {
     int         line_number;   // 1-based; 0 means "file-level, no line"

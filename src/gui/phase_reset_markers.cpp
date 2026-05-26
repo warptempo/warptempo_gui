@@ -270,3 +270,21 @@ void GuiPhaseResetMarkers::remove_marker(int index) {
     markers_.erase(markers_.begin() + index);
     ++generation_;
 }
+
+// Mode inheritance resolver. Mirrors resolve_inherited_tempo (render.cpp): a
+// backward walk to the last mode-OWNING (Peak or Heap), non-disabled marker.
+// Disabled markers (`#` prefix) are inert in resolution exactly as disabled
+// warp markers drop out of the timemap, so a `#`-commented `heap` must not
+// switch the mode. Pass markers inherit; the default when no owner precedes
+// `index` is Peak (the global default == L-D == untagged behavior).
+Mode resolve_inherited_mode(const std::vector<GuiPhaseResetMarker>& markers,
+                            int index) {
+    for (int i = index - 1; i >= 0; --i) {
+        const auto& m = markers[i];
+        if (m.disabled) continue;                 // inert in resolution
+        if (m.mode == Mode::Peak || m.mode == Mode::Heap) {
+            return m.mode;                         // last owner wins
+        }
+    }
+    return Mode::Peak;
+}

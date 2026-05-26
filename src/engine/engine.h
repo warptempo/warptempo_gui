@@ -16,6 +16,16 @@ enum class LimiterMode {
     Peak,      // time-domain peak limiter (peak_limiter.cpp), inline in synthesis
 };
 
+// Phase-propagation model selectable per phase-reset-marker segment. Shared by
+// the GUI authoring layer and the engine so both sides reference one
+// definition. `Peak` is the Laroche-Dolson identity peak-locking model (the
+// historical engine and the global default). `Heap` is the PGHI
+// gradient-integration model. `Pass` ("inherit the previous owning marker's
+// mode") exists ONLY in the GUI authoring/file domain; it is resolved to a
+// concrete Peak/Heap before the engine runs (mirroring how an unresolved
+// `pass` tempo never reaches the engine). The engine never sees Pass.
+enum class Mode { Peak, Heap, Pass };
+
 // Parameter struct for the warptempo DSP pipeline. Constructed by the GUI's
 // render pipeline and passed to run_warptempo_engine().
 struct EngineParams {
@@ -60,6 +70,16 @@ struct EngineParams {
     // Typical source: GUI's phase reset view, providing the union of inserted
     // + active-detected (with displacement applied) entries.
     std::vector<int64_t> phase_reset_frames;
+
+    // Resolved per-reset phase-propagation model, parallel to
+    // phase_reset_frames (same length and order). Each entry is a CONCRETE
+    // mode (Peak or Heap; never Pass) — inheritance is resolved GUI-side
+    // before dispatch. Default contract: when this list is EMPTY, the engine
+    // treats every reset as Peak — an empty modes list is byte-identical to
+    // the historical all-peak behavior, which keeps non-GUI callers (e.g. the
+    // parser binary) unaffected. When non-empty it must match
+    // phase_reset_frames in length and order.
+    std::vector<Mode> phase_reset_modes;
 };
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation

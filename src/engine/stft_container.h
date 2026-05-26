@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <vector>
 #include <string>
@@ -19,6 +20,11 @@ struct TimeMapSegment {
 struct PhaseResetMarker {
     int synth_frame;
     int64_t src_frame;
+    // Concrete phase-propagation model owned from this marker until the next
+    // mode-owning marker. Defaults to Peak so a marker constructed without an
+    // explicit mode (older callers, empty EngineParams::phase_reset_modes)
+    // reproduces the historical all-peak behavior.
+    Mode mode = Mode::Peak;
 };
 
 struct LimiterParams {
@@ -33,6 +39,29 @@ struct LimiterParams {
 inline double princarg(double phase) {
     return phase - 2.0 * M_PI * std::floor((phase + M_PI) / (2.0 * M_PI));
 }
+
+// PGHI ("heap") tunables (Part 2). kPghiTol is the significance threshold,
+// relative to the per-frame-pair peak magnitude (the LTFAT default, ~-120 dB);
+// it decides only which bins may ANCHOR a frequency-spread, never who gets a
+// phase. kPghiFreqStep is the per-bin frequency step b_a (constant for the r2c
+// layout); the synthesis-side step b_s equals b_a — see the b_s comment in
+// heap_phase for the empirical validation of the (stretch-independent) scale.
+// Both are named (not inlined) for later ear-tuning and so the scale can be
+// re-checked against an offline LTFAT/PVDR reference render.
+inline constexpr double kPghiTol      = 1e-6;
+inline constexpr double kPghiFreqStep = 1.0;
+
+// One entry in the PGHI integration max-heap (Algorithm 1). `mag` is the heap
+// key. `bin` is the spectral bin. `current` distinguishes the two live frames:
+// false => a PREVIOUS-frame significant bin, eligible to be time-stepped into
+// the current frame; true => a CURRENT-frame bin already assigned, eligible to
+// frequency-spread to its neighbors. Ordered by `mag` so the loudest available
+// propagation path wins.
+struct PghiHeapNode {
+    double mag;
+    int    bin;
+    bool   current;
+};
 
 // get_alpha() returns tgt_dur / src_dur, the engine-internal
 // alpha used by the phase vocoder.
@@ -274,60 +303,233 @@ struct AudioSTFT {
         }
     }
 
-    // Shared phase vocoder core for one channel/frame.
-    // M, phi, theta must be pre-allocated to K = N/2+1.
-    // peaks must be pre-reserved (e.g. N/8); cleared on each call.
-    // frame_buf is the interleaved read buffer; ch_stride is the channel count.
-    // atten_row points to num_bands attenuation factors; nullptr means identity.
-    // On return: M[k] holds magnitude, theta[k] holds synthesised phase, and
-    //            ifft_in has been populated with the attenuated synthesis spectrum
-    //            ready for fftw_execute(plan_inv).
-    // phi_prev[ch] and theta_prev[ch] are updated in place.
-    void phase_vocoder_frame(int ch, int ch_stride, int64_t R_a_actual, int frame_idx,
-                              const float* frame_buf,
-                              std::vector<double>& M, std::vector<double>& phi,
-                              std::vector<double>& theta, std::vector<int>& peaks,
-                              const double* atten_row) {
-        const int K = N / 2 + 1;
+    // --- Phase computation, split into byte-preserving helpers --------------
+    //
+    // The historical fused phase_vocoder_frame is split into three pure helpers
+    // so the lookahead pipeline (synthesis.cpp) can run analysis one frame
+    // ahead of synthesis and dispatch the phase step per marker mode. The peak
+    // helpers carry the EXACT float-operation sequence of the original fused
+    // routine, so an all-peak / untagged render stays byte-identical (Gate 1).
+    // None of these helpers touch the member phi_prev/theta_prev accumulators;
+    // the pipeline owns all inter-frame state explicitly.
 
+    // Analysis: window + forward FFT of one channel of frame_buf; extract
+    // magnitude and analysis phase into M_out, phi_out (size K). Verbatim from
+    // the original analysis block.
+    void analyze_frame(int ch, int ch_stride, const float* frame_buf,
+                       std::vector<double>& M_out,
+                       std::vector<double>& phi_out) {
+        const int K = N / 2 + 1;
         for (int n = 0; n < N; ++n)
             fft_in[n] = frame_buf[n * ch_stride + ch] * window[n];
         fftw_execute(plan_fwd);
-
         for (int k = 0; k < K; ++k) {
-            M[k]   = std::hypot(fft_out[k][0], fft_out[k][1]);
-            phi[k] = std::atan2(fft_out[k][1], fft_out[k][0]);
+            M_out[k]   = std::hypot(fft_out[k][0], fft_out[k][1]);
+            phi_out[k] = std::atan2(fft_out[k][1], fft_out[k][0]);
         }
+    }
 
-        if (frame_idx == 0) {
-            for (int k = 0; k < K; ++k) theta[k] = phi[k];
-        } else {
-            peaks.clear();
-            for (int k = 1; k < N / 2; ++k)
-                if (M[k] > M[k - 1] && M[k] > M[k + 1]) peaks.push_back(k);
-            if (peaks.empty()) peaks.push_back(N / 4);
-
-            for (int p : peaks) {
-                double omega_p = 2.0 * M_PI * p / N;
-                theta[p] = theta_prev[ch][p] +
-                           (omega_p + princarg(phi[p] - phi_prev[ch][p] - omega_p * R_a_actual) / R_a_actual) * R_s;
-            }
-            size_t peak_idx = 0;
-            for (int k = 0; k < K; ++k) {
-                if (peak_idx < peaks.size() - 1 &&
-                    std::abs(k - peaks[peak_idx + 1]) < std::abs(k - peaks[peak_idx]))
-                    ++peak_idx;
-                int p = peaks[peak_idx];
-                if (k != p) theta[k] = theta[p] + phi[k] - phi[p];
-            }
+    // Peak (Laroche-Dolson) phase propagation for one frame. Reads M (current
+    // magnitude, for peak detection), ph_cur/ph_prev (analysis phase n / n-1)
+    // and th_prev (synthesis phase n-1); writes theta (size K). `seed` selects
+    // the frame-0 seat (theta = phi). peaks is reused scratch. The arithmetic
+    // is verbatim from the historical phase_vocoder_frame — DO NOT alter it;
+    // Gate 1 (byte-identical untagged render) depends on it.
+    void peak_phase(bool seed, int64_t R_a_actual,
+                    const std::vector<double>& M,
+                    const std::vector<double>& ph_prev,
+                    const std::vector<double>& ph_cur,
+                    const std::vector<double>& th_prev,
+                    std::vector<double>& theta,
+                    std::vector<int>& peaks) {
+        const int K = N / 2 + 1;
+        if (seed) {
+            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
+            return;
         }
+        peaks.clear();
+        for (int k = 1; k < N / 2; ++k)
+            if (M[k] > M[k - 1] && M[k] > M[k + 1]) peaks.push_back(k);
+        if (peaks.empty()) peaks.push_back(N / 4);
 
+        for (int p : peaks) {
+            double omega_p = 2.0 * M_PI * p / N;
+            theta[p] = th_prev[p] +
+                       (omega_p + princarg(ph_cur[p] - ph_prev[p] - omega_p * R_a_actual) / R_a_actual) * R_s;
+        }
+        size_t peak_idx = 0;
         for (int k = 0; k < K; ++k) {
-            phi_prev[ch][k]   = phi[k];
-            theta_prev[ch][k] = theta[k];
+            if (peak_idx < peaks.size() - 1 &&
+                std::abs(k - peaks[peak_idx + 1]) < std::abs(k - peaks[peak_idx]))
+                ++peak_idx;
+            int p = peaks[peak_idx];
+            if (k != p) theta[k] = theta[p] + ph_cur[k] - ph_cur[p];
+        }
+    }
+
+    // PGHI ("heap") phase propagation for one frame (Part 2). Same outputs as
+    // peak_phase (writes theta for all k) plus dt_out, this frame's CENTERED
+    // time-derivative (rad/sample), to be stored as the next frame's dt_prev.
+    //
+    //   seed   : frame-0 or immediately-after-a-reset frame. There is no prior
+    //            synthesis phase to integrate from, so theta is seated to phi
+    //            (identical to the peak frame-0/post-reset seat); dt_out is
+    //            still computed for the following frame.
+    //   frame0 : the file's first frame — has no real backward neighbor, so the
+    //            time-derivative uses the forward difference only. (The only
+    //            time-axis boundary; interior and mode-switch seams have real
+    //            neighbors on both sides via the lookahead pipeline.)
+    //   R_a_back/R_a_fwd : the actual backward/forward analysis hops (samples).
+    //                      Their ratio to R_s carries the time-stretch into the
+    //                      time integration; the frequency integration is
+    //                      stretch-independent (b_s = b_a), so alpha is not a
+    //                      parameter.
+    //
+    // Scratch (size K, reused across channels/frames): df_scratch, done_scratch,
+    // heap_scratch. heap_scratch is cleared on entry.
+    void heap_phase(bool seed, bool frame0,
+                    int64_t R_a_back, int64_t R_a_fwd,
+                    const std::vector<double>& mag_prev,
+                    const std::vector<double>& mag_cur,
+                    const std::vector<double>& ph_prev,
+                    const std::vector<double>& ph_cur,
+                    const std::vector<double>& ph_nxt,
+                    const std::vector<double>& th_prev,
+                    const std::vector<double>& dt_prev,
+                    std::vector<double>& theta,
+                    std::vector<double>& dt_out,
+                    std::vector<double>& df_scratch,
+                    std::vector<char>&   done_scratch,
+                    std::vector<PghiHeapNode>& heap_scratch) {
+        const int K = N / 2 + 1;
+
+        // 2a. Centered time-derivative (instantaneous frequency) for every bin,
+        // each half normalized by its own hop so an alpha change across a warp
+        // marker needs no special handling. Stored for the next frame's dt_prev.
+        const double inv_back = (R_a_back != 0) ? 1.0 / static_cast<double>(R_a_back) : 0.0;
+        const double inv_fwd  = (R_a_fwd  != 0) ? 1.0 / static_cast<double>(R_a_fwd)  : 0.0;
+        for (int p = 0; p < K; ++p) {
+            const double omega_p = 2.0 * M_PI * p / N;
+            const double freq_fwd =
+                omega_p + princarg(ph_nxt[p] - ph_cur[p] - omega_p * R_a_fwd) * inv_fwd;
+            if (frame0) {
+                dt_out[p] = freq_fwd;            // forward-only at the file start
+            } else {
+                const double freq_back =
+                    omega_p + princarg(ph_cur[p] - ph_prev[p] - omega_p * R_a_back) * inv_back;
+                dt_out[p] = 0.5 * (freq_back + freq_fwd);
+            }
         }
 
-        // Synthesis: populate ifft_in with optional per-band attenuation
+        // 2f. Reset / frame-0 seat: seed theta = phi, skip integration.
+        if (seed) {
+            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
+            return;
+        }
+
+        // 2b. Frequency-direction derivative (centered; one-sided at the DC and
+        // Nyquist edges, which are inaudible). b_a = kPghiFreqStep.
+        const double inv_ba = 1.0 / kPghiFreqStep;
+        for (int m = 0; m < K; ++m) {
+            if (m == 0) {
+                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0]) * inv_ba;
+            } else if (m == K - 1) {
+                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2]) * inv_ba;
+            } else {
+                const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1]) * inv_ba;
+                const double dff = princarg(ph_cur[m + 1] - ph_cur[m])     * inv_ba;
+                df_scratch[m] = 0.5 * (dfb + dff);
+            }
+        }
+
+        // 2c/2d. Significance set I and the quiet-bin policy. abstol is relative
+        // to the loudest bin across frames n and n-1.
+        double peak_mag = 0.0;
+        for (int k = 0; k < K; ++k) {
+            if (mag_cur[k]  > peak_mag) peak_mag = mag_cur[k];
+            if (mag_prev[k] > peak_mag) peak_mag = mag_prev[k];
+        }
+        const double abstol  = kPghiTol * peak_mag;
+        const double half_Rs = 0.5 * static_cast<double>(R_s);
+        // Synthesis-side frequency step. Time-stretching rescales the TIME grid
+        // (the horizontal phase advances by R_s while the analysis hop is
+        // R_s/alpha — that ratio carries the stretch via dt above); the
+        // FREQUENCY grid is unchanged, so the frequency-direction integration
+        // uses the analysis gradient as-is: b_s = b_a. This was validated
+        // empirically against the trusted peak path — with b_s = b_a the
+        // per-sample output energy of a stationary sinusoid and of a linear
+        // chirp is stretch-invariant and tracks peak (ratio ~1.0 at stretch
+        // 1.5), whereas b_s = alpha*b_a (the brief's literal text, which it
+        // flagged for validation) and b_s = b_a/alpha both lose or inflate
+        // energy under stretch. alpha therefore does not enter the vertical
+        // integration.
+        const double b_s = kPghiFreqStep;
+
+        // 2e. POLICY (b): quiet bins (not in I) are TIME-PROPAGATED on their own
+        // instantaneous frequency — never randomized, never copied. They keep
+        // advancing exactly as under the peak model, so reverb/decay tails do
+        // not develop spectral holes. The tolerance gate decides only who may
+        // anchor a frequency-spread; everyone gets a phase. done==1 marks a bin
+        // assigned (quiet bins immediately; significant bins via the heap).
+        for (int k = 0; k < K; ++k) {
+            if (mag_cur[k] > abstol) {
+                done_scratch[k] = 0;                                  // in I
+            } else {
+                theta[k] = th_prev[k] + half_Rs * (dt_prev[k] + dt_out[k]);
+                done_scratch[k] = 1;
+            }
+        }
+
+        // Algorithm 1. Seed the heap with the previous frame's significant bins
+        // (time-step candidates), keyed on their previous magnitude.
+        auto cmp = [](const PghiHeapNode& a, const PghiHeapNode& b) {
+            return a.mag < b.mag;                                     // max-heap on mag
+        };
+        heap_scratch.clear();
+        for (int k = 0; k < K; ++k) {
+            if (done_scratch[k] == 0) {
+                heap_scratch.push_back({mag_prev[k], k, false});
+                std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+            }
+        }
+        while (!heap_scratch.empty()) {
+            std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+            const PghiHeapNode node = heap_scratch.back();
+            heap_scratch.pop_back();
+            const int m = node.bin;
+            if (!node.current) {
+                // Previous-frame bin -> trapezoidal time-step into frame n.
+                if (done_scratch[m] == 0) {
+                    theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_out[m]);
+                    done_scratch[m] = 1;
+                    heap_scratch.push_back({mag_cur[m], m, true});
+                    std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                }
+            } else {
+                // Current-frame bin -> integrate the frequency gradient to its
+                // still-unassigned significant neighbors (trapezoidal in df).
+                for (int dir = 0; dir < 2; ++dir) {
+                    const int nb = (dir == 0) ? m + 1 : m - 1;
+                    if (nb < 0 || nb >= K) continue;
+                    if (done_scratch[nb] != 0) continue;     // not in I, or done
+                    const double step = 0.5 * b_s * (df_scratch[m] + df_scratch[nb]);
+                    theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
+                    done_scratch[nb] = 1;
+                    heap_scratch.push_back({mag_cur[nb], nb, true});
+                    std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                }
+            }
+        }
+    }
+
+    // Synthesis: populate ifft_in from magnitude M and phase theta, applying
+    // optional per-band attenuation. Verbatim from the historical
+    // phase_vocoder_frame tail; both models share this one path so the
+    // magnitude/spectrum step is identical regardless of how theta was derived.
+    void populate_synth_spectrum(const std::vector<double>& M,
+                                 const std::vector<double>& theta,
+                                 const double* atten_row) {
+        const int K = N / 2 + 1;
         if (atten_row) {
             for (int k = 0; k < K; ++k) {
                 double scaled = M[k] * atten_row[bin_to_band[k]];
