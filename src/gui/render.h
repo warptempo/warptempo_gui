@@ -249,7 +249,9 @@ constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
 // `baseline_y - monospace_row_baseline_offset()`, so the box fills its full
 // row slot — callers solve baseline_y so the box bottom lands at the slot
 // bottom. The cursor uses the std::round(x)+0.5 half-pixel convention for a
-// crisp single-pixel column.
+// crisp single-pixel column. The cursor and the selection highlight span only
+// the glyph ink band (ascent-to-descent) — NOT the full slot; only the step-1
+// fill spans the full padded slot.
 //
 // Colors are pre-resolved by the caller: `fill` is the resolved chip
 // color and `text_color` is kText. The selection swap fills the selected
@@ -624,6 +626,12 @@ double flag_pending_text_left_x(
 // false, all perf_counters increments and [dbg perf] stderr emissions in
 // the redraw path are compiled out.
 constexpr bool kDebugPerf = false;
+
+// Diagnostic (F-flaggeom follow-up): when true, on_redraw strokes the flag
+// hit rectangles — recomputed via the SAME path hit_test_flag uses — over the
+// painted chips, so any paint-vs-hit coordinate divergence is visible. Off in
+// normal builds. Remove once the edge-alignment diagnosis is complete.
+constexpr bool kDebugHitRects = false;
 
 // Hot-loop counters for perf instrumentation. Incremented by the render
 // helpers on every relevant inner-loop step; the caller zeroes them with

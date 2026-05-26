@@ -680,19 +680,27 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);
 
-    // Defect B (F.trim.3): the fill box fills its full row slot rather than the
-    // tight glyph bounding box. Height is the cached monospace_row_h() (font
-    // ascent+descent + 2*kFlagPadYPx) — the same metric the
-    // strip-row geometry uses — and the top is the baseline lifted by
-    // monospace_row_baseline_offset(), so baseline_y sits centered in the row
-    // and the box's bottom lands flush at the slot bottom. Callers solve
-    // baseline_y so the box bottom coincides with flag_chip_bottom_y (chips) or
-    // the row rect (bottom-strip editors). The horizontal extent (fill width)
-    // is unchanged. Previously this used the tight cairo_text_extents.height of
-    // a representative string, which is ~7px shorter than the row, leaving a
-    // gap at the top of every chip.
-    const double bg_top = s.baseline_y - monospace_row_baseline_offset();
-    const double bg_h   = static_cast<double>(monospace_row_h());
+    // Defect B (F.trim.3): the step-1 fill box fills its full row slot rather
+    // than the tight glyph bounding box — that geometry now lives entirely
+    // inside flag_chip_rect (height = cached monospace_row_h(), top = baseline
+    // lifted by monospace_row_baseline_offset()), so baseline_y sits centered
+    // in the row and the box bottom lands flush at the slot bottom. Callers
+    // solve baseline_y so the box bottom coincides with flag_chip_bottom_y
+    // (chips) or the row rect (bottom-strip editors).
+    //
+    // The cursor (step 5) and the selection highlight (step 4) span exactly the
+    // glyph ink band (ascent-to-descent), no vertical padding. The band is
+    // recovered from the two cached monospace metrics (exact inverses of how
+    // init_monospace_grid_metrics built them: g_row_baseline_off = kFlagPadYPx
+    // + ascent, g_row_h = round(font_height + 2*kFlagPadYPx)). The round() on
+    // the row height can leak a sub-pixel into the derived descent; that is
+    // cosmetically irrelevant here and saves adding a new metric accessor.
+    const double bg_h        = static_cast<double>(monospace_row_h());
+    const double ascent      = monospace_row_baseline_offset() - kFlagPadYPx;
+    const double font_height = bg_h - 2.0 * kFlagPadYPx;
+    const double descent     = font_height - ascent;
+    const double glyph_top   = s.baseline_y - ascent;
+    const double glyph_h     = ascent + descent;
 
     // 1. Solid fill behind the editable region, from the single source of
     //    truth (flag_chip_rect), so the painted chip and the hit rect are the
@@ -727,7 +735,10 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_show_text(cr, s.text.c_str());
 
     // 4. Selection swap: fill the selected range with text_color, repaint
-    //    the selected substring in the fill color for contrast.
+    //    the selected substring in the fill color for contrast. The highlight
+    //    spans exactly the glyph ink band (glyph_top / glyph_h), distinct from
+    //    the full-slot step-1 fill; hi_x and hi_w are the exact glyph-run
+    //    extent.
     if (s.has_selection) {
         cairo_text_extents_t a_ext;
         cairo_text_extents(cr,
@@ -741,7 +752,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         const double hi_w = b_ext.x_advance - a_ext.x_advance;
         cairo_set_source_rgb(cr,
             s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_rectangle(cr, hi_x, bg_top, hi_w, bg_h);
+        cairo_rectangle(cr, hi_x, glyph_top, hi_w, glyph_h);
         cairo_fill(cr);
         cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
         cairo_move_to(cr, hi_x, s.baseline_y);
@@ -752,7 +763,9 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
                 .c_str());
     }
 
-    // 5. Cursor (blink-gated), crisp single-pixel column.
+    // 5. Cursor (blink-gated), crisp single-pixel column spanning exactly the
+    //    glyph ink band (glyph_top / glyph_h), not the full step-1 slot; cur_x
+    //    keeps the round(x)+0.5 column unchanged.
     if (s.cursor_visible) {
         double cursor_x_offset = 0.0;
         if (s.cursor_pos > 0) {
@@ -767,8 +780,8 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         cairo_set_source_rgb(cr,
             s.text_color.r, s.text_color.g, s.text_color.b);
         cairo_set_line_width(cr, 1.0);
-        cairo_move_to(cr, cur_x, bg_top);
-        cairo_line_to(cr, cur_x, bg_top + bg_h);
+        cairo_move_to(cr, cur_x, glyph_top);
+        cairo_line_to(cr, cur_x, glyph_top + glyph_h);
         cairo_stroke(cr);
     }
 
