@@ -54,18 +54,22 @@ inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
 // when that boundary is selected.
 inline constexpr GuiColor kTrimMarker       = {0.965, 0.455, 0.000};
 
-// Flag rect geometry. Internal padding around the text glyph bounding box,
-// applied symmetrically (horizontal and vertical). Brief Q raised this from
-// 2 to 3 for breathing room. The single source of truth — both render and
-// hit-rect computation must use this value, and so must the iteration popup
-// in main.cpp.
-constexpr double kFlagInnerPadPx = 4.0;
-
-// Extra vertical inner padding added on top of kFlagInnerPadPx on each side.
-// (V.B Addendum 2: rects grow by 2*kVPadExtraPx in height; the horizontal
-// pad is unaffected.) Was previously file-private to render.cpp; moved
-// here in Brief Q to share with main.cpp's iteration popup.
-constexpr double kVPadExtraPx = 1.0;
+// Flag chip internal padding around the text glyph bounding box, split per
+// axis so the two can be tuned independently. Both are the single source of
+// truth for their axis — every chip renderer and the hit-rect computation must
+// read these, never a literal.
+//
+// kFlagPadXPx sets chip WIDTH: the painted fill and the hit rect both span
+// glyph_advance + 2*kFlagPadXPx, and the elision pack uses it as the inter-chip
+// touch threshold.
+//
+// kFlagPadYPx sets chip HEIGHT via the row metric: the row height is
+// font (ascent+descent) + 2*kFlagPadYPx, and the baseline offset is
+// kFlagPadYPx + ascent. Lowered from an effective 4 to 2 here; the old
+// vertical-only kVPadExtraPx remnant (outline-era stroke clearance, obsolete
+// since the migration to solid fills) is gone.
+constexpr double kFlagPadXPx = 4.0;
+constexpr double kFlagPadYPx = 2.0;
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
@@ -125,9 +129,9 @@ constexpr int kWaveformInsetPx = 10;
 // offset (Liberation Mono 11pt). on_resize can fire before the first redraw
 // measures the real font; these seed the geometry so it is sane (never a
 // negative waveform) until init_monospace_grid_metrics overwrites them.
-constexpr int    kRowHFallbackPx       = 28;
+constexpr int    kRowHFallbackPx       = 22;
 constexpr double kRowBaselineOffFallbackPx =
-    kFlagInnerPadPx + kVPadExtraPx + 14.0;
+    kFlagPadYPx + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
@@ -194,7 +198,7 @@ constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
 //
 // `text_left` is the actual text painting x — i.e., where cairo_move_to
 // would place the cursor for cairo_show_text. The helper subtracts
-// kFlagInnerPadPx itself to derive the fill rect's left edge. `bg_top`
+// kFlagPadXPx itself to derive the fill rect's left edge. `bg_top`
 // and `bg_height` reuse the existing outline/highlight rect math at the
 // caller, so the fill aligns with the outline that gets painted on top.
 inline void render_flag_text_bg_fill(cairo_t* cr,
@@ -203,7 +207,7 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
                                      double bg_top,
                                      double bg_height,
                                      GuiColor fill) {
-    const double pad = kFlagInnerPadPx;
+    const double pad = kFlagPadXPx;
     const double x = std::round(text_left - pad);
     const double y = std::round(bg_top);
     const double w = std::round(text_x_advance + 2.0 * pad);
@@ -244,7 +248,7 @@ struct EditorTextBox {
     double               baseline_y      = 0.0;
     std::string          prefix;            // optional; "" = none
     std::string          text;              // editable content
-    double               hl_pad           = kFlagInnerPadPx;
+    double               hl_pad           = kFlagPadXPx;
     GuiColor             fill             = kMarker;
     GuiColor             text_color       = kText;
     bool                 has_selection    = false;
@@ -578,13 +582,13 @@ std::string compute_hover_popup_text(
 double monospace_advance();
 
 // Fixed-pixel row height for the strip grid, measured from cairo_font_extents
-// (ascent + descent) at kFlagFontSize plus 2*(kFlagInnerPadPx + kVPadExtraPx).
+// (ascent + descent) at kFlagFontSize plus 2*kFlagPadYPx.
 // Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
 // real font. The vertical twin of monospace_advance(); consumed by the
 // strip/row geometry helpers (which have no cairo context of their own).
 int monospace_row_h();
 
-// Baseline offset from a row rect's top edge: (kFlagInnerPadPx + kVPadExtraPx)
+// Baseline offset from a row rect's top edge: kFlagPadYPx
 // + font ascent. baseline_y = row.y + monospace_row_baseline_offset() centers
 // the text in the row the same way the flag chip sits in the top strip.
 double monospace_row_baseline_offset();
@@ -595,7 +599,7 @@ double monospace_row_baseline_offset();
 void init_monospace_grid_metrics(cairo_t* cr);
 
 // Returns the on-screen x where the given marker's flag pending text
-// starts, in pixels. Includes the kFlagInnerPadPx left inner pad so
+// starts, in pixels. Includes the kFlagPadXPx left inner pad so
 // the returned value matches where pending text actually paints
 // (cairo_move_to(cr, e.text_left + hl_pad, ...) at render.cpp:620).
 // Returns -1.0 if the marker is not currently visible in the

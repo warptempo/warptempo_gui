@@ -18,7 +18,7 @@ namespace perf_counters {
     int flag_elided          = 0;
 }
 
-// kVPadExtraPx, kFlagBottomLiftPx, and kStemAboveWaveformPx now live in
+// kFlagBottomLiftPx and kStemAboveWaveformPx now live in
 // render.h so the iter/BPM popups in main.cpp and the stem blit in
 // paint_handler.cpp can reference the same values.
 
@@ -594,7 +594,7 @@ void render_trim_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
 
     // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
     // iterate_visible_flags_impl does for the lower row, one row higher. The
@@ -682,7 +682,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
 
     // Defect B (F.trim.3): the fill box fills its full row slot rather than the
     // tight glyph bounding box. Height is the cached monospace_row_h() (font
-    // ascent+descent + 2*(kFlagInnerPadPx+kVPadExtraPx)) — the same metric the
+    // ascent+descent + 2*kFlagPadYPx) — the same metric the
     // strip-row geometry uses — and the top is the baseline lifted by
     // monospace_row_baseline_offset(), so baseline_y sits centered in the row
     // and the box's bottom lands flush at the slot bottom. Callers solve
@@ -832,11 +832,11 @@ void iterate_visible_flags_impl(
         const double text_left =
             static_cast<double>(top_strip_area.x) + std::round(x_raw);
         // Elide only on genuine overlap: a candidate is dropped only when its
-        // chip left edge (text_left - kFlagInnerPadPx) would fall left of the
+        // chip left edge (text_left - kFlagPadXPx) would fall left of the
         // previous chip's right edge. Adjacent chips may share an edge (touch)
         // without being elided — there is no inter-chip gutter. Reintroducing
         // one is a single added term on the right-hand side here.
-        if (text_left < rightmost_right_edge + kFlagInnerPadPx) {
+        if (text_left < rightmost_right_edge + kFlagPadXPx) {
             if constexpr (kDebugPerf) perf_counters::flag_elided++;
             continue;
         }
@@ -849,7 +849,7 @@ void iterate_visible_flags_impl(
         if constexpr (kDebugPerf) perf_counters::flag_measure++;
 
         emit(static_cast<int>(i), text_left, baseline_y, text, ext);
-        rightmost_right_edge = text_left + ext.x_advance + kFlagInnerPadPx;
+        rightmost_right_edge = text_left + ext.x_advance + kFlagPadXPx;
     }
 }
 
@@ -921,7 +921,7 @@ void render_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
 
     // Brief Y.5: collect emit args during the left-to-right iterate pass,
     // then paint the collected list in REVERSE order. The pack rule inside
@@ -994,7 +994,7 @@ void render_one_editor_flag(
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
 
     iterate_visible_flags_impl(cr, top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
@@ -1045,7 +1045,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // background register on the marker. Defect B (F.trim.3): the y/height use
     // the same font-metric box geometry as render_editor_text_box (full
     // monospace_row_h() slot), so the hit band tracks the painted chip exactly.
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
 
     iterate_visible_flags_impl(cr, top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
@@ -1136,7 +1136,7 @@ void render_phase_reset_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
 
     // Brief Y.5: collect-then-reverse-paint, mirroring render_flags.
     // Phase reset flags have no editor and thus no widening-text case, so
@@ -1232,8 +1232,8 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_font_extents(cr, &fe);
     const double font_height = fe.ascent + fe.descent;
     g_row_h = static_cast<int>(std::nearbyint(
-        font_height + 2.0 * (kFlagInnerPadPx + kVPadExtraPx)));
-    g_row_baseline_off = (kFlagInnerPadPx + kVPadExtraPx) + fe.ascent;
+        font_height + 2.0 * kFlagPadYPx));
+    g_row_baseline_off = kFlagPadYPx + fe.ascent;
     cairo_restore(cr);
     g_metrics_initialized = true;
 }
@@ -1281,5 +1281,5 @@ double flag_pending_text_left_x(
         (ms - static_cast<double>(vp_start)) / samples_per_pixel;
     const double text_left =
         static_cast<double>(top.x) + std::nearbyint(x_raw);
-    return text_left + kFlagInnerPadPx;
+    return text_left + kFlagPadXPx;
 }

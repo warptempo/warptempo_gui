@@ -213,7 +213,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(scratch_cr, kFlagFontSize);
 
-    const double hl_pad = kFlagInnerPadPx;
+    const double hl_pad = kFlagPadXPx;
     const int kMiss = std::numeric_limits<int>::max();
 
     // Per-bound chip rect, computed exactly as render_trim_flags paints it:

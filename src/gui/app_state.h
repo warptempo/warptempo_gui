@@ -917,8 +917,8 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 // than the stem column. The chip glyph ("b"/"e") is drawn hl_pad to the
 // right of the bound's column, so a column-only test misses clicks on the
 // visible chip (F.trim.4). The rect mirrors regular-flag hit geometry
-// (compute_flag_hit_rects): x = round(text_left - kFlagInnerPadPx),
-// w = round(glyph_advance + 2*kFlagInnerPadPx), with y/h from
+// (compute_flag_hit_rects): x = round(text_left - kFlagPadXPx),
+// w = round(glyph_advance + 2*kFlagPadXPx), with y/h from
 // top_upper_row_area. Tests both mouse_x and mouse_y. Used for upper-row
 // presses; the stem elsewhere still routes through hit_test_trim_boundary.
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,

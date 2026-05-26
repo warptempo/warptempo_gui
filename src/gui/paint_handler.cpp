@@ -498,7 +498,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 box.baseline_y      = upper_baseline;
                 box.prefix          = "setting: ";
                 box.text            = app.settings_editor.pending;
-                box.hl_pad          = kFlagInnerPadPx;
+                box.hl_pad          = kFlagPadXPx;
                 box.fill            = app.settings_editor.red
                                           ? kAccent : kBackground;
                 box.text_color      = kText;
@@ -535,7 +535,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 box.baseline_y      = upper_baseline;
                 box.prefix          = "bpm: ";
                 box.text            = app.top_flag_editor.pending;
-                box.hl_pad          = kFlagInnerPadPx;
+                box.hl_pad          = kFlagPadXPx;
                 box.fill            = app.top_flag_editor.red
                                           ? kAccent : kBackground;
                 box.text_color      = kText;

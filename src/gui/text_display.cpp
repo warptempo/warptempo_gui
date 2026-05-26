@@ -26,6 +26,11 @@ double draw_line(cairo_t* cr,
 namespace {
 // Pixel gap between the popup baseline and the anchor edge.
 constexpr double kVerticalGapPx = 4.0;
+
+// Hover-popup bottom inner clearance: lifts the popup baseline by 1px so the
+// text descent doesn't kiss the anchor edge. Formerly borrowed the flag
+// kVPadExtraPx constant (now removed); given its own name to decouple.
+constexpr double kHoverPopupBottomPadPx = 1.0;
 } // namespace
 
 void render(cairo_t* cr, const State& s, double font_size) {
@@ -48,11 +53,11 @@ void render(cairo_t* cr, const State& s, double font_size) {
     const double text_left = static_cast<double>(s.anchor.x);
 
     // Place baseline so the descent of the text sits `kVerticalGapPx`
-    // above the top edge of the anchor, with kVPadExtraPx of additional
-    // clearance for the popup's own bottom inner padding.
+    // above the top edge of the anchor, with kHoverPopupBottomPadPx of
+    // additional clearance for the popup's own bottom inner padding.
     const double baseline_y = static_cast<double>(s.anchor.y)
                             - kVerticalGapPx
-                            - kVPadExtraPx
+                            - kHoverPopupBottomPadPx
                             - (ext.height + ext.y_bearing);
 
     cairo_set_source_rgb(cr, s.color.r, s.color.g, s.color.b);
