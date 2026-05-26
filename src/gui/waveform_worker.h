@@ -38,14 +38,6 @@ struct WaveformJob {
     bool      target           = false;
     uint64_t  timemap_hash     = 0;
 
-    // Out-of-trim sample dim bounds, in the SAME paint domain as vp_start/
-    // vp_end (source-frame in source view, target-frame in target view).
-    // -1 = that side unset (no dim). render_waveform recolors only the
-    // sample columns outside [trim_begin_frame, trim_end_frame). Part of the
-    // waveform fingerprint so a trim set/clear/drag rebuilds the plate.
-    int64_t   trim_begin_frame = -1;
-    int64_t   trim_end_frame   = -1;
-
     // Timemap snapshot the worker dereferences during the render. Empty for
     // source view; populated for target view from the value paint-side
     // computed (or app.drag.frozen_timemap during a target-view drag). The
@@ -161,6 +153,4 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<TimeMapSegment>* timemap_or_null,
-    int64_t trim_begin_frame = -1,   // paint-domain; -1 = unset
-    int64_t trim_end_frame   = -1);  // paint-domain; -1 = unset
+    const std::vector<TimeMapSegment>* timemap_or_null);

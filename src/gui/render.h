@@ -42,11 +42,14 @@ struct TrimRange {
 inline constexpr GuiColor kBackground       = {0.10, 0.10, 0.12};
 inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
 
-// Out-of-trim waveform sample color. Applied ONLY to sample columns
-// outside the active tab's trim region, by render_waveform. This is a
-// standalone tunable color, NOT a global dim factor — Brief C retired the
-// global out-of-trim dim and that stays retired; nothing but the sample
-// plate dims. Default is roughly kWaveform blended ~55% toward kBackground
+// Out-of-trim waveform sample color. Applied by on_redraw as a
+// CAIRO_OPERATOR_ATOP overlay over the out-of-trim sample pixels of the
+// blitted plate — NOT baked into the plate, which is trim-agnostic. ATOP
+// uses the plate's alpha as the mask, so only painted sample pixels are
+// recolored (gaps stay background) at the exact tuned RGB, no blend. This
+// is a standalone tunable color, NOT a global dim factor — Brief C retired
+// the global out-of-trim dim and that stays retired; nothing but the sample
+// pixels dim. Default is roughly kWaveform blended ~55% toward kBackground
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = {0.30, 0.39, 0.47};
 inline constexpr GuiColor kMarker           = {0.57, 0.27, 0.68};
@@ -306,26 +309,13 @@ void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
 // non-null (target view) the viewport range is target-frame: each
 // column's [t0, t1) is translated to source-frame via
 // `map_target_to_source` before the pyramid read, producing the
-// deformed-waveform display. The brightness threshold (trim_*_sample)
-// is interpreted in the SAME domain as the viewport: source-frame in
-// source view, target-frame in target view.
+// deformed-waveform display.
 //
-// Out-of-trim sample dim: the sample columns inside the trim region paint
-// in `color`; the columns outside it paint in kWaveformDimmed. This is a
-// sample-plate-only recolor (Brief C's global out-of-trim dim stays
-// retired — flags, stems, cursor, scanner, and playhead never dim). The
-// split is emitted as exactly two batched strokes (one per color),
-// independent of column count, so the batched-stroke performance is
-// preserved.
-//
-// `trim_begin_frame` / `trim_end_frame` are PAINT-domain frame bounds
-// (target-frame in target view, source-frame in source view — same domain
-// as `viewport_*_sample`), so the in/out test uses each column's paint
-// frame directly with no timemap mapping. `-1` on either side disables
-// dimming on that side; when BOTH are -1 every column classifies in-trim
-// and the dim stroke paints nothing, so the result is byte-identical to a
-// uniform `color` plate. A column at paint-frame f0 is OUT of trim when
-// (begin >= 0 && f0 < begin) || (end >= 0 && f0 >= end).
+// The plate paints uniformly in `color` — it is trim-agnostic. The
+// out-of-trim dim is NOT baked here; on_redraw paints it as an ATOP
+// overlay over the blitted plate (see kWaveformDimmed and
+// compute_out_of_trim_rects), so a trim set/clear/drag never re-rasterizes
+// these pixels.
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
@@ -333,9 +323,7 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<TimeMapSegment>* timemap = nullptr,
-                     long long trim_begin_frame = -1,   // paint-domain; -1 = unset
-                     long long trim_end_frame   = -1);  // paint-domain; -1 = unset
+                     const std::vector<TimeMapSegment>* timemap = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.
@@ -357,9 +345,9 @@ void render_playhead(cairo_t* cr,
 // Effective disabled state is computed inline from the marker list (a label
 // reference inherits the disabled flag of its defining marker). Disabled
 // markers are skipped entirely. Selected markers paint kSelected, the rest
-// kMarker; marker stems do not dim — only the sample plate dims (see
-// render_waveform / kWaveformDimmed). Brief C retired the global out-of-trim
-// dim and it stays retired for stems.
+// kMarker; marker stems do not dim — only the out-of-trim sample pixels
+// dim, via on_redraw's ATOP overlay (see kWaveformDimmed). Brief C retired
+// the global out-of-trim dim and it stays retired for stems.
 // `timemap` (default null) shifts marker positioning into the target-frame
 // domain when target view is active: each marker's source-frame position is
 // run through `map_source_to_target` before viewport clipping and column

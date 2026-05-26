@@ -345,9 +345,7 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<TimeMapSegment>* timemap,
-                     long long trim_begin_frame,
-                     long long trim_end_frame) {
+                     const std::vector<TimeMapSegment>* timemap) {
     if (area.w <= 0 || area.h <= 2) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -377,7 +375,7 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    struct ColLine { double x, y0, y1; bool in_trim; };
+    struct ColLine { double x, y0, y1; };
     std::vector<ColLine> lines;
     lines.reserve(static_cast<size_t>(area.w));
 
@@ -425,42 +423,14 @@ void render_waveform(cairo_t* cr,
         const double y_bottom = y_center - min_val * half_h;
         const double x_px     = area.x + i + 0.5;
 
-        // Out-of-trim classification by the column's representative PAINT
-        // frame f0 (its left edge), so the test is correct in both views:
-        // the bounds are passed in the paint domain (source-frame in source
-        // view, target-frame in target view) and never against the post-
-        // timemap source frame. Using the left edge for a 1px column lands
-        // the boundary column within one pixel of the amber trim stem —
-        // visually indistinguishable, no sub-pixel split needed. When both
-        // bounds are -1 every column is in-trim.
-        const bool out_of_trim =
-            (trim_begin_frame >= 0 && f0 <  static_cast<double>(trim_begin_frame)) ||
-            (trim_end_frame   >= 0 && f0 >= static_cast<double>(trim_end_frame));
-
-        lines.push_back({x_px, y_top, y_bottom, !out_of_trim});
+        lines.push_back({x_px, y_top, y_bottom});
     }
 
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
 
-    // Two batched stroke passes, independent of column count (do not switch
-    // to per-column source-color + stroke — that reintroduces the per-column
-    // overhead this loop was built to avoid). In-trim columns paint in
-    // `color`; out-of-trim columns paint in kWaveformDimmed. When both trim
-    // bounds are -1 the out-of-trim pass strokes nothing and the result is
-    // byte-identical to a single uniform `color` plate.
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& L : lines) {
-        if (!L.in_trim) continue;
-        cairo_move_to(cr, L.x, L.y0);
-        cairo_line_to(cr, L.x, L.y1);
-    }
-    cairo_stroke(cr);
-
-    cairo_set_source_rgb(cr, kWaveformDimmed.r, kWaveformDimmed.g,
-                         kWaveformDimmed.b);
-    for (const auto& L : lines) {
-        if (L.in_trim) continue;
         cairo_move_to(cr, L.x, L.y0);
         cairo_line_to(cr, L.x, L.y1);
     }

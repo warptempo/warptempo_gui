@@ -46,9 +46,7 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<TimeMapSegment>* timemap_or_null,
-    int64_t trim_begin_frame,
-    int64_t trim_end_frame) {
+    const std::vector<TimeMapSegment>* timemap_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     cairo_t* ccr = cairo_create(dest);
@@ -71,8 +69,7 @@ void render_waveform_to_cache_surface(
         render_waveform(ccr, cache_area, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null,
-                        trim_begin_frame, trim_end_frame);
+                        timemap_or_null);
     } else if (channel_count >= 2) {
         // Channel gap removed (kChannelGapPx deleted): the 1972 Krips material
         // is effectively never unity, so the two channels' inner excursions do
@@ -87,13 +84,11 @@ void render_waveform_to_cache_surface(
         render_waveform(ccr, ch0, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null,
-                        trim_begin_frame, trim_end_frame);
+                        timemap_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null,
-                        trim_begin_frame, trim_end_frame);
+                        timemap_or_null);
     }
     cairo_destroy(ccr);
 }
@@ -178,6 +173,39 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                          area.x, area.y);
                 cairo_paint(cr);
                 cairo_restore(cr);
+
+                // Out-of-trim dim, composited live over the just-blitted
+                // plate (which is trim-agnostic). The dim is the
+                // kWaveformDimmed color masked through the plate surface's
+                // own alpha: opaque sample pixels are recolored — at the
+                // exact tuned RGB, no blend — and the transparent gaps are
+                // left as background. ATOP would key on the WINDOW's alpha,
+                // which is already opaque post-blit, so it can't serve as the
+                // sample mask and fills the whole rect solid; the plate
+                // surface's alpha can. We clip to the LIVE out-of-trim
+                // rect(s) (trim + viewport), so a trim drag tracks the stem
+                // frame-for-frame with no plate rebuild, then mask the dim
+                // color through the plate (blitted at (area.x, area.y), so
+                // the mask uses the same origin). OVER + mask is exactly
+                // "color where the plate is opaque, within the clip" — no
+                // operator change. cairo_save/restore brackets the clip so
+                // the marker/stem/flag/playhead passes below run unclipped
+                // with the default OVER.
+                const OutOfTrimRects dim = compute_out_of_trim_rects(area);
+                if (dim.has_left || dim.has_right) {
+                    cairo_save(cr);
+                    if (dim.has_left)
+                        cairo_rectangle(cr, dim.left.x, dim.left.y,
+                                        dim.left.w, dim.left.h);
+                    if (dim.has_right)
+                        cairo_rectangle(cr, dim.right.x, dim.right.y,
+                                        dim.right.w, dim.right.h);
+                    cairo_clip(cr);
+                    cairo_set_source_rgb(cr, kWaveformDimmed.r,
+                                         kWaveformDimmed.g, kWaveformDimmed.b);
+                    cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
+                    cairo_restore(cr);
+                }
             }
 
             const auto wf1 = clock::now();
@@ -763,44 +791,12 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         }
     }
 
-    // Out-of-trim sample dim bounds, paint-domain with a -1 sentinel per
-    // unset side (so the dim only lands where a bound exists). Domain
-    // handling mirrors compute_displayed_trim — but against target_timemap
-    // (the SAME timemap this render consumes), not wf_cache.fp_timemap, so
-    // the baked dim boundary and the trim stem land on the same column once
-    // the swap publishes this fingerprint. Render view has no trim (it is a
-    // source-view authoring concept, and the render audio has trim baked in),
-    // so both sides stay -1 there.
-    int64_t trim_begin_frame = -1;
-    int64_t trim_end_frame   = -1;
-    if (!app.render_view_enabled) {
-        const ViewState& tvs = active_view_state(app);
-        const double srd = static_cast<double>(sr);
-        auto to_paint_frame = [&](double sec) -> int64_t {
-            const int64_t src = static_cast<int64_t>(
-                std::nearbyint(sec * srd));
-            if (is_target && !target_timemap.empty()) {
-                return static_cast<int64_t>(std::nearbyint(
-                    map_source_to_target(
-                        static_cast<size_t>(src < 0 ? 0 : src),
-                        target_timemap)));
-            }
-            return src;
-        };
-        if (tvs.has_trim_begin)
-            trim_begin_frame = to_paint_frame(tvs.trim_begin_seconds);
-        if (tvs.has_trim_end)
-            trim_end_frame = to_paint_frame(tvs.trim_end_seconds);
-    }
-
     in.vp_start      = vp_start;
     in.vp_end        = vp_end;
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.is_target     = is_target;
     in.timemap_hash  = target_timemap_hash;
-    in.trim_begin_frame = trim_begin_frame;
-    in.trim_end_frame   = trim_end_frame;
     in.channel_count = audio.render_channels();
     in.timemap       = std::move(target_timemap);
     in.valid         = true;
@@ -822,20 +818,13 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int64_t fp_vp_s, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
         long long fp_ag, bool    fp_t,
-        uint64_t fp_h,
-        int64_t fp_tb,   int64_t fp_te) -> bool {
+        uint64_t fp_h) -> bool {
         if (fp_ag != app.audio_generation) return true;
         if (fp_vp_s != in.vp_start)        return true;
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
         if (fp_t    != in.is_target)       return true;
-        // Trim dim bounds. Always compared (not gated by drag_freeze): trim
-        // is constant across a marker drag, and a trim set/clear in source
-        // view changes no other fingerprint input, so this is the only thing
-        // that rebuilds the dimmed plate.
-        if (fp_tb   != in.trim_begin_frame) return true;
-        if (fp_te   != in.trim_end_frame)   return true;
         if (!drag_freeze) {
             if (fp_h  != in.timemap_hash)     return true;
         }
@@ -849,9 +838,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_audio_gen,
         wf_cache.pending_fp_target,
-        wf_cache.pending_fp_timemap_hash,
-        wf_cache.pending_fp_trim_begin,
-        wf_cache.pending_fp_trim_end);
+        wf_cache.pending_fp_timemap_hash);
 
     if (!diff_vs_pending) return;
 
@@ -868,8 +855,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_audio_gen   = app.audio_generation;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_timemap_hash = in.timemap_hash;
-        wf_cache.supersede_trim_begin  = in.trim_begin_frame;
-        wf_cache.supersede_trim_end    = in.trim_end_frame;
         wf_cache.supersede_timemap     = std::move(in.timemap);
         return;
     }
@@ -897,8 +882,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio_gen      = app.audio_generation;
     job.target         = in.is_target;
     job.timemap_hash   = in.timemap_hash;
-    job.trim_begin_frame = in.trim_begin_frame;
-    job.trim_end_frame   = in.trim_end_frame;
     // Stage B: stash a copy of the timemap on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
@@ -915,8 +898,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_audio_gen   = app.audio_generation;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_timemap_hash = in.timemap_hash;
-    wf_cache.pending_fp_trim_begin  = in.trim_begin_frame;
-    wf_cache.pending_fp_trim_end    = in.trim_end_frame;
 
     waveform_worker.dispatch(std::move(job),
         [this](bool ok) { on_waveform_render_done(ok); });
@@ -969,8 +950,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
         job.timemap_hash   = wf_cache.supersede_timemap_hash;
-        job.trim_begin_frame = wf_cache.supersede_trim_begin;
-        job.trim_end_frame   = wf_cache.supersede_trim_end;
         // Stage B: thread the supersede timemap into both the job and
         // pending_fp_timemap, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
@@ -988,8 +967,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_audio_gen   = wf_cache.supersede_audio_gen;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_timemap_hash = wf_cache.supersede_timemap_hash;
-        wf_cache.pending_fp_trim_begin  = wf_cache.supersede_trim_begin;
-        wf_cache.pending_fp_trim_end    = wf_cache.supersede_trim_end;
 
         wf_cache.supersede = false;
         wf_cache.supersede_timemap.clear();
@@ -1013,8 +990,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_timemap_hash = wf_cache.pending_fp_timemap_hash;
-    wf_cache.fp_trim_begin   = wf_cache.pending_fp_trim_begin;
-    wf_cache.fp_trim_end     = wf_cache.pending_fp_trim_end;
     // Stage B: publish the in-flight job's timemap to the displayed slot
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
@@ -1080,8 +1055,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.channel_count,
         audio,
         in.vp_start, in.vp_end,
-        in.timemap.empty() ? nullptr : &in.timemap,
-        in.trim_begin_frame, in.trim_end_frame);
+        in.timemap.empty() ? nullptr : &in.timemap);
 
     // Publish the displayed fingerprint NOW so this same tick's
     // maybe_rebuild_stem_cache / maybe_rebuild_flag_cache read the
@@ -1095,8 +1069,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_audio_gen    = app.audio_generation;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_timemap_hash = in.timemap_hash;
-    wf_cache.fp_trim_begin   = in.trim_begin_frame;
-    wf_cache.fp_trim_end     = in.trim_end_frame;
     wf_cache.fp_timemap      = in.timemap;
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
@@ -1106,8 +1078,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_audio_gen    = app.audio_generation;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_timemap_hash = in.timemap_hash;
-    wf_cache.pending_fp_trim_begin   = in.trim_begin_frame;
-    wf_cache.pending_fp_trim_end     = in.trim_end_frame;
     wf_cache.pending_fp_timemap      = in.timemap;
 
     wf_cache.dirty = false;
@@ -1218,6 +1188,52 @@ GuiPaintHandler::compute_displayed_trim() const {
     }
     out.begin = t.first;
     out.end   = t.second;
+    return out;
+}
+
+GuiPaintHandler::OutOfTrimRects
+GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
+    OutOfTrimRects out;
+    if (area.w <= 0) return out;
+
+    // Frames in the same paint domain the trim stems use (render view forces
+    // has_begin/has_end off, so the early-out below covers it). begin/end are
+    // already mapped through the displayed timemap in target view.
+    const DisplayedTrim dtrim = compute_displayed_trim();
+    if (!dtrim.has_begin && !dtrim.has_end) return out;
+
+    // LIVE viewport + live samples-per-pixel (NOT wf_cache.fp_*): during a
+    // trim drag the viewport is static so this equals the displayed viewport
+    // and the dim edge sits on the stem; keeping it live means the dim never
+    // waits on the plate's async rebuild to recolor.
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return out;
+    const int64_t vp_start = app.viewport_start_sample;
+    const int x_lo = area.x;
+    const int x_hi = area.x + area.w;
+
+    auto frame_to_x = [&](int64_t frame) -> int {
+        double x = area.x +
+            std::nearbyint((static_cast<double>(frame) - vp_start) / spp);
+        if (x < x_lo) x = x_lo;
+        if (x > x_hi) x = x_hi;
+        return static_cast<int>(x);
+    };
+
+    if (dtrim.has_begin) {
+        const int x_begin = frame_to_x(dtrim.begin);
+        if (x_begin > x_lo) {
+            out.has_left = true;
+            out.left = GuiRect{x_lo, area.y, x_begin - x_lo, area.h};
+        }
+    }
+    if (dtrim.has_end) {
+        const int x_end = frame_to_x(dtrim.end);
+        if (x_end < x_hi) {
+            out.has_right = true;
+            out.right = GuiRect{x_end, area.y, x_hi - x_end, area.h};
+        }
+    }
     return out;
 }
 

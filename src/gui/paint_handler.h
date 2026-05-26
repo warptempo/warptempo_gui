@@ -83,11 +83,6 @@ struct WaveformCache {
     long long fp_audio_gen   = -1;     // -1 = never rendered
     bool      fp_target      = false;
     uint64_t  fp_timemap_hash = 0;
-    // Out-of-trim sample dim bounds baked into the live pixels (paint-domain,
-    // -1 = side unset). Part of the fingerprint so a trim set/clear/drag,
-    // which changes no other input in source view, still rebuilds the plate.
-    int64_t   fp_trim_begin  = -1;
-    int64_t   fp_trim_end    = -1;
 
     // Stage B (layered-paint): the timemap baked into the live waveform
     // pixels. The stem cache reads this to render target-view stems
@@ -114,8 +109,6 @@ struct WaveformCache {
     long long pending_fp_audio_gen   = -1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_timemap_hash = 0;
-    int64_t   pending_fp_trim_begin  = -1;
-    int64_t   pending_fp_trim_end    = -1;
 
     // Stage B: the timemap the in-flight job is consuming. Set at
     // dispatch alongside the other pending_fp_*; swapped into fp_timemap
@@ -136,8 +129,6 @@ struct WaveformCache {
     long long supersede_audio_gen   = -1;
     bool      supersede_target      = false;
     uint64_t  supersede_timemap_hash = 0;
-    int64_t   supersede_trim_begin  = -1;
-    int64_t   supersede_trim_end    = -1;
     std::vector<TimeMapSegment> supersede_timemap;
 
     // Stage A: `dirty` no longer drives the dispatch decision (the
@@ -422,12 +413,6 @@ private:
         uint64_t timemap_hash  = 0;
         int      channel_count = 0;
         std::vector<TimeMapSegment> timemap;   // empty in source view
-        // Out-of-trim sample dim bounds, paint-domain (target-frame in
-        // target view, source-frame in source view), -1 = side unset.
-        // Resolved against THIS struct's timemap so the dim boundary lands
-        // on the same column the waveform render places the trim region at.
-        int64_t  trim_begin_frame = -1;
-        int64_t  trim_end_frame   = -1;
         bool     valid         = false;        // false if degenerate / loading
     };
 
@@ -450,4 +435,22 @@ private:
         bool    end_selected   = false;
     };
     DisplayedTrim compute_displayed_trim() const;
+
+    // Out-of-trim dim rects in SCREEN coordinates for the current frame, or
+    // an empty result when nothing should dim (no trim, or render view).
+    // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the
+    // waveform plate blit, so the dim recolors only the out-of-trim sample
+    // pixels (the plate itself is trim-agnostic — see render_waveform).
+    // Resolved from the LIVE viewport (app.viewport_start_sample + live spp)
+    // and the displayed-domain trim frames compute_displayed_trim() returns
+    // (the SAME source the trim stems use), so the dim edge stays locked to
+    // the trim stem across a drag with no cache rebuild. Both rects span the
+    // full waveform height; ATOP confines the recolor to sample pixels.
+    struct OutOfTrimRects {
+        bool    has_left  = false;
+        GuiRect left{};
+        bool    has_right = false;
+        GuiRect right{};
+    };
+    OutOfTrimRects compute_out_of_trim_rects(const GuiRect& area) const;
 };
