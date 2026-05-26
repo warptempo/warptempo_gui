@@ -139,6 +139,9 @@ int monospace_row_h();
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_rect (inline) reads it.
 double monospace_row_baseline_offset();
+// Forward declaration: defined with its full doc comment below. Needed here
+// because flag_chip_rect (inline) computes the chip width from it.
+double monospace_advance();
 
 // Which strip row a chip's bottom edge sits at. Lower is the regular
 // warp/phase-reset flag row (now flush with the waveform area top, since
@@ -169,33 +172,36 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // Single source of truth for a flag chip's painted/hit rectangle. ALL chip
 // types — regular warp flags, phase-reset flags, and trim b/e chips — derive
 // their fill rect AND their hit rect from this one function, so the two cannot
-// drift (the edge-click dead zone fixed in F-flaggeom came from five hand-
-// transcribed copies of this formula rounding independently and measuring the
-// glyph advance on different cairo surfaces).
+// drift.
+//
+// Width is computed from the cached per-character monospace advance
+// (monospace_advance(), measured once on the real paint surface at startup),
+// NOT from a per-call cairo_text_extents — that was the residual edge bug:
+// paint measured on the window surface, hit on a 1x1 scratch surface, and the
+// integer width diverged by 1px. Chip text is ASCII-only, so glyph_count is the
+// exact glyph count and glyph_count * monospace_advance() is the exact advance,
+// identical at paint and hit, with zero surface dependence.
 //
 // Inputs:
-//   text_left  - the glyph paint x (where cairo_move_to places the text cursor),
-//                already snapped to the marker's integer pixel column by the
-//                caller. The chip's left edge is kFlagPadXPx to the LEFT of this.
-//   advance    - the glyph run's cairo x_advance, measured ONCE by the caller on
-//                whatever cr it is using, and threaded in. Never re-measured by a
-//                consumer on a second surface.
-//   baseline_y - the text baseline y the caller has already solved for its row
-//                (Lower row for regular/phase-reset chips, Upper for trim). The
-//                box top is baseline_y - monospace_row_baseline_offset(); the
-//                height is the full monospace_row_h() slot (Defect B geometry).
+//   text_left   - glyph paint x, already snapped to the marker's integer pixel
+//                 column by the caller. Chip left edge = round(text_left); the
+//                 kFlagPadXPx left inner pad is folded into where the caller
+//                 places text_left vs. the glyph origin (see consumers).
+//   glyph_count - number of glyphs in the chip's text (== text.length() for the
+//                 ASCII chip strings). Width = round(count*advance + 2*pad).
+//   baseline_y  - the text baseline y the caller solved for its row (Lower row
+//                 for regular/phase-reset chips, Upper for trim). The box top is
+//                 baseline_y - monospace_row_baseline_offset(); the height is
+//                 the full monospace_row_h() slot (Defect B geometry).
 //
-// Returns the integer GuiRect [x, y, w, h]:
-//   x = round(text_left)
-//   y = round(baseline_y - monospace_row_baseline_offset())
-//   w = round(advance + 2*kFlagPadXPx)
-//   h = monospace_row_h()
-//
-// Rounding happens HERE, once. Consumers use the returned ints directly — no
-// consumer re-rounds or recomputes any edge.
-inline GuiRect flag_chip_rect(double text_left, double advance,
+// Returns the integer GuiRect [x, y, w, h]; rounding happens here, once.
+// Consumers use the returned ints directly — no consumer re-rounds or
+// recomputes any edge.
+inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
                               double baseline_y) {
     const double pad = kFlagPadXPx;
+    const double advance =
+        static_cast<double>(glyph_count) * monospace_advance();
     GuiRect r;
     r.x = static_cast<int>(std::round(text_left));
     r.y = static_cast<int>(std::round(

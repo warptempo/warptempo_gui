@@ -205,14 +205,6 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     }
     const bool use_tmap = !target_timemap.empty();
 
-    cairo_surface_t* scratch_s = cairo_image_surface_create(
-        CAIRO_FORMAT_ARGB32, 1, 1);
-    cairo_t* scratch_cr = cairo_create(scratch_s);
-    cairo_select_font_face(scratch_cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(scratch_cr, kFlagFontSize);
-
     const int kMiss = std::numeric_limits<int>::max();
 
     // Per-bound chip rect, computed exactly as render_trim_flags paints it via
@@ -224,7 +216,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // horizontal containment is tested here. Returns the bound's distance from
     // the press to its column when the press is inside the chip (for the
     // both-hit tie-break), else kMiss.
-    auto chip_dist = [&](double seconds, bool present, const char* glyph) -> int {
+    auto chip_dist = [&](double seconds, bool present,
+                         const char* /*glyph*/) -> int {
         if (!present) return kMiss;
         double ms = std::nearbyint(seconds * sr_d);
         if (use_tmap) {
@@ -238,13 +231,14 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         const double x_raw = (ms - vp) / spp;
         const double text_left =
             static_cast<double>(top.x) + std::round(x_raw);
-        cairo_text_extents_t ext;
-        cairo_text_extents(scratch_cr, glyph, &ext);
-        // Horizontal chip rect from the single source of truth. baseline_y is
-        // irrelevant to the x/w this test uses (the vertical band was already
-        // checked via top_upper_row_area above), so pass 0.0 — only rx/rw are
-        // read.
-        const GuiRect cr_rect = flag_chip_rect(text_left, ext.x_advance, 0.0);
+        // Width from the cached monospace advance via the shared helper — no
+        // scratch-surface measurement (that was the residual edge drift: paint
+        // measured on the window surface, hit on a 1x1 scratch surface, and the
+        // integer width diverged by 1px). The glyph is one ASCII char ("b"/"e"),
+        // so the count is 1. baseline_y is irrelevant to the x/w this test uses
+        // (the vertical band was already checked via top_upper_row_area above),
+        // so pass 0.0 — only rx/rw are read.
+        const GuiRect cr_rect = flag_chip_rect(text_left, 1, 0.0);
         const int rx = cr_rect.x;
         const int rw = cr_rect.w;
         if (mouse_x < rx || mouse_x >= rx + rw) return kMiss;
@@ -253,9 +247,6 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     const int db = chip_dist(vs.trim_begin_seconds, vs.has_trim_begin, "b");
     const int de = chip_dist(vs.trim_end_seconds,   vs.has_trim_end,   "e");
-
-    cairo_destroy(scratch_cr);
-    cairo_surface_destroy(scratch_s);
 
     // Overlapping chips: the renderer elides the right one, but guard the tie
     // by preferring the bound whose column is nearer the press, mirroring

@@ -703,7 +703,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     //    the chip rect measures).
     const double chip_text_left = editable_left - s.hl_pad;
     const GuiRect fr =
-        flag_chip_rect(chip_text_left, text_ext.x_advance, s.baseline_y);
+        flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
     if (fr.w > 0 && fr.h > 0) {
         cairo_save(cr);
         cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
@@ -1063,9 +1063,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
                                sample_rate, timemap, drag_overlay,
         std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
-            const std::string& /*text*/, const cairo_text_extents_t& ext) {
+            const std::string& text, const cairo_text_extents_t& /*ext*/) {
             const GuiRect cr_rect =
-                flag_chip_rect(text_left, ext.x_advance, baseline_y);
+                flag_chip_rect(text_left, text.length(), baseline_y);
             FlagHitRect r;
             r.marker_index = i;
             r.x = cr_rect.x;
