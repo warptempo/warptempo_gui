@@ -45,7 +45,6 @@ class GuiWaveformWorker;
 // anonymous namespace.
 
 constexpr int      kProgressBarHeight        = 4;
-constexpr int      kChannelGapPx             = 2;
 // kFlagFontSize lives in render.h so render.cpp can reach it without
 // pulling paint_handler.h into the lower-layer include graph.
 

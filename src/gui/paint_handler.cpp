@@ -56,17 +56,31 @@ void render_waveform_to_cache_surface(
     cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
     cairo_paint(ccr);
     cairo_restore(ccr);
-    const GuiRect cache_area{0, 0, area_w, area_h};
+    // Samples draw into an inset sub-rect of the full-height cache surface:
+    // kWaveformInsetPx clear at top and bottom (the top band holds the cursor
+    // triangle; the bottom mirrors it so the waveform is centered in its area).
+    // The surface itself is still area_w x area_h and is blitted at area.y, so
+    // the cache fingerprint, stem cache, and blit are unaffected — the inset is
+    // a property of sample drawing only.
+    const int inset_h = area_h - 2 * kWaveformInsetPx;
+    if (inset_h <= 0) { cairo_destroy(ccr); return; }
+    const GuiRect cache_area{0, kWaveformInsetPx, area_w, inset_h};
     if (channel_count == 1) {
         render_waveform(ccr, cache_area, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
                         timemap_or_null);
     } else if (channel_count >= 2) {
-        const int ch_h = (cache_area.h - kChannelGapPx) / 2;
-        const GuiRect ch0{0, 0, cache_area.w, ch_h};
-        const GuiRect ch1{0, ch_h + kChannelGapPx,
-                          cache_area.w, ch_h};
+        // Channel gap removed (kChannelGapPx deleted): the 1972 Krips material
+        // is effectively never unity, so the two channels' inner excursions do
+        // not visually collide at the shared midline; a plain halve of the
+        // inset region is clean. The two channels share the single inset band
+        // (inset first, then split), so 10px stays clear above the top channel
+        // and below the bottom channel, with the channels meeting at the inset
+        // region's vertical center.
+        const int ch_h = cache_area.h / 2;
+        const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
+        const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
         render_waveform(ccr, ch0, audio, 0,
                         vp_start, vp_end,
                         kWaveform,

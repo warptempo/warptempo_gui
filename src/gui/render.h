@@ -68,35 +68,38 @@ constexpr double kFlagInnerPadPx = 4.0;
 constexpr double kVPadExtraPx = 1.0;
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
-// the waveform area's top edge up to the flag rect's painted bottom edge.
-// The flag rect sits in overlay space above the waveform; this is the height
-// of its footprint there. The marker stem emanates from the rect's bottom
-// edge (via flag_chip_bottom_y) and runs down to the waveform bottom, so the
-// chip and stem read as one continuous unit. Consumed by render_flags'
-// baseline computation and by the stem renderers (both through
-// flag_chip_bottom_y), by the stem-cache overhang (via kStemAboveWaveformPx,
-// defined off this value), and by the iter/BPM popups in main.cpp which
-// mirror the flag rect's vertical position. Doubles as the waveform-to-flag-
-// row gap; expected to become Brief F's waveform-side gap constant when the
-// strip layout is inverted to a fixed-pixel grid.
-constexpr double kFlagBottomLiftPx = 10.0;
+// the waveform area's top edge up to the regular flag rect's painted bottom
+// edge. Now 0 — the chip bottom is flush with the waveform area's top edge
+// (flag_chip_bottom_y(area, Lower) returns area.y exactly), so the regular
+// marker stem begins at the chip bottom = area top and runs straight down
+// with no overhang above the area. The constant survives as the lower-row
+// term of the stem-cache overhang (via kStemAboveWaveformPx, now 0) and as
+// the flag_chip_bottom_y Lower anchor (now identity); it is still consumed by
+// render_flags' baseline computation, the stem renderers, and the iter/BPM
+// popups in main.cpp that mirror the flag rect's vertical position. The
+// waveform-internal inset for the cursor triangle is a SEPARATE constant
+// introduced in geom-cursor, not a rename of this one.
+constexpr double kFlagBottomLiftPx = 0.0;
 
 // The lower-row component of the stem-cache overhang: the distance from the
-// waveform top up to the regular (lower-row) flag chip's bottom edge. The
-// stem geometry itself no longer originates here — stem tops derive from
-// flag_chip_bottom_y. After F.trim the full stem-cache overhang is the
-// TALLER trim value (see stem_cache_overhang_px, which adds one row + gap on
-// top of this), since trim stems reach up to the upper-row chip bottom and
-// share the same cache surface. Defined off kFlagBottomLiftPx so the
-// lower-row component tracks the one authored lift value.
+// waveform top up to the regular (lower-row) flag chip's bottom edge. Now 0
+// (defined off kFlagBottomLiftPx, which is 0): the lower-row stem no longer
+// overhangs above the waveform top — it begins at the chip bottom = area top.
+// The full stem-cache overhang is still the TALLER trim value (see
+// stem_cache_overhang_px, which adds one row + gap on top of this), since
+// trim stems reach up to the upper-row chip bottom and share the same cache
+// surface. Defined by derivation off kFlagBottomLiftPx so the lower-row
+// component tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
 // Brief F: fixed-pixel mirrored four-row strip grid. G is the single tunable
 // inter-row gap, shared between the two rows of each strip; it doubles as the
-// trim-flag-to-regular-flag distance consumed later by F.trim. One named
-// constant, one place to change it. kFlagBottomLiftPx (=10) is promoted to the
-// shared waveform-side AND outer (window-edge) gap.
-constexpr double kRowGapPx = 4.0;
+// trim-flag-to-regular-flag distance consumed by F.trim. One named constant,
+// one place to change it. Now 0 — the two rows of each strip touch, and the
+// waveform-side and outer (window-edge) gaps (both kFlagBottomLiftPx, also 0)
+// vanish, so rows and strips pack tight against each other and the window
+// edges.
+constexpr double kRowGapPx = 0.0;
 
 // Defensive window floor (the canonical XRandR minimum). Enforced two ways:
 // the Wayland set_min_size hint at toplevel creation, and an internal clamp in
@@ -105,6 +108,18 @@ constexpr double kRowGapPx = 4.0;
 // may clip at the floor, which is acceptable (nobody authors at 640x480).
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
+
+// Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
+// are confined to [area.y + kWaveformInsetPx, area.y + area.h - kWaveformInsetPx]
+// so the cursor triangle has a clear band to sit in at the top, and the
+// waveform is symmetric about its area center. MUST equal the height of
+// assets/playhead-cursor.png (19x10) — the triangle exactly fills the top band,
+// tip at the first sample row. If the asset height changes, change this to
+// match (and kPlayheadHalfPx for the width; see render.cpp). This is NOT the
+// old strip gap (kFlagBottomLiftPx, now 0) revived — it is a distinct
+// waveform-internal margin that happens to share the value 10 because that is
+// the triangle's height.
+constexpr int kWaveformInsetPx = 10;
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
 // offset (Liberation Mono 11pt). on_resize can fire before the first redraw
@@ -119,23 +134,24 @@ constexpr double kRowBaselineOffFallbackPx =
 int monospace_row_h();
 
 // Which strip row a chip's bottom edge sits at. Lower is the regular
-// warp/phase-reset flag row (kFlagBottomLiftPx above the waveform top);
-// Upper is the F.trim begin/end row, one row + one inter-row gap higher.
+// warp/phase-reset flag row (now flush with the waveform area top, since
+// kFlagBottomLiftPx is 0); Upper is the F.trim begin/end row, one row + one
+// inter-row gap higher.
 enum class ChipRow { Lower, Upper };
 
-// The flag chip's painted bottom edge for the current layout. The flag chip
-// sits in overlay space above the waveform with its bottom edge lifted
-// kFlagBottomLiftPx above the waveform top. This is the single source of
+// The flag chip's painted bottom edge for the current layout. With
+// kFlagBottomLiftPx now 0, the regular (Lower) chip's bottom edge is flush
+// with the waveform area top. This is the single source of
 // truth that both the flag baseline solve and the stem renderers
 // (render_marker_stems_impl, render_trim_stems, render_trim_flags) read: the
 // stem is an extension of the flag, so its top originates here and runs down
 // to the waveform bottom. Length is whatever connects the chip bottom to the
 // waveform bottom.
 //
-// `row` selects which strip row the chip caps. Lower reproduces the original
-// value exactly (regular flags/stems, no pixel drift). Upper sits one row +
-// one inter-row gap higher — the trim begin/end flags, whose stems are
-// therefore longer by that amount automatically.
+// `row` selects which strip row the chip caps. Lower returns the waveform
+// area top exactly (regular flags/stems are flush, kFlagBottomLiftPx == 0).
+// Upper sits one row + one inter-row gap higher — the trim begin/end flags,
+// whose stems are therefore longer by that amount automatically.
 inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
     const double lower =
         static_cast<double>(waveform_area.y) - kFlagBottomLiftPx;

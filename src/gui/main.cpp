@@ -77,7 +77,7 @@
 
 namespace {
 
-// X.7.8a: kProgressBarHeight, kChannelGapPx, kFlagFontSize, kTimestampPadX,
+// X.7.8a: kProgressBarHeight, kFlagFontSize, kTimestampPadX,
 // and kTabLetterGapPx now live in paint_handler.h so paint_handler.cpp can
 // reach them; the constants below are paint-handler-independent and stay
 // file-local.
@@ -154,10 +154,12 @@ constexpr int kPlayheadHalfPx = 9;
 // Brief F: fixed-pixel mirrored four-row grid. Top and bottom strips are equal
 // pixel height regardless of window size; the waveform flexes in the middle.
 // Each strip is two text rows of the cached row height monospace_row_h(),
-// separated by the inter-row gap kRowGapPx (G), with a kFlagBottomLiftPx (=10)
-// gap on the waveform side and an equal gap on the window-edge side (a true
-// mirror). The four row rects are the same formula with the y flipped about the
-// window midline: a bottom row's y is `h - <top row's y> - row_h`.
+// packed tight: the inter-row gap kRowGapPx (G), the waveform-side gap, and the
+// outer (window-edge) gap (both kFlagBottomLiftPx) are all 0, so strip_h is just
+// 2*row_h, the two rows touch, and the strips sit flush against the window edges
+// and the waveform area. The four row rects are the same formula with the y
+// flipped about the window midline: a bottom row's y is `h - <top row's y> -
+// row_h`.
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -167,7 +169,9 @@ static void clamp_dims(int& w, int& h) {
     if (h < kMinWindowHeightPx) h = kMinWindowHeightPx;
 }
 
-// outer_gap(10) + row_h + G + row_h + waveform_gap(10). Dimension-independent.
+// outer_gap(0) + row_h + G(0) + row_h + waveform_gap(0) = 2*row_h. All three
+// gaps are now zero; the form below keeps the derivation explicit so the gap
+// terms reappear if any constant is un-zeroed. Dimension-independent.
 int strip_h(const AppState&) {
     return 2 * monospace_row_h()
          + static_cast<int>(kRowGapPx)
@@ -194,11 +198,11 @@ GuiRect waveform_area(const AppState& a) {
     return GuiRect{0, sh, w, h - 2 * sh};
 }
 
-// Top strip rows, counted down from the window top: outer gap, top_upper_row
-// (reserved for F.trim's b/e flags — empty in F), gap G, top_lower_row (the
-// regular warp/phase-reset flag chips, whose bottom edge sits kFlagBottomLiftPx
-// above the waveform — exactly flag_chip_bottom_y, so flag/stem rendering is
-// unchanged).
+// Top strip rows, counted down from the window top with all gaps now zero:
+// top_upper_row starts flush at y=0 (the F.trim b/e flag row), top_lower_row
+// sits immediately below it (the regular warp/phase-reset flag chips), and the
+// waveform area begins immediately below that. The regular chip's bottom edge
+// is therefore flush with the waveform area top — exactly flag_chip_bottom_y.
 GuiRect top_upper_row_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);

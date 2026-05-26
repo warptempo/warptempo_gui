@@ -469,17 +469,25 @@ void render_playhead(cairo_t* cr,
     }
 
     // Inverted-triangle indicator: stamped from a hand-authored PNG mask so
-    // every pixel is explicit (no rasterizer ambiguity). Asset is 17×9 with
-    // the tip at column index 8 (image-local); integer division places that
-    // tip column at `area.x + col`. The bottom row sits one pixel above
-    // `area.y` so the stem stroke beginning at `area.y` is visually adjacent.
-    // Skipped for the scanner call (draw_triangle=false): the triangle
-    // belongs to the cursor exclusively under the split-playhead model.
+    // every pixel is explicit (no rasterizer ambiguity). Asset is 19x10 with
+    // the tip at column index 9 (image-local); integer division places that
+    // tip column at `area.x + col`. The triangle now sits INSIDE the top
+    // waveform inset band (kWaveformInsetPx tall, equal to the asset height):
+    // top row at area.y, tip (bottom row) at the first drawn sample row. The
+    // samples are inset by exactly the asset height in
+    // render_waveform_to_cache_surface, so the triangle's band and the
+    // sample-free band coincide. Skipped for the scanner call
+    // (draw_triangle=false): the triangle belongs to the cursor exclusively
+    // under the split-playhead model. The scanner line therefore reads as
+    // running ~kWaveformInsetPx longer than the cursor's, because the cursor's
+    // top band is visually occupied by the triangle while the scanner's is a
+    // bare line — both lines actually span the identical full area height; this
+    // is expected, not a defect.
     if (draw_triangle && triangle_surface) {
         const int img_w = cairo_image_surface_get_width(triangle_surface);
         const int img_h = cairo_image_surface_get_height(triangle_surface);
         const double dst_x = static_cast<double>(area.x + col - img_w / 2);
-        const double dst_y = static_cast<double>(area.y - img_h);
+        const double dst_y = static_cast<double>(area.y);
         cairo_rectangle(cr,
                         static_cast<double>(area.x),
                         dst_y,
