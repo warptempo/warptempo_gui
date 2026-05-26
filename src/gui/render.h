@@ -136,6 +136,9 @@ constexpr double kRowBaselineOffFallbackPx =
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
 int monospace_row_h();
+// Forward declaration: defined with its full doc comment below. Needed here
+// because flag_chip_rect (inline) reads it.
+double monospace_row_baseline_offset();
 
 // Which strip row a chip's bottom edge sits at. Lower is the regular
 // warp/phase-reset flag row (now flush with the waveform area top, since
@@ -163,6 +166,45 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
     return lower - (static_cast<double>(monospace_row_h()) + kRowGapPx);
 }
 
+// Single source of truth for a flag chip's painted/hit rectangle. ALL chip
+// types — regular warp flags, phase-reset flags, and trim b/e chips — derive
+// their fill rect AND their hit rect from this one function, so the two cannot
+// drift (the edge-click dead zone fixed in F-flaggeom came from five hand-
+// transcribed copies of this formula rounding independently and measuring the
+// glyph advance on different cairo surfaces).
+//
+// Inputs:
+//   text_left  - the glyph paint x (where cairo_move_to places the text cursor),
+//                already snapped to the marker's integer pixel column by the
+//                caller. The chip's left edge is kFlagPadXPx to the LEFT of this.
+//   advance    - the glyph run's cairo x_advance, measured ONCE by the caller on
+//                whatever cr it is using, and threaded in. Never re-measured by a
+//                consumer on a second surface.
+//   baseline_y - the text baseline y the caller has already solved for its row
+//                (Lower row for regular/phase-reset chips, Upper for trim). The
+//                box top is baseline_y - monospace_row_baseline_offset(); the
+//                height is the full monospace_row_h() slot (Defect B geometry).
+//
+// Returns the integer GuiRect [x, y, w, h]:
+//   x = round(text_left)
+//   y = round(baseline_y - monospace_row_baseline_offset())
+//   w = round(advance + 2*kFlagPadXPx)
+//   h = monospace_row_h()
+//
+// Rounding happens HERE, once. Consumers use the returned ints directly — no
+// consumer re-rounds or recomputes any edge.
+inline GuiRect flag_chip_rect(double text_left, double advance,
+                              double baseline_y) {
+    const double pad = kFlagPadXPx;
+    GuiRect r;
+    r.x = static_cast<int>(std::round(text_left));
+    r.y = static_cast<int>(std::round(
+              baseline_y - monospace_row_baseline_offset()));
+    r.w = static_cast<int>(std::round(advance + 2.0 * pad));
+    r.h = monospace_row_h();
+    return r;
+}
+
 // Stem-cache surface overhang above the waveform top, in pixels. Sized for
 // the TALLER trim stem (whose top reaches the upper-row chip bottom), so the
 // single shared stem-cache surface holds both marker stems (originating at
@@ -184,42 +226,6 @@ inline int stem_cache_overhang_px() {
 // the compiler folds it to a constant at compile time.
 constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
 
-// Brief Y.4 sub-bug A: paints an opaque kBackground-colored rect under
-// flag and iter popup text glyphs so the editor's growing pending text
-// occludes neighbor text rather than blending with it. Without this fill,
-// static flag/popup text paints directly on the canvas, and a widening
-// edit shares pixels with adjacent flags' glyphs (both sets are visible
-// blended). The fill matches the strip-clear color exactly, so in every
-// non-edit state nothing changes visually; during an edit it does the
-// occlusion work once pending text widens past the original flag width.
-//
-// Drawn before any outline (selection purple, editor parse-fail red) and
-// before the text glyphs.
-//
-// `text_left` is the actual text painting x — i.e., where cairo_move_to
-// would place the cursor for cairo_show_text. The helper subtracts
-// kFlagPadXPx itself to derive the fill rect's left edge. `bg_top`
-// and `bg_height` reuse the existing outline/highlight rect math at the
-// caller, so the fill aligns with the outline that gets painted on top.
-inline void render_flag_text_bg_fill(cairo_t* cr,
-                                     double text_left,
-                                     double text_x_advance,
-                                     double bg_top,
-                                     double bg_height,
-                                     GuiColor fill) {
-    const double pad = kFlagPadXPx;
-    const double x = std::round(text_left - pad);
-    const double y = std::round(bg_top);
-    const double w = std::round(text_x_advance + 2.0 * pad);
-    const double h = std::round(bg_height);
-    if (w <= 0.0 || h <= 0.0) return;
-    cairo_save(cr);
-    cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-    cairo_rectangle(cr, x, y, w, h);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
 // Brief B.2 editor text-box primitive. Draws the full editable-text-box
 // anatomy shared by the flag-payload editor (top strip) and the settings
 // editor (bottom strip), in paint order: solid fill behind the editable
@@ -231,8 +237,8 @@ inline void render_flag_text_bg_fill(cairo_t* cr,
 // Geometry: `anchor_x` is the left edge of the prefix (or of the editable
 // text when `prefix` is empty). The editable region paints at
 // `anchor_x + prefix_advance`; the solid fill covers only the editable
-// region (the prefix, if any, sits to its left on the canvas), via
-// render_flag_text_bg_fill. Defect B (F.trim.3): the box height is the cached
+// region (the prefix, if any, sits to its left on the canvas), via the
+// shared flag_chip_rect helper. Defect B (F.trim.3): the box height is the cached
 // monospace_row_h() (the same metric the strip rows use) and the top is
 // `baseline_y - monospace_row_baseline_offset()`, so the box fills its full
 // row slot — callers solve baseline_y so the box bottom lands at the slot

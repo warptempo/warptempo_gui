@@ -694,9 +694,23 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     const double bg_top = s.baseline_y - monospace_row_baseline_offset();
     const double bg_h   = static_cast<double>(monospace_row_h());
 
-    // 1. Solid fill behind the editable region only.
-    render_flag_text_bg_fill(cr, editable_left, text_ext.x_advance,
-                             bg_top, bg_h, s.fill);
+    // 1. Solid fill behind the editable region, from the single source of
+    //    truth (flag_chip_rect), so the painted chip and the hit rect are the
+    //    same rectangle. text_left is the glyph paint x = editable_left -
+    //    hl_pad (the renderers pass anchor_x = text_left + kFlagPadXPx; prefix-
+    //    bearing editors have their editable text begin past the prefix, and
+    //    the fill still covers exactly the editable glyph run, which is what
+    //    the chip rect measures).
+    const double chip_text_left = editable_left - s.hl_pad;
+    const GuiRect fr =
+        flag_chip_rect(chip_text_left, text_ext.x_advance, s.baseline_y);
+    if (fr.w > 0 && fr.h > 0) {
+        cairo_save(cr);
+        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
+        cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
 
     // 2. Optional static prefix, drawn on the canvas to the left of the box.
     if (!s.prefix.empty()) {
@@ -1040,25 +1054,24 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     cairo_set_font_size(cr, font_size);
 
     // Mirror render_flags: uniform y/height for the hit rect so clicks
-    // register consistently across flag types. Left edge + width match the
-    // corrected visual highlight box so clicks anywhere inside the painted
-    // background register on the marker. Defect B (F.trim.3): the y/height use
-    // the same font-metric box geometry as render_editor_text_box (full
-    // monospace_row_h() slot), so the hit band tracks the painted chip exactly.
-    const double hl_pad = kFlagPadXPx;
-
+    // register consistently across flag types. The rect comes from the shared
+    // flag_chip_rect helper, the same one render_editor_text_box fills, so the
+    // painted chip and this hit rect are the same rectangle by construction
+    // (Defect B / F-flaggeom).
     iterate_visible_flags_impl(cr, top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
                                sample_rate, timemap, drag_overlay,
         std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
             const std::string& /*text*/, const cairo_text_extents_t& ext) {
+            const GuiRect cr_rect =
+                flag_chip_rect(text_left, ext.x_advance, baseline_y);
             FlagHitRect r;
             r.marker_index = i;
-            r.x = std::round(text_left);
-            r.y = baseline_y - monospace_row_baseline_offset();
-            r.w = std::round(ext.x_advance + 2.0 * hl_pad);
-            r.h = static_cast<double>(monospace_row_h());
+            r.x = cr_rect.x;
+            r.y = cr_rect.y;
+            r.w = cr_rect.w;
+            r.h = cr_rect.h;
             out.push_back(r);
         });
 
