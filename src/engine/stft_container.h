@@ -6,12 +6,6 @@
 #include <string>
 #include <cmath>
 #include <cstdint>
-// TEMP throwaway diagnostic: force the PGHI orphan scan on so the standard
-// build carries it. Revert this whole commit once the counts are in.
-#define WT_PGHI_ORPHAN_DEBUG 1
-#ifdef WT_PGHI_ORPHAN_DEBUG
-#include <cstdio>
-#endif
 #include <fftw3.h>
 #include <sndfile.h>
 
@@ -553,60 +547,6 @@ struct AudioSTFT {
                 }
             }
         }
-        // DEBUG-ONLY orphan detection (read-only; no phase is modified). A bin in
-        // set I (done_scratch[k] was set to 0 to mark it in I; it becomes 1 once
-        // assigned) that is still 0 here was never reached by the heap — an onset-
-        // coverage orphan with a stale theta. Counted, never repaired, behind a
-        // compile-time gate so the production hot path is byte-identical and
-        // zero-cost when off.
-        #ifdef WT_PGHI_ORPHAN_DEBUG
-        {
-            // Process-lifetime accumulators. The dtor prints a guaranteed final
-            // summary at process exit; the periodic print below surfaces the
-            // running totals to the terminal without waiting for exit (there is
-            // no clean end-of-render hook in this header).
-            struct OrphanStats {
-                long long heap_frames   = 0;
-                long long orphan_frames = 0;
-                int       max_per_frame = 0;
-                long long total_orphans = 0;
-                ~OrphanStats() {
-                    std::fprintf(stderr,
-                        "[pghi-debug] FINAL heap frames=%lld orphan frames=%lld "
-                        "max/frame=%d total orphans=%lld\n",
-                        heap_frames, orphan_frames, max_per_frame, total_orphans);
-                }
-            };
-            static OrphanStats stats;
-            static bool announced = false;
-            if (!announced) {
-                // Proves the heap actually ran. If this line never appears, the
-                // render resolved to all-peak/pass and any "0 orphans" is void.
-                std::fprintf(stderr, "[pghi-debug] heap_phase active (N=%d)\n", N);
-                announced = true;
-            }
-            int orphans = 0;
-            for (int k = 0; k < K; ++k) if (done_scratch[k] == 0) ++orphans;
-            ++stats.heap_frames;
-            if (orphans > 0) {
-                ++stats.orphan_frames;
-                stats.total_orphans += orphans;
-                if (orphans > stats.max_per_frame) stats.max_per_frame = orphans;
-                std::fprintf(stderr,
-                    "[pghi-orphan] frame had %d unassigned significant bin(s)\n",
-                    orphans);
-            }
-            // Periodic running summary every 100 heap frames, AND on every orphan
-            // frame, so the totals reach the terminal even if orphans never fire.
-            if (orphans > 0 || (stats.heap_frames % 100) == 0) {
-                std::fprintf(stderr,
-                    "[pghi-debug] heap frames=%lld orphan frames=%lld "
-                    "max/frame=%d total orphans=%lld\n",
-                    stats.heap_frames, stats.orphan_frames,
-                    stats.max_per_frame, stats.total_orphans);
-            }
-        }
-        #endif
     }
 
     // Synthesis: populate ifft_in from magnitude M and phase theta, applying
