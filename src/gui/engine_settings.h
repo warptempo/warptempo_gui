@@ -12,7 +12,7 @@ struct EngineSettings {
     std::string output_format            = "wav";
     double      scale                    = 1.0;
     int         bpm                      = 0;     // informational only; unused by engine/GUI
-    int         N                        = 2560;
+    int         N                        = 4096;
     int         fftw_threads             = 16;
     bool        limiter_enabled_on_render = true;
     double      phase_reset_offset_hops  = 1.0;

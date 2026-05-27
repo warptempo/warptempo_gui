@@ -144,12 +144,13 @@ struct AudioSTFT {
     // Source metadata
     SF_INFO src_info{};
     SNDFILE* src_snd = nullptr;
-    // Default N=2560 (2^9*5): ~40 Hz practical bass floor for this
-    // material gives 2.32 cycles/window, clearing the ~2-cycle phase-vocoder
-    // coherence floor; phase resets cover quiet-section onsets. 2^9*5 is the
-    // most FFTW-efficient factorization in the viable range. Must stay
-    // divisible by 4 (R_s = N/4).
-    int N = 2560;
+    // Default N=4096: the dual-model split makes the larger window viable.
+    // heap (PGHI) carries dense/tutti material, where the finer frequency
+    // resolution helps; peak (Laroche-Dolson) owns exposed/transient material
+    // per phase-reset segment, where a large-N L-D window would smear. Under
+    // L-D alone N had to stay at 2560 (2^9*5) to keep attacks/highs coherent.
+    // Must stay divisible by 4 (R_s = N/4); 4096 = 2^12 is FFTW-clean.
+    int N = 4096;
     int R_s = 0;
     int channels = 0;
     double nyquist = 0.0;
