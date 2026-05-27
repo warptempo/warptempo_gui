@@ -8,26 +8,32 @@ Build requires a C++17 toolchain (GCC 9+ or Clang 10+), CMake 3.10+, pkg-config,
 
 Arch Linux:
 
-    sudo pacman -S base-devel cmake pkgconf \
-        cairo fftw libsndfile \
-        wayland wayland-protocols libxkbcommon \
-        pipewire-jack
+```bash
+sudo pacman -S base-devel cmake pkgconf \
+    cairo fftw libsndfile \
+    wayland wayland-protocols libxkbcommon \
+    pipewire-jack
+```
 
 Debian / Ubuntu:
 
-    sudo apt install build-essential cmake pkg-config \
-        libcairo2-dev libfftw3-dev libsndfile1-dev \
-        libwayland-dev wayland-protocols libxkbcommon-dev \
-        libjack-jackd2-dev
+```bash
+sudo apt install build-essential cmake pkg-config \
+    libcairo2-dev libfftw3-dev libsndfile1-dev \
+    libwayland-dev wayland-protocols libxkbcommon-dev \
+    libjack-jackd2-dev
+```
 
 The libwayland-dev package on Debian ships wayland-scanner and the client / cursor headers in one piece.
 
 Fedora:
 
-    sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config \
-        cairo-devel fftw-devel libsndfile-devel \
-        wayland-devel wayland-protocols-devel libxkbcommon-devel \
-        pipewire-jack-audio-connection-kit-devel
+```bash
+sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config \
+    cairo-devel fftw-devel libsndfile-devel \
+    wayland-devel wayland-protocols-devel libxkbcommon-devel \
+    pipewire-jack-audio-connection-kit-devel
+```
 
 A Wayland compositor is required at runtime — there is no X11 backend. Tested compositors include labwc, sway, and Hyprland; GNOME and KDE Wayland sessions should work but are not regularly exercised.
 
@@ -35,30 +41,38 @@ A Wayland compositor is required at runtime — there is no X11 backend. Tested 
 
 Standard out-of-tree CMake build from the repository root:
 
-    cmake -B build -S .
-    cmake --build build -j$(nproc)
+```bash
+cmake -B build -S .
+cmake --build build -j$(nproc)
+```
 
 This produces a single executable at `build/warptempo_gui`. The engine sources under `src/engine/` link into the same target — there is no separate engine library. `-O3 -march=native` is always on for GCC and Clang, so the binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
 
 There is no `make install` target. The binary is self-contained: copy it to anywhere on `$PATH` (typically `~/.local/bin/` or `/usr/local/bin/`) to make it available system-wide.
 
-    install -Dm755 build/warptempo_gui ~/.local/bin/warptempo_gui
+```bash
+install -Dm755 build/warptempo_gui ~/.local/bin/warptempo_gui
+```
 
-A `.desktop` file is shipped in `packaging/warptempo_gui.desktop`. To register warptempo_gui with the system's application launcher and as a handler for audio files, install it to the user-level application directory and refresh the desktop database:
+A `.desktop` file is shipped in `packaging/warptempo_gui.desktop`. To register `warptempo_gui` with the system's application launcher and as a handler for audio files, install it to the user-level application directory and refresh the desktop database:
 
-    install -Dm644 packaging/warptempo_gui.desktop \
-        ~/.local/share/applications/warptempo_gui.desktop
-    update-desktop-database ~/.local/share/applications
+```bash
+install -Dm644 packaging/warptempo_gui.desktop \
+    ~/.local/share/applications/warptempo_gui.desktop
+update-desktop-database ~/.local/share/applications
+```
 
 The shipped `.desktop` file uses the freedesktop `audio-x-generic` icon name, which resolves to whatever the user's active icon theme provides — no icon file is bundled. Replace the `Icon=` line with a different freedesktop name or an absolute path to a custom SVG to override.
 
 ## First run
 
-warptempo_gui takes a single argument: the path to a source audio file (typically `.wav` or `.flac`, though anything libsndfile reads will load). Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename.
+`warptempo_gui` takes a single argument: the path to a source audio file (typically `.wav` or `.flac`, though anything libsndfile reads will load). Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename.
 
-    warptempo_gui "path/to/source.wav"
+```bash
+warptempo_gui "path/to/source.wav"
+```
 
-On launch, warptempo_gui opens a window, reads any existing `.warpmarkers`, `.phaseresetmarkers`, and `.settings` sidecar files for the given audio file, and presents the source waveform across the full window width. With no sidecar files present, the window opens with a single warp marker at frame zero (the immovable anchor) and no phase reset markers. With sidecar files present, the prior session state is restored verbatim — viewport, zoom, playhead, active view selectors, and all marker positions and flags.
+On launch, `warptempo_gui` opens a window, reads any existing `.warpmarkers`, `.phaseresetmarkers`, and `.settings` sidecar files for the given audio file, and presents the source waveform across the full window width. With no sidecar files present, the window opens with a single warp marker at frame zero (the immovable anchor) and no phase reset markers. With sidecar files present, the prior session state is restored verbatim — viewport, zoom, playhead, active view selectors, and all marker positions and flags.
 
 The examples directory in the repository ships three reference movements with complete sidecar files. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the recommended first load — it exercises every form and syntax used in the project. The audio file itself is not included (the corpus is commercially licensed); the user supplies the source recording and places it in the example directory under the basename the sidecar files expect.
 
@@ -68,7 +82,9 @@ The conceptual model and hotkey reference are in the sections below.
 
 ### Engine and timemap
 
-warptempo_gui drives a dual-model phase vocoder: Laroche-Dolson identity phase-locking carries exposed/transient material per phase-reset segment, while PGHI carries dense/tutti material. FFT size N defaults to 4096 and is user-configurable through settings (any value divisible by 4 in the range 256 to 8192); the synthesis hop R_s is derived as N/4 (75% overlap) and is not independently settable. The 4096 default became viable with the dual-model split: heap (PGHI) takes the dense/tutti passages, where the finer frequency resolution of the larger window helps, while peak (Laroche-Dolson) owns the exposed/transient material, where a large-N L-D window would smear. Under L-D alone N had to stay at 2560 (2⁹·5) to keep attacks and highs coherent. Larger N gives fuller bass and finer resolution at the cost of more transient smearing under L-D; smaller N is crisper but thins the low end. The engine inherits the source recording's sample rate — 44100 Hz for the Krips reference material this project was built around. The phase-locking keeps bins coherent within each frame so steady-state content — held strings, sustained winds, room tone — stretches without smearing into a chorused or phasey artifact.
+`warptempo_gui` drives a phase vocoder. Internally it is a *dual-model* phase vocoder: the historical baseline is Laroche-Dolson identity phase-locking (peak), and the second model is Prusa-Holighaus phase-gradient heap integration (heap). Each phase-reset segment runs under one model or the other; the operator tags the choice on the phase-reset marker that opens the segment, and a third value, `pass`, inherits the previous owning marker's mode. The two models have complementary failure modes — peak smears mid- and high-frequency content in a steady-state way that takes some perceptual brightness off the output; heap preserves that brightness but introduces a vibratory instability on material that lacks dense articulation to mask it (exposed sustained legato, exposed tremolo). The per-segment dispatch lets each be applied only where the other is unacceptable. The engineering description of the dual-model architecture, including the diagnostic and the symmetry principle that connects the two phase-derivative axes, is in `docs/warptempo_dual_model_paper.md`.
+
+FFT size `N` defaults to 4096 and is user-configurable through settings (any value divisible by 4 in the range 256 to 8192); the synthesis hop `R_s` is derived as `N/4` (75% overlap) and is not independently settable. The `N=4096` default is what makes the dual model practical: under peak alone, a window this large smears transients and high-frequency detail. Once heap carries the dense material (where the larger window's finer frequency resolution is an asset rather than a liability) and peak is retained per-segment for the exposed and transient material, `N=4096` proves flexible enough to accommodate the vast majority of real-world material. The orchestral demonstration material is the calibration target precisely because it is the most artifact-revealing genre for this class of algorithm — exposed lines and natural-acoustic recording give artifacts the most audible room — so settings that produce transparent output there have headroom for genres with denser masking (rock, pop, electronic dance music) where the author's producer practice has not observed the technique to fail. The two decisions — model split and window size — are not independent; the split is the precondition for the size. The engine inherits the source recording's sample rate — 44100 Hz for the Krips reference material this project was built around. Per-frame phase correction keeps bins coherent within each frame so steady-state content — held strings, sustained winds, room tone — stretches without smearing into a chorused or phasey artifact.
 
 Variable-rate time-stretching with user-placed warp markers exists in other tools — DAWs that ship warp-marker editing on top of their bundled time-stretch algorithm have offered this for years. What separates this project is per-marker tempo locking through label definitions and references. A marker can declare a named label; a later marker can reference that label by name; the two markers and every other reference to the same label render at the same effective tempo, and editing the def's tempo updates every ref that cites it. The mechanism is described in the warp marker model section below. The use case it was built around is the sonata-form exposition/recapitulation relationship in classical orchestral repertoire, where the same musical material returns multiple times across a movement and should hold a coherent tempo relationship across all occurrences regardless of how the surrounding material is edited.
 
@@ -82,11 +98,15 @@ The first pair, **source vs target**, selects the audio domain of the waveform u
 
 The second pair, **warp vs phase reset**, selects which marker collection is visible and edited. Warp markers (W) drive the timemap. Phase reset markers (P) protect transients. The two collections are stored, authored, and rendered independently; toggling between them swaps which collection the marker hotkeys operate on but changes nothing else. Authoring proceeds in warp view first, since phase resets have no useful position until the timemap exists.
 
-Beyond the data-model difference, the two collections want different placement discipline. Warp markers benefit from a lead-in: rather than landing exactly on a transient, place the marker slightly earlier, in the fading tail of the previous material. The lead-in matters most for label-bearing markers and for markers adjacent to label-bearing ones, where the tempo precision the label mechanism enforces only pays off if the underlying timing is itself precise. It also matters for quiet, slow, or legato onsets where the acoustic event itself has no sharp attack to pin to — pinning against the louder fade of the prior note is more reliable than guessing where the quiet onset begins. The A/B tab pair (described below) is the natural way to set lead-ins precisely, matching the lead-up across paired sections. Phase reset markers are the opposite: they want approximate timing, placed close to the transient itself. The `phase_reset_offset_hops` engine setting (default `1`) gives the engine a small lead-in of one synthesis hop — about 14.5 milliseconds at the default N — which keeps the hop crossfade from smearing the reset across the transient. Phase resets are also placed only where loud transient content provides masking; quiet, exposed passages should carry one phase reset at their start and nothing else, since a reset during exposed material has nothing to hide behind.
+Beyond the data-model difference, the two collections want different placement discipline. Warp markers benefit from a lead-in: rather than landing exactly on a transient, place the marker slightly earlier, in the fading tail of the previous material. The lead-in matters most for label-bearing markers and for markers adjacent to label-bearing ones, where the tempo precision the label mechanism enforces only pays off if the underlying timing is itself precise. It also matters for quiet, slow, or legato onsets where the acoustic event itself has no sharp attack to pin to — pinning against the louder fade of the prior note is more reliable than guessing where the quiet onset begins. The A/B tab pair (described below) is the natural way to set lead-ins precisely, matching the lead-up across paired sections. Phase reset markers are the opposite: they want approximate timing, placed close to the transient itself. The `phase_reset_offset_hops` engine setting (default `1`) gives the engine a small lead-in of one synthesis hop — about 23.2 milliseconds at the default `N=4096` and 44100 Hz — which keeps the hop crossfade from smearing the reset across the transient. Phase resets are also placed only where loud transient content provides masking; quiet, exposed passages should carry one phase reset at their start and nothing else, since a reset during exposed material has nothing to hide behind.
+
+Each phase-reset marker also carries a **mode** — `peak`, `heap`, or `pass` — that selects which phase-propagation model runs for the segment of audio that begins at that marker. Peak is the safe default and produces a steady, listenable result on any material at the cost of some perceptual dullness; heap restores upper-band life and the sense of impact at climaxes, but is only safe on material with dense articulation to mask its vibratory failure mode. The general rule is: leave quiet material at peak; loud articulated material (dense tutti, the exposition close) can be tagged heap; loud sustained material (legato or tremolo whether loud or soft) stays on peak. `pass` inherits the previous owning marker's mode and mirrors the way `pass` warp markers inherit tempo — useful when a region's mode is set once and recapitulations should track it without re-tagging. The mode token is edited in P-view by clicking the flag and typing the new value.
 
 The third pair, **tab A vs tab B**, selects between two snapshots of viewport, zoom, playhead, trim region, and selection. Marker stores and engine settings are shared across both tabs; only navigation state differs. The two-tab layout gets used throughout authoring, not just for aligning sections that exist already. Repeated phrases within a single passage benefit from label-locked tempos, and laying those labels down reliably means parking one tab at the first occurrence and the other at the second, then walking the lead-ins forward together to confirm the matching reference point. The same pattern applies at every scale — phrase repeats, sectional repeats, and the exposition-recapitulation relationship a sonata movement turns on. The second tab earns its place from the first repeated phrase onward.
 
 ### Warp marker model
+
+A mandatory warp marker is present at the file's first frame, carrying tempo `1.00` by default. The classical phase-vocoder use case — one constant stretch ratio for the whole file — requires no further warp-marker authoring: the global stretch ratio is set entirely through the settings `scale` field (six-decimal precision), and the timemap remains a single constant. Warp markers as an authoring surface come into play only when the operator wants phrase-level tempo variation. The model below describes that authoring surface.
 
 Each warp marker carries three independent pieces of state.
 
@@ -98,7 +118,7 @@ Each warp marker carries three independent pieces of state.
 
 An owning marker's tempo is a base value times a scale. The base value is two decimals in the range `0.01` to `9.99` and expresses the headline stretch ratio relative to the source recording — `1.00` is no stretch, `1.05` is 5% faster, `0.95` is 5% slower. The base value's precision is deliberately coarse; the user authors at the resolution they would set a metronome, not finer. The scale is a separate four-decimal multiplier defaulting to `1.0000`. The intended use is fine-tuning a marker's effective tempo to approximate a neighboring section's effective tempo when that neighbor uses a `label_ref` — the user reads off the neighbor's resolved `base*scale` from its hover popup and applies a matching scale to the marker being authored. The user can use scale for anything else they want; there are no enforced rules. The reference example in `examples/550 - 1/` shows both fields in use across a complete movement.
 
-Phase reset markers carry only a position and a disabled flag. They have no tempo, no labels, no scale. The engine concern they parameterize is a single bit ("reset phase here") and the marker's data model reflects that. The small per-marker lead-in the engine applies before each reset is set globally through `phase_reset_offset_hops` (default `1`, one synthesis hop), not per-marker.
+Phase reset markers carry three pieces of state: a position, a disabled flag, and a mode (`peak` / `heap` / `pass`, described in the View axes section above). They have no tempo, no labels, no scale. The engine concerns they parameterize are *which* phase-propagation model runs and *where to reset* — both decisions local to the segment opening at that marker. The small per-marker lead-in the engine applies before each reset is set globally through `phase_reset_offset_hops` (default `1`, one synthesis hop), not per-marker.
 
 ## Hotkey reference
 
