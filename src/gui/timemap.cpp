@@ -119,14 +119,12 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     // Trim range comes from .settings (TimemapBuildInput::trim_*), no
     // longer from per-marker flags. The post-pass below filters timemap
     // segments by source frame against this range.
-    const bool   has_begin = in.has_trim_begin;
+    // A begin of <= 0 means "start at the start", identical to no begin
+    // trim, so normalize it away here rather than treating it as an error.
+    const bool   has_begin = in.has_trim_begin && in.trim_begin_sec > 0.0;
     const bool   has_end   = in.has_trim_end;
     const double begin_sec = in.trim_begin_sec;
     const double end_sec   = in.trim_end_sec;
-    if (has_begin && begin_sec <= 0.0) {
-        std::cerr << "warptempo_gui: timemap error: begin time cannot be 00:00.000\n";
-        return false;
-    }
 
     // Pass 1: accumulate per-label deltas so forward-declared references
     // receive the correct duration when encountered in Pass 2.

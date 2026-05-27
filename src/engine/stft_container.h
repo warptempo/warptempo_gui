@@ -429,15 +429,31 @@ struct AudioSTFT {
 
         // 2b. Frequency-direction derivative (centered; one-sided at the DC and
         // Nyquist edges, which are inaudible). b_a = kPghiFreqStep.
-        const double inv_ba = 1.0 / kPghiFreqStep;
+        //
+        // The expected per-one-bin phase progression must be demodulated out
+        // before princarg, exactly as the time derivative subtracts omega_p*R_a
+        // above. analyze_frame applies the window UN-shifted over [0,N) (no
+        // fftshift), so the window is centered near sample n_c, not index 0;
+        // that time-origin offset puts a linear-in-bin group-delay term on the
+        // analysis phase (2*pi*n_c/N per one-bin step). Taking princarg of the
+        // bare bin-to-bin difference would leave that constant on every step and
+        // the heap would accumulate it into a phase ramp across frequency (the
+        // rotating-Leslie sweep). The Hann is built symmetric over [0, N-1]
+        // (init_fftw), so its center is n_c = (N-1)/2 — close to but not exactly
+        // N/2; using pi would reintroduce a smaller rotation. expected_f is a
+        // phase OFFSET subtracted before princarg and is orthogonal to inv_ba
+        // (which scales the result into a per-unit-frequency gradient).
+        const double inv_ba     = 1.0 / kPghiFreqStep;
+        const double n_c        = 0.5 * (N - 1);
+        const double expected_f = 2.0 * M_PI * n_c / N;
         for (int m = 0; m < K; ++m) {
             if (m == 0) {
-                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0]) * inv_ba;
+                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0] - expected_f) * inv_ba;
             } else if (m == K - 1) {
-                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2]) * inv_ba;
+                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2] - expected_f) * inv_ba;
             } else {
-                const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1]) * inv_ba;
-                const double dff = princarg(ph_cur[m + 1] - ph_cur[m])     * inv_ba;
+                const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1] - expected_f) * inv_ba;
+                const double dff = princarg(ph_cur[m + 1] - ph_cur[m]     - expected_f) * inv_ba;
                 df_scratch[m] = 0.5 * (dfb + dff);
             }
         }
@@ -512,7 +528,18 @@ struct AudioSTFT {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
                     if (nb < 0 || nb >= K) continue;
                     if (done_scratch[nb] != 0) continue;     // not in I, or done
-                    const double step = 0.5 * b_s * (df_scratch[m] + df_scratch[nb]);
+                    // df_scratch holds the demodulated DEVIATION; the full
+                    // synthesis-phase step per one-bin move is expected_f +
+                    // deviation, mirroring how the time axis re-adds omega_p
+                    // after its princarg (2a above). The expected progression is
+                    // real vertical phase structure, not noise — integrating the
+                    // deviation alone leaves a fixed per-step offset (a static
+                    // comb / tap-delay and the attendant inter-bin cancellation).
+                    const double dev  = 0.5 * b_s * (df_scratch[m] + df_scratch[nb]);
+                    const double step = expected_f + dev;
+                    // The (+step up / -step down) sign convention applies to the
+                    // WHOLE step: stepping up a bin adds the expected progression,
+                    // stepping down subtracts it — same direction as the deviation.
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
                     heap_scratch.push_back({mag_cur[nb], nb, true});
