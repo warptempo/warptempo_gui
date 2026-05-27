@@ -37,6 +37,10 @@ constexpr int kMaxPendingCharsBpm = 13;
 // `tab_a_viewport_start=44100000`) sits well under this cap; the headroom
 // is reserved for hand-authored passthrough keys.
 constexpr int kMaxPendingCharsSettings = 64;
+// Phase-reset mode token. The three valid tokens (peak/heap/pass) are all
+// four lowercase letters, so the cap is the longest token; an unknown
+// 4-letter word like "heep" is typeable and rejected at commit.
+constexpr int kMaxPendingCharsPhaseResetMode = 4;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind selects which keys produce a
@@ -50,6 +54,8 @@ enum class Kind {
     IterationBracket,
     BpmBracket,
     SettingsAssignment,
+    // Phase-reset mode token (peak/heap/pass): lowercase a-z only.
+    PhaseResetMode,
 };
 
 // State for a single editable rect.

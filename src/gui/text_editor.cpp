@@ -16,6 +16,16 @@ char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind,
                     bool iter_grammar) {
     const bool shift = mods.shift;
 
+    if (kind == Kind::PhaseResetMode) {
+        // Lowercase a-z only; the peak/heap/pass tokens carry no digits or
+        // punctuation, so this guard sits above the common digit/period
+        // branches to keep those out of the buffer.
+        if (key >= GuiKeys::A && key <= GuiKeys::Z && !shift) {
+            return static_cast<char>('a' + (key - GuiKeys::A));
+        }
+        return 0;
+    }
+
     // Digits are common to all kinds.
     if (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 && !shift) {
         // Brief X.2: Shift+2 → '@' for BpmBracket only; the digit branch
@@ -274,6 +284,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         int cap = kMaxPendingChars;
         if (s.kind == Kind::BpmBracket)        cap = kMaxPendingCharsBpm;
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
+        if (s.kind == Kind::PhaseResetMode)     cap = kMaxPendingCharsPhaseResetMode;
         if (s.kind == Kind::FlagPayload && s.iter_grammar)
             cap = kMaxPendingCharsFlagIter;
         // Replace-on-type: erase before the cap check so the typed

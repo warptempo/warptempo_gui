@@ -26,6 +26,18 @@ struct GuiPhaseResetMarker {
 Mode resolve_inherited_mode(const std::vector<GuiPhaseResetMarker>& markers,
                             int index);
 
+// Mode <-> on-disk token mapping. Single source of truth shared by file
+// load (parse_line), save(), and the GUI phase-reset mode editor, so the
+// three sites can't drift. Tokens are the canonical lowercase strings
+// peak/heap/pass.
+//
+// mode_from_token: returns true and sets `out` on a recognized
+// exact-lowercase token; false otherwise (matching the strict parser —
+// no case-folding). mode_to_token: the inverse; Peak->"peak",
+// Heap->"heap", Pass->"pass".
+bool        mode_from_token(const std::string& tok, Mode& out);
+const char* mode_to_token(Mode m);
+
 struct GuiPhaseResetMarkerError {
     int         line_number;   // 1-based; 0 means "file-level, no line"
     std::string message;

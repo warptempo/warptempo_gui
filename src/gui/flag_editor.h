@@ -52,6 +52,15 @@ struct GuiFlagEditor {
     void enter_bpm_mode();
     void exit_bpm_mode();
 
+    // Phase-reset mode editor (P view). Mirrors enter_top_flag_edit /
+    // commit_top_flag_edit but operates on app.phase_reset_markers and the
+    // PhaseResetMode editor kind: click a phase-reset flag, type
+    // peak/heap/pass, validate on commit, write marker.mode under the
+    // phase-reset undo op, then re-render. Entry is gated to P view; the
+    // caller (the click site) applies the read-only refusal.
+    void enter_phase_reset_mode_edit(int idx);
+    void commit_phase_reset_mode_edit();
+
   private:
     // Shared core for the three "enter editor on idx" flows. The
     // public wrappers handle their kind-specific eligibility gates

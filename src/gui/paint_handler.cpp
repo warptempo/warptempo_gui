@@ -372,6 +372,40 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         app.active_markers_view == 'W');
             }
 
+            // Live phase-reset mode editor flag: P view, not render-view.
+            // Mirrors the warp live editor flag above — the cache leaves a
+            // hole over the editor target (the skip-guard fed by
+            // flag_target), so this fill owns the blinking cursor and the
+            // live pending token every frame.
+            if (text_editor::is_active(app.top_flag_editor) &&
+                app.top_flag_editor.kind ==
+                    text_editor::Kind::PhaseResetMode &&
+                app.active_markers_view == 'P' &&
+                !app.render_view_enabled) {
+                FlagEditorOverlay pr_overlay;
+                pr_overlay.marker_index   = app.top_flag_editor.target;
+                pr_overlay.pending        = app.top_flag_editor.pending;
+                pr_overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
+                pr_overlay.is_red         = app.top_flag_editor.red;
+                pr_overlay.cursor_visible =
+                    text_editor::cursor_visible_now(app.top_flag_editor);
+                pr_overlay.has_selection =
+                    text_editor::has_selection(app.top_flag_editor);
+                pr_overlay.selection_start =
+                    text_editor::selection_start(app.top_flag_editor);
+                pr_overlay.selection_end =
+                    text_editor::selection_end(app.top_flag_editor);
+                render_one_editor_phase_reset_flag(
+                    cr, top_strip,
+                    app.phase_reset_markers.markers(),
+                    vp_start_disp, vp_end_disp, sr,
+                    kFlagFontSize,
+                    app.selected_markers,
+                    pr_overlay,
+                    tmap_disp,
+                    drag_overlay);
+            }
+
             const auto f1 = clock::now();
             t_flags_ms =
                 std::chrono::duration<double, std::milli>(f1 - f0).count();
@@ -1493,10 +1527,14 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // popup-editor outline-suppression channel was removed along with
     // the popup surfaces; the IterationBracket / BpmBracket kinds no
     // longer feed the cache fingerprint.
+    // FlagPayload (W view) and PhaseResetMode (P view) both drive the
+    // skip-guard. The active editor's kind always matches the current view
+    // (the editor owns the keyboard, so `p` can't flip the view mid-edit),
+    // so a single target feeds whichever flag renderer the view selects.
     int flag_target = -1;
     if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::FlagPayload) {
+        (app.top_flag_editor.kind == text_editor::Kind::FlagPayload ||
+         app.top_flag_editor.kind == text_editor::Kind::PhaseResetMode)) {
         flag_target = app.top_flag_editor.target;
     }
 
@@ -1582,6 +1620,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                 vp_start, vp_end, sr,
                 kFlagFontSize,
                 app.selected_markers,
+                cache_overlay,
                 nullptr,
                 drag_overlay);
         } else {
@@ -1601,6 +1640,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             kFlagFontSize,
             app.selected_markers,
+            cache_overlay,
             tmap_arg,
             drag_overlay);
     } else {

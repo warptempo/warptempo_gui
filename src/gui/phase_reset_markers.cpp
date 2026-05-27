@@ -16,6 +16,22 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+bool mode_from_token(const std::string& tok, Mode& out) {
+    if (tok == "peak") { out = Mode::Peak; return true; }
+    if (tok == "heap") { out = Mode::Heap; return true; }
+    if (tok == "pass") { out = Mode::Pass; return true; }
+    return false;
+}
+
+const char* mode_to_token(Mode m) {
+    switch (m) {
+        case Mode::Peak: return "peak";
+        case Mode::Heap: return "heap";
+        case Mode::Pass: return "pass";
+    }
+    return "pass";  // unreachable: Mode has only Peak/Heap/Pass
+}
+
 namespace {
 
 std::string trim_ws(const std::string& s) {
@@ -115,13 +131,7 @@ bool parse_line(const std::string& raw, GuiPhaseResetMarker& out, std::string& e
     }
 
     const std::string mode_str = token.substr(bar + 1);
-    if (mode_str == "pass") {
-        out.mode = Mode::Pass;
-    } else if (mode_str == "peak") {
-        out.mode = Mode::Peak;
-    } else if (mode_str == "heap") {
-        out.mode = Mode::Heap;
-    } else {
+    if (!mode_from_token(mode_str, out.mode)) {
         err_msg = "unknown phase-reset mode (expected peak/heap/pass): " +
                   mode_str;
         return false;
@@ -232,8 +242,15 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
 
     std::ostringstream out;
     for (const auto& m : deduped) {
+        // Always emit the mode token (including `|pass`) for a byte-stable
+        // round-trip: load reads `|pass` back to Mode::Pass and still
+        // accepts a bare timestamp as implicit Pass for old files. The `#`
+        // disable prefix composes as `#TIMESTAMP|MODE`, exactly as the
+        // parser splits it.
         if (m.disabled) out << '#';
-        out << format_timestamp(m.time_seconds) << '\n';
+        out << format_timestamp(m.time_seconds)
+            << '|' << mode_to_token(m.mode)
+            << '\n';
     }
     const std::string data = out.str();
 
