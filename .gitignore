@@ -13,7 +13,8 @@ CLAUDE.md
 tmp/
 
 # docs
-*.pdf
+docs/references/*.pdf
+docs/tmp
 
 # Bungee Adapter Build Artifacts
 adapters/bungee/build/

@@ -149,6 +149,7 @@ void PhaseResetPropagate::copy_from_selection() {
             p.fractional_position = (t_time - b.start) / duration;
             p.source_time         = t_time;
             p.disabled            = t.disabled;
+            p.mode                = t.mode;
             cb.placements.push_back(p);
         }
         clipboard_blocks.push_back(std::move(cb));
@@ -256,6 +257,7 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_seconds =
                 std::max(0.0, dst_start + p.fractional_position * dst_dur);
             nm.disabled     = p.disabled;
+            nm.mode         = p.mode;
             app.phase_reset_markers.insert_marker(std::move(nm));
         }
     }
@@ -376,10 +378,12 @@ void PhaseResetPropagate::paste_state_apply() {
             break;
         }
         for (size_t j = 0; j < dest_indices.size(); ++j) {
-            const bool want = windowed_clip[j]->disabled;
+            const bool want_disabled = windowed_clip[j]->disabled;
+            const Mode want_mode     = windowed_clip[j]->mode;
             auto& m = out[dest_indices[j]];
-            if (m.disabled != want) {
-                m.disabled = want;
+            if (m.disabled != want_disabled || m.mode != want_mode) {
+                m.disabled = want_disabled;
+                m.mode     = want_mode;
                 any_change = true;
             }
         }
