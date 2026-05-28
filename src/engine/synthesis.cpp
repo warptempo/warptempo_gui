@@ -14,20 +14,19 @@ void Synthesis::synthesize_full(
     bool show_progress,
     const char* pass_label) {
     const int N          = stft.N;
+    const int Mfft       = stft.M;
     const int R_s        = stft.R_s;
     const int channels   = stft.channels;
-    const int K          = N / 2 + 1;
+    const int K          = Mfft / 2 + 1;
     const auto& fm       = stft.frame_map;
     const int num_frames = static_cast<int>(fm.size());
 
-    // --- One-deep lookahead analysis pipeline (Part 1) ----------------------
-    // Analysis runs one frame ahead of synthesis so the PGHI centered
-    // time-derivative can read the NEXT frame's analysis phase. This is INTERNAL
-    // pipeline latency only: synthesis frame m still OLA-adds into output
-    // position m*R_s exactly as before, and the existing N/2 start-trim is
-    // unchanged — the untagged/peak path stays byte-identical (Gate 1). All
-    // inter-frame phase state is held in these loop-local per-channel buffers;
-    // the peak helper reads exactly the values the old fused routine read.
+    // --- One-deep lookahead analysis pipeline -------------------------------
+    // Analysis runs one frame ahead of synthesis so PGHI's centered
+    // time-derivative can read the NEXT frame's analysis phase. This is
+    // INTERNAL pipeline latency only: synthesis frame m still OLA-adds into
+    // output position m*R_s. All inter-frame phase state is held in these
+    // loop-local per-channel buffers; the heap helper reads them directly.
     std::vector<std::vector<double>> ph_prev (channels, std::vector<double>(K, 0.0));
     std::vector<std::vector<double>> ph_cur  (channels, std::vector<double>(K, 0.0));
     std::vector<std::vector<double>> ph_nxt  (channels, std::vector<double>(K, 0.0));
@@ -39,8 +38,6 @@ void Synthesis::synthesize_full(
 
     std::vector<double> theta(K), dt_scratch(K), df_scratch(K);
     std::vector<char>   done_scratch(K);
-    std::vector<int>    peaks;
-    peaks.reserve(N / 8);
     std::vector<PghiHeapNode> heap_scratch;
     heap_scratch.reserve(K);
 
@@ -81,20 +78,18 @@ void Synthesis::synthesize_full(
     }
 
     int phase_reset_cursor = 0;
-    // Forward mode-dispatch cursor (Part 3d). Seeded from
-    // initial_phase_mode, which the GUI resolves from the most recent
-    // mode-owning marker at-or-before the render's first source frame.
-    // `prev_reset` carries "the previous frame fired a reset" into the
-    // next iteration so the heap path knows to seat.
-    Mode current_mode = stft.initial_phase_mode;
-    bool prev_reset   = false;
+    // `prev_reset` carries "the previous frame fired a reset" into the next
+    // iteration so heap_phase reseats theta = phi on the post-reset frame.
+    bool prev_reset = false;
 
     std::vector<std::vector<double>> ola_out(channels, std::vector<double>(N, 0.0));
 
     std::vector<float> write_buf(N * channels, 0.0f);
 
-    // Start-trim: the first N/2 samples are OLA ramp-up. Mirrors the phase vocoder pass.
-    int frames_to_skip = N / 2;
+    // Start-trim: N samples = N/2 of OLA ramp-up plus N/2 of latency added by
+    // the origin-centered analysis convention (see the timing-convention block
+    // in stft_container.h).
+    int frames_to_skip = N;
 
     // Progress reporting every ~1% of frames (or every 100 frames, whichever is rarer).
     int progress_stride = std::max(100, num_frames / 100);
@@ -116,26 +111,19 @@ void Synthesis::synthesize_full(
         const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
         const int64_t R_a_fwd    = ta_nxt - ta_cur;
         const bool    frame0     = (frame_idx == 0);
-        const bool    seed_peak  = frame0;
         const bool    seed_heap  = frame0 || prev_reset;
 
         const double* atten_row = stft.attenuation_map[frame_idx].data();
 
         for (int ch = 0; ch < channels; ++ch) {
-            if (current_mode == Mode::Heap) {
-                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                                mag_prev[ch], mag_cur[ch],
-                                ph_prev[ch], ph_cur[ch], ph_nxt[ch],
-                                th_prev[ch], dt_prev[ch],
-                                theta, dt_scratch, df_scratch, done_scratch,
-                                heap_scratch);
-                // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
-                dt_prev[ch].swap(dt_scratch);
-            } else {
-                stft.peak_phase(seed_peak, R_a_actual,
-                                mag_cur[ch], ph_prev[ch], ph_cur[ch], th_prev[ch],
-                                theta, peaks);
-            }
+            stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
+                            mag_prev[ch], mag_cur[ch],
+                            ph_prev[ch], ph_cur[ch], ph_nxt[ch],
+                            th_prev[ch], dt_prev[ch],
+                            theta, dt_scratch, df_scratch, done_scratch,
+                            heap_scratch);
+            // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
+            dt_prev[ch].swap(dt_scratch);
             stft.populate_synth_spectrum(mag_cur[ch], theta, atten_row);
 
             if (spectra_cache) {
@@ -148,10 +136,18 @@ void Synthesis::synthesize_full(
                 }
             }
 
+            // IFFT length M; un-shift the centered frame back into the
+            // [0, N) OLA window (the inverse of analyze_frame's placement).
+            // synth_window stays length N — only the N samples nearest the
+            // window center participate in OLA; the M-N zero-padded tail of
+            // the IFFT is discarded along with its (1/M)-scaled energy.
             fftw_execute(stft.plan_inv);
-            const double inv_N = 1.0 / N;
-            for (int n = 0; n < N; ++n)
-                ola_out[ch][n] += (stft.ifft_out[n] * inv_N) * stft.synth_window[n];
+            const double inv_M = 1.0 / Mfft;
+            const int half = N / 2;
+            for (int n = 0; n < N; ++n) {
+                const double v = stft.ifft_out[(n - half + Mfft) % Mfft];
+                ola_out[ch][n] += (v * inv_M) * stft.synth_window[n];
+            }
 
             // End-of-frame per-channel state shift. theta -> th_prev (this
             // frame's synth phase, for the next frame); ph_cur -> ph_prev and
@@ -164,21 +160,15 @@ void Synthesis::synthesize_full(
             mag_cur[ch].swap(mag_nxt[ch]);
         }
 
-        // Phase-reset re-seat AND mode handoff (the same marker event). The
-        // cursor is keyed to the SYNTHESIS frame index — the analysis lead does
-        // NOT change which synthesis frame a reset lands on (off-by-one here
-        // would shift every reset by R_s and fail Gate 1 loudly). theta_prev is
-        // re-seated from ph_prev, which now holds frame_idx's analysis phase —
-        // identical to the old loop, where phi_prev had just been updated to
-        // this frame's phase. The mode switch and the re-seat are one event, so
-        // the incoming model's first frame is a seam-aligned seed (Part 3e: the
-        // Hann OLA dissolves the handoff; no crossfade region).
+        // Phase-reset re-seat. theta_prev seats from ph_prev (which holds
+        // frame_idx's analysis phase after the end-of-frame swap above), so
+        // heap_phase on the NEXT frame sees seed_heap=true and reseats
+        // theta = phi. Marker mode is ignored — the engine is heap-only.
         bool reset_fired = false;
         while (phase_reset_cursor < static_cast<int>(stft.phase_reset_markers.size()) &&
                stft.phase_reset_markers[phase_reset_cursor].synth_frame == frame_idx) {
             for (int c = 0; c < channels; ++c)
                 th_prev[c] = ph_prev[c];
-            current_mode = stft.phase_reset_markers[phase_reset_cursor].mode;
             ++phase_reset_cursor;
             reset_fired = true;
         }

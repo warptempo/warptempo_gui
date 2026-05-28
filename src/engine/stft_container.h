@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <random>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -127,16 +128,18 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSe
 }
 
 // --- Output sample timing convention ---
-// Both the phase vocoder pass (Pass 1) and synthesis (Pass 4) emit samples with the
-// same OLA ramp-up trim: the first N/2 samples are dropped via `frames_to_skip = N/2`.
+// Synthesis emits samples with an OLA ramp-up trim equal to the full window
+// length N: `frames_to_skip = N`. The trim covers N/2 of OLA ramp-up plus the
+// N/2 of output latency the origin-centered analysis convention contributes.
 // Consequences any downstream module must respect:
-//   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N/2.
-//   - A phase reset marker with synth_frame m lands at output sample m * R_s; the +N/2
-//     window-center offset is absorbed by the trim, so diag spikes must NOT add it.
-//   - Total output length = num_frames * R_s + N/2 - R_s.
-//     Any auxiliary buffer sized to match the output (limiter meas_ola, diag WAVs)
-//     must use this formula; target_total_frames describes the *input* plan, not
-//     the emitted sample count.
+//   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N.
+//   - A phase reset marker with synth_frame m lands at output sample m * R_s.
+//     The +N trim is uniform, so resets stay aligned relative to trimmed
+//     output (and diag spikes must NOT add the offset).
+//   - Total output length = (num_frames - 1) * R_s.
+//     Any auxiliary buffer sized to match the output (limiter meas_ola, diag
+//     WAVs) must use this formula; target_total_frames describes the *input*
+//     plan, not the emitted sample count.
 //
 // --- Central Pipeline Container ---
 // Peak memory dominated by overlap-add buffers, FFTW planning, and phase vocoder state arrays.
@@ -144,13 +147,16 @@ struct AudioSTFT {
     // Source metadata
     SF_INFO src_info{};
     SNDFILE* src_snd = nullptr;
-    // Default N=4096: the dual-model split makes the larger window viable.
-    // heap (PGHI) carries dense/tutti material, where the finer frequency
-    // resolution helps; peak (Laroche-Dolson) owns exposed/transient material
-    // per phase-reset segment, where a large-N L-D window would smear. Under
-    // L-D alone N had to stay at 2560 (2^9*5) to keep attacks/highs coherent.
-    // Must stay divisible by 4 (R_s = N/4); 4096 = 2^12 is FFTW-clean.
+    // Default N=4096: the analysis window length and the OLA frame stride
+    // (R_s = N/4) baseline. Must stay divisible by 4; 4096 = 2^12 is FFTW-clean.
     int N = 4096;
+    // FFT length used by the forward/inverse plans. Set to 2*N in init_fftw to
+    // give the analysis frame a centered zero-padded layout (Prusa-Holighaus):
+    // the N-length window sits with its center at FFT index 0, and the
+    // remaining M-N samples are zero. Doubles the bin density (bin_hz_width =
+    // sr/M) and is what makes the heap-integration phase consistent on the
+    // truncated-Gaussian-like Hann lobe in the bin grid.
+    int M = 0;
     int R_s = 0;
     int channels = 0;
     double nyquist = 0.0;
@@ -185,9 +191,18 @@ struct AudioSTFT {
     std::vector<PhaseResetMarker> phase_reset_markers;
 
     // Phase-propagation mode seeded into the synthesis loop at frame 0.
-    // Mirrors EngineParams::initial_phase_mode (copied in run_warptempo_engine).
-    // Peak default reproduces the historical all-peak seed for non-GUI callers.
+    // Engine no longer dispatches on this — heap (PGHI) is the only path. The
+    // field is kept (and copied from EngineParams) only so the GUI/parser do
+    // not need to change; the synthesis loop ignores it.
     Mode initial_phase_mode = Mode::Peak;
+
+    // Seeded RNG for the PGHI quiet-bin policy (Prusa Alg.1 line 3): each
+    // sub-tolerance bin is assigned a uniform-random synthesis phase. Same
+    // seed every render -> reproducible output. Re-seeded at the top of
+    // init_fftw so a second engine init in the same process restarts the
+    // stream identically.
+    std::mt19937 quiet_rng{0x5715E11u};
+    std::uniform_real_distribution<double> quiet_dist{-M_PI, M_PI};
 
     // Spectral limiter
     LimiterParams limiter_params;
@@ -258,6 +273,9 @@ struct AudioSTFT {
 
     void init_fftw() {
         R_s = N / 4;
+        M = 2 * N;
+        bin_hz_width = static_cast<double>(src_info.samplerate) / M;
+        quiet_rng.seed(0x5715E11u);
         window.resize(N);
         synth_window.resize(N);
         for (int n = 0; n < N; ++n) {
@@ -265,19 +283,19 @@ struct AudioSTFT {
             synth_window[n] = window[n] / 1.5;
         }
 
-        fft_in = fftw_alloc_real(N);
-        fft_out = fftw_alloc_complex(N / 2 + 1);
-        plan_fwd = fftw_plan_dft_r2c_1d(N, fft_in, fft_out, FFTW_ESTIMATE);
-        ifft_in = fftw_alloc_complex(N / 2 + 1);
-        ifft_out = fftw_alloc_real(N);
-        plan_inv = fftw_plan_dft_c2r_1d(N, ifft_in, ifft_out, FFTW_ESTIMATE);
+        fft_in = fftw_alloc_real(M);
+        fft_out = fftw_alloc_complex(M / 2 + 1);
+        plan_fwd = fftw_plan_dft_r2c_1d(M, fft_in, fft_out, FFTW_ESTIMATE);
+        ifft_in = fftw_alloc_complex(M / 2 + 1);
+        ifft_out = fftw_alloc_real(M);
+        plan_inv = fftw_plan_dft_c2r_1d(M, ifft_in, ifft_out, FFTW_ESTIMATE);
 
-        phi_prev.assign(channels, std::vector<double>(N / 2 + 1, 0.0));
-        theta_prev.assign(channels, std::vector<double>(N / 2 + 1, 0.0));
+        phi_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
+        theta_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
         overlap_add.assign(channels, std::vector<double>(N, 0.0));
 
         // 1/3-octave bin-to-band lookup (centers at 1000 * 2^(n/3), 20 Hz .. Nyquist)
-        const int K = N / 2 + 1;
+        const int K = M / 2 + 1;
         bin_to_band.assign(K, 0);
         std::vector<double> centers;
         int n_min = static_cast<int>(std::ceil(3.0 * std::log2(20.0 / 1000.0)));
@@ -309,25 +327,31 @@ struct AudioSTFT {
         }
     }
 
-    // --- Phase computation, split into byte-preserving helpers --------------
+    // --- Phase computation helpers ------------------------------------------
     //
-    // The historical fused phase_vocoder_frame is split into three pure helpers
-    // so the lookahead pipeline (synthesis.cpp) can run analysis one frame
-    // ahead of synthesis and dispatch the phase step per marker mode. The peak
-    // helpers carry the EXACT float-operation sequence of the original fused
-    // routine, so an all-peak / untagged render stays byte-identical (Gate 1).
-    // None of these helpers touch the member phi_prev/theta_prev accumulators;
-    // the pipeline owns all inter-frame state explicitly.
+    // The synthesis pipeline runs a one-deep analysis lookahead and calls
+    // analyze_frame / heap_phase / populate_synth_spectrum per frame. None of
+    // these helpers touch the member phi_prev/theta_prev accumulators; the
+    // pipeline owns all inter-frame state explicitly.
 
     // Analysis: window + forward FFT of one channel of frame_buf; extract
-    // magnitude and analysis phase into M_out, phi_out (size K). Verbatim from
-    // the original analysis block.
+    // magnitude and analysis phase into M_out, phi_out (size K = M/2+1).
+    // Origin-centered, zero-padded placement (Prusa-Holighaus): the windowed
+    // frame's center sits at FFT index 0 and the rest of the M-length buffer
+    // is zero. Clearing the whole buffer each frame is cheap next to the
+    // M-point FFT. Centered placement makes the per-bin phase carry no
+    // group-delay ramp (expected_f == 0 in heap_phase) — which is the
+    // condition under which PGHI's heap integration actually converges.
     void analyze_frame(int ch, int ch_stride, const float* frame_buf,
                        std::vector<double>& M_out,
                        std::vector<double>& phi_out) {
-        const int K = N / 2 + 1;
-        for (int n = 0; n < N; ++n)
-            fft_in[n] = frame_buf[n * ch_stride + ch] * window[n];
+        const int K = M / 2 + 1;
+        const int half = N / 2;
+        std::fill(fft_in, fft_in + M, 0.0);
+        for (int n = 0; n < N; ++n) {
+            const double w = frame_buf[n * ch_stride + ch] * window[n];
+            fft_in[(n - half + M) % M] = w;
+        }
         fftw_execute(plan_fwd);
         for (int k = 0; k < K; ++k) {
             M_out[k]   = std::hypot(fft_out[k][0], fft_out[k][1]);
@@ -335,64 +359,22 @@ struct AudioSTFT {
         }
     }
 
-    // Peak (Laroche-Dolson) phase propagation for one frame. Reads M (current
-    // magnitude, for peak detection), ph_cur/ph_prev (analysis phase n / n-1)
-    // and th_prev (synthesis phase n-1); writes theta (size K). `seed` selects
-    // the frame-0 seat (theta = phi). peaks is reused scratch. The arithmetic
-    // is verbatim from the historical phase_vocoder_frame — DO NOT alter it;
-    // Gate 1 (byte-identical untagged render) depends on it.
-    void peak_phase(bool seed, int64_t R_a_actual,
-                    const std::vector<double>& M,
-                    const std::vector<double>& ph_prev,
-                    const std::vector<double>& ph_cur,
-                    const std::vector<double>& th_prev,
-                    std::vector<double>& theta,
-                    std::vector<int>& peaks) {
-        const int K = N / 2 + 1;
-        if (seed) {
-            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
-            return;
-        }
-        peaks.clear();
-        for (int k = 1; k < N / 2; ++k)
-            if (M[k] > M[k - 1] && M[k] > M[k + 1]) peaks.push_back(k);
-        if (peaks.empty()) peaks.push_back(N / 4);
-
-        for (int p : peaks) {
-            double omega_p = 2.0 * M_PI * p / N;
-            theta[p] = th_prev[p] +
-                       (omega_p + princarg(ph_cur[p] - ph_prev[p] - omega_p * R_a_actual) / R_a_actual) * R_s;
-        }
-        size_t peak_idx = 0;
-        for (int k = 0; k < K; ++k) {
-            if (peak_idx < peaks.size() - 1 &&
-                std::abs(k - peaks[peak_idx + 1]) < std::abs(k - peaks[peak_idx]))
-                ++peak_idx;
-            int p = peaks[peak_idx];
-            if (k != p) theta[k] = theta[p] + ph_cur[k] - ph_cur[p];
-        }
-    }
-
-    // PGHI ("heap") phase propagation for one frame (Part 2). Same outputs as
-    // peak_phase (writes theta for all k) plus dt_out, this frame's CENTERED
-    // time-derivative (rad/sample), to be stored as the next frame's dt_prev.
+    // PGHI ("heap") phase propagation for one frame (Prusa-Holighaus Alg. 1)
+    // on the centered, zero-padded STFT. Writes theta (size K = M/2+1) and
+    // dt_out (this frame's centered time-derivative, stored as next frame's
+    // dt_prev).
     //
-    //   seed   : frame-0 or immediately-after-a-reset frame. There is no prior
-    //            synthesis phase to integrate from, so theta is seated to phi
-    //            (identical to the peak frame-0/post-reset seat); dt_out is
+    //   seed   : frame-0 or immediately-after-a-reset frame. No prior synthesis
+    //            phase to integrate from, so theta seats to phi; dt_out is
     //            still computed for the following frame.
-    //   frame0 : the file's first frame — has no real backward neighbor, so the
-    //            time-derivative uses the forward difference only. (The only
-    //            time-axis boundary; interior and mode-switch seams have real
-    //            neighbors on both sides via the lookahead pipeline.)
-    //   R_a_back/R_a_fwd : the actual backward/forward analysis hops (samples).
-    //                      Their ratio to R_s carries the time-stretch into the
-    //                      time integration; the frequency integration is
-    //                      stretch-independent (b_s = b_a), so alpha is not a
-    //                      parameter.
+    //   frame0 : the file's first frame — no real backward neighbor, so the
+    //            time-derivative falls back to the forward difference.
+    //   R_a_back/R_a_fwd : actual backward/forward analysis hops. Their ratio
+    //                      to R_s is alpha (the stretch); used both in the time
+    //                      integration AND as b_s = alpha * b_a in the
+    //                      frequency-spread step (Prusa).
     //
-    // Scratch (size K, reused across channels/frames): df_scratch, done_scratch,
-    // heap_scratch. heap_scratch is cleared on entry.
+    // Scratch (size K, reused): df_scratch, done_scratch, heap_scratch.
     void heap_phase(bool seed, bool frame0,
                     int64_t R_a_back, int64_t R_a_fwd,
                     const std::vector<double>& mag_prev,
@@ -407,15 +389,25 @@ struct AudioSTFT {
                     std::vector<double>& df_scratch,
                     std::vector<char>&   done_scratch,
                     std::vector<PghiHeapNode>& heap_scratch) {
-        const int K = N / 2 + 1;
+        const int K = M / 2 + 1;
 
-        // 2a. Centered time-derivative (instantaneous frequency) for every bin,
+        // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
+        // Used as b_s = alpha * b_a in the vertical (frequency) integration
+        // step below; the time-axis integration carries alpha implicitly via
+        // the actual hop in the principal-arg demodulation.
+        const double alpha_fp =
+            (R_a_back > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_back)
+          : (R_a_fwd  > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_fwd)
+          : 1.0;
+
+        // Centered time-derivative (instantaneous frequency) for every bin,
         // each half normalized by its own hop so an alpha change across a warp
-        // marker needs no special handling. Stored for the next frame's dt_prev.
+        // marker needs no special handling. omega_p is the per-bin angular
+        // frequency on the M-point grid. Stored for the next frame's dt_prev.
         const double inv_back = (R_a_back != 0) ? 1.0 / static_cast<double>(R_a_back) : 0.0;
         const double inv_fwd  = (R_a_fwd  != 0) ? 1.0 / static_cast<double>(R_a_fwd)  : 0.0;
         for (int p = 0; p < K; ++p) {
-            const double omega_p = 2.0 * M_PI * p / N;
+            const double omega_p = 2.0 * M_PI * p / M;
             const double freq_fwd =
                 omega_p + princarg(ph_nxt[p] - ph_cur[p] - omega_p * R_a_fwd) * inv_fwd;
             if (frame0) {
@@ -427,45 +419,31 @@ struct AudioSTFT {
             }
         }
 
-        // 2f. Reset / frame-0 seat: seed theta = phi, skip integration.
+        // Reset / frame-0 seat: seed theta = phi, skip integration.
         if (seed) {
             for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
             return;
         }
 
-        // 2b. Frequency-direction derivative (centered; one-sided at the DC and
-        // Nyquist edges, which are inaudible). b_a = kPghiFreqStep.
-        //
-        // The expected per-one-bin phase progression must be demodulated out
-        // before princarg, exactly as the time derivative subtracts omega_p*R_a
-        // above. analyze_frame applies the window UN-shifted over [0,N) (no
-        // fftshift), so the window is centered near sample n_c, not index 0;
-        // that time-origin offset puts a linear-in-bin group-delay term on the
-        // analysis phase (2*pi*n_c/N per one-bin step). Taking princarg of the
-        // bare bin-to-bin difference would leave that constant on every step and
-        // the heap would accumulate it into a phase ramp across frequency (the
-        // rotating-Leslie sweep). The Hann is built symmetric over [0, N-1]
-        // (init_fftw), so its center is n_c = (N-1)/2 — close to but not exactly
-        // N/2; using pi would reintroduce a smaller rotation. expected_f is a
-        // phase OFFSET subtracted before princarg and is orthogonal to inv_ba
-        // (which scales the result into a per-unit-frequency gradient).
-        const double inv_ba     = 1.0 / kPghiFreqStep;
-        const double n_c        = 0.5 * (N - 1);
-        const double expected_f = 2.0 * M_PI * n_c / N;
+        // Frequency-direction derivative (centered; one-sided at DC and
+        // Nyquist). With origin-centered analysis the window is centered at
+        // FFT index 0, so the per-bin expected phase progression is zero —
+        // the bare princarg difference IS the gradient (in units of b_a;
+        // b_a = kPghiFreqStep = 1, so no scaling).
         for (int m = 0; m < K; ++m) {
             if (m == 0) {
-                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0] - expected_f) * inv_ba;
+                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0]);
             } else if (m == K - 1) {
-                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2] - expected_f) * inv_ba;
+                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2]);
             } else {
-                const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1] - expected_f) * inv_ba;
-                const double dff = princarg(ph_cur[m + 1] - ph_cur[m]     - expected_f) * inv_ba;
+                const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1]);
+                const double dff = princarg(ph_cur[m + 1] - ph_cur[m]);
                 df_scratch[m] = 0.5 * (dfb + dff);
             }
         }
 
-        // 2c/2d. Significance set I and the quiet-bin policy. abstol is relative
-        // to the loudest bin across frames n and n-1.
+        // Significance set I and the quiet-bin policy. abstol is relative to
+        // the loudest bin across frames n and n-1.
         double peak_mag = 0.0;
         for (int k = 0; k < K; ++k) {
             if (mag_cur[k]  > peak_mag) peak_mag = mag_cur[k];
@@ -473,31 +451,18 @@ struct AudioSTFT {
         }
         const double abstol  = kPghiTol * peak_mag;
         const double half_Rs = 0.5 * static_cast<double>(R_s);
-        // Synthesis-side frequency step. Time-stretching rescales the TIME grid
-        // (the horizontal phase advances by R_s while the analysis hop is
-        // R_s/alpha — that ratio carries the stretch via dt above); the
-        // FREQUENCY grid is unchanged, so the frequency-direction integration
-        // uses the analysis gradient as-is: b_s = b_a. This was validated
-        // empirically against the trusted peak path — with b_s = b_a the
-        // per-sample output energy of a stationary sinusoid and of a linear
-        // chirp is stretch-invariant and tracks peak (ratio ~1.0 at stretch
-        // 1.5), whereas b_s = alpha*b_a (the brief's literal text, which it
-        // flagged for validation) and b_s = b_a/alpha both lose or inflate
-        // energy under stretch. alpha therefore does not enter the vertical
-        // integration.
-        const double b_s = kPghiFreqStep;
 
-        // 2e. POLICY (b): quiet bins (not in I) are TIME-PROPAGATED on their own
-        // instantaneous frequency — never randomized, never copied. They keep
-        // advancing exactly as under the peak model, so reverb/decay tails do
-        // not develop spectral holes. The tolerance gate decides only who may
-        // anchor a frequency-spread; everyone gets a phase. done==1 marks a bin
-        // assigned (quiet bins immediately; significant bins via the heap).
+        // Prusa Alg. 1 line 3: sub-tolerance ("quiet") bins are assigned a
+        // uniform-random synthesis phase rather than time-propagated. Random
+        // here is the published choice — quiet bins carry no coherent
+        // structure, so freshly randomized phase is what keeps the residual
+        // floor decorrelated from frame to frame. Significant bins (in I)
+        // get their phase via the heap below.
         for (int k = 0; k < K; ++k) {
             if (mag_cur[k] > abstol) {
                 done_scratch[k] = 0;                                  // in I
             } else {
-                theta[k] = th_prev[k] + half_Rs * (dt_prev[k] + dt_out[k]);
+                theta[k] = quiet_dist(quiet_rng);
                 done_scratch[k] = 1;
             }
         }
@@ -528,24 +493,15 @@ struct AudioSTFT {
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
             } else {
-                // Current-frame bin -> integrate the frequency gradient to its
-                // still-unassigned significant neighbors (trapezoidal in df).
+                // Current-frame bin -> integrate the frequency gradient (scaled
+                // by b_s = alpha * b_a) to its still-unassigned significant
+                // neighbors (trapezoidal in df). Centered convention -> no
+                // expected_f offset; the gradient is the whole step.
                 for (int dir = 0; dir < 2; ++dir) {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
                     if (nb < 0 || nb >= K) continue;
                     if (done_scratch[nb] != 0) continue;     // not in I, or done
-                    // df_scratch holds the demodulated DEVIATION; the full
-                    // synthesis-phase step per one-bin move is expected_f +
-                    // deviation, mirroring how the time axis re-adds omega_p
-                    // after its princarg (2a above). The expected progression is
-                    // real vertical phase structure, not noise — integrating the
-                    // deviation alone leaves a fixed per-step offset (a static
-                    // comb / tap-delay and the attendant inter-bin cancellation).
-                    const double dev  = 0.5 * b_s * (df_scratch[m] + df_scratch[nb]);
-                    const double step = expected_f + dev;
-                    // The (+step up / -step down) sign convention applies to the
-                    // WHOLE step: stepping up a bin adds the expected progression,
-                    // stepping down subtracts it — same direction as the deviation.
+                    const double step = alpha_fp * 0.5 * (df_scratch[m] + df_scratch[nb]);
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
                     heap_scratch.push_back({mag_cur[nb], nb, true});
@@ -555,24 +511,23 @@ struct AudioSTFT {
         }
     }
 
-    // Synthesis: populate ifft_in from magnitude M and phase theta, applying
-    // optional per-band attenuation. Verbatim from the historical
-    // phase_vocoder_frame tail; both models share this one path so the
-    // magnitude/spectrum step is identical regardless of how theta was derived.
-    void populate_synth_spectrum(const std::vector<double>& M,
+    // Synthesis: populate ifft_in from magnitude mag and phase theta, applying
+    // optional per-band attenuation. Caller IFFTs and un-shifts to recover the
+    // origin-centered time-domain frame.
+    void populate_synth_spectrum(const std::vector<double>& mag,
                                  const std::vector<double>& theta,
                                  const double* atten_row) {
-        const int K = N / 2 + 1;
+        const int K = M / 2 + 1;
         if (atten_row) {
             for (int k = 0; k < K; ++k) {
-                double scaled = M[k] * atten_row[bin_to_band[k]];
+                double scaled = mag[k] * atten_row[bin_to_band[k]];
                 ifft_in[k][0] = scaled * std::cos(theta[k]);
                 ifft_in[k][1] = scaled * std::sin(theta[k]);
             }
         } else {
             for (int k = 0; k < K; ++k) {
-                ifft_in[k][0] = M[k] * std::cos(theta[k]);
-                ifft_in[k][1] = M[k] * std::sin(theta[k]);
+                ifft_in[k][0] = mag[k] * std::cos(theta[k]);
+                ifft_in[k][1] = mag[k] * std::sin(theta[k]);
             }
         }
     }

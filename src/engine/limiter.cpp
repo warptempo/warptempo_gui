@@ -10,10 +10,10 @@
 
 // Two sample-coordinate systems are in play:
 //   - post_trim (output/meas_ola coords): sample 0 is the first sample emitted
-//     by synthesize_full after the N/2 OLA ramp-up is discarded.
+//     by synthesize_full after the N-sample start-trim is discarded.
 //   - pre_trim  (virtual OLA coords): sample 0 is the very first OLA
 //     accumulation position; frame m contributes to samples [m*R_s, m*R_s + N).
-// Relationship: pre_trim_sample = post_trim_sample + N/2.
+// Relationship: pre_trim_sample = post_trim_sample + N.
 // Rule: any function that maps between sample-index and frame-index works in
 // pre_trim coords. Convert at the boundary.
 
@@ -34,14 +34,18 @@ struct Peak {
 };
 
 static inline int64_t pre_trim(int64_t post_trim_sample, int N) {
-    return post_trim_sample + N / 2;
+    return post_trim_sample + N;
 }
 
-// IFFT of single band (all other bins zeroed) with gain applied, windowed and /N.
+// IFFT of single band (all other bins zeroed) with gain applied. The FFT is
+// length M and the result is un-shifted back into the [0, N) OLA window, then
+// scaled by 1/M and synth-windowed — mirroring synthesize_full's per-frame
+// path so a rescan reproduces the same OLA contribution.
 static void band_ifft(AudioSTFT& stft, const std::complex<float>* cached_spec,
                        int band, double gain, std::vector<double>& out_buf) {
     const int N = stft.N;
-    const int K = N / 2 + 1;
+    const int Mfft = stft.M;
+    const int K = Mfft / 2 + 1;
     const auto& b2b = stft.bin_to_band;
     for (int k = 0; k < K; ++k) {
         if (b2b[k] == band) {
@@ -53,16 +57,20 @@ static void band_ifft(AudioSTFT& stft, const std::complex<float>* cached_spec,
         }
     }
     fftw_execute(stft.plan_inv);
-    const double inv_N = 1.0 / N;
-    for (int n = 0; n < N; ++n)
-        out_buf[n] = stft.ifft_out[n] * inv_N * stft.synth_window[n];
+    const double inv_M = 1.0 / Mfft;
+    const int half = N / 2;
+    for (int n = 0; n < N; ++n) {
+        const double v = stft.ifft_out[(n - half + Mfft) % Mfft];
+        out_buf[n] = v * inv_M * stft.synth_window[n];
+    }
 }
 
 // Full-spectrum IFFT with per-band gain from attenuation_map[frame_idx].
 static void full_ifft_with_map(AudioSTFT& stft, const std::complex<float>* cached_spec,
                                 int frame_idx, std::vector<double>& out_buf) {
     const int N = stft.N;
-    const int K = N / 2 + 1;
+    const int Mfft = stft.M;
+    const int K = Mfft / 2 + 1;
     const auto& b2b = stft.bin_to_band;
     const double* row = stft.attenuation_map[frame_idx].data();
     for (int k = 0; k < K; ++k) {
@@ -71,9 +79,12 @@ static void full_ifft_with_map(AudioSTFT& stft, const std::complex<float>* cache
         stft.ifft_in[k][1] = cached_spec[k].imag() * g;
     }
     fftw_execute(stft.plan_inv);
-    const double inv_N = 1.0 / N;
-    for (int n = 0; n < N; ++n)
-        out_buf[n] = stft.ifft_out[n] * inv_N * stft.synth_window[n];
+    const double inv_M = 1.0 / Mfft;
+    const int half = N / 2;
+    for (int n = 0; n < N; ++n) {
+        const double v = stft.ifft_out[(n - half + Mfft) % Mfft];
+        out_buf[n] = v * inv_M * stft.synth_window[n];
+    }
 }
 
 // At 75% overlap (R_s = N/4), exactly 4 frames contribute to each output sample.
@@ -136,7 +147,7 @@ static void find_peaks_in_range(const float* ola, int64_t n_start, int64_t n_end
 // Rescan: re-synthesize OLA over [pre_trim_s_start, pre_trim_s_end) using cached
 // spectra and current attenuation map. Parameters are in pre-trim coords, and the
 // returned slice's index 0 corresponds to pre-trim position s_start (== post-trim
-// position s_start - N/2). Writes interleaved floats into dest.
+// position s_start - N). Writes interleaved floats into dest.
 static void rescan_region(AudioSTFT& stft,
                            const std::complex<float>* cached_spectra,
                            int64_t s_start, int64_t s_end,
@@ -144,7 +155,7 @@ static void rescan_region(AudioSTFT& stft,
     const int N = stft.N;
     const int R_s = stft.R_s;
     const int channels = stft.channels;
-    const int K = N / 2 + 1;
+    const int K = stft.M / 2 + 1;
     const int num_frames = static_cast<int>(stft.frame_map.size());
     const size_t slice_len = static_cast<size_t>(s_end - s_start);
 
@@ -192,7 +203,7 @@ void Limiter::process(AudioSTFT& stft) {
     const int N          = stft.N;
     const int R_s        = stft.R_s;
     const int channels   = stft.channels;
-    const int K          = N / 2 + 1;
+    const int K          = stft.M / 2 + 1;
     const int num_frames = static_cast<int>(stft.frame_map.size());
     const int num_bands  = stft.num_bands;
 
@@ -204,7 +215,7 @@ void Limiter::process(AudioSTFT& stft) {
 
     // Matches synthesize_full's post-trim output length (see stft_container.h).
     const int64_t total_samples =
-        static_cast<int64_t>(num_frames) * R_s + N / 2 - R_s;
+        static_cast<int64_t>(num_frames - 1) * R_s;
     const size_t total_out_samples =
         static_cast<size_t>(total_samples) * channels;
 
