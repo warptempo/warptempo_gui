@@ -80,6 +80,17 @@ struct EngineParams {
     // parser binary) unaffected. When non-empty it must match
     // phase_reset_frames in length and order.
     std::vector<Mode> phase_reset_modes;
+
+    // Phase-propagation mode at synthesis frame 0. Resolved GUI-side from
+    // the most recent mode-owning marker at-or-before the render's first
+    // source frame (untrimmed: source frame 0; trimmed: trim_begin frame),
+    // walking back through `pass` and disabled markers as
+    // resolve_inherited_mode does. Defaults to Peak so non-GUI callers
+    // (parser binary, future callers) that never set the field reproduce
+    // the historical seed and pass Gate 1 byte-identity. The GUI dispatch
+    // site also resolves to Peak when no owner precedes, so all-Peak input
+    // and untagged input remain byte-identical.
+    Mode initial_phase_mode = Mode::Peak;
 };
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation

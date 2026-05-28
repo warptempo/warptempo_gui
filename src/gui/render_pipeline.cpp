@@ -266,6 +266,30 @@ RenderOutcome do_render(const RenderRequest& req,
             modes_for_input.clear();  // misaligned -> default all-peak
         const bool carry_modes = !modes_for_input.empty();
 
+        // Initial phase-propagation mode at engine frame 0. Mirrors the
+        // warp-side synthetic (0,0) timemap anchor: an unconditional
+        // prefix-inheritance seat. For an untrimmed render trim_begin_frame
+        // is 0; the first in-trim index is 0 if any markers exist (or the
+        // size() sentinel if none); resolve_inherited_mode walks back from
+        // first_in_trim_idx + 1, considering the marker at first_in_trim_idx
+        // itself as a candidate owner. Empty markers / no owner upstream:
+        // resolver returns Peak default.
+        int64_t trim_begin_for_seed = tmres.trimmed
+            ? static_cast<int64_t>(tmres.trim_begin_frame)
+            : 0;
+        size_t first_in_trim_idx = req.phase_resets.size();
+        for (size_t i = 0; i < req.phase_resets.size(); ++i) {
+            const int64_t sf = static_cast<int64_t>(std::nearbyint(
+                req.phase_resets[i].time_seconds *
+                static_cast<double>(sample_rate)));
+            if (sf >= trim_begin_for_seed) {
+                first_in_trim_idx = i;
+                break;
+            }
+        }
+        ep.initial_phase_mode = resolve_inherited_mode(
+            req.phase_resets, static_cast<int>(first_in_trim_idx) + 1);
+
         if (tmres.trimmed) {
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
@@ -525,9 +549,8 @@ RenderOutcome do_render(const RenderRequest& req,
                     const int64_t render_frame =
                         static_cast<int64_t>(m) *
                         static_cast<int64_t>(engine_R_s);
-                    GuiPhaseResetMarker w;
+                    GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;
-                    w.disabled     = false;
                     warped_phase_resets.push_back(std::move(w));
                 }
                 const std::string tmd_path =

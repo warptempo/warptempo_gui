@@ -81,10 +81,12 @@ void Synthesis::synthesize_full(
     }
 
     int phase_reset_cursor = 0;
-    // Forward mode-dispatch cursor (Part 3d). Default L-D (peak) from frame 0
-    // until the first owning marker. `prev_reset` carries "the previous frame
-    // fired a reset" into the next iteration so the heap path knows to seat.
-    Mode current_mode = Mode::Peak;
+    // Forward mode-dispatch cursor (Part 3d). Seeded from
+    // initial_phase_mode, which the GUI resolves from the most recent
+    // mode-owning marker at-or-before the render's first source frame.
+    // `prev_reset` carries "the previous frame fired a reset" into the
+    // next iteration so the heap path knows to seat.
+    Mode current_mode = stft.initial_phase_mode;
     bool prev_reset   = false;
 
     std::vector<std::vector<double>> ola_out(channels, std::vector<double>(N, 0.0));

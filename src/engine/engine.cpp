@@ -127,6 +127,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
+    audio_stft.initial_phase_mode = p.initial_phase_mode;
 
     init_fftw_threads(audio_stft, p.fftw_threads);
 

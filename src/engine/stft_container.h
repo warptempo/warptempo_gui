@@ -184,6 +184,11 @@ struct AudioSTFT {
     // Phase reset markers
     std::vector<PhaseResetMarker> phase_reset_markers;
 
+    // Phase-propagation mode seeded into the synthesis loop at frame 0.
+    // Mirrors EngineParams::initial_phase_mode (copied in run_warptempo_engine).
+    // Peak default reproduces the historical all-peak seed for non-GUI callers.
+    Mode initial_phase_mode = Mode::Peak;
+
     // Spectral limiter
     LimiterParams limiter_params;
     int num_bands = 0;
