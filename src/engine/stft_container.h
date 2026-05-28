@@ -190,10 +190,12 @@ struct AudioSTFT {
     // Phase reset markers
     std::vector<PhaseResetMarker> phase_reset_markers;
 
-    // Phase-propagation mode seeded into the synthesis loop at frame 0.
-    // Engine no longer dispatches on this — heap (PGHI) is the only path. The
-    // field is kept (and copied from EngineParams) only so the GUI/parser do
-    // not need to change; the synthesis loop ignores it.
+    // Phase-propagation mode seeded into the synthesis loop at frame 0. The
+    // synthesis dispatch reads this for the segment before any phase-reset
+    // marker; each marker then hands off to its own `mode` field. Default is
+    // Peak so a stream constructed without an explicit initial mode (older
+    // callers, empty EngineParams::phase_reset_modes) reproduces the historical
+    // all-peak behavior.
     Mode initial_phase_mode = Mode::Peak;
 
     // Seeded RNG for the PGHI quiet-bin policy (Prusa Alg.1 line 3): each
@@ -508,6 +510,44 @@ struct AudioSTFT {
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
             }
+        }
+    }
+
+    // Laroche-Dolson identity phase-locking, on the shared centered M=2N grid.
+    // Peak-pick and region assignment over the M/2+1 bins; omega_p uses M; the
+    // synth phase rides the shared centered IFFT/un-shift unchanged. Validated
+    // to reconstruct at alpha=1 (-224 dB) on this grid. `mag` (NOT `M`) is the
+    // magnitude argument — `M` is the FFT-length member.
+    void peak_phase(bool seed, int64_t R_a_actual,
+                    const std::vector<double>& mag,
+                    const std::vector<double>& ph_prev,
+                    const std::vector<double>& ph_cur,
+                    const std::vector<double>& th_prev,
+                    std::vector<double>& theta,
+                    std::vector<int>& peaks) {
+        const int K = M / 2 + 1;
+        if (seed) {
+            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
+            return;
+        }
+        peaks.clear();
+        for (int k = 1; k < M / 2; ++k)
+            if (mag[k] > mag[k - 1] && mag[k] > mag[k + 1]) peaks.push_back(k);
+        if (peaks.empty()) peaks.push_back(M / 4);
+
+        for (int p : peaks) {
+            const double omega_p = 2.0 * M_PI * p / M;
+            theta[p] = th_prev[p] +
+                       (omega_p + princarg(ph_cur[p] - ph_prev[p] - omega_p * R_a_actual)
+                        / R_a_actual) * R_s;
+        }
+        size_t peak_idx = 0;
+        for (int k = 0; k < K; ++k) {
+            if (peak_idx < peaks.size() - 1 &&
+                std::abs(k - peaks[peak_idx + 1]) < std::abs(k - peaks[peak_idx]))
+                ++peak_idx;
+            int p = peaks[peak_idx];
+            if (k != p) theta[k] = theta[p] + ph_cur[k] - ph_cur[p];
         }
     }
 
