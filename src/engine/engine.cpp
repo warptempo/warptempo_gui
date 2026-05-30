@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -227,6 +228,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
     };
 
+    // Env-gated pass-level profiling. Timers accumulate unconditionally (the
+    // now() overhead is negligible against a full render); the [profile] line
+    // is emitted to std::cerr only when WARPTEMPO_PROFILE is set. Runtime env
+    // gating only — no compile-time macro — so it toggles without a rebuild.
+    const bool prof = (std::getenv("WARPTEMPO_PROFILE") != nullptr);
+    int64_t p1_ns = 0, p2_ns = 0, p3_ns = 0;
+    auto ns_between = [](std::chrono::steady_clock::time_point a,
+                         std::chrono::steady_clock::time_point b) {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
+    };
+
     auto t_p2_0 = std::chrono::steady_clock::now();
     audio_stft.phase_reset_markers.clear();
     audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
@@ -246,6 +258,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
               << audio_stft.phase_reset_markers.size()
               << " phase resets\n";
     auto t_p2_1 = std::chrono::steady_clock::now();
+    p1_ns = ns_between(t_p2_0, t_p2_1);
     std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
 
     // Pass 2 (spectral limiter) is skipped on the buffer-output path. The
@@ -259,6 +272,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         auto t_p3_0 = std::chrono::steady_clock::now();
         limiter.process(audio_stft);
         auto t_p3_1 = std::chrono::steady_clock::now();
+        p2_ns = ns_between(t_p3_0, t_p3_1);
         std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
         if (audio_stft.cancellation_observed) {
             std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
@@ -274,11 +288,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         synthesis.process(audio_stft);
     }
     auto t_p4_1 = std::chrono::steady_clock::now();
+    p3_ns = ns_between(t_p4_0, t_p4_1);
     std::cout << "  (" << pass_ms(t_p4_0, t_p4_1) << " ms)\n";
     if (audio_stft.cancellation_observed) {
         std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
         audio_stft.cleanup();
         return EngineResult::Cancelled;
+    }
+
+    if (prof) {
+        std::cerr << "[profile] passes:"
+                  << " P1=" << (p1_ns / 1e6)
+                  << " P2=" << (p2_ns / 1e6)
+                  << " P3=" << (p3_ns / 1e6) << "\n";
     }
 
     std::cout << "[Success] " << audio_stft.output_audio_file << "\n";

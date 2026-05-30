@@ -1,8 +1,11 @@
 #include "synthesis.h"
 #include "peak_limiter.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <complex>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -20,6 +23,25 @@ void Synthesis::synthesize_full(
     const int K          = Mfft / 2 + 1;
     const auto& fm       = stft.frame_map;
     const int num_frames = static_cast<int>(fm.size());
+
+    // --- Env-gated sub-stage profiling --------------------------------------
+    // Six ns counters, each summed across the per-frame loop and the inner
+    // per-channel loop, so the totals are aggregate over the whole render
+    // (both channels folded in). Timers accumulate unconditionally; the
+    // [profile] line is emitted to std::cerr only when WARPTEMPO_PROFILE is
+    // set (runtime env gating only — no compile-time macro).
+    //
+    // CAVEAT: the two now() reads per sub-stage per frame slightly inflate the
+    // cheapest stages (synthspec, ola) relative to the expensive ones. The
+    // FFT (ifft, analysis) and heap figures are the accurate ones and the ones
+    // we care about; this is acceptable for a first-cut breakdown.
+    const bool prof = (std::getenv("WARPTEMPO_PROFILE") != nullptr);
+    int64_t t_analysis = 0, t_heap = 0, t_synthspec = 0,
+            t_ifft = 0, t_ola = 0, t_write = 0;
+    using prof_clock = std::chrono::steady_clock;
+    auto prof_ns = [](prof_clock::time_point a, prof_clock::time_point b) {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
+    };
 
     // --- One-deep lookahead analysis pipeline -------------------------------
     // Analysis runs one frame ahead of synthesis so PGHI's centered
@@ -53,9 +75,12 @@ void Synthesis::synthesize_full(
         return fm[num_frames - 1] +
                static_cast<int64_t>(R_s) * (aidx - (num_frames - 1));
     };
+    // t_analysis folds in the two one-time priming calls below as well as the
+    // per-frame in-loop call — all analysis goes through this lambda.
     auto analyze_into = [&](int aidx,
                             std::vector<std::vector<double>>& magd,
                             std::vector<std::vector<double>>& phid) {
+        const auto _a0 = prof_clock::now();
         const int64_t ta = ta_for(aidx);
         std::fill(a_read.begin(), a_read.end(), 0.0f);
         if (ta >= 0 && ta < stft.src_info.frames) {
@@ -64,6 +89,7 @@ void Synthesis::synthesize_full(
         }
         for (int ch = 0; ch < channels; ++ch)
             stft.analyze_frame(ch, channels, a_read.data(), magd[ch], phid[ch]);
+        t_analysis += prof_ns(_a0, prof_clock::now());
     };
 
     // Prime: analysis frames 0 and 1 (frame 1 is the EOF analysis-only frame
@@ -117,15 +143,19 @@ void Synthesis::synthesize_full(
         const double* atten_row = stft.attenuation_map[frame_idx].data();
 
         for (int ch = 0; ch < channels; ++ch) {
+            const auto _h0 = prof_clock::now();
             stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
                             mag_prev[ch], mag_cur[ch],
                             ph_prev[ch], ph_cur[ch], ph_nxt[ch],
                             th_prev[ch], dt_prev[ch],
                             theta, dt_scratch, df_scratch, done_scratch,
                             heap_scratch);
+            t_heap += prof_ns(_h0, prof_clock::now());
             // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
             dt_prev[ch].swap(dt_scratch);
+            const auto _s0 = prof_clock::now();
             stft.populate_synth_spectrum(mag_cur[ch], theta, atten_row);
+            t_synthspec += prof_ns(_s0, prof_clock::now());
 
             if (spectra_cache) {
                 std::complex<float>* dst = spectra_cache +
@@ -142,13 +172,17 @@ void Synthesis::synthesize_full(
             // synth_window stays length N — only the N samples nearest the
             // window center participate in OLA; the M-N zero-padded tail of
             // the IFFT is discarded along with its (1/M)-scaled energy.
+            const auto _i0 = prof_clock::now();
             fftw_execute(stft.plan_inv);
+            t_ifft += prof_ns(_i0, prof_clock::now());
+            const auto _o0 = prof_clock::now();
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             for (int n = 0; n < N; ++n) {
                 const double v = stft.ifft_out[(n - half + Mfft) % Mfft];
                 ola_out[ch][n] += (v * inv_M) * stft.synth_window[n];
             }
+            t_ola += prof_ns(_o0, prof_clock::now());
 
             // End-of-frame per-channel state shift. theta -> th_prev (this
             // frame's synth phase, for the next frame); ph_cur -> ph_prev and
@@ -202,8 +236,11 @@ void Synthesis::synthesize_full(
                 write_buf[(n - write_offset) * channels + ch] = static_cast<float>(v);
             }
         }
-        if (write_len > 0)
+        if (write_len > 0) {
+            const auto _w0 = prof_clock::now();
             write_cb(write_buf.data(), static_cast<size_t>(write_len));
+            t_write += prof_ns(_w0, prof_clock::now());
+        }
 
         for (int ch = 0; ch < channels; ++ch) {
             std::memmove(ola_out[ch].data(), ola_out[ch].data() + R_s,
@@ -229,11 +266,28 @@ void Synthesis::synthesize_full(
                 write_buf[n * channels + ch] = static_cast<float>(v);
             }
         }
+        const auto _w0 = prof_clock::now();
         write_cb(write_buf.data(), static_cast<size_t>(remaining));
+        t_write += prof_ns(_w0, prof_clock::now());
     }
 
     if (show_progress) {
         std::cout << "\r" << pass_label << "100%\n";
+    }
+
+    if (prof) {
+        const int64_t total = t_analysis + t_heap + t_synthspec +
+                              t_ifft + t_ola + t_write;
+        const double denom = total > 0 ? static_cast<double>(total) : 1.0;
+        auto pct = [&](int64_t v) { return 100.0 * v / denom; };
+        std::cerr << "[profile] synth:"
+                  << " analysis=" << (t_analysis / 1e6) << "(" << pct(t_analysis) << "%)"
+                  << " heap="     << (t_heap     / 1e6) << "(" << pct(t_heap)     << "%)"
+                  << " synthspec="<< (t_synthspec/ 1e6) << "(" << pct(t_synthspec)<< "%)"
+                  << " ifft="     << (t_ifft     / 1e6) << "(" << pct(t_ifft)     << "%)"
+                  << " ola="      << (t_ola      / 1e6) << "(" << pct(t_ola)      << "%)"
+                  << " write/limiter=" << (t_write / 1e6) << "(" << pct(t_write) << "%)"
+                  << " total="    << (total      / 1e6) << "\n";
     }
 }
 

@@ -27,12 +27,9 @@ PeakLimiter::PeakLimiter(double ceiling_dbfs,
       ring_count_(0),
       att_(1.0),
       delta_(0.0),
-      target_countdown_(-1),
-      emit_buf_(static_cast<std::size_t>(channels), 0.0f) {}
+      target_countdown_(-1) {}
 
-void PeakLimiter::emit_frame(
-    int ring_idx,
-    const std::function<void(const float*, std::size_t)>& write_cb) {
+void PeakLimiter::emit_frame(int ring_idx) {
     const float* slot = &ring_[static_cast<std::size_t>(ring_idx) *
                                static_cast<std::size_t>(channels_)];
     for (int c = 0; c < channels_; ++c) {
@@ -41,9 +38,8 @@ void PeakLimiter::emit_frame(
         // this catches floating-point drift and pathological inputs.
         if (v >  ceiling_) v =  ceiling_;
         if (v < -ceiling_) v = -ceiling_;
-        emit_buf_[static_cast<std::size_t>(c)] = static_cast<float>(v);
+        out_accum_.push_back(static_cast<float>(v));
     }
-    write_cb(emit_buf_.data(), 1);
 }
 
 void PeakLimiter::advance_envelope() {
@@ -55,6 +51,8 @@ void PeakLimiter::advance_envelope() {
 void PeakLimiter::process(
     const float* in, std::size_t n_frames,
     const std::function<void(const float*, std::size_t)>& write_cb) {
+    out_accum_.clear();
+    out_accum_.reserve(n_frames * static_cast<std::size_t>(channels_));
     for (std::size_t i = 0; i < n_frames; ++i) {
         const float* frame = in + i * static_cast<std::size_t>(channels_);
 
@@ -83,7 +81,7 @@ void PeakLimiter::process(
         // overwrite that slot with the new input. Skipped during the initial
         // lookahead fill (ring not yet full).
         if (ring_count_ == ring_size_) {
-            emit_frame(ring_write_, write_cb);
+            emit_frame(ring_write_);
         }
         {
             float* slot = &ring_[static_cast<std::size_t>(ring_write_) *
@@ -108,16 +106,22 @@ void PeakLimiter::process(
             }
         }
     }
+
+    if (!out_accum_.empty()) {
+        write_cb(out_accum_.data(),
+                 out_accum_.size() / static_cast<std::size_t>(channels_));
+    }
 }
 
 void PeakLimiter::flush(
     const std::function<void(const float*, std::size_t)>& write_cb) {
     // Drain remaining ring contents. No new inputs arriving, so no further
     // peak observations; envelope continues with whatever delta is set.
+    out_accum_.clear();
     while (ring_count_ > 0) {
         const int oldest =
             (ring_write_ - ring_count_ + ring_size_) % ring_size_;
-        emit_frame(oldest, write_cb);
+        emit_frame(oldest);
         --ring_count_;
         advance_envelope();
         if (target_countdown_ > 0) {
@@ -128,5 +132,10 @@ void PeakLimiter::flush(
                 target_countdown_ = -1;
             }
         }
+    }
+
+    if (!out_accum_.empty()) {
+        write_cb(out_accum_.data(),
+                 out_accum_.size() / static_cast<std::size_t>(channels_));
     }
 }

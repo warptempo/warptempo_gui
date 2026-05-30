@@ -36,8 +36,7 @@ public:
     void flush(const std::function<void(const float*, std::size_t)>& write_cb);
 
 private:
-    void emit_frame(int ring_idx,
-                    const std::function<void(const float*, std::size_t)>& write_cb);
+    void emit_frame(int ring_idx);
     void advance_envelope();
 
     int    channels_;
@@ -56,6 +55,7 @@ private:
     double delta_;
     int    target_countdown_;  // frames until att should reach target_att_
 
-    // Single-frame emit scratch buffer (channels_ floats).
-    std::vector<float> emit_buf_;
+    // Per-call accumulation buffer: interleaved limited output, one
+    // process()/flush() call's worth. Flushed to write_cb once per call.
+    std::vector<float> out_accum_;
 };
