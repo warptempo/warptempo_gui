@@ -1,6 +1,5 @@
 #pragma once
 
-#include "engine/engine.h"  // Mode
 #include "warpmarkers.h"
 
 #include <string>
@@ -28,7 +27,6 @@ struct ClipboardPlacement {
     double fractional_position = 0.0;
     double source_time         = 0.0;  // absolute capture-time seconds
     bool   disabled            = false;
-    Mode   mode                = Mode::Pass;   // authored mode, verbatim
 };
 
 struct ClipboardBlock {

@@ -127,7 +127,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
-    audio_stft.initial_phase_mode = p.initial_phase_mode;
 
     init_fftw_threads(audio_stft, p.fftw_threads);
 
@@ -232,12 +231,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.phase_reset_markers.clear();
     audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
     const auto& fm = audio_stft.frame_map;
-    // phase_reset_modes is parallel to phase_reset_frames (same index). When
-    // empty, every reset defaults to Peak (the all-peak == current-behavior
-    // contract). The src-frame -> synth-frame upper_bound filter drops entries
-    // before the first frame; the mode is carried by the same index so the
-    // marker's mode survives the drop.
-    const bool have_modes = !p.phase_reset_modes.empty();
+    // The src-frame -> synth-frame upper_bound filter drops entries before
+    // the first frame.
     for (size_t i = 0; i < p.phase_reset_frames.size(); ++i) {
         int64_t F = p.phase_reset_frames[i];
         auto it = std::upper_bound(fm.begin(), fm.end(), F);
@@ -245,9 +240,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         --it;
         size_t s = static_cast<size_t>(it - fm.begin());
         if (s >= fm.size()) continue;
-        Mode mode = have_modes ? p.phase_reset_modes[i] : Mode::Peak;
-        audio_stft.phase_reset_markers.push_back(
-            {static_cast<int>(s), F, mode});
+        audio_stft.phase_reset_markers.push_back({static_cast<int>(s), F});
     }
     std::cout << "[Pass 1/3] Phase reset placement............. "
               << audio_stft.phase_reset_markers.size()

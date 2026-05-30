@@ -40,8 +40,6 @@ void Synthesis::synthesize_full(
     std::vector<char>   done_scratch(K);
     std::vector<PghiHeapNode> heap_scratch;
     heap_scratch.reserve(K);
-    std::vector<int> peaks;
-    peaks.reserve(Mfft / 8);
 
     std::vector<float> a_read(N * channels, 0.0f);
 
@@ -81,11 +79,9 @@ void Synthesis::synthesize_full(
 
     int phase_reset_cursor = 0;
     // `prev_reset` carries "the previous frame fired a reset" into the next
-    // iteration so heap_phase reseats theta = phi on the post-reset frame.
-    // `current_mode` is the mode dispatched on each frame; markers hand it off
-    // in the reset loop below. Engine dispatch is back: heap/peak are both live.
+    // iteration so heap_phase reseeds theta = phi on the post-reset frame.
+    // Heap (PGHI) is the sole phase engine; there is no per-frame mode.
     bool prev_reset = false;
-    Mode current_mode = stft.initial_phase_mode;
 
     std::vector<std::vector<double>> ola_out(channels, std::vector<double>(N, 0.0));
 
@@ -117,25 +113,18 @@ void Synthesis::synthesize_full(
         const int64_t R_a_fwd    = ta_nxt - ta_cur;
         const bool    frame0     = (frame_idx == 0);
         const bool    seed_heap  = frame0 || prev_reset;
-        const bool    seed_peak  = frame0;
 
         const double* atten_row = stft.attenuation_map[frame_idx].data();
 
         for (int ch = 0; ch < channels; ++ch) {
-            if (current_mode == Mode::Heap) {
-                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                                mag_prev[ch], mag_cur[ch],
-                                ph_prev[ch], ph_cur[ch], ph_nxt[ch],
-                                th_prev[ch], dt_prev[ch],
-                                theta, dt_scratch, df_scratch, done_scratch,
-                                heap_scratch);
-                // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
-                dt_prev[ch].swap(dt_scratch);
-            } else {
-                stft.peak_phase(seed_peak, R_a_actual,
-                                mag_cur[ch], ph_prev[ch], ph_cur[ch], th_prev[ch],
-                                theta, peaks);
-            }
+            stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
+                            mag_prev[ch], mag_cur[ch],
+                            ph_prev[ch], ph_cur[ch], ph_nxt[ch],
+                            th_prev[ch], dt_prev[ch],
+                            theta, dt_scratch, df_scratch, done_scratch,
+                            heap_scratch);
+            // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
+            dt_prev[ch].swap(dt_scratch);
             stft.populate_synth_spectrum(mag_cur[ch], theta, atten_row);
 
             if (spectra_cache) {
@@ -164,7 +153,7 @@ void Synthesis::synthesize_full(
             // End-of-frame per-channel state shift. theta -> th_prev (this
             // frame's synth phase, for the next frame); ph_cur -> ph_prev and
             // ph_nxt -> ph_cur (mag likewise). After this, ph_prev holds
-            // frame_idx's analysis phase, which the reset re-seat below reads.
+            // frame_idx's analysis phase, ready for the next frame's heap call.
             th_prev[ch] = theta;
             ph_prev[ch].swap(ph_cur[ch]);
             ph_cur[ch].swap(ph_nxt[ch]);
@@ -172,17 +161,13 @@ void Synthesis::synthesize_full(
             mag_cur[ch].swap(mag_nxt[ch]);
         }
 
-        // Phase-reset re-seat. theta_prev seats from ph_prev (which holds
-        // frame_idx's analysis phase after the end-of-frame swap above). The
-        // incoming heap segment then hard-seeds theta = phi via seed_heap; the
-        // incoming peak segment soft-seeds from the re-seated th_prev. Marker
-        // mode hands off `current_mode` for the next segment.
+        // Phase reset. The post-reset frame re-grounds via seed_heap (theta =
+        // phi); there is no soft-seed and no mode handoff. The loop only
+        // advances the marker cursor and records that a reset fired so
+        // `prev_reset` seeds the next frame.
         bool reset_fired = false;
         while (phase_reset_cursor < static_cast<int>(stft.phase_reset_markers.size()) &&
                stft.phase_reset_markers[phase_reset_cursor].synth_frame == frame_idx) {
-            for (int c = 0; c < channels; ++c)
-                th_prev[c] = ph_prev[c];
-            current_mode = stft.phase_reset_markers[phase_reset_cursor].mode;
             ++phase_reset_cursor;
             reset_fired = true;
         }

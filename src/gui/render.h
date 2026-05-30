@@ -529,18 +529,11 @@ void render_phase_reset_markers(cairo_t* cr,
                               const std::vector<TimeMapSegment>* timemap = nullptr,
                               const DragOverlay* drag_overlay = nullptr);
 
-// Flag text for phase resets is the mode token peak/heap/pass (the
-// authored phase-propagation model), produced by mode_to_token.
-//
-// Three-state model, mirroring the warp flags:
-//   1. Not selected: text in `kText`, fill `kMarker`.
-//   2. Selected, editor not engaged: fill `kSelected`.
-//   3. PhaseResetMode editor engaged on this flag: live pending token +
-//      blinking cursor; parse-fail fill `kAccent` on a rejected token.
-// `editor.marker_index` drives the skip-guard so the cache leaves a hole
-// for the live editor render (render_one_editor_phase_reset_flag) to fill;
-// the other overlay fields supply the live state. Brief C: trim membership
-// has no effect — flags always paint full-brightness.
+// The phase-reset chip is an invariable single `p` (the peak/heap/pass
+// phase-MODEL concept was removed once heap became the sole engine). Two
+// states only: default fill `kMarker`, selected fill `kSelected`. No editor,
+// no parse-fail state. Brief C: trim membership has no effect — flags always
+// paint full-brightness.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
@@ -549,26 +542,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const FlagEditorOverlay& editor = {},
                             const std::vector<TimeMapSegment>* timemap = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
-
-// Phase-reset analogue of render_one_editor_flag: paints ONLY the
-// PhaseResetMode editor target with the live pending text + blinking cursor,
-// over the hole render_phase_reset_flags leaves in the cache. Same greedy-
-// pack / elision math so the flag lands at the cached pixel column.
-void render_one_editor_phase_reset_flag(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::set<int>& selected_set,
-    const FlagEditorOverlay& editor,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     cairo_t* cr,

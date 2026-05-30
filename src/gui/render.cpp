@@ -1117,49 +1117,33 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 
 namespace {
 
-std::string phase_reset_flag_text(const GuiPhaseResetMarker& m) {
-    return mode_to_token(m.mode);   // "peak" / "heap" / "pass"
+std::string phase_reset_flag_text(const GuiPhaseResetMarker&) {
+    // The phase-reset chip is an invariable single `p`: the peak/heap/pass
+    // phase-MODEL concept was removed once heap became the sole engine. One
+    // cell wide, so the shared glyph-count width math yields a 1-cell chip.
+    return "p";
 }
 
-// Stage-C-style shared paint body for phase-reset flags. Mirrors
-// paint_one_flag_with_overlay: the editor overlay supplies the live pending
-// text, selection swap, blinking cursor, and the parse-fail fill. For
-// non-editor flags the overlay fields default to inert, so the chip paints
-// its committed mode token on a selected/default fill.
-void paint_one_phase_reset_flag_with_overlay(
+// Plain painter for a phase-reset flag. Two states only: selected fill
+// kSelected, otherwise default fill kMarker. There is no per-flag editor,
+// so no pending/cursor/selection/parse-fail handling.
+void paint_one_phase_reset_flag(
     cairo_t* cr,
     int i,
     double text_left,
     double baseline_y,
     const std::string& text,
     const std::set<int>& selected_set,
-    const FlagEditorOverlay& editor,
     double hl_pad) {
-    const bool is_selected   = selected_set.count(i) > 0;
-    const bool is_editing    = (i == editor.marker_index);
-    const bool is_parse_fail = is_editing && editor.is_red;
-
-    const std::string draw_text = is_editing ? editor.pending : text;
-
-    // Fill table mirrors the warp flags: parse-fail > selected >
-    // default(kMarker). Brief C: trim membership no longer dims the chip.
-    GuiColor fill_col;
-    if (is_parse_fail)      fill_col = kAccent;
-    else if (is_selected)   fill_col = kSelected;
-    else                    fill_col = kMarker;
+    const bool is_selected = selected_set.count(i) > 0;
 
     EditorTextBox box;
     box.anchor_x        = text_left + hl_pad;
     box.baseline_y      = baseline_y;
-    box.text            = draw_text;
+    box.text            = text;
     box.hl_pad          = hl_pad;
-    box.fill            = fill_col;
+    box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
-    box.has_selection   = is_editing && editor.has_selection;
-    box.selection_start = editor.selection_start;
-    box.selection_end   = editor.selection_end;
-    box.cursor_visible  = is_editing && editor.cursor_visible;
-    box.cursor_pos      = editor.cursor_pos;
     render_editor_text_box(cr, box);
 
     if constexpr (kDebugPerf) perf_counters::flag_drawn++;
@@ -1193,7 +1177,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const FlagEditorOverlay& editor,
                             const std::vector<TimeMapSegment>* timemap,
                             const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1208,12 +1191,8 @@ void render_phase_reset_flags(cairo_t* cr,
 
     const double hl_pad = kFlagPadXPx;
 
-    // Brief Y.5: collect-then-reverse-paint, mirroring render_flags. The
-    // PhaseResetMode editor target is skipped here (skip-guard) so the cache
-    // leaves a transparent hole over its column; render_one_editor_phase_
-    // reset_flag fills that hole per frame with the live pending text and
-    // blinking cursor. When editor.marker_index == -1 (the cache's
-    // steady-state default), the guard never fires.
+    // Brief Y.5: collect-then-reverse-paint, mirroring render_flags. With no
+    // per-flag editor every visible flag paints straight into the cache.
     struct PhaseResetEmit {
         int                  i;
         double               text_left;
@@ -1230,58 +1209,14 @@ void render_phase_reset_flags(cairo_t* cr,
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text, const cairo_text_extents_t& ext) {
-            if (editor.marker_index == i) return;
             emits.push_back({i, text_left, baseline_y, text, ext});
         });
 
     for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
-        paint_one_phase_reset_flag_with_overlay(
+        paint_one_phase_reset_flag(
             cr, it->i, it->text_left, it->baseline_y, it->text,
-            selected_set, editor, hl_pad);
+            selected_set, hl_pad);
     }
-
-    cairo_restore(cr);
-}
-
-void render_one_editor_phase_reset_flag(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::set<int>& selected_set,
-    const FlagEditorOverlay& editor,
-    const std::vector<TimeMapSegment>* timemap,
-    const DragOverlay* drag_overlay) {
-    if (editor.marker_index < 0) return;
-    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, font_size);
-
-    const double hl_pad = kFlagPadXPx;
-
-    iterate_visible_flags_impl(cr, top_strip_area, phase_resets,
-                               viewport_start_sample, viewport_end_sample,
-                               sample_rate, timemap, drag_overlay,
-        [&](int i) {
-            return phase_reset_flag_text(phase_resets[i]);
-        },
-        [&](int i, double text_left, double baseline_y,
-            const std::string& text, const cairo_text_extents_t& ext) {
-            (void)ext;
-            if (i != editor.marker_index) return;
-            paint_one_phase_reset_flag_with_overlay(
-                cr, i, text_left, baseline_y, text,
-                selected_set, editor, hl_pad);
-        });
 
     cairo_restore(cr);
 }

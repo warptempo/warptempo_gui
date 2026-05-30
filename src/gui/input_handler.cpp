@@ -481,12 +481,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     }
                     viewport.invalidate_timestamp_area();
                 }
-            } else if (app.top_flag_editor.kind ==
-                           text_editor::Kind::PhaseResetMode) {
-                // Plain commit, no mode-enter/exit wrapper. CancelRequested
-                // and Consumed fall through to the shared FlagPayload arms
-                // below (exit_no_commit / invalidate_top_strip).
-                flag_editor.commit_phase_reset_mode_edit();
             } else {
                 flag_editor.commit_top_flag_edit();
             }
@@ -2463,30 +2457,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Non-Ctrl: plain or Shift press. In the waveform area this
         // starts a playhead-drag gesture. In the top strip (flag click) a
-        // plain click enters the view's text editor (warp canonical line in
-        // W, phase-reset mode in P); Shift+click keeps the legacy
-        // multi-select toggle + playhead move.
+        // W-view plain click enters the warp canonical-line editor;
+        // Shift+click keeps the legacy multi-select toggle + playhead move.
+        // A P-view plain click is navigation (single-select + playhead),
+        // falling through to the selection block below; phase resets have
+        // no per-flag editor.
         if (inside_top) {
             if (hit >= 0) {
-                if (!shift) {
-                    // Plain click on a flag enters the appropriate text
-                    // editor. Read-only refuses the open (silent no-op).
-                    // W view -> warp canonical-line editor (owns the
-                    // selection + playhead update on its target-switching
-                    // path); P view -> phase-reset mode editor. Shift+click
+                if (!shift && app.active_markers_view != 'P') {
+                    // Plain click on a W-view flag enters the warp
+                    // canonical-line editor (which owns the selection +
+                    // playhead update on its target-switching path).
+                    // Read-only refuses the open (silent no-op). Shift+click
                     // keeps the legacy multi-select toggle below; Ctrl+click
                     // was handled by the reposition-drag branch above.
                     if (active_view_state(app).read_only) {
                         return;
                     }
-                    if (app.active_markers_view == 'P') {
-                        flag_editor.enter_phase_reset_mode_edit(hit);
-                    } else {
-                        flag_editor.enter_top_flag_edit(
-                            hit, static_cast<double>(x));
-                    }
+                    flag_editor.enter_top_flag_edit(
+                        hit, static_cast<double>(x));
                     return;
                 }
+                // P-view plain click and any Shift+click fall here.
+                // Single-select is navigation, so it is allowed even in
+                // read-only (no marker mutation).
                 if (shift) selection.toggle_selection_membership(hit);
                 else       selection.set_single_selection(hit);
                 const int sr = audio.sample_rate();

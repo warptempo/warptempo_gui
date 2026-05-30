@@ -16,22 +16,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-bool mode_from_token(const std::string& tok, Mode& out) {
-    if (tok == "peak") { out = Mode::Peak; return true; }
-    if (tok == "heap") { out = Mode::Heap; return true; }
-    if (tok == "pass") { out = Mode::Pass; return true; }
-    return false;
-}
-
-const char* mode_to_token(Mode m) {
-    switch (m) {
-        case Mode::Peak: return "peak";
-        case Mode::Heap: return "heap";
-        case Mode::Pass: return "pass";
-    }
-    return "pass";  // unreachable: Mode has only Peak/Heap/Pass
-}
-
 namespace {
 
 std::string trim_ws(const std::string& s) {
@@ -109,31 +93,19 @@ bool parse_line(const std::string& raw, GuiPhaseResetMarker& out, std::string& e
         return false;
     }
 
-    // The mode rides inside the single whitespace token after a `|`:
-    // `TIMESTAMP[|MODE]`. Split once on the first `|` — the half before is
-    // the timestamp (validated exactly as before), the half after (if any)
-    // selects the phase-propagation model. A `#` strip already happened
-    // above, so `#TS|MODE` composes with no extra code. Exact lowercase
-    // only (peak/heap/pass), matching the warp file's lowercase `pass`; no
-    // case-folding, consistent with the strict-by-default parser.
+    // The phase-reset mode token (`|peak`/`|heap`/`|pass`) was removed when
+    // heap became the sole engine. A line still carrying a `|` suffix is a
+    // pre-migration file; reject it hard so the strip requirement surfaces,
+    // consistent with the parser's other strict rejections, rather than
+    // silently accepting and ignoring the suffix.
     const std::string& token = toks[0];
-    const auto bar = token.find('|');
-    const std::string ts_str =
-        (bar == std::string::npos) ? token : token.substr(0, bar);
-
-    if (!parse_timestamp_token(ts_str, out.time_seconds, err_msg)) {
+    if (token.find('|') != std::string::npos) {
+        err_msg = "phase-reset mode tokens removed; "
+                  "strip the trailing |peak/|heap/|pass";
         return false;
     }
 
-    if (bar == std::string::npos) {
-        out.mode = Mode::Pass;  // untagged / bare timestamp -> implicit pass
-        return true;
-    }
-
-    const std::string mode_str = token.substr(bar + 1);
-    if (!mode_from_token(mode_str, out.mode)) {
-        err_msg = "unknown phase-reset mode (expected peak/heap/pass): " +
-                  mode_str;
+    if (!parse_timestamp_token(token, out.time_seconds, err_msg)) {
         return false;
     }
     return true;
@@ -242,15 +214,11 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
 
     std::ostringstream out;
     for (const auto& m : deduped) {
-        // Always emit the mode token (including `|pass`) for a byte-stable
-        // round-trip: load reads `|pass` back to Mode::Pass and still
-        // accepts a bare timestamp as implicit Pass for old files. The `#`
-        // disable prefix composes as `#TIMESTAMP|MODE`, exactly as the
-        // parser splits it.
+        // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
+        // timestamp, exactly as the parser strips it. No mode suffix — the
+        // peak/heap/pass model was removed when heap became the sole engine.
         if (m.disabled) out << '#';
-        out << format_timestamp(m.time_seconds)
-            << '|' << mode_to_token(m.mode)
-            << '\n';
+        out << format_timestamp(m.time_seconds) << '\n';
     }
     const std::string data = out.str();
 
@@ -316,22 +284,4 @@ void GuiPhaseResetMarkers::remove_marker(int index) {
     if (index < 0 || index >= static_cast<int>(markers_.size())) return;
     markers_.erase(markers_.begin() + index);
     ++generation_;
-}
-
-// Mode inheritance resolver. Mirrors resolve_inherited_tempo (render.cpp): a
-// backward walk to the last mode-OWNING (Peak or Heap), non-disabled marker.
-// Disabled markers (`#` prefix) are inert in resolution exactly as disabled
-// warp markers drop out of the timemap, so a `#`-commented `heap` must not
-// switch the mode. Pass markers inherit; the default when no owner precedes
-// `index` is Peak (the global default == L-D == untagged behavior).
-Mode resolve_inherited_mode(const std::vector<GuiPhaseResetMarker>& markers,
-                            int index) {
-    for (int i = index - 1; i >= 0; --i) {
-        const auto& m = markers[i];
-        if (m.disabled) continue;                 // inert in resolution
-        if (m.mode == Mode::Peak || m.mode == Mode::Heap) {
-            return m.mode;                         // last owner wins
-        }
-    }
-    return Mode::Peak;
 }

@@ -241,62 +241,12 @@ RenderOutcome do_render(const RenderRequest& req,
         // .renderphaseresetmarkers writer below so the on-disk
         // visualization and the engine-applied placement agree on which
         // phase resets are in scope.
-        // Per-input resolved phase-propagation modes, aligned 1:1 with
-        // req.phase_reset_frames. Every GUI dispatch site builds
-        // phase_reset_frames by walking req.phase_resets and skipping disabled
-        // markers, in order; we reproduce that same walk to recover each
-        // surviving reset's resolved concrete mode (Peak/Heap, with Pass
-        // resolved away via resolve_inherited_mode). If the two lists don't
-        // align (a non-GUI / future caller that populated phase_reset_frames
-        // without a matching phase_resets snapshot), we leave the modes list
-        // empty so the engine defaults every reset to Peak — the all-peak ==
-        // current-behavior contract.
-        std::vector<Mode> modes_for_input;
-        modes_for_input.reserve(req.phase_reset_frames.size());
-        for (size_t i = 0; i < req.phase_resets.size(); ++i) {
-            if (req.phase_resets[i].disabled) continue;
-            const Mode authored = req.phase_resets[i].mode;
-            modes_for_input.push_back(
-                (authored == Mode::Heap || authored == Mode::Peak)
-                    ? authored
-                    : resolve_inherited_mode(req.phase_resets,
-                                             static_cast<int>(i)));
-        }
-        if (modes_for_input.size() != req.phase_reset_frames.size())
-            modes_for_input.clear();  // misaligned -> default all-peak
-        const bool carry_modes = !modes_for_input.empty();
-
-        // Initial phase-propagation mode at engine frame 0. Mirrors the
-        // warp-side synthetic (0,0) timemap anchor: an unconditional
-        // prefix-inheritance seat. For an untrimmed render trim_begin_frame
-        // is 0; the first in-trim index is 0 if any markers exist (or the
-        // size() sentinel if none); resolve_inherited_mode walks back from
-        // first_in_trim_idx + 1, considering the marker at first_in_trim_idx
-        // itself as a candidate owner. Empty markers / no owner upstream:
-        // resolver returns Peak default.
-        int64_t trim_begin_for_seed = tmres.trimmed
-            ? static_cast<int64_t>(tmres.trim_begin_frame)
-            : 0;
-        size_t first_in_trim_idx = req.phase_resets.size();
-        for (size_t i = 0; i < req.phase_resets.size(); ++i) {
-            const int64_t sf = static_cast<int64_t>(std::nearbyint(
-                req.phase_resets[i].time_seconds *
-                static_cast<double>(sample_rate)));
-            if (sf >= trim_begin_for_seed) {
-                first_in_trim_idx = i;
-                break;
-            }
-        }
-        ep.initial_phase_mode = resolve_inherited_mode(
-            req.phase_resets, static_cast<int>(first_in_trim_idx) + 1);
-
         if (tmres.trimmed) {
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
             const int64_t trim_end =
                 static_cast<int64_t>(tmres.trim_end_frame);
             ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
-            ep.phase_reset_modes.reserve(req.phase_reset_frames.size());
             for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
                 const int64_t F = req.phase_reset_frames[i];
                 if (F < trim_begin || F > trim_end) continue;
@@ -312,11 +262,9 @@ RenderOutcome do_render(const RenderRequest& req,
                     engine_frame = 0;
                 }
                 ep.phase_reset_frames.push_back(engine_frame);
-                if (carry_modes) ep.phase_reset_modes.push_back(modes_for_input[i]);
             }
         } else {
             ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
-            ep.phase_reset_modes.reserve(req.phase_reset_frames.size());
             for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
                 const int64_t F = req.phase_reset_frames[i];
                 int64_t engine_frame = F - phase_reset_offset_samples;
@@ -330,7 +278,6 @@ RenderOutcome do_render(const RenderRequest& req,
                     engine_frame = 0;
                 }
                 ep.phase_reset_frames.push_back(engine_frame);
-                if (carry_modes) ep.phase_reset_modes.push_back(modes_for_input[i]);
             }
         }
 
