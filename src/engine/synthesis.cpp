@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <random>
 #include <vector>
 
 void Synthesis::synthesize_full(
@@ -62,6 +63,18 @@ void Synthesis::synthesize_full(
     std::vector<char>   done_scratch(K);
     std::vector<PghiHeapNode> heap_scratch;
     heap_scratch.reserve(K);
+
+    // One quiet-bin RNG per channel. Each stream is consumed only by its own
+    // channel, in bin order, so the draw sequence is identical whether channels
+    // run serially (now) or on separate threads (brief C) — which is what makes
+    // C bit-identical to B. Seeds are fixed -> reproducible render. The golden-
+    // ratio stride just separates the seeds; the exact constant is arbitrary.
+    std::vector<std::mt19937> quiet_rng_ch;
+    quiet_rng_ch.reserve(channels);
+    for (int ch = 0; ch < channels; ++ch)
+        quiet_rng_ch.emplace_back(
+            static_cast<std::uint32_t>(0x5715E11u ^
+                (static_cast<std::uint32_t>(ch) * 0x9E3779B9u)));
 
     const int64_t src_frames = stft.src_info.frames;
     // Planar source: channel-contiguous float copy of the whole source, read
@@ -166,7 +179,7 @@ void Synthesis::synthesize_full(
                             ph_prev[ch], ph_cur[ch], ph_nxt[ch],
                             th_prev[ch], dt_prev[ch],
                             theta, dt_scratch, df_scratch, done_scratch,
-                            heap_scratch);
+                            heap_scratch, quiet_rng_ch[ch]);
             t_heap += prof_ns(_h0, prof_clock::now());
             // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
             dt_prev[ch].swap(dt_scratch);

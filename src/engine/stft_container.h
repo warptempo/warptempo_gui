@@ -192,14 +192,6 @@ struct AudioSTFT {
     // Phase reset markers
     std::vector<PhaseResetMarker> phase_reset_markers;
 
-    // Seeded RNG for the PGHI quiet-bin policy (Prusa Alg.1 line 3): each
-    // sub-tolerance bin is assigned a uniform-random synthesis phase. Same
-    // seed every render -> reproducible output. Re-seeded at the top of
-    // init_fftw so a second engine init in the same process restarts the
-    // stream identically.
-    std::mt19937 quiet_rng{0x5715E11u};
-    std::uniform_real_distribution<double> quiet_dist{-M_PI, M_PI};
-
     // Spectral limiter
     LimiterParams limiter_params;
     int num_bands = 0;
@@ -271,7 +263,6 @@ struct AudioSTFT {
         R_s = N / 4;
         M = 2 * N;
         bin_hz_width = static_cast<double>(src_info.samplerate) / M;
-        quiet_rng.seed(0x5715E11u);
         window.resize(N);
         synth_window.resize(N);
         for (int n = 0; n < N; ++n) {
@@ -399,7 +390,8 @@ struct AudioSTFT {
                     std::vector<double>& dt_out,
                     std::vector<double>& df_scratch,
                     std::vector<char>&   done_scratch,
-                    std::vector<PghiHeapNode>& heap_scratch) {
+                    std::vector<PghiHeapNode>& heap_scratch,
+                    std::mt19937& rng) {
         const int K = M / 2 + 1;
 
         // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
@@ -469,11 +461,12 @@ struct AudioSTFT {
         // structure, so freshly randomized phase is what keeps the residual
         // floor decorrelated from frame to frame. Significant bins (in I)
         // get their phase via the heap below.
+        std::uniform_real_distribution<double> quiet_dist(-M_PI, M_PI);
         for (int k = 0; k < K; ++k) {
             if (mag_cur[k] > abstol) {
                 done_scratch[k] = 0;                                  // in I
             } else {
-                theta[k] = quiet_dist(quiet_rng);
+                theta[k] = quiet_dist(rng);
                 done_scratch[k] = 1;
             }
         }
