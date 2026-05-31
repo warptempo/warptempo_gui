@@ -239,7 +239,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
     };
 
-    auto t_p2_0 = std::chrono::steady_clock::now();
+    // Pass 1: phase reset placement.
+    auto t_p1_0 = std::chrono::steady_clock::now();
     audio_stft.phase_reset_markers.clear();
     audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
     const auto& fm = audio_stft.frame_map;
@@ -257,43 +258,50 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     std::cout << "[Pass 1/3] Phase reset placement............. "
               << audio_stft.phase_reset_markers.size()
               << " phase resets\n";
-    auto t_p2_1 = std::chrono::steady_clock::now();
-    p1_ns = ns_between(t_p2_0, t_p2_1);
-    std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
+    auto t_p1_1 = std::chrono::steady_clock::now();
+    p1_ns = ns_between(t_p1_0, t_p1_1);
+    std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
 
-    // Pass 2 (spectral limiter) is skipped on the buffer-output path. The
-    // attenuation_map was already assign()'d to all-1.0 above, which is
-    // the same identity row the spectral limiter would have produced for
-    // a no-overshoot signal — so synthesis sees a no-op attenuation row
-    // regardless of which branch we take. Pass 3 still applies the peak
-    // limiter when limiter_mode == Peak (the target render sets
-    // force_peak_limiter at the GUI boundary to opt in).
-    if (!p.output_buffer) {
+    // Pass 2: synthesis (clean render, identity attenuation_map). The Spectral
+    // disk path renders into an in-memory buffer that Pass 3 limits in place;
+    // every other path streams straight to its destination. attenuation_map
+    // stays all-1.0 (a no-op row), so synthesize_full — and therefore the None
+    // disk render — is byte-identical to the pre-relocation build.
+    std::vector<float> render_buf;
+    const bool spectral_disk =
+        (!p.output_buffer && audio_stft.limiter_mode == LimiterMode::Spectral);
+    auto t_p2_0 = std::chrono::steady_clock::now();
+    if (p.output_buffer) {
+        synthesis.process_to_buffer(audio_stft, p.output_buffer);
+    } else if (spectral_disk) {
+        synthesis.process_to_buffer(audio_stft, &render_buf);
+    } else {
+        synthesis.process(audio_stft);
+    }
+    auto t_p2_1 = std::chrono::steady_clock::now();
+    p2_ns = ns_between(t_p2_0, t_p2_1);
+    std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
+    if (audio_stft.cancellation_observed) {
+        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+        audio_stft.cleanup();
+        return EngineResult::Cancelled;
+    }
+
+    // Pass 3: post-render spectral limiter + peak-limiter backstop, then write
+    // the limited buffer to disk. Spectral disk path only — the None disk path
+    // and the target-view buffer path have no Pass 3.
+    if (spectral_disk) {
         auto t_p3_0 = std::chrono::steady_clock::now();
-        limiter.process(audio_stft);
-        auto t_p3_1 = std::chrono::steady_clock::now();
-        p2_ns = ns_between(t_p3_0, t_p3_1);
-        std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
+        limiter.process(audio_stft, render_buf);
         if (audio_stft.cancellation_observed) {
             std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
         }
-    }
-
-    auto t_p4_0 = std::chrono::steady_clock::now();
-    if (p.output_buffer) {
-        synthesis.process_to_buffer(audio_stft, p.output_buffer);
-    } else {
-        synthesis.process(audio_stft);
-    }
-    auto t_p4_1 = std::chrono::steady_clock::now();
-    p3_ns = ns_between(t_p4_0, t_p4_1);
-    std::cout << "  (" << pass_ms(t_p4_0, t_p4_1) << " ms)\n";
-    if (audio_stft.cancellation_observed) {
-        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
-        audio_stft.cleanup();
-        return EngineResult::Cancelled;
+        synthesis.write_render_to_file(audio_stft, render_buf);
+        auto t_p3_1 = std::chrono::steady_clock::now();
+        p3_ns = ns_between(t_p3_0, t_p3_1);
+        std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
     }
 
     if (prof) {

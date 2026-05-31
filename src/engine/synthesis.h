@@ -17,6 +17,13 @@ public:
     // (same layout the file path emits).
     void process_to_buffer(AudioSTFT& stft, std::vector<float>* output_buffer);
 
+    // Write an already-rendered, spectral-limited buffer to the output wav,
+    // running the time-domain peak limiter as an always-after backstop first.
+    // Used by the Spectral disk path, where Pass 2 rendered into memory and
+    // Pass 3's spectral limiter ran on that buffer in place. Output format is
+    // 24-bit PCM (matches the non-None format decision in process()).
+    void write_render_to_file(AudioSTFT& stft, const std::vector<float>& render);
+
     // Shared synthesis helper. Runs full OLA synthesis from frame 0 using
     // stft.attenuation_map. write_cb is invoked with per-iteration chunks (each
     // at most R_s frames; initial iterations contribute less during the N/2

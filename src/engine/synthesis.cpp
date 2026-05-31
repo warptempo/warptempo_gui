@@ -318,12 +318,12 @@ void Synthesis::process(AudioSTFT& stft) {
         };
         synthesize_full(stft, nullptr, write_through_limiter,
                         /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
         pl.flush(write_to_file);
     } else {
         synthesize_full(stft, nullptr, write_to_file,
                         /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
     }
     sf_close(output_snd);
 }
@@ -353,11 +353,41 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
         };
         synthesize_full(stft, nullptr, write_through_limiter,
                         /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
         pl.flush(append_to_buffer);
     } else {
         synthesize_full(stft, nullptr, append_to_buffer,
                         /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 3/3] Synthesis........................ ");
+                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
     }
+}
+
+void Synthesis::write_render_to_file(AudioSTFT& stft,
+                                     const std::vector<float>& render) {
+    SF_INFO tgt_info = stft.src_info;
+    // Spectral disk path -> 24-bit PCM (same non-None decision as process()).
+    tgt_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+
+    SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
+    if (!output_snd) {
+        std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
+        return;
+    }
+
+    auto write_to_file = [output_snd](const float* buf, size_t n_frames) {
+        sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
+    };
+
+    // Always-after backstop: catches the sub-dB residual the spectral limiter's
+    // per-peak cap leaves plus any rare blip. Free on compliant material.
+    PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
+                   stft.peak_limiter_attack_ms,
+                   stft.peak_limiter_release_ms,
+                   stft.src_info.samplerate,
+                   stft.channels);
+    const size_t total_frames = stft.channels > 0
+        ? render.size() / static_cast<size_t>(stft.channels) : 0;
+    pl.process(render.data(), total_frames, write_to_file);
+    pl.flush(write_to_file);
+    sf_close(output_snd);
 }
