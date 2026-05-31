@@ -1,6 +1,7 @@
 #include "synthesis.h"
 #include "peak_limiter.h"
 #include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <complex>
@@ -26,55 +27,22 @@ void Synthesis::synthesize_full(
     const int num_frames = static_cast<int>(fm.size());
 
     // --- Env-gated sub-stage profiling --------------------------------------
-    // Six ns counters, each summed across the per-frame loop and the inner
-    // per-channel loop, so the totals are aggregate over the whole render
-    // (both channels folded in). Timers accumulate unconditionally; the
-    // [profile] line is emitted to std::cerr only when WARPTEMPO_PROFILE is
-    // set (runtime env gating only — no compile-time macro).
+    // Five ns counters per channel (held in chprof, below), reduced across
+    // channels after the per-channel passes complete, plus a single
+    // write/limiter timer for the one interleaved write_cb. The totals are
+    // aggregate over the whole render (both channels folded in). The [profile]
+    // line is emitted to std::cerr only when WARPTEMPO_PROFILE is set (runtime
+    // env gating only — no compile-time macro).
     //
     // CAVEAT: the two now() reads per sub-stage per frame slightly inflate the
     // cheapest stages (synthspec, ola) relative to the expensive ones. The
     // FFT (ifft, analysis) and heap figures are the accurate ones and the ones
     // we care about; this is acceptable for a first-cut breakdown.
     const bool prof = (std::getenv("WARPTEMPO_PROFILE") != nullptr);
-    int64_t t_analysis = 0, t_heap = 0, t_synthspec = 0,
-            t_ifft = 0, t_ola = 0, t_write = 0;
     using prof_clock = std::chrono::steady_clock;
     auto prof_ns = [](prof_clock::time_point a, prof_clock::time_point b) {
         return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
     };
-
-    // --- One-deep lookahead analysis pipeline -------------------------------
-    // Analysis runs one frame ahead of synthesis so PGHI's centered
-    // time-derivative can read the NEXT frame's analysis phase. This is
-    // INTERNAL pipeline latency only: synthesis frame m still OLA-adds into
-    // output position m*R_s. All inter-frame phase state is held in these
-    // loop-local per-channel buffers; the heap helper reads them directly.
-    std::vector<std::vector<double>> ph_prev (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> ph_cur  (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> ph_nxt  (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> mag_prev(channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> mag_cur (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> mag_nxt (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> th_prev (channels, std::vector<double>(K, 0.0));
-    std::vector<std::vector<double>> dt_prev (channels, std::vector<double>(K, 0.0));
-
-    std::vector<double> theta(K), dt_scratch(K), df_scratch(K);
-    std::vector<char>   done_scratch(K);
-    std::vector<PghiHeapNode> heap_scratch;
-    heap_scratch.reserve(K);
-
-    // One quiet-bin RNG per channel. Each stream is consumed only by its own
-    // channel, in bin order, so the draw sequence is identical whether channels
-    // run serially (now) or on separate threads (brief C) — which is what makes
-    // C bit-identical to B. Seeds are fixed -> reproducible render. The golden-
-    // ratio stride just separates the seeds; the exact constant is arbitrary.
-    std::vector<std::mt19937> quiet_rng_ch;
-    quiet_rng_ch.reserve(channels);
-    for (int ch = 0; ch < channels; ++ch)
-        quiet_rng_ch.emplace_back(
-            static_cast<std::uint32_t>(0x5715E11u ^
-                (static_cast<std::uint32_t>(ch) * 0x9E3779B9u)));
 
     const int64_t src_frames = stft.src_info.frames;
     // Planar source: channel-contiguous float copy of the whole source, read
@@ -99,215 +67,253 @@ void Synthesis::synthesize_full(
         }
     }
 
-    // t_a for analysis-frame index `aidx`. Beyond the last synthesis frame the
-    // timemap range is exhausted (alpha == 1), so each extra analysis-only
-    // frame advances by R_s. We never read more than one frame past EOF: that
-    // single analysis-only frame supplies the last emitted frame's phi_next and
-    // is never itself emitted, so the total emitted length is unchanged.
-    auto ta_for = [&](int aidx) -> int64_t {
-        if (aidx < num_frames) return fm[aidx];
-        return fm[num_frames - 1] +
-               static_cast<int64_t>(R_s) * (aidx - (num_frames - 1));
-    };
-    // t_analysis folds in the two one-time priming calls below as well as the
-    // per-frame in-loop call — all analysis goes through this lambda.
-    auto analyze_into = [&](int aidx,
-                            std::vector<std::vector<double>>& magd,
-                            std::vector<std::vector<double>>& phid) {
-        const auto _a0 = prof_clock::now();
-        const int64_t ta = ta_for(aidx);
-        for (int ch = 0; ch < channels; ++ch)
-            stft.analyze_frame(ch, &planar[static_cast<size_t>(ch) * src_frames],
-                               ta, src_frames, magd[ch], phid[ch]);
-        t_analysis += prof_ns(_a0, prof_clock::now());
-    };
+    // Emitted output length (timing-convention: (num_frames-1)*R_s).
+    const int64_t out_frames =
+        (num_frames > 0) ? static_cast<int64_t>(num_frames - 1) * R_s : 0;
 
-    // Prime: analysis frames 0 and 1 (frame 1 is the EOF analysis-only frame
-    // when there is only a single synthesis frame). ph_prev stays zero — frame
-    // 0 is a seed and consumes no time recursion, so it needs no phi_prev.
-    int64_t ta_prev = 0, ta_cur = 0, ta_nxt = 0;
-    if (num_frames >= 1) {
-        analyze_into(0, mag_cur, ph_cur);
-        analyze_into(1, mag_nxt, ph_nxt);
-        ta_cur = ta_for(0);
-        ta_nxt = ta_for(1);
-    }
+    // One mono output stream per channel. Each channel computes its whole
+    // output independently into its own buffer; the streams are interleaved
+    // only at the end. This is the channel-major restructure (brief C.1): a
+    // pure reorganization of the previously frame-major loop, with each
+    // channel's pipeline state now fully local to run_channel so brief C.2
+    // can hand each channel to its own thread.
+    std::vector<std::vector<float>> mono(channels);
+    struct ChProf { int64_t analysis=0, heap=0, synthspec=0, ifft=0, ola=0; };
+    std::vector<ChProf> chprof(channels);
+    std::vector<char> ch_cancelled(channels, 0);
 
-    int phase_reset_cursor = 0;
-    // `prev_reset` carries "the previous frame fired a reset" into the next
-    // iteration so heap_phase reseeds theta = phi on the post-reset frame.
-    // Heap (PGHI) is the sole phase engine; there is no per-frame mode.
-    bool prev_reset = false;
+    // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
+    // fm, stft.phase_reset_markers, stft.attenuation_map, stft.fft_ws[ch],
+    // stft.window/synth_window) and writes only mono[ch], chprof[ch],
+    // ch_cancelled[ch]. Every buffer that was shared across channels in the old
+    // frame-major loop (theta/dt/df/done scratch, the heap scratch, the OLA
+    // row, the analysis-state rows, the RNG) is now a local here — that
+    // locality is exactly what makes C.2 safe.
+    auto run_channel = [&](int ch) {
+        const int K2 = K;
+        // --- One-deep lookahead analysis pipeline ---------------------------
+        // Analysis runs one frame ahead of synthesis so PGHI's centered
+        // time-derivative can read the NEXT frame's analysis phase. This is
+        // INTERNAL pipeline latency only: synthesis frame m still OLA-adds into
+        // output position m*R_s. All inter-frame phase state is held in these
+        // per-channel buffers; the heap helper reads them directly.
+        std::vector<double> ph_prev(K2,0.0), ph_cur(K2,0.0), ph_nxt(K2,0.0);
+        std::vector<double> mag_prev(K2,0.0), mag_cur(K2,0.0), mag_nxt(K2,0.0);
+        std::vector<double> th_prev(K2,0.0), dt_prev(K2,0.0);
+        // Per-channel scratch (was shared and serially reused across channels).
+        std::vector<double> theta(K2), dt_scratch(K2), df_scratch(K2);
+        std::vector<char>   done_scratch(K2);
+        std::vector<PghiHeapNode> heap_scratch; heap_scratch.reserve(K2);
+        // Per-channel quiet-bin RNG. Each stream is consumed only by its own
+        // channel, in bin order, so the draw sequence is identical whether
+        // channels run serially (now) or on separate threads (C.2) — which is
+        // what keeps C bit-identical to B. Seed scheme matches brief B exactly;
+        // the golden-ratio stride just separates the seeds.
+        std::mt19937 rng(static_cast<std::uint32_t>(
+            0x5715E11u ^ (static_cast<std::uint32_t>(ch) * 0x9E3779B9u)));
+        const float* psrc = &planar[static_cast<size_t>(ch) * src_frames];
 
-    std::vector<std::vector<double>> ola_out(channels, std::vector<double>(N, 0.0));
+        std::vector<double> ola(N, 0.0);
+        std::vector<float>& out = mono[ch];
+        out.reserve(static_cast<size_t>(out_frames));
 
-    std::vector<float> write_buf(N * channels, 0.0f);
+        // t_a for analysis-frame index `aidx`. Beyond the last synthesis frame
+        // the timemap range is exhausted (alpha == 1), so each extra
+        // analysis-only frame advances by R_s. We never read more than one
+        // frame past EOF: that single analysis-only frame supplies the last
+        // emitted frame's phi_next and is never itself emitted, so the total
+        // emitted length is unchanged.
+        auto ta_for = [&](int aidx) -> int64_t {
+            if (aidx < num_frames) return fm[aidx];
+            return fm[num_frames - 1] +
+                   static_cast<int64_t>(R_s) * (aidx - (num_frames - 1));
+        };
+        // analysis folds in the two one-time priming calls below as well as the
+        // per-frame in-loop call — all analysis goes through this lambda.
+        auto analyze1 = [&](int aidx, std::vector<double>& md,
+                                      std::vector<double>& pd) {
+            const auto _a0 = prof_clock::now();
+            stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
+            chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
+        };
 
-    // Start-trim: N samples = N/2 of OLA ramp-up plus N/2 of latency added by
-    // the origin-centered analysis convention (see the timing-convention block
-    // in stft_container.h).
-    int frames_to_skip = N;
-
-    // Progress reporting every ~1% of frames (or every 100 frames, whichever is rarer).
-    int progress_stride = std::max(100, num_frames / 100);
-    int last_pct = -1;
-
-    for (int frame_idx = 0; frame_idx < num_frames; ++frame_idx) {
-        // Cooperative cancellation: stft.cancel_flag is set by the GUI when
-        // the user presses Esc during a render. Worst-case cancel-to-stop
-        // latency is one frame (100-300 us on the target hardware) — well
-        // below human perception.
-        if (stft.cancel_flag && stft.cancel_flag->load()) {
-            stft.cancellation_observed = true;
-            return;
+        // Prime: analysis frames 0 and 1 (frame 1 is the EOF analysis-only
+        // frame when there is only a single synthesis frame). ph_prev stays
+        // zero — frame 0 is a seed, so it needs no phi_prev.
+        int64_t ta_prev = 0, ta_cur = 0, ta_nxt = 0;
+        if (num_frames >= 1) {
+            analyze1(0, mag_cur, ph_cur);
+            analyze1(1, mag_nxt, ph_nxt);
+            ta_cur = ta_for(0);
+            ta_nxt = ta_for(1);
         }
-        // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame_idx),
-        // ph_nxt/mag_nxt = analysis(frame_idx+1), ph_prev/mag_prev =
-        // analysis(frame_idx-1) (zero at frame 0). R_a values follow from the
-        // tracked t_a's, identical to the old fm[m]-fm[m-1].
-        const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
-        const int64_t R_a_fwd    = ta_nxt - ta_cur;
-        const bool    frame0     = (frame_idx == 0);
-        const bool    seed_heap  = frame0 || prev_reset;
 
-        const double* atten_row = stft.attenuation_map[frame_idx].data();
+        int  phase_reset_cursor = 0;
+        // `prev_reset` carries "the previous frame fired a reset" into the next
+        // iteration so heap_phase reseeds theta = phi on the post-reset frame.
+        bool prev_reset = false;
+        // Start-trim: N samples = N/2 of OLA ramp-up plus N/2 of latency added
+        // by the origin-centered analysis convention (see the timing-convention
+        // block in stft_container.h).
+        int  frames_to_skip = N;
+        int  progress_stride = std::max(100, num_frames / 100);
+        int  last_pct = -1;
 
-        for (int ch = 0; ch < channels; ++ch) {
+        for (int frame_idx = 0; frame_idx < num_frames; ++frame_idx) {
+            // Cooperative cancellation: stft.cancel_flag is set by the GUI when
+            // the user presses Esc during a render. Worst-case cancel-to-stop
+            // latency is one frame — well below human perception.
+            if (stft.cancel_flag && stft.cancel_flag->load()) {
+                ch_cancelled[ch] = 1;
+                return;
+            }
+            // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame),
+            // ph_nxt/mag_nxt = analysis(frame+1), ph_prev/mag_prev =
+            // analysis(frame-1) (zero at frame 0).
+            const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
+            const int64_t R_a_fwd    = ta_nxt - ta_cur;
+            const bool    frame0     = (frame_idx == 0);
+            const bool    seed_heap  = frame0 || prev_reset;
+            const double* atten_row  = stft.attenuation_map[frame_idx].data();
+
             const auto _h0 = prof_clock::now();
             stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                            mag_prev[ch], mag_cur[ch],
-                            ph_prev[ch], ph_cur[ch], ph_nxt[ch],
-                            th_prev[ch], dt_prev[ch],
-                            theta, dt_scratch, df_scratch, done_scratch,
-                            heap_scratch, quiet_rng_ch[ch]);
-            t_heap += prof_ns(_h0, prof_clock::now());
+                            mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
+                            th_prev, dt_prev, theta, dt_scratch,
+                            df_scratch, done_scratch, heap_scratch, rng);
+            chprof[ch].heap += prof_ns(_h0, prof_clock::now());
             // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
-            dt_prev[ch].swap(dt_scratch);
+            dt_prev.swap(dt_scratch);
+
             const auto _s0 = prof_clock::now();
-            stft.populate_synth_spectrum(ch, mag_cur[ch], theta, atten_row);
-            t_synthspec += prof_ns(_s0, prof_clock::now());
+            stft.populate_synth_spectrum(ch, mag_cur, theta, atten_row);
+            chprof[ch].synthspec += prof_ns(_s0, prof_clock::now());
 
             if (spectra_cache) {
                 std::complex<float>* dst = spectra_cache +
                     (static_cast<size_t>(frame_idx) * channels + ch) * K;
                 const fftw_complex* src = stft.fft_ws[ch].ifft_in;
-                for (int k = 0; k < K; ++k) {
-                    dst[k] = std::complex<float>(
-                        static_cast<float>(src[k][0]),
-                        static_cast<float>(src[k][1]));
-                }
+                for (int k = 0; k < K; ++k)
+                    dst[k] = std::complex<float>(static_cast<float>(src[k][0]),
+                                                 static_cast<float>(src[k][1]));
             }
 
-            // IFFT length M; un-shift the centered frame back into the
-            // [0, N) OLA window (the inverse of analyze_frame's placement).
-            // synth_window stays length N — only the N samples nearest the
-            // window center participate in OLA; the M-N zero-padded tail of
-            // the IFFT is discarded along with its (1/M)-scaled energy.
+            // IFFT length M; un-shift the centered frame back into the [0, N)
+            // OLA window (the inverse of analyze_frame's placement).
             const auto _i0 = prof_clock::now();
             fftw_execute(stft.fft_ws[ch].plan_inv);
-            t_ifft += prof_ns(_i0, prof_clock::now());
+            chprof[ch].ifft += prof_ns(_i0, prof_clock::now());
+
             const auto _o0 = prof_clock::now();
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             const double* io = stft.fft_ws[ch].ifft_out;
             for (int n = 0; n < N; ++n) {
                 const double v = io[(n - half + Mfft) % Mfft];
-                ola_out[ch][n] += (v * inv_M) * stft.synth_window[n];
+                ola[n] += (v * inv_M) * stft.synth_window[n];
             }
-            t_ola += prof_ns(_o0, prof_clock::now());
+            chprof[ch].ola += prof_ns(_o0, prof_clock::now());
 
-            // End-of-frame per-channel state shift. theta -> th_prev (this
-            // frame's synth phase, for the next frame); ph_cur -> ph_prev and
-            // ph_nxt -> ph_cur (mag likewise). After this, ph_prev holds
-            // frame_idx's analysis phase, ready for the next frame's heap call.
-            th_prev[ch] = theta;
-            ph_prev[ch].swap(ph_cur[ch]);
-            ph_cur[ch].swap(ph_nxt[ch]);
-            mag_prev[ch].swap(mag_cur[ch]);
-            mag_cur[ch].swap(mag_nxt[ch]);
-        }
+            // End-of-frame per-channel state shift. theta -> th_prev; ph_cur ->
+            // ph_prev and ph_nxt -> ph_cur (mag likewise). After this, ph_prev
+            // holds frame_idx's analysis phase, ready for the next heap call.
+            th_prev = theta;
+            ph_prev.swap(ph_cur);
+            ph_cur.swap(ph_nxt);
+            mag_prev.swap(mag_cur);
+            mag_cur.swap(mag_nxt);
 
-        // Phase reset. The post-reset frame re-grounds via seed_heap (theta =
-        // phi); there is no soft-seed and no mode handoff. The loop only
-        // advances the marker cursor and records that a reset fired so
-        // `prev_reset` seeds the next frame.
-        bool reset_fired = false;
-        while (phase_reset_cursor < static_cast<int>(stft.phase_reset_markers.size()) &&
-               stft.phase_reset_markers[phase_reset_cursor].synth_frame == frame_idx) {
-            ++phase_reset_cursor;
-            reset_fired = true;
-        }
-        prev_reset = reset_fired;
-
-        // Advance the analysis pipeline by one frame for the next iteration.
-        // Only needed while another synthesis frame follows; the EOF
-        // analysis-only frame (index == num_frames) is reached here when
-        // frame_idx == num_frames-2, supplying the last frame's phi_next. Each
-        // analyzed spectrum is computed exactly once.
-        if (frame_idx + 1 < num_frames) {
-            ta_prev = ta_cur;
-            ta_cur  = ta_nxt;
-            ta_nxt  = ta_for(frame_idx + 2);
-            analyze_into(frame_idx + 2, mag_nxt, ph_nxt);
-        }
-
-        int write_offset = 0, write_len = R_s;
-        if (frames_to_skip > 0) {
-            if (frames_to_skip >= write_len) {
-                frames_to_skip -= write_len;
-                write_len = 0;
-            } else {
-                write_offset   = frames_to_skip;
-                write_len     -= frames_to_skip;
-                frames_to_skip = 0;
+            // Emit this frame's R_s samples (less the start-trim) into mono out.
+            int write_offset = 0, write_len = R_s;
+            if (frames_to_skip > 0) {
+                if (frames_to_skip >= write_len) { frames_to_skip -= write_len; write_len = 0; }
+                else { write_offset = frames_to_skip; write_len -= frames_to_skip; frames_to_skip = 0; }
             }
-        }
-        for (int n = write_offset; n < write_offset + write_len; ++n) {
-            for (int ch = 0; ch < channels; ++ch) {
-                double v = ola_out[ch][n];
-                write_buf[(n - write_offset) * channels + ch] = static_cast<float>(v);
-            }
-        }
-        if (write_len > 0) {
-            const auto _w0 = prof_clock::now();
-            write_cb(write_buf.data(), static_cast<size_t>(write_len));
-            t_write += prof_ns(_w0, prof_clock::now());
-        }
+            for (int n = write_offset; n < write_offset + write_len; ++n)
+                out.push_back(static_cast<float>(ola[n]));
 
-        for (int ch = 0; ch < channels; ++ch) {
-            std::memmove(ola_out[ch].data(), ola_out[ch].data() + R_s,
+            std::memmove(ola.data(), ola.data() + R_s,
                          static_cast<size_t>(N - R_s) * sizeof(double));
-            std::fill(ola_out[ch].data() + (N - R_s), ola_out[ch].data() + N, 0.0);
+            std::fill(ola.data() + (N - R_s), ola.data() + N, 0.0);
+
+            // Progress is reported by channel 0 only; under C.2 it'll be
+            // approximate, which is fine (cosmetic).
+            if (show_progress && ch == 0 && num_frames > 0 &&
+                (frame_idx % progress_stride) == 0) {
+                int pct = static_cast<int>((frame_idx * 100LL) / num_frames);
+                if (pct != last_pct) {
+                    std::cout << "\r" << pass_label << pct << "%" << std::flush;
+                    last_pct = pct;
+                }
+            }
+
+            // Phase reset. The post-reset frame re-grounds via seed_heap
+            // (theta = phi). The loop only advances the marker cursor and
+            // records that a reset fired so `prev_reset` seeds the next frame.
+            // Channel-independent: each channel walks its own cursor.
+            bool reset_fired = false;
+            while (phase_reset_cursor < static_cast<int>(stft.phase_reset_markers.size()) &&
+                   stft.phase_reset_markers[phase_reset_cursor].synth_frame == frame_idx) {
+                ++phase_reset_cursor;
+                reset_fired = true;
+            }
+            prev_reset = reset_fired;
+
+            // Advance the analysis pipeline by one frame. Only needed while
+            // another synthesis frame follows; the EOF analysis-only frame
+            // (index == num_frames) is reached when frame_idx == num_frames-2,
+            // supplying the last frame's phi_next. Each spectrum is analyzed
+            // exactly once.
+            if (frame_idx + 1 < num_frames) {
+                ta_prev = ta_cur;
+                ta_cur  = ta_nxt;
+                ta_nxt  = ta_for(frame_idx + 2);
+                analyze1(frame_idx + 2, mag_nxt, ph_nxt);
+            }
         }
 
-        // Live progress via carriage return, gated on show_progress.
-        if (show_progress && num_frames > 0 && (frame_idx % progress_stride) == 0) {
-            int pct = static_cast<int>((frame_idx * 100LL) / num_frames);
-            if (pct != last_pct) {
-                std::cout << "\r" << pass_label << pct << "%" << std::flush;
-                last_pct = pct;
-            }
+        // Final tail: the last N-R_s samples of the OLA window.
+        const int remaining = N - R_s;
+        for (int n = 0; n < remaining; ++n)
+            out.push_back(static_cast<float>(ola[n]));
+    };
+
+    // Run the channels (serial, this brief; C.2 threads them).
+    for (int ch = 0; ch < channels; ++ch) run_channel(ch);
+
+    for (int ch = 0; ch < channels; ++ch) {
+        if (ch_cancelled[ch]) {
+            stft.cancellation_observed = true;
+            return;                      // matches the old early-return on cancel
         }
     }
+    if (show_progress) std::cout << "\r" << pass_label << "100%\n";
 
-    const int remaining = N - R_s;
-    if (remaining > 0) {
+    // Interleave the per-channel mono streams and emit in one write_cb call.
+    // All channels emit out_frames samples; the downstream write_cb
+    // (sf_writef / buffer-append / peak-limiter) is order-preserving and
+    // chunk-agnostic, so one big call is identical to the old per-frame calls.
+    int64_t t_write = 0;
+    if (out_frames > 0) {
+        std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
         for (int ch = 0; ch < channels; ++ch) {
-            for (int n = 0; n < remaining; ++n) {
-                double v = ola_out[ch][n];
-                write_buf[n * channels + ch] = static_cast<float>(v);
-            }
+            const std::vector<float>& m = mono[ch];
+            assert(static_cast<int64_t>(m.size()) == out_frames);
+            for (int64_t f = 0; f < out_frames; ++f)
+                inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
         const auto _w0 = prof_clock::now();
-        write_cb(write_buf.data(), static_cast<size_t>(remaining));
+        write_cb(inter.data(), static_cast<size_t>(out_frames));
         t_write += prof_ns(_w0, prof_clock::now());
     }
 
-    if (show_progress) {
-        std::cout << "\r" << pass_label << "100%\n";
-    }
-
     if (prof) {
+        int64_t t_analysis=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
+        for (int ch = 0; ch < channels; ++ch) {
+            t_analysis += chprof[ch].analysis; t_heap += chprof[ch].heap;
+            t_synthspec += chprof[ch].synthspec; t_ifft += chprof[ch].ifft;
+            t_ola += chprof[ch].ola;
+        }
         const int64_t total = t_analysis + t_heap + t_synthspec +
                               t_ifft + t_ola + t_write;
         const double denom = total > 0 ? static_cast<double>(total) : 1.0;
