@@ -154,16 +154,17 @@ void Synthesis::synthesize_full(
             // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
             dt_prev[ch].swap(dt_scratch);
             const auto _s0 = prof_clock::now();
-            stft.populate_synth_spectrum(mag_cur[ch], theta, atten_row);
+            stft.populate_synth_spectrum(ch, mag_cur[ch], theta, atten_row);
             t_synthspec += prof_ns(_s0, prof_clock::now());
 
             if (spectra_cache) {
                 std::complex<float>* dst = spectra_cache +
                     (static_cast<size_t>(frame_idx) * channels + ch) * K;
+                const fftw_complex* src = stft.fft_ws[ch].ifft_in;
                 for (int k = 0; k < K; ++k) {
                     dst[k] = std::complex<float>(
-                        static_cast<float>(stft.ifft_in[k][0]),
-                        static_cast<float>(stft.ifft_in[k][1]));
+                        static_cast<float>(src[k][0]),
+                        static_cast<float>(src[k][1]));
                 }
             }
 
@@ -173,13 +174,14 @@ void Synthesis::synthesize_full(
             // window center participate in OLA; the M-N zero-padded tail of
             // the IFFT is discarded along with its (1/M)-scaled energy.
             const auto _i0 = prof_clock::now();
-            fftw_execute(stft.plan_inv);
+            fftw_execute(stft.fft_ws[ch].plan_inv);
             t_ifft += prof_ns(_i0, prof_clock::now());
             const auto _o0 = prof_clock::now();
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
+            const double* io = stft.fft_ws[ch].ifft_out;
             for (int n = 0; n < N; ++n) {
-                const double v = stft.ifft_out[(n - half + Mfft) % Mfft];
+                const double v = io[(n - half + Mfft) % Mfft];
                 ola_out[ch][n] += (v * inv_M) * stft.synth_window[n];
             }
             t_ola += prof_ns(_o0, prof_clock::now());

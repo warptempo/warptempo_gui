@@ -165,13 +165,20 @@ struct AudioSTFT {
     std::vector<double> window;
     std::vector<double> synth_window;
 
-    // FFTW resources (shared across modules)
-    double* fft_in = nullptr;
-    fftw_complex* fft_out = nullptr;
-    fftw_plan plan_fwd{};
-    fftw_complex* ifft_in = nullptr;
-    double* ifft_out = nullptr;
-    fftw_plan plan_inv{};
+    // Per-channel FFTW scratch + plans. One workspace per channel so each
+    // channel's analysis/synthesis transforms are independent — the
+    // prerequisite for running channels on separate threads. All plans are
+    // FFTW_ESTIMATE over the same M, so per-channel plans are numerically
+    // identical to the single plan they replace (bit-identical render).
+    struct FftWorkspace {
+        double*       fft_in   = nullptr;   // length M
+        fftw_complex* fft_out  = nullptr;   // length M/2+1
+        fftw_plan     plan_fwd{};
+        fftw_complex* ifft_in  = nullptr;   // length M/2+1
+        double*       ifft_out = nullptr;   // length M
+        fftw_plan     plan_inv{};
+    };
+    std::vector<FftWorkspace> fft_ws;       // size == channels
     bool fftw_threads_inited = false;
 
     // Phase vocoder accumulators
@@ -272,12 +279,16 @@ struct AudioSTFT {
             synth_window[n] = window[n] / 1.5;
         }
 
-        fft_in = fftw_alloc_real(M);
-        fft_out = fftw_alloc_complex(M / 2 + 1);
-        plan_fwd = fftw_plan_dft_r2c_1d(M, fft_in, fft_out, FFTW_ESTIMATE);
-        ifft_in = fftw_alloc_complex(M / 2 + 1);
-        ifft_out = fftw_alloc_real(M);
-        plan_inv = fftw_plan_dft_c2r_1d(M, ifft_in, ifft_out, FFTW_ESTIMATE);
+        fft_ws.assign(channels, FftWorkspace{});
+        for (int ch = 0; ch < channels; ++ch) {
+            FftWorkspace& w = fft_ws[ch];
+            w.fft_in   = fftw_alloc_real(M);
+            w.fft_out  = fftw_alloc_complex(M / 2 + 1);
+            w.plan_fwd = fftw_plan_dft_r2c_1d(M, w.fft_in, w.fft_out, FFTW_ESTIMATE);
+            w.ifft_in  = fftw_alloc_complex(M / 2 + 1);
+            w.ifft_out = fftw_alloc_real(M);
+            w.plan_inv = fftw_plan_dft_c2r_1d(M, w.ifft_in, w.ifft_out, FFTW_ESTIMATE);
+        }
 
         phi_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
         theta_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
@@ -334,17 +345,18 @@ struct AudioSTFT {
     void analyze_frame(int ch, int ch_stride, const float* frame_buf,
                        std::vector<double>& M_out,
                        std::vector<double>& phi_out) {
+        FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
         const int half = N / 2;
-        std::fill(fft_in, fft_in + M, 0.0);
+        std::fill(w.fft_in, w.fft_in + M, 0.0);
         for (int n = 0; n < N; ++n) {
-            const double w = frame_buf[n * ch_stride + ch] * window[n];
-            fft_in[(n - half + M) % M] = w;
+            const double v = frame_buf[n * ch_stride + ch] * window[n];
+            w.fft_in[(n - half + M) % M] = v;
         }
-        fftw_execute(plan_fwd);
+        fftw_execute(w.plan_fwd);
         for (int k = 0; k < K; ++k) {
-            M_out[k]   = std::hypot(fft_out[k][0], fft_out[k][1]);
-            phi_out[k] = std::atan2(fft_out[k][1], fft_out[k][0]);
+            M_out[k]   = std::hypot(w.fft_out[k][0], w.fft_out[k][1]);
+            phi_out[k] = std::atan2(w.fft_out[k][1], w.fft_out[k][0]);
         }
     }
 
@@ -503,31 +515,34 @@ struct AudioSTFT {
     // Synthesis: populate ifft_in from magnitude mag and phase theta, applying
     // optional per-band attenuation. Caller IFFTs and un-shifts to recover the
     // origin-centered time-domain frame.
-    void populate_synth_spectrum(const std::vector<double>& mag,
+    void populate_synth_spectrum(int ch,
+                                 const std::vector<double>& mag,
                                  const std::vector<double>& theta,
                                  const double* atten_row) {
+        FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
         if (atten_row) {
             for (int k = 0; k < K; ++k) {
                 double scaled = mag[k] * atten_row[bin_to_band[k]];
-                ifft_in[k][0] = scaled * std::cos(theta[k]);
-                ifft_in[k][1] = scaled * std::sin(theta[k]);
+                w.ifft_in[k][0] = scaled * std::cos(theta[k]);
+                w.ifft_in[k][1] = scaled * std::sin(theta[k]);
             }
         } else {
             for (int k = 0; k < K; ++k) {
-                ifft_in[k][0] = mag[k] * std::cos(theta[k]);
-                ifft_in[k][1] = mag[k] * std::sin(theta[k]);
+                w.ifft_in[k][0] = mag[k] * std::cos(theta[k]);
+                w.ifft_in[k][1] = mag[k] * std::sin(theta[k]);
             }
         }
     }
 
     void cleanup() {
-        fftw_destroy_plan(plan_fwd);
-        fftw_destroy_plan(plan_inv);
-        fftw_free(fft_in);
-        fftw_free(fft_out);
-        fftw_free(ifft_in);
-        fftw_free(ifft_out);
+        for (auto& w : fft_ws) {
+            fftw_destroy_plan(w.plan_fwd);
+            fftw_destroy_plan(w.plan_inv);
+            fftw_free(w.fft_in);  fftw_free(w.fft_out);
+            fftw_free(w.ifft_in); fftw_free(w.ifft_out);
+        }
+        fft_ws.clear();
         if (fftw_threads_inited) fftw_cleanup_threads();
         if (src_snd) sf_close(src_snd);
     }
