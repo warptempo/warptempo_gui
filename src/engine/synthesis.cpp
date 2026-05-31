@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <random>
+#include <thread>
 #include <vector>
 
 void Synthesis::synthesize_full(
@@ -278,8 +279,19 @@ void Synthesis::synthesize_full(
             out.push_back(static_cast<float>(ola[n]));
     };
 
-    // Run the channels (serial, this brief; C.2 threads them).
-    for (int ch = 0; ch < channels; ++ch) run_channel(ch);
+    // Run each channel's pipeline concurrently. ch 0 runs on this (main) thread
+    // so its progress output isn't interleaved; ch 1..n-1 get worker threads.
+    // All per-channel state is private to run_channel and fft_ws[ch] is
+    // per-channel, so the passes are independent — see the race audit in the
+    // brief. Join before the interleave below.
+    {
+        std::vector<std::thread> workers;
+        workers.reserve(static_cast<size_t>(std::max(0, channels - 1)));
+        for (int ch = 1; ch < channels; ++ch)
+            workers.emplace_back(run_channel, ch);
+        run_channel(0);
+        for (auto& w : workers) w.join();
+    }
 
     for (int ch = 0; ch < channels; ++ch) {
         if (ch_cancelled[ch]) {

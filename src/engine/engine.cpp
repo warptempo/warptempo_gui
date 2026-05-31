@@ -86,13 +86,12 @@ sf_count_t mem_write(const void*, sf_count_t, void*) {
 // Shared FFTW thread init for full-render and detection-only paths. Sets
 // audio_stft.fftw_threads_inited if init succeeded.
 void init_fftw_threads(AudioSTFT& audio_stft, int requested_threads) {
-    int fftw_threads = requested_threads;
-    if (fftw_threads <= 0) {
-        unsigned hc = std::thread::hardware_concurrency();
-        fftw_threads = static_cast<int>(std::max(1u, hc / 2));
-    }
+    (void)requested_threads;   // per-transform threading intentionally off:
+                               // channel-level threads (synthesis.cpp) are the
+                               // parallelism; FFTW internal threads on a single
+                               // 8192 transform are net-negative and would nest.
     if (fftw_init_threads()) {
-        fftw_plan_with_nthreads(fftw_threads);
+        fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
     } else {
         std::cerr << "  ! fftw_init_threads failed; FFTW will run single-threaded.\n";
