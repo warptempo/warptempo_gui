@@ -63,7 +63,28 @@ void Synthesis::synthesize_full(
     std::vector<PghiHeapNode> heap_scratch;
     heap_scratch.reserve(K);
 
-    std::vector<float> a_read(N * channels, 0.0f);
+    const int64_t src_frames = stft.src_info.frames;
+    // Planar source: channel-contiguous float copy of the whole source, read
+    // once. Replaces the per-frame sf_seek/sf_readf in analyze_into (each
+    // sample was previously read ~4x through libsndfile). Bit-identical: same
+    // floats, just resident in RAM.
+    std::vector<float> planar(static_cast<size_t>(channels) *
+                              static_cast<size_t>(src_frames));
+    {
+        constexpr int64_t kChunk = 1 << 16;                  // frames per read
+        std::vector<float> stage(static_cast<size_t>(kChunk) * channels);
+        sf_seek(stft.src_snd, 0, SEEK_SET);
+        int64_t got = 0, pos = 0;
+        while (pos < src_frames &&
+               (got = sf_readf_float(stft.src_snd, stage.data(),
+                       std::min<int64_t>(kChunk, src_frames - pos))) > 0) {
+            for (int64_t f = 0; f < got; ++f)
+                for (int ch = 0; ch < channels; ++ch)
+                    planar[static_cast<size_t>(ch) * src_frames + (pos + f)] =
+                        stage[static_cast<size_t>(f) * channels + ch];
+            pos += got;
+        }
+    }
 
     // t_a for analysis-frame index `aidx`. Beyond the last synthesis frame the
     // timemap range is exhausted (alpha == 1), so each extra analysis-only
@@ -82,13 +103,9 @@ void Synthesis::synthesize_full(
                             std::vector<std::vector<double>>& phid) {
         const auto _a0 = prof_clock::now();
         const int64_t ta = ta_for(aidx);
-        std::fill(a_read.begin(), a_read.end(), 0.0f);
-        if (ta >= 0 && ta < stft.src_info.frames) {
-            sf_seek(stft.src_snd, ta, SEEK_SET);
-            sf_readf_float(stft.src_snd, a_read.data(), N);
-        }
         for (int ch = 0; ch < channels; ++ch)
-            stft.analyze_frame(ch, channels, a_read.data(), magd[ch], phid[ch]);
+            stft.analyze_frame(ch, &planar[static_cast<size_t>(ch) * src_frames],
+                               ta, src_frames, magd[ch], phid[ch]);
         t_analysis += prof_ns(_a0, prof_clock::now());
     };
 

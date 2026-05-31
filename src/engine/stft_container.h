@@ -334,24 +334,34 @@ struct AudioSTFT {
     // these helpers touch the member phi_prev/theta_prev accumulators; the
     // pipeline owns all inter-frame state explicitly.
 
-    // Analysis: window + forward FFT of one channel of frame_buf; extract
-    // magnitude and analysis phase into M_out, phi_out (size K = M/2+1).
+    // Analysis: window + forward FFT of one channel from its planar source
+    // slice (planar_ch, the channel-contiguous source copy) starting at sample
+    // ta; extract magnitude and analysis phase into M_out, phi_out (size K =
+    // M/2+1).
     // Origin-centered, zero-padded placement (Prusa-Holighaus): the windowed
     // frame's center sits at FFT index 0 and the rest of the M-length buffer
     // is zero. Clearing the whole buffer each frame is cheap next to the
     // M-point FFT. Centered placement makes the per-bin phase carry no
     // group-delay ramp (expected_f == 0 in heap_phase) — which is the
     // condition under which PGHI's heap integration actually converges.
-    void analyze_frame(int ch, int ch_stride, const float* frame_buf,
+    void analyze_frame(int ch, const float* planar_ch,
+                       int64_t ta, int64_t src_frames,
                        std::vector<double>& M_out,
                        std::vector<double>& phi_out) {
         FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
         const int half = N / 2;
         std::fill(w.fft_in, w.fft_in + M, 0.0);
-        for (int n = 0; n < N; ++n) {
-            const double v = frame_buf[n * ch_stride + ch] * window[n];
-            w.fft_in[(n - half + M) % M] = v;
+        // Whole-frame guard (matches the old sf_seek/sf_readf behavior): a
+        // frame whose start is out of [0, src_frames) is entirely zero; a valid
+        // frame reads min(N, src_frames - ta) samples and zero-pads the tail.
+        if (ta >= 0 && ta < src_frames) {
+            const int navail =
+                static_cast<int>(std::min<int64_t>(N, src_frames - ta));
+            for (int n = 0; n < navail; ++n) {
+                const double v = planar_ch[ta + n] * window[n];
+                w.fft_in[(n - half + M) % M] = v;
+            }
         }
         fftw_execute(w.plan_fwd);
         for (int k = 0; k < K; ++k) {
