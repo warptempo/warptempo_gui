@@ -200,11 +200,6 @@ static void rescan_region(const LimGrid& g,
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     auto& lp = stft.limiter_params;
 
-    if (!lp.enabled) {
-        std::cout << "[Pass 3/3] Limiter.......................... disabled\n";
-        return;
-    }
-
     const int channels    = stft.channels;
     const int sample_rate  = stft.src_info.samplerate;
     if (channels <= 0) return;
@@ -232,11 +227,9 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     }
 
     // -- 1/3-octave band table over the limiter's own bin grid --
-    // Mirrors AudioSTFT::init_fftw exactly (centers 1000*2^(n/3) from 20 Hz to
-    // Nyquist, hard nearest-log-distance bin->band). limiter_params
-    // .num_bands_override is intentionally NOT consulted, matching init_fftw —
-    // the in-PV limiter never read it — so the band table is identical in
-    // character to the gold standard's.
+    // The band table auto-derives from the one-third-octave grid (centers
+    // 1000*2^(n/3) from 20 Hz to Nyquist, hard nearest-log-distance bin->band),
+    // mirroring AudioSTFT::init_fftw.
     std::vector<int> bin_to_band(K_lim, 0);
     int num_bands = 0;
     {

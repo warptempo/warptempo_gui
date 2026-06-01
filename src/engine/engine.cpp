@@ -130,10 +130,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
-    lp.enabled              = (p.limiter_mode == LimiterMode::Spectral);
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
-    lp.num_bands_override   = p.limiter_num_bands;
     lp.diag                 = p.limiter_diag;
 
     // "<buffer>" is a log-only sentinel — never pass it to filesystem APIs.
@@ -141,7 +139,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // inside passes that are gated off on the buffer-output path.
     audio_stft.output_audio_file       =
         p.output_buffer ? std::string("<buffer>") : p.output_audio_path;
-    audio_stft.limiter_mode            = p.limiter_mode;
+    audio_stft.limiter                 = p.limiter;
     audio_stft.peak_limiter_ceiling_dbfs = p.peak_limiter_ceiling_dbfs;
     audio_stft.peak_limiter_attack_ms    = p.peak_limiter_attack_ms;
     audio_stft.peak_limiter_release_ms   = p.peak_limiter_release_ms;
@@ -260,14 +258,15 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     p1_ns = ns_between(t_p1_0, t_p1_1);
     std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
 
-    // Pass 2: synthesis (clean render, identity attenuation_map). The Spectral
-    // disk path renders into an in-memory buffer that Pass 3 limits in place;
-    // every other path streams straight to its destination. attenuation_map
-    // stays all-1.0 (a no-op row), so synthesize_full — and therefore the None
-    // disk render — is byte-identical to the pre-relocation build.
+    // Pass 2: synthesis (clean render, identity attenuation_map). The
+    // limiter-on disk path renders into an in-memory buffer that Pass 3 limits
+    // in place; every other path streams straight to its destination.
+    // attenuation_map stays all-1.0 (a no-op row), so synthesize_full — and
+    // therefore the limiter-off disk render — is byte-identical to the
+    // pre-relocation build.
     // The limited chain runs on a buffer; the clean (None) disk path streams
     // float straight to file.
-    const bool limited = (audio_stft.limiter_mode == LimiterMode::Spectral);
+    const bool limited = audio_stft.limiter;
     std::vector<float> render_buf;
     auto t_p2_0 = std::chrono::steady_clock::now();
     if (p.output_buffer) {

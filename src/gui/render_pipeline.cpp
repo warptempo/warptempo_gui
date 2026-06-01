@@ -191,8 +191,6 @@ RenderOutcome do_render(const RenderRequest& req,
         // Global limiter toggle. When on, every path (disk trimmed/untrimmed and
         // the target-view buffer) gets the spectral(-0.3) + peak(0) chain; when
         // off, no limiter anywhere and disk output is clean 32-bit float.
-        const LimiterMode limiter_mode =
-            req.engine_settings.limiter ? LimiterMode::Spectral : LimiterMode::None;
 
         EngineParams ep;
         ep.source_audio_samples = src_samples.data();
@@ -213,7 +211,7 @@ RenderOutcome do_render(const RenderRequest& req,
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
         }
         ep.N                    = N_fft;
-        ep.limiter_mode         = limiter_mode;
+        ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;
         // Trim-relative source-frame domain. The engine receives a sliced
         // source buffer and a trim-shifted timemap, so phase_reset_frames

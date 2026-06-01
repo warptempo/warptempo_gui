@@ -24,10 +24,8 @@ struct PhaseResetMarker {
 };
 
 struct LimiterParams {
-    bool   enabled               = true;
     double ceiling_dbfs          = -0.3;
     double tolerance_db          = 0.01;
-    int    num_bands_override    = 0;    // 0 = auto-derive from 1/3-octave grid
     bool   diag                  = false;
 };
 
@@ -200,11 +198,10 @@ struct AudioSTFT {
 
     // Output path (derived from MD5 of source audio)
     std::string output_audio_file;
-    // Mirrors EngineParams::limiter_mode. Synthesis derives the wav format
-    // from this (Spectral/Peak → 24-bit PCM, None → 32-bit float) and decides
-    // whether to wrap its write_cb through a PeakLimiter.
-    LimiterMode limiter_mode = LimiterMode::None;
-    double peak_limiter_ceiling_dbfs = -0.3;
+    // Mirrors EngineParams::limiter. When true, synthesis writes 24-bit PCM
+    // and runs the limited chain; when false, clean 32-bit float.
+    bool limiter = false;
+    double peak_limiter_ceiling_dbfs = 0.0;
     double peak_limiter_attack_ms    = 0.25;
     double peak_limiter_release_ms   = 0.5;
 

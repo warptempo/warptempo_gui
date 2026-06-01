@@ -376,8 +376,7 @@ void Synthesis::synthesize_full(
 void Synthesis::process(AudioSTFT& stft) {
     SF_INFO tgt_info = stft.src_info;
     tgt_info.format = SF_FORMAT_WAV |
-        (stft.limiter_mode != LimiterMode::None
-            ? SF_FORMAT_PCM_24 : SF_FORMAT_FLOAT);
+        (stft.limiter ? SF_FORMAT_PCM_24 : SF_FORMAT_FLOAT);
 
     SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
     if (!output_snd) {
