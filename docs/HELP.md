@@ -1,6 +1,6 @@
 # warptempo_gui
 
-[ Install, build, first run, the conceptual model, and the hotkey reference. ]
+[ Install, build, first run, the conceptual model, output formats and the limiter, and the hotkey reference. ]
 
 ## Dependencies
 
@@ -117,6 +117,12 @@ Each warp marker carries three independent pieces of state.
 An owning marker's tempo is a base value times a scale. The base value is two decimals in the range `0.01` to `9.99` and expresses the headline stretch ratio relative to the source recording — `1.00` is no stretch, `1.05` is 5% faster, `0.95` is 5% slower. The base value's precision is deliberately coarse; the user authors at the resolution they would set a metronome, not finer. The scale is a separate four-decimal multiplier defaulting to `1.0000`. The intended use is fine-tuning a marker's effective tempo to approximate a neighboring section's effective tempo when that neighbor uses a `label_ref` — the user reads off the neighbor's resolved `base*scale` from its hover popup and applies a matching scale to the marker being authored. The user can use scale for anything else they want; there are no enforced rules. The reference example in `examples/550 - 1/` shows both fields in use across a complete movement.
 
 Phase reset markers carry two pieces of state: a position and a disabled flag. They have no tempo, no labels, no scale, no mode. The engine concern they parameterize is *where to reset* — re-grounding the synthesis phase at the transient that opens the segment. The small per-marker lead-in the engine applies before each reset is set globally through `phase_reset_offset_hops` (default `1`, one synthesis hop), not per-marker.
+
+## Output formats and the limiter
+
+The `output_format` setting is one of `wav` (the default, finished audio), `timemap`, or `tempomap`; the latter two write warp and tempo maps for external stretch engines rather than audio, and the limiter does not apply to them.
+
+The default wav output is brought to a delivery ceiling by a built-in limiter — a transparent spectral stage at -0.3 dBFS, then a 0 dBFS lookahead peak limiter with a hard-clip backstop — and written as 24-bit PCM. Setting `limiter=false` bypasses it entirely, writing the clean phase-vocoder output as 32-bit float for null-checking or for finishing in an external limiter.
 
 ## Hotkey reference
 

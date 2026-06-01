@@ -8,6 +8,6 @@ The classical phase-vocoder use case — one constant stretch ratio for an entir
 
 The `examples/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer 2024 remaster for Decca Eloquence — best-in-class restorations of source material long known for its recording quality) warped toward Hummel-published metronome marks. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the reference example — it exercises every form and syntax used in the project (label cascade, phase-reset markers, two-decimal `base_tempo` with six-decimal scale fine-tune). Orchestral material is the demonstration target because it is the most artifact-revealing case for phase-vocoder time-warping — the size of a symphony orchestra, the natural-acoustic recording technique, and the exposed lines and silences of orchestral writing all give algorithmic artifacts maximal room to be heard. Genres with denser sustained spectra and more pervasive percussive activity (rock, pop, EDM) provide stronger masking; the tool is used informally on those genres in the author's producer practice and has not been observed to fail there, though no formal cross-genre evaluation is presented.
 
-Linux + Wayland (JACK audio). Build instructions, conceptual model, hotkey reference, file formats, and troubleshooting are in `docs/HELP.md`.
+Linux + Wayland (JACK audio). Build instructions, conceptual model, hotkey reference, and file formats are in `docs/HELP.md`.
 
 Licensed GPL v3. See `LICENSE`.
