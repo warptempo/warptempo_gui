@@ -17,10 +17,10 @@ public:
     // (same layout the file path emits).
     void process_to_buffer(AudioSTFT& stft, std::vector<float>* output_buffer);
 
-    // Write an already-rendered, spectral-limited buffer to the output wav,
-    // running the time-domain peak limiter as an always-after backstop first.
-    // Used by the Spectral disk path, where Pass 2 rendered into memory and
-    // Pass 3's spectral limiter ran on that buffer in place. Output format is
+    // Write an already-limited buffer (spectral + peak backstop both applied by
+    // the engine in place) to the output wav. Used by the Spectral disk path,
+    // where Pass 2 rendered into memory and Pass 3 ran the limited chain on that
+    // buffer. Plain buffer-to-file write — no limiter here. Output format is
     // 24-bit PCM (matches the non-None format decision in process()).
     void write_render_to_file(AudioSTFT& stft, const std::vector<float>& render);
 
@@ -45,3 +45,11 @@ public:
         bool show_progress,
         const char* pass_label);
 };
+
+// Apply the peak-limiter backstop to `buf` in place. One-shot process+flush, so
+// it is sample-for-sample identical to the previous streaming application in
+// write_render_to_file. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0
+// dBFS) — a pure clip net above the spectral limiter's -0.3. Called by the
+// engine on whichever buffer (disk render or target-view) the limited chain
+// fills.
+void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf);

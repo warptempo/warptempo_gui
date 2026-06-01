@@ -80,10 +80,10 @@ std::filesystem::path compose_sibling_output_path(
     std::filesystem::path src(source_audio_path);
     std::filesystem::path dir = src.parent_path();
     if (dir.empty()) dir = std::filesystem::path(".");
-    const bool output_unlimited =
-        es.output_format == "wav" && !es.limiter_enabled_on_render;
-    const std::string out_filename = output_unlimited
-        ? ("limiter_enabled_on_render=false;" + es.title + ext)
+    const bool clean_float_render =
+        es.output_format == "wav" && !es.limiter;
+    const std::string out_filename = clean_float_render
+        ? ("limiter=false;" + es.title + ext)
         : (es.title + ext);
     return dir / out_filename;
 }
@@ -97,13 +97,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // range by construction here). ---
     const std::string& output_format = req.engine_settings.output_format;
     const double scale               = req.engine_settings.scale;
-    const bool   user_limiter_en     = req.engine_settings.limiter_enabled_on_render;
     const int    N_fft               = req.engine_settings.N;
-    const int    fftw_threads        = req.engine_settings.fftw_threads;
     const double phase_reset_offset_hops_mult = req.engine_settings.phase_reset_offset_hops;
-    const double limiter_ceiling     = req.engine_settings.limiter_ceiling;
-    const double limiter_attack_ms   = req.engine_settings.limiter_attack_ms;
-    const double limiter_release_ms  = req.engine_settings.limiter_release_ms;
     const int    R_s                 = N_fft / 4;
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
         std::nearbyint(phase_reset_offset_hops_mult *
@@ -193,20 +188,11 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
 
-        // Limiter routing. `limiter_enabled_on_render=false` means no
-        // limiter anywhere. When true, trim state decides: no trim →
-        // engine spectral limiter (frequency-domain, final-archival);
-        // trim → engine peak limiter (time-domain, fast iteration).
-        // The target render overrides this to LimiterMode::Peak
-        // unconditionally — see RenderRequest::force_peak_limiter.
-        LimiterMode limiter_mode = LimiterMode::None;
-        if (req.force_peak_limiter) {
-            limiter_mode = LimiterMode::Peak;
-        } else if (user_limiter_en) {
-            limiter_mode = tmres.trimmed
-                ? LimiterMode::Peak
-                : LimiterMode::Spectral;
-        }
+        // Global limiter toggle. When on, every path (disk trimmed/untrimmed and
+        // the target-view buffer) gets the spectral(-0.3) + peak(0) chain; when
+        // off, no limiter anywhere and disk output is clean 32-bit float.
+        const LimiterMode limiter_mode =
+            req.engine_settings.limiter ? LimiterMode::Spectral : LimiterMode::None;
 
         EngineParams ep;
         ep.source_audio_samples = src_samples.data();
@@ -227,12 +213,7 @@ RenderOutcome do_render(const RenderRequest& req,
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
         }
         ep.N                    = N_fft;
-        ep.fftw_threads         = fftw_threads;
         ep.limiter_mode         = limiter_mode;
-        ep.limiter_ceiling_dbfs       = limiter_ceiling;
-        ep.peak_limiter_ceiling_dbfs  = limiter_ceiling;
-        ep.peak_limiter_attack_ms     = limiter_attack_ms;
-        ep.peak_limiter_release_ms    = limiter_release_ms;
         ep.limiter_diag         = false;
         // Trim-relative source-frame domain. The engine receives a sliced
         // source buffer and a trim-shifted timemap, so phase_reset_frames

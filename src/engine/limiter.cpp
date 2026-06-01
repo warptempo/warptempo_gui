@@ -31,7 +31,7 @@ constexpr int    MIN_PEAK_EDGE_MARGIN     = 25;   // minimum frames between any 
 constexpr int    PEAK_DEDUP_RADIUS        = 4;    // per-channel minimum sample gap between peaks
 constexpr int    MAX_REFINEMENT_TRIES     = 3;    // extra attempts past the first (inner predictive aim)
 constexpr int    MAX_CLAMP_REDIST_TRIES   = 8;    // safety cap on apply_update inner loop
-constexpr int    MAX_PEAK_RESOLVE_PASSES  = 8;    // per-lineage outer re-queue cap (architect sweeps)
+constexpr int    MAX_PEAK_RESOLVE_PASSES  = 4;    // per-lineage outer re-queue cap (architect sweeps)
 constexpr double DIAG_FLOOR_DB            = 12.0; // reduction (dB) that fills diag floor
 
 struct Peak {
@@ -633,21 +633,27 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             render[dst + ch] = meas_ola[src + ch];
     }
 
-    std::cout << "[Pass 3/3] Limiter.......................... "
-              << resolved.size() << " peaks, " << iterations
-              << " iterations, done\n";
+    // The [Pass 3/3] header and per-peak residual loop go to stdout. On the
+    // target-view buffer path (output_audio_file == "<buffer>") that would spam
+    // every scrub, so gate both on the disk path.
+    const bool verbose = (stft.output_audio_file != "<buffer>");
+    if (verbose) {
+        std::cout << "[Pass 3/3] Limiter.......................... "
+                  << resolved.size() << " peaks, " << iterations
+                  << " iterations, done\n";
 
-    // -- Per-peak terminal diagnostic (drives the MAX_PEAK_RESOLVE_PASSES
-    //    sweep; emitted unconditionally). time = post coords / sample_rate;
-    //    residual > 0 is the bit handed to the peak limiter. --
-    for (size_t i = 0; i < resolved.size(); ++i) {
-        int64_t post = resolved[i].sample_idx - N_lim;
-        double  sec  = static_cast<double>(post) / sample_rate;
-        char ln[160];
-        std::snprintf(ln, sizeof ln,
-                      "  peak @ %.3f s (sample %lld)  residual %+.2f dB\n",
-                      sec, static_cast<long long>(post), residual_db_list[i]);
-        std::cout << ln;
+        // -- Per-peak terminal diagnostic (drives the MAX_PEAK_RESOLVE_PASSES
+        //    sweep). time = post coords / sample_rate; residual > 0 is the bit
+        //    handed to the peak limiter. --
+        for (size_t i = 0; i < resolved.size(); ++i) {
+            int64_t post = resolved[i].sample_idx - N_lim;
+            double  sec  = static_cast<double>(post) / sample_rate;
+            char ln[160];
+            std::snprintf(ln, sizeof ln,
+                          "  peak @ %.3f s (sample %lld)  residual %+.2f dB\n",
+                          sec, static_cast<long long>(post), residual_db_list[i]);
+            std::cout << ln;
+        }
     }
 
     // -- Optional diagnostic WAV (gated on lp.diag) --

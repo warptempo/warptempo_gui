@@ -147,12 +147,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "bpm",                         SettingKind::EnginePassthrough,    EngineField::Bpm,                     nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     { "N",                           SettingKind::EnginePassthrough,    EngineField::N,                       nullptr },
-    { "fftw_threads",                SettingKind::EnginePassthrough,    EngineField::FftwThreads,             nullptr },
-    { "limiter_enabled_on_render",   SettingKind::EnginePassthrough,    EngineField::LimiterEnabledOnRender,  nullptr },
+    { "limiter",                     SettingKind::EnginePassthrough,    EngineField::Limiter,                 nullptr },
     { "phase_reset_offset_hops",     SettingKind::EnginePassthrough,    EngineField::PhaseResetOffsetHops,    nullptr },
-    { "limiter_ceiling",             SettingKind::EnginePassthrough,    EngineField::LimiterCeiling,          nullptr },
-    { "limiter_attack_ms",           SettingKind::EnginePassthrough,    EngineField::LimiterAttackMs,         nullptr },
-    { "limiter_release_ms",          SettingKind::EnginePassthrough,    EngineField::LimiterReleaseMs,        nullptr },
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
@@ -223,28 +219,12 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
             std::snprintf(buf, sizeof(buf), "%d", es.N);
             out += buf;
             break;
-        case EngineField::FftwThreads:
-            std::snprintf(buf, sizeof(buf), "%d", es.fftw_threads);
-            out += buf;
-            break;
-        case EngineField::LimiterEnabledOnRender:
-            out += es.limiter_enabled_on_render ? "true" : "false";
+        case EngineField::Limiter:
+            out += es.limiter ? "true" : "false";
             break;
         case EngineField::PhaseResetOffsetHops:
             std::snprintf(buf, sizeof(buf), "%.6f",
                           es.phase_reset_offset_hops);
-            out += buf;
-            break;
-        case EngineField::LimiterCeiling:
-            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_ceiling);
-            out += buf;
-            break;
-        case EngineField::LimiterAttackMs:
-            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_attack_ms);
-            out += buf;
-            break;
-        case EngineField::LimiterReleaseMs:
-            std::snprintf(buf, sizeof(buf), "%.6f", es.limiter_release_ms);
             out += buf;
             break;
     }
@@ -293,7 +273,7 @@ bool atomic_write_string_to_path(const std::string& path,
     return true;
 }
 
-// Append the engine block (the ten canonical engine keys, in
+// Append the engine block (the seven canonical engine keys, in
 // kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file) to `out`. Shared by write_rendersettings.
 void append_engine_block(std::string& out, const EngineSettings& engine) {
@@ -396,12 +376,8 @@ std::optional<EngineSettings> read_engine_block_strict(
     require("output_format");
     require("scale");
     require("N");
-    require("fftw_threads");
-    require("limiter_enabled_on_render");
+    require("limiter");
     require("phase_reset_offset_hops");
-    require("limiter_ceiling");
-    require("limiter_attack_ms");
-    require("limiter_release_ms");
 
     if (any_error) return std::nullopt;
     return es;
@@ -633,22 +609,13 @@ bool validate_engine_setting(const std::string& key,
         out.N = v;
         return true;
     }
-    if (key == "fftw_threads") {
-        int v;
-        if (!parse_int_strict(value, v) || v < 0) {
-            reason = "must be an integer >= 0";
-            return false;
-        }
-        out.fftw_threads = v;
-        return true;
-    }
-    if (key == "limiter_enabled_on_render") {
+    if (key == "limiter") {
         bool v;
         if (!parse_bool_strict(value, v)) {
             reason = "must be one of {true, false, 1, 0, yes, no, on, off}";
             return false;
         }
-        out.limiter_enabled_on_render = v;
+        out.limiter = v;
         return true;
     }
     if (key == "phase_reset_offset_hops") {
@@ -658,33 +625,6 @@ bool validate_engine_setting(const std::string& key,
             return false;
         }
         out.phase_reset_offset_hops = v;
-        return true;
-    }
-    if (key == "limiter_ceiling") {
-        double v;
-        if (!parse_double_strict(value, v) || !(v <= 0.0)) {
-            reason = "must be a finite double <= 0";
-            return false;
-        }
-        out.limiter_ceiling = v;
-        return true;
-    }
-    if (key == "limiter_attack_ms") {
-        double v;
-        if (!parse_double_strict(value, v) || !(v > 0.0)) {
-            reason = "must be a finite double strictly greater than 0";
-            return false;
-        }
-        out.limiter_attack_ms = v;
-        return true;
-    }
-    if (key == "limiter_release_ms") {
-        double v;
-        if (!parse_double_strict(value, v) || !(v > 0.0)) {
-            reason = "must be a finite double strictly greater than 0";
-            return false;
-        }
-        out.limiter_release_ms = v;
         return true;
     }
     reason = "unknown engine key";

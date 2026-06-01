@@ -85,11 +85,10 @@ sf_count_t mem_write(const void*, sf_count_t, void*) {
 
 // Shared FFTW thread init for full-render and detection-only paths. Sets
 // audio_stft.fftw_threads_inited if init succeeded.
-void init_fftw_threads(AudioSTFT& audio_stft, int requested_threads) {
-    (void)requested_threads;   // per-transform threading intentionally off:
-                               // channel-level threads (synthesis.cpp) are the
-                               // parallelism; FFTW internal threads on a single
-                               // 8192 transform are net-negative and would nest.
+void init_fftw_threads(AudioSTFT& audio_stft) {
+    // Per-transform threading intentionally off: channel-level threads
+    // (synthesis.cpp) are the parallelism; FFTW internal threads on a single
+    // 8192 transform are net-negative and would nest.
     if (fftw_init_threads()) {
         fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
@@ -128,7 +127,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
-    init_fftw_threads(audio_stft, p.fftw_threads);
+    init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
     lp.enabled              = (p.limiter_mode == LimiterMode::Spectral);
@@ -266,16 +265,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // every other path streams straight to its destination. attenuation_map
     // stays all-1.0 (a no-op row), so synthesize_full — and therefore the None
     // disk render — is byte-identical to the pre-relocation build.
+    // The limited chain runs on a buffer; the clean (None) disk path streams
+    // float straight to file.
+    const bool limited = (audio_stft.limiter_mode == LimiterMode::Spectral);
     std::vector<float> render_buf;
-    const bool spectral_disk =
-        (!p.output_buffer && audio_stft.limiter_mode == LimiterMode::Spectral);
     auto t_p2_0 = std::chrono::steady_clock::now();
     if (p.output_buffer) {
         synthesis.process_to_buffer(audio_stft, p.output_buffer);
-    } else if (spectral_disk) {
+    } else if (limited) {
         synthesis.process_to_buffer(audio_stft, &render_buf);
     } else {
-        synthesis.process(audio_stft);
+        synthesis.process(audio_stft);            // None -> 32-bit float, clean
     }
     auto t_p2_1 = std::chrono::steady_clock::now();
     p2_ns = ns_between(t_p2_0, t_p2_1);
@@ -286,18 +286,21 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Cancelled;
     }
 
-    // Pass 3: post-render spectral limiter + peak-limiter backstop, then write
-    // the limited buffer to disk. Spectral disk path only — the None disk path
-    // and the target-view buffer path have no Pass 3.
-    if (spectral_disk) {
+    // Pass 3: the limited chain — spectral(-0.3) then peak(0) backstop — applied
+    // in place on whichever buffer Pass 2 filled (disk render or target view).
+    // The None disk path has no Pass 3. The disk render is then written out.
+    if (limited) {
         auto t_p3_0 = std::chrono::steady_clock::now();
-        limiter.process(audio_stft, render_buf);
+        std::vector<float>& buf = p.output_buffer ? *p.output_buffer : render_buf;
+        limiter.process(audio_stft, buf);          // spectral -0.3
         if (audio_stft.cancellation_observed) {
             std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
         }
-        synthesis.write_render_to_file(audio_stft, render_buf);
+        apply_peak_backstop(audio_stft, buf);      // peak 0 net
+        if (!p.output_buffer)
+            synthesis.write_render_to_file(audio_stft, render_buf);  // plain write
         auto t_p3_1 = std::chrono::steady_clock::now();
         p3_ns = ns_between(t_p3_0, t_p3_1);
         std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";

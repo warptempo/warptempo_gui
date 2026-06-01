@@ -499,8 +499,8 @@ struct AppState {
     // against each entry's op_mode. Drives both the unsaved-work dialog
     // and the dirty-dot.
     //
-    // Authoring-class settings (trim, engine, scale, N, fftw_threads,
-    // limiter_enabled, title, audio_input, plus any free-form key typed
+    // Authoring-class settings (trim, engine, scale, N, limiter, title,
+    // audio_input, plus any free-form key typed
     // into the settings editor that isn't a view-state key) participate
     // in dirty via settings_dirty. View-state keys (viewport, zoom,
     // playhead, follow_mode, active_markers_view, playback_speed) do NOT

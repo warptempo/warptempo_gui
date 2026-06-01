@@ -61,26 +61,15 @@ struct RenderRequest {
 
     // Nullable. When non-null and output_format is "wav", do_render routes
     // the engine to this buffer instead of a staged .wav file. Skips the
-    // spectral limiter (Pass 2), the atomic rename, the peak-pyramid
-    // sidecar write, and every batch sidecar write (.warpmarkers /
-    // .phaseresetmarkers / .rendersettings / .renderwarpmarkers /
-    // .renderphaseresetmarkers). The peak limiter still runs on this
-    // path when limiter_mode == Peak (force_peak_limiter or the trim-
-    // derived selection picks it). Defaults to nullptr; the existing
-    // wav-to-disk path is taken when null. Reserved for target-view
-    // target rendering; not authoring-facing. Non-wav output_format
-    // branches silently ignore this field.
+    // atomic rename, the peak-pyramid sidecar write, and every batch sidecar
+    // write (.warpmarkers / .phaseresetmarkers / .rendersettings /
+    // .renderwarpmarkers / .renderphaseresetmarkers). The limited chain
+    // (spectral + peak backstop) runs in place on this buffer whenever the
+    // global `limiter` toggle is on, exactly as on the disk path. Defaults
+    // to nullptr; the existing wav-to-disk path is taken when null. Reserved
+    // for target-view target rendering; not authoring-facing. Non-wav
+    // output_format branches silently ignore this field.
     std::vector<float>* output_buffer = nullptr;
-
-    // Target-view override. When true, do_render forces
-    // LimiterMode::Peak regardless of engine_settings.limiter_enabled_on_render
-    // or the trim state, so the user monitoring target output through
-    // speakers gets brick-walled at the configured ceiling on every
-    // update. Reading peak_limiter_ceiling_dbfs / attack_ms / release_ms
-    // from engine_settings as usual. Defaults to false — archival renders
-    // (Ctrl+Alt+R, Ctrl+Alt+E, Ctrl+Alt+I, and the BPM sweep) keep their
-    // user-controlled limiter routing.
-    bool force_peak_limiter = false;
 
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>.wav` (or
@@ -111,8 +100,8 @@ RenderOutcome do_render(const RenderRequest& req,
 // req.batch_folder is empty. Mirrors the inline composition in
 // do_render; both must stay in lockstep. Directory is the
 // source's parent ("." when the source has no parent). Extension is
-// selected by output_format; the unlimited-wav path carries the
-// `limiter_enabled_on_render=false;` filename prefix.
+// selected by output_format; the clean-float-wav path carries the
+// `limiter=false;` filename prefix.
 std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es);

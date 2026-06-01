@@ -2,7 +2,7 @@
 
 #include <string>
 
-// Typed view of the ten engine-relevant settings keys. Promoted onto
+// Typed view of the seven engine-relevant settings keys. Promoted onto
 // AppState as the live authoring store; carried by RenderRequest as the
 // only engine-settings carrier. Member-default-initialized to the values
 // format_default_settings_template emits (modulo title, which defaults to
@@ -13,12 +13,8 @@ struct EngineSettings {
     double      scale                    = 1.0;
     int         bpm                      = 0;     // informational only; unused by engine/GUI
     int         N                        = 4096;
-    int         fftw_threads             = 16;
-    bool        limiter_enabled_on_render = true;
+    bool        limiter                  = true;
     double      phase_reset_offset_hops  = 1.0;
-    double      limiter_ceiling          = -0.3;     // dBFS, expected <= 0
-    double      limiter_attack_ms        = 0.25;
-    double      limiter_release_ms       = 0.5;
 };
 
 // Identifier for one field of EngineSettings. Stored on each
@@ -31,10 +27,6 @@ enum class EngineField {
     Bpm,
     OutputFormat,
     N,
-    FftwThreads,
-    LimiterEnabledOnRender,
+    Limiter,
     PhaseResetOffsetHops,
-    LimiterCeiling,
-    LimiterAttackMs,
-    LimiterReleaseMs,
 };

@@ -80,7 +80,7 @@ bool create_if_missing(const std::filesystem::path& p,
 // read_engine_settings_from_file.
 bool parse_settings_file(const std::string& path, ParsedSettings& out);
 
-// True iff `key` is one of the ten canonical engine setting keys.
+// True iff `key` is one of the seven canonical engine setting keys.
 // Driven from the EnginePassthrough subset of kSettingsOrder.
 bool is_canonical_engine_key(const std::string& key);
 
@@ -137,7 +137,7 @@ RenderViewState read_rendersettings_view_state(
 std::optional<EngineSettings> read_rendersettings_engine_block(
     const std::filesystem::path& path);
 
-// Full-write of `.rendersettings`: emits the ten canonical engine keys
+// Full-write of `.rendersettings`: emits the seven canonical engine keys
 // (in kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file), then the three view-state keys
 // (viewport_start, zoom, playhead). Atomic via tmp + fsync + rename.

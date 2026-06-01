@@ -115,13 +115,10 @@ void GuiTargetRender::dispatch_render_now() {
     }
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
-    // *output_buffer instead.
+    // *output_buffer instead. The limited chain (spectral + peak backstop)
+    // runs in place on the buffer whenever the global `limiter` toggle is
+    // on — the target-view preview gets the same limiting as the disk path.
     req.output_buffer = &app.target_buffer;
-    // Force the peak limiter on. Brick-walling at the user's configured
-    // ceiling protects the speakers from spikes the unrendered engine
-    // would otherwise emit. This bypasses do_render's trim-derived
-    // None / Spectral / Peak selection.
-    req.force_peak_limiter = true;
 
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) { on_render_done(o); });

@@ -7,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-// Tri-state selector for the engine's limiter pass. The 24-bit-PCM output
+// Bi-state selector for the engine's limiter pass. The 24-bit-PCM output
 // format decision is derived from this enum inside the engine (None →
-// 32-bit float, Spectral/Peak → 24-bit PCM) — single source of truth.
+// 32-bit float clean, Spectral → 24-bit PCM limited) — single source of truth.
 enum class LimiterMode {
-    None,      // no limiter; output is 32-bit float
-    Spectral,  // frequency-domain limiter (limiter.cpp)
-    Peak,      // time-domain peak limiter (peak_limiter.cpp), inline in synthesis
+    None,      // no limiter; output is clean 32-bit float
+    Spectral,  // limited chain: spectral(-0.3 dBFS) + peak(0 dBFS) backstop
 };
 
 // Parameter struct for the warptempo DSP pipeline. Constructed by the GUI's
@@ -32,25 +31,23 @@ struct EngineParams {
 
     // Optional in-memory output sink. When non-null, the engine routes
     // synthesis output to this caller-owned vector (append-only via
-    // std::vector::insert) and skips the spectral limiter pass — Pass 2
-    // (limiter.process) is not invoked. Pass 3 still applies a peak
-    // limiter when limiter_mode == Peak (the target render opts in
-    // via RenderRequest::force_peak_limiter at the GUI boundary). The
-    // existing output_audio_path field is ignored on this path. The
-    // buffer must remain valid through run_warptempo_engine; the caller
-    // is responsible for clearing or reserving.
+    // std::vector::insert). When limiter_mode == Spectral the limited chain
+    // (spectral -0.3 + peak 0 backstop) is applied in place on this buffer;
+    // when None the buffer holds clean synthesis. The existing
+    // output_audio_path field is ignored on this path. The buffer must
+    // remain valid through run_warptempo_engine; the caller is responsible
+    // for clearing or reserving.
     std::vector<float>* output_buffer = nullptr;
 
     std::vector<std::pair<size_t, size_t>> timemap;  // src_frame, tgt_frame
 
     int    N                          = 4096;
-    int    fftw_threads               = 0;   // 0 = auto
     LimiterMode limiter_mode          = LimiterMode::None;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
     int    limiter_num_bands          = 0;
     bool   limiter_diag               = false;
-    double peak_limiter_ceiling_dbfs  = -0.3;
+    double peak_limiter_ceiling_dbfs  = 0.0;
     double peak_limiter_attack_ms     = 0.25;
     double peak_limiter_release_ms    = 0.5;
 

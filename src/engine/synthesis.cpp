@@ -13,6 +13,29 @@
 #include <thread>
 #include <vector>
 
+// Apply the peak-limiter backstop to `buf` in place. One-shot process+flush, so
+// it is sample-for-sample identical to the previous streaming application in
+// write_render_to_file. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0
+// dBFS) - a pure clip net above the spectral limiter's -0.3.
+void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf) {
+    const int channels = stft.channels;
+    const size_t total_frames =
+        channels > 0 ? buf.size() / static_cast<size_t>(channels) : 0;
+    if (total_frames == 0) return;
+    PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
+                   stft.peak_limiter_attack_ms,
+                   stft.peak_limiter_release_ms,
+                   stft.src_info.samplerate, channels);
+    std::vector<float> out;
+    out.reserve(buf.size());
+    auto sink = [&](const float* p, size_t n) {
+        out.insert(out.end(), p, p + n * static_cast<size_t>(channels));
+    };
+    pl.process(buf.data(), total_frames, sink);
+    pl.flush(sink);
+    buf.swap(out);
+}
+
 void Synthesis::synthesize_full(
     AudioSTFT& stft,
     std::complex<float>* spectra_cache,
@@ -357,24 +380,9 @@ void Synthesis::process(AudioSTFT& stft) {
         sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
     };
 
-    if (stft.limiter_mode == LimiterMode::Peak) {
-        PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
-                       stft.peak_limiter_attack_ms,
-                       stft.peak_limiter_release_ms,
-                       stft.src_info.samplerate,
-                       stft.channels);
-        auto write_through_limiter = [&](const float* buf, size_t n_frames) {
-            pl.process(buf, n_frames, write_to_file);
-        };
-        synthesize_full(stft, nullptr, write_through_limiter,
-                        /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
-        pl.flush(write_to_file);
-    } else {
-        synthesize_full(stft, nullptr, write_to_file,
-                        /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
-    }
+    synthesize_full(stft, nullptr, write_to_file,
+                    /*show_progress=*/true,
+                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
     sf_close(output_snd);
 }
 
@@ -387,57 +395,26 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             output_buffer->end(), buf,
             buf + n_frames * static_cast<size_t>(channels));
     };
-    // Mirror Synthesis::process: when limiter_mode == Peak, wrap the
-    // append in a PeakLimiter so the target render's audio is
-    // brick-walled at the configured ceiling. The spectral limiter is
-    // skipped on the buffer path (Pass 2 is gated off in engine.cpp);
-    // the peak limiter is the only limiter that runs here.
-    if (stft.limiter_mode == LimiterMode::Peak) {
-        PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
-                       stft.peak_limiter_attack_ms,
-                       stft.peak_limiter_release_ms,
-                       stft.src_info.samplerate,
-                       stft.channels);
-        auto write_through_limiter = [&](const float* buf, size_t n_frames) {
-            pl.process(buf, n_frames, append_to_buffer);
-        };
-        synthesize_full(stft, nullptr, write_through_limiter,
-                        /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
-        pl.flush(append_to_buffer);
-    } else {
-        synthesize_full(stft, nullptr, append_to_buffer,
-                        /*show_progress=*/true,
-                        /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
-    }
+    // The limited chain (spectral + peak backstop) runs in the engine after
+    // synthesis, in place on this buffer — process_to_buffer always does the
+    // plain append.
+    synthesize_full(stft, nullptr, append_to_buffer,
+                    /*show_progress=*/true,
+                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
 }
 
 void Synthesis::write_render_to_file(AudioSTFT& stft,
                                      const std::vector<float>& render) {
     SF_INFO tgt_info = stft.src_info;
-    // Spectral disk path -> 24-bit PCM (same non-None decision as process()).
     tgt_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-
     SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
     if (!output_snd) {
         std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
         return;
     }
-
-    auto write_to_file = [output_snd](const float* buf, size_t n_frames) {
-        sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
-    };
-
-    // Always-after backstop: catches the sub-dB residual the spectral limiter's
-    // per-peak cap leaves plus any rare blip. Free on compliant material.
-    PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
-                   stft.peak_limiter_attack_ms,
-                   stft.peak_limiter_release_ms,
-                   stft.src_info.samplerate,
-                   stft.channels);
     const size_t total_frames = stft.channels > 0
         ? render.size() / static_cast<size_t>(stft.channels) : 0;
-    pl.process(render.data(), total_frames, write_to_file);
-    pl.flush(write_to_file);
+    sf_writef_float(output_snd, render.data(),
+                    static_cast<sf_count_t>(total_frames));
     sf_close(output_snd);
 }
