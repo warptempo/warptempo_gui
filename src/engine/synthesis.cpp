@@ -51,12 +51,14 @@ void Synthesis::synthesize_full(
     const int num_frames = static_cast<int>(fm.size());
 
     // --- Env-gated sub-stage profiling --------------------------------------
-    // Five ns counters per channel (held in chprof, below), reduced across
-    // channels after the per-channel passes complete, plus a single
-    // write/limiter timer for the one interleaved write_cb. The totals are
-    // aggregate over the whole render (both channels folded in). The [profile]
-    // line is emitted to std::cerr only when WARPTEMPO_PROFILE is set (runtime
-    // env gating only — no compile-time macro).
+    // Five ns counters per channel (held in chprof, below), summed across the
+    // channel threads after the per-channel passes complete, plus a single
+    // write/limiter timer for the one interleaved write_cb. Because the channels
+    // run concurrently, the summed work_sum reads ~channel-count times the real
+    // elapsed time; wall (measured below) is the true elapsed ms of the threaded
+    // compute+write region, so the two can't be confused. The [profile] line is
+    // emitted to std::cerr only when WARPTEMPO_PROFILE is set (runtime env gating
+    // only — no compile-time macro).
     //
     // CAVEAT: the two now() reads per sub-stage per frame slightly inflate the
     // cheapest stages (synthspec, ola) relative to the expensive ones. The
@@ -307,6 +309,7 @@ void Synthesis::synthesize_full(
     // All per-channel state is private to run_channel and fft_ws[ch] is
     // per-channel, so the passes are independent — see the race audit in the
     // brief. Join before the interleave below.
+    const auto _wall0 = prof_clock::now();
     {
         std::vector<std::thread> workers;
         workers.reserve(static_cast<size_t>(std::max(0, channels - 1)));
@@ -342,6 +345,7 @@ void Synthesis::synthesize_full(
         t_write += prof_ns(_w0, prof_clock::now());
     }
 
+    const int64_t t_wall = prof_ns(_wall0, prof_clock::now());
     if (prof) {
         int64_t t_analysis=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
         for (int ch = 0; ch < channels; ++ch) {
@@ -349,9 +353,9 @@ void Synthesis::synthesize_full(
             t_synthspec += chprof[ch].synthspec; t_ifft += chprof[ch].ifft;
             t_ola += chprof[ch].ola;
         }
-        const int64_t total = t_analysis + t_heap + t_synthspec +
-                              t_ifft + t_ola + t_write;
-        const double denom = total > 0 ? static_cast<double>(total) : 1.0;
+        const int64_t work_sum = t_analysis + t_heap + t_synthspec +
+                                 t_ifft + t_ola + t_write;
+        const double denom = work_sum > 0 ? static_cast<double>(work_sum) : 1.0;
         auto pct = [&](int64_t v) { return 100.0 * v / denom; };
         std::cerr << "[profile] synth:"
                   << " analysis=" << (t_analysis / 1e6) << "(" << pct(t_analysis) << "%)"
@@ -360,7 +364,12 @@ void Synthesis::synthesize_full(
                   << " ifft="     << (t_ifft     / 1e6) << "(" << pct(t_ifft)     << "%)"
                   << " ola="      << (t_ola      / 1e6) << "(" << pct(t_ola)      << "%)"
                   << " write/limiter=" << (t_write / 1e6) << "(" << pct(t_write) << "%)"
-                  << " total="    << (total      / 1e6) << "\n";
+                  << " work_sum=" << (work_sum / 1e6)
+                  << " wall="     << (t_wall    / 1e6)
+                  << "  (work_sum = per-stage ms summed over " << channels
+                  << " channel threads; wall = elapsed ms of the compute+write"
+                  << " region. work_sum exceeds wall by about the channel count"
+                  << " when threading is healthy.)\n";
     }
 }
 
