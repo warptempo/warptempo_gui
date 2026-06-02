@@ -724,13 +724,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             (ctrl && !shift && !alt && key == GuiKeys::S);
         const bool is_copy_phase_resets =
             (ctrl && !shift && !alt && key == GuiKeys::P);
+        // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are admitted through this
+        // active-tab gate unconditionally. The honored-ness rule is not the
+        // active tab's read-only state but the target entry's tab, which may
+        // be the other tab; only do_undo / do_redo have that entry in hand,
+        // so the real read-only decision lives there, not here.
+        const bool is_undo_redo = (ctrl && !alt && key == GuiKeys::Z);
         if (!(is_o || is_play_pause || is_scrub || is_scrub_samples ||
               is_home_end || is_page_updown ||
               is_zoom || is_zoom_symbol || is_zero ||
               is_follow || is_center || is_sub_t || is_sub_p ||
               is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
               is_esc || is_ctrl_q || is_ctrl_w || is_save ||
-              is_copy_phase_resets)) {
+              is_copy_phase_resets || is_undo_redo)) {
             return;
         }
     }

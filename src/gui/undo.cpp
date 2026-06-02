@@ -287,6 +287,18 @@ void Undo::do_undo() {
     // underlying source-view marker lists are not mutated behind the
     // user's back while the UI says render view is read-only.
     if (app.render_view_enabled) return;
+    // Peek the entry on top of the undo stack: if the tab it targets is
+    // currently read-only, undo is a silent no-op. Read-only is a reversible
+    // per-tab toggle, so honored-ness is decided by the target tab's state
+    // now, not when the action was recorded. Peek-then-bail — the entry stays
+    // on the stack and the view is unchanged, so unlocking the tab makes the
+    // history reachable again with nothing lost.
+    {
+        const char tt = app.history.undo_stack.back().tab;
+        const bool target_ro = (tt == 'B') ? app.tab_b.read_only
+                                            : app.tab_a.read_only;
+        if (target_ro) return;
+    }
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());
@@ -384,6 +396,15 @@ void Undo::do_undo() {
 void Undo::do_redo() {
     if (app.history.redo_stack.empty()) return;
     if (app.render_view_enabled) return;
+    // Symmetric to do_undo: peek the entry on top of the redo stack and bail
+    // silently if its target tab is currently read-only. Entry stays on the
+    // stack; unlocking the tab restores reachability.
+    {
+        const char tt = app.history.redo_stack.back().tab;
+        const bool target_ro = (tt == 'B') ? app.tab_b.read_only
+                                            : app.tab_a.read_only;
+        if (target_ro) return;
+    }
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.redo_stack.back());
