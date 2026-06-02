@@ -3,6 +3,7 @@
 #include "app_state.h"
 
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 class GuiAudio;
@@ -33,12 +34,47 @@ struct Viewport {
     int64_t                     trim_begin_sample() const;
     int64_t                     trim_end_sample() const;
 
+    // Worker kick: requests an immediate waveform regeneration the moment
+    // the viewport changes, instead of waiting for the next platform tick.
+    // Set from main.cpp to paint_handler.maybe_enqueue_waveform_render().
+    // Held as a std::function rather than a GuiPaintHandler& so viewport.cpp
+    // keeps no compile-time edge to paint_handler.h. kick_waveform_render()
+    // is null-safe: if the callback is unset (e.g. before main.cpp wires it),
+    // it no-ops. The enqueue is idempotent against the on_tick backstop —
+    // both dirty-check the same pending fingerprint, so a redundant call is
+    // a cheap no-op. Callers fire it only inside their actually-changed guard.
+    std::function<void()> request_waveform_render_;
+    void kick_waveform_render() {
+        if (request_waveform_render_) request_waveform_render_();
+    }
+
+    // Incremental-pan kick: for a pure horizontal pan, drive the shift-and-
+    // strip fast-path instead of the full worker re-render. Set from main.cpp
+    // to paint_handler.pan_waveform_incremental(new_vp_start); held as a
+    // std::function for the same no-compile-time-edge reason as the kick
+    // above. When unset (before main.cpp wires it) kick_waveform_pan falls
+    // back to the full worker kick, so the pan path stays correct either way.
+    // The incremental path itself falls back to the worker for any non-pure-
+    // pan case, and the on_tick backstop catches residual drift.
+    std::function<void(int64_t)> request_waveform_pan_;
+    void kick_waveform_pan(int64_t new_vp_start) {
+        if (request_waveform_pan_) request_waveform_pan_(new_vp_start);
+        else                       kick_waveform_render();
+    }
+
     // Viewport mutators.
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(int new_zoom_level);
     void zoom_in();
     void zoom_out();
+    // Coalesced zoom: apply |in_steps| zoom levels in a single shot.
+    // Positive in_steps zooms in, negative zooms out. Equivalent in final
+    // state to calling zoom_in()/zoom_out() |in_steps| times, but resolves
+    // to one apply_zoom_change so invalidate + worker-kick fire once per
+    // pointer frame instead of once per detent. in_steps == +/-1 reproduces
+    // zoom_in()/zoom_out() exactly.
+    void zoom_steps(int in_steps);
     void scroll_viewport(int64_t delta_samples);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();

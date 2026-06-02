@@ -208,6 +208,11 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     // cursor — re-evaluate hover.
     recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
+    // Reaching here means the zoom level changed (early-return above guards
+    // the no-op case), so the waveform fingerprint differs — kick the worker
+    // now rather than waiting for the next tick. zoom_in/zoom_out delegate
+    // here, so they are covered without a separate kick.
+    kick_waveform_render();
 }
 
 void Viewport::zoom_in() {
@@ -234,6 +239,49 @@ void Viewport::zoom_out() {
     }
 }
 
+void Viewport::zoom_steps(int in_steps) {
+    if (in_steps == 0) return;
+    if (audio.total_frames() <= 0) return;
+    const int max_num = max_valid_numeric_level(
+        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
+
+    if (in_steps > 0) {
+        // Zoom in. Mirrors zoom_in(): no numeric level valid -> nothing to do.
+        if (max_num < 0) return;
+    } else {
+        // Zoom out. Mirrors zoom_out(): already fully out is a no-op; with no
+        // numeric level valid, the only target is fit-file.
+        if (app.zoom_level == kFitFileLevel) return;
+        if (max_num < 0) { apply_zoom_change(kFitFileLevel); return; }
+    }
+
+    // Linear ordinal over the zoom states, most-zoomed-out (fit = 0) to
+    // most-zoomed-in (numeric level 1 = max_num). A numeric level L maps to
+    // ordinal (max_num - L + 1); fit maps to 0. Single-step zoom_in/zoom_out
+    // are exactly +/-1 on this ordinal with clamping at both ends (zoom_in
+    // jumps fit -> max_num then decrements the level; zoom_out increments the
+    // level then jumps max_num -> fit), so a net detent count is a single
+    // clamped add. Clamp keeps the result inside [fit, level 1].
+    const int cur_ord = (app.zoom_level == kFitFileLevel)
+        ? 0 : (max_num - app.zoom_level + 1);
+    int new_ord = cur_ord + in_steps;
+    if (new_ord < 0)       new_ord = 0;
+    if (new_ord > max_num) new_ord = max_num;
+
+    const int target = (new_ord == 0) ? kFitFileLevel : (max_num - new_ord + 1);
+
+    if (target == app.zoom_level) {
+        // Net movement saturated with no level change. Match the single-step
+        // zoom_in() behavior of recentering on the playhead when a zoom-in is
+        // requested while already at the deepest numeric level.
+        if (in_steps > 0 && app.zoom_level == kMinNumericLevel) {
+            center_viewport_on_playhead();
+        }
+        return;
+    }
+    apply_zoom_change(target);
+}
+
 void Viewport::scroll_viewport(int64_t delta_samples) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;
@@ -251,6 +299,12 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
+        // Viewport actually moved (inside the changed guard). A scroll is a
+        // pure horizontal pan, so drive the incremental shift-and-strip
+        // fast-path rather than a full worker re-render — this is what keeps
+        // fast touchpad scroll continuous instead of leaping. Pass the
+        // post-clamp viewport start.
+        kick_waveform_pan(app.viewport_start_sample);
     }
 }
 
@@ -279,6 +333,9 @@ void Viewport::center_viewport_on_playhead() {
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
+        // Viewport actually moved (inside the changed guard) — kick the
+        // waveform worker now instead of deferring to the next tick.
+        kick_waveform_render();
     }
 }
 
@@ -313,6 +370,9 @@ void Viewport::follow_scroll_if_needed() {
         if (app.viewport_start_sample != old_vp) {
             invalidate_waveform_area();
             if (playback.is_playing()) playback.resync_predictor();
+            // Viewport actually moved — kick the waveform worker now rather
+            // than waiting for the next tick.
+            kick_waveform_render();
         }
     }
 }

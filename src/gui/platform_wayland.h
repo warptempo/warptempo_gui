@@ -20,6 +20,13 @@ public:
     using ResizeCallback       = std::function<void(int w, int h)>;
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
+    // A scroll wheel notification carrying the NET number of detents crossed
+    // in one pointer frame (always >= 1). on_pointer_frame() coalesces a
+    // frame's worth of value120 / legacy-axis deltas into a single emission
+    // of this callback, so the per-step wheel machinery (viewport move,
+    // damage, hover, worker kick) runs once per frame regardless of burst
+    // size. `dir` is WheelUp or WheelDown; `steps` is the magnitude.
+    using WheelCallback        = std::function<void(GuiMouseButton dir, int steps, int x, int y, GuiInputState mods)>;
     using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using CloseCallback        = std::function<void()>;
     using FileDropCallback     = std::function<void(const std::string& path)>;
@@ -47,6 +54,7 @@ public:
     void set_on_key(KeyCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
+    void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
     void set_on_close(CloseCallback cb);
     void set_on_file_drop(FileDropCallback cb);
@@ -107,7 +115,11 @@ private:
         size_t            size_bytes   = 0;
         bool              busy         = false;    // true between attach and release
     };
-    ShmBuffer shm_buffers_[2];
+    // Buffer count is the single source of truth for the array size and
+    // every loop that walks the buffers (pool sizing, per-buffer layout,
+    // acquire, destroy). Change it here only.
+    static constexpr int kShmBufferCount = 2;
+    ShmBuffer shm_buffers_[kShmBufferCount];
     int       shm_pool_fd_   = -1;
     void*     shm_pool_map_  = nullptr;
     size_t    shm_pool_size_ = 0;
@@ -213,6 +225,27 @@ private:
     // primary_button_held field of GuiInputState.
     bool pointer_left_held_ = false;
 
+    // Accumulated vertical scroll carry, in value120 units (120 = one
+    // detent). on_pointer_frame() folds the per-frame delta (arbitrated
+    // from the two staged sources below) into this and drains it into
+    // discrete WheelUp/WheelDown steps once per logical pointer frame,
+    // carrying the sub-detent remainder forward. This is what collapses a
+    // touchpad's stream of small axis events into the same handful of
+    // steps a mouse wheel produces.
+    double scroll_accum_ = 0.0;
+
+    // Per-frame scroll staging. A wl_pointer.frame may carry a value120
+    // event (wheel, high-resolution) and/or a legacy wl_pointer.axis event
+    // (touchpad and other continuous sources). Both handlers stage into
+    // these scratch fields; on_pointer_frame() arbitrates — value120 wins
+    // when present, legacy axis is used otherwise — folds the result into
+    // scroll_accum_, then resets all four unconditionally at the frame
+    // boundary so no partial delta leaks into a later frame.
+    double frame_v120_accum_ = 0.0;   // value120 units seen this frame (wheel)
+    double frame_axis_accum_ = 0.0;   // legacy axis units seen this frame
+    bool   frame_have_v120_  = false; // a value120 event arrived this frame
+    bool   frame_have_axis_  = false; // a legacy axis event arrived this frame
+
     // Cursor (system theme, loaded once at init, kept for the process
     // lifetime). cursor_surface_ is a dedicated wl_surface that holds
     // the cursor image buffer; it is distinct from the main window
@@ -253,6 +286,7 @@ private:
     KeyCallback          on_key_;
     ButtonCallback       on_button_press_;
     ButtonCallback       on_button_release_;
+    WheelCallback        on_wheel_;
     MotionCallback       on_motion_;
     CloseCallback        on_close_;
     FileDropCallback     on_file_drop_;
@@ -309,6 +343,8 @@ private:
     void on_pointer_button(uint32_t serial, uint32_t time,
                            uint32_t button, uint32_t state);
     void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
+    void on_pointer_axis_value120(uint32_t axis, int32_t value120);
+    void on_pointer_frame();
 
     // -- Data device (drag-and-drop) handlers --
     void on_data_offer(struct wl_data_offer* offer);

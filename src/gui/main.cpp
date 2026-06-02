@@ -520,6 +520,22 @@ int main(int argc, char** argv) {
                                   settings_editor, target_render,
                                   paint_handler);
 
+    // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
+    // requests the new waveform immediately rather than waiting for the next
+    // tick. maybe_enqueue_waveform_render is main-thread-safe and idempotent
+    // against the on_tick backstop, so the earlier trigger only shortens
+    // input-to-render latency. See Viewport::kick_waveform_render.
+    viewport.request_waveform_render_ =
+        [&]() { paint_handler.maybe_enqueue_waveform_render(); };
+
+    // Pure-pan fast-path: scroll_viewport drives this instead of the full
+    // worker kick. Shifts the live plate by the pixel delta and renders only
+    // the newly exposed edge strip inline, so fast touchpad scroll stays
+    // continuous. Falls back to the worker for any non-pan case. See
+    // Viewport::kick_waveform_pan and GuiPaintHandler::pan_waveform_incremental.
+    viewport.request_waveform_pan_ =
+        [&](int64_t new_vp) { paint_handler.pan_waveform_incremental(new_vp); };
+
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -572,6 +588,14 @@ int main(int argc, char** argv) {
     gui.set_on_button_release([&](GuiMouseButton button, int x, int y,
                                   GuiInputState mods) {
         input_handler.on_button_release(button, x, y, mods);
+    });
+
+    // Scroll wheel arrives coalesced once per pointer frame, carrying the
+    // net detent count, so the per-step wheel machinery runs once regardless
+    // of how many detents a fast touchpad burst crossed in that frame.
+    gui.set_on_wheel([&](GuiMouseButton dir, int steps, int x, int y,
+                         GuiInputState mods) {
+        input_handler.on_wheel(dir, steps, x, y, mods);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

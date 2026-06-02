@@ -93,6 +93,86 @@ void render_waveform_to_cache_surface(
     cairo_destroy(ccr);
 }
 
+// -- render_waveform_strip_to_cache_surface ------------------------------
+//
+// Incremental-pan strip render. Redraws only the [strip_x, strip_x+strip_w)
+// column of the plate (full height, including the inset bands) and leaves
+// every other column untouched — the caller has already memmove'd the
+// reusable pixels into place, and this fills the newly exposed edge.
+//
+// vp_start_full / vp_end_full describe the WHOLE plate's displayed viewport
+// (not the strip's). The strip's own sample range is derived from them so the
+// strip columns land at the exact frames a full-plate render at this viewport
+// would produce; the shifted pixels and the freshly rendered strip then meet
+// seamlessly at the strip boundary. Mirrors render_waveform_to_cache_surface's
+// inset + mono/stereo split, restricted to the strip columns and clipped so a
+// 1px stroke cannot bleed past the strip edge into the reused pixels.
+//
+// Runs inline on the GUI thread (the strip is at most a window wide; see
+// pan_waveform_incremental's over-a-window fallback), so unlike the worker
+// render it touches the LIVE wf_cache.surface directly. Safe because the pan
+// path only takes this branch when the worker is idle.
+static void render_waveform_strip_to_cache_surface(
+    cairo_surface_t* dest,
+    int area_w,
+    int area_h,
+    int strip_x,
+    int strip_w,
+    int channel_count,
+    const GuiAudio& audio,
+    int64_t vp_start_full,
+    int64_t vp_end_full,
+    const std::vector<TimeMapSegment>* timemap_or_null) {
+    if (!dest || area_w <= 0 || area_h <= 0) return;
+    if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
+    if (vp_end_full <= vp_start_full) return;
+
+    const double disp_spp =
+        static_cast<double>(vp_end_full - vp_start_full) / area_w;
+    const int64_t strip_vp_start = vp_start_full +
+        static_cast<int64_t>(std::nearbyint(disp_spp * strip_x));
+    const int64_t strip_vp_end   = vp_start_full +
+        static_cast<int64_t>(std::nearbyint(disp_spp * (strip_x + strip_w)));
+
+    cairo_t* ccr = cairo_create(dest);
+
+    // Clear only the strip column (full height, incl. the inset bands) so the
+    // shifted-in pixels in the rest of the plate are left intact.
+    cairo_save(ccr);
+    cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
+    cairo_clip(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+
+    // Re-clip for the strokes so render_waveform's 1px line width cannot bleed
+    // out of the strip into the reused columns.
+    cairo_save(ccr);
+    cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
+    cairo_clip(ccr);
+
+    const int inset_h = area_h - 2 * kWaveformInsetPx;
+    if (inset_h <= 0) { cairo_restore(ccr); cairo_destroy(ccr); return; }
+    if (channel_count == 1) {
+        const GuiRect a{strip_x, kWaveformInsetPx, strip_w, inset_h};
+        render_waveform(ccr, a, audio, 0,
+                        strip_vp_start, strip_vp_end,
+                        kWaveform, timemap_or_null);
+    } else if (channel_count >= 2) {
+        const int ch_h = inset_h / 2;
+        const GuiRect ch0{strip_x, kWaveformInsetPx, strip_w, ch_h};
+        const GuiRect ch1{strip_x, kWaveformInsetPx + ch_h, strip_w, ch_h};
+        render_waveform(ccr, ch0, audio, 0,
+                        strip_vp_start, strip_vp_end,
+                        kWaveform, timemap_or_null);
+        render_waveform(ccr, ch1, audio, 1,
+                        strip_vp_start, strip_vp_end,
+                        kWaveform, timemap_or_null);
+    }
+    cairo_restore(ccr);
+    cairo_destroy(ccr);
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -1081,6 +1161,149 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_timemap      = in.timemap;
 
     wf_cache.dirty = false;
+
+    const GuiRect a = waveform_area(app);
+    gui.invalidate_region(0, 0, app.width, a.y + a.h);
+}
+
+// -- Incremental pan (shift-and-strip) -----------------------------------
+//
+// Pan fast-path: instead of re-rendering the whole window on the worker for a
+// pure horizontal pan, shift the already-rendered plate by the pixel delta and
+// render only the thin newly-exposed edge strip inline. O(strip) per frame
+// instead of O(window), so the pipeline keeps pace with fast touchpad scroll.
+//
+// Routed here from Viewport::scroll_viewport (a pure pan — spp and view are
+// unchanged) via the request_waveform_pan_ callback. new_vp_start is the
+// post-clamp app.viewport_start_sample in the displayed domain (source frames
+// in source view, target frames in target view).
+//
+// Target view uses this path too: a pan is a translation in the DISPLAYED
+// (target) domain, the plate is uniformly indexed in that domain
+// (render_waveform maps column i -> vp_start + spp*i, then target->source via
+// the timemap), and the timemap is invariant across a pan (marker/scale edits
+// rebuild it and stay on the worker path, caught by the fp_timemap_hash gate
+// below). So a uniform pixel shift is exactly as correct in target view as in
+// source view.
+//
+// This is an optimization layered over the worker backstop: every exit that is
+// not a clean shift falls back to the worker (maybe_enqueue) or a synchronous
+// full render, and the on_tick dirty-check re-renders if the fingerprint ever
+// drifts.
+void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) { maybe_enqueue_waveform_render(); return; }
+
+    // Fallbacks (section 5): anything that is not a clean translate of the
+    // live plate goes to the worker / full-render path.
+    //  - no plate yet (just after load)
+    //  - worker mid-render: leave it to the worker; superseding keeps the
+    //    latest viewport without racing a swap against our in-place shift
+    //  - active drag: the timemap is frozen / mid-deformation
+    //  - dimension mismatch (resize since the plate was rendered)
+    //  - view / timemap mismatch: not a pure pan (e.g. 't' toggle, marker edit)
+    if (!wf_cache.surface ||
+        waveform_worker.is_busy() ||
+        app.drag.active ||
+        wf_cache.fp_area_w != in.area_w ||
+        wf_cache.fp_area_h != in.area_h ||
+        wf_cache.width     != in.area_w ||
+        wf_cache.height    != in.area_h ||
+        wf_cache.fp_target       != in.is_target ||
+        wf_cache.fp_timemap_hash != in.timemap_hash ||
+        wf_cache.fp_audio_gen    != app.audio_generation) {
+        maybe_enqueue_waveform_render();
+        return;
+    }
+
+    const int64_t old_vp_start = wf_cache.fp_vp_start;
+    const int64_t old_vp_end   = wf_cache.fp_vp_end;
+    const int     plate_w      = wf_cache.fp_area_w;
+    const double  disp_spp =
+        static_cast<double>(old_vp_end - old_vp_start) / plate_w;
+    if (disp_spp <= 0.0) { maybe_enqueue_waveform_render(); return; }
+
+    const int delta_px = static_cast<int>(
+        std::nearbyint(static_cast<double>(new_vp_start - old_vp_start) /
+                       disp_spp));
+
+    // Sub-pixel move: nothing to redraw, just advance the plate bookkeeping so
+    // the dim/cursor/markers track the new viewport and the dirty-check no-ops.
+    if (delta_px == 0) {
+        wf_cache.fp_vp_start         = in.vp_start;
+        wf_cache.fp_vp_end           = in.vp_end;
+        wf_cache.pending_fp_vp_start = in.vp_start;
+        wf_cache.pending_fp_vp_end   = in.vp_end;
+        const GuiRect a = waveform_area(app);
+        gui.invalidate_region(0, 0, app.width, a.y + a.h);
+        return;
+    }
+
+    // Over-a-full-window pan: nothing to reuse. Synchronous full render
+    // guarantees a correct frame (the rare fast-flick case), and keeps the
+    // inline strip work strictly bounded to at most a window width.
+    if (delta_px >= plate_w || delta_px <= -plate_w) {
+        force_synchronous_waveform_rebuild();
+        return;
+    }
+
+    // Shift the plate in place. Content moves opposite the viewport: panning
+    // toward later audio (delta_px > 0) slides pixels left and exposes the
+    // right edge; panning toward earlier audio exposes the left edge.
+    cairo_surface_flush(wf_cache.surface);
+    unsigned char* data = cairo_image_surface_get_data(wf_cache.surface);
+    const int stride     = cairo_image_surface_get_stride(wf_cache.surface);
+    const int surf_h     = cairo_image_surface_get_height(wf_cache.surface);
+    if (!data) { maybe_enqueue_waveform_render(); return; }
+
+    int strip_x = 0;
+    int strip_w = 0;
+    if (delta_px > 0) {
+        const int shift = delta_px;
+        const size_t move_bytes =
+            static_cast<size_t>(plate_w - shift) * 4;
+        for (int row = 0; row < surf_h; ++row) {
+            unsigned char* p = data + static_cast<size_t>(row) * stride;
+            std::memmove(p, p + static_cast<size_t>(shift) * 4, move_bytes);
+        }
+        strip_x = plate_w - shift;
+        strip_w = shift;
+    } else {
+        const int shift = -delta_px;
+        const size_t move_bytes =
+            static_cast<size_t>(plate_w - shift) * 4;
+        for (int row = 0; row < surf_h; ++row) {
+            unsigned char* p = data + static_cast<size_t>(row) * stride;
+            std::memmove(p + static_cast<size_t>(shift) * 4, p, move_bytes);
+        }
+        strip_x = 0;
+        strip_w = shift;
+    }
+    cairo_surface_mark_dirty(wf_cache.surface);
+
+    // Render the newly exposed edge strip at the new viewport. in.vp_end is
+    // the full plate's displayed end (== new_vp_start + the preserved span,
+    // since spp and area_w are unchanged), so the strip columns map to the
+    // identical frames a full render would produce.
+    render_waveform_strip_to_cache_surface(
+        wf_cache.surface,
+        in.area_w, in.area_h,
+        strip_x, strip_w,
+        in.channel_count,
+        audio,
+        in.vp_start, in.vp_end,
+        in.timemap.empty() ? nullptr : &in.timemap);
+
+    // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
+    // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors
+    // it so the on_tick dirty-check sees the fingerprint already satisfied and
+    // does not redundantly re-render the whole window. Everything else
+    // (area, target, timemap, audio_gen) is unchanged by a pure pan and was
+    // verified equal to in.* by the fallback gate above.
+    wf_cache.fp_vp_start         = in.vp_start;
+    wf_cache.fp_vp_end           = in.vp_end;
+    wf_cache.pending_fp_vp_start = in.vp_start;
+    wf_cache.pending_fp_vp_end   = in.vp_end;
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);

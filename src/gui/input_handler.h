@@ -161,6 +161,10 @@ struct GuiInputHandler {
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
     void on_button_release(GuiMouseButton button, int x, int y,
                            GuiInputState mods);
+    // Coalesced scroll-wheel entry. `count` is the net detent count for one
+    // pointer frame (>= 1); the platform's set_on_wheel routes here.
+    void on_wheel(GuiMouseButton dir, int count, int x, int y,
+                  GuiInputState mods);
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
 private:
@@ -221,7 +225,7 @@ private:
     // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-
     // pan (10%), plain = zoom; Ctrl+wheel moves the playhead by one pixel
     // (and stops playback), matching the bare Left/Right keyboard binding.
-    void handle_wheel(GuiMouseButton button, bool ctrl, bool alt,
+    void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool alt,
                       bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop

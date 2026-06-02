@@ -2093,29 +2093,72 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
 // X.7.8b-2: shared wheel handler. Verbatim from the lambda at the original
 // main.cpp:1444 — only difference is the captured viewport / playhead
 // helpers now resolve through this struct's reference members.
-void GuiInputHandler::handle_wheel(GuiMouseButton button,
+void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                                    bool ctrl, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
+    // `count` is the net detent count coalesced for this pointer frame
+    // (always >= 1 from the platform). Each chord scales its single per-step
+    // action by that count and applies it in ONE viewport call, so the
+    // damage / hover / worker-kick path fires once per frame regardless of
+    // burst size. count == 1 reproduces the old single-detent behavior.
+    if (count < 1) count = 1;
     if (ctrl && alt) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / 50);
-        viewport.scroll_viewport(button == GuiMouseButton::WheelUp ? -step : +step);
+        viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
         return;
     }
     if (ctrl) {
         playback_lifecycle.stop_playback_if_playing();
-        viewport.move_playhead_pixels(button == GuiMouseButton::WheelUp ? -1 : +1);
+        viewport.move_playhead_pixels((button == GuiMouseButton::WheelUp ? -count : +count));
         return;
     }
     if (alt) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / 10);
-        viewport.scroll_viewport(button == GuiMouseButton::WheelUp ? -step : +step);
+        viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
         return;
     }
-    if (button == GuiMouseButton::WheelUp) viewport.zoom_out();
-    else                                   viewport.zoom_in();
+    // Plain wheel = zoom. WheelUp zooms out, WheelDown zooms in; apply the
+    // net level change in a single apply_zoom_change (inside zoom_steps).
+    viewport.zoom_steps(button == GuiMouseButton::WheelUp ? -count : +count);
+}
+
+// Coalesced wheel entry point. The platform delivers one of these per
+// pointer frame carrying the net detent count (>= 1), instead of pumping a
+// WheelUp/WheelDown through on_button_press once per detent. The gating here
+// mirrors on_button_press's wheel-relevant guards (prompt / editor modals,
+// loading, active drags, area hit-test) so a wheel event is swallowed in
+// exactly the same situations as before; the wheel branch was identical in
+// the render-view and source-view arms of on_button_press, so a single
+// shared handler covers both.
+void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
+                               GuiInputState mods) {
+    if constexpr (kDebugPerf) {
+        app.last_input_event_time = std::chrono::steady_clock::now();
+    }
+    if (app.prompt.active) return;
+    if (text_editor::is_active(app.settings_editor)) return;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+        return;
+    }
+    if (app.loading || audio.total_frames() <= 0) return;
+    // A wheel event during an active drag is ignored, matching on_button_press.
+    if (app.drag.active) return;
+    if (app.trim_drag.active) return;
+
+    const GuiRect area = waveform_area(app);
+    const GuiRect top  = top_strip_area(app);
+    const bool inside_waveform =
+        x >= area.x && x < area.x + area.w &&
+        y >= area.y && y < area.y + area.h;
+    const bool inside_top =
+        x >= top.x && x < top.x + top.w &&
+        y >= top.y && y < top.y + top.h;
+
+    handle_wheel(dir, count, mods.ctrl, mods.alt, inside_waveform, inside_top);
 }
 
 // X.7.8b-2: button-press handler. Verbatim from the lambda at the original
@@ -2155,7 +2198,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         y >= top.y && y < top.y + top.h;
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
-    const bool alt   = mods.alt;
+    // (alt is consulted only by wheel chords, which now arrive via on_wheel.)
 
     // Defensive: a second press during a drag is ignored (left button
     // should still be held down for a drag to exist).
@@ -2180,11 +2223,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // those writers.
 
     if (app.render_view_enabled) {
-        if (button == GuiMouseButton::WheelUp || button == GuiMouseButton::WheelDown) {
-            handle_wheel(button, ctrl, alt,
-                         inside_waveform, inside_top);
-            return;
-        }
+        // Wheel events arrive via on_wheel (coalesced per pointer frame), not
+        // here; a stray wheel button is caught by the Left-only gate below.
         if (button != GuiMouseButton::Left) return;
         // Brief F Section 3: in phase reset sub-view, top-strip clicks
         // are silent no-ops (phase resets have no flag rects). Bail
@@ -2569,10 +2609,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.playhead_drag.press_marker_idx = -1;
             }
         }
-    } else if (button == GuiMouseButton::WheelUp || button == GuiMouseButton::WheelDown) {
-        handle_wheel(button, ctrl, alt,
-                     inside_waveform, inside_top);
     }
+    // Wheel events no longer reach on_button_press; they arrive coalesced
+    // per pointer frame through on_wheel -> handle_wheel.
 }
 
 // X.7.8b-2: button-release handler. Verbatim from the lambda at the

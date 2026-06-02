@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -305,21 +306,28 @@ struct WaylandListeners {
         static_cast<GuiPlatform*>(data)->on_pointer_axis(time, axis, value);
     }
 
-    // v5+ pointer events. We bind seat at v4 so none of these are
-    // dispatched at runtime; the slots are still in the listener struct
-    // because wayland-client-protocol.h ships them regardless of bind
-    // version. Same abort-on-NULL rule as wl_output. These stubs are
-    // forward-compat insurance if the bind version is ever raised.
-    static void pointer_frame(void*, struct wl_pointer*) {}
+    // v5+ pointer events. We bind seat at v8, so pointer_frame and
+    // pointer_axis_value120 are now live (they drive high-resolution
+    // scroll); the remaining slots stay as stubs. They are all in the
+    // listener struct because wayland-client-protocol.h ships them
+    // regardless of bind version. Same abort-on-NULL rule as wl_output.
+    static void pointer_frame(void* data, struct wl_pointer*) {
+        static_cast<GuiPlatform*>(data)->on_pointer_frame();
+    }
     static void pointer_axis_source(void*, struct wl_pointer*, uint32_t) {}
     static void pointer_axis_stop(void*, struct wl_pointer*,
                                   uint32_t, uint32_t) {}
     static void pointer_axis_discrete(void*, struct wl_pointer*,
                                       uint32_t, int32_t) {}
 
-    // v8+ and v9+ stubs.
-    static void pointer_axis_value120(void*, struct wl_pointer*,
-                                      uint32_t, int32_t) {}
+    // v8 axis_value120: high-resolution WHEEL scroll delta in 1/120-detent
+    // units. Staged by on_pointer_axis_value120; the frame boundary
+    // arbitrates it against the legacy axis (touchpad) stream and drains
+    // to discrete steps. v9 relative_direction is still a stub.
+    static void pointer_axis_value120(void* data, struct wl_pointer*,
+                                      uint32_t axis, int32_t value120) {
+        static_cast<GuiPlatform*>(data)->on_pointer_axis_value120(axis, value120);
+    }
     static void pointer_axis_relative_direction(void*, struct wl_pointer*,
                                                 uint32_t, uint32_t) {}
 
@@ -660,8 +668,10 @@ void GuiPlatform::destroy_wayland_state() {
         wl_pointer_ = nullptr;
     }
     if (wl_seat_) {
-        // wl_seat.release is a v5+ request; we bind to v4 max, so use
-        // wl_proxy_destroy via the destroy helper.
+        // wl_seat.release is a v5+ request. We now bind at v8, but
+        // wl_seat_destroy (plain wl_proxy_destroy) is still correct at
+        // shutdown — it tears the proxy down unconditionally without
+        // needing the release round-trip, so this guard stays as-is.
         wl_seat_destroy(wl_seat_);
         wl_seat_ = nullptr;
     }
@@ -762,7 +772,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
 
     const int    stride       = w * 4;                         // ARGB32
     const size_t buffer_bytes = static_cast<size_t>(stride) * static_cast<size_t>(h);
-    const size_t pool_bytes   = buffer_bytes * 2;
+    const size_t pool_bytes   = buffer_bytes * kShmBufferCount;
 
     shm_pool_fd_ = open_shm_fd(pool_bytes);
     if (shm_pool_fd_ < 0) {
@@ -786,7 +796,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
     shm_pool_ = wl_shm_create_pool(wl_shm_, shm_pool_fd_,
                                    static_cast<int32_t>(pool_bytes));
 
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < kShmBufferCount; ++i) {
         const size_t offset = static_cast<size_t>(i) * buffer_bytes;
         shm_buffers_[i].pixels     = static_cast<char*>(shm_pool_map_) + offset;
         shm_buffers_[i].size_bytes = buffer_bytes;
@@ -809,7 +819,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
 }
 
 void GuiPlatform::destroy_shm_pool() {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < kShmBufferCount; ++i) {
         if (shm_buffers_[i].surface) {
             cairo_surface_destroy(shm_buffers_[i].surface);
             shm_buffers_[i].surface = nullptr;
@@ -894,7 +904,7 @@ bool GuiPlatform::load_cursor_theme() {
 }
 
 GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < kShmBufferCount; ++i) {
         if (!shm_buffers_[i].busy && shm_buffers_[i].buffer) return &shm_buffers_[i];
     }
     return nullptr;
@@ -1131,9 +1141,14 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             wl_output_add_listener(wl_output_, &s_output_listener, this);
         }
     } else if (std::strcmp(interface, wl_seat_interface.name) == 0) {
-        // Cap to version 4 — enough for key repeat (added in v4) and
-        // matches what's reasonable for the bindings we use.
-        const uint32_t v = std::min<uint32_t>(version, 4);
+        // Cap to version 8. v4 gave us key repeat; v8 adds
+        // wl_pointer.axis_value120, which gives high-resolution WHEEL
+        // scroll. Touchpad two-finger scroll still arrives via the legacy
+        // wl_pointer.axis event (value120 is wheel-only); on_pointer_frame()
+        // arbitrates the two streams so each source counts once per frame
+        // and drains to discrete wheel steps. v5 release semantics still
+        // apply at v8 (see the wl_seat cleanup in destroy_wayland_state).
+        const uint32_t v = std::min<uint32_t>(version, 8);
         wl_seat_ = static_cast<struct wl_seat*>(
             wl_registry_bind(r, name, &wl_seat_interface, v));
         wl_seat_add_listener(wl_seat_, &s_seat_listener, this);
@@ -1486,25 +1501,108 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
 
 void GuiPlatform::on_pointer_axis(uint32_t /*time*/,
                                   uint32_t axis, int32_t value) {
+    // Live path for touchpad two-finger scroll and any other continuous
+    // (non-wheel) source. value120 carries WHEEL scroll only; the
+    // compositor sends a touchpad's continuous delta through this legacy
+    // wl_pointer.axis event (in its continuous scroll unit, a wl_fixed_t)
+    // and sends no value120 for that frame. So this is the touchpad's only
+    // path. We stage the delta into the per-frame scratch and do not emit
+    // here — on_pointer_frame() arbitrates so exactly one source counts
+    // per frame (value120 wins when both arrive) and drains to detents.
     if (axis != WL_POINTER_AXIS_VERTICAL_SCROLL) return;
-    if (value == 0) return;
+    frame_axis_accum_ += wl_fixed_to_double(value);
+    frame_have_axis_  = true;
+}
 
-    // Wheel convention on Wayland: positive value = scroll down
-    // (content moves up under the cursor), negative = scroll up.
-    // Translate to a discrete WheelUp / WheelDown button event pair.
-    // Trackpad smooth-scroll arrives here too but we treat any
-    // non-zero vertical axis tick as one discrete step; warptempo_gui's
-    // wheel bindings (zoom-by-level, pan-by-fraction) are discrete
-    // by nature and don't benefit from sub-step resolution.
-    const GuiMouseButton mb = (value > 0)
-        ? GuiMouseButton::WheelDown
-        : GuiMouseButton::WheelUp;
+// One logical scroll detent is 120 value120 units (the high-resolution
+// scroll protocol's fixed convention). A mouse-wheel click arrives as a
+// single value120 = 120 (or a multiple), so the drain below emits exactly
+// one step per detent — identical to the pre-value120 feel. A touchpad
+// arrives via the legacy axis event as a stream of small continuous
+// deltas; on_pointer_frame() scales those into value120 units with
+// kAxisToV120 so they too emit proportionally and smoothly.
+namespace {
+constexpr double kScrollDetent = 120.0;
+// Legacy continuous axis unit -> value120 unit. Touchpad deltas arrive in
+// the compositor's continuous scroll unit (historically ~15 units per
+// detent on wlroots compositors), so 120/15 = 8 treats ~15 legacy units as
+// one detent. This is a feel constant, not a derived one: raise it if
+// touchpad scrolling feels too slow, lower it if too fast or jumpy.
+constexpr double kAxisToV120 = 120.0 / 15.0;
+}
 
-    const GuiInputState mods = current_mods();
-    if (on_button_press_)
-        on_button_press_(mb, pointer_x_, pointer_y_, mods);
-    if (on_button_release_)
-        on_button_release_(mb, pointer_x_, pointer_y_, mods);
+void GuiPlatform::on_pointer_axis_value120(uint32_t axis, int32_t value120) {
+    if (axis != WL_POINTER_AXIS_VERTICAL_SCROLL) return;
+    // Stage into the per-frame scratch; on_pointer_frame() arbitrates and
+    // drains. value120 is the wheel (high-resolution) source.
+    frame_v120_accum_ += static_cast<double>(value120);
+    frame_have_v120_  = true;
+}
+
+void GuiPlatform::on_pointer_frame() {
+    // Per-frame arbitration: a wl_pointer.frame may carry value120 (wheel)
+    // and/or legacy axis (touchpad) events for the vertical axis. Resolve
+    // them to a single delta in value120 units:
+    //   - value120 present  -> use it; discard the paired legacy axis delta
+    //     (the compositor mirrors wheels onto both streams, so counting
+    //     both would double every wheel click).
+    //   - else axis present -> continuous source (touchpad); scale the
+    //     legacy delta into value120 units with kAxisToV120.
+    //   - neither            -> motion-only frame, no scroll.
+    double delta120 = 0.0;
+    if (frame_have_v120_) {
+        delta120 = frame_v120_accum_;
+    } else if (frame_have_axis_) {
+        delta120 = frame_axis_accum_ * kAxisToV120;
+    }
+    scroll_accum_ += delta120;
+
+    // Drain the accumulated delta into a NET signed step count for this
+    // frame, carrying the sub-detent remainder forward to the next frame.
+    // We tally the detents crossed instead of emitting one wheel event per
+    // detent, then fire a single coalesced on_wheel_ carrying the count.
+    // The per-step wheel machinery (viewport move, full-width damage, hover
+    // hit-test, worker kick) then runs once per frame, not once per detent —
+    // which is the whole point: a fast touchpad burst no longer piles that
+    // work up between paints. Wheel convention on Wayland: positive value =
+    // scroll down (content moves up under the cursor) = WheelDown, negative
+    // = WheelUp. The sign of scroll_accum_ cannot flip mid-drain (each
+    // iteration moves it toward zero by exactly one detent and stops once
+    // below threshold), so every step this frame shares one direction.
+    //
+    // Guard against a runaway accumulator: a glitch must not back up an
+    // unbounded queue of steps. A normal swipe is a few steps per frame;
+    // if we somehow exceed the cap, drop the rest of the accumulator so a
+    // pathological input cannot tail off into a long burst after the
+    // fingers lift.
+    constexpr int kMaxStepsPerFrame = 16;
+    int steps = 0;
+    GuiMouseButton dir = GuiMouseButton::WheelDown;
+    while (std::abs(scroll_accum_) >= kScrollDetent) {
+        if (steps >= kMaxStepsPerFrame) {
+            scroll_accum_ = 0.0;
+            break;
+        }
+        if (scroll_accum_ > 0.0) {
+            dir = GuiMouseButton::WheelDown;
+            scroll_accum_ -= kScrollDetent;
+        } else {
+            dir = GuiMouseButton::WheelUp;
+            scroll_accum_ += kScrollDetent;
+        }
+        ++steps;
+    }
+    if (steps > 0 && on_wheel_) {
+        on_wheel_(dir, steps, pointer_x_, pointer_y_, current_mods());
+    }
+
+    // Reset the per-frame scratch unconditionally — including motion-only
+    // frames where no axis events arrived — so no partial delta leaks into
+    // a later frame. scroll_accum_ is the only cross-frame carry.
+    frame_v120_accum_ = 0.0;
+    frame_axis_accum_ = 0.0;
+    frame_have_v120_  = false;
+    frame_have_axis_  = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -1711,6 +1809,7 @@ void GuiPlatform::set_on_resize(ResizeCallback cb)              { on_resize_ = s
 void GuiPlatform::set_on_key(KeyCallback cb)                    { on_key_ = std::move(cb); }
 void GuiPlatform::set_on_button_press(ButtonCallback cb)        { on_button_press_ = std::move(cb); }
 void GuiPlatform::set_on_button_release(ButtonCallback cb)      { on_button_release_ = std::move(cb); }
+void GuiPlatform::set_on_wheel(WheelCallback cb)                { on_wheel_ = std::move(cb); }
 void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }

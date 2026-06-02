@@ -397,6 +397,17 @@ struct GuiPaintHandler {
     // for continuous gestures — those stay on the worker.
     void force_synchronous_waveform_rebuild();
 
+    // Incremental pan fast-path. For a pure horizontal pan (the only kind
+    // scroll_viewport produces), shift the live plate by the pixel delta and
+    // render only the newly exposed edge strip inline, instead of kicking a
+    // full worker re-render. new_vp_start is the post-clamp viewport start in
+    // the displayed domain. Wired from main.cpp into Viewport via the
+    // request_waveform_pan_ callback. Falls back to the worker / a synchronous
+    // full render for every case that is not a clean translate of the current
+    // plate (no plate, worker busy, drag, resize, view/timemap change,
+    // over-a-window flick); the on_tick backstop catches any residual drift.
+    void pan_waveform_incremental(int64_t new_vp_start);
+
 private:
     // Waveform fingerprint inputs derived from current app state. This is
     // the single source of truth for the desired waveform fingerprint —
