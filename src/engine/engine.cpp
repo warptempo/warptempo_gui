@@ -121,6 +121,7 @@ bool validate_timemap_monotonic(const std::vector<TimeMapSegment>& tm) {
 EngineResult run_warptempo_engine(const EngineParams& p,
                                   std::vector<int64_t>* out_frame_map,
                                   int* out_R_s,
+                                  int* out_synth_frame_begin,
                                   const std::atomic<bool>* cancel_flag) {
     AudioSTFT audio_stft;
 
@@ -205,6 +206,35 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.init_fftw();
     audio_stft.frame_map = audio_stft.generate_frame_map();
+
+    // Resolve the synthesis frame window against the full frame map. Default is
+    // the whole map (full-render behavior). When p.has_trim is set, narrow
+    // [synth_frame_begin, synth_frame_end) to the contiguous range of frames
+    // whose source read positions cover [trim_begin_src, trim_end_src]. The
+    // window always lands on real frame indices, so the windowed output is a
+    // constant integer offset of synth_frame_begin * R_s from the full render.
+    {
+        const auto& fmw = audio_stft.frame_map;
+        const int num_frames = static_cast<int>(fmw.size());
+        audio_stft.synth_frame_begin = 0;
+        audio_stft.synth_frame_end   = num_frames;
+        if (p.has_trim && num_frames > 0) {
+            // begin: largest b with fm[b] <= trim_begin_src (upper_bound then
+            // step back), clamped to [0, num_frames - 1].
+            auto bit = std::upper_bound(fmw.begin(), fmw.end(), p.trim_begin_src);
+            int b = (bit == fmw.begin()) ? 0
+                  : static_cast<int>((bit - fmw.begin()) - 1);
+            if (b > num_frames - 1) b = num_frames - 1;
+            // end: smallest e with fm[e] >= trim_end_src, one past it; clamp
+            // high to num_frames and low to b + 1.
+            auto eit = std::upper_bound(fmw.begin(), fmw.end(), p.trim_end_src);
+            int e = static_cast<int>(eit - fmw.begin());
+            if (e > num_frames)  e = num_frames;
+            if (e < b + 1)       e = b + 1;
+            audio_stft.synth_frame_begin = b;
+            audio_stft.synth_frame_end   = e;
+        }
+    }
 
     audio_stft.attenuation_map.assign(audio_stft.frame_map.size(),
         std::vector<double>(audio_stft.num_bands, 1.0));
@@ -316,6 +346,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     if (out_frame_map) *out_frame_map = audio_stft.frame_map;
     if (out_R_s)       *out_R_s       = audio_stft.R_s;
+    if (out_synth_frame_begin) *out_synth_frame_begin = audio_stft.synth_frame_begin;
 
     audio_stft.cleanup();
     return EngineResult::Success;

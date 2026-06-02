@@ -208,6 +208,14 @@ struct AudioSTFT {
     // Cached frame map (populated once in main, reused by all passes)
     std::vector<int64_t> frame_map;
 
+    // Synthesis frame window, resolved from EngineParams trim bounds in
+    // engine.cpp after the frame map is built. [synth_frame_begin,
+    // synth_frame_end) is the half-open range of frames synthesize_full emits.
+    // Defaults describe the whole map; engine.cpp narrows them only when
+    // EngineParams::has_trim is set.
+    int synth_frame_begin = 0;
+    int synth_frame_end   = 0;   // 0 means "use full map" until engine sets it
+
     // Optional cancellation hook. When non-null, synthesize_full checks
     // cancel_flag->load() at the top of every frame iteration; if true, it
     // sets cancellation_observed and returns early. Limiter::process and

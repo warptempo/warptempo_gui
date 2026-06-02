@@ -269,7 +269,7 @@ RenderOutcome do_render(const RenderRequest& req,
         };
 
         const EngineResult er = run_warptempo_engine(
-            ep, &engine_frame_map, &engine_R_s, cancel_flag);
+            ep, &engine_frame_map, &engine_R_s, nullptr, cancel_flag);
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
                 std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");

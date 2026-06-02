@@ -49,6 +49,16 @@ void Synthesis::synthesize_full(
     const int K          = Mfft / 2 + 1;
     const auto& fm       = stft.frame_map;
     const int num_frames = static_cast<int>(fm.size());
+    // Synthesis frame window [wbegin, wend): the half-open range of frames this
+    // pass actually emits. num_frames stays the full map size and ta_for stays
+    // absolute over the full fm; only the emit range narrows. Defaults describe
+    // the whole map (full-render behavior); engine.cpp narrows them when
+    // EngineParams::has_trim is set. wend == 0 means "unset" (a caller that
+    // bypassed engine.cpp's resolution) -> treat as the full map.
+    const int wbegin = stft.synth_frame_begin;
+    const int wend   = (stft.synth_frame_end > 0) ? stft.synth_frame_end
+                                                  : num_frames;
+    const int wcount = wend - wbegin;
 
     // --- Env-gated sub-stage profiling --------------------------------------
     // Five ns counters per channel (held in chprof, below), summed across the
@@ -93,9 +103,11 @@ void Synthesis::synthesize_full(
         }
     }
 
-    // Emitted output length (timing-convention: (num_frames-1)*R_s).
+    // Emitted output length (timing-convention: (wcount-1)*R_s over the emit
+    // window). For the full map wcount == num_frames, so this is the unchanged
+    // full-render length.
     const int64_t out_frames =
-        (num_frames > 0) ? static_cast<int64_t>(num_frames - 1) * R_s : 0;
+        (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s : 0;
 
     // One mono output stream per channel. Each channel computes its whole
     // output independently into its own buffer; the streams are interleaved
@@ -163,18 +175,27 @@ void Synthesis::synthesize_full(
             chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
         };
 
-        // Prime: analysis frames 0 and 1 (frame 1 is the EOF analysis-only
-        // frame when there is only a single synthesis frame). ph_prev stays
-        // zero — frame 0 is a seed, so it needs no phi_prev.
+        // Prime: analysis frames wbegin and wbegin+1 (wbegin+1 is the
+        // analysis-only frame when the window is a single synthesis frame).
+        // ph_prev stays zero — the window's first frame is a seed, so it needs
+        // no phi_prev (same as frame 0 on the full path).
         int64_t ta_prev = 0, ta_cur = 0, ta_nxt = 0;
-        if (num_frames >= 1) {
-            analyze1(0, mag_cur, ph_cur);
-            analyze1(1, mag_nxt, ph_nxt);
-            ta_cur = ta_for(0);
-            ta_nxt = ta_for(1);
+        if (wcount >= 1) {
+            analyze1(wbegin,     mag_cur, ph_cur);
+            analyze1(wbegin + 1, mag_nxt, ph_nxt);
+            ta_cur = ta_for(wbegin);
+            ta_nxt = ta_for(wbegin + 1);
         }
 
+        // Phase reset cursor: skip markers placed before the window so the
+        // in-loop equality check (synth_frame == frame_idx) lines up. Markers
+        // before wbegin are dropped; markers at or after wend never match a
+        // frame_idx in range and so never fire.
         int  phase_reset_cursor = 0;
+        while (phase_reset_cursor <
+                   static_cast<int>(stft.phase_reset_markers.size()) &&
+               stft.phase_reset_markers[phase_reset_cursor].synth_frame < wbegin)
+            ++phase_reset_cursor;
         // `prev_reset` carries "the previous frame fired a reset" into the next
         // iteration so heap_phase reseeds theta = phi on the post-reset frame.
         bool prev_reset = false;
@@ -182,10 +203,10 @@ void Synthesis::synthesize_full(
         // by the origin-centered analysis convention (see the timing-convention
         // block in stft_container.h).
         int  frames_to_skip = N;
-        int  progress_stride = std::max(100, num_frames / 100);
+        int  progress_stride = std::max(100, wcount / 100);
         int  last_pct = -1;
 
-        for (int frame_idx = 0; frame_idx < num_frames; ++frame_idx) {
+        for (int frame_idx = wbegin; frame_idx < wend; ++frame_idx) {
             // Cooperative cancellation: stft.cancel_flag is set by the GUI when
             // the user presses Esc during a render. Worst-case cancel-to-stop
             // latency is one frame — well below human perception.
@@ -196,9 +217,9 @@ void Synthesis::synthesize_full(
             // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame),
             // ph_nxt/mag_nxt = analysis(frame+1), ph_prev/mag_prev =
             // analysis(frame-1) (zero at frame 0).
-            const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
+            const int64_t R_a_actual = (frame_idx > wbegin) ? (ta_cur - ta_prev) : 0;
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
-            const bool    frame0     = (frame_idx == 0);
+            const bool    frame0     = (frame_idx == wbegin);
             const bool    seed_heap  = frame0 || prev_reset;
             const double* atten_row  = stft.attenuation_map[frame_idx].data();
 
@@ -264,9 +285,9 @@ void Synthesis::synthesize_full(
 
             // Progress is reported by channel 0 only; under C.2 it'll be
             // approximate, which is fine (cosmetic).
-            if (show_progress && ch == 0 && num_frames > 0 &&
-                (frame_idx % progress_stride) == 0) {
-                int pct = static_cast<int>((frame_idx * 100LL) / num_frames);
+            if (show_progress && ch == 0 && wcount > 0 &&
+                ((frame_idx - wbegin) % progress_stride) == 0) {
+                int pct = static_cast<int>(((frame_idx - wbegin) * 100LL) / wcount);
                 if (pct != last_pct) {
                     std::cout << "\r" << pass_label << pct << "%" << std::flush;
                     last_pct = pct;
@@ -286,11 +307,12 @@ void Synthesis::synthesize_full(
             prev_reset = reset_fired;
 
             // Advance the analysis pipeline by one frame. Only needed while
-            // another synthesis frame follows; the EOF analysis-only frame
-            // (index == num_frames) is reached when frame_idx == num_frames-2,
-            // supplying the last frame's phi_next. Each spectrum is analyzed
-            // exactly once.
-            if (frame_idx + 1 < num_frames) {
+            // another synthesis frame follows within the window; the window's
+            // analysis-only frame (index == wend) is reached when frame_idx ==
+            // wend-2, supplying the last emitted frame's phi_next. ta_for
+            // supplies fm[wend] when wend < num_frames and the clamped tail
+            // otherwise. Each spectrum is analyzed exactly once.
+            if (frame_idx + 1 < wend) {
                 ta_prev = ta_cur;
                 ta_cur  = ta_nxt;
                 ta_nxt  = ta_for(frame_idx + 2);

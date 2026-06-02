@@ -14,6 +14,7 @@ tmp/
 
 # docs
 docs/references/*.pdf
+docs/welcome_back_template.md
 
 # Bungee Adapter Build Artifacts
 adapters/bungee/build/
