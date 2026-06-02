@@ -1947,14 +1947,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // PageUp / PageDown: page the viewport one screen back / forward,
-    // retaining the same lead fraction follow mode uses as overlap.
-    // Source-view only — the render-view allowlist above excludes them.
-    if (!ctrl && !alt && !shift && key == GuiKeys::PageDown) {
-        viewport.page_viewport(true);  return;
-    }
-    if (!ctrl && !alt && !shift && key == GuiKeys::PageUp) {
-        viewport.page_viewport(false); return;
+    // PageUp / PageDown: step the viewport back / forward by exactly the
+    // Alt-wheel step (samples_visible / 10). PageUp goes back, PageDown
+    // forward. Source-view only — the render-view allowlist above excludes
+    // them.
+    if (!ctrl && !alt && !shift &&
+        (key == GuiKeys::PageDown || key == GuiKeys::PageUp)) {
+        const int64_t step = std::max<int64_t>(
+            1, samples_visible(app, audio) / 10);
+        viewport.scroll_viewport(key == GuiKeys::PageUp ? -step : +step);
+        return;
     }
 
     // Bare-key dispatch. Every modifier-gated handler above this point

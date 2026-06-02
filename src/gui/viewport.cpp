@@ -254,19 +254,6 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
     }
 }
 
-// Page the viewport by one screen, retaining the same lead fraction as
-// follow mode so the trailing edge of the old screen reappears at the
-// leading edge of the new one. scroll_viewport already clamps, invalidates,
-// resyncs hover and the predictor, and no-ops cleanly when the clamp leaves
-// viewport_start_sample unchanged (end-of-file / start-of-file).
-void Viewport::page_viewport(bool forward) {
-    const int64_t visible = samples_visible(app, audio);
-    if (visible <= 0) return;
-    const int64_t overlap = visible / kViewportLeadDivisor;
-    const int64_t step    = std::max<int64_t>(1, visible - overlap);
-    scroll_viewport(forward ? step : -step);
-}
-
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
     // Split-playhead: during playback center on the scanner (audio
