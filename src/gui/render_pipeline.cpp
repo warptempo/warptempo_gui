@@ -135,6 +135,28 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Failed;
     }
 
+    // Full (untrimmed) timemap for the wav engine path. A trimmed wav render
+    // hands the engine the canonical untrimmed frame map and windows it,
+    // rather than rebuilding a local trimmed map; that inherited t_a history
+    // from frame 0 is what makes the windowed render null against the full
+    // render. build_timemaps already produces the untrimmed segment list when
+    // trim is forced off, so reuse it instead of duplicating the timemap math.
+    // tmres stays the source for the timemap/tempomap else-branch (which keeps
+    // its trimmed timemap + -trimmed.wav sibling); tmfull feeds the engine and
+    // the render-domain sidecar block. Declared here (not inside the wav
+    // branch) so the sidecar block outside the branch can read it.
+    TimemapBuildInput tmin_full = tmin;
+    tmin_full.has_trim_begin = false;
+    tmin_full.trim_begin_sec = 0.0;
+    tmin_full.has_trim_end   = false;
+    tmin_full.trim_end_sec   = 0.0;
+    TimemapBuildResult tmfull;
+    if (!build_timemaps(tmin_full, tmfull)) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: full timemap build failed\n");
+        return RenderOutcome::Failed;
+    }
+
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
         if (output_format == "timemap")  return ".timemap";
@@ -167,19 +189,46 @@ RenderOutcome do_render(const RenderRequest& req,
     // reset sidecar generation. timemap/tempomap paths leave these empty.
     std::vector<int64_t> engine_frame_map;
     int engine_R_s = 0;
+    // Window origin resolved by the engine from the trim bounds (frame index
+    // of the windowed render's first emitted frame). Sub-brief 3 uses it with
+    // the now-full engine_frame_map to place render-domain sidecars on the
+    // windowed time axis; this brief just captures it.
+    int engine_synth_frame_begin = 0;
 
     if (output_format == "wav") {
-        // Load the source range to an in-memory buffer (full source when
-        // no trim; [trim_begin, trim_end) when trimmed). The engine reads
-        // from this buffer via libsndfile virtual IO — no wav-on-disk
-        // shim for trim.
+        // Absolute source-frame trim bounds. Full-timemap path: the engine
+        // resolves the synthesis window by binary search over the full frame
+        // map, so these are absolute source frames (nearbyint per the
+        // architecture rounding rule — matches timemap.cpp's own trim cut).
+        // When a bound is unset it defaults to the full extent (0 / total),
+        // which leaves the engine rendering the whole map.
+        const int64_t trim_begin_src = req.has_trim_begin
+            ? static_cast<int64_t>(std::nearbyint(
+                  req.trim_begin_sec * static_cast<double>(sample_rate)))
+            : 0;
+        const int64_t trim_end_src = req.has_trim_end
+            ? static_cast<int64_t>(std::nearbyint(
+                  req.trim_end_sec * static_cast<double>(sample_rate)))
+            : static_cast<int64_t>(total_frames);
+
+        // Load the source from frame 0 to the end-trim point (plus margin),
+        // NOT a begin-trimmed slice. The begin MUST stay at 0: the frame map's
+        // t_a accumulation runs from frame 0, and that inherited history is the
+        // entire reason the windowed render nulls against the full render. The
+        // end is end-capped because no frame in the window reads source past
+        // trim_end except the last analysis window's small reach — covered by
+        // end_margin (one analysis hop, which grows with the stretch, plus the
+        // N-sample window; 2*N covers realistic stretches). An undersized
+        // margin only zero-pads the trailing edge — never a crash.
         std::vector<float> src_samples;
         int src_sr = 0;
         int src_ch = 0;
         {
-            const size_t b = tmres.trimmed ? tmres.trim_begin_frame : 0;
-            const size_t e = tmres.trimmed
-                ? tmres.trim_end_frame
+            const int64_t end_margin = 2LL * static_cast<int64_t>(N_fft);
+            const size_t b = 0;
+            const size_t e = req.has_trim_end
+                ? static_cast<size_t>(std::min<int64_t>(
+                      total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
             if (!load_source_range_to_buffer(req.source_audio_path, b, e,
                                              src_samples, src_sr, src_ch)) {
@@ -206,59 +255,44 @@ RenderOutcome do_render(const RenderRequest& req,
         } else {
             ep.output_audio_path = staging_output_path;
         }
-        ep.timemap.reserve(tmres.standard.size());
-        for (const auto& s : tmres.standard) {
+        // Full untrimmed timemap: the engine builds the whole frame map and
+        // synthesizes only the windowed frames (set via ep.has_trim below),
+        // so the windowed source reads match the full render frame-for-frame.
+        ep.timemap.reserve(tmfull.standard.size());
+        for (const auto& s : tmfull.standard) {
             ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
         }
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;
-        // Trim-relative source-frame domain. The engine receives a sliced
-        // source buffer and a trim-shifted timemap, so phase_reset_frames
-        // must live in the same trimmed-source domain as the rest of the
-        // engine input. Drop predicates and domain match the
-        // .renderphaseresetmarkers writer below so the on-disk
-        // visualization and the engine-applied placement agree on which
-        // phase resets are in scope.
-        if (tmres.trimmed) {
-            const int64_t trim_begin =
-                static_cast<int64_t>(tmres.trim_begin_frame);
-            const int64_t trim_end =
-                static_cast<int64_t>(tmres.trim_end_frame);
-            ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
-            for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
-                const int64_t F = req.phase_reset_frames[i];
-                if (F < trim_begin || F > trim_end) continue;
-                int64_t engine_frame =
-                    (F - trim_begin) - phase_reset_offset_samples;
-                if (engine_frame < 0) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: phase reset at %.3f s clamped to "
-                        "engine frame 0 (offset shift would place it "
-                        "before trim begin)\n",
-                        static_cast<double>(F) /
-                            static_cast<double>(sample_rate));
-                    engine_frame = 0;
-                }
-                ep.phase_reset_frames.push_back(engine_frame);
+        // Absolute source-frame domain. On the full-timemap path the engine
+        // resolves resets by binary search over the full frame map, so the
+        // reset list is in absolute source frames regardless of trim — exactly
+        // like the untrimmed branch always did. No trim re-basing.
+        ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
+        for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
+            const int64_t F = req.phase_reset_frames[i];
+            int64_t engine_frame = F - phase_reset_offset_samples;
+            if (engine_frame < 0) {
+                std::fprintf(stderr,
+                    "warptempo_gui: phase reset at %.3f s clamped to "
+                    "engine frame 0 (offset shift would place it "
+                    "before audio start)\n",
+                    static_cast<double>(F) /
+                        static_cast<double>(sample_rate));
+                engine_frame = 0;
             }
-        } else {
-            ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
-            for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
-                const int64_t F = req.phase_reset_frames[i];
-                int64_t engine_frame = F - phase_reset_offset_samples;
-                if (engine_frame < 0) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: phase reset at %.3f s clamped to "
-                        "engine frame 0 (offset shift would place it "
-                        "before audio start)\n",
-                        static_cast<double>(F) /
-                            static_cast<double>(sample_rate));
-                    engine_frame = 0;
-                }
-                ep.phase_reset_frames.push_back(engine_frame);
-            }
+            ep.phase_reset_frames.push_back(engine_frame);
         }
+
+        // Synthesis frame window from the trim bounds. When neither bound is
+        // set, has_trim is false and the engine renders the whole map
+        // (unchanged untrimmed behavior). When set, the engine narrows
+        // synthesis to the frames covering [trim_begin_src, trim_end_src] out
+        // of the full map.
+        ep.has_trim       = req.has_trim_begin || req.has_trim_end;
+        ep.trim_begin_src = trim_begin_src;
+        ep.trim_end_src   = trim_end_src;
 
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;
@@ -269,7 +303,8 @@ RenderOutcome do_render(const RenderRequest& req,
         };
 
         const EngineResult er = run_warptempo_engine(
-            ep, &engine_frame_map, &engine_R_s, nullptr, cancel_flag);
+            ep, &engine_frame_map, &engine_R_s, &engine_synth_frame_begin,
+            cancel_flag);
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
                 std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
@@ -387,21 +422,28 @@ RenderOutcome do_render(const RenderRequest& req,
         // the engine, so engine_frame_map and engine_R_s are unset.
         if (output_format == "wav" && !tmres.standard.empty() &&
             sample_rate > 0) {
-            const TimemapRealRange real = real_segments(tmres);
+            // Walk the FULL timemap (no synthetic trim anchors); each emitted
+            // render-domain time is the full-render output sample minus the
+            // window origin. When untrimmed, engine_synth_frame_begin is 0 so
+            // window_offset_samples is 0 and this reduces to old behavior.
+            const TimemapRealRange real = real_segments(tmfull);
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
             const int64_t trim_end = tmres.trimmed
                 ? static_cast<int64_t>(tmres.trim_end_frame)
                 : static_cast<int64_t>(total_frames);
             const double sr_d = static_cast<double>(sample_rate);
+            const int64_t window_offset_samples =
+                static_cast<int64_t>(engine_synth_frame_begin) *
+                static_cast<int64_t>(engine_R_s);
 
             // Markers: lockstep walk between req.markers and the real-segment
-            // range of tmres.standard (synthetic trim anchors stripped so they
-            // do not surface as ghost markers in render-view). Each surviving
-            // marker (post resolve filter + post trim filter) pairs with the
-            // next-in-order surviving segment. seg.tgt_frame is already
-            // post-shift (render-domain) so the render-time is tgt_frame / sr
-            // directly.
+            // range of tmfull.standard (built trim-off, so no synthetic trim
+            // anchors). Each non-disabled marker consumes the next-in-order
+            // segment; the trim range gates only emission, not consumption, so
+            // the lockstep stays in step with tmfull's all-segments vector.
+            // s.tgt_frame is the full-render target sample; subtracting
+            // window_offset_samples places it on the trimmed wav axis.
             std::set<std::string> disabled_label_defs;
             for (const auto& m : req.markers) {
                 if (!m.label_def.empty() && m.disabled) {
@@ -423,18 +465,24 @@ RenderOutcome do_render(const RenderRequest& req,
                 // resolve_markers_for_render filter.
                 if (eff_disabled) continue;
 
-                // Trim-range filter (inclusive both ends — matches the
-                // post-pass at timemap.cpp).
-                const int64_t sf_abs = static_cast<int64_t>(
-                    std::nearbyint(g.time_seconds * sr_d));
-                if (sf_abs < trim_begin || sf_abs > trim_end) continue;
-
+                // Consume this marker's segment first (tmfull holds every
+                // segment, so the lockstep advances for every non-disabled
+                // marker regardless of trim).
                 if (seg_it == real.end) break;
                 const auto& s = *seg_it;
                 ++seg_it;
 
+                // Trim-range filter (inclusive both ends — matches the
+                // post-pass at timemap.cpp). Gates emission only; the segment
+                // above is already consumed.
+                const int64_t sf_abs = static_cast<int64_t>(
+                    std::nearbyint(g.time_seconds * sr_d));
+                if (sf_abs < trim_begin || sf_abs > trim_end) continue;
+
                 GuiWarpMarker w = g;
-                w.time_seconds  = static_cast<double>(s.tgt_frame) / sr_d;
+                w.time_seconds  =
+                    (static_cast<double>(s.tgt_frame) - window_offset_samples) /
+                    sr_d;
                 warped_markers.push_back(std::move(w));
             }
             const std::string wmd_path =
@@ -445,11 +493,12 @@ RenderOutcome do_render(const RenderRequest& req,
                     wmd_path.c_str());
             }
 
-            // Phase resets: locate each phase reset's source frame in the
-            // engine's frame_map via binary search and emit at synth_frame *
-            // R_s — same placement convention the engine uses internally.
-            // Drop out-of-trim and disabled. time_seconds on the emitted
-            // marker is the engine-domain render_frame divided by sr.
+            // Phase resets: locate each phase reset's absolute source frame in
+            // the engine's (now full) frame_map via binary search; m is an
+            // absolute synth_frame. Emit at m * R_s minus the window offset, so
+            // a reset sits at the same place in render-view as in the windowed
+            // wav. Drop out-of-trim and disabled. time_seconds on the emitted
+            // marker is the windowed render_frame divided by sr.
             if (!req.phase_resets.empty()) {
                 std::vector<GuiPhaseResetMarker> warped_phase_resets;
                 warped_phase_resets.reserve(req.phase_resets.size());
@@ -459,10 +508,9 @@ RenderOutcome do_render(const RenderRequest& req,
                         std::nearbyint(t.time_seconds * sr_d));
                     if (sf_abs < trim_begin || sf_abs > trim_end) continue;
                     if (engine_frame_map.empty()) continue;
-                    const int64_t sf_rel = sf_abs - trim_begin;
                     auto it = std::upper_bound(engine_frame_map.begin(),
                                                engine_frame_map.end(),
-                                               sf_rel);
+                                               sf_abs);
                     size_t m;
                     if (it == engine_frame_map.begin()) {
                         m = 0;
@@ -474,7 +522,8 @@ RenderOutcome do_render(const RenderRequest& req,
                     }
                     const int64_t render_frame =
                         static_cast<int64_t>(m) *
-                        static_cast<int64_t>(engine_R_s);
+                        static_cast<int64_t>(engine_R_s) -
+                        window_offset_samples;
                     GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;
                     warped_phase_resets.push_back(std::move(w));
