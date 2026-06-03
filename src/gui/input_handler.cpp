@@ -3450,6 +3450,14 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // surface, and the playhead column all repaint in one frame.
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
+    // One-shot discrete jump with a domain change: is_target, the viewport, and
+    // the timemap hash all flip, so the displayed plate must change. Render it
+    // synchronously and publish the displayed fingerprint now, so the
+    // bottom-strip S/T indicator and the playhead column do not repaint a frame
+    // ahead of the deformed waveform. The plate is built from source audio plus
+    // the live timemap, independent of the target render buffer, so this is
+    // unaffected by the ensure_ready / rebind_to_source below.
+    viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);
 
     if (going_to_target) {

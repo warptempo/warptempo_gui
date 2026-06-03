@@ -121,9 +121,15 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
         app.last_selected_marker = target.warp_last_selected;
     }
     clamp_viewport_start(app, audio);
-    // invalidate_waveform_area covers the top strip + waveform
-    // (including the playhead column inside it); the timestamp
-    // area holds the letter and the ts text.
+    // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
+    // different viewport / zoom / playhead, so render the plate synchronously
+    // and publish the displayed fingerprint now instead of leaving it to the
+    // tick. kick_waveform_sync emits the same waveform-region damage
+    // invalidate_waveform_area does, so the explicit call below is a redundant
+    // coalesced duplicate left in place for a minimal diff. invalidate_
+    // timestamp_area still covers the bottom-strip letter + ts text the sync
+    // rebuild does not.
+    viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // Per-tab trim is engine input. Switching tabs in target view

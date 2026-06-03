@@ -334,6 +334,15 @@ bool GuiRenderView::load_render_view_at(int index) {
         std::fprintf(stderr,
             "warptempo_gui: playback disabled in render-view\n");
     }
+    // One-shot discrete jump: the loaded render swapped the audio buffer and
+    // the viewport / zoom, so render the plate synchronously and publish the
+    // displayed fingerprint now. Otherwise the markers / playhead repaint
+    // immediately from the full-window invalidate below while the plate is left
+    // to the next tick's worker, jumping the overlays a frame ahead of the
+    // waveform on render-view entry and on render-to-render navigation. Covers
+    // the R-key toggle-on, render navigation, and auto-open paths, which all
+    // route through here.
+    viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
@@ -387,6 +396,14 @@ void GuiRenderView::restore_source_audio() {
     if (app.active_audio_view == 'T') {
         target_render.ensure_ready();
     }
+    // One-shot discrete jump: source audio is restored and the entering tab's
+    // viewport / zoom / playhead are applied, so render the plate synchronously
+    // and publish the displayed fingerprint now. Covers the R-key toggle-off and
+    // exit_render_view_and_clear paths, which route through here. The plate is
+    // built from the restored source audio (or, when active_audio_view is
+    // Target, source audio plus the live timemap), independent of the target
+    // render buffer ensure_ready rebinds above.
+    viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 

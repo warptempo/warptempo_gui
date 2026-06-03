@@ -386,6 +386,15 @@ void Undo::do_undo() {
     }
     recompute_dirty();
     viewport.invalidate_waveform_area();
+    // One-shot discrete jump: undo/redo restored markers / phase resets /
+    // settings, changing the displayed plate (the target-view timemap, and the
+    // viewport when an offscreen-marker restore recenters). Render it
+    // synchronously so the restored markers and the waveform land together. A
+    // single keystroke, so bounded — the drag-time async-timemap policy is about
+    // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
+    // duplicates invalidate_waveform_area above (harmless); target_render.trigger
+    // below still re-renders the target audio buffer independently.
+    viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
     // Every undo restores engine input (markers, phase resets, or
     // settings) — fire a target render in target view. No-op in
@@ -473,6 +482,15 @@ void Undo::do_redo() {
     }
     recompute_dirty();
     viewport.invalidate_waveform_area();
+    // One-shot discrete jump: undo/redo restored markers / phase resets /
+    // settings, changing the displayed plate (the target-view timemap, and the
+    // viewport when an offscreen-marker restore recenters). Render it
+    // synchronously so the restored markers and the waveform land together. A
+    // single keystroke, so bounded — the drag-time async-timemap policy is about
+    // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
+    // duplicates invalidate_waveform_area above (harmless); target_render.trigger
+    // below still re-renders the target audio buffer independently.
+    viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
     // Every redo restores engine input — fire a target render in
     // target view. No-op in source view.

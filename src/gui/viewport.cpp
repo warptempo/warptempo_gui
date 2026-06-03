@@ -142,7 +142,19 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     if (app.viewport_start_sample != old_vp) viewport_changed = true;
 
     if (viewport_changed) {
+        // One-shot discrete viewport shift (Home / End, navigate-to-marker, an
+        // arrow nudge or Ctrl+wheel scrub that pushed the playhead past the
+        // edge). Render the plate synchronously so the playhead / marker
+        // overlays do not land a frame ahead of the new viewport window. The
+        // one continuous caller — the playhead drag — clamps its target to the
+        // visible area and so never reaches this branch; the callers that do
+        // reach it are discrete or frame-coalesced (Ctrl+wheel coalesces to one
+        // move per pointer frame), so a full sync render here is bounded.
+        // kick_waveform_sync emits the same waveform-region damage
+        // invalidate_waveform_area does, so the explicit call is left as a
+        // harmless coalesced duplicate.
         invalidate_waveform_area();
+        kick_waveform_sync();
     } else {
         const double new_px = playhead_pixel_x(app, audio);
         invalidate_playhead_columns(old_px, new_px);
@@ -209,10 +221,15 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
     // Reaching here means the zoom level changed (early-return above guards
-    // the no-op case), so the waveform fingerprint differs — kick the worker
-    // now rather than waiting for the next tick. zoom_in/zoom_out delegate
-    // here, so they are covered without a separate kick.
-    kick_waveform_render();
+    // the no-op case), so the waveform fingerprint differs. Zoom is a one-shot
+    // discrete jump: render the plate synchronously and publish the displayed
+    // fingerprint now so the top-strip flags and the playhead column do not
+    // jump a frame ahead of the waveform. The pyramid bounds per-column cost at
+    // every level, so a full render is O(area_width) at any zoom; coalesced
+    // pointer detents resolve to one apply_zoom_change per frame, so this is one
+    // sync render per frame, not per detent. zoom_in / zoom_out / zoom_steps
+    // delegate here, so they are covered without a separate kick.
+    kick_waveform_sync();
 }
 
 void Viewport::zoom_in() {
@@ -333,9 +350,11 @@ void Viewport::center_viewport_on_playhead() {
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
-        // Viewport actually moved (inside the changed guard) — kick the
-        // waveform worker now instead of deferring to the next tick.
-        kick_waveform_render();
+        // Viewport actually moved (inside the changed guard). Center-on-
+        // playhead is a one-shot discrete jump (the C key, and the Tab recenter
+        // family) — render the plate synchronously so the playhead overlay does
+        // not lead the waveform by a frame.
+        kick_waveform_sync();
     }
 }
 

@@ -536,6 +536,14 @@ int main(int argc, char** argv) {
     viewport.request_waveform_pan_ =
         [&](int64_t new_vp) { paint_handler.pan_waveform_incremental(new_vp); };
 
+    // One-shot discrete jumps route here instead of the async worker: render
+    // the plate synchronously and publish the displayed fingerprint now so the
+    // overlays and waveform land in the same frame. See
+    // Viewport::kick_waveform_sync and
+    // GuiPaintHandler::force_synchronous_waveform_rebuild.
+    viewport.request_waveform_sync_ =
+        [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
+
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };

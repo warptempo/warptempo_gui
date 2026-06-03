@@ -1114,6 +1114,45 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // holds no reference to the live surface. Do not reorder the drain after
 // the render.
 
+// Synchronous-repaint rule (the waveform-layer coherence invariant):
+//
+// The waveform plate and the marker / playhead / dim / stem / flag overlays are
+// separate paint layers. The overlays are computed inline from live state and
+// paint on the next frame; the plate is the expensive layer. If a one-shot
+// state change updates the overlays inline but defers the plate to the async
+// worker, the overlays jump to their new positions one or two frames before the
+// plate catches up — a cross-layer desync that surfaced as zoom lag, the A/B-tab
+// and Tab recenter jump, the source/target toggle smear, and the render-view
+// enter/exit jump.
+//
+// The rule, realized three ways — render the correct frame before painting:
+//   1. One-shot discrete viewport/view jumps render synchronously, through this
+//      function. The jumps this governs: zoom, center-on-playhead, the
+//      viewport-shift playhead moves (Home / End and navigate-to-marker), the
+//      A/B tab switch, the source/target toggle, render-view enter / exit /
+//      navigate, and undo / redo. They arrive at a bounded rate: pointer detents
+//      coalesce to one action per pointer frame, and key repeat is compositor-
+//      throttled, so a full inline render per event is affordable. The pyramid
+//      bounds per-column cost, so the render is O(area_width) at any zoom level.
+//   2. The one sustained pointer gesture (pan / scroll) uses the incremental
+//      shift-and-strip path (pan_waveform_incremental) — also synchronous in
+//      frame, just a partial render. The built-in touchpad emits a high-rate
+//      continuous stream a full-render-per-event model cannot keep up with, so
+//      pan must NOT be converted to a full sync render. The over-a-window
+//      fast-flick fallback in pan_waveform_incremental already drops to this
+//      full sync rebuild.
+//   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
+//      changes the user is not actively driving: resize, file load / reload,
+//      target-view marker drags (frozen during the drag, re-rendered on the
+//      worker at release), follow_scroll_if_needed during playback, and the
+//      on_tick safety net that catches residual fingerprint drift.
+//
+// This is NOT "make everything synchronous." Async earns its keep for the
+// touchpad torrent and for undriven / playback-adjacent changes; the rule is
+// only that a one-shot jump must not paint its overlays against a stale plate.
+//
+// Parts 2 and 3 of this arc wire the remaining call sites above; this commit
+// realizes zoom and the mechanism.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;

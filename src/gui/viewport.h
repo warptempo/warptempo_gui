@@ -62,6 +62,20 @@ struct Viewport {
         else                       kick_waveform_render();
     }
 
+    // One-shot synchronous rebuild kick: for a discrete viewport/view jump,
+    // render the waveform plate inline and publish the displayed fingerprint in
+    // the same handler, so every layer reflects the new state in one frame. Set
+    // from main.cpp to paint_handler.force_synchronous_waveform_rebuild(). Held
+    // as a std::function for the same no-compile-time-edge-to-paint_handler.h
+    // reason as the kicks above. Null-safe: when unset (before main.cpp wires
+    // it) it falls back to the async worker kick, so the path stays correct
+    // either way.
+    std::function<void()> request_waveform_sync_;
+    void kick_waveform_sync() {
+        if (request_waveform_sync_) request_waveform_sync_();
+        else                        kick_waveform_render();
+    }
+
     // Viewport mutators.
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
