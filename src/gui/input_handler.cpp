@@ -3340,6 +3340,25 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
         return;
     }
     select_trim_boundary(which, /*additive=*/shift);
+    // Mirror the marker flag/stem click: a plain or Shift click on a trim
+    // boundary moves the playhead cursor to that boundary, so trim flags
+    // navigate exactly like marker flags. The Ctrl branch above is a
+    // reposition-drag grab and intentionally does not move the playhead,
+    // matching the Ctrl+marker reposition. The hit-test that routed here only
+    // fires when the boundary exists, so trim_begin/end_seconds is set.
+    const ViewState& vs = active_view_state(app);
+    const double sec = (which == TrimHit::Begin) ? vs.trim_begin_seconds
+                                                 : vs.trim_end_seconds;
+    const int sr = audio.sample_rate();
+    const int64_t src_sample =
+        static_cast<int64_t>(std::nearbyint(sec * static_cast<double>(sr)));
+    int64_t sample = src_sample;
+    if (app.active_audio_view == 'T') {
+        const auto tmap = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        sample = to_domain_frame(app, src_sample, tmap);
+    }
+    viewport.move_playhead_to(sample);
 }
 
 void GuiInputHandler::handle_active_audio_view_toggle() {

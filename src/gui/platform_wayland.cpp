@@ -1222,8 +1222,17 @@ void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height) {
 }
 
 void GuiPlatform::on_toplevel_close() {
+    // The compositor (title-bar X) REQUESTS a close; it does not force one.
+    // Delegate to the close callback, which routes through the unsaved-work
+    // dialog and calls request_exit() itself once the user confirms — or
+    // immediately when the document is clean. Setting should_exit_ here
+    // unconditionally was the bug: the run loop (while !should_exit_) exited in
+    // the same frame the dialog opened, so a dirty document closed without the
+    // prompt. Ctrl+Q was unaffected because it reaches request_close_or_revert
+    // directly and only exits via proceed() when clean. Honor the close
+    // directly only when no callback is wired.
     if (on_close_) on_close_();
-    should_exit_ = true;
+    else           should_exit_ = true;
 }
 
 void GuiPlatform::on_frame_done(struct wl_callback* cb) {
