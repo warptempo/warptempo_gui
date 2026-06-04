@@ -98,6 +98,16 @@ private:
     // have arrived during render).
     void on_render_done(RenderOutcome outcome);
 
+    // Single source of truth for app.target_buffer_start_frame: the
+    // full-target-frame coordinate that target_buffer[0] represents. 0 for a
+    // full-song (no-trim) render; with trim set, the trim-begin source frame
+    // mapped through the target-view timemap (the engine renders only the trim
+    // range, so buffer frame 0 is the trim's target-frame start). Requires
+    // app.target_buffer_frames to be set. Called from on_render_done (after a
+    // fresh render) and from ensure_ready's clean rebind (so a cached buffer
+    // re-entered without a render gets the same anchor it had at render time).
+    void recompute_target_buffer_start_frame();
+
     // Set true by trigger() when a dispatch is wanted but the worker
     // wasn't idle. Cleared once dispatch_render_now is actually
     // issued.

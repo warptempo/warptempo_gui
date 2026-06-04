@@ -139,31 +139,10 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         } else {
             app.target_buffer_frames = 0;
         }
-        // Capture the full-target-frame coordinate that
-        // target_buffer[0] represents. With trim set, this is
-        // map_source_to_target(trim_begin_frame) against the full-
-        // source timemap — the engine rendered only the trim range,
-        // so its frame 0 corresponds to the trim's target-frame start.
-        // With trim unset, frame 0 of the target buffer corresponds
-        // to target frame 0 (full-song render). Capture only after
-        // target_buffer_frames has been set so a failed channel
-        // probe doesn't leave start_frame set against an empty buffer.
-        app.target_buffer_start_frame = 0;
-        const ViewState& vs = active_view_state(app);
-        if (vs.has_trim_begin && app.target_buffer_frames > 0 &&
-            audio.sample_rate() > 0 && audio.total_frames() > 0) {
-            const auto tmap = build_target_view_timemap(
-                app, audio.sample_rate(),
-                static_cast<long>(audio.total_frames()));
-            const int64_t trim_begin_frame = static_cast<int64_t>(
-                std::nearbyint(vs.trim_begin_seconds *
-                               static_cast<double>(audio.sample_rate())));
-            const double tgt = map_source_to_target(
-                static_cast<size_t>(trim_begin_frame < 0
-                                    ? 0 : trim_begin_frame), tmap);
-            app.target_buffer_start_frame =
-                static_cast<int64_t>(std::nearbyint(tgt));
-        }
+        // Capture the full-target-frame coordinate target_buffer[0]
+        // represents (0, or the trim-mapped anchor). SoT helper, shared with
+        // ensure_ready's clean rebind so a cached re-entry matches.
+        recompute_target_buffer_start_frame();
         // Only rebind if we're still in target view. A T→S toggle
         // during render already called rebind_to_source(); we don't
         // want to undo that.
@@ -207,6 +186,30 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     maybe_dispatch_pending();
 }
 
+void GuiTargetRender::recompute_target_buffer_start_frame() {
+    // Buffer frame 0 corresponds to target frame 0 for a full-song render;
+    // with trim set, to map_source_to_target(trim_begin_frame) against the
+    // full-source timemap, since the engine rendered only the trim range.
+    // Compute only after target_buffer_frames is set so a failed/empty buffer
+    // does not leave a stale anchor.
+    app.target_buffer_start_frame = 0;
+    const ViewState& vs = active_view_state(app);
+    if (vs.has_trim_begin && app.target_buffer_frames > 0 &&
+        audio.sample_rate() > 0 && audio.total_frames() > 0) {
+        const auto tmap = build_target_view_timemap(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        const int64_t trim_begin_frame = static_cast<int64_t>(
+            std::nearbyint(vs.trim_begin_seconds *
+                           static_cast<double>(audio.sample_rate())));
+        const double tgt = map_source_to_target(
+            static_cast<size_t>(trim_begin_frame < 0
+                                ? 0 : trim_begin_frame), tmap);
+        app.target_buffer_start_frame =
+            static_cast<int64_t>(std::nearbyint(tgt));
+    }
+}
+
 void GuiTargetRender::ensure_ready() {
     // Source view does not use target_buffer. Match trigger()'s
     // source-view no-op invariant.
@@ -228,6 +231,15 @@ void GuiTargetRender::ensure_ready() {
             app.playhead_scanner_active = false;
             app.playhead_scanner_sample = app.playhead_cursor_sample;
         }
+        // Restore the playback bias the cached buffer was rendered with.
+        // rebind_to_source() (the T→S leg) zeroes target_buffer_start_frame to
+        // leave a clean slate, but a clean re-entry rebinds the SAME buffer
+        // without a render, so the trim-mapped anchor must be recomputed here or
+        // target-view play maps the playhead past the buffer and silently
+        // refuses (no audio, no playhead move). When the clean path is taken the
+        // trim is unchanged since the render (any trim edit sets is_dirty_), so
+        // this reproduces the render's anchor.
+        recompute_target_buffer_start_frame();
         playback.rebind_buffer(app.target_buffer.data(),
                                app.target_buffer_frames);
         return;
