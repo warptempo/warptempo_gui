@@ -38,8 +38,9 @@ inline double princarg(double phase) {
 // relative to the per-frame-pair peak magnitude (the LTFAT default, ~-120 dB);
 // it decides only which bins may ANCHOR a frequency-spread, never who gets a
 // phase. kPghiFreqStep is the per-bin frequency step b_a (constant for the r2c
-// layout); the synthesis-side step b_s equals b_a — see the b_s comment in
-// heap_phase for the empirical validation of the (stretch-independent) scale.
+// layout) and is itself stretch-independent; the synthesis-side step is
+// b_s = alpha * b_a, applied per-frame as the alpha_fp scaling in heap_phase's
+// frequency integration. See the b_s comment in heap_phase.
 // Both are named (not inlined) for later ear-tuning and so the scale can be
 // re-checked against an offline LTFAT/PVDR reference render.
 inline constexpr double kPghiTol      = 1e-6;
