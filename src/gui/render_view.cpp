@@ -215,6 +215,12 @@ bool GuiRenderView::load_render_view_at(int index) {
         return false;
     }
     auto& e = app.render_view_list[index];
+    // Leaving target view for render view, same as the T→S toggle: cancel any
+    // in-flight target render so it does not keep pegging the cores under
+    // render-view playback and cannot rebind playback to target_buffer behind
+    // the render-view binding when it completes. No-op when nothing is updating
+    // (render-to-render navigation).
+    target_render.cancel_in_flight_update();
 
     GuiAudio next;
     if (!next.load(e.wav_path.string(), {})) {

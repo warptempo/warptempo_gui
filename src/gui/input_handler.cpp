@@ -1435,8 +1435,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // practice. The empty-target-buffer case (no successful target
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
-        // target-view binding. Source view falls through unchanged.
-        if (app.active_audio_view == 'T' && !playback.is_playing()) {
+        // target-view binding. Source view AND render view fall through
+        // unchanged: render view plays its own loaded render buffer, not
+        // target_buffer, so this in-flight / empty-buffer target gating must
+        // not apply to it. render_view_enabled overrides active_audio_view
+        // here, matching the "actually in target view" idiom in
+        // playback_lifecycle (active_audio_view == 'T' && !render_view_enabled).
+        if (app.active_audio_view == 'T' && !app.render_view_enabled &&
+            !playback.is_playing()) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
         }

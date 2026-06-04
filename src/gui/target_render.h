@@ -68,6 +68,13 @@ struct GuiTargetRender {
     // stopped; callers (the toggle handler) stop playback before calling.
     void rebind_to_source();
 
+    // Cancel an in-flight / pending target render and clear its "updating..."
+    // status, without touching playback. Shared by the two paths that leave
+    // target view: rebind_to_source (T→S) calls it, and the render-view entry
+    // (GuiRenderView::load_render_view_at) calls it directly. No-op when
+    // nothing is updating (e.g. render-to-render navigation).
+    void cancel_in_flight_update();
+
     // Target-view entry hook. Called from sites that *enter* target view
     // (S→T toggle, render-view exit while active_audio_view==Target). If the
     // target buffer is current (is_dirty_ == false and frames > 0),

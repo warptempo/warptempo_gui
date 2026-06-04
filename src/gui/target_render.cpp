@@ -143,10 +143,15 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // represents (0, or the trim-mapped anchor). SoT helper, shared with
         // ensure_ready's clean rebind so a cached re-entry matches.
         recompute_target_buffer_start_frame();
-        // Only rebind if we're still in target view. A T→S toggle
-        // during render already called rebind_to_source(); we don't
-        // want to undo that.
-        if (app.active_audio_view == 'T' &&
+        // Only rebind if we're actually showing target audio. A T→S toggle or
+        // a render-view entry during render already cancelled this render and
+        // does not want playback bound to target_buffer: rebinding here would
+        // clobber source.wav / the render-view buffer. Gate it out by both
+        // active_audio_view and render_view_enabled, matching the "actually in
+        // target view" idiom. is_dirty_ therefore stays set through a render-
+        // view visit, so the next true target-view entry re-renders — correct,
+        // never stale, and consistent with the source-toggle case.
+        if (app.active_audio_view == 'T' && !app.render_view_enabled &&
             app.target_buffer_frames > 0) {
             // The trigger always freezes playback before dispatch, so
             // the device should still be stopped here. The rebind helper
@@ -290,21 +295,28 @@ void GuiTargetRender::cancel_for_load() {
     app.target_buffer_start_frame = 0;
 }
 
-void GuiTargetRender::rebind_to_source() {
-    // Called from the target → source view toggle. Cancel any in-flight
-    // target render and clear the pending dispatch — source view's
-    // playback reads source.wav, not target_buffer.
+void GuiTargetRender::cancel_in_flight_update() {
+    // The in-flight render is now navigated-away-from work. Cancel it and drop
+    // any pending dispatch. The worker clears target_buffer / frames in
+    // on_render_done's Cancelled branch after it exits; is_dirty_ stays set (the
+    // edit that triggered the render is still unrendered), so the next true
+    // target-view entry re-renders. Does not touch playback — callers own the
+    // rebind (source.wav for T→S, the render buffer for render-view entry).
     if (async_renderer.is_busy() && in_flight_) {
         async_renderer.request_cancel();
     }
     pending_ = false;
-
-    // Clear status if it still says "updating..." (the target render's
-    // on_done also clears it but that fires asynchronously).
     if (app.queue_progress_text == "updating...") {
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
     }
+}
+
+void GuiTargetRender::rebind_to_source() {
+    // Called from the target → source view toggle. Cancel any in-flight target
+    // render and drop the pending dispatch — source view's playback reads
+    // source.wav, not target_buffer. Shared with the render-view entry path.
+    cancel_in_flight_update();
 
     if (playback.is_playing()) {
         playback.stop();
