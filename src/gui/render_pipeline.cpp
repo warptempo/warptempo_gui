@@ -521,9 +521,25 @@ RenderOutcome do_render(const RenderRequest& req,
                         std::nearbyint(t.time_seconds * sr_d));
                     if (sf_abs < trim_begin || sf_abs > trim_end) continue;
                     if (engine_frame_map.empty()) continue;
+                    // Account for the dispatch offset so render-view PR markers
+                    // line up with target-view PR markers. The engine fires each
+                    // reset phase_reset_offset_samples (= phase_reset_offset_hops
+                    // * R_s, source domain) before the user-clicked frame
+                    // (engine_frame = F - phase_reset_offset_samples, above), so
+                    // locating the render marker by the raw click leaves it that
+                    // offset ahead of the target-view marker. The source offset
+                    // shows up in the rendered output scaled by the local stretch
+                    // (~78 ms at hops=1 here, not the bare 1024 samples). Add the
+                    // offset to the lookup frame so the marker matches the
+                    // target-view marker (clicked musical position) rather than
+                    // the offset-shifted reset; re-searching the frame map keeps
+                    // the compensation stretch-aware. Trim gating stays on the
+                    // raw click (sf_abs) above.
+                    const int64_t reset_lookup_frame =
+                        sf_abs + phase_reset_offset_samples;
                     auto it = std::upper_bound(engine_frame_map.begin(),
                                                engine_frame_map.end(),
-                                               sf_abs);
+                                               reset_lookup_frame);
                     size_t m;
                     if (it == engine_frame_map.begin()) {
                         m = 0;
