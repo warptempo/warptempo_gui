@@ -45,8 +45,6 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them.
 constexpr int kMarkerHitHalfPx    = 4;
-constexpr int kDoubleClickMs      = 300;
-constexpr int kDoubleClickPixels  = 5;
 
 // Op-kind tag carried on every undo/redo entry. Marker selection collapses
 // per kind on undo: Create restores selection to the just-created marker,
@@ -518,14 +516,6 @@ struct AppState {
     // If a drop arrives mid-load, the path is stashed here and processed
     // after the active load returns. Empty means "no pending drop."
     std::string pending_drop_path;
-
-    // Double-click detection state. Tracks the most recent left-button
-    // press so the next one can compare and upgrade to a double-click.
-    std::chrono::steady_clock::time_point last_click_time =
-        std::chrono::steady_clock::time_point{};
-    int          last_click_x        = -10000;
-    int          last_click_y        = -10000;
-    bool         last_click_consumed = true;
 
     // For redraw-time diagnostics (acceptance criterion 15).
     std::chrono::steady_clock::time_point stats_last_report =

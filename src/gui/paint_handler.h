@@ -40,7 +40,7 @@ class GuiWaveformWorker;
 //
 // X.7.8a: hoisted from main.cpp's anonymous namespace so paint_handler.cpp
 // can reach them. Other constants (kHoverDelayMs, kMarkerHitHalfPx,
-// kDoubleClickMs, kDoubleClickPixels, kPlayheadHalfPx, kDirtyGapPx,
+// kPlayheadHalfPx, kDirtyGapPx,
 // kZoomMsPerPixel) are paint-handler-independent and stay in main.cpp's
 // anonymous namespace.
 

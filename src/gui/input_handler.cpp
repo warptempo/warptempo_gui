@@ -2218,8 +2218,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the motion handler against render_view_markers.
     // Brief 3b: target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
-    // translation lives in the per-gesture writers (double-click drop,
-    // drag begin/motion, etc.) and in to_source_frame helpers used by
+    // translation lives in the per-gesture writers (drag
+    // begin/motion, etc.) and in to_source_frame helpers used by
     // those writers.
 
     if (app.render_view_enabled) {
@@ -2366,66 +2366,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // drag, marker click, etc.
             }
         }
-
-        // Detect double-click from timing + position deltas.
-        const auto now = std::chrono::steady_clock::now();
-        const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - app.last_click_time).count();
-        const bool is_double =
-            !app.last_click_consumed &&
-            dt_ms <= kDoubleClickMs &&
-            std::abs(x - app.last_click_x) <= kDoubleClickPixels &&
-            std::abs(y - app.last_click_y) <= kDoubleClickPixels;
-
-        // A double-click in the waveform area creates a new marker at
-        // the click position (not the playhead). In warp view, drops a
-        // warp marker (Shift forces inherit). In phase reset view, drops
-        // a phase reset (Shift is ignored — no inherit concept). The
-        // first single-click already moved the playhead via the
-        // playhead-drag-press logic below.
-        if (is_double && inside_waveform && !ctrl) {
-            // Read-only: refuse the double-click drop entirely. Consume
-            // the click so a triple-click doesn't re-fire the gesture
-            // and bypass read-only via the trailing fallthrough.
-            if (active_view_state(app).read_only) {
-                app.last_click_consumed = true;
-                return;
-            }
-            const double spp = current_samples_per_pixel(app, audio);
-            const int click_rel_x = x - area.x;
-            const int sr = audio.sample_rate();
-            // `sample` is active-domain (viewport_start_sample + spp*pixel).
-            // The marker stores source-domain time_seconds, so inverse-
-            // translate before dividing by sample rate when target view
-            // is active.
-            const int64_t sample = app.viewport_start_sample +
-                static_cast<int64_t>(std::nearbyint(click_rel_x * spp));
-            std::vector<TimeMapSegment> tmap;
-            if (app.active_audio_view == 'T') {
-                tmap = build_target_view_timemap(
-                    app, sr, static_cast<long>(audio.total_frames()));
-            }
-            const int64_t src_sample =
-                to_source_frame(app, sample, tmap);
-            const double t = (sr > 0)
-                ? static_cast<double>(src_sample) /
-                  static_cast<double>(sr)
-                : 0.0;
-            if (app.active_markers_view == 'P') {
-                phase_resets.drop_phase_reset_at_position(t);
-            } else {
-                warpops.drop_marker(t, /*inherit=*/shift);
-            }
-            // Consume this click so a triple-click doesn't double-fire.
-            app.last_click_consumed = true;
-            return;
-        }
-
-        // Store this click for the next one to compare against.
-        app.last_click_time     = now;
-        app.last_click_x        = x;
-        app.last_click_y        = y;
-        app.last_click_consumed = false;
 
         // Brief B2: the iter/BPM popup-click priority block has been
         // deleted along with the popup surfaces. Clicks in iter/BPM

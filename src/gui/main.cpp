@@ -86,13 +86,12 @@ namespace {
 // mirrored grid; the strip/row geometry now derives from monospace_row_h(),
 // kRowGapPx, and kFlagBottomLiftPx (see the geometry helpers below).
 
-// X.7.8b-2: kMarkerHitHalfPx, kDoubleClickMs, kDoubleClickPixels moved to
-// app_state.h so the hit_test_* free functions and the GuiInputHandler
-// mouse handler can reach them.
+// X.7.8b-2: kMarkerHitHalfPx moved to app_state.h so the hit_test_* free
+// functions and the GuiInputHandler mouse handler can reach them.
 
 // Time the cursor must dwell on a popup-eligible flag rect before the
-// hover popup appears. Distinct from kDoubleClickMs (point-event window
-// vs continuous-state duration) even though they currently share a value.
+// hover popup appears. A continuous-state dwell duration (the cursor must
+// rest this long before the hover popup appears).
 constexpr int kHoverDelayMs       = 500;
 
 // ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
