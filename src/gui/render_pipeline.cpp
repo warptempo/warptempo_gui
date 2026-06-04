@@ -437,6 +437,18 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<int64_t>(engine_synth_frame_begin) *
                 static_cast<int64_t>(engine_R_s);
 
+            // The engine start-trims N samples from the head of every rendered
+            // output (synthesis.cpp: frames_to_skip = N — N/2 OLA ramp-up plus
+            // N/2 origin-centered analysis latency), so the written wav's
+            // sample 0 is OLA sample N. Both marker axes below (warp s.tgt_frame
+            // and phase-reset m*R_s) are on the pre-trim OLA axis, so subtract
+            // the start-trim too or every marker sits N samples late on the
+            // rendered time axis. N == the engine N (ep.N = N_fft;
+            // synthesis frames_to_skip = stft.N). Applies to trimmed and
+            // untrimmed renders alike.
+            const int64_t engine_start_trim_samples =
+                static_cast<int64_t>(N_fft);
+
             // Markers: lockstep walk between req.markers and the real-segment
             // range of tmfull.standard (built trim-off, so no synthetic trim
             // anchors). Each non-disabled marker consumes the next-in-order
@@ -481,8 +493,9 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 GuiWarpMarker w = g;
                 w.time_seconds  =
-                    (static_cast<double>(s.tgt_frame) - window_offset_samples) /
-                    sr_d;
+                    (static_cast<double>(s.tgt_frame) - window_offset_samples -
+                     engine_start_trim_samples) / sr_d;
+                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
                 warped_markers.push_back(std::move(w));
             }
             const std::string wmd_path =
@@ -523,9 +536,11 @@ RenderOutcome do_render(const RenderRequest& req,
                     const int64_t render_frame =
                         static_cast<int64_t>(m) *
                         static_cast<int64_t>(engine_R_s) -
-                        window_offset_samples;
+                        window_offset_samples -
+                        engine_start_trim_samples;
                     GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;
+                    if (w.time_seconds < 0.0) w.time_seconds = 0.0;
                     warped_phase_resets.push_back(std::move(w));
                 }
                 const std::string tmd_path =
