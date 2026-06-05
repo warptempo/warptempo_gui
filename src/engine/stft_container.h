@@ -122,18 +122,26 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSe
 }
 
 // --- Output sample timing convention ---
-// Synthesis emits samples with an OLA ramp-up trim equal to the full window
-// length N: `frames_to_skip = N`. The trim covers N/2 of OLA ramp-up plus the
-// N/2 of output latency the origin-centered analysis convention contributes.
-// Consequences any downstream module must respect:
-//   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N.
-//   - A phase reset marker with synth_frame m lands at output sample m * R_s.
-//     The +N trim is uniform, so resets stay aligned relative to trimmed
-//     output (and diag spikes must NOT add the offset).
-//   - Total output length = (num_frames - 1) * R_s.
-//     Any auxiliary buffer sized to match the output (limiter meas_ola, diag
-//     WAVs) must use this formula; target_total_frames describes the *input*
-//     plan, not the emitted sample count.
+// Synthesis start-trims frames_to_skip = N/2 samples from the head. That N/2 is
+// the alignment latency the origin-centered analysis convention contributes: a
+// frame's content is centered at its window center, which the synthesis un-shift
+// lands at OLA index N/2. Trimming exactly N/2 makes source frame 0 map to output
+// frame 0. The remaining OLA ramp-up (the head region before overlap reaches
+// unity) is intentionally NOT trimmed -- it is kept as a brief head fade-in over
+// (near-)silent lead-in material; it is amplitude only and does not move
+// alignment. Consequences any downstream module must respect:
+//   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N/2,
+//     so a feature at source S lands at output sample tgt(S) (== map_source_to_
+//     target(S)) -- frame-exact with an ideal time-stretch from frame 0 onward.
+//   - The +N/2 head trim is uniform, so phase resets and diag spikes keep their
+//     relative alignment to the audio (diag spikes must NOT add the offset).
+//   - Total output length is AudioSTFT::emit_sample_cap: the target-frame
+//     position of the window's last source sample (full render: last_tgt =
+//     timemap.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
+//     longer the output length, and target_total_frames describes the *input*
+//     plan, not the emitted sample count. Any auxiliary buffer sized to match the
+//     output (limiter meas_ola, diag WAVs) must use the actually emitted length
+//     (synthesis out_frames), not a recomputed frame-count formula.
 //
 // --- Central Pipeline Container ---
 // Peak memory dominated by overlap-add buffers, FFTW planning, and phase vocoder state arrays.
@@ -217,6 +225,12 @@ struct AudioSTFT {
     int synth_frame_begin = 0;
     int synth_frame_end   = 0;   // 0 means "use full map" until engine sets it
 
+    // Emit cap: output length in samples. The synthesizer truncates its emitted
+    // stream to this many samples so render length equals the target-view length
+    // (full render: timemap.back().tgt_frame). Set by engine.cpp after the synth
+    // window is resolved. 0 means "no cap" (defensive default).
+    int64_t emit_sample_cap = 0;
+
     // Optional cancellation hook. When non-null, synthesize_full checks
     // cancel_flag->load() at the top of every frame iteration; if true, it
     // sets cancellation_observed and returns early. Limiter::process and
@@ -233,34 +247,24 @@ struct AudioSTFT {
     // t_s for frame m is implicitly m * R_s.
     // R_a_actual for frame m is frame_map[m] - frame_map[m-1] (caller derives).
     std::vector<int64_t> generate_frame_map() const {
+        // Synthesis frame m sits at output position t_s = m * R_s. Its source
+        // read position is the exact inverse-timemap value at t_s, minus the
+        // N/2 origin-centered analysis offset:
+        //     t_a(m) = map_target_to_source(m * R_s) - N/2.
+        // map_target_to_source is piecewise-linear and splits exactly at every
+        // warp segment boundary, so a synthesis hop that straddles a tempo
+        // change gets the true source advance on each side of the boundary --
+        // no per-hop alpha sampling, no boundary quantization drift. This is
+        // identical to the old right-Riemann accumulation inside any single
+        // constant-alpha segment; it differs only on boundary-crossing hops,
+        // which is exactly the error being removed. R_a_actual for frame m is
+        // still frame_map[m] - frame_map[m-1] (caller derives); near a boundary
+        // that difference is now the exact straddled advance.
         std::vector<int64_t> fmap;
-        double t_a = -(double)N / 2.0;
-        size_t t_s = 0;
-        int idx = 0;
-        // Forward-only cursor: O(segments + frames) instead of O(segments * frames)
-        size_t seg = 0;
-
-        while (t_s < target_total_frames) {
-            // Advance cursor while the next segment starts at or before t_s
-            while (timemap.size() >= 2 && seg + 2 < timemap.size() &&
-                   t_s >= timemap[seg + 1].tgt_frame)
-                ++seg;
-
-            double alpha = 1.0;
-            if (timemap.size() >= 2 && t_s > timemap.front().tgt_frame &&
-                t_s >= timemap[seg].tgt_frame && t_s < timemap[seg + 1].tgt_frame) {
-                double tgt_dur = static_cast<double>(timemap[seg + 1].tgt_frame - timemap[seg].tgt_frame);
-                double src_dur = static_cast<double>(timemap[seg + 1].src_frame - timemap[seg].src_frame);
-                alpha = tgt_dur / src_dur;
-            }
-
-            double R_a = R_s / alpha;
-            if (idx > 0) t_a += R_a;
-            int64_t t_a_rounded = static_cast<int64_t>(std::llround(t_a));
-            fmap.push_back(t_a_rounded);
-
-            t_s += R_s;
-            idx++;
+        for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
+            double src = map_target_to_source(t_s, timemap)
+                       - static_cast<double>(N) / 2.0;
+            fmap.push_back(static_cast<int64_t>(std::llround(src)));
         }
         return fmap;
     }

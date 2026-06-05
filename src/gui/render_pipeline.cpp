@@ -437,17 +437,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<int64_t>(engine_synth_frame_begin) *
                 static_cast<int64_t>(engine_R_s);
 
-            // The engine start-trims N samples from the head of every rendered
-            // output (synthesis.cpp: frames_to_skip = N — N/2 OLA ramp-up plus
-            // N/2 origin-centered analysis latency), so the written wav's
-            // sample 0 is OLA sample N. Both marker axes below (warp s.tgt_frame
-            // and phase-reset m*R_s) are on the pre-trim OLA axis, so subtract
-            // the start-trim too or every marker sits N samples late on the
-            // rendered time axis. N == the engine N (ep.N = N_fft;
-            // synthesis frames_to_skip = stft.N). Applies to trimmed and
-            // untrimmed renders alike.
-            const int64_t engine_start_trim_samples =
-                static_cast<int64_t>(N_fft);
+            // After the head-alignment brief, markers sit on the aligned
+            // feature: a marker at source F displays at tgt(F) - window_offset
+            // with no start-trim term.
 
             // Markers: lockstep walk between req.markers and the real-segment
             // range of tmfull.standard (built trim-off, so no synthetic trim
@@ -493,8 +485,8 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 GuiWarpMarker w = g;
                 w.time_seconds  =
-                    (static_cast<double>(s.tgt_frame) - window_offset_samples -
-                     engine_start_trim_samples) / sr_d;
+                    (static_cast<double>(s.tgt_frame) - window_offset_samples)
+                    / sr_d;
                 if (w.time_seconds < 0.0) w.time_seconds = 0.0;
                 warped_markers.push_back(std::move(w));
             }
@@ -506,12 +498,40 @@ RenderOutcome do_render(const RenderRequest& req,
                     wmd_path.c_str());
             }
 
-            // Phase resets: locate each phase reset's absolute source frame in
-            // the engine's (now full) frame_map via binary search; m is an
-            // absolute synth_frame. Emit at m * R_s minus the window offset, so
-            // a reset sits at the same place in render-view as in the windowed
-            // wav. Drop out-of-trim and disabled. time_seconds on the emitted
-            // marker is the windowed render_frame divided by sr.
+            // Forward-map a source frame to its target frame via the same
+            // piecewise-linear timemap the warp markers use, so a phase-reset
+            // marker displays at the clicked musical position -- identical
+            // convention to source and target views. The engine still fires the
+            // reset at F - phase_reset_offset_samples (the dispatch offset is an
+            // engine mechanic and is deliberately NOT applied to the displayed
+            // marker).
+            auto src_to_tgt = [&](int64_t sf) -> double {
+                if (real.begin == real.end) return static_cast<double>(sf);
+                if (sf <= static_cast<int64_t>(real.begin->src_frame))
+                    return static_cast<double>(real.begin->tgt_frame);
+                for (auto it = real.begin; it + 1 != real.end; ++it) {
+                    const auto& a = *it;
+                    const auto& b = *(it + 1);
+                    if (sf >= static_cast<int64_t>(a.src_frame) &&
+                        sf <  static_cast<int64_t>(b.src_frame)) {
+                        const double sd =
+                            static_cast<double>(b.src_frame - a.src_frame);
+                        const double td =
+                            static_cast<double>(b.tgt_frame - a.tgt_frame);
+                        const double off =
+                            static_cast<double>(sf - static_cast<int64_t>(a.src_frame));
+                        return static_cast<double>(a.tgt_frame) + off * (td / sd);
+                    }
+                }
+                const auto& last = *(real.end - 1);
+                return static_cast<double>(last.tgt_frame) +
+                       static_cast<double>(sf - static_cast<int64_t>(last.src_frame));
+            };
+
+            // Phase resets: forward-map each reset's clicked source frame
+            // through src_to_tgt and place it at tgt(F) - window_offset, so a
+            // reset sits on the same musical position in render-view as in
+            // source and target views. Drop out-of-trim and disabled.
             if (!req.phase_resets.empty()) {
                 std::vector<GuiPhaseResetMarker> warped_phase_resets;
                 warped_phase_resets.reserve(req.phase_resets.size());
@@ -520,40 +540,9 @@ RenderOutcome do_render(const RenderRequest& req,
                     const int64_t sf_abs = static_cast<int64_t>(
                         std::nearbyint(t.time_seconds * sr_d));
                     if (sf_abs < trim_begin || sf_abs > trim_end) continue;
-                    if (engine_frame_map.empty()) continue;
-                    // Account for the dispatch offset so render-view PR markers
-                    // line up with target-view PR markers. The engine fires each
-                    // reset phase_reset_offset_samples (= phase_reset_offset_hops
-                    // * R_s, source domain) before the user-clicked frame
-                    // (engine_frame = F - phase_reset_offset_samples, above), so
-                    // locating the render marker by the raw click leaves it that
-                    // offset ahead of the target-view marker. The source offset
-                    // shows up in the rendered output scaled by the local stretch
-                    // (~78 ms at hops=1 here, not the bare 1024 samples). Add the
-                    // offset to the lookup frame so the marker matches the
-                    // target-view marker (clicked musical position) rather than
-                    // the offset-shifted reset; re-searching the frame map keeps
-                    // the compensation stretch-aware. Trim gating stays on the
-                    // raw click (sf_abs) above.
-                    const int64_t reset_lookup_frame =
-                        sf_abs + phase_reset_offset_samples;
-                    auto it = std::upper_bound(engine_frame_map.begin(),
-                                               engine_frame_map.end(),
-                                               reset_lookup_frame);
-                    size_t m;
-                    if (it == engine_frame_map.begin()) {
-                        m = 0;
-                    } else if (it == engine_frame_map.end()) {
-                        m = engine_frame_map.size() - 1;
-                    } else {
-                        --it;
-                        m = static_cast<size_t>(it - engine_frame_map.begin());
-                    }
                     const int64_t render_frame =
-                        static_cast<int64_t>(m) *
-                        static_cast<int64_t>(engine_R_s) -
-                        window_offset_samples -
-                        engine_start_trim_samples;
+                        static_cast<int64_t>(std::llround(src_to_tgt(sf_abs))) -
+                        window_offset_samples;
                     GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;
                     if (w.time_seconds < 0.0) w.time_seconds = 0.0;

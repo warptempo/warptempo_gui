@@ -103,11 +103,14 @@ void Synthesis::synthesize_full(
         }
     }
 
-    // Emitted output length (timing-convention: (wcount-1)*R_s over the emit
-    // window). For the full map wcount == num_frames, so this is the unchanged
-    // full-render length.
-    const int64_t out_frames =
-        (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s : 0;
+    // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
+    // leaves in, then capped at stft.emit_sample_cap so the file ends at the
+    // window's target position (render length == target length). See the
+    // timing-convention block in stft_container.h.
+    int64_t out_frames =
+        (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s + N / 2 : 0;
+    if (stft.emit_sample_cap > 0 && stft.emit_sample_cap < out_frames)
+        out_frames = stft.emit_sample_cap;
 
     // One mono output stream per channel. Each channel computes its whole
     // output independently into its own buffer; the streams are interleaved
@@ -199,10 +202,11 @@ void Synthesis::synthesize_full(
         // `prev_reset` carries "the previous frame fired a reset" into the next
         // iteration so heap_phase reseeds theta = phi on the post-reset frame.
         bool prev_reset = false;
-        // Start-trim: N samples = N/2 of OLA ramp-up plus N/2 of latency added
-        // by the origin-centered analysis convention (see the timing-convention
-        // block in stft_container.h).
-        int  frames_to_skip = N;
+        // Start-trim: N/2 samples -- the origin-centered analysis alignment
+        // latency only, so source frame 0 maps to output frame 0. The OLA
+        // ramp-up is intentionally NOT trimmed; it is kept as a brief head
+        // fade-in (see the timing-convention block in stft_container.h).
+        int  frames_to_skip = N / 2;
         int  progress_stride = std::max(100, wcount / 100);
         int  last_pct = -1;
 
@@ -358,7 +362,7 @@ void Synthesis::synthesize_full(
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
         for (int ch = 0; ch < channels; ++ch) {
             const std::vector<float>& m = mono[ch];
-            assert(static_cast<int64_t>(m.size()) == out_frames);
+            assert(static_cast<int64_t>(m.size()) >= out_frames);
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }

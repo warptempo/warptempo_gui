@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -234,6 +235,26 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             audio_stft.synth_frame_begin = b;
             audio_stft.synth_frame_end   = e;
         }
+    }
+
+    // Emit cap (length oracle + render==target length): the rendered output ends
+    // at the target-frame position of the window's last source sample. Full
+    // render: end_src == timemap.back().src_frame, so the cap is last_tgt.
+    // Windowed render: end_src == trim_end_src, rebased onto the windowed output
+    // axis by window_offset. Samples past this are OLA decay tail over
+    // (near-)silent material and do not determine head or interior alignment.
+    {
+        const int64_t end_src = p.has_trim
+            ? p.trim_end_src
+            : static_cast<int64_t>(audio_stft.timemap.back().src_frame);
+        const int64_t window_offset =
+            static_cast<int64_t>(audio_stft.synth_frame_begin) *
+            static_cast<int64_t>(audio_stft.R_s);
+        const double tgt_end =
+            map_source_to_target(static_cast<size_t>(end_src), audio_stft.timemap);
+        audio_stft.emit_sample_cap =
+            static_cast<int64_t>(std::llround(tgt_end)) - window_offset;
+        if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
     }
 
     audio_stft.attenuation_map.assign(audio_stft.frame_map.size(),
