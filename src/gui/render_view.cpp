@@ -357,6 +357,18 @@ bool GuiRenderView::load_render_view_at(int index) {
 // of the load_render_view_at entry path. No-op when
 // source_audio_held is empty (nothing to restore).
 void GuiRenderView::restore_source_audio() {
+    // Leaving render view: clear the flag BEFORE the synchronous waveform
+    // kick at the end of this function. kick_waveform_sync resolves to
+    // force_synchronous_waveform_rebuild, whose compute_waveform_render_inputs
+    // derives is_target as (active_audio_view == 'T') && !render_view_enabled.
+    // If the flag is still set when the kick runs, is_target is false, the
+    // plate is rendered with no timemap (an unwarped source plate) and that
+    // non-target fingerprint is published; the next on_redraw then sees the
+    // inputs differ and rebuilds the real target plate on the async worker,
+    // which is the visible flash on the render -> target transition. Clearing
+    // here, ahead of the source_audio_held guard, makes every leave path
+    // correct without each call site having to order the flag itself.
+    app.render_view_enabled = false;
     if (source_audio_held.total_frames() == 0) return;
     playback.stop();
     playback.shutdown();
@@ -560,7 +572,6 @@ void GuiRenderView::auto_open_batch_at_first_file(
 // performed before calling refresh_render_view_list.
 void GuiRenderView::exit_render_view_and_clear() {
     this->restore_source_audio();
-    app.render_view_enabled = false;
     app.render_view_markers.clear();
     app.render_view_phase_resets.clear();
     app.render_view_index             = -1;

@@ -1397,7 +1397,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         app.bpm_mode_enabled       = false;
 
         render_view.restore_source_audio();
-        app.render_view_enabled = false;
         app.render_view_list.clear();
         app.render_view_markers.clear();
         app.render_view_phase_resets.clear();
@@ -1719,7 +1718,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // freshly enumerated list.
             render_view.stash_render_view_selection_to_active_entry();
             render_view.restore_source_audio();
-            app.render_view_enabled = false;
             app.render_view_markers.clear();
             app.render_view_phase_resets.clear();
             app.render_view_index             = -1;
