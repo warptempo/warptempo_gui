@@ -7,8 +7,6 @@
 #include "timemap.h"
 #include "engine/stft_container.h"
 
-#include <cairo/cairo.h>
-
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -269,9 +267,6 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     }
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
-    cairo_surface_t* scratch_s = cairo_image_surface_create(
-        CAIRO_FORMAT_ARGB32, 1, 1);
-    cairo_t* scratch_cr = cairo_create(scratch_s);
     const double spp = current_samples_per_pixel(app, audio);
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
@@ -310,12 +305,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     std::vector<FlagHitRect> rects;
     if (app.render_view_enabled) {
         rects = compute_flag_hit_rects(
-            scratch_cr, top, app.render_view_markers,
+            top, app.render_view_markers,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             nullptr, drag_overlay);
     } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
-            scratch_cr, top, app.phase_reset_markers.markers(),
+            top, app.phase_reset_markers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             tmap_arg, drag_overlay);
     } else {
@@ -323,13 +318,11 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         // clicks land on the iteration-mode chip. This branch is reached
         // only in warp view (not render view, not 'P').
         rects = compute_flag_hit_rects(
-            scratch_cr, top, app.warpmarkers.markers(),
+            top, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);
     }
-    cairo_destroy(scratch_cr);
-    cairo_surface_destroy(scratch_s);
     for (const auto& r : rects) {
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {

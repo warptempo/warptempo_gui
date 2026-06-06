@@ -496,15 +496,15 @@ void render_one_editor_flag(
 
 // Same greedy-pack and elision logic as render_flags, without drawing —
 // returns the screen-coord rects of the flags that would be rendered. The
-// caller uses these for hit-testing. A minimal image-surface cairo_t works
-// fine as `cr` since only font metrics are needed.
+// caller uses these for hit-testing. No cairo context is needed: the chip
+// width comes from the cached monospace advance (glyph count times
+// monospace_advance()), which is exact for the ASCII monospace chip strings.
 // `timemap` parameter mirrors render_flags so the two stay in sync. Brief 2
 // adds it for symmetry — target view's hover/iter/BPM popups are gated off
 // elsewhere, so this helper is not yet called with a non-null timemap. A
 // future brief that re-enables popup paint in target view will route the
 // timemap through here without further signature churn.
 std::vector<FlagHitRect> compute_flag_hit_rects(
-    cairo_t* cr,
     GuiRect top_strip_area,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
@@ -546,7 +546,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             const DragOverlay* drag_overlay = nullptr);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
-    cairo_t* cr,
     GuiRect top_strip_area,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     long long viewport_start_sample,

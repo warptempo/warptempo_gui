@@ -510,9 +510,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // not the displayed cache fingerprint the paint above used. If these
             // strokes are offset from the painted chips, the divergence is the
             // viewport/coordinate space, not the chip-rect formula.
-            cairo_surface_t* dbg_s =
-                cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-            cairo_t* dbg_cr = cairo_create(dbg_s);
             const double dbg_spp = current_samples_per_pixel(app, audio);
             const int64_t dbg_vp_start = app.viewport_start_sample;
             const int64_t dbg_vp_end = dbg_vp_start +
@@ -545,23 +542,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             std::vector<FlagHitRect> dbg_rects;
             if (app.render_view_enabled) {
                 dbg_rects = compute_flag_hit_rects(
-                    dbg_cr, top_strip, app.render_view_markers,
+                    top_strip, app.render_view_markers,
                     dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
                     nullptr, dbg_drag);
             } else if (app.active_markers_view == 'P') {
                 dbg_rects = compute_phase_reset_flag_hit_rects(
-                    dbg_cr, top_strip, app.phase_reset_markers.markers(),
+                    top_strip, app.phase_reset_markers.markers(),
                     dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
                     dbg_tmap_arg, dbg_drag);
             } else {
                 dbg_rects = compute_flag_hit_rects(
-                    dbg_cr, top_strip, app.warpmarkers.markers(),
+                    top_strip, app.warpmarkers.markers(),
                     dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
                     dbg_tmap_arg, dbg_drag,
                     app.iteration_mode_enabled);
             }
-            cairo_destroy(dbg_cr);
-            cairo_surface_destroy(dbg_s);
 
             // Stroke each hit rect in bright magenta, 1px, half-pixel aligned so
             // a 1px offset from the chip fill is unambiguous. The stroke sits
