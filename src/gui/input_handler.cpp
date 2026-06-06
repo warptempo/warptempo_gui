@@ -490,22 +490,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
     // first; Esc with no active edit falls through to the rest.
     if (text_editor::is_active(app.top_flag_editor)) {
-        // BPM editor (bottom-strip) honors Ctrl+Q / Ctrl+W like the settings
-        // editor: discard the in-progress edit, exit BPM mode, then run the
-        // normal close/revert path. Scoped to BpmBracket so the top-strip
-        // FlagPayload / IterationBracket editors keep swallowing these chords.
-        if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket &&
-            ctrl && !shift && !alt &&
-            (key == GuiKeys::Q || key == GuiKeys::W)) {
-            flag_editor.exit_top_flag_edit_no_commit();
-            flag_editor.exit_bpm_mode();
-            viewport.invalidate_timestamp_area();
-            prompt.request_close_or_revert(
-                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
-                                  : DialogTrigger::REVERT_TO_BLANK);
-            return;
-        }
-        (void)ctrl; (void)alt; // Modifiers swallowed except Shift→colon.
         const auto action = text_editor::handle_key(
             app.top_flag_editor, key, mods);
         if (action == text_editor::KeyAction::CommitRequested) {
@@ -565,10 +549,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 viewport.invalidate_top_strip();
             return;
         }
-        // NotConsumed: editor saw nothing useful; fall through is wrong
-        // because the editor must own all keys while active. Treat as
-        // consumed.
-        return;
+        // NotConsumed: the editor does not own this key, so it is a command.
+        // Cancel the edit (Esc-discard: no commit, no validation), using the
+        // same teardown Esc uses, then fall through (no return) so the key
+        // reaches the global command dispatch below and runs. This is how every
+        // command (Ctrl+Q/W/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, Ctrl+E, ...) works
+        // mid-edit: exit first, then the command. No command list — the editor
+        // owns only its editing keymap and everything else punches through.
+        if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+            flag_editor.exit_top_flag_edit_no_commit();
+            flag_editor.exit_bpm_mode();
+            viewport.invalidate_timestamp_area();
+        } else {
+            flag_editor.exit_top_flag_edit_no_commit();
+        }
+        // No return — fall through to the global dispatch.
     }
 
     // Settings-prompt editor (`;` opener). Same shape as the flag-editor
@@ -578,19 +573,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // edit. Routed before queue/drag/playhead Esc handlers so Esc
     // cancels the edit first.
     if (text_editor::is_active(app.settings_editor)) {
-        // Ctrl+Q / Ctrl+W escape the editor even mid-edit: discard the
-        // in-progress text (no commit) via the same teardown Esc uses,
-        // then run the normal close/revert path (which raises the
-        // unsaved-work dialog if history is dirty).
-        if (ctrl && !shift && !alt &&
-            (key == GuiKeys::Q || key == GuiKeys::W)) {
-            settings_editor.exit_no_commit();
-            prompt.request_close_or_revert(
-                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
-                                  : DialogTrigger::REVERT_TO_BLANK);
-            return;
-        }
-        (void)ctrl; (void)alt;
         const auto action = text_editor::handle_key(
             app.settings_editor, key, mods);
         if (action == text_editor::KeyAction::CommitRequested) {
@@ -605,7 +587,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             viewport.invalidate_timestamp_area();
             return;
         }
-        return;
+        // NotConsumed: a command. Cancel the settings edit (Esc-discard) and
+        // fall through so the global dispatch runs the command.
+        settings_editor.exit_no_commit();
+        // No return — fall through.
     }
 
     // Chunk W: render-view input gate. While render-view is active
