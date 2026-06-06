@@ -1363,7 +1363,8 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     GuiKey key = static_cast<GuiKey>(sym);
     if (key >= 'A' && key <= 'Z') key |= 0x20;
 
-    const GuiInputState mods = current_mods();
+    GuiInputState mods = current_mods();
+    mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
     deliver_key(key, mods);
 
     // Arm key repeat (last-key-wins: this replaces any prior repeating

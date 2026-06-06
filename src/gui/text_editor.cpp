@@ -7,116 +7,6 @@ namespace text_editor {
 
 namespace {
 
-// Vocabulary closed set, no whitespace, no pipe (pipe is in the locked
-// prefix). Letters lowercase only — uppercase swallowed (the platform
-// boundary already case-folds, so only the lowercase form arrives). Map
-// a GuiKey (paired with mods) to the literal char to insert; returns 0
-// for "not a printable in this vocabulary". `kind` selects between the
-// flag-payload, iteration-bracket, and BPM-bracket alphabets.
-char keysym_to_char(GuiKey key, GuiInputState mods, Kind kind,
-                    bool iter_grammar) {
-    const bool shift = mods.shift;
-
-    // Digits are common to all kinds.
-    if (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 && !shift) {
-        // Brief X.2: Shift+2 → '@' for BpmBracket only; the digit branch
-        // already filters out shift, so the BpmBracket-specific block
-        // below is what handles the shifted form.
-        return static_cast<char>('0' + (key - GuiKeys::Digit0));
-    }
-    // Decimal point is accepted by FlagPayload, IterationBracket, and
-    // SettingsAssignment but NOT BpmBracket (strict integer-only).
-    if (key == GuiKeys::Period && !shift && kind != Kind::BpmBracket) return '.';
-
-    if (kind == Kind::SettingsAssignment) {
-        // Letters: lowercase bare, uppercase with Shift. Capitals are
-        // accepted for every settings line so `title=` can carry a
-        // human-readable value (e.g. "Symphony No. 40 (K. 550)"); keys
-        // that require lowercase (N, output_format, ...) are still guarded
-        // by their per-key validators in settings_io.cpp, which reject the
-        // bad value at commit. The title validator accepts any non-empty,
-        // newline-free string, so the full printable set below round-trips.
-        if (key >= GuiKeys::A && key <= GuiKeys::Z) {
-            return shift
-                ? static_cast<char>('A' + (key - GuiKeys::A))
-                : static_cast<char>('a' + (key - GuiKeys::A));
-        }
-        // Identifier / value punctuation. Settings lines have exactly one
-        // '='; both halves can contain identifier-shaped characters.
-        // Minus carries negative numbers; colon is needed for the
-        // MM:SS.mmm shape of trim values. Underscore arrives as
-        // Shift+Minus on US.
-        if (key == GuiKeys::Equal     && !shift) return '=';
-        if (key == GuiKeys::Minus     && !shift) return '-';
-        if (key == GuiKeys::Minus     &&  shift) return '_';
-        if (key == GuiKeys::Colon                ) return ':';
-        if (key == GuiKeys::Semicolon &&  shift) return ':';
-        // Title punctuation. Space, parentheses, comma, apostrophe,
-        // ampersand — the characters a recording title needs. Period is
-        // handled by the common branch at the top of this function.
-        // US-layout shifted-digit forms match the convention used by the
-        // other Kind branches (e.g. Shift+2 → @ in BpmBracket).
-        if (key == GuiKeys::Space)                 return ' ';
-        if (key == GuiKeys::Comma      && !shift) return ',';
-        if (key == GuiKeys::Apostrophe && !shift) return '\'';
-        if (key == GuiKeys::Digit7     &&  shift) return '&';
-        if (key == GuiKeys::Digit9     &&  shift) return '(';
-        if (key == GuiKeys::Digit0     &&  shift) return ')';
-        return 0;
-    }
-
-    if (kind == Kind::IterationBracket) {
-        // Brackets, comma, signed-number prefixes. No letters, no `*`,
-        // no `:` — those would be syntactically invalid in the
-        // iteration popup payload.
-        if (key == GuiKeys::BracketLeft  && !shift) return '[';
-        if (key == GuiKeys::BracketRight && !shift) return ']';
-        if (key == GuiKeys::Comma        && !shift) return ',';
-        if (key == GuiKeys::Minus        && !shift) return '-';
-        if (key == GuiKeys::Plus)                   return '+';
-        // US layout: Shift+= produces +.
-        if (key == GuiKeys::Equal && shift)         return '+';
-        return 0;
-    }
-
-    if (kind == Kind::BpmBracket) {
-        // Brief X.2: digits, `@`, `,`, `[`, `]`. No letters, no signs,
-        // no decimals.
-        if (key == GuiKeys::BracketLeft  && !shift) return '[';
-        if (key == GuiKeys::BracketRight && !shift) return ']';
-        if (key == GuiKeys::Comma        && !shift) return ',';
-        if (key == GuiKeys::At)                     return '@';
-        // US layout: Shift+2 produces @.
-        if (key == GuiKeys::Digit2 && shift)        return '@';
-        return 0;
-    }
-
-    // FlagPayload kind.
-    if (key >= GuiKeys::A && key <= GuiKeys::Z && !shift) {
-        return static_cast<char>('a' + (key - GuiKeys::A));
-    }
-    if (key == GuiKeys::Asterisk)            return '*';
-    if (key == GuiKeys::Colon)               return ':';
-    // US layout: Shift+; gives :. Treat as colon.
-    if (key == GuiKeys::Semicolon && shift)  return ':';
-    // Shift+8 also produces asterisk on US layouts. Let it through.
-    if (key == GuiKeys::Digit8 && shift)     return '*';
-    // Brief D: iteration-mode FlagPayload editing widens the vocabulary
-    // to admit the inline bracket characters. The bracket's space after
-    // the comma is part of the seeded display but is not typeable (and
-    // the commit-side parser tolerates its absence).
-    if (iter_grammar) {
-        if (key == GuiKeys::BracketLeft  && !shift) return '[';
-        if (key == GuiKeys::BracketRight && !shift) return ']';
-        if (key == GuiKeys::Comma        && !shift) return ',';
-        if (key == GuiKeys::Minus        && !shift) return '-';
-        if (key == GuiKeys::Plus)                   return '+';
-        // US layout: Shift+= produces +.
-        if (key == GuiKeys::Equal && shift)         return '+';
-    }
-    return 0;
-}
-
 void touch_blink(State& s) {
     s.blink_epoch = std::chrono::steady_clock::now();
 }
@@ -277,10 +167,19 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // Printable insertion (length-capped). BpmBracket gets a tighter cap
     // than the default (brief X.2): the strict format `<beats>@[<lo>,<hi>]`
     // tops out at 12 chars, so 13 leaves one char of typo slack.
-    const char ch = keysym_to_char(key, mods, s.kind, s.iter_grammar);
-    if (ch != 0) {
+    // Accept any printable character the keyboard produced. The platform
+    // resolved the effective codepoint (shift / layout applied) via
+    // xkbcommon; insert it when no Ctrl/Alt is held and it is a printable
+    // ASCII character. Characters that are invalid for this field are NOT
+    // filtered here — the commit-time validator rejects the value (red
+    // flash) when Enter is pressed. This replaces the per-Kind
+    // keysym_to_char vocabulary entirely; the only thing Kind still selects
+    // is the length cap below.
+    if (!ctrl && !mods.alt &&
+        mods.codepoint >= 0x20 && mods.codepoint <= 0x7e) {
+        const char ch = static_cast<char>(mods.codepoint);
         int cap = kMaxPendingChars;
-        if (s.kind == Kind::BpmBracket)        cap = kMaxPendingCharsBpm;
+        if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
         if (s.kind == Kind::FlagPayload && s.iter_grammar)
             cap = kMaxPendingCharsFlagIter;
@@ -301,8 +200,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::Consumed;
     }
 
-    // Any other key while editing: swallow (the editor owns the keyboard).
-    return KeyAction::Consumed;
+    // The editor does not own this key. Report NotConsumed so the caller can
+    // route it (Brief 2: cancel the edit and let the global command run).
+    return KeyAction::NotConsumed;
 }
 
 bool cursor_visible_now(const State& s) {
