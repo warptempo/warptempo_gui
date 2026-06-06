@@ -156,4 +156,13 @@ bool cursor_visible_now(const State& s);
 // change.
 bool blink_period_milliseconds(int& out_ms);
 
+// Translate a click x-coordinate to a byte index into `pending` based on
+// the monospace per-character advance and a known text-left x (the char-0
+// origin). Both `advance > 0` and `text_left_x >= 0` must hold; callers
+// gate on those before invoking. The returned index is clamped to
+// [0, pending_size]. Shared by the flag editor's click-to-caret path and
+// the F2.1 mouse drag-to-select path in input_handler.cpp.
+int byte_index_from_click_x(double click_x, double text_left_x,
+                            double advance, int pending_size);
+
 } // namespace text_editor

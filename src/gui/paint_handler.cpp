@@ -173,6 +173,42 @@ static void render_waveform_strip_to_cache_surface(
     cairo_destroy(ccr);
 }
 
+// F2: the settings-prompt editor and the BPM editor paint the same
+// bottom-strip text box through render_editor_text_box, differing only
+// in the prefix and which text_editor::State they read. This is the one
+// body both branches share. It takes the row geometry (anchor_x,
+// baseline_y) the caller already solved (upper_baseline) rather than
+// computing a row of its own, so the two call sites stay the single
+// source for where the bottom-strip editor sits.
+static void render_bottom_strip_editor(cairo_t* cr,
+                                       const text_editor::State& ed,
+                                       const char* prefix,
+                                       double anchor_x,
+                                       double baseline_y) {
+    cairo_save(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, kFlagFontSize);
+
+    EditorTextBox box;
+    box.anchor_x        = anchor_x;
+    box.baseline_y      = baseline_y;
+    box.prefix          = prefix;
+    box.text            = ed.pending;
+    box.hl_pad          = kFlagPadXPx;
+    box.fill            = ed.red ? kAccent : kBackground;
+    box.text_color      = kText;
+    box.has_selection   = text_editor::has_selection(ed);
+    box.selection_start = text_editor::selection_start(ed);
+    box.selection_end   = text_editor::selection_end(ed);
+    box.cursor_visible  = text_editor::cursor_visible_now(ed);
+    box.cursor_pos      = ed.cursor_pos;
+    render_editor_text_box(cr, box);
+
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -683,73 +719,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     app.queue_progress_text, kText, kFlagFontSize);
             } else if (text_editor::is_active(app.settings_editor)) {
                 // Settings prompt overlay (Brief B.2): "setting: <pending>"
-                // through the shared editor text-box primitive. The fill is
-                // kBackground normally, kAccent on parse failure. The
-                // "setting: " prefix sits to the left of the box.
-                cairo_save(cr);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-
-                EditorTextBox box;
-                box.anchor_x        = static_cast<double>(kTimestampPadX);
-                box.baseline_y      = upper_baseline;
-                box.prefix          = "setting: ";
-                box.text            = app.settings_editor.pending;
-                box.hl_pad          = kFlagPadXPx;
-                box.fill            = app.settings_editor.red
-                                          ? kAccent : kBackground;
-                box.text_color      = kText;
-                box.has_selection   =
-                    text_editor::has_selection(app.settings_editor);
-                box.selection_start =
-                    text_editor::selection_start(app.settings_editor);
-                box.selection_end   =
-                    text_editor::selection_end(app.settings_editor);
-                box.cursor_visible  =
-                    text_editor::cursor_visible_now(app.settings_editor);
-                box.cursor_pos      = app.settings_editor.cursor_pos;
-                render_editor_text_box(cr, box);
-
-                cairo_restore(cr);
+                // through the shared bottom-strip editor helper. Fill is
+                // kBackground normally, kAccent on parse failure (handled
+                // inside the helper).
+                render_bottom_strip_editor(cr, app.settings_editor,
+                                           kSettingsEditorPrefix,
+                                           static_cast<double>(kTimestampPadX),
+                                           upper_baseline);
             } else if (text_editor::is_active(app.top_flag_editor) &&
                        app.top_flag_editor.kind ==
                            text_editor::Kind::BpmBracket) {
-                // Brief E: BPM editor overlay. Same bottom-strip primitive
-                // and shape as the settings-editor branch above (F2 folds
-                // both into one row helper), differing only in the "bpm: "
-                // prefix and the editor it reads. top_flag_editor with
-                // kind==BpmBracket only ever paints here, never over the flag
-                // in the top strip. Fill is kBackground normally, kAccent on
-                // parse failure.
-                cairo_save(cr);
-                cairo_select_font_face(cr, "monospace",
-                                       CAIRO_FONT_SLANT_NORMAL,
-                                       CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, kFlagFontSize);
-
-                EditorTextBox box;
-                box.anchor_x        = static_cast<double>(kTimestampPadX);
-                box.baseline_y      = upper_baseline;
-                box.prefix          = "bpm: ";
-                box.text            = app.top_flag_editor.pending;
-                box.hl_pad          = kFlagPadXPx;
-                box.fill            = app.top_flag_editor.red
-                                          ? kAccent : kBackground;
-                box.text_color      = kText;
-                box.has_selection   =
-                    text_editor::has_selection(app.top_flag_editor);
-                box.selection_start =
-                    text_editor::selection_start(app.top_flag_editor);
-                box.selection_end   =
-                    text_editor::selection_end(app.top_flag_editor);
-                box.cursor_visible  =
-                    text_editor::cursor_visible_now(app.top_flag_editor);
-                box.cursor_pos      = app.top_flag_editor.cursor_pos;
-                render_editor_text_box(cr, box);
-
-                cairo_restore(cr);
+                // Brief E: BPM editor overlay, through the same bottom-strip
+                // editor helper as the settings branch above. top_flag_editor
+                // with kind==BpmBracket only ever paints here, never over the
+                // flag in the top strip.
+                render_bottom_strip_editor(cr, app.top_flag_editor,
+                                           kBpmEditorPrefix,
+                                           static_cast<double>(kTimestampPadX),
+                                           upper_baseline);
             } else if (app.hover_popup.visible) {
                 // B2 deleted the floating hover popup paint but kept the
                 // dwell mechanism; Brief F gives it a home as the

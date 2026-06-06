@@ -60,6 +60,65 @@
 //     anonymous namespace into input_handler.h so this TU can reach them;
 //     render_bpm_sweep() is the sole caller.
 
+// F2.1: mouse drag-to-select for the three text editors. The selection
+// highlight is already painted from the editor State's selection_anchor /
+// cursor_pos, so the whole gesture is input-side: a press sets the anchor
+// and arms the drag, motion moves cursor_pos (extending the highlight),
+// release finalizes. The only per-editor geometry the mouse path needs is
+// each editor's char-0 text origin; advance is the shared monospace cell.
+namespace {
+
+// The active editor's resolved text geometry, valid only while exactly one
+// editor is active (and, for the flag editor, on-view). Press / motion /
+// release all resolve this so they agree on origin and which strip to
+// repaint.
+struct ActiveEditorText {
+    bool                valid        = false;
+    text_editor::State* ed           = nullptr;  // the active editor
+    double              text_left    = 0.0;       // char-0 origin (px)
+    double              advance      = 0.0;
+    bool                bottom_strip = false;      // which strip to repaint
+};
+
+ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
+    ActiveEditorText g;
+    const double adv = monospace_advance();
+    if (adv <= 0.0) return g;
+    if (text_editor::is_active(app.settings_editor)) {
+        g.ed = &app.settings_editor;
+        g.text_left = static_cast<double>(kTimestampPadX) +
+            std::strlen(kSettingsEditorPrefix) * adv;
+        g.bottom_strip = true;
+    } else if (text_editor::is_active(app.top_flag_editor) &&
+               app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+        g.ed = &app.top_flag_editor;
+        g.text_left = static_cast<double>(kTimestampPadX) +
+            std::strlen(kBpmEditorPrefix) * adv;
+        g.bottom_strip = true;
+    } else if (text_editor::is_active(app.top_flag_editor)) {
+        // FlagPayload / IterationBracket — top strip.
+        const double tl = flag_pending_text_left_x(
+            app, audio, app.top_flag_editor.target);
+        if (tl < 0.0) return g;   // flag off-view: leave invalid
+        g.ed = &app.top_flag_editor;
+        g.text_left = tl;
+    } else {
+        return g;
+    }
+    g.advance = adv;
+    g.valid = true;
+    return g;
+}
+
+void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
+    const int idx = text_editor::byte_index_from_click_x(
+        static_cast<double>(mouse_x), g.text_left, g.advance,
+        static_cast<int>(g.ed->pending.size()));
+    g.ed->cursor_pos = idx;
+}
+
+} // namespace
+
 static bool is_play_pause_key(GuiKey key) {
     return key == GuiKeys::Space
         || key == GuiKeys::Return
@@ -2181,6 +2240,49 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
     if (app.prompt.active) return;
+
+    // F2.1: mouse drag-to-select inside the active text editor. A press on
+    // the active editor's text region places the caret and arms a selection
+    // drag (anchor == caret until the pointer moves). Resolved before the
+    // per-editor modal swallows below so the gesture reaches the settings /
+    // BPM bottom-strip editors too. A press outside the active editor's
+    // region falls through to the existing logic (target-switch, open-
+    // another-flag, modal swallow) unchanged.
+    if (button == GuiMouseButton::Left) {
+        const ActiveEditorText g = active_editor_text(app, audio);
+        if (g.valid) {
+            bool in_region = false;
+            if (g.bottom_strip) {
+                const GuiRect bs = bottom_strip_area(app);
+                in_region = x >= bs.x && x < bs.x + bs.w &&
+                            y >= bs.y && y < bs.y + bs.h;
+            } else {
+                const GuiRect top = top_strip_area(app);
+                const bool inside_top_strip =
+                    x >= top.x && x < top.x + top.w &&
+                    y >= top.y && y < top.y + top.h;
+                in_region = inside_top_strip &&
+                    hit_test_flag(app, audio, x, y) ==
+                        app.top_flag_editor.target;
+            }
+            if (in_region) {
+                set_editor_caret_from_x(g, x);
+                // Collapsed anchor — extends to a real selection only if the
+                // pointer then moves.
+                g.ed->selection_anchor = g.ed->cursor_pos;
+                app.editor_text_drag.active = true;
+                if (g.bottom_strip) viewport.invalidate_timestamp_area();
+                else                viewport.invalidate_top_strip();
+                return;
+            }
+            // A bottom-strip editor stays modal: a press outside its row is
+            // swallowed without arming. A flag-editor press that isn't on the
+            // edited flag falls through to the existing target-switch / open /
+            // exit handling below.
+            if (g.bottom_strip) return;
+        }
+    }
+
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
@@ -2561,9 +2663,28 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 // X.7.8b-2: button-release handler. Verbatim from the lambda at the
 // original main.cpp:1835; commit_drag and set_single_selection are
 // rewritten to direct method calls on warpops / selection respectively.
+void GuiInputHandler::finalize_editor_text_drag() {
+    const ActiveEditorText g = active_editor_text(app, audio);
+    if (g.valid) {
+        // A press that never moved leaves a plain caret and no selection,
+        // matching the existing click-to-caret.
+        if (g.ed->selection_anchor == g.ed->cursor_pos)
+            g.ed->selection_anchor = -1;
+        if (g.bottom_strip) viewport.invalidate_timestamp_area();
+        else                viewport.invalidate_top_strip();
+    }
+    app.editor_text_drag.active = false;
+}
+
 void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
                                         int /*y*/, GuiInputState mods) {
     if (app.prompt.active) return;
+    // F2.1: a left release ending an editor-text drag finalizes the
+    // selection (or collapses to a caret) before the modal swallow below.
+    if (button == GuiMouseButton::Left && app.editor_text_drag.active) {
+        finalize_editor_text_drag();
+        return;
+    }
     if (text_editor::is_active(app.settings_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.playhead_drag.active) {
@@ -2696,6 +2817,28 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     if (app.prompt.active) {
+        viewport.clear_hover_popup();
+        return;
+    }
+    // F2.1: editor-text drag motion. Handled before the settings swallow
+    // (which returns) so the gesture reaches the bottom-strip editors, and
+    // before the trim / playhead branches. A lost button finalizes like
+    // release, mirroring those handlers.
+    if (app.editor_text_drag.active) {
+        if (!mods.primary_button_held) {
+            finalize_editor_text_drag();
+            return;
+        }
+        const ActiveEditorText g = active_editor_text(app, audio);
+        if (g.valid) {
+            // The anchor set at press stays put; moving cursor_pos extends
+            // the selection.
+            set_editor_caret_from_x(g, mouse_x);
+            if (g.bottom_strip) viewport.invalidate_timestamp_area();
+            else                viewport.invalidate_top_strip();
+        }
+        // !g.valid (flag scrolled off-view mid-drag): no-op this frame,
+        // leaving the caret where it was.
         viewport.clear_hover_popup();
         return;
     }

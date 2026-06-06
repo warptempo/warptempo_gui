@@ -1,6 +1,7 @@
 #include "text_editor.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace text_editor {
 
@@ -133,6 +134,13 @@ void erase_selection(State& s) {
 }
 
 } // namespace
+
+int byte_index_from_click_x(double click_x, double text_left_x,
+                            double advance, int pending_size) {
+    const double offset = click_x - text_left_x;
+    int idx = static_cast<int>(std::nearbyint(offset / advance));
+    return std::clamp(idx, 0, pending_size);
+}
 
 void deactivate(State& s) {
     s.target            = -1;

@@ -21,18 +21,6 @@
 
 namespace {
 
-// Translate a click x-coordinate to a byte index into `pending` based
-// on the monospace per-character advance and a known text-left x.
-// Both `advance > 0` and `text_left_x >= 0` must hold; callers gate
-// on those before invoking. The returned index is clamped to
-// [0, pending_size].
-int byte_index_from_click_x(double click_x, double text_left_x,
-                            double advance, int pending_size) {
-    const double offset = click_x - text_left_x;
-    int idx = static_cast<int>(std::nearbyint(offset / advance));
-    return std::clamp(idx, 0, pending_size);
-}
-
 // Brief D: strict signed two-decimal parse (sign, >=1 integer digit, '.',
 // exactly two fraction digits). Leading/trailing ASCII whitespace is
 // trimmed first so the bracket's `, ` separator round-trips. Lifted from
@@ -166,7 +154,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
                 : flag_pending_text_left_x(app, audio, idx);
             if (advance > 0.0 && text_left >= 0.0) {
                 app.top_flag_editor.cursor_pos =
-                    byte_index_from_click_x(
+                    text_editor::byte_index_from_click_x(
                         click_x, text_left, advance,
                         static_cast<int>(
                             app.top_flag_editor.pending.size()));
@@ -217,7 +205,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
             : flag_pending_text_left_x(app, audio, idx);
         if (advance > 0.0 && text_left >= 0.0) {
             app.top_flag_editor.cursor_pos =
-                byte_index_from_click_x(
+                text_editor::byte_index_from_click_x(
                     click_x, text_left, advance,
                     static_cast<int>(
                         app.top_flag_editor.pending.size()));

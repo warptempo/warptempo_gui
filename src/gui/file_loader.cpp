@@ -125,6 +125,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
+    app.editor_text_drag = EditorTextDragState{};
     app.last_sel_group = LastSelGroup::Markers;
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).

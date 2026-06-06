@@ -55,6 +55,14 @@ constexpr int      kProgressBarHeight        = 4;
 constexpr int      kTimestampPadX            = 8;
 constexpr double   kTabLetterGapPx           = 10.0;
 
+// F2.1: single source for the two bottom-strip editor prefixes. The paint
+// sites (render_bottom_strip_editor calls) and the mouse drag-to-select
+// geometry helper (active_editor_text in input_handler.cpp) both derive
+// the editable text's char-0 origin from these, so the origin math can
+// never drift from the painted prefix.
+constexpr const char* kSettingsEditorPrefix = "setting: ";
+constexpr const char* kBpmEditorPrefix      = "bpm: ";
+
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //
 // Lives for the life of main(); recreated when the waveform area is

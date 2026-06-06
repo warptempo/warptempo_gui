@@ -246,6 +246,17 @@ struct PlayheadDragState {
     int  press_marker_idx          = -1;
 };
 
+// F2.1: mouse drag-to-select inside the active text editor. Only one
+// editor is active at a time, so the active editor (and thus its text
+// geometry) is discoverable from the per-editor is_active checks; a single
+// armed flag is enough. Set on a press that lands on the active editor's
+// text region; cleared on release, on a lost button mid-drag, and on file
+// load (the motion / release handlers also self-heal if the backing editor
+// closes out from under an in-flight drag).
+struct EditorTextDragState {
+    bool active = false;
+};
+
 // Brief C: which selection group the most recent selecting gesture
 // targeted. Group-acting gestures (Delete, Ctrl+drag) act on exactly one
 // group, chosen by this tag. Set to Trim when a click/gesture lands on a
@@ -471,6 +482,10 @@ struct AppState {
     // Brief C: Ctrl+drag of a trim boundary stem. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
+
+    // F2.1: mouse drag-to-select inside the active text editor. Cleared on
+    // button release, on a lost button mid-drag, and on file load.
+    EditorTextDragState editor_text_drag;
 
     // Brief C: which selection group the last selecting gesture targeted.
     // Drives Delete / Ctrl+drag group dispatch. Session-only.

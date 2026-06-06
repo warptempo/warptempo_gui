@@ -220,6 +220,14 @@ private:
     // values / zero-duration span / no valid cells / renderer busy).
     bool render_bpm_sweep();
 
+    // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
+    // button release both route here). Collapses a never-moved anchor back
+    // to a plain caret (no selection), repaints the active editor's strip,
+    // and clears app.editor_text_drag. No-op on the strip repaint if no
+    // editor is active (the editor closed out from under the drag); the
+    // flag is cleared regardless.
+    void finalize_editor_text_drag();
+
     // X.7.8b-2: shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is
     // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-
