@@ -2461,6 +2461,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (hit_now >= 0 && app.active_markers_view != 'P') {
                     flag_editor.enter_top_flag_edit(
                         hit_now, static_cast<double>(x));
+                    arm_editor_text_drag_on_open();
                     return;
                 }
                 // Top strip click that isn't on a flag: exit and fall
@@ -2570,6 +2571,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     }
                     flag_editor.enter_top_flag_edit(
                         hit, static_cast<double>(x));
+                    arm_editor_text_drag_on_open();
                     return;
                 }
                 // P-view plain click and any Shift+click fall here.
@@ -2674,6 +2676,17 @@ void GuiInputHandler::finalize_editor_text_drag() {
         else                viewport.invalidate_top_strip();
     }
     app.editor_text_drag.active = false;
+}
+
+void GuiInputHandler::arm_editor_text_drag_on_open() {
+    if (!text_editor::is_active(app.top_flag_editor)) return;
+    // The caret was set from the click x inside enter_top_flag_edit;
+    // a collapsed anchor (anchor == caret) becomes a real selection
+    // only once the pointer moves, and on_button_release collapses it
+    // back to a plain caret if the press never moved.
+    app.top_flag_editor.selection_anchor =
+        app.top_flag_editor.cursor_pos;
+    app.editor_text_drag.active = true;
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,

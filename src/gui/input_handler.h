@@ -228,6 +228,14 @@ private:
     // flag is cleared regardless.
     void finalize_editor_text_drag();
 
+    // F2.1: after a mouse press opens (or switches) a flag editor, arm a
+    // selection drag with a collapsed anchor at the caret enter_top_flag_edit
+    // just placed from the click x, so the opening gesture itself can
+    // drag-select (web-address-bar behavior) instead of requiring a second
+    // press. No-op when the open was refused (editor not active, e.g.
+    // read-only), so a refused open changes nothing.
+    void arm_editor_text_drag_on_open();
+
     // X.7.8b-2: shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is
     // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-
