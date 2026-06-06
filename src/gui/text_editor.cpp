@@ -23,6 +23,31 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
+bool is_word_char(char c) {
+    return (c >= '0' && c <= '9') ||
+           (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z');
+}
+
+// Index of the boundary to the left of `pos`: skip separators
+// immediately left, then the word run beyond them.
+int prev_word_boundary(const std::string& s, int pos) {
+    int i = pos;
+    while (i > 0 && !is_word_char(s[static_cast<size_t>(i - 1)])) --i;
+    while (i > 0 &&  is_word_char(s[static_cast<size_t>(i - 1)])) --i;
+    return i;
+}
+
+// Index of the boundary to the right of `pos`: skip separators
+// immediately right, then the word run beyond them.
+int next_word_boundary(const std::string& s, int pos) {
+    const int n = static_cast<int>(s.size());
+    int i = pos;
+    while (i < n && !is_word_char(s[static_cast<size_t>(i)])) ++i;
+    while (i < n &&  is_word_char(s[static_cast<size_t>(i)])) ++i;
+    return i;
+}
+
 } // namespace
 
 int byte_index_from_click_x(double click_x, double text_left_x,
@@ -86,6 +111,19 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // Cursor motion. Shift extends a selection from an anchor; bare
     // motion collapses any existing selection to the corresponding edge.
     if (key == GuiKeys::Left) {
+        if (ctrl) {
+            // Word-left: optionally extend the selection (Shift), else
+            // collapse it, then jump the cursor to the previous boundary.
+            const int b = prev_word_boundary(s.pending, s.cursor_pos);
+            if (shift) {
+                if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
+            } else {
+                s.selection_anchor = -1;
+            }
+            s.cursor_pos = b;
+            touch_blink(s);
+            return KeyAction::Consumed;
+        }
         if (shift) {
             if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
             if (s.cursor_pos > 0) s.cursor_pos--;
@@ -101,6 +139,17 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::Consumed;
     }
     if (key == GuiKeys::Right) {
+        if (ctrl) {
+            const int b = next_word_boundary(s.pending, s.cursor_pos);
+            if (shift) {
+                if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
+            } else {
+                s.selection_anchor = -1;
+            }
+            s.cursor_pos = b;
+            touch_blink(s);
+            return KeyAction::Consumed;
+        }
         if (shift) {
             if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
             if (s.cursor_pos < static_cast<int>(s.pending.size())) {
@@ -144,6 +193,14 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (has_selection(s)) {
             erase_selection(s);
             s.red = false;
+        } else if (ctrl) {
+            const int b = prev_word_boundary(s.pending, s.cursor_pos);
+            if (b < s.cursor_pos) {
+                s.pending.erase(static_cast<size_t>(b),
+                                static_cast<size_t>(s.cursor_pos - b));
+                s.cursor_pos = b;
+                s.red = false;
+            }
         } else if (s.cursor_pos > 0) {
             s.pending.erase(static_cast<size_t>(s.cursor_pos - 1), 1);
             s.cursor_pos--;
@@ -156,6 +213,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (has_selection(s)) {
             erase_selection(s);
             s.red = false;
+        } else if (ctrl) {
+            const int e = next_word_boundary(s.pending, s.cursor_pos);
+            if (e > s.cursor_pos) {
+                s.pending.erase(static_cast<size_t>(s.cursor_pos),
+                                static_cast<size_t>(e - s.cursor_pos));
+                s.red = false;
+            }
         } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
             s.pending.erase(static_cast<size_t>(s.cursor_pos), 1);
             s.red = false;
