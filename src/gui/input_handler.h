@@ -236,6 +236,14 @@ private:
     // read-only), so a refused open changes nothing.
     void arm_editor_text_drag_on_open();
 
+    // Clipboard: perform the platform I/O for a Copy/Cut/Paste editor action
+    // against editor `s`, and report whether it handled one. Copy and cut
+    // push the selection to the clipboard (cut then deletes it); paste pulls
+    // the clipboard text into the selection. Returns false for any other
+    // action so the caller can fall through to its remaining branches.
+    bool apply_editor_clipboard(text_editor::KeyAction action,
+                                text_editor::State& s);
+
     // X.7.8b-2: shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is
     // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-

@@ -352,11 +352,13 @@ struct WaylandListeners {
     static void data_device_drop(void* data, struct wl_data_device*) {
         static_cast<GuiPlatform*>(data)->on_dnd_drop();
     }
-    // wl_data_device.selection (clipboard ownership change). Required
-    // listener slot; we ignore clipboard events entirely. NOTE: the
-    // offer arg may be NULL.
-    static void data_device_selection(void*, struct wl_data_device*,
-                                      struct wl_data_offer*) {}
+    // wl_data_device.selection (clipboard ownership change). The offer arg
+    // is the new CLIPBOARD selection offer, or NULL when the selection was
+    // cleared.
+    static void data_device_selection(void* data, struct wl_data_device*,
+                                      struct wl_data_offer* offer) {
+        static_cast<GuiPlatform*>(data)->on_selection(offer);
+    }
 
     // wl_data_offer
     static void data_offer_offer(void* data, struct wl_data_offer* offer,
@@ -370,6 +372,24 @@ struct WaylandListeners {
     // wl_data_offer.action (v3+). Required listener slot.
     static void data_offer_action(void*, struct wl_data_offer*,
                                   uint32_t) {}
+
+    // wl_data_source (the clipboard payload we own). The manager is bound at
+    // v3, so every v3 slot is filled; only send (a consumer is reading our
+    // payload) and cancelled (another client took the selection) do anything.
+    static void data_source_target(void*, struct wl_data_source*,
+                                   const char*) {}
+    static void data_source_send(void* data, struct wl_data_source* src,
+                                 const char* mime, int32_t fd) {
+        static_cast<GuiPlatform*>(data)->on_data_source_send(src, mime, fd);
+    }
+    static void data_source_cancelled(void* data, struct wl_data_source* src) {
+        static_cast<GuiPlatform*>(data)->on_data_source_cancelled(src);
+    }
+    static void data_source_dnd_drop_performed(void*,
+                                               struct wl_data_source*) {}
+    static void data_source_dnd_finished(void*, struct wl_data_source*) {}
+    static void data_source_action(void*, struct wl_data_source*,
+                                   uint32_t) {}
 };
 
 namespace {
@@ -469,6 +489,15 @@ const struct wl_data_offer_listener s_data_offer_listener = {
     WaylandListeners::data_offer_offer,
     WaylandListeners::data_offer_source_actions,
     WaylandListeners::data_offer_action,
+};
+
+const struct wl_data_source_listener s_data_source_listener = {
+    WaylandListeners::data_source_target,
+    WaylandListeners::data_source_send,
+    WaylandListeners::data_source_cancelled,
+    WaylandListeners::data_source_dnd_drop_performed,
+    WaylandListeners::data_source_dnd_finished,
+    WaylandListeners::data_source_action,
 };
 
 #pragma GCC diagnostic pop
@@ -650,6 +679,16 @@ void GuiPlatform::destroy_wayland_state() {
     }
 
     destroy_current_offer();
+    if (clipboard_source_) {
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_ = nullptr;
+    }
+    if (clipboard_offer_) {
+        // Detached from current_data_offer_ in on_selection, so this never
+        // double-frees what destroy_current_offer() already handled.
+        wl_data_offer_destroy(clipboard_offer_);
+        clipboard_offer_ = nullptr;
+    }
     if (wl_data_device_) {
         wl_data_device_release(wl_data_device_);
         wl_data_device_ = nullptr;
@@ -1330,8 +1369,12 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     repeat_key_ = 0;
 }
 
-void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
+void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
+    // Cache the serial for wl_data_device.set_selection: copy is always
+    // triggered by a Ctrl+C key event, so this is current at set time.
+    last_input_serial_ = serial;
+
     if (!xkb_state_) return;
 
     // Wayland delivers raw evdev keycodes (offset by 8 for X11
@@ -1647,6 +1690,7 @@ void GuiPlatform::on_data_offer(struct wl_data_offer* offer) {
     destroy_current_offer();
     current_data_offer_ = offer;
     current_offer_has_uri_list_ = false;
+    latest_offer_has_text_ = false;   // accumulates over this offer's mimes
     wl_data_offer_add_listener(offer, &s_data_offer_listener, this);
 }
 
@@ -1655,6 +1699,10 @@ void GuiPlatform::on_data_offer_mime_type(struct wl_data_offer* offer,
     if (offer != current_data_offer_) return;
     if (mime && std::strcmp(mime, "text/uri-list") == 0) {
         current_offer_has_uri_list_ = true;
+    }
+    if (mime && (std::strcmp(mime, "text/plain") == 0 ||
+                 std::strcmp(mime, "text/plain;charset=utf-8") == 0)) {
+        latest_offer_has_text_ = true;
     }
 }
 
@@ -1790,6 +1838,104 @@ std::string GuiPlatform::read_drop_data(int read_fd) {
         }
         if (r == 0) break;  // EOF
         out.append(buf, static_cast<size_t>(r));
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// Clipboard (regular CLIPBOARD selection)
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::clipboard_set_text(const std::string& text) {
+    clipboard_send_text_ = text;        // also the self-paste local copy
+    if (!wl_data_device_manager_ || !wl_data_device_) return;
+    if (clipboard_source_) {
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_ = nullptr;
+    }
+    clipboard_source_ = wl_data_device_manager_create_data_source(
+        wl_data_device_manager_);
+    if (!clipboard_source_) { clipboard_we_own_ = false; return; }
+    wl_data_source_add_listener(clipboard_source_,
+                                &s_data_source_listener, this);
+    wl_data_source_offer(clipboard_source_, "text/plain;charset=utf-8");
+    wl_data_source_offer(clipboard_source_, "text/plain");
+    wl_data_device_set_selection(wl_data_device_, clipboard_source_,
+                                 last_input_serial_);
+    clipboard_we_own_ = true;
+}
+
+void GuiPlatform::on_data_source_send(struct wl_data_source* /*src*/,
+                                      const char* /*mime*/, int fd) {
+    // Runs only for an EXTERNAL consumer (self-paste is short-circuited in
+    // clipboard_get_text), so a brief blocking write of a short string is
+    // fine.
+    const char* p = clipboard_send_text_.data();
+    size_t left   = clipboard_send_text_.size();
+    while (left > 0) {
+        ssize_t n = ::write(fd, p, left);
+        if (n <= 0) break;          // receiver went away (EPIPE etc.)
+        p    += n;
+        left -= static_cast<size_t>(n);
+    }
+    ::close(fd);
+}
+
+void GuiPlatform::on_data_source_cancelled(struct wl_data_source* src) {
+    if (src == clipboard_source_) {
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_   = nullptr;
+        clipboard_we_own_   = false;
+    }
+}
+
+void GuiPlatform::on_selection(struct wl_data_offer* offer) {
+    // Supersede any previous external clipboard offer.
+    if (clipboard_offer_ && clipboard_offer_ != offer) {
+        wl_data_offer_destroy(clipboard_offer_);
+    }
+    clipboard_offer_          = offer;          // may be null (cleared)
+    clipboard_offer_has_text_ = offer ? latest_offer_has_text_ : false;
+    // The selection offer is now owned by the clipboard slot. Detach it from
+    // the DnD current-offer slot (on_data_offer aliased them) so the next
+    // incoming data_offer's destroy_current_offer() cannot free it out from
+    // under us — that aliasing would otherwise double-free on the second
+    // external clipboard change and on a null-clear selection.
+    if (current_data_offer_ == offer) current_data_offer_ = nullptr;
+}
+
+std::string GuiPlatform::clipboard_get_text() {
+    // Self-paste: we own the selection — return the local copy, never touch
+    // the pipe (this is what avoids the same-thread send-then-read deadlock).
+    if (clipboard_we_own_) return clipboard_send_text_;
+    if (!clipboard_offer_ || !clipboard_offer_has_text_) return std::string();
+    int fds[2];
+    if (pipe(fds) != 0) return std::string();
+    wl_data_offer_receive(clipboard_offer_,
+                          "text/plain;charset=utf-8", fds[1]);
+    ::close(fds[1]);
+    wl_display_flush(wl_display_);
+    std::string out = read_clipboard_data(fds[0]);
+    ::close(fds[0]);
+    return out;
+}
+
+std::string GuiPlatform::read_clipboard_data(int read_fd) {
+    // Bounded, non-blocking read so a slow or large external source can
+    // never stall the editor. The editor truncates to the field cap
+    // afterward, so kMaxBytes is only a runaway guard.
+    std::string out;
+    fcntl(read_fd, F_SETFL, O_NONBLOCK);
+    const size_t kMaxBytes = 64 * 1024;
+    char buf[4096];
+    for (;;) {
+        struct pollfd pfd { read_fd, POLLIN, 0 };
+        int pr = poll(&pfd, 1, 50);          // up to 50 ms
+        if (pr <= 0) break;                  // timeout or error
+        ssize_t n = ::read(read_fd, buf, sizeof buf);
+        if (n <= 0) break;                   // EOF (source closed) or would-block end
+        out.append(buf, static_cast<size_t>(n));
+        if (out.size() >= kMaxBytes) break;
     }
     return out;
 }

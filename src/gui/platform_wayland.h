@@ -44,6 +44,14 @@ public:
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
 
+    // Regular clipboard (CLIPBOARD selection, not PRIMARY). clipboard_set_text
+    // claims the selection with our text as the payload; clipboard_get_text
+    // returns the current selection text (our own local copy on self-paste,
+    // a bounded non-blocking pipe read for an external owner). Empty string
+    // when nothing text-shaped is available.
+    void        clipboard_set_text(const std::string& text);
+    std::string clipboard_get_text();
+
     int width()  const;
     int height() const;
     int playback_tick_ms() const;
@@ -193,6 +201,31 @@ private:
     // predicate.
     int dnd_x_ = 0;
     int dnd_y_ = 0;
+
+    // -- Clipboard (regular CLIPBOARD selection) --
+    // clipboard_source_ is the wl_data_source we own while we hold the
+    // selection; clipboard_send_text_ is both its on-the-wire payload and
+    // the local copy a self-paste reads (so a copy-then-paste in the same
+    // process never touches the pipe and so cannot self-deadlock).
+    // clipboard_we_own_ is true between a successful set_selection and a
+    // cancelled event (another client claiming the selection).
+    struct wl_data_source* clipboard_source_      = nullptr;
+    std::string            clipboard_send_text_;
+    bool                   clipboard_we_own_       = false;
+
+    // clipboard_offer_ is the current EXTERNAL selection offer (an offer we
+    // do not own). clipboard_offer_has_text_ records whether it advertised a
+    // text mime. latest_offer_has_text_ accumulates text-mime sightings for
+    // the in-flight data_offer; on_selection latches it onto
+    // clipboard_offer_has_text_ when the offer is claimed as the selection.
+    struct wl_data_offer*  clipboard_offer_        = nullptr;
+    bool                   clipboard_offer_has_text_ = false;
+    bool                   latest_offer_has_text_  = false;
+
+    // Most recent serial from an input event, required by
+    // wl_data_device.set_selection. Cached in on_keyboard_key (copy is
+    // always a Ctrl+C key event, so the serial is current at set time).
+    uint32_t               last_input_serial_      = 0;
 
     // -- Keyboard --
     struct wl_seat*     wl_seat_     = nullptr;
@@ -355,4 +388,11 @@ private:
     void on_dnd_leave();
     void on_dnd_motion(uint32_t time, int32_t surface_x, int32_t surface_y);
     void on_dnd_drop();
+
+    // -- Clipboard handlers --
+    void on_data_source_send(struct wl_data_source* src,
+                             const char* mime, int fd);
+    void on_data_source_cancelled(struct wl_data_source* src);
+    void on_selection(struct wl_data_offer* offer);
+    std::string read_clipboard_data(int read_fd);
 };

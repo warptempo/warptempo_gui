@@ -57,6 +57,37 @@ int byte_index_from_click_x(double click_x, double text_left_x,
     return std::clamp(idx, 0, pending_size);
 }
 
+std::string selected_text(const State& s) {
+    if (!has_selection(s)) return std::string();
+    const int a = selection_start(s);
+    const int b = selection_end(s);
+    return s.pending.substr(static_cast<size_t>(a),
+                            static_cast<size_t>(b - a));
+}
+
+void replace_selection(State& s, const std::string& raw) {
+    if (has_selection(s)) erase_selection(s);
+    std::string clean;
+    clean.reserve(raw.size());
+    for (unsigned char c : raw) {
+        if (c >= 0x20 && c <= 0x7e) clean.push_back(static_cast<char>(c));
+    }
+    int cap = kMaxPendingChars;
+    if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
+    if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
+    if (s.kind == Kind::FlagPayload && s.iter_grammar)
+        cap = kMaxPendingCharsFlagIter;
+    const int room = cap - static_cast<int>(s.pending.size());
+    if (room > 0 && !clean.empty()) {
+        if (static_cast<int>(clean.size()) > room)
+            clean.resize(static_cast<size_t>(room));
+        s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
+        s.cursor_pos += static_cast<int>(clean.size());
+    }
+    s.red = false;
+    touch_blink(s);
+}
+
 void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;
@@ -106,6 +137,23 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
             touch_blink(s);
         }
         return KeyAction::Consumed;
+    }
+
+    // Ctrl+C / Ctrl+X / Ctrl+V: clipboard. These sit in the editor's owned
+    // keymap (returning a handled action), so they never fall through to the
+    // global dispatch; Ctrl+C/X/V are unbound globally, so no conflict. Copy
+    // and cut are a no-op (plain Consumed) without a selection; paste always
+    // requests — the input handler performs the platform I/O.
+    if (ctrl && key == GuiKeys::C) {
+        return has_selection(s) ? KeyAction::CopyRequested
+                                : KeyAction::Consumed;
+    }
+    if (ctrl && key == GuiKeys::X) {
+        return has_selection(s) ? KeyAction::CutRequested
+                                : KeyAction::Consumed;
+    }
+    if (ctrl && key == GuiKeys::V) {
+        return KeyAction::PasteRequested;
     }
 
     // Cursor motion. Shift extends a selection from an anchor; bare

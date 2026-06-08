@@ -539,6 +539,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
             return;
         }
+        if (apply_editor_clipboard(action, app.top_flag_editor)) {
+            // Same repaint as the Consumed branch — text may have changed
+            // (cut / paste); copy repaints harmlessly.
+            if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
+                viewport.invalidate_timestamp_area();
+            else
+                viewport.invalidate_top_strip();
+            return;
+        }
         if (action == text_editor::KeyAction::Consumed) {
             // The BpmBracket editor draws in the bottom strip (like the
             // settings editor); FlagPayload / IterationBracket draw in the
@@ -581,6 +590,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         if (action == text_editor::KeyAction::CancelRequested) {
             settings_editor.exit_no_commit();
+            return;
+        }
+        if (apply_editor_clipboard(action, app.settings_editor)) {
+            viewport.invalidate_timestamp_area();
             return;
         }
         if (action == text_editor::KeyAction::Consumed) {
@@ -2672,6 +2685,24 @@ void GuiInputHandler::arm_editor_text_drag_on_open() {
     app.top_flag_editor.selection_anchor =
         app.top_flag_editor.cursor_pos;
     app.editor_text_drag.active = true;
+}
+
+bool GuiInputHandler::apply_editor_clipboard(
+        text_editor::KeyAction action, text_editor::State& s) {
+    switch (action) {
+        case text_editor::KeyAction::CopyRequested:
+            gui.clipboard_set_text(text_editor::selected_text(s));
+            return true;
+        case text_editor::KeyAction::CutRequested:
+            gui.clipboard_set_text(text_editor::selected_text(s));
+            text_editor::replace_selection(s, std::string());
+            return true;
+        case text_editor::KeyAction::PasteRequested:
+            text_editor::replace_selection(s, gui.clipboard_get_text());
+            return true;
+        default:
+            return false;
+    }
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,

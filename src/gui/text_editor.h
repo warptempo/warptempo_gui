@@ -140,9 +140,22 @@ enum class KeyAction {
     Consumed,
     CommitRequested,
     CancelRequested,
+    CopyRequested,
+    CutRequested,
+    PasteRequested,
 };
 
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
+
+// Clipboard primitives, used by the input handler to bridge the editor's
+// selection model to the platform clipboard. selected_text returns the
+// highlighted substring (empty if no selection). replace_selection is the
+// paste/cut primitive: it erases any selection, sanitizes `raw` to printable
+// ASCII (0x20..0x7e — dropping control chars, newlines, tabs, non-ASCII),
+// truncates to the field's per-Kind cap, and inserts at the cursor. Cut calls
+// it with an empty string, which simply deletes the selection.
+std::string selected_text(const State& s);
+void        replace_selection(State& s, const std::string& raw);
 
 // Render-side helper: returns true if the cursor should be drawn this
 // frame. Period is 1000ms (~500ms on, ~500ms off) and resets at every
