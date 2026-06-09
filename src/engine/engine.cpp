@@ -23,7 +23,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -36,53 +35,6 @@
 #include "synthesis.h"
 
 namespace {
-
-// libsndfile virtual-IO over a caller-owned interleaved-float buffer. Lets
-// the engine read its source from memory without a wav-on-disk shim; the
-// per-frame sf_seek + sf_readf_float calls in synthesize_full hit this
-// VIO transparently.
-struct MemSrcCtx {
-    const uint8_t* data_bytes  = nullptr;
-    sf_count_t     total_bytes = 0;
-    sf_count_t     pos_bytes   = 0;
-};
-
-sf_count_t mem_get_filelen(void* user) {
-    return static_cast<MemSrcCtx*>(user)->total_bytes;
-}
-
-sf_count_t mem_seek(sf_count_t offset, int whence, void* user) {
-    auto* c = static_cast<MemSrcCtx*>(user);
-    sf_count_t np;
-    switch (whence) {
-        case SEEK_SET: np = offset; break;
-        case SEEK_CUR: np = c->pos_bytes + offset; break;
-        case SEEK_END: np = c->total_bytes + offset; break;
-        default:       return c->pos_bytes;
-    }
-    if (np < 0) np = 0;
-    if (np > c->total_bytes) np = c->total_bytes;
-    c->pos_bytes = np;
-    return c->pos_bytes;
-}
-
-sf_count_t mem_read(void* ptr, sf_count_t count, void* user) {
-    auto* c = static_cast<MemSrcCtx*>(user);
-    sf_count_t avail = c->total_bytes - c->pos_bytes;
-    sf_count_t n = count < avail ? count : avail;
-    if (n <= 0) return 0;
-    std::memcpy(ptr, c->data_bytes + c->pos_bytes, static_cast<size_t>(n));
-    c->pos_bytes += n;
-    return n;
-}
-
-sf_count_t mem_tell(void* user) {
-    return static_cast<MemSrcCtx*>(user)->pos_bytes;
-}
-
-sf_count_t mem_write(const void*, sf_count_t, void*) {
-    return 0;
-}
 
 // Shared FFTW thread init for full-render and detection-only paths. Sets
 // audio_stft.fftw_threads_inited if init succeeded.
@@ -169,40 +121,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // SF_INFO fields libsndfile needs for RAW float read. The total byte
-    // length the virtual-IO get_filelen callback returns is what libsndfile
-    // actually uses to size reads; the `frames` field here is informational.
     audio_stft.src_info.samplerate = p.source_sample_rate;
     audio_stft.src_info.channels   = p.source_channels;
     audio_stft.src_info.frames     = static_cast<sf_count_t>(p.source_audio_frames);
-    audio_stft.src_info.format     = SF_FORMAT_RAW | SF_FORMAT_FLOAT | SF_ENDIAN_CPU;
-    audio_stft.src_info.sections   = 1;
-    audio_stft.src_info.seekable   = 1;
 
-    MemSrcCtx mem_ctx;
-    mem_ctx.data_bytes =
-        reinterpret_cast<const uint8_t*>(p.source_audio_samples);
-    mem_ctx.total_bytes = static_cast<sf_count_t>(p.source_audio_frames) *
-                          static_cast<sf_count_t>(p.source_channels) *
-                          static_cast<sf_count_t>(sizeof(float));
-
-    SF_VIRTUAL_IO vio;
-    vio.get_filelen = mem_get_filelen;
-    vio.seek        = mem_seek;
-    vio.read        = mem_read;
-    vio.write       = mem_write;
-    vio.tell        = mem_tell;
-
-    audio_stft.src_snd = sf_open_virtual(&vio, SFM_READ, &audio_stft.src_info,
-                                         &mem_ctx);
-    if (!audio_stft.src_snd) {
-        std::cerr << "Error: sf_open_virtual failed for in-memory source: "
-                  << sf_strerror(nullptr) << "\n";
-        return EngineResult::Failed;
-    }
+    audio_stft.src_samples = p.source_audio_samples;
     audio_stft.channels = audio_stft.src_info.channels;
-    audio_stft.nyquist = audio_stft.src_info.samplerate / 2.0;
-    audio_stft.bin_hz_width = static_cast<double>(audio_stft.src_info.samplerate) / audio_stft.N;
     audio_stft.target_total_frames = audio_stft.timemap.back().tgt_frame + audio_stft.N;
 
     audio_stft.init_fftw();
@@ -257,9 +181,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
     }
 
-    audio_stft.attenuation_map.assign(audio_stft.frame_map.size(),
-        std::vector<double>(audio_stft.num_bands, 1.0));
-
     double duration_sec = static_cast<double>(audio_stft.target_total_frames) /
                           audio_stft.src_info.samplerate;
     std::cout << "[warptempo] Source: <in-memory buffer, "
@@ -309,12 +230,10 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     p1_ns = ns_between(t_p1_0, t_p1_1);
     std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
 
-    // Pass 2: synthesis (clean render, identity attenuation_map). The
-    // limiter-on disk path renders into an in-memory buffer that Pass 3 limits
-    // in place; every other path streams straight to its destination.
-    // attenuation_map stays all-1.0 (a no-op row), so synthesize_full — and
-    // therefore the limiter-off disk render — is byte-identical to the
-    // pre-relocation build.
+    // Pass 2: synthesis (clean render). The limiter-on disk path renders into
+    // an in-memory buffer that Pass 3 limits in place; every other path streams
+    // straight to its destination. synthesize_full applies no attenuation, so
+    // the limiter-off disk render is byte-identical to the pre-relocation build.
     // The limited chain runs on a buffer; the clean (None) disk path streams
     // float straight to file.
     const bool limited = audio_stft.limiter;

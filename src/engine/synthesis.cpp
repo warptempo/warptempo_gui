@@ -38,7 +38,6 @@ void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf) {
 
 void Synthesis::synthesize_full(
     AudioSTFT& stft,
-    std::complex<float>* spectra_cache,
     std::function<void(const float*, size_t)> write_cb,
     bool show_progress,
     const char* pass_label) {
@@ -81,34 +80,28 @@ void Synthesis::synthesize_full(
     };
 
     const int64_t src_frames = stft.src_info.frames;
-    // Planar source: channel-contiguous float copy of the whole source, read
-    // once. Replaces the per-frame sf_seek/sf_readf in analyze_into (each
-    // sample was previously read ~4x through libsndfile). Bit-identical: same
-    // floats, just resident in RAM.
+    // Planar source: channel-contiguous float copy of the whole source,
+    // deinterleaved once directly from the caller-owned interleaved buffer.
+    // Bit-identical: same floats, just resident in RAM.
     std::vector<float> planar(static_cast<size_t>(channels) *
                               static_cast<size_t>(src_frames));
     {
-        constexpr int64_t kChunk = 1 << 16;                  // frames per read
-        std::vector<float> stage(static_cast<size_t>(kChunk) * channels);
-        sf_seek(stft.src_snd, 0, SEEK_SET);
-        int64_t got = 0, pos = 0;
-        while (pos < src_frames &&
-               (got = sf_readf_float(stft.src_snd, stage.data(),
-                       std::min<int64_t>(kChunk, src_frames - pos))) > 0) {
-            for (int64_t f = 0; f < got; ++f)
-                for (int ch = 0; ch < channels; ++ch)
-                    planar[static_cast<size_t>(ch) * src_frames + (pos + f)] =
-                        stage[static_cast<size_t>(f) * channels + ch];
-            pos += got;
-        }
+        const float* src = stft.src_samples;
+        for (int64_t f = 0; f < src_frames; ++f)
+            for (int ch = 0; ch < channels; ++ch)
+                planar[static_cast<size_t>(ch) * src_frames + f] =
+                    src[static_cast<size_t>(f) * channels + ch];
     }
 
     // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
     // leaves in, then capped at stft.emit_sample_cap so the file ends at the
     // window's target position (render length == target length). See the
-    // timing-convention block in stft_container.h.
-    int64_t out_frames =
+    // timing-convention block in stft_container.h. mono_len is the uncapped
+    // per-channel push total (what each run_channel actually appends); the
+    // reserve uses it so the cap never under-reserves the mono buffer.
+    const int64_t mono_len =
         (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s + N / 2 : 0;
+    int64_t out_frames = mono_len;
     if (stft.emit_sample_cap > 0 && stft.emit_sample_cap < out_frames)
         out_frames = stft.emit_sample_cap;
 
@@ -124,7 +117,7 @@ void Synthesis::synthesize_full(
     std::vector<char> ch_cancelled(channels, 0);
 
     // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
-    // fm, stft.phase_reset_markers, stft.attenuation_map, stft.fft_ws[ch],
+    // fm, stft.phase_reset_markers, stft.fft_ws[ch],
     // stft.window/synth_window) and writes only mono[ch], chprof[ch],
     // ch_cancelled[ch]. Every buffer that was shared across channels in the old
     // frame-major loop (theta/dt/df/done scratch, the heap scratch, the OLA
@@ -156,7 +149,7 @@ void Synthesis::synthesize_full(
 
         std::vector<double> ola(N, 0.0);
         std::vector<float>& out = mono[ch];
-        out.reserve(static_cast<size_t>(out_frames));
+        out.reserve(static_cast<size_t>(mono_len));
 
         // t_a for analysis-frame index `aidx`. Beyond the last synthesis frame
         // the timemap range is exhausted (alpha == 1), so each extra
@@ -225,7 +218,6 @@ void Synthesis::synthesize_full(
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
             const bool    frame0     = (frame_idx == wbegin);
             const bool    seed_heap  = frame0 || prev_reset;
-            const double* atten_row  = stft.attenuation_map[frame_idx].data();
 
             const auto _h0 = prof_clock::now();
             stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
@@ -237,20 +229,14 @@ void Synthesis::synthesize_full(
             dt_prev.swap(dt_scratch);
 
             const auto _s0 = prof_clock::now();
-            stft.populate_synth_spectrum(ch, mag_cur, theta, atten_row);
+            stft.populate_synth_spectrum(ch, mag_cur, theta);
             chprof[ch].synthspec += prof_ns(_s0, prof_clock::now());
 
-            if (spectra_cache) {
-                std::complex<float>* dst = spectra_cache +
-                    (static_cast<size_t>(frame_idx) * channels + ch) * K;
-                const fftw_complex* src = stft.fft_ws[ch].ifft_in;
-                for (int k = 0; k < K; ++k)
-                    dst[k] = std::complex<float>(static_cast<float>(src[k][0]),
-                                                 static_cast<float>(src[k][1]));
-            }
-
             // IFFT length M; un-shift the centered frame back into the [0, N)
-            // OLA window (the inverse of analyze_frame's placement).
+            // OLA window (the inverse of analyze_frame's placement). With n in
+            // [0, N) and Mfft = 2N the index resolves to two contiguous ranges,
+            // so the split below replaces the per-sample modulo with no change to
+            // the loads, multiplies, or accumulation order.
             const auto _i0 = prof_clock::now();
             fftw_execute(stft.fft_ws[ch].plan_inv);
             chprof[ch].ifft += prof_ns(_i0, prof_clock::now());
@@ -259,16 +245,22 @@ void Synthesis::synthesize_full(
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             const double* io = stft.fft_ws[ch].ifft_out;
-            for (int n = 0; n < N; ++n) {
-                const double v = io[(n - half + Mfft) % Mfft];
+            for (int n = 0; n < half; ++n) {
+                const double v = io[n + Mfft - half];
+                ola[n] += (v * inv_M) * stft.synth_window[n];
+            }
+            for (int n = half; n < N; ++n) {
+                const double v = io[n - half];
                 ola[n] += (v * inv_M) * stft.synth_window[n];
             }
             chprof[ch].ola += prof_ns(_o0, prof_clock::now());
 
-            // End-of-frame per-channel state shift. theta -> th_prev; ph_cur ->
-            // ph_prev and ph_nxt -> ph_cur (mag likewise). After this, ph_prev
-            // holds frame_idx's analysis phase, ready for the next heap call.
-            th_prev = theta;
+            // End-of-frame per-channel state shift. theta -> th_prev (a swap:
+            // heap_phase fully overwrites theta before reading it next frame, so
+            // the stale th_prev the swap leaves in theta is dead on arrival);
+            // ph_cur -> ph_prev and ph_nxt -> ph_cur (mag likewise). After this,
+            // ph_prev holds frame_idx's analysis phase, ready for the next heap call.
+            th_prev.swap(theta);
             ph_prev.swap(ph_cur);
             ph_cur.swap(ph_nxt);
             mag_prev.swap(mag_cur);
@@ -414,7 +406,7 @@ void Synthesis::process(AudioSTFT& stft) {
         sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
     };
 
-    synthesize_full(stft, nullptr, write_to_file,
+    synthesize_full(stft, write_to_file,
                     /*show_progress=*/true,
                     /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
     sf_close(output_snd);
@@ -432,7 +424,7 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
     // The limited chain (spectral + peak backstop) runs in the engine after
     // synthesis, in place on this buffer — process_to_buffer always does the
     // plain append.
-    synthesize_full(stft, nullptr, append_to_buffer,
+    synthesize_full(stft, append_to_buffer,
                     /*show_progress=*/true,
                     /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
 }

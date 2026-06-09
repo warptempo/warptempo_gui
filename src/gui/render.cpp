@@ -382,18 +382,22 @@ void render_waveform(cairo_t* cr,
     std::vector<ColLine> lines;
     lines.reserve(static_cast<size_t>(area.w));
 
+    // Column i's left edge (f0) is column i-1's right edge (f1) — the same
+    // expression yields the same double, so its translation is the same too.
+    // Carry the prior column's right edge forward instead of retranslating it,
+    // halving the timemap calls per column in target view (no-op in source view).
+    double f_prev = static_cast<double>(viewport_start_sample);
+    double g_prev = timemap ? map_target_to_source(
+                        static_cast<size_t>(f_prev < 0.0 ? 0.0 : f_prev),
+                        *timemap)
+                            : f_prev;
     for (int i = 0; i < area.w; i++) {
-        const double f0 = static_cast<double>(viewport_start_sample) +
-                          (span * i)     / area.w;
         const double f1 = static_cast<double>(viewport_start_sample) +
                           (span * (i+1)) / area.w;
         // Target view: translate each column's [t0, t1) endpoint into
         // source-frame via the timemap so the pyramid read lands at the
         // matching authored audio. Source view: identity.
-        const double g0 = timemap ? map_target_to_source(
-                              static_cast<size_t>(f0 < 0.0 ? 0.0 : f0),
-                              *timemap)
-                                  : f0;
+        const double g0 = g_prev;
         const double g1 = timemap ? map_target_to_source(
                               static_cast<size_t>(f1 < 0.0 ? 0.0 : f1),
                               *timemap)
@@ -427,6 +431,7 @@ void render_waveform(cairo_t* cr,
         const double x_px     = area.x + i + 0.5;
 
         lines.push_back({x_px, y_top, y_bottom});
+        g_prev = g1;
     }
 
     cairo_save(cr);

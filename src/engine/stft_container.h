@@ -58,42 +58,24 @@ struct PghiHeapNode {
     bool   current;
 };
 
-// get_alpha() returns tgt_dur / src_dur, the engine-internal
-// alpha used by the phase vocoder.
-// alpha < 1.0: output shorter than source (user's tempo value > 1, speedup).
-// alpha > 1.0: output longer than source (user's tempo value < 1, slowdown).
-// Note: the engine's alpha is the reciprocal of the tempo value the
-// user authors in the warp marker file, which is consumed by the
-// parser as delta_tgt = delta_src / (tempo * scale).
-inline double get_alpha(size_t t_s, const std::vector<TimeMapSegment>& map) {
-    if (map.empty()) return 1.0;
-    if (t_s <= map.front().tgt_frame) return 1.0;
-    for (size_t i = 0; i < map.size() - 1; ++i) {
-        if (t_s >= map[i].tgt_frame && t_s < map[i+1].tgt_frame) {
-            double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
-            double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
-            return tgt_dur / src_dur;
-        }
-    }
-    return 1.0;
-}
-
 inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSegment>& map) {
     if (map.empty()) return static_cast<double>(src_frame);
     if (src_frame <= map.front().src_frame) return map.front().tgt_frame;
-    for (size_t i = 0; i < map.size() - 1; ++i) {
-        if (src_frame >= map[i].src_frame && src_frame < map[i+1].src_frame) {
-            double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
-            double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
-            double offset = static_cast<double>(src_frame - map[i].src_frame);
-            return map[i].tgt_frame + (offset * (tgt_dur / src_dur));
-        }
+    // Strictly monotonic src_frame (engine-validated; GUI builder emits
+    // strictly increasing segments), so the owning segment is found by
+    // binary search: i is the last segment with src_frame <= query.
+    auto it = std::upper_bound(
+        map.begin(), map.end(), src_frame,
+        [](size_t q, const TimeMapSegment& s) { return q < s.src_frame; });
+    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
+    if (i < map.size() - 1) {
+        double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
+        double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
+        double offset = static_cast<double>(src_frame - map[i].src_frame);
+        return map[i].tgt_frame + (offset * (tgt_dur / src_dur));
     }
     const auto& last = map.back();
-    if (src_frame >= last.src_frame) {
-        return last.tgt_frame + (src_frame - last.src_frame);
-    }
-    return 0.0;
+    return last.tgt_frame + (src_frame - last.src_frame);
 }
 
 // Inverse of map_source_to_target: piecewise-linear interpolation over
@@ -102,23 +84,23 @@ inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSe
 // per-column target-frame ranges into source-frame ranges for the
 // shared waveform paint. Symmetric edge cases: clamp to the first
 // segment for queries before the timemap's tgt start; identity past
-// the last segment; empty map degenerates to identity.
+// the last segment; empty map degenerates to identity. The owning
+// segment is found by binary search over the strictly monotonic tgt axis.
 inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSegment>& map) {
     if (map.empty()) return static_cast<double>(tgt_frame);
     if (tgt_frame <= map.front().tgt_frame) return map.front().src_frame;
-    for (size_t i = 0; i < map.size() - 1; ++i) {
-        if (tgt_frame >= map[i].tgt_frame && tgt_frame < map[i+1].tgt_frame) {
-            double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
-            double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
-            double offset = static_cast<double>(tgt_frame - map[i].tgt_frame);
-            return map[i].src_frame + (offset * (src_dur / tgt_dur));
-        }
+    auto it = std::upper_bound(
+        map.begin(), map.end(), tgt_frame,
+        [](size_t q, const TimeMapSegment& s) { return q < s.tgt_frame; });
+    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
+    if (i < map.size() - 1) {
+        double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
+        double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
+        double offset = static_cast<double>(tgt_frame - map[i].tgt_frame);
+        return map[i].src_frame + (offset * (src_dur / tgt_dur));
     }
     const auto& last = map.back();
-    if (tgt_frame >= last.tgt_frame) {
-        return last.src_frame + (tgt_frame - last.tgt_frame);
-    }
-    return 0.0;
+    return last.src_frame + (tgt_frame - last.tgt_frame);
 }
 
 // --- Output sample timing convention ---
@@ -144,11 +126,16 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSe
 //     (synthesis out_frames), not a recomputed frame-count formula.
 //
 // --- Central Pipeline Container ---
-// Peak memory dominated by overlap-add buffers, FFTW planning, and phase vocoder state arrays.
+// Peak memory dominated by the per-channel FFTW workspaces and, during
+// synthesis, the channel-contiguous planar source copy and per-channel output
+// streams.
 struct AudioSTFT {
     // Source metadata
     SF_INFO src_info{};
-    SNDFILE* src_snd = nullptr;
+    // Caller-owned interleaved float source (EngineParams::source_audio_samples).
+    // Valid for the duration of run_warptempo_engine. src_info carries the
+    // frame count, channel count, and sample rate that describe it.
+    const float* src_samples = nullptr;
     // Default N=4096: the analysis window length and the OLA frame stride
     // (R_s = N/4) baseline. Must stay divisible by 4; 4096 = 2^12 is FFTW-clean.
     int N = 4096;
@@ -161,7 +148,6 @@ struct AudioSTFT {
     int M = 0;
     int R_s = 0;
     int channels = 0;
-    double nyquist = 0.0;
     double bin_hz_width = 0.0;
     size_t target_total_frames = 0;
 
@@ -188,22 +174,11 @@ struct AudioSTFT {
     std::vector<FftWorkspace> fft_ws;       // size == channels
     bool fftw_threads_inited = false;
 
-    // Phase vocoder accumulators
-    std::vector<std::vector<double>> phi_prev;
-    std::vector<std::vector<double>> theta_prev;
-    std::vector<std::vector<double>> overlap_add;
-
-    // Virtual target buffer (Pass 1 output)
-    std::vector<float> virtual_tgt_buf;
-
     // Phase reset markers
     std::vector<PhaseResetMarker> phase_reset_markers;
 
     // Spectral limiter
     LimiterParams limiter_params;
-    int num_bands = 0;
-    std::vector<int> bin_to_band;                        // size K = N/2+1
-    std::vector<std::vector<double>> attenuation_map;    // [num_frames][num_bands]
 
     // Output path (derived from MD5 of source audio)
     std::string output_audio_file;
@@ -284,6 +259,7 @@ struct AudioSTFT {
         for (int ch = 0; ch < channels; ++ch) {
             FftWorkspace& w = fft_ws[ch];
             w.fft_in   = fftw_alloc_real(M);
+            std::fill(w.fft_in, w.fft_in + M, 0.0);
             w.fft_out  = fftw_alloc_complex(M / 2 + 1);
             w.plan_fwd = fftw_plan_dft_r2c_1d(M, w.fft_in, w.fft_out, FFTW_ESTIMATE);
             w.ifft_in  = fftw_alloc_complex(M / 2 + 1);
@@ -291,49 +267,14 @@ struct AudioSTFT {
             w.plan_inv = fftw_plan_dft_c2r_1d(M, w.ifft_in, w.ifft_out, FFTW_ESTIMATE);
         }
 
-        phi_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
-        theta_prev.assign(channels, std::vector<double>(M / 2 + 1, 0.0));
-        overlap_add.assign(channels, std::vector<double>(N, 0.0));
-
-        // 1/3-octave bin-to-band lookup (centers at 1000 * 2^(n/3), 20 Hz .. Nyquist)
-        const int K = M / 2 + 1;
-        bin_to_band.assign(K, 0);
-        std::vector<double> centers;
-        int n_min = static_cast<int>(std::ceil(3.0 * std::log2(20.0 / 1000.0)));
-        int n_max = static_cast<int>(std::floor(3.0 * std::log2(nyquist / 1000.0)));
-        for (int n = n_min; n <= n_max; ++n)
-            centers.push_back(1000.0 * std::pow(2.0, n / 3.0));
-        if (centers.empty()) centers.push_back(1000.0);
-        num_bands = static_cast<int>(centers.size());
-        for (int k = 0; k < K; ++k) {
-            double hz = k * bin_hz_width;
-            if (hz <= centers.front()) { bin_to_band[k] = 0; continue; }
-            if (hz >= centers.back())  { bin_to_band[k] = num_bands - 1; continue; }
-            double log_hz = std::log2(hz);
-            int best = 0;
-            double best_dist = std::abs(log_hz - std::log2(centers[0]));
-            for (int b = 1; b < num_bands; ++b) {
-                double d = std::abs(log_hz - std::log2(centers[b]));
-                if (d < best_dist) { best_dist = d; best = b; }
-            }
-            bin_to_band[k] = best;
-        }
-    }
-
-    void reset_phase_state() {
-        for (int ch = 0; ch < channels; ++ch) {
-            std::fill(phi_prev[ch].begin(), phi_prev[ch].end(), 0.0);
-            std::fill(theta_prev[ch].begin(), theta_prev[ch].end(), 0.0);
-            std::fill(overlap_add[ch].begin(), overlap_add[ch].end(), 0.0);
-        }
     }
 
     // --- Phase computation helpers ------------------------------------------
     //
     // The synthesis pipeline runs a one-deep analysis lookahead and calls
-    // analyze_frame / heap_phase / populate_synth_spectrum per frame. None of
-    // these helpers touch the member phi_prev/theta_prev accumulators; the
-    // pipeline owns all inter-frame state explicitly.
+    // analyze_frame / heap_phase / populate_synth_spectrum per frame. The
+    // pipeline owns all inter-frame state in run_channel locals (these helpers
+    // hold no inter-frame accumulators of their own).
 
     // Analysis: window + forward FFT of one channel from its planar source
     // slice (planar_ch, the channel-contiguous source copy) starting at sample
@@ -352,7 +293,12 @@ struct AudioSTFT {
         FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
         const int half = N / 2;
-        std::fill(w.fft_in, w.fft_in + M, 0.0);
+        // The centered placement (n - half + M) % M for n in [0, navail), navail <= N,
+        // only ever writes [0, N/2) and [M - N/2, M). The middle gap was zeroed once
+        // at allocation and is never written, so clearing the two end regions is a
+        // full clear of every sample any frame can have written.
+        std::fill(w.fft_in, w.fft_in + half, 0.0);
+        std::fill(w.fft_in + M - half, w.fft_in + M, 0.0);
         // Whole-frame guard (matches the old sf_seek/sf_readf behavior): a
         // frame whose start is out of [0, src_frames) is entirely zero; a valid
         // frame reads min(N, src_frames - ta) samples and zero-pads the tail.
@@ -525,26 +471,16 @@ struct AudioSTFT {
         }
     }
 
-    // Synthesis: populate ifft_in from magnitude mag and phase theta, applying
-    // optional per-band attenuation. Caller IFFTs and un-shifts to recover the
-    // origin-centered time-domain frame.
+    // Synthesis: populate ifft_in from magnitude mag and phase theta. Caller
+    // IFFTs and un-shifts to recover the origin-centered time-domain frame.
     void populate_synth_spectrum(int ch,
                                  const std::vector<double>& mag,
-                                 const std::vector<double>& theta,
-                                 const double* atten_row) {
+                                 const std::vector<double>& theta) {
         FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
-        if (atten_row) {
-            for (int k = 0; k < K; ++k) {
-                double scaled = mag[k] * atten_row[bin_to_band[k]];
-                w.ifft_in[k][0] = scaled * std::cos(theta[k]);
-                w.ifft_in[k][1] = scaled * std::sin(theta[k]);
-            }
-        } else {
-            for (int k = 0; k < K; ++k) {
-                w.ifft_in[k][0] = mag[k] * std::cos(theta[k]);
-                w.ifft_in[k][1] = mag[k] * std::sin(theta[k]);
-            }
+        for (int k = 0; k < K; ++k) {
+            w.ifft_in[k][0] = mag[k] * std::cos(theta[k]);
+            w.ifft_in[k][1] = mag[k] * std::sin(theta[k]);
         }
     }
 
@@ -557,6 +493,5 @@ struct AudioSTFT {
         }
         fft_ws.clear();
         if (fftw_threads_inited) fftw_cleanup_threads();
-        if (src_snd) sf_close(src_snd);
     }
 };

@@ -310,8 +310,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         }
     }
 
-    // Limiter-local gain map [frame][band], identity. The PV's
-    // stft.attenuation_map is never touched.
+    // Limiter-local gain map [frame][band], identity. The limiter solves over
+    // this map alone and reads nothing from the PV grid.
     std::vector<std::vector<double>> gain_map(
         num_frames_lim, std::vector<double>(num_bands, 1.0));
 
