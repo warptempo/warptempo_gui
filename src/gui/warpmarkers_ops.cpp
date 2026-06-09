@@ -90,6 +90,15 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
         sample = to_domain_frame(app, src_sample, tmap_after);
     }
     viewport.move_playhead_to(sample);
+
+    // Discrete timemap change while target view is displayed: the plate
+    // must re-warp. Route this one-shot jump through the synchronous
+    // rebuild — the same fix applied to tab cycling (Tab / Shift+Tab /
+    // Ctrl+Shift+Tab) and render-view entry — so the re-warped waveform,
+    // stems, flags, and playhead all land in one frame instead of
+    // flashing across the async worker's rebuild window. Source view
+    // skips it: marker edits don't change source-domain waveform pixels.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
@@ -180,6 +189,9 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Same discrete-timemap-change class as drop_marker (see comment
+    // there): re-warp synchronously in target view.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
@@ -539,8 +551,10 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
-// only if the markers actually moved. Playhead is left wherever it
-// ended up (tracked live in the motion handler) — no snap.
+// only if the markers actually moved. Playhead is left in place for
+// source-view and phase-reset drags; warp drags in target view
+// re-anchor it through the source domain (see the capture/re-anchor
+// blocks below).
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
@@ -552,6 +566,21 @@ void GuiWarpMarkersOps::commit_drag() {
     if (!app.drag.active) return;
     const bool moved = app.drag.moved;
     const bool phase_reset = (app.drag.drag_mode == 'P');
+    // Bug fix: the playhead is stored in active-domain frames, so a warp
+    // drag that changes the timemap would silently re-point it at
+    // different music. Capture its source-domain anchor against the
+    // pre-drag (frozen) map now; after write-back it is re-expressed
+    // through the new map below, so the playhead follows the deformation
+    // exactly like the marker chips. Phase-reset drags don't touch the
+    // timemap, and in source view the coordinate is already
+    // source-domain — both skip.
+    bool    reanchor_playhead   = false;
+    int64_t playhead_src_anchor = 0;
+    if (moved && !phase_reset && app.active_audio_view == 'T') {
+        playhead_src_anchor = to_source_frame(
+            app, app.playhead_cursor_sample, app.drag.frozen_timemap);
+        reanchor_playhead = true;
+    }
     // Cascade validation for warp drags. The frozen-coord regime keeps
     // build_timemaps from running during motion (paint sources from the
     // pre-drag snapshot in app.drag.frozen_timemap), so a drag end-state
@@ -617,6 +646,18 @@ void GuiWarpMarkersOps::commit_drag() {
         viewport.invalidate_timestamp_area();
     }
     viewport.invalidate_waveform_area();
+    if (reanchor_playhead) {
+        const int sr = audio.sample_rate();
+        const auto new_map = build_target_view_timemap(
+            app, sr, static_cast<long>(audio.total_frames()));
+        viewport.move_playhead_to(
+            to_domain_frame(app, playhead_src_anchor, new_map));
+    }
+    // Same discrete-timemap-change class as drop_marker (see comment
+    // there): the commit re-warps the plate, so render it synchronously
+    // — re-warped waveform and re-anchored playhead land in one frame.
+    if (moved && !phase_reset && app.active_audio_view == 'T')
+        viewport.kick_waveform_sync();
     if (moved) target_render.trigger();
 }
 
