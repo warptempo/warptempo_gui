@@ -332,7 +332,7 @@ void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
     const int filled = static_cast<int>(progress_fraction * w + 0.5f);
     if (filled <= 0) return;
     cairo_save(cr);
-    cairo_set_source_rgb(cr, 0.35, 0.35, 0.40);
+    cairo_set_source_rgb(cr, kProgressBar.r, kProgressBar.g, kProgressBar.b);
     cairo_rectangle(cr, x, y, filled, h);
     cairo_fill(cr);
     cairo_restore(cr);

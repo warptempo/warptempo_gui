@@ -27,6 +27,19 @@ struct GuiColor {
     double b;
 };
 
+// Build a GuiColor from a 0xRRGGBB hex literal, converting each 8-bit
+// channel to an exact [0,1] double. constexpr so palette constants stay
+// compile-time. RGB only (the renderer uses cairo_set_source_rgb); if an
+// alpha channel is ever needed, add a separate 0xRRGGBBAA overload rather
+// than widening this one.
+inline constexpr GuiColor hex(uint32_t rgb) {
+    return GuiColor{
+        static_cast<double>((rgb >> 16) & 0xFF) / 255.0,
+        static_cast<double>((rgb >>  8) & 0xFF) / 255.0,
+        static_cast<double>( rgb        & 0xFF) / 255.0,
+    };
+}
+
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). After Brief C, trim no longer dims any
 // renderer — it is consumed only by render_trim_stems to place the two
@@ -39,8 +52,8 @@ struct TrimRange {
 
 // Brief H palette: bases shared across the renderer module and
 // main.cpp.
-inline constexpr GuiColor kBackground       = {0.10, 0.10, 0.12};
-inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
+inline constexpr GuiColor kBackground       = hex(0x1A1A1F);
+inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 
 // Out-of-trim waveform sample color. Applied by on_redraw as a
 // CAIRO_OPERATOR_ATOP overlay over the out-of-trim sample pixels of the
@@ -51,19 +64,24 @@ inline constexpr GuiColor kWaveform         = {0.55, 0.75, 0.90};
 // the global out-of-trim dim and that stays retired; nothing but the sample
 // pixels dim. Default is roughly kWaveform blended ~55% toward kBackground
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
-inline constexpr GuiColor kWaveformDimmed   = {0.30, 0.39, 0.47};
-inline constexpr GuiColor kMarker           = {0.57, 0.27, 0.68};
-inline constexpr GuiColor kSelected         = {0.239, 0.682, 0.914};  // #3DAEE9 Breeze blue
-inline constexpr GuiColor kPlayheadScanner  = {0.95, 0.85, 0.35};
-inline constexpr GuiColor kPlayheadCursor   = {0.10, 0.74, 0.61};
-inline constexpr GuiColor kAccent           = {0.75, 0.20, 0.18};
-inline constexpr GuiColor kText             = {0.99, 0.99, 0.99};
+inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
+inline constexpr GuiColor kMarker           = hex(0x9145AD);
+inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
+inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);
+inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
+inline constexpr GuiColor kAccent           = hex(0xBF332E);
+inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
 // Brief C: trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
 // trim begin/end paints as a vertical stem in this color, or kSelected
 // when that boundary is selected.
-inline constexpr GuiColor kTrimMarker       = {0.965, 0.455, 0.000};
+inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
+
+// Progress-bar fill (the determinate load/render bar in render_progress_bar).
+// Promoted from an inline triple at render.cpp's progress-bar draw; nearest
+// hex to the former 0.35/0.35/0.40 gray, now tunable alongside the rest.
+inline constexpr GuiColor kProgressBar      = hex(0x59596A);
 
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
