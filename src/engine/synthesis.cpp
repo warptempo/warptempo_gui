@@ -406,9 +406,12 @@ void Synthesis::process(AudioSTFT& stft) {
         sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
     };
 
+    const std::string pass_label = stft.limiter
+        ? "[Pass 2/3] Synthesis........................ "
+        : "[Pass 2/2] Synthesis........................ ";
     synthesize_full(stft, write_to_file,
                     /*show_progress=*/true,
-                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
+                    /*pass_label=*/pass_label.c_str());
     sf_close(output_snd);
 }
 
@@ -424,9 +427,12 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
     // The limited chain (spectral + peak backstop) runs in the engine after
     // synthesis, in place on this buffer — process_to_buffer always does the
     // plain append.
+    const std::string pass_label = stft.limiter
+        ? "[Pass 2/3] Synthesis........................ "
+        : "[Pass 2/2] Synthesis........................ ";
     synthesize_full(stft, append_to_buffer,
                     /*show_progress=*/true,
-                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
+                    /*pass_label=*/pass_label.c_str());
 }
 
 void Synthesis::write_render_to_file(AudioSTFT& stft,

@@ -2061,7 +2061,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // invert the trim region; refuses equal-frame collisions.
         case GuiKeys::B: handle_trim_set_begin_at_playhead(); break;
         case GuiKeys::E: handle_trim_set_end_at_playhead();   break;
-        // TODO: growing binding set will want an in-GUI help overlay.
         default: break;
         }
     }

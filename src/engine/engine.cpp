@@ -223,7 +223,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         if (s >= fm.size()) continue;
         audio_stft.phase_reset_markers.push_back({static_cast<int>(s), F});
     }
-    std::cout << "[Pass 1/3] Phase reset placement............. "
+    std::cout << "[Pass 1/" << (audio_stft.limiter ? 3 : 2)
+              << "] Phase reset placement............. "
               << audio_stft.phase_reset_markers.size()
               << " phase resets\n";
     auto t_p1_1 = std::chrono::steady_clock::now();

@@ -232,8 +232,10 @@ RenderOutcome do_render(const RenderRequest& req,
 
         // Load the source from frame 0 to the end-trim point (plus margin),
         // NOT a begin-trimmed slice. The begin MUST stay at 0: the frame map's
-        // t_a accumulation runs from frame 0, and that inherited history is the
-        // entire reason the windowed render nulls against the full render. The
+        // t_a accumulation runs from frame 0, and that inherited history is
+        // what keeps the windowed render's source reads sample-aligned with the
+        // full render (the window head itself is a phase seed, so it converges
+        // toward the full render rather than nulling at the first frames). The
         // end is end-capped because no frame in the window reads source past
         // trim_end except the last analysis window's small reach — covered by
         // end_margin (one analysis hop, which grows with the stretch, plus the
