@@ -2706,7 +2706,7 @@ bool GuiInputHandler::apply_editor_clipboard(
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
-                                        int /*y*/, GuiInputState mods) {
+                                        int /*y*/, GuiInputState /*mods*/) {
     if (app.prompt.active) return;
     // F2.1: a left release ending an editor-text drag finalizes the
     // selection (or collapses to a caret) before the modal swallow below.
@@ -2717,106 +2717,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
     if (text_editor::is_active(app.settings_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.playhead_drag.active) {
-        // Brief F Section 1: if the playhead snapped onto a marker
-        // during the drag, commit selection on release. Plain release
-        // sets the snapped marker as the single selection; Shift
-        // release adds it to the existing set without removing
-        // anything. Off-marker release leaves selection alone.
-        const bool shift = mods.shift;
-        const int  sr    = audio.sample_rate();
-        int snapped = -1;
-        if (sr > 0) {
-            const int64_t ph = app.playhead_cursor_sample;
-            // Target view: marker time_seconds is source-domain;
-            // playhead is active-domain. Inverse-translate playhead
-            // once so the per-marker == comparison stays in source-
-            // frame. Render-view is unaffected (own coordinate system).
-            int64_t ph_for_local = ph;
-            if (!app.render_view_enabled &&
-                app.active_audio_view == 'T') {
-                const auto tmap = build_target_view_timemap(
-                    app, sr, static_cast<long>(audio.total_frames()));
-                ph_for_local = to_source_frame(app, ph, tmap);
-            }
-            if (app.render_view_enabled) {
-                if (app.active_markers_view == 'P') {
-                    const auto& mv = app.render_view_phase_resets;
-                    for (size_t i = 0; i < mv.size(); ++i) {
-                        const int64_t s = static_cast<int64_t>(
-                            std::nearbyint(mv[i].time_seconds *
-                                         static_cast<double>(sr)));
-                        if (s == ph) {
-                            snapped = static_cast<int>(i);
-                            break;
-                        }
-                    }
-                } else {
-                    const auto& mv = app.render_view_markers;
-                    for (size_t i = 0; i < mv.size(); ++i) {
-                        const int64_t s = static_cast<int64_t>(
-                            std::nearbyint(mv[i].time_seconds *
-                                         static_cast<double>(sr)));
-                        if (s == ph) {
-                            snapped = static_cast<int>(i);
-                            break;
-                        }
-                    }
-                }
-            } else if (app.active_markers_view == 'P') {
-                const auto& mv = app.phase_reset_markers.markers();
-                for (size_t i = 0; i < mv.size(); ++i) {
-                    const int64_t s = static_cast<int64_t>(
-                        std::nearbyint(mv[i].time_seconds *
-                                     static_cast<double>(sr)));
-                    if (s == ph_for_local) {
-                        snapped = static_cast<int>(i);
-                        break;
-                    }
-                }
-            } else {
-                const auto& mv = app.warpmarkers.markers();
-                for (size_t i = 0; i < mv.size(); ++i) {
-                    const int64_t s = static_cast<int64_t>(
-                        std::nearbyint(mv[i].time_seconds *
-                                     static_cast<double>(sr)));
-                    if (s == ph_for_local) {
-                        snapped = static_cast<int>(i);
-                        break;
-                    }
-                }
-            }
-        }
-        if (snapped >= 0) {
-            if (snapped == app.playhead_drag.press_marker_idx) {
-                // Press already committed selection for this marker; release
-                // is from a click-without-drag, not a drag-completion. Skip
-                // the snap-action so press/release don't overlap destructively
-                // (specifically, shift+click-remove must not be re-added by
-                // the release).
-                app.playhead_drag = PlayheadDragState{};
-                return;
-            }
-            if (app.render_view_enabled) {
-                // Brief J.2 Section 3: render-view writes the
-                // global live pair. active_markers_view tells us which
-                // marker list the indices map to.
-                if (shift) {
-                    app.selected_markers.insert(snapped);
-                    app.last_selected_marker = snapped;
-                } else {
-                    app.selected_markers.clear();
-                    app.selected_markers.insert(snapped);
-                    app.last_selected_marker = snapped;
-                }
-                gui.invalidate_region(0, 0, app.width, app.height);
-            } else if (shift) {
-                app.selected_markers.insert(snapped);
-                app.last_selected_marker = snapped;
-                viewport.invalidate_top_strip();
-            } else {
-                selection.set_single_selection(snapped);
-            }
-        }
+        // Selection is committed live during the drag (see on_motion); the
+        // release only ends the gesture. A click without a drag keeps the
+        // selection the press set, since no motion fired and this is a no-op
+        // on selection.
         app.playhead_drag = PlayheadDragState{};
         return;
     }
@@ -2932,6 +2836,33 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (new_playhead != app.playhead_cursor_sample) {
                 viewport.move_playhead_to(new_playhead);
             }
+            // Live selection in render view. Same model as source view, written
+            // through the global selection pair with a full-window invalidate to
+            // match this path's existing selection writes.
+            if (!mods.shift) {
+                if (hit >= 0) {
+                    const bool already_single =
+                        app.selected_markers.size() == 1 &&
+                        *app.selected_markers.begin() == hit;
+                    if (!already_single) {
+                        app.selected_markers.clear();
+                        app.selected_markers.insert(hit);
+                        app.last_selected_marker = hit;
+                        gui.invalidate_region(0, 0, app.width, app.height);
+                    }
+                } else if (!app.selected_markers.empty() ||
+                           app.last_selected_marker != -1) {
+                    app.selected_markers.clear();
+                    app.last_selected_marker = -1;
+                    gui.invalidate_region(0, 0, app.width, app.height);
+                }
+            } else if (hit >= 0 &&
+                       hit != app.playhead_drag.press_marker_idx &&
+                       !app.selected_markers.count(hit)) {
+                app.selected_markers.insert(hit);
+                app.last_selected_marker = hit;
+                gui.invalidate_region(0, 0, app.width, app.height);
+            }
             return;
         }
         const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
@@ -3003,6 +2934,36 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (new_playhead != app.playhead_cursor_sample) {
             viewport.move_playhead_to(new_playhead);
         }
+        // Live selection: the playhead drag selects the marker under the
+        // cursor as it moves. No-Shift tracks a single selection and clears
+        // when the cursor leaves every marker; Shift adds markers passed over
+        // and never clears. press_marker_idx is skipped under Shift so a
+        // Shift-press toggle is not re-added by an incidental motion.
+        bool sel_changed = false;
+        if (!mods.shift) {
+            if (hit >= 0) {
+                const bool already_single =
+                    app.selected_markers.size() == 1 &&
+                    *app.selected_markers.begin() == hit;
+                if (!already_single) {
+                    selection.set_single_selection(hit);
+                    sel_changed = true;
+                }
+            } else if (!app.selected_markers.empty() ||
+                       app.last_selected_marker != -1) {
+                selection.clear_selection();
+                sel_changed = true;
+            }
+        } else if (hit >= 0 &&
+                   hit != app.playhead_drag.press_marker_idx &&
+                   !app.selected_markers.count(hit)) {
+            app.selected_markers.insert(hit);
+            app.last_selected_marker = hit;
+            app.last_sel_group = LastSelGroup::Markers;
+            viewport.invalidate_top_strip();
+            sel_changed = true;
+        }
+        if (sel_changed) viewport.invalidate_waveform_area();
         return;
     }
     if (!app.drag.active) {
