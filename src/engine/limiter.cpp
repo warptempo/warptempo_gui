@@ -220,13 +220,15 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     const int    K_lim   = M_lim / 2 + 1;     // 2049
     const double bin_hz_width_lim = static_cast<double>(sample_rate) / N_lim;
 
-    // COLA analysis/synthesis Hann pair for 75% overlap (synth = analysis/1.5;
-    // sum of Hann^2 over 4 overlapping frames is 1.5, so the round-trip is
-    // unity). Replicated locally for N_lim — the PV's windows are length N too
-    // but planned on the 2N grid.
+    // COLA analysis/synthesis Hann pair for 75% overlap (synth = analysis/1.5).
+    // Periodic Hann (denominator N_lim, not N_lim - 1): at R_s_lim = N_lim/4 the
+    // four overlapping squared windows sum to exactly 3/2 at every sample, so
+    // the /1.5 synthesis window is the exact dual and the round-trip is unity
+    // with no COLA ripple. Replicated locally for N_lim — the PV's windows are
+    // length N too but planned on the 2N grid.
     std::vector<double> window(N_lim), synth_window(N_lim);
     for (int n = 0; n < N_lim; ++n) {
-        window[n]       = 0.5 * (1.0 - std::cos(2.0 * M_PI * n / (N_lim - 1)));
+        window[n]       = 0.5 * (1.0 - std::cos(2.0 * M_PI * n / N_lim));
         synth_window[n] = window[n] / 1.5;
     }
 

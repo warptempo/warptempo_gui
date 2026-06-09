@@ -250,8 +250,13 @@ struct AudioSTFT {
         bin_hz_width = static_cast<double>(src_info.samplerate) / M;
         window.resize(N);
         synth_window.resize(N);
+        // Periodic Hann (denominator N, not N - 1); at R_s = N/4 the four
+        // overlapping squared windows sum to exactly 3/2 at every sample, so the
+        // /1.5 synthesis window is the exact Prusa-Holighaus dual (their eq. 11
+        // with constant denominator) and the OLA round trip is unity with no
+        // COLA ripple.
         for (int n = 0; n < N; ++n) {
-            window[n] = 0.5 * (1.0 - std::cos(2.0 * M_PI * n / (N - 1)));
+            window[n] = 0.5 * (1.0 - std::cos(2.0 * M_PI * n / N));
             synth_window[n] = window[n] / 1.5;
         }
 
