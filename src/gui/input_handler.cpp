@@ -2897,8 +2897,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (spp <= 0.0) return;
 
         // Marker snap test — uses the same 3px epsilon as marker hit-test.
-        // Selection is fixed at press time and is NOT mutated here; the
-        // snap is purely a playhead-positioning magnet.
+        // The snap is purely a playhead-positioning magnet; marker
+        // selection is committed live below, from the hit index.
         const int hit = hit_test_marker_line(app, audio, mouse_x);
         int64_t new_playhead;
         if (hit >= 0) {
