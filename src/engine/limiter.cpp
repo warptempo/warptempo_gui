@@ -33,6 +33,7 @@ constexpr int    MAX_REFINEMENT_TRIES     = 3;    // extra attempts past the fir
 constexpr int    MAX_CLAMP_REDIST_TRIES   = 8;    // safety cap on apply_update inner loop
 constexpr int    MAX_PEAK_RESOLVE_PASSES  = 4;    // per-lineage outer re-queue cap (architect sweeps)
 constexpr double DIAG_FLOOR_DB            = 12.0; // reduction (dB) that fills diag floor
+constexpr bool   kCidSelfCheck            = false; // cross-check direct c_id against band_ifft
 
 struct Peak {
     int64_t sample_idx;     // position in the reconstruction (pre coords)
@@ -57,7 +58,10 @@ struct LimGrid {
 };
 
 // IFFT of a single band (all other bins zeroed) with gain applied, scaled by
-// 1/M and synth-windowed into the [0, N) OLA window. No unshift.
+// 1/M and synth-windowed into the [0, N) OLA window. No unshift. Self-check
+// only: the main path computes c_id by single-point inverse DFT (see the peak
+// loop); this remains as the byte-for-byte reference the kCidSelfCheck flag
+// cross-checks against.
 static void band_ifft(const LimGrid& g, const std::complex<float>* spec,
                       int band, double gain, std::vector<double>& out) {
     const int K = g.K;
@@ -286,6 +290,17 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     g.plan_inv = plan_inv; g.inv_in = inv_in; g.inv_out = inv_out;
     g.synth_window = synth_window.data(); g.bin_to_band = bin_to_band.data();
 
+    // Single-sample inverse-DFT twiddle table: cos and sin of 2*pi*j/M_lim
+    // for j in [0, M_lim). The c_id evaluation below indexes it with
+    // (k * local) mod M_lim via an integer stride, so every angle factor is
+    // an exact table entry — no recurrence drift across the bin loop.
+    std::vector<double> tw_cos(M_lim), tw_sin(M_lim);
+    for (int j = 0; j < M_lim; ++j) {
+        const double a = 2.0 * M_PI * j / M_lim;
+        tw_cos[j] = std::cos(a);
+        tw_sin[j] = std::sin(a);
+    }
+
     // Front-padded interleaved sample read (zero outside [0, render_frames)).
     auto padded_sample = [&](int64_t pre_idx, int ch) -> double {
         int64_t r = pre_idx - N_lim;
@@ -350,9 +365,9 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     reduction_db_list.reserve(queue.size());
     residual_db_list.reserve(queue.size());
 
-    std::vector<double> frame_time_buf(N_lim);
     std::vector<float>  rescan_slice;
     std::vector<int>    frames_cov;
+    double cid_selfcheck_max_diff = 0.0;  // tracked only when kCidSelfCheck
 
     int iterations = 0;
 
@@ -372,7 +387,11 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         contributing_frames(peak.sample_idx, R_s_lim, N_lim, num_frames_lim, frames_cov);
         if (frames_cov.empty()) continue;
 
-        // c_id[i][b] = identity-gain IFFT of band b at the offending sample.
+        // c_id[i][b] = identity-gain contribution of band b at the offending
+        // sample: a single-point inverse DFT accumulated per band in one pass
+        // over the bins. Equals band_ifft(...)[local] for every band at once
+        // (halfcomplex c2r identity above), times the same 1/M and
+        // synth_window[local] scaling band_ifft applied.
         std::vector<double> c_id(frames_cov.size() * num_bands, 0.0);
         for (size_t i = 0; i < frames_cov.size(); ++i) {
             int m = frames_cov[i];
@@ -380,9 +399,27 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             if (local < 0 || local >= N_lim) continue;
             const std::complex<float>* spec =
                 cached_spectra.data() + (static_cast<size_t>(m) * channels + peak.ch) * K_lim;
-            for (int b = 0; b < num_bands; ++b) {
-                band_ifft(g, spec, b, 1.0, frame_time_buf);
-                c_id[i * num_bands + b] = frame_time_buf[local];
+            double* row = &c_id[i * num_bands];
+            const int step = static_cast<int>(local);   // < M_lim by the guard above
+            int j = 0;                                  // (k * step) mod M_lim
+            for (int k = 0; k < K_lim; ++k) {
+                const double re = spec[k].real();
+                const double im = spec[k].imag();
+                const double w  = (k == 0 || k == K_lim - 1) ? 1.0 : 2.0;
+                row[bin_to_band[k]] += w * (re * tw_cos[j] - im * tw_sin[j]);
+                j += step;
+                if (j >= M_lim) j -= M_lim;
+            }
+            const double s = (1.0 / M_lim) * synth_window[static_cast<size_t>(local)];
+            for (int b = 0; b < num_bands; ++b) row[b] *= s;
+
+            if (kCidSelfCheck) {
+                std::vector<double> frame_time_buf(N_lim);
+                for (int b = 0; b < num_bands; ++b) {
+                    band_ifft(g, spec, b, 1.0, frame_time_buf);
+                    double d = std::abs(frame_time_buf[local] - row[b]);
+                    if (d > cid_selfcheck_max_diff) cid_selfcheck_max_diff = d;
+                }
             }
         }
 
@@ -615,6 +652,10 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         reduction_db_list.push_back(reduction_db);
         residual_db_list.push_back(residual_db);
     }
+
+    if (kCidSelfCheck)
+        std::cerr << "  [c_id self-check] max |direct - band_ifft| = "
+                  << cid_selfcheck_max_diff << "\n";
 
     // Replace the render with the limited reconstruction (kept region). The
     // whole buffer is the STFT round-trip, so this is not bit-nullable against
