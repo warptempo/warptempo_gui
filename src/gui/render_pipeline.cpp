@@ -174,6 +174,25 @@ RenderOutcome do_render(const RenderRequest& req,
             compose_sibling_output_path(req.source_audio_path,
                                         req.engine_settings).string();
     }
+    // Hard refusal: never overwrite the source audio itself. Overwriting a
+    // previous render with the same title is intended behavior; the source
+    // is the one path that must survive every dispatch. equivalent() is an
+    // inode-level match and only succeeds when both paths exist — if the
+    // output path doesn't exist yet it cannot be the source.
+    {
+        std::error_code ec;
+        if (std::filesystem::exists(final_output_path, ec) &&
+            std::filesystem::equivalent(final_output_path,
+                                        req.source_audio_path, ec)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: output '%s' resolves to the "
+                "source audio file; refusing to overwrite the source. "
+                "Change the title setting.\n",
+                final_output_path.c_str());
+            return RenderOutcome::Failed;
+        }
+    }
+
     // Staging path used by the wav engine path's atomic rename. Text-file
     // formats write final_output_path directly.
     const std::string staging_output_path = final_output_path + ".tmp";

@@ -398,6 +398,9 @@ std::vector<TimeMapSegment> build_target_view_timemap(
     // Trim is render-time, not view-time — target view paints the WHOLE
     // song. Forcing trim off here matches the paint_handler construction
     // so hit-test math and waveform paint walk the same segment list.
+    // This overload always builds directly and is the entry point for
+    // hypothetical (non-live) marker lists; live-state consumers go
+    // through the cache via the AppState overload.
     tmin.has_trim_begin = false;
     tmin.trim_begin_sec = 0.0;
     tmin.has_trim_end   = false;
@@ -412,13 +415,36 @@ std::vector<TimeMapSegment> build_target_view_timemap(
     return out;
 }
 
+const TargetTimemapCache& target_view_timemap_cached(
+    const AppState& app, int sample_rate, long total_frames) {
+    TargetTimemapCache& c = app.target_timemap_cache;
+    const long long gen = app.warpmarkers.generation();
+    const double scale  = app.engine_settings.scale;
+    if (c.valid && c.markers_gen == gen && c.scale == scale &&
+        c.sample_rate == sample_rate && c.total_frames == total_frames) {
+        return c;
+    }
+    c.timemap = build_target_view_timemap(
+        app.warpmarkers.markers(), scale, sample_rate, total_frames);
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (const auto& s : c.timemap) {
+        h ^= static_cast<uint64_t>(s.src_frame);
+        h *= 0x100000001b3ULL;
+        h ^= static_cast<uint64_t>(s.tgt_frame);
+        h *= 0x100000001b3ULL;
+    }
+    c.hash         = c.timemap.empty() ? 0 : h;
+    c.markers_gen  = gen;
+    c.scale        = scale;
+    c.sample_rate  = sample_rate;
+    c.total_frames = total_frames;
+    c.valid        = true;
+    return c;
+}
+
 std::vector<TimeMapSegment> build_target_view_timemap(
     const AppState& app, int sample_rate, long total_frames) {
-    return build_target_view_timemap(
-        app.warpmarkers.markers(),
-        app.engine_settings.scale,
-        sample_rate,
-        total_frames);
+    return target_view_timemap_cached(app, sample_rate, total_frames).timemap;
 }
 
 int64_t to_source_frame(const AppState& app, int64_t domain_frame,

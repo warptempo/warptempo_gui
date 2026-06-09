@@ -5,6 +5,7 @@
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
 #include "phase_reset_markers.h"
+#include "timemap.h"
 #include "warpmarkers.h"
 
 #include <chrono>
@@ -470,6 +471,10 @@ struct AppState {
     // the deformed timeline's length. Zero is sentinel for "not yet
     // populated" — the toggle handler is the only writer in brief 1.
     int64_t target_view_total_frames = 0;
+
+    // Memoized target-view timemap (see timemap.h). Mutable: consulted and
+    // refreshed from const hit-test paths.
+    mutable TargetTimemapCache target_timemap_cache;
 
     // Ctrl+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.

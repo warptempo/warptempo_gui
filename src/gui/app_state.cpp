@@ -287,9 +287,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             target_timemap = app.drag.frozen_timemap;
         } else {
             target_timemap = build_target_view_timemap(
-                app.warpmarkers.markers(),
-                app.engine_settings.scale,
-                audio.sample_rate(),
+                app, audio.sample_rate(),
                 static_cast<long>(audio.total_frames()));
         }
     }

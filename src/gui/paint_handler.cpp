@@ -558,9 +558,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     dbg_tmap = app.drag.frozen_timemap;
                 } else {
                     dbg_tmap = build_target_view_timemap(
-                        app.warpmarkers.markers(),
-                        app.engine_settings.scale,
-                        sr,
+                        app, sr,
                         static_cast<long>(audio.total_frames()));
                 }
             }
@@ -844,30 +842,11 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         if (app.drag.active) {
             target_timemap = app.drag.frozen_timemap;
         } else {
-            TimemapBuildInput tmin;
-            tmin.markers      = resolve_markers_for_render(
-                                     app.warpmarkers.markers());
-            tmin.scale        = app.engine_settings.scale;
-            tmin.sample_rate  = sr;
-            tmin.total_frames = static_cast<long>(audio.total_frames());
-            tmin.has_trim_begin = false;
-            tmin.trim_begin_sec = 0.0;
-            tmin.has_trim_end   = false;
-            tmin.trim_end_sec   = 0.0;
-            TimemapBuildResult tmres;
-            if (build_timemaps(tmin, tmres)) {
-                target_timemap.reserve(tmres.standard.size());
-                uint64_t h = 0xcbf29ce484222325ULL;
-                for (const auto& s : tmres.standard) {
-                    target_timemap.push_back(TimeMapSegment{
-                        s.src_frame, s.tgt_frame});
-                    h ^= static_cast<uint64_t>(s.src_frame);
-                    h *= 0x100000001b3ULL;
-                    h ^= static_cast<uint64_t>(s.tgt_frame);
-                    h *= 0x100000001b3ULL;
-                }
-                target_timemap_hash = h;
-            }
+            const TargetTimemapCache& c =
+                target_view_timemap_cached(app, sr,
+                    static_cast<long>(audio.total_frames()));
+            target_timemap      = c.timemap;       // job needs an owned snapshot
+            target_timemap_hash = c.hash;
         }
     }
 

@@ -4,6 +4,7 @@
 #include "engine/stft_container.h"   // TimeMapSegment
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -119,6 +120,31 @@ std::vector<TimeMapSegment> build_target_view_timemap(
 // AppState forward declaration suffices here.
 struct AppState;
 std::vector<TimeMapSegment> build_target_view_timemap(
+    const AppState& app, int sample_rate, long total_frames);
+
+// Memoized target-view timemap. One entry, keyed on the inputs that
+// determine the map: the warp-marker store generation, the scale
+// setting, and the audio identity (sample rate, total frames). The
+// entry also carries the FNV-1a hash of the segment list, computed at
+// rebuild, so the waveform-cache fingerprint reads it instead of
+// rehashing per tick. A failed or empty build is cached too (empty
+// timemap, hash 0) — callers already treat an empty map as identity.
+struct TargetTimemapCache {
+    bool      valid        = false;
+    long long markers_gen  = -1;
+    double    scale        = 0.0;
+    int       sample_rate  = 0;
+    long      total_frames = 0;
+    std::vector<TimeMapSegment> timemap;
+    uint64_t  hash         = 0;
+};
+
+// Returns the cache entry for the app's live marker store, rebuilding
+// it first if the key does not match. The reference is valid until the
+// next call with a changed key (single-threaded GUI use only — the
+// waveform worker receives its own copy via the job, never this
+// reference).
+const TargetTimemapCache& target_view_timemap_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Inverse-translate a domain-frame coordinate (active-domain) into a

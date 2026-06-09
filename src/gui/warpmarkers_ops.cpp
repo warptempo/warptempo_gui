@@ -569,6 +569,8 @@ void GuiWarpMarkersOps::commit_drag() {
             if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
             proposed[idx].time_seconds = app.drag.moveable_times[k];
         }
+        // Builds from a proposed list, intentionally bypasses the
+        // live-state cache.
         const auto tmap = build_target_view_timemap(
             proposed, app.engine_settings.scale, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
