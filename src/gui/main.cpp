@@ -306,10 +306,11 @@ int max_valid_numeric_level(int waveform_width_px,
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
-    if (a.active_audio_view == 'T' &&
-        !a.render_view_enabled &&
-        a.target_view_total_frames > 0) {
-        return a.target_view_total_frames;
+    if (a.active_audio_view == 'T' && !a.render_view_enabled) {
+        const TargetTimemapCache& c = target_view_timemap_cached(
+            a, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        if (c.tgt_total_frames > 0) return c.tgt_total_frames;
     }
     return audio.total_frames();
 }
@@ -641,6 +642,40 @@ int main(int argc, char** argv) {
         // Runs first so the worker is kicked off before any of the
         // tick-time paint invalidations below.
         paint_handler.maybe_enqueue_waveform_render();
+
+        // Backstop: if the live-domain total changed under the current view
+        // (scale commit, tempo edit, marker move while target view is
+        // displayed), the current zoom level and viewport may sit outside
+        // the new bounds. Re-clamp both; when either actually moved, the
+        // displayed geometry changed discretely, so rebuild synchronously
+        // (same class as drop_marker — see warpmarkers_ops.cpp).
+        {
+            const int64_t lt = live_total_frames(app, audio);
+            if (app.last_tick_live_total != lt) {
+                app.last_tick_live_total = lt;
+                bool changed = false;
+                const GuiRect area = waveform_area(app);
+                const int max_l = max_valid_numeric_level(
+                    area.w, lt, audio.sample_rate());
+                if (app.zoom_level >= kMinNumericLevel) {
+                    const int clamped =
+                        (max_l < kMinNumericLevel) ? 0   // fit-file only
+                                                   : std::min(app.zoom_level, max_l);
+                    if (clamped != app.zoom_level) {
+                        app.zoom_level = clamped;
+                        changed = true;
+                    }
+                }
+                const int64_t old_vp = app.viewport_start_sample;
+                clamp_viewport_start(app, audio);
+                if (app.viewport_start_sample != old_vp) changed = true;
+                if (changed) {
+                    viewport.invalidate_waveform_area();
+                    viewport.invalidate_timestamp_area();
+                    viewport.kick_waveform_sync();
+                }
+            }
+        }
 
         // Stage B: stem-cache dirty-detect. Runs AFTER the waveform's
         // dirty-detect on purpose — both layers key their displayed-

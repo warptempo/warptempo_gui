@@ -82,7 +82,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // at end-of-load will dispatch a fresh target render if the parsed
     // .settings landed us in target view.
     target_render.cancel_for_load();
-    app.target_view_total_frames = 0;
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
@@ -286,28 +285,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.engine_settings = std::move(*es);
     }
 
-    // If the parsed .settings landed us in target view, populate the
-    // target-domain total-frame cache from the timemap before the
-    // viewport clamp below reads live_total_frames. The cache is
-    // otherwise only written by the S→T toggle handler; on a file that
-    // *opens* in target view, that toggle never runs, so without this
-    // step the clamp + first paint use the source length and the
-    // waveform renders short of the target length. The target *length*
-    // is a pure timemap computation — it does NOT require the audio
-    // render to finish. Mirrors the S→T toggle's computation exactly
-    // (trim-agnostic: full source frames in, fall back to source length
-    // if the timemap is degenerate).
-    if (app.active_audio_view == 'T') {
-        const auto tmap = build_target_view_timemap(
-            app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
-        const int64_t src_total = audio.total_frames();
-        const double tgt_total_d = map_source_to_target(
-            static_cast<size_t>(src_total < 0 ? 0 : src_total), tmap);
-        const int64_t tgt_total =
-            static_cast<int64_t>(std::nearbyint(tgt_total_d));
-        app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
-    }
+    // If the parsed .settings landed us in target view, the deformed
+    // total the viewport clamp below needs is derived on demand from the
+    // timemap cache by live_total_frames (the markers and engine_settings
+    // it derives from are already loaded at this point). No cached total
+    // to populate here — a file that *opens* in target view gets the
+    // correct deformed length on first read, same as the S→T toggle path.
 
     // Activate the parsed-tab: copy its snapshot into the live AppState
     // fields. active_tab_view was set from the parsed-settings block above.
@@ -416,7 +399,6 @@ void GuiFileLoader::revert_to_blank() {
     // in-flight target render and clear it on revert so a subsequent
     // file load doesn't inherit stale frames.
     target_render.cancel_for_load();
-    app.target_view_total_frames = 0;
 
     viewport.invalidate_all();
 }

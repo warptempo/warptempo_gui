@@ -434,6 +434,16 @@ const TargetTimemapCache& target_view_timemap_cached(
         h *= 0x100000001b3ULL;
     }
     c.hash         = c.timemap.empty() ? 0 : h;
+    if (c.timemap.empty()) {
+        c.tgt_total_frames = static_cast<int64_t>(total_frames);
+    } else {
+        const double t = map_source_to_target(
+            static_cast<size_t>(total_frames < 0 ? 0 : total_frames),
+            c.timemap);
+        const int64_t tt = static_cast<int64_t>(std::nearbyint(t));
+        c.tgt_total_frames =
+            tt > 0 ? tt : static_cast<int64_t>(total_frames);
+    }
     c.markers_gen  = gen;
     c.scale        = scale;
     c.sample_rate  = sample_rate;

@@ -1908,8 +1908,9 @@ void GuiPaintHandler::on_resize(int w, int h) {
 
     // A numeric zoom level may have been valid at the old width but show
     // more samples than the file at the new width — promote to fit-file.
-    // live_total_frames returns target_view_total_frames in target view
-    // so the cap is consistent with the deformed timeline's length.
+    // live_total_frames returns the timemap-derived deformed total in
+    // target view so the cap is consistent with the deformed timeline's
+    // length.
     const int max_num = max_valid_numeric_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (app.zoom_level != kFitFileLevel) {

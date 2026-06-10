@@ -68,6 +68,50 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
+// Brief 4c: sweep-select every marker in the time-ordered `markers` list
+// whose time_seconds falls in [lo_t, hi_t], iterating in travel order
+// (ascending indices when `forward`, else descending) so the final
+// last_selected_marker lands on the most recently passed marker. Skips
+// press_marker_idx (preserves the Shift-press toggle non-re-add guarantee)
+// and already-selected indices. Mutates app's selection set / focus /
+// last_sel_group; returns true if anything was added. Shared by the
+// source/target and render-view playhead-drag Shift sweeps; templated on
+// the vector element type because the two stores hold different marker
+// types that both expose time_seconds. O(log n + added) per call.
+template <typename MarkerVec>
+bool sweep_select_interval(AppState& app, const MarkerVec& markers,
+                           double lo_t, double hi_t, bool forward,
+                           int press_marker_idx) {
+    if (lo_t > hi_t) return false;
+    // First index with time_seconds >= lo_t through the last with
+    // time_seconds <= hi_t (half-open [first, last)).
+    const int first = static_cast<int>(
+        std::lower_bound(markers.begin(), markers.end(), lo_t,
+                         [](const auto& m, double t) {
+                             return m.time_seconds < t;
+                         }) - markers.begin());
+    const int last = static_cast<int>(
+        std::upper_bound(markers.begin(), markers.end(), hi_t,
+                         [](double t, const auto& m) {
+                             return t < m.time_seconds;
+                         }) - markers.begin());
+    bool changed = false;
+    auto add = [&](int idx) {
+        if (idx == press_marker_idx) return;
+        if (app.selected_markers.count(idx)) return;
+        app.selected_markers.insert(idx);
+        app.last_selected_marker = idx;
+        app.last_sel_group = LastSelGroup::Markers;
+        changed = true;
+    };
+    if (forward) {
+        for (int i = first; i < last; ++i) add(i);
+    } else {
+        for (int i = last - 1; i >= first; --i) add(i);
+    }
+    return changed;
+}
+
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /
 // release all resolve this so they agree on origin and which strip to
@@ -2397,6 +2441,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing_rv) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
                 app.playhead_drag.press_marker_idx = hit;
+                app.playhead_drag.last_swept_sample = sample;
             }
             return;
         }
@@ -2425,6 +2470,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (was_playing_rv) app.follow_overridden_for_session = true;
             app.playhead_drag.active = true;
             app.playhead_drag.press_marker_idx = -1;
+            app.playhead_drag.last_swept_sample = sample;
         }
         return;
     }
@@ -2634,6 +2680,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
                 app.playhead_drag.press_marker_idx = hit;
+                app.playhead_drag.last_swept_sample = sample;
             } else {
                 // Press on empty waveform.
                 const double spp = current_samples_per_pixel(app, audio);
@@ -2652,6 +2699,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (was_playing) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
                 app.playhead_drag.press_marker_idx = -1;
+                app.playhead_drag.last_swept_sample = sample;
             }
         }
     }
@@ -2855,13 +2903,44 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     app.last_selected_marker = -1;
                     gui.invalidate_region(0, 0, app.width, app.height);
                 }
-            } else if (hit >= 0 &&
-                       hit != app.playhead_drag.press_marker_idx &&
-                       !app.selected_markers.count(hit)) {
-                app.selected_markers.insert(hit);
-                app.last_selected_marker = hit;
-                gui.invalidate_region(0, 0, app.width, app.height);
+            } else {
+                // Endpoint add: unchanged hit-based pickup (3px epsilon).
+                if (hit >= 0 &&
+                    hit != app.playhead_drag.press_marker_idx &&
+                    !app.selected_markers.count(hit)) {
+                    app.selected_markers.insert(hit);
+                    app.last_selected_marker = hit;
+                    gui.invalidate_region(0, 0, app.width, app.height);
+                }
+                // Interval sweep: add every marker the playhead PASSED
+                // since the last motion event (point-sampling skipped
+                // markers at fast pointer speeds). Render-view positions
+                // are already in the display domain — identity interval,
+                // no map translation.
+                const int64_t prev = app.playhead_drag.last_swept_sample;
+                if (prev >= 0 && new_playhead != prev) {
+                    int64_t a = prev, b = new_playhead;
+                    const bool forward = (b >= a);
+                    if (!forward) std::swap(a, b);
+                    const double sr_d = static_cast<double>(sr);
+                    const double lo_t = static_cast<double>(a) / sr_d;
+                    const double hi_t = static_cast<double>(b) / sr_d;
+                    const bool swept = (app.active_markers_view == 'P')
+                        ? sweep_select_interval(
+                              app, app.render_view_phase_resets,
+                              lo_t, hi_t, forward,
+                              app.playhead_drag.press_marker_idx)
+                        : sweep_select_interval(
+                              app, app.render_view_markers,
+                              lo_t, hi_t, forward,
+                              app.playhead_drag.press_marker_idx);
+                    if (swept)
+                        gui.invalidate_region(0, 0, app.width, app.height);
+                }
             }
+            // Keep the sweep anchor fresh on every motion event of the
+            // drag, Shift or not (mirrors the source/target branch).
+            app.playhead_drag.last_swept_sample = new_playhead;
             return;
         }
         const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
@@ -2953,15 +3032,58 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 selection.clear_selection();
                 sel_changed = true;
             }
-        } else if (hit >= 0 &&
-                   hit != app.playhead_drag.press_marker_idx &&
-                   !app.selected_markers.count(hit)) {
-            app.selected_markers.insert(hit);
-            app.last_selected_marker = hit;
-            app.last_sel_group = LastSelGroup::Markers;
-            viewport.invalidate_top_strip();
-            sel_changed = true;
+        } else {
+            // Endpoint add: unchanged hit-based pickup (3px epsilon).
+            if (hit >= 0 &&
+                hit != app.playhead_drag.press_marker_idx &&
+                !app.selected_markers.count(hit)) {
+                app.selected_markers.insert(hit);
+                app.last_selected_marker = hit;
+                app.last_sel_group = LastSelGroup::Markers;
+                sel_changed = true;
+            }
+            // Interval sweep: add every marker the playhead PASSED since
+            // the last motion event. The per-event hit test only samples
+            // the pointer's instantaneous position, so fast drags skipped
+            // markers between samples (frame-rate dependent selection).
+            // Interval endpoints translate to source domain once (the map
+            // is monotone), then the time-ordered marker list is range-
+            // scanned in travel direction so last_selected_marker ends on
+            // the most recently passed marker.
+            const int64_t prev = app.playhead_drag.last_swept_sample;
+            if (prev >= 0 && new_playhead != prev) {
+                int64_t a = prev, b = new_playhead;
+                const bool forward = (b >= a);
+                if (!forward) std::swap(a, b);
+                int64_t lo = a, hi = b;
+                if (app.active_audio_view == 'T') {
+                    const auto& tm = target_view_timemap_cached(
+                        app, sr,
+                        static_cast<long>(audio.total_frames())).timemap;
+                    lo = to_source_frame(app, a, tm);
+                    hi = to_source_frame(app, b, tm);
+                    if (lo > hi) std::swap(lo, hi);
+                }
+                const double sr_d = static_cast<double>(sr);
+                const double lo_t = static_cast<double>(lo) / sr_d;
+                const double hi_t = static_cast<double>(hi) / sr_d;
+                const bool swept = (app.active_markers_view == 'P')
+                    ? sweep_select_interval(
+                          app, app.phase_reset_markers.markers(),
+                          lo_t, hi_t, forward,
+                          app.playhead_drag.press_marker_idx)
+                    : sweep_select_interval(
+                          app, app.warpmarkers.markers(),
+                          lo_t, hi_t, forward,
+                          app.playhead_drag.press_marker_idx);
+                if (swept) sel_changed = true;
+            }
+            if (sel_changed) viewport.invalidate_top_strip();
         }
+        // Keep the sweep anchor fresh on every motion event of the drag,
+        // Shift or not — so a mid-drag Shift press sweeps only from the
+        // current position, never retroactively from the press.
+        app.playhead_drag.last_swept_sample = new_playhead;
         if (sel_changed) viewport.invalidate_waveform_area();
         return;
     }
@@ -3502,16 +3624,9 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 
     bool going_to_target = false;
     if (app.active_audio_view == 'S') {
-        // S → T: forward-translate the playhead and cache the target-
-        // domain total so live_total_frames returns the deformed
-        // length for the post-flip viewport math.
-        const int64_t src_total = audio.total_frames();
-        const double tgt_total_d = map_source_to_target(
-            static_cast<size_t>(src_total < 0 ? 0 : src_total), tmap);
-        const int64_t tgt_total = static_cast<int64_t>(
-            std::nearbyint(tgt_total_d));
-        app.target_view_total_frames = tgt_total > 0 ? tgt_total : src_total;
-
+        // S → T: forward-translate the playhead. The deformed-domain
+        // total is derived from the timemap cache by live_total_frames,
+        // so the post-flip viewport math needs no cached total here.
         const double tph = map_source_to_target(
             static_cast<size_t>(app.playhead_cursor_sample < 0
                                 ? 0 : app.playhead_cursor_sample), tmap);
@@ -3520,15 +3635,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         app.active_audio_view = 'T';
         going_to_target = true;
     } else {
-        // T → S: inverse-translate the playhead, drop the target-domain
-        // total cache.
+        // T → S: inverse-translate the playhead.
         const double sph = map_target_to_source(
             static_cast<size_t>(app.playhead_cursor_sample < 0
                                 ? 0 : app.playhead_cursor_sample), tmap);
         new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
         app.active_audio_view              = 'S';
-        app.target_view_total_frames = 0;
     }
 
     // Domain is flipped — current_samples_per_pixel below reads the

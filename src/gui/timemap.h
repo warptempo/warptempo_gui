@@ -137,6 +137,13 @@ struct TargetTimemapCache {
     long      total_frames = 0;
     std::vector<TimeMapSegment> timemap;
     uint64_t  hash         = 0;
+
+    // Deformed-timeline length: the source total forward-translated
+    // through this timemap (the same formula the S-to-T toggle used).
+    // Source total when the map is empty. live_total_frames() reads
+    // this, so the value every viewport clamp and zoom bound sees is
+    // always the total of the map actually in effect.
+    int64_t   tgt_total_frames = 0;
 };
 
 // Returns the cache entry for the app's live marker store, rebuilding

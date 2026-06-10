@@ -245,6 +245,14 @@ struct PlayheadDragState {
     // release uses it to suppress the snap-action when no actual drag
     // occurred.
     int  press_marker_idx          = -1;
+    // Active-domain playhead position at the previous motion event (the
+    // press position until the first motion). Left edge of the
+    // selection sweep interval: the Shift branch of the motion handler
+    // adds every marker the playhead PASSED between events, not just
+    // the one under the pointer at event time — point-sampling skipped
+    // markers at fast pointer speeds. -1 = unseeded (sweep disabled
+    // until a begin site seeds it).
+    int64_t last_swept_sample      = -1;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -463,15 +471,6 @@ struct AppState {
     // playable with live engine output.
     char active_audio_view = 'S';
 
-    // Cached total-frame count for the active timemap, in TARGET-frame
-    // units. Computed at every S→T toggle as forward-translate(audio
-    // .total_frames()) and zeroed on file load. Read by samples_visible /
-    // clamp_viewport_start / current_samples_per_pixel when active_audio_view
-    // == 'T' so the viewport-clamp / fit-file math operates against
-    // the deformed timeline's length. Zero is sentinel for "not yet
-    // populated" — the toggle handler is the only writer in brief 1.
-    int64_t target_view_total_frames = 0;
-
     // Memoized target-view timemap (see timemap.h). Mutable: consulted and
     // refreshed from const hit-test paths.
     mutable TargetTimemapCache target_timemap_cache;
@@ -620,6 +619,10 @@ struct AppState {
     // editor swallowing all keys while active).
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
+
+    // Tick backstop bookkeeping: last live-domain total observed by the
+    // on_tick clamp (see main.cpp). 0 = not yet observed.
+    int64_t last_tick_live_total = 0;
 
     // Render-queue state (chunk U). `queue_running` is true only inside the
     // Ctrl+Alt+R queue walker. The Esc handler checks it to scope the
@@ -849,8 +852,8 @@ double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
                         int64_t vp_start, double spp);
 // Active-domain total frame count. Source view returns audio.total_frames();
-// target view returns the cached target_view_total_frames (the forward-
-// translated source length). Used by every viewport helper that needs the
+// target view returns the deformed total derived from the timemap cache
+// (the forward-translated source length). Used by every viewport helper that needs the
 // "length of the timeline currently being viewed" — clamp, fit-file zoom,
 // and the numeric-level cap. Declared here so any TU touching the
 // viewport math can reach it.
