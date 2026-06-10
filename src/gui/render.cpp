@@ -452,7 +452,8 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      cairo_surface_t* triangle_surface,
-                     bool draw_triangle) {
+                     bool draw_triangle,
+                     cairo_surface_t* ink_plate) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: the triangle's nearer
     // half stays onscreen even when the tip column itself has clipped
@@ -474,6 +475,64 @@ void render_playhead(cairo_t* cr,
         cairo_move_to(cr, x_px, area.y);
         cairo_line_to(cr, x_px, area.y + area.h);
         cairo_stroke(cr);
+
+        // Two-tone overdraw: where this column crosses opaque waveform ink,
+        // recolor the green line to kBackground so it reads as a dark notch
+        // cut through the light fill (DAW-style), while it stays green over
+        // the dark background and the transparent gaps. The displayed plate
+        // is the single source of ink truth — its per-sample alpha is the
+        // exact mask the out-of-trim dim pass already uses, so this needs no
+        // new geometry and is correct across all views and the shifted plate.
+        if (ink_plate) {
+            cairo_surface_flush(ink_plate);
+            const int plate_w = cairo_image_surface_get_width(ink_plate);
+            const int plate_h = cairo_image_surface_get_height(ink_plate);
+            const int icol    = static_cast<int>(col);
+            // Silent, safe fallback: a non-ARGB32 plate or an out-of-range
+            // column leaves the plain green line untouched.
+            if (cairo_image_surface_get_format(ink_plate) == CAIRO_FORMAT_ARGB32
+                && icol >= 0 && icol < plate_w) {
+                const unsigned char* data =
+                    cairo_image_surface_get_data(ink_plate);
+                const int stride = cairo_image_surface_get_stride(ink_plate);
+                const int y_max =
+                    std::min(area.h, plate_h);  // exclusive upper bound
+
+                // Collect contiguous ink runs down the column, then fill them
+                // all in one batch. The plate is hard-aliased (alpha 0 or 255);
+                // the >127 threshold is just a guard. Runs are emitted raw —
+                // no smoothing, merging, or padding — so sparse line-art
+                // material speckles green/background pixel by pixel, the
+                // accepted behavior of the per-pixel variant. The union of the
+                // green line above and these runs covers exactly the same
+                // pixels the single stroke covered.
+                cairo_set_source_rgb(cr, kBackground.r, kBackground.g,
+                                     kBackground.b);
+                int run_start = -1;
+                for (int y = 0; y < y_max; ++y) {
+                    const bool ink =
+                        data[y * stride + icol * 4 + 3] > 127;
+                    if (ink && run_start < 0) {
+                        run_start = y;
+                    } else if (!ink && run_start >= 0) {
+                        cairo_rectangle(cr,
+                                        static_cast<double>(area.x) + col,
+                                        static_cast<double>(area.y + run_start),
+                                        1.0,
+                                        static_cast<double>(y - run_start));
+                        run_start = -1;
+                    }
+                }
+                if (run_start >= 0) {
+                    cairo_rectangle(cr,
+                                    static_cast<double>(area.x) + col,
+                                    static_cast<double>(area.y + run_start),
+                                    1.0,
+                                    static_cast<double>(y_max - run_start));
+                }
+                cairo_fill(cr);
+            }
+        }
     }
 
     // Inverted-triangle indicator: stamped from a hand-authored PNG mask so

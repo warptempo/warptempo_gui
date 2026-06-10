@@ -351,12 +351,23 @@ void render_waveform(cairo_t* cr,
 // triangle belongs to the cursor exclusively under the split-playhead
 // model; pass `draw_triangle = false` for the scanner call so only the
 // vertical line is drawn.
+//
+// `ink_plate` (default null) is the displayed waveform plate — an ARGB32 image
+// surface whose alpha is opaque exactly where a sample column was painted and
+// transparent in the gaps. When non-null, the line is two-toned per-pixel: it
+// stays `color` wherever its column crosses no waveform ink (background, the
+// inter-channel gap, the inset bands, notches inside the waveform) and is
+// overdrawn in kBackground wherever the column crosses an opaque sample pixel,
+// cutting a dark notch through the waveform. When null, the line is the
+// existing single-color stroke. The triangle is unaffected and always paints in
+// `color` over the line.
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
                      cairo_surface_t* triangle_surface,
-                     bool draw_triangle = true);
+                     bool draw_triangle = true,
+                     cairo_surface_t* ink_plate = nullptr);
 
 // Draws vertical 1-pixel lines across `waveform_area` for each marker whose
 // resolved sample falls inside [viewport_start_sample, viewport_end_sample).
