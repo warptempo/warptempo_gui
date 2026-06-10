@@ -378,9 +378,16 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    struct ColLine { double x, y0, y1; };
-    std::vector<ColLine> lines;
-    lines.reserve(static_cast<size_t>(area.w));
+    // Each column becomes a 1px-wide integer-row rectangle so the plate is
+    // binary: every pixel is either the color at full alpha or fully
+    // transparent, no antialiased tips. Per-column min/max extents stay raw
+    // and unsmoothed; only the y endpoints are snapped to whole pixel rows.
+    struct ColRect { int x, y0, y1; };
+    std::vector<ColRect> rects;
+    rects.reserve(static_cast<size_t>(area.w));
+
+    const int y_lo = area.y;
+    const int y_hi = area.y + area.h;
 
     // Column i's left edge (f0) is column i-1's right edge (f1) — the same
     // expression yields the same double, so its translation is the same too.
@@ -426,23 +433,29 @@ void render_waveform(cairo_t* cr,
             }
         }
 
-        const double y_top    = y_center - max_val * half_h;
-        const double y_bottom = y_center - min_val * half_h;
-        const double x_px     = area.x + i + 0.5;
+        int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
+        int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
+        // Any signal keeps at least one pixel.
+        if (y1 <= y0) y1 = y0 + 1;
+        // Clamp to the waveform area's pixel rows.
+        if (y0 < y_lo) y0 = y_lo;
+        if (y0 > y_hi) y0 = y_hi;
+        if (y1 < y_lo) y1 = y_lo;
+        if (y1 > y_hi) y1 = y_hi;
 
-        lines.push_back({x_px, y_top, y_bottom});
+        rects.push_back({area.x + i, y0, y1});
         g_prev = g1;
     }
 
     cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
-    for (const auto& L : lines) {
-        cairo_move_to(cr, L.x, L.y0);
-        cairo_line_to(cr, L.x, L.y1);
+    for (const auto& R : rects) {
+        if (R.y1 <= R.y0) continue;
+        cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
     }
-    cairo_stroke(cr);
+    cairo_fill(cr);
 
     cairo_restore(cr);
 }
