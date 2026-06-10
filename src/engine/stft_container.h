@@ -310,14 +310,28 @@ struct AudioSTFT {
         if (ta >= 0 && ta < src_frames) {
             const int navail =
                 static_cast<int>(std::min<int64_t>(N, src_frames - ta));
-            for (int n = 0; n < navail; ++n) {
-                const double v = planar_ch[ta + n] * window[n];
-                w.fft_in[(n - half + M) % M] = v;
-            }
+            // The centered index (n - half + M) % M resolves to two contiguous
+            // disjoint ranges (same split the synthesis-side un-shift uses in
+            // synthesis.cpp): n in [0, half) writes [M - half, M), and n in
+            // [half, navail) writes [0, navail - half). Bit-identical to the
+            // modulo write, minus the per-sample hardware divide. navail can be
+            // < N at the file tail, hence the n_head clamp: for navail <= half
+            // the second loop is empty, matching the modulo loop's coverage.
+            const int n_head = std::min(navail, half);
+            for (int n = 0; n < n_head; ++n)
+                w.fft_in[M - half + n] = planar_ch[ta + n] * window[n];
+            for (int n = n_head; n < navail; ++n)
+                w.fft_in[n - half] = planar_ch[ta + n] * window[n];
         }
         fftw_execute(w.plan_fwd);
         for (int k = 0; k < K; ++k) {
-            M_out[k]   = std::hypot(w.fft_out[k][0], w.fft_out[k][1]);
+            // |re|, |im| are bounded by a few thousand at audio FFT scales, so
+            // re*re + im*im is nowhere near double's overflow/underflow limits;
+            // sqrt of the sum matches hypot to within one ulp without hypot's
+            // scaling guard.
+            const double re = w.fft_out[k][0];
+            const double im = w.fft_out[k][1];
+            M_out[k]   = std::sqrt(re * re + im * im);
             phi_out[k] = std::atan2(w.fft_out[k][1], w.fft_out[k][0]);
         }
     }
@@ -484,8 +498,12 @@ struct AudioSTFT {
         FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
         for (int k = 0; k < K; ++k) {
-            w.ifft_in[k][0] = mag[k] * std::cos(theta[k]);
-            w.ifft_in[k][1] = mag[k] * std::sin(theta[k]);
+            // One sincos rather than separate cos+sin: glibc extension, and
+            // this project is Arch/glibc-only by charter.
+            double s, c;
+            sincos(theta[k], &s, &c);
+            w.ifft_in[k][0] = mag[k] * c;
+            w.ifft_in[k][1] = mag[k] * s;
         }
     }
 
