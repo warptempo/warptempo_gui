@@ -74,7 +74,7 @@ warptempo_gui "path/to/source.wav"
 
 On launch, `warptempo_gui` opens a window, reads any existing `.warpmarkers`, `.phaseresetmarkers`, and `.settings` sidecar files for the given audio file, and presents the source waveform across the full window width. With no sidecar files present, the window opens with a single warp marker at frame zero (the immovable anchor) and no phase reset markers. With sidecar files present, the prior session state is restored verbatim — viewport, zoom, playhead, active view selectors, and all marker positions and flags.
 
-The examples directory in the repository ships three reference movements with complete sidecar files. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the recommended first load — it exercises every form and syntax used in the project. The audio file itself is not included (the corpus is commercially licensed); the user supplies the source recording and places it in the example directory under the basename the sidecar files expect.
+The examples directory in the repository ships reference movements with complete sidecar files. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the recommended first load — it exercises every form and syntax used in the project. The audio file itself is not included (the corpus is commercially licensed); the user supplies the source recording and places it in the example directory under the basename the sidecar files expect.
 
 The conceptual model and hotkey reference are in the sections below.
 
@@ -180,6 +180,6 @@ The repository's `examples/` directory ships reference sidecar files. The recomm
 
 The source recording is commercially licensed and is not distributed with the project. A lossy reference copy is available so a reader can hear the example without owning the release:
 
-`https://music.youtube.com/watch?v=f10ISOkJZuA&list=OLAK5uy_nMff2yJASrC9u9uf4b0uPZYoiDt-MdTh8`
+[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
 
 That copy is a lossy reference only — enough to follow the example and hear what the markers do. The lossless commercial release is the real source, and the one to author against for any serious work; the audible limits of the copy are part of the point.
