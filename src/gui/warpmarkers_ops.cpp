@@ -234,7 +234,31 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     }
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
+    int hint_last = app.last_selected_marker;
+    {
+        // Prefer focusing undo on the label_def that drove the cascade.
+        // Refs were pulled into `expanded` automatically; the def is the
+        // action's subject. Search the original selection (not the
+        // expanded batch) so only an explicitly selected def wins.
+        int def_hint = -1;
+        const bool last_is_def =
+            app.last_selected_marker >= 0 &&
+            app.last_selected_marker < static_cast<int>(mv.size()) &&
+            !mv[app.last_selected_marker].label_def.empty() &&
+            app.selected_markers.count(app.last_selected_marker);
+        if (last_is_def) {
+            def_hint = app.last_selected_marker;
+        } else {
+            for (int idx : app.selected_markers) {
+                if (idx >= 0 && idx < static_cast<int>(mv.size()) &&
+                    !mv[idx].label_def.empty()) {
+                    def_hint = idx;   // app.selected_markers is a std::set,
+                    break;            // so iteration is ascending — lowest wins
+                }
+            }
+        }
+        if (def_hint >= 0) hint_last = def_hint;
+    }
     for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }

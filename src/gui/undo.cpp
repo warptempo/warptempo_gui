@@ -152,9 +152,24 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                     any       = true;
                 }
             }
+            // Prefer the operation's subject (hint) when it is itself one of
+            // the removed markers — symmetric to the restore branch below,
+            // which focuses hint_last_selected. For a cascaded label_def
+            // force-delete this lands the playhead on the def rather than the
+            // rightmost-in-time ref the cascade pulled in.
+            double target_time = rightmost;
+            const int hi = entry.hint_last_selected;
+            if (any && hi >= 0 && hi < static_cast<int>(before.size())) {
+                const double ht = before[hi].time_seconds;
+                auto it = std::lower_bound(after_times.begin(),
+                                           after_times.end(), ht - kEps);
+                const bool matched = (it != after_times.end() &&
+                                      std::abs(*it - ht) < kEps);
+                if (!matched) target_time = ht;
+            }
             if (any) {
                 int64_t target_sample = static_cast<int64_t>(
-                    std::nearbyint(rightmost * static_cast<double>(sr)));
+                    std::nearbyint(target_time * static_cast<double>(sr)));
                 // The marker's time_seconds is source-domain; the
                 // playhead is active-domain. In target view forward-
                 // translate so the playhead lands at the restored
