@@ -49,9 +49,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     GuiAudio next;
     const auto t0 = std::chrono::steady_clock::now();
     const bool ok = next.load(path, [&](float p) {
+        // load_progress is no longer read anywhere (the determinate bar was
+        // replaced by a static "building waveform cache..." status message
+        // painted once at load entry); the write is kept harmlessly. With a
+        // static message there is no per-tick repaint, so this callback no
+        // longer invalidates a bar strip — it only pumps the event loop so the
+        // compositor stays responsive across a multi-frame build.
         app.load_progress = p;
-        const int bar_y = app.height - kProgressBarHeight;
-        gui.invalidate_region(0, bar_y, app.width, kProgressBarHeight);
         gui.drain_events();
     });
     const auto t1 = std::chrono::steady_clock::now();

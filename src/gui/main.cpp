@@ -77,10 +77,10 @@
 
 namespace {
 
-// X.7.8a: kProgressBarHeight, kFlagFontSize, kTimestampPadX,
-// and kTabLetterGapPx now live in paint_handler.h so paint_handler.cpp can
-// reach them; the constants below are paint-handler-independent and stay
-// file-local.
+// X.7.8a: kFlagFontSize, kTimestampPadX, and kTabLetterGapPx now live in
+// paint_handler.h so paint_handler.cpp can reach them; the constants below
+// are paint-handler-independent and stay file-local. (kProgressBarHeight,
+// formerly in this group, was deleted with the load progress bar.)
 
 // Brief F replaced the window-proportional strip ratios with a fixed-pixel
 // mirrored grid; the strip/row geometry now derives from monospace_row_h(),
@@ -116,11 +116,9 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 
 constexpr double kDirtyGapPx              = 8.0;
 
-// Half-width of the column invalidated around a playhead position. Wide
-// enough to cover the playhead line, the 19px-wide triangle indicator
-// (±9 px of playhead_x including the tip column), and subpixel
-// rounding margin.
-constexpr int kPlayheadHalfPx = 9;
+// kPlayheadHalfPx (half-width of the column invalidated around a playhead
+// position) now lives in render.h as a single shared inline constexpr,
+// reached here via the render.h include.
 
 // X.7.8b-1: Brief X.3 BPM-sweep math primitive (BaseTempoScale +
 // compute_base_tempo_scale) moved out of this anonymous namespace into

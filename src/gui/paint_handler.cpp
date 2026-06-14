@@ -234,9 +234,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     render_background(cr, x, y, w, h);
 
     if (app.loading) {
-        const int bar_y = app.height - kProgressBarHeight;
-        render_progress_bar(cr, 0, bar_y, app.width, kProgressBarHeight,
-                            app.load_progress);
+        render_status_message(cr, waveform_area(app),
+                              "building waveform cache...");
     } else if (audio.total_frames() > 0) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);

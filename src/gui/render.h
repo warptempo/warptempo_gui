@@ -78,11 +78,6 @@ inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper wh
 // when that boundary is selected.
 inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
 
-// Progress-bar fill (the determinate load/render bar in render_progress_bar).
-// Promoted from an inline triple at render.cpp's progress-bar draw; nearest
-// hex to the former 0.35/0.35/0.40 gray, now tunable alongside the rest.
-inline constexpr GuiColor kProgressBar      = hex(0x59596A);
-
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
 // truth for their axis — every chip renderer and the hit-rect computation must
@@ -153,6 +148,12 @@ constexpr int kMinWindowHeightPx = 480;
 // waveform-internal margin that happens to share the value 10 because that is
 // the triangle's height.
 constexpr int kWaveformInsetPx = 10;
+
+// Half-width (px) of the playhead triangle's horizontal footprint; bounds
+// the playhead's off-screen cull and its invalidation strip. Single
+// definition shared by render.cpp (cull) and main.cpp (invalidation), both of
+// which formerly held their own anonymous-namespace copy of the value.
+inline constexpr int kPlayheadHalfPx = 9;
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
 // offset (Liberation Mono 11pt). on_resize can fire before the first redraw
@@ -317,8 +318,11 @@ struct FlagHitRect {
 
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 
-void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
-                         float progress_fraction);
+// Centered single-line status message, shown in place of the (removed) load
+// progress bar for the duration of app.loading. Selects the monospace face,
+// measures the string via monospace_advance(), centers it in `area`
+// horizontally and on `area`'s vertical mid-line, and shows it in kText.
+void render_status_message(cairo_t* cr, GuiRect area, const char* msg);
 
 // Draws one channel's waveform into `area`, displaying samples in
 // [viewport_start_sample, viewport_end_sample). When `timemap` is null

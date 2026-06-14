@@ -390,6 +390,9 @@ struct AppState {
     int     width                 = 1400;
     int     height                = 800;
     bool    loading               = false;
+    // Still written by the file-loader progress callback, but no longer read:
+    // the determinate load bar it fed was replaced by a static status message.
+    // Left in place rather than chased across its several write sites.
     float   load_progress         = 0.0f;
 
     int64_t playhead_cursor_sample = 0;

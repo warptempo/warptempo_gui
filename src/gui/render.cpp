@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -22,11 +23,9 @@ namespace perf_counters {
 // render.h so the iter/BPM popups in main.cpp and the stem blit in
 // paint_handler.cpp can reference the same values.
 
-// Half-width of the inverted-triangle playhead asset (19×10, tip at column 9).
-// Mirrors the same-named constant in main.cpp's invalidation logic — both
-// describe the same asset, but each TU holds its own copy because main.cpp's
-// version is in an anonymous namespace.
-constexpr int kPlayheadHalfPx = 9;
+// kPlayheadHalfPx is the half-width of the inverted-triangle playhead asset
+// (19×10, tip at column 9); it now lives in render.h as a single inline
+// constexpr shared by this TU's cull and main.cpp's invalidation.
 
 namespace {
 
@@ -328,16 +327,25 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
-void render_progress_bar(cairo_t* cr, int x, int y, int w, int h,
-                         float progress_fraction) {
-    if (progress_fraction <= 0.0f || w <= 0 || h <= 0) return;
-    if (progress_fraction > 1.0f) progress_fraction = 1.0f;
-    const int filled = static_cast<int>(progress_fraction * w + 0.5f);
-    if (filled <= 0) return;
+void render_status_message(cairo_t* cr, GuiRect area, const char* msg) {
+    if (!msg || area.w <= 0 || area.h <= 0) return;
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kProgressBar.r, kProgressBar.g, kProgressBar.b);
-    cairo_rectangle(cr, x, y, filled, h);
-    cairo_fill(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, kFlagFontSize);
+    // Monospace arithmetic for the width (glyph count * monospace_advance()),
+    // the same convention as the flag and editor paths; centered horizontally
+    // in `area` and vertically on its mid-line. Antialiasing stays on — this
+    // is glyph text.
+    const double text_w =
+        static_cast<double>(std::strlen(msg)) * monospace_advance();
+    const double tx = area.x + (area.w - text_w) * 0.5;
+    const double ty = area.y + area.h * 0.5
+                    + monospace_row_baseline_offset() - monospace_row_h() * 0.5;
+    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+    cairo_move_to(cr, tx, ty);
+    cairo_show_text(cr, msg);
     cairo_restore(cr);
 }
 
@@ -727,8 +735,12 @@ void render_trim_flags(cairo_t* cr,
     double rightmost_right_edge = -1e18;
     for (const TrimChip& chip : chips) {
         if (chip.text_left < rightmost_right_edge + hl_pad) continue;
-        cairo_text_extents_t g_ext;
-        cairo_text_extents(cr, chip.glyph, &g_ext);
+        // Chip advance is the shared monospace arithmetic (glyph count *
+        // monospace_advance()), the same convention every other flag path
+        // uses, rather than a per-chip cairo_text_extents. The glyph field is
+        // ASCII monospace, so the two are equal by construction.
+        const double glyph_adv =
+            static_cast<double>(std::strlen(chip.glyph)) * monospace_advance();
         EditorTextBox box;
         box.anchor_x    = chip.text_left + hl_pad;
         box.baseline_y  = baseline_y;
@@ -737,7 +749,7 @@ void render_trim_flags(cairo_t* cr,
         box.fill        = chip.selected ? kSelected : kTrimMarker;
         box.text_color  = kText;
         render_editor_text_box(cr, box);
-        rightmost_right_edge = chip.text_left + g_ext.x_advance + hl_pad;
+        rightmost_right_edge = chip.text_left + glyph_adv + hl_pad;
     }
 
     cairo_restore(cr);
@@ -749,12 +761,11 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
 
-    double prefix_adv = 0.0;
-    if (!s.prefix.empty()) {
-        cairo_text_extents_t pre_ext;
-        cairo_text_extents(cr, s.prefix.c_str(), &pre_ext);
-        prefix_adv = pre_ext.x_advance;
-    }
+    // Prefix is monospace ASCII like the rest of the box; its advance is
+    // exact arithmetic (glyph count * monospace_advance()), matching the flag
+    // paths, with no transient cairo_text_extents over s.prefix.
+    const double prefix_adv =
+        static_cast<double>(s.prefix.length()) * monospace_advance();
     const double editable_left = s.anchor_x + prefix_adv;
 
     cairo_text_extents_t text_ext;
@@ -781,6 +792,15 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     const double descent     = font_height - ascent;
     const double glyph_top   = s.baseline_y - ascent;
     const double glyph_h     = ascent + descent;
+
+    // Snap the shared glyph ink band to integer pixel rows once, so the
+    // selection highlight (step 4) and the cursor (step 5) both fill crisp
+    // integer-edged rectangles with antialiasing off — the same anti-aliased-
+    // tip defect corrected in render_waveform. Glyph text (steps 2-3) keeps
+    // antialiasing and is untouched.
+    const int band_y0 = static_cast<int>(std::lround(glyph_top));
+    const int band_y1 = static_cast<int>(std::lround(glyph_top + glyph_h));
+    const int band_h  = (band_y1 > band_y0) ? (band_y1 - band_y0) : 1;
 
     // 1. Solid fill behind the editable region, from the single source of
     //    truth (flag_chip_rect), so the painted chip and the hit rect are the
@@ -816,24 +836,25 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
 
     // 4. Selection swap: fill the selected range with text_color, repaint
     //    the selected substring in the fill color for contrast. The highlight
-    //    spans exactly the glyph ink band (glyph_top / glyph_h), distinct from
-    //    the full-slot step-1 fill; hi_x and hi_w are the exact glyph-run
-    //    extent.
+    //    band is the integer-snapped glyph ink band (band_y0 / band_h) with
+    //    AA off, distinct from the full-slot step-1 fill; the horizontal
+    //    extent is snapped too (hx0 / hw). hi_x / hi_w (the exact glyph-run
+    //    extent from monospace arithmetic) still position the antialiased
+    //    substring repaint.
     if (s.has_selection) {
-        cairo_text_extents_t a_ext;
-        cairo_text_extents(cr,
-            s.text.substr(0, static_cast<size_t>(s.selection_start)).c_str(),
-            &a_ext);
-        cairo_text_extents_t b_ext;
-        cairo_text_extents(cr,
-            s.text.substr(0, static_cast<size_t>(s.selection_end)).c_str(),
-            &b_ext);
-        const double hi_x = editable_left + a_ext.x_advance;
-        const double hi_w = b_ext.x_advance - a_ext.x_advance;
+        const double adv  = monospace_advance();
+        const double hi_x = editable_left + s.selection_start * adv;
+        const double hi_w = (s.selection_end - s.selection_start) * adv;
+        const int hx0 = static_cast<int>(std::lround(hi_x));
+        const int hx1 = static_cast<int>(std::lround(hi_x + hi_w));
+        const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr,
             s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_rectangle(cr, hi_x, glyph_top, hi_w, glyph_h);
+        cairo_rectangle(cr, hx0, band_y0, hw, band_h);
         cairo_fill(cr);
+        cairo_restore(cr);
         cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
         cairo_move_to(cr, hi_x, s.baseline_y);
         cairo_show_text(cr,
@@ -843,26 +864,25 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
                 .c_str());
     }
 
-    // 5. Cursor (blink-gated), crisp single-pixel column spanning exactly the
-    //    glyph ink band (glyph_top / glyph_h), not the full step-1 slot; cur_x
-    //    keeps the round(x)+0.5 column unchanged.
+    // 5. Cursor (blink-gated): a crisp one-pixel-wide integer rectangle, AA
+    //    off, spanning the integer-snapped glyph ink band (band_y0 / band_h),
+    //    not the full step-1 slot. cur_col is the rounded column; the former
+    //    round(x)+0.5 half-pixel was a stroke-aliasing device, unneeded for a
+    //    filled integer rectangle.
     if (s.cursor_visible) {
-        double cursor_x_offset = 0.0;
-        if (s.cursor_pos > 0) {
-            cairo_text_extents_t pext;
-            cairo_text_extents(cr,
-                s.text.substr(0,
-                    static_cast<size_t>(s.cursor_pos)).c_str(),
-                &pext);
-            cursor_x_offset = pext.x_advance;
-        }
-        const double cur_x = std::round(editable_left + cursor_x_offset) + 0.5;
+        const double cursor_x_offset = s.cursor_pos * monospace_advance();
+        // An integer one-pixel rectangle at cur_col occupies exactly the
+        // cursor column with AA off; the former round(x)+0.5 half-pixel was a
+        // stroke-aliasing device and is no longer needed.
+        const int cur_col =
+            static_cast<int>(std::round(editable_left + cursor_x_offset));
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr,
             s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_set_line_width(cr, 1.0);
-        cairo_move_to(cr, cur_x, glyph_top);
-        cairo_line_to(cr, cur_x, glyph_top + glyph_h);
-        cairo_stroke(cr);
+        cairo_rectangle(cr, cur_col, band_y0, 1, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
     }
 
     cairo_restore(cr);
