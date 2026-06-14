@@ -180,6 +180,10 @@ The repository's `examples/` directory ships reference sidecar files. The recomm
 
 The source recording is commercially licensed and is not distributed with the project. A lossy reference copy is available so a reader can hear the example without owning the release:
 
-[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
+[Reference source](https://music.youtube.com/watch?v=f10ISOkJZuA&list=OLAK5uy_nMff2yJASrC9u9uf4b0uPZYoiDt-MdTh8)
 
 That copy is a lossy reference only — enough to follow the example and hear what the markers do. The lossless commercial release is the real source, and the one to author against for any serious work; the audible limits of the copy are part of the point.
+
+Example output, also in lossy audio format:
+
+[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
