@@ -531,7 +531,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 render_playhead(cr, area, scan_px, kPlayheadScanner,
                                 gui.playhead_triangle_surface(),
                                 /*draw_triangle=*/false,
-                                /*ink_plate=*/nullptr);
+                                /*ink_plate=*/wf_cache.surface);
             }
             render_playhead(cr, area, px_x, kPlayheadCursor,
                             gui.playhead_triangle_surface(),
