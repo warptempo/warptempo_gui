@@ -208,12 +208,8 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
             out += buf;
             break;
         case EngineField::Bpm:
-            // Canonical unset form is empty (`bpm=`); 0 means unset.
-            if (es.bpm != 0) {
-                std::snprintf(buf, sizeof(buf), "%d", es.bpm);
-                out += buf;
-            }
-            // else: append nothing — the key line becomes `bpm=`.
+            // bpm is a descriptor string; emit verbatim, empty when unset.
+            out += es.bpm;
             break;
         case EngineField::N:
             std::snprintf(buf, sizeof(buf), "%d", es.N);
@@ -584,19 +580,10 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "bpm") {
-        // Informational reference tempo. Empty value is the canonical
-        // "unset" form (written as `bpm=`); it parses to 0. A present
-        // value must be a non-negative integer.
-        if (value.empty()) {
-            out.bpm = 0;
-            return true;
-        }
-        int v;
-        if (!parse_int_strict(value, v) || v < 0) {
-            reason = "must be empty or an integer >= 0";
-            return false;
-        }
-        out.bpm = v;
+        // bpm is a free-text provenance descriptor on one line. Any value
+        // is accepted verbatim (caller already trims the line); empty is
+        // the canonical "unset" form (`bpm=`).
+        out.bpm = value;
         return true;
     }
     if (key == "N") {

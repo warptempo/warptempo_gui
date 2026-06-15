@@ -11,7 +11,10 @@ struct EngineSettings {
     std::string title;
     std::string output_format            = "wav";
     double      scale                    = 1.0;
-    int         bpm                      = 0;     // informational only; unused by engine/GUI
+    std::string bpm;   // BPM render descriptor, e.g.
+                       // "36 beats @ 220 bpm from 00:32.008 to 00:46.562".
+                       // Empty when no BPM render is the current baseline.
+                       // Informational only — no engine or GUI effect.
     int         N                        = 4096;
     bool        limiter                  = true;
     double      phase_reset_offset_hops  = 1.0;

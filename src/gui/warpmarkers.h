@@ -45,17 +45,25 @@ struct GuiWarpMarker {
     double iter_end   = std::numeric_limits<double>::quiet_NaN();
 
     // Brief X.2 BPM mode. Session-only authoring state for basetempo-scale
-    // sweeps; never serialized, lost on app close. At most one marker at a
-    // time has bpm_owner=true (invariant maintained by the `m`
-    // toggle handler). "Committed" is implicit: bpm_beats > 0 means the
-    // owner has authored a value (parser guarantees all three of bpm_beats,
-    // bpm_lo, bpm_hi are set together). The value form is
-    // "<beats>@[<lo>,<hi>]" with positive integers and lo <= hi.
-    // Math/render is X.3.
+    // sweeps; never serialized, lost on app close. The mode is a two-marker
+    // explicit span: of the two selected markers, the earlier owns
+    // (bpm_owner=true) and the later closes the span (its index held in this
+    // owner's bpm_endpoint). At most one marker at a time has bpm_owner=true
+    // (invariant maintained by the `m` toggle handler). "Committed" is
+    // implicit: bpm_beats > 0 means the owner has authored a value (parser
+    // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
+    // The value form is "<beats>@[<lo>,<hi>]" with positive integers and
+    // lo <= hi. Math/render is X.3.
     bool bpm_owner = false;
     int  bpm_beats = 0;
     int  bpm_lo    = 0;
     int  bpm_hi    = 0;
+
+    // Session-only, set with bpm_owner on the `m`-press two-marker gate.
+    // Index of the span's closing marker (the later of the two selected).
+    // The BPM region runs [this owner, bpm_endpoint) — the endpoint marker
+    // closes the span and is not a member. -1 when unset. Not serialized.
+    int  bpm_endpoint = -1;
 };
 
 struct GuiWarpMarkerError {

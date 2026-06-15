@@ -516,6 +516,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
             mv[i].bpm_beats = 0;
             mv[i].bpm_lo    = 0;
             mv[i].bpm_hi    = 0;
+            mv[i].bpm_endpoint = -1;
         }
     }
     m->bpm_owner = true;
@@ -529,16 +530,17 @@ bool GuiFlagEditor::commit_bpm_edit() {
 
 // Brief X.2 / E: full mode-on transition for BPM mode. Validates the
 // activation gate, toggles iter mode off if active, maintains the
-// single-owner invariant, marks the selected marker as the BPM owner
-// (preserving prior values when re-toggling on the same owner),
-// auto-selects the next eligible+enabled marker as the visual endpoint
-// cue, and flips the mode flag. Brief E's `m` handler calls this and then
-// opens the bottom-strip BPM editor on the owner.
+// single-owner invariant, and marks the earlier of the two selected
+// markers as the BPM owner (preserving prior values when re-toggling on the
+// same owner), then flips the mode flag. The span endpoint is now explicit
+// — supplied by the `m` handler and recorded on the owner's bpm_endpoint —
+// so this no longer auto-selects an endpoint cue. Brief E's `m` handler
+// calls this and then opens the bottom-strip BPM editor on the owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;
-    if (app.selected_markers.size() != 1) return;
-    const int owner = *app.selected_markers.begin();
+    if (app.selected_markers.size() != 2) return;
+    const int owner = *app.selected_markers.begin();   // earlier of the two
     const auto& mv_const = app.warpmarkers.markers();
     if (owner < 0 || owner >= static_cast<int>(mv_const.size())) return;
     if (!bpm_popup_eligible_marker(mv_const[owner])) return;
@@ -555,6 +557,7 @@ void GuiFlagEditor::enter_bpm_mode() {
             mv[i].bpm_beats          = 0;
             mv[i].bpm_lo             = 0;
             mv[i].bpm_hi             = 0;
+            mv[i].bpm_endpoint       = -1;
         }
     }
     // Tag owner with bpm_owner=true if not already set. Sentinel-zero
@@ -567,16 +570,6 @@ void GuiFlagEditor::enter_bpm_mode() {
         mv[owner].bpm_beats          = 0;
         mv[owner].bpm_lo             = 0;
         mv[owner].bpm_hi             = 0;
-    }
-
-    // Auto-select endpoint: next non-disabled marker after owner.
-    // Endpoint is purely informational (visual span boundary); pass
-    // markers and label_refs are valid endpoints since the BPM owner never
-    // lives there. Only effectively-disabled markers are skipped.
-    for (int i = owner + 1; i < static_cast<int>(mv.size()); ++i) {
-        if (effective_disabled(mv, i)) continue;
-        app.selected_markers.insert(i);
-        break;
     }
 
     app.bpm_mode_enabled = true;

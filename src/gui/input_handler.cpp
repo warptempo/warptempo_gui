@@ -5,6 +5,7 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
+#include "time_format.h"
 #include "timemap.h"
 #include "warpmarkers.h"
 #include "engine/stft_container.h"
@@ -281,6 +282,21 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
     // maybe_dispatch_pending here.
 }
 
+// Brief E: human-readable provenance descriptor for a committed BPM cell,
+// e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats and bpm are
+// integers; the two timestamps are the span's owner and endpoint marker
+// times, formatted via the shared mm:ss.mmm formatter. Stored verbatim in
+// the cell's .rendersettings bpm= field and promoted into .settings on
+// commit.
+static std::string format_bpm_descriptor(int beats, int bpm,
+                                         double start_seconds,
+                                         double end_seconds) {
+    return std::to_string(beats) + " beats @ " +
+           std::to_string(bpm) + " bpm from " +
+           format_timestamp(start_seconds) + " to " +
+           format_timestamp(end_seconds);
+}
+
 // Brief E (formerly Brief X.3): sweep every BPM in the BPM owner's
 // [bpm_lo, bpm_hi] range, computing (base_tempo, scale) per cell and
 // rendering one .wav per cell into
@@ -314,23 +330,14 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (owner.bpm_lo    <= 0) return false;
     if (owner.bpm_hi    <= 0) return false;
 
-    // Find the span endpoint: first effectively-enabled marker after the
-    // owner. If none, the span runs to end-of-audio.
-    int endpoint_idx = -1;
-    for (int i = owner_idx + 1;
-         i < static_cast<int>(base_markers.size()); ++i) {
-        if (effective_disabled(base_markers, i)) continue;
-        endpoint_idx = i;
-        break;
+    // Span endpoint is explicit (set on the `m` two-marker gate, part 1).
+    const int endpoint_idx = owner.bpm_endpoint;
+    if (endpoint_idx <= owner_idx ||
+        endpoint_idx >= static_cast<int>(base_markers.size())) {
+        return false;   // missing or malformed span: no sweep
     }
-    const double audio_total_seconds =
-        static_cast<double>(audio.total_frames()) /
-        static_cast<double>(audio.sample_rate());
     const double duration_seconds =
-        (endpoint_idx >= 0)
-            ? (base_markers[endpoint_idx].time_seconds -
-               owner.time_seconds)
-            : (audio_total_seconds - owner.time_seconds);
+        base_markers[endpoint_idx].time_seconds - owner.time_seconds;
     if (!(duration_seconds > 0.0)) return false;
 
     std::vector<int> bpm_values;
@@ -400,16 +407,32 @@ bool GuiInputHandler::render_bpm_sweep() {
         }
 
         std::vector<GuiWarpMarker> cell_markers = base_markers;
-        cell_markers[owner_idx].tempo_base  = computed->base_tempo;
+        // Owner: concrete computed base tempo, scale carried in settings.
+        cell_markers[owner_idx].tempo_inherits = false;
+        cell_markers[owner_idx].tempo_base     = computed->base_tempo;
         cell_markers[owner_idx].tempo_scale.clear();
+        // Span-internal markers pass: their own tempo is subsumed by the
+        // owner's span tempo. Disabled span-internal markers stay disabled
+        // but also pass (the disabled flag is independent of tempo_inherits).
+        for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
+            cell_markers[i].tempo_inherits = true;
+            cell_markers[i].tempo_base     = 1.0;       // inert default
+            cell_markers[i].tempo_scale    = "1.0000";  // model's inert scale
+            // label_def on a span-internal marker is preserved (refs are
+            // excluded from spans by the part-1 gate, but a def may exist);
+            // only the tempo fields are rewritten. Do not touch label_def,
+            // disabled, or any non-tempo field.
+        }
+        // endpoint marker: untouched — its section lies outside the span.
 
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
-        // Record the cell's swept BPM (informational) so the cell's
-        // .rendersettings carries it; Ctrl+Alt+C reads it back on
-        // commit. The sweep varies scale per cell, and bpm is the
-        // input that produced that scale — the two travel together.
-        cell_settings.bpm = bpm;
+        // Provenance descriptor for this cell's .rendersettings; promoted
+        // verbatim into .settings on Ctrl+Alt+C commit (part 3).
+        cell_settings.bpm =
+            format_bpm_descriptor(owner.bpm_beats, bpm,
+                                  owner.time_seconds,
+                                  base_markers[endpoint_idx].time_seconds);
 
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
@@ -1688,12 +1711,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Brief E `m` (no modifiers): open the BPM editor on the single
-    // selected eligible owner in one press, or — if BPM mode is already on
-    // — toggle it (and the editor) off. Warp view only; silent no-op in
-    // phase reset view. Mutual exclusion with iter mode is handled inside
-    // enter_bpm_mode. The gate requires exactly one selected eligible
-    // marker; zero / multiple / ineligible selection is a silent no-op.
+    // Brief E `m` (no modifiers): open the BPM editor on the earlier of two
+    // selected markers that define an explicit span, or — if BPM mode is
+    // already on — toggle it (and the editor) off. Warp view only; silent
+    // no-op in phase reset view. Mutual exclusion with iter mode is handled
+    // inside enter_bpm_mode. The gate requires exactly two selected markers
+    // with no label_ref anywhere in the span; any other selection is a
+    // silent no-op.
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return;
         if (app.bpm_mode_enabled) {
@@ -1707,19 +1731,37 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             viewport.invalidate_timestamp_area();
             return;
         }
-        if (app.selected_markers.size() != 1) return;
-        const int owner = *app.selected_markers.begin();
+        // Two-marker span gate. Exactly two markers must be selected; the
+        // earlier owns, the later closes the span. Neither endpoint nor any
+        // span-internal marker may be a label_ref — commit rewrites every
+        // in-span tempo and a ref cannot take a manual tempo.
+        if (app.selected_markers.size() != 2) return;
         const auto& mv = app.warpmarkers.markers();
-        if (owner < 0 || owner >= static_cast<int>(mv.size())) return;
+        auto it = app.selected_markers.begin();
+        const int owner    = *it++;       // std::set: ascending, so owner is
+        const int endpoint = *it;         // the earlier index, endpoint later
+        if (owner < 0 || endpoint >= static_cast<int>(mv.size())) return;
+        // No label_ref anywhere in [owner, endpoint] inclusive (endpoint
+        // included in the eligibility scan even though its section is not in
+        // the rendered region — a ref endpoint still cannot bound the span
+        // cleanly). Disabled markers ARE allowed and remain in-span.
+        for (int i = owner; i <= endpoint; ++i) {
+            if (!mv[i].label_ref.empty()) return;   // silent no-op
+        }
+        // Owner must still satisfy the BPM-eligibility predicate (e.g. not
+        // itself a label_ref — already covered — and any other standing
+        // condition bpm_popup_eligible_marker encodes).
         if (!bpm_popup_eligible_marker(mv[owner])) return;
-        // enter_bpm_mode tags the owner, flips the mode flag, and
-        // auto-selects the span-endpoint cue (selection becomes
-        // {owner, endpoint}). enter_bpm_edit then opens the bottom-strip
-        // editor on the owner, but its shared enter_text_edit resets the
-        // selection to {owner} — so capture the post-mode selection and
-        // re-assert it afterward to keep the endpoint cue visible.
+        // enter_bpm_mode tags the owner and flips the mode flag. It no
+        // longer auto-selects a next-marker cue; the span endpoint is
+        // explicit, so record it on the owner and keep both selected
+        // markers highlighted as the span cue.
         flag_editor.enter_bpm_mode();
         if (!app.bpm_mode_enabled) return;   // gate inside bailed
+        {
+            auto& mvw = app.warpmarkers.markers_mut();
+            mvw[owner].bpm_endpoint = endpoint;
+        }
         const std::set<int> span_selection = app.selected_markers;
         flag_editor.enter_bpm_edit(owner);
         bool restored = false;
