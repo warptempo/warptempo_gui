@@ -91,6 +91,56 @@ static inline double sec_to_paint_sample(
     return std::nearbyint(eff_time * sr);
 }
 
+// Two-tone overdraw for a single stem column. Mirrors the per-pixel notch
+// render_playhead cuts: wherever this column crosses opaque waveform ink in
+// the displayed plate, recolor the stem to kBackground so it reads as a dark
+// notch through the light fill; elsewhere the stem keeps its own color. icol
+// is the integer plate column the stem was snapped to (round(x_raw)). The
+// plate's row 0 is the waveform body top, which sits at waveform_area.y in
+// these coordinates, so plate row pr maps to fill-y waveform_area.y + pr.
+// Rows above the waveform body (the flag-to-waveform gap) have no plate
+// coverage and are never scanned, so that segment stays the stem color with
+// no special-casing. A null or non-ARGB32 plate, or an out-of-range column,
+// leaves the plain stem untouched.
+void overdraw_stem_ink_notch(cairo_t* cr,
+                             GuiRect waveform_area,
+                             cairo_surface_t* ink_plate,
+                             int icol) {
+    if (!ink_plate) return;
+    cairo_surface_flush(ink_plate);
+    if (cairo_image_surface_get_format(ink_plate) != CAIRO_FORMAT_ARGB32) return;
+    const int plate_w = cairo_image_surface_get_width(ink_plate);
+    const int plate_h = cairo_image_surface_get_height(ink_plate);
+    if (icol < 0 || icol >= plate_w) return;
+    const unsigned char* data = cairo_image_surface_get_data(ink_plate);
+    const int stride  = cairo_image_surface_get_stride(ink_plate);
+    const int y_max   = std::min(waveform_area.h, plate_h);
+
+    cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
+    int run_start = -1;
+    for (int pr = 0; pr < y_max; ++pr) {
+        const bool ink = data[pr * stride + icol * 4 + 3] > 127;
+        if (ink && run_start < 0) {
+            run_start = pr;
+        } else if (!ink && run_start >= 0) {
+            cairo_rectangle(cr,
+                            static_cast<double>(waveform_area.x + icol),
+                            static_cast<double>(waveform_area.y + run_start),
+                            1.0,
+                            static_cast<double>(pr - run_start));
+            run_start = -1;
+        }
+    }
+    if (run_start >= 0) {
+        cairo_rectangle(cr,
+                        static_cast<double>(waveform_area.x + icol),
+                        static_cast<double>(waveform_area.y + run_start),
+                        1.0,
+                        static_cast<double>(y_max - run_start));
+    }
+    cairo_fill(cr);
+}
+
 // Shared stem-painting loop used by render_markers and
 // render_phase_reset_markers. The only meaningful difference between the
 // two callers is how visual-disability is computed: warp markers walk
@@ -110,7 +160,8 @@ void render_marker_stems_impl(
     const std::set<int>& selected_set,
     const std::vector<TimeMapSegment>* timemap,
     const DragOverlay* drag_overlay,
-    IsVisuallyDisabled&& is_disabled) {
+    IsVisuallyDisabled&& is_disabled,
+    cairo_surface_t* ink_plate) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -159,10 +210,12 @@ void render_marker_stems_impl(
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
-        const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
+        const int icol = static_cast<int>(std::round(x_raw));
+        const double x_px = waveform_area.x + icol + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
+        overdraw_stem_ink_notch(cr, waveform_area, ink_plate, icol);
     }
 
     cairo_restore(cr);
@@ -596,14 +649,16 @@ void render_markers(cairo_t* cr,
                     int sample_rate,
                     const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap,
-                    const DragOverlay* drag_overlay) {
+                    const DragOverlay* drag_overlay,
+                    cairo_surface_t* ink_plate) {
     render_marker_stems_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate, selected_set, timemap, drag_overlay,
         [&](int i) {
             return effective_disabled(markers, i);
-        });
+        },
+        ink_plate);
 }
 
 void render_trim_stems(cairo_t* cr,
@@ -614,7 +669,8 @@ void render_trim_stems(cairo_t* cr,
                        bool has_begin,
                        bool begin_selected,
                        bool has_end,
-                       bool end_selected) {
+                       bool end_selected,
+                       cairo_surface_t* ink_plate) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (!has_begin && !has_end) return;
@@ -643,10 +699,12 @@ void render_trim_stems(cairo_t* cr,
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
-        const double x_px = waveform_area.x + std::round(x_raw) + 0.5;
+        const int icol = static_cast<int>(std::round(x_raw));
+        const double x_px = waveform_area.x + icol + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
+        overdraw_stem_ink_notch(cr, waveform_area, ink_plate, icol);
     };
 
     if (has_begin) paint_bound(trim.begin, begin_selected);
@@ -1251,14 +1309,16 @@ void render_phase_reset_markers(cairo_t* cr,
                               int sample_rate,
                               const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap,
-                              const DragOverlay* drag_overlay) {
+                              const DragOverlay* drag_overlay,
+                              cairo_surface_t* ink_plate) {
     render_marker_stems_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
         sample_rate, selected_set, timemap, drag_overlay,
         [&](int i) {
             return phase_resets[i].disabled;
-        });
+        },
+        ink_plate);
 }
 
 void render_phase_reset_flags(cairo_t* cr,

@@ -393,7 +393,8 @@ void render_markers(cairo_t* cr,
                     int sample_rate,
                     const std::set<int>& selected_set,
                     const std::vector<TimeMapSegment>* timemap = nullptr,
-                    const DragOverlay* drag_overlay = nullptr);
+                    const DragOverlay* drag_overlay = nullptr,
+                    cairo_surface_t* ink_plate = nullptr);
 
 // Brief C: draws the trim begin/end boundary stems. Each set bound
 // (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
@@ -413,7 +414,8 @@ void render_trim_stems(cairo_t* cr,
                        bool has_begin,
                        bool begin_selected,
                        bool has_end,
-                       bool end_selected);
+                       bool end_selected,
+                       cairo_surface_t* ink_plate = nullptr);
 
 // F.trim: draws the begin/end trim-boundary flag chips in the upper top row.
 // Each set bound (gated by `has_begin` / `has_end`) paints a single-glyph
@@ -560,7 +562,8 @@ void render_phase_reset_markers(cairo_t* cr,
                               int sample_rate,
                               const std::set<int>& selected_set,
                               const std::vector<TimeMapSegment>* timemap = nullptr,
-                              const DragOverlay* drag_overlay = nullptr);
+                              const DragOverlay* drag_overlay = nullptr,
+                              cairo_surface_t* ink_plate = nullptr);
 
 // The phase-reset chip is an invariable single `p` (the peak/heap/pass
 // phase-MODEL concept was removed once heap became the sole engine). Two

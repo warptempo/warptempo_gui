@@ -1624,7 +1624,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         ccr, local_area, vp_start, vp_end,
         trim_struct,
         trim_has_begin, trim_begin_sel,
-        trim_has_end, trim_end_sel);
+        trim_has_end, trim_end_sel,
+        wf_cache.surface);
 
     if (mv == 'P') {
         const auto& list = rve
@@ -1633,7 +1634,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_phase_reset_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, tmap_arg, drag_overlay);
+            app.selected_markers, tmap_arg, drag_overlay,
+            wf_cache.surface);
     } else {
         const auto& list = rve
             ? app.render_view_markers
@@ -1641,7 +1643,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, tmap_arg, drag_overlay);
+            app.selected_markers, tmap_arg, drag_overlay,
+            wf_cache.surface);
     }
 
     cairo_destroy(ccr);
