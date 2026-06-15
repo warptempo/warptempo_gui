@@ -281,6 +281,7 @@ private:
     // methods than as four side-parameterized invocations.
     enum class TrimSide { Begin, End };
     void handle_trim_set_at_playhead(TrimSide side);
+    void stop_playback_if_scanner_out_of_trim();
     void handle_trim_unset(TrimSide side);
 
     // Brief C: mouse gestures on the trim boundary stems. on_press routes a

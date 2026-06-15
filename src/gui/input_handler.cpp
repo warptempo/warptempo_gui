@@ -2131,7 +2131,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             app.follow_mode = !app.follow_mode;
             if (was_off && app.follow_mode &&
                 playback.is_playing()) {
+                // Explicit enable overrides a prior manual-pan suppression so
+                // follow resumes paging, not just the one initial jump.
+                app.follow_overridden_for_session = false;
                 playback.resync_predictor();
+                // Land the scanner at the page-turn position if it had drifted
+                // offscreen; no-op when it is already in view.
+                viewport.follow_scroll_if_needed();
             }
             break;
         }
@@ -3313,6 +3319,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
+            stop_playback_if_scanner_out_of_trim();
             return;
         }
     }
@@ -3324,6 +3331,22 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
+    stop_playback_if_scanner_out_of_trim();
+}
+
+// After a trim set has resolved the new region, stop playback if the
+// scanner has been left outside it. The cursor sits on the just-set
+// bound, so only the moving scanner can fall out; widening or removing a
+// bound can never push it out, so this is called only from the region-
+// narrowing outcomes below. No-op when the scanner is inactive (stopped)
+// or still in bounds, so the common case keeps playing like a set marker.
+void GuiInputHandler::stop_playback_if_scanner_out_of_trim() {
+    if (!app.playhead_scanner_active) return;
+    const int64_t s = app.playhead_scanner_sample;
+    if (s < viewport.trim_begin_sample() ||
+        s >= viewport.trim_end_sample()) {
+        playback_lifecycle.stop_playback_if_playing();
+    }
 }
 
 void GuiInputHandler::handle_trim_set_begin_at_playhead() {
