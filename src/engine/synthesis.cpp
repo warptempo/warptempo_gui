@@ -402,6 +402,13 @@ void Synthesis::process(AudioSTFT& stft) {
         return;
     }
 
+    // Byte-reproducible output: libsndfile stamps the float WAV PEAK chunk
+    // with wall-clock time(NULL), so two otherwise-identical float renders
+    // differ by that timestamp under literal cmp while the data chunk is
+    // bit-identical. Suppress the chunk. This is a no-op on the PCM_24 paths
+    // (integer WAV carries no PEAK chunk) and must precede any frame write.
+    sf_command(output_snd, SFC_SET_ADD_PEAK_CHUNK, NULL, SF_FALSE);
+
     auto write_to_file = [output_snd](const float* buf, size_t n_frames) {
         sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
     };
