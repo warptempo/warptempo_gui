@@ -3111,7 +3111,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (app.active_audio_view == 'T') {
                     const auto& tm = target_view_timemap_cached(
                         app, sr,
-                        static_cast<long>(audio.total_frames())).timemap;
+                        static_cast<long>(audio.total_frames())).frame_map;
                     lo = to_source_frame(app, a, tm);
                     hi = to_source_frame(app, b, tm);
                     if (lo > hi) std::swap(lo, hi);
@@ -3212,7 +3212,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // proposed source-time lives in the drag overlay — under the
     // frozen-coord regime apply_drag_motion does not mutate the live
     // store during motion. In target view, forward-translate through
-    // the frozen timemap (the same map paint walks during motion) so
+    // the frozen frame_map (the same map paint walks during motion) so
     // the playhead lands at the same screen column as the marker stem.
     // Viewport is deliberately not followed — the user can pan manually
     // if the drag runs past the edge.
@@ -3263,7 +3263,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     // source-domain. Inverse-translate at the boundary so the
     // downstream toggle / collision / swap logic compares against the
     // source-frame domain the trim store lives in.
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -3433,7 +3433,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary, mirroring
     // handle_trim_set_at_playhead.
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -3636,7 +3636,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // it from elsewhere.)
     if (audio.total_frames() <= 0) return;
 
-    // Build the current timemap from the live warp marker store +
+    // Build the current frame_map from the live warp marker store +
     // settings trim. Same resolve-then-build pipeline the render
     // pipeline runs, so the visible deformity in target view matches
     // what the engine would emit. An empty / failed build degenerates
@@ -3649,7 +3649,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     tmin.total_frames = static_cast<long>(audio.total_frames());
     // Trim is a render-time cut, not a view-time concept. The toggle
     // translates source-frame viewport / playhead / total_frames across
-    // the WHOLE song, so the timemap must too — see the matching
+    // the WHOLE song, so the frame_map must too — see the matching
     // comment in paint_handler.cpp's per-paint recompute. Passing the
     // active tab's trim here would shrink the segment list to the
     // exposition's source-frame range and identity-extrapolate the
@@ -3659,11 +3659,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
     TimemapBuildResult tmres;
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (build_timemaps(tmin, tmres)) {
         tmap.reserve(tmres.standard.size());
         for (const auto& s : tmres.standard) {
-            tmap.push_back(TimeMapSegment{s.src_frame, s.tgt_frame});
+            tmap.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});
         }
     }
 
@@ -3675,10 +3675,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     playback_lifecycle.stop_playback_if_playing();
 
     // Anchor the toggle on the playhead's pre-flip screen-pixel column.
-    // Compute ph_px now, translate the playhead through the timemap,
+    // Compute ph_px now, translate the playhead through the frame_map,
     // then derive the new viewport_start so the translated playhead
     // occupies the same column. zoom_level is preserved across the
-    // flip (the visible time span will differ by the timemap's net
+    // flip (the visible time span will differ by the frame_map's net
     // stretch — that is the deformity made visible). clamp_viewport_start
     // below pins viewport_start to file bounds; when the playhead sits
     // near the start / end of the file, the clamp moves the playhead's
@@ -3695,7 +3695,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     bool going_to_target = false;
     if (app.active_audio_view == 'S') {
         // S → T: forward-translate the playhead. The deformed-domain
-        // total is derived from the timemap cache by live_total_frames,
+        // total is derived from the frame_map cache by live_total_frames,
         // so the post-flip viewport math needs no cached total here.
         const double tph = map_source_to_target(
             static_cast<size_t>(app.playhead_cursor_sample < 0
@@ -3729,11 +3729,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
     // One-shot discrete jump with a domain change: is_target, the viewport, and
-    // the timemap hash all flip, so the displayed plate must change. Render it
+    // the frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the
     // bottom-strip S/T indicator and the playhead column do not repaint a frame
     // ahead of the deformed waveform. The plate is built from source audio plus
-    // the live timemap, independent of the target render buffer, so this is
+    // the live frame_map, independent of the target render buffer, so this is
     // unaffected by the ensure_ready / rebind_to_source below.
     viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);

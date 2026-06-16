@@ -76,11 +76,11 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                     ? static_cast<int>(app.phase_reset_markers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
     // Brief 3b: target view paints marker stems at map_source_to_target
-    // translated positions; the hit test must walk the same timemap so
+    // translated positions; the hit test must walk the same frame_map so
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    std::vector<TimeMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_timemap;
     if (!rv && app.active_audio_view == 'T') {
         target_timemap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -139,7 +139,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    std::vector<TimeMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_timemap;
     if (app.active_audio_view == 'T') {
         target_timemap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -196,7 +196,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    std::vector<TimeMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_timemap;
     if (app.active_audio_view == 'T') {
         target_timemap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -272,15 +272,15 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     // Brief 3a: target view's flags paint at translated positions
-    // (compute_flag_hit_rects with a non-null timemap), so hit-test
-    // must walk the same timemap. Build it locally — same construction
+    // (compute_flag_hit_rects with a non-null frame_map), so hit-test
+    // must walk the same frame_map. Build it locally — same construction
     // as paint_handler's on_redraw, trim forced off. Empty in source-
     // view and render-view; the helper's nullptr-when-empty pass-through
     // below leaves those paths untouched.
     //
-    // During a drag, route through the frozen timemap captured at
+    // During a drag, route through the frozen frame_map captured at
     // begin_drag so hit-rect positions match the frozen-coord paint.
-    std::vector<TimeMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_timemap;
     if (!app.render_view_enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
@@ -291,7 +291,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
                 static_cast<long>(audio.total_frames()));
         }
     }
-    const std::vector<TimeMapSegment>* tmap_arg =
+    const std::vector<FrameMapSegment>* tmap_arg =
         target_timemap.empty() ? nullptr : &target_timemap;
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;

@@ -291,7 +291,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the
-    // timemap cache by live_total_frames (the markers and engine_settings
+    // frame_map cache by live_total_frames (the markers and engine_settings
     // it derives from are already loaded at this point). No cached total
     // to populate here — a file that *opens* in target view gets the
     // correct deformed length on first read, same as the S→T toggle path.

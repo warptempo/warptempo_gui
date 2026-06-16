@@ -69,7 +69,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));
@@ -270,7 +270,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     const double anchor_t = tv[app.last_selected_marker].time_seconds;
     // Target view: inverse-translate playhead so the delta lives in
     // source-seconds (matching anchor_t's domain).
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));

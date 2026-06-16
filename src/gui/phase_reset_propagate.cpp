@@ -67,8 +67,8 @@ std::vector<DestBlock> walk_named_blocks(
 // currently in. The input is always a source-domain seconds value (warp
 // markers, clipboard blocks, and dest_blocks all live in source seconds).
 // In source view: identity, labeled " source time". In target view:
-// forward-translate via the live target-view timemap, labeled
-// " target time". Degenerate timemap / sample_rate falls back to the
+// forward-translate via the live target-view frame_map, labeled
+// " target time". Degenerate frame_map / sample_rate falls back to the
 // untranslated source seconds + " source time" label.
 std::string format_domain_timestamp(double source_seconds,
                                     const AppState& app,
@@ -84,7 +84,7 @@ std::string format_domain_timestamp(double source_seconds,
 
     const auto tmap = build_target_view_timemap(app, sr, total);
     if (tmap.empty()) {
-        // Degenerate timemap — fall back to untranslated source seconds
+        // Degenerate frame_map — fall back to untranslated source seconds
         // with a source-time label so the message is still well-defined.
         return format_timestamp(source_seconds) + " source time";
     }

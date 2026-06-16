@@ -24,7 +24,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // source-domain seconds via inverse-translation in
         // handle_trim_set_at_playhead) but Home/End needs to land
         // the playhead in the active target-frame domain. Build
-        // the live timemap and forward-translate the source-domain
+        // the live frame_map and forward-translate the source-domain
         // trim boundaries; unset sides fall back to 0 / live total,
         // matching compute_trim_samples' unset-side semantics for
         // S-view.

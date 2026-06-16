@@ -117,7 +117,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     }
 
     // Trim range comes from .settings (TimemapBuildInput::trim_*), no
-    // longer from per-marker flags. The post-pass below filters timemap
+    // longer from per-marker flags. The post-pass below filters frame_map
     // segments by source frame against this range.
     // A begin of <= 0 means "start at the start", identical to no begin
     // trim, so normalize it away here rather than treating it as an error.
@@ -189,7 +189,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         src_f_prev = src_frame;
     }
 
-    // Pass 2: emit standard timemap + midi tempomap entries.
+    // Pass 2: emit standard frame_map + midi tempomap entries.
     out.standard.push_back({0, 0});
 
     src_f_prev = 0.0;
@@ -272,10 +272,10 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
 
         // Snapshot the pre-shift standard for boundary interpolation; the
         // shift loop below moves into out.standard. The engine helper
-        // map_source_to_target takes std::vector<TimeMapSegment> (engine
+        // map_source_to_target takes std::vector<FrameMapSegment> (engine
         // struct), so build a one-shot element-wise copy.
-        std::vector<TimemapSegment> pre_shift_standard = out.standard;
-        std::vector<TimeMapSegment> pre_shift_eng;
+        std::vector<FrameMapSegment> pre_shift_standard = out.standard;
+        std::vector<FrameMapSegment> pre_shift_eng;
         pre_shift_eng.reserve(pre_shift_standard.size());
         for (const auto& s : pre_shift_standard) {
             pre_shift_eng.push_back({s.src_frame, s.tgt_frame});
@@ -299,7 +299,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
                   ? 0
                   : static_cast<long>(pre_shift_standard.back().tgt_frame));
 
-        std::vector<TimemapSegment> std_shifted;
+        std::vector<FrameMapSegment> std_shifted;
         for (const auto& seg : pre_shift_standard) {
             long sf = static_cast<long>(seg.src_frame);
             long tf = static_cast<long>(seg.tgt_frame);
@@ -317,7 +317,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         // strict monotonicity against the first real entry.
         if (has_begin &&
             (out.standard.empty() || out.standard.front().src_frame != 0)) {
-            out.standard.insert(out.standard.begin(), TimemapSegment{0, 0});
+            out.standard.insert(out.standard.begin(), FrameMapSegment{0, 0});
             out.has_trim_begin_anchor = true;
         }
 
@@ -328,7 +328,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
                 static_cast<size_t>(end_frame - begin_frame);
             if (out.standard.empty() ||
                 out.standard.back().src_frame != end_src_shifted) {
-                out.standard.push_back(TimemapSegment{
+                out.standard.push_back(FrameMapSegment{
                     end_src_shifted,
                     static_cast<size_t>(end_tgt - begin_tgt)
                 });
@@ -385,7 +385,7 @@ TimemapRealRange real_segments(const TimemapBuildResult& r) {
     return {b, e};
 }
 
-std::vector<TimeMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_timemap(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
@@ -406,11 +406,11 @@ std::vector<TimeMapSegment> build_target_view_timemap(
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
     TimemapBuildResult tmres;
-    std::vector<TimeMapSegment> out;
+    std::vector<FrameMapSegment> out;
     if (!build_timemaps(tmin, tmres)) return out;
     out.reserve(tmres.standard.size());
     for (const auto& s : tmres.standard) {
-        out.push_back(TimeMapSegment{s.src_frame, s.tgt_frame});
+        out.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});
     }
     return out;
 }
@@ -424,22 +424,22 @@ const TargetTimemapCache& target_view_timemap_cached(
         c.sample_rate == sample_rate && c.total_frames == total_frames) {
         return c;
     }
-    c.timemap = build_target_view_timemap(
+    c.frame_map = build_target_view_timemap(
         app.warpmarkers.markers(), scale, sample_rate, total_frames);
     uint64_t h = 0xcbf29ce484222325ULL;
-    for (const auto& s : c.timemap) {
+    for (const auto& s : c.frame_map) {
         h ^= static_cast<uint64_t>(s.src_frame);
         h *= 0x100000001b3ULL;
         h ^= static_cast<uint64_t>(s.tgt_frame);
         h *= 0x100000001b3ULL;
     }
-    c.hash         = c.timemap.empty() ? 0 : h;
-    if (c.timemap.empty()) {
+    c.hash         = c.frame_map.empty() ? 0 : h;
+    if (c.frame_map.empty()) {
         c.tgt_total_frames = static_cast<int64_t>(total_frames);
     } else {
         const double t = map_source_to_target(
             static_cast<size_t>(total_frames < 0 ? 0 : total_frames),
-            c.timemap);
+            c.frame_map);
         const int64_t tt = static_cast<int64_t>(std::nearbyint(t));
         c.tgt_total_frames =
             tt > 0 ? tt : static_cast<int64_t>(total_frames);
@@ -452,29 +452,29 @@ const TargetTimemapCache& target_view_timemap_cached(
     return c;
 }
 
-std::vector<TimeMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_timemap(
     const AppState& app, int sample_rate, long total_frames) {
-    return target_view_timemap_cached(app, sample_rate, total_frames).timemap;
+    return target_view_timemap_cached(app, sample_rate, total_frames).frame_map;
 }
 
 int64_t to_source_frame(const AppState& app, int64_t domain_frame,
-                        const std::vector<TimeMapSegment>& timemap) {
+                        const std::vector<FrameMapSegment>& frame_map) {
     if (app.active_audio_view == 'S') return domain_frame;
     const size_t q = (domain_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(domain_frame);
     return static_cast<int64_t>(
-        std::nearbyint(map_target_to_source(q, timemap)));
+        std::nearbyint(map_target_to_source(q, frame_map)));
 }
 
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
-                        const std::vector<TimeMapSegment>& timemap) {
+                        const std::vector<FrameMapSegment>& frame_map) {
     if (app.active_audio_view == 'S') return source_frame;
     const size_t q = (source_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(source_frame);
     return static_cast<int64_t>(
-        std::nearbyint(map_source_to_target(q, timemap)));
+        std::nearbyint(map_source_to_target(q, frame_map)));
 }
 
 bool write_trimmed_wav(const std::string& src_path,

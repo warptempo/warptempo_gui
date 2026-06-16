@@ -32,7 +32,7 @@ void unlink_silent(const std::string& path) {
 }
 
 bool write_standard_timemap(const std::string& path,
-                            const std::vector<TimemapSegment>& segs,
+                            const std::vector<FrameMapSegment>& segs,
                             bool drop_zero_zero) {
     std::ofstream of(path);
     if (!of) {
@@ -279,9 +279,9 @@ RenderOutcome do_render(const RenderRequest& req,
         // Full untrimmed timemap: the engine builds the whole frame map and
         // synthesizes only the windowed frames (set via ep.has_trim below),
         // so the windowed source reads match the full render frame-for-frame.
-        ep.timemap.reserve(tmfull.standard.size());
+        ep.frame_map.reserve(tmfull.standard.size());
         for (const auto& s : tmfull.standard) {
-            ep.timemap.emplace_back(s.src_frame, s.tgt_frame);
+            ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
         }
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;

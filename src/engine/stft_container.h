@@ -13,7 +13,7 @@
 #include "engine.h"
 
 // --- Data Structures ---
-struct TimeMapSegment {
+struct FrameMapSegment {
     size_t src_frame;
     size_t tgt_frame;
 };
@@ -58,7 +58,7 @@ struct PghiHeapNode {
     bool   current;
 };
 
-inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSegment>& map) {
+inline double map_source_to_target(size_t src_frame, const std::vector<FrameMapSegment>& map) {
     if (map.empty()) return static_cast<double>(src_frame);
     if (src_frame <= map.front().src_frame) return map.front().tgt_frame;
     // Strictly monotonic src_frame (engine-validated; GUI builder emits
@@ -66,7 +66,7 @@ inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSe
     // binary search: i is the last segment with src_frame <= query.
     auto it = std::upper_bound(
         map.begin(), map.end(), src_frame,
-        [](size_t q, const TimeMapSegment& s) { return q < s.src_frame; });
+        [](size_t q, const FrameMapSegment& s) { return q < s.src_frame; });
     const size_t i = static_cast<size_t>(it - map.begin()) - 1;
     if (i < map.size() - 1) {
         double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
@@ -83,15 +83,15 @@ inline double map_source_to_target(size_t src_frame, const std::vector<TimeMapSe
 // source-frame position. Used by the GUI's target view to translate
 // per-column target-frame ranges into source-frame ranges for the
 // shared waveform paint. Symmetric edge cases: clamp to the first
-// segment for queries before the timemap's tgt start; identity past
+// segment for queries before the frame_map's tgt start; identity past
 // the last segment; empty map degenerates to identity. The owning
 // segment is found by binary search over the strictly monotonic tgt axis.
-inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSegment>& map) {
+inline double map_target_to_source(size_t tgt_frame, const std::vector<FrameMapSegment>& map) {
     if (map.empty()) return static_cast<double>(tgt_frame);
     if (tgt_frame <= map.front().tgt_frame) return map.front().src_frame;
     auto it = std::upper_bound(
         map.begin(), map.end(), tgt_frame,
-        [](size_t q, const TimeMapSegment& s) { return q < s.tgt_frame; });
+        [](size_t q, const FrameMapSegment& s) { return q < s.tgt_frame; });
     const size_t i = static_cast<size_t>(it - map.begin()) - 1;
     if (i < map.size() - 1) {
         double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
@@ -119,7 +119,7 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<TimeMapSe
 //     relative alignment to the audio (diag spikes must NOT add the offset).
 //   - Total output length is AudioSTFT::emit_sample_cap: the target-frame
 //     position of the window's last source sample (full render: last_tgt =
-//     timemap.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
+//     frame_map.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
 //     longer the output length, and target_total_frames describes the *input*
 //     plan, not the emitted sample count. Any auxiliary buffer sized to match the
 //     output (limiter meas_ola, diag WAVs) must use the actually emitted length
@@ -152,7 +152,7 @@ struct AudioSTFT {
     size_t target_total_frames = 0;
 
     // Timemap
-    std::vector<TimeMapSegment> timemap;
+    std::vector<FrameMapSegment> frame_map;
 
     // Windows
     std::vector<double> window;
@@ -218,7 +218,7 @@ struct AudioSTFT {
 
     // Emit cap: output length in samples. The synthesizer truncates its emitted
     // stream to this many samples so render length equals the target-view length
-    // (full render: timemap.back().tgt_frame). Set by engine.cpp after the synth
+    // (full render: frame_map.back().tgt_frame). Set by engine.cpp after the synth
     // window is resolved. 0 means "no cap" (defensive default).
     int64_t emit_sample_cap = 0;
 
@@ -241,7 +241,7 @@ struct AudioSTFT {
     // source_frame_positions[m-1] (caller derives).
     std::vector<int64_t> generate_source_frame_positions() const {
         // Synthesis frame m sits at output position t_s = m * R_s. Its source
-        // read position is the exact inverse-timemap value at t_s, minus the
+        // read position is the exact inverse-frame_map value at t_s, minus the
         // N/2 origin-centered analysis offset:
         //     t_a(m) = map_target_to_source(m * R_s) - N/2.
         // map_target_to_source is piecewise-linear and splits exactly at every
@@ -256,7 +256,7 @@ struct AudioSTFT {
         // straddled advance.
         std::vector<int64_t> positions;
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
-            double src = map_target_to_source(t_s, timemap)
+            double src = map_target_to_source(t_s, frame_map)
                        - static_cast<double>(N) / 2.0;
             positions.push_back(static_cast<int64_t>(std::llround(src)));
         }

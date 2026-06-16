@@ -113,7 +113,7 @@ void Selection::cycle_selection(bool forward) {
     // marker source-frame == active-domain frame (identity). Target view:
     // forward-translate to active-domain so frame_of values are
     // comparable to playhead_cursor_sample / viewport_start_sample below.
-    std::vector<TimeMapSegment> tmap;
+    std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
         tmap = build_target_view_timemap(
             app, sr, static_cast<long>(audio.total_frames()));

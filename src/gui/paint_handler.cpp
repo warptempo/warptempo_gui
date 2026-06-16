@@ -34,7 +34,7 @@
 // the waveform worker thread when the main path goes through GuiWaveformWorker;
 // the function itself is thread-agnostic — it touches only the dest surface
 // the caller passed in, the audio handle's peak pyramid (read-only after
-// load), and the timemap snapshot the caller built. perf_counters
+// load), and the frame_map snapshot the caller built. perf_counters
 // increments inside render_waveform fire from the worker thread when
 // kDebugPerf=true; see the comment in render.h.
 
@@ -46,7 +46,7 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<TimeMapSegment>* timemap_or_null) {
+    const std::vector<FrameMapSegment>* timemap_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     cairo_t* ccr = cairo_create(dest);
@@ -122,7 +122,7 @@ static void render_waveform_strip_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start_full,
     int64_t vp_end_full,
-    const std::vector<TimeMapSegment>* timemap_or_null) {
+    const std::vector<FrameMapSegment>* timemap_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
     if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
     if (vp_end_full <= vp_start_full) return;
@@ -242,7 +242,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect exposed{x, y, w, h};
         const int     sr         = audio.sample_rate();
 
-        // Stage C: live viewport / target-timemap / trim computations
+        // Stage C: live viewport / target-frame_map / trim computations
         // that used to drive on_redraw's render_flags / render_markers
         // calls have moved into the cache rebuild paths (waveform via
         // Stage A's worker, stems via maybe_rebuild_stem_cache, flags
@@ -273,7 +273,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             //      which swaps into wf_cache.surface on completion. Fires
             //      on the on_tick backstop and on non-pan viewport changes
             //      (zoom, center-on-playhead, follow-scroll), plus resize,
-            //      reload, and target-view timemap changes.
+            //      reload, and target-view frame_map changes.
             //   2. Incremental shift-and-strip — a pure horizontal pan
             //      (scroll_viewport) calls pan_waveform_incremental, which
             //      shifts the existing plate pixels by the pan delta and
@@ -444,7 +444,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // (after a viewport gesture, before the worker's swap).
             const int64_t  vp_start_disp = wf_cache.fp_vp_start;
             const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
-            const std::vector<TimeMapSegment>* tmap_disp =
+            const std::vector<FrameMapSegment>* tmap_disp =
                 (wf_cache.fp_target && !wf_cache.fp_timemap.empty())
                     ? &wf_cache.fp_timemap : nullptr;
 
@@ -552,7 +552,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             const int64_t dbg_vp_end = dbg_vp_start +
                 static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
-            std::vector<TimeMapSegment> dbg_tmap;
+            std::vector<FrameMapSegment> dbg_tmap;
             if (!app.render_view_enabled &&
                 app.active_audio_view == 'T') {
                 if (app.drag.active) {
@@ -563,7 +563,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         static_cast<long>(audio.total_frames()));
                 }
             }
-            const std::vector<TimeMapSegment>* dbg_tmap_arg =
+            const std::vector<FrameMapSegment>* dbg_tmap_arg =
                 dbg_tmap.empty() ? nullptr : &dbg_tmap;
 
             DragOverlay dbg_drag_storage;
@@ -837,7 +837,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 
     const bool is_target = (app.active_audio_view == 'T') &&
                            !app.render_view_enabled;
-    std::vector<TimeMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_timemap;
     uint64_t target_timemap_hash = 0;
     if (is_target) {
         if (app.drag.active) {
@@ -846,7 +846,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
             const TargetTimemapCache& c =
                 target_view_timemap_cached(app, sr,
                     static_cast<long>(audio.total_frames()));
-            target_timemap      = c.timemap;       // job needs an owned snapshot
+            target_timemap      = c.frame_map;       // job needs an owned snapshot
             target_timemap_hash = c.hash;
         }
     }
@@ -858,7 +858,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.is_target     = is_target;
     in.timemap_hash  = target_timemap_hash;
     in.channel_count = audio.render_channels();
-    in.timemap       = std::move(target_timemap);
+    in.frame_map       = std::move(target_timemap);
     in.valid         = true;
     return in;
 }
@@ -867,7 +867,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
-    // Drag-freeze gate: during a target-view drag the timemap-derived
+    // Drag-freeze gate: during a target-view drag the frame_map-derived
     // inputs are excluded from the dirty-detect comparison, so non-drag
     // viewport changes (which would still update pending_fp_* if they
     // happened) trigger a render but pure drag-motion does not. See the
@@ -915,7 +915,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_audio_gen   = app.audio_generation;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_timemap_hash = in.timemap_hash;
-        wf_cache.supersede_timemap     = std::move(in.timemap);
+        wf_cache.supersede_timemap     = std::move(in.frame_map);
         return;
     }
 
@@ -942,11 +942,11 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio_gen      = app.audio_generation;
     job.target         = in.is_target;
     job.timemap_hash   = in.timemap_hash;
-    // Stage B: stash a copy of the timemap on the pending slot so the
+    // Stage B: stash a copy of the frame_map on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
-    wf_cache.pending_fp_timemap = in.timemap;
-    job.timemap        = std::move(in.timemap);
+    wf_cache.pending_fp_timemap = in.frame_map;
+    job.frame_map        = std::move(in.frame_map);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = in.channel_count;
     job.audio          = &audio;
@@ -1010,12 +1010,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
         job.timemap_hash   = wf_cache.supersede_timemap_hash;
-        // Stage B: thread the supersede timemap into both the job and
+        // Stage B: thread the supersede frame_map into both the job and
         // pending_fp_timemap, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
         // displayable copy for the post-completion stem rebuild.
         wf_cache.pending_fp_timemap = wf_cache.supersede_timemap;
-        job.timemap        = std::move(wf_cache.supersede_timemap);
+        job.frame_map        = std::move(wf_cache.supersede_timemap);
         job.surface        = wf_cache.pending_surface;
         job.channel_count  = audio.render_channels();
         job.audio          = &audio;
@@ -1050,7 +1050,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_timemap_hash = wf_cache.pending_fp_timemap_hash;
-    // Stage B: publish the in-flight job's timemap to the displayed slot
+    // Stage B: publish the in-flight job's frame_map to the displayed slot
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_timemap,     wf_cache.pending_fp_timemap);
@@ -1154,7 +1154,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.channel_count,
         audio,
         in.vp_start, in.vp_end,
-        in.timemap.empty() ? nullptr : &in.timemap);
+        in.frame_map.empty() ? nullptr : &in.frame_map);
 
     // Publish the displayed fingerprint NOW so this same tick's
     // maybe_rebuild_stem_cache / maybe_rebuild_flag_cache read the
@@ -1168,7 +1168,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_audio_gen    = app.audio_generation;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_timemap_hash = in.timemap_hash;
-    wf_cache.fp_timemap      = in.timemap;
+    wf_cache.fp_timemap      = in.frame_map;
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
@@ -1177,7 +1177,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_audio_gen    = app.audio_generation;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_timemap_hash = in.timemap_hash;
-    wf_cache.pending_fp_timemap      = in.timemap;
+    wf_cache.pending_fp_timemap      = in.frame_map;
 
     wf_cache.dirty = false;
 
@@ -1200,7 +1200,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 // Target view uses this path too: a pan is a translation in the DISPLAYED
 // (target) domain, the plate is uniformly indexed in that domain
 // (render_waveform maps column i -> vp_start + spp*i, then target->source via
-// the timemap), and the timemap is invariant across a pan (marker/scale edits
+// the frame_map), and the frame_map is invariant across a pan (marker/scale edits
 // rebuild it and stay on the worker path, caught by the fp_timemap_hash gate
 // below). So a uniform pixel shift is exactly as correct in target view as in
 // source view.
@@ -1218,9 +1218,9 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     //  - no plate yet (just after load)
     //  - worker mid-render: leave it to the worker; superseding keeps the
     //    latest viewport without racing a swap against our in-place shift
-    //  - active drag: the timemap is frozen / mid-deformation
+    //  - active drag: the frame_map is frozen / mid-deformation
     //  - dimension mismatch (resize since the plate was rendered)
-    //  - view / timemap mismatch: not a pure pan (e.g. 't' toggle, marker edit)
+    //  - view / frame_map mismatch: not a pure pan (e.g. 't' toggle, marker edit)
     if (!wf_cache.surface ||
         waveform_worker.is_busy() ||
         app.drag.active ||
@@ -1311,13 +1311,13 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         in.channel_count,
         audio,
         in.vp_start, in.vp_end,
-        in.timemap.empty() ? nullptr : &in.timemap);
+        in.frame_map.empty() ? nullptr : &in.frame_map);
 
     // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
     // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors
     // it so the on_tick dirty-check sees the fingerprint already satisfied and
     // does not redundantly re-render the whole window. Everything else
-    // (area, target, timemap, audio_gen) is unchanged by a pure pan and was
+    // (area, target, frame_map, audio_gen) is unchanged by a pure pan and was
     // verified equal to in.* by the fallback gate above.
     wf_cache.fp_vp_start         = in.vp_start;
     wf_cache.fp_vp_end           = in.vp_end;
@@ -1402,7 +1402,7 @@ GuiPaintHandler::compute_displayed_trim() const {
     // Positions read LIVE from app state (no waveform-cache coupling): trim
     // no longer affects waveform pixels, so they must follow the cursor every
     // motion tick rather than lagging a worker-completion swap. Target-view
-    // positions map through the displayed timemap (wf_cache.fp_timemap) — the
+    // positions map through the displayed frame_map (wf_cache.fp_timemap) — the
     // same coordinate system the marker stems use — which trim does not
     // perturb, so it is stable across a trim drag.
     const int sr = audio.sample_rate();
@@ -1440,7 +1440,7 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
 
     // Frames in the same paint domain the trim stems use (render view forces
     // has_begin/has_end off, so the early-out below covers it). begin/end are
-    // already mapped through the displayed timemap in target view.
+    // already mapped through the displayed frame_map in target view.
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
 
@@ -1592,11 +1592,11 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const TrimRange trim_struct{trim_begin, trim_end};
     const int sr = audio.sample_rate();
 
-    // Target-view stems consume the displayed timemap (the one baked
+    // Target-view stems consume the displayed frame_map (the one baked
     // into the live waveform pixels), not a freshly-built one — keeps
     // stem positions consistent with the displayed waveform during the
     // worker's rebuild window.
-    const std::vector<TimeMapSegment>* tmap_arg =
+    const std::vector<FrameMapSegment>* tmap_arg =
         (is_target && !wf_cache.fp_timemap.empty())
             ? &wf_cache.fp_timemap : nullptr;
 
@@ -1801,7 +1801,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const GuiRect local_top_strip{0, 0, surface_w, surface_h};
     const int sr = audio.sample_rate();
 
-    const std::vector<TimeMapSegment>* tmap_arg =
+    const std::vector<FrameMapSegment>* tmap_arg =
         (is_target && !wf_cache.fp_timemap.empty())
             ? &wf_cache.fp_timemap : nullptr;
 
@@ -1912,7 +1912,7 @@ void GuiPaintHandler::on_resize(int w, int h) {
 
     // A numeric zoom level may have been valid at the old width but show
     // more samples than the file at the new width — promote to fit-file.
-    // live_total_frames returns the timemap-derived deformed total in
+    // live_total_frames returns the frame_map-derived deformed total in
     // target view so the cap is consistent with the deformed timeline's
     // length.
     const int max_num = max_valid_numeric_level(

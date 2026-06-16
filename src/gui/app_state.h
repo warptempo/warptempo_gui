@@ -123,12 +123,12 @@ struct DragState {
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
-    // Pre-drag timemap snapshot. Captured at begin_drag via
+    // Pre-drag frame_map snapshot. Captured at begin_drag via
     // build_target_view_timemap so paint can route selected-marker
     // positions and target-view waveform through a frozen coordinate
     // system for the duration of the drag. Empty when source view is
     // active at begin_drag time, or when the build failed.
-    std::vector<TimeMapSegment> frozen_timemap;
+    std::vector<FrameMapSegment> frozen_timemap;
     // Full pre-drag marker state. Captured at button-press so commit_drag
     // can push it onto the undo stack when motion landed; discarded on
     // commit when no motion occurred (DragState is reset wholesale there).
@@ -473,7 +473,7 @@ struct AppState {
     // playable with live engine output.
     char active_audio_view = 'S';
 
-    // Memoized target-view timemap (see timemap.h). Mutable: consulted and
+    // Memoized target-view frame_map (see timemap.h). Mutable: consulted and
     // refreshed from const hit-test paths.
     mutable TargetTimemapCache target_timemap_cache;
 
@@ -570,10 +570,10 @@ struct AppState {
     int64_t target_buffer_frames = 0;
     // Full-target-frame coordinate that target_buffer[0] represents.
     // With trim set: map_source_to_target(trim_begin_frame) against the
-    // full-source timemap. With trim unset: 0 (the target buffer is
+    // full-source frame_map. With trim unset: 0 (the target buffer is
     // the full-song render starting at target frame 0). Captured in
     // on_render_done's Success branch when target_buffer_frames
-    // has just been set and the timemap is still derivable from the
+    // has just been set and the frame_map is still derivable from the
     // live AppState. Read by toggle_playback (to translate the
     // playhead's target-domain coordinate into a target-buffer
     // frame index for playback.play()) and by the pre-paint hook (to
@@ -854,7 +854,7 @@ double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
                         int64_t vp_start, double spp);
 // Active-domain total frame count. Source view returns audio.total_frames();
-// target view returns the deformed total derived from the timemap cache
+// target view returns the deformed total derived from the frame_map cache
 // (the forward-translated source length). Used by every viewport helper that needs the
 // "length of the timeline currently being viewed" — clamp, fit-file zoom,
 // and the numeric-level cap. Declared here so any TU touching the
@@ -921,7 +921,7 @@ enum class TrimHit { None, Begin, End };
 // hit_test_trim_boundary: return which set trim boundary's painted
 // column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
 // bounds (has_trim_begin / has_trim_end) are testable. Walks the same
-// timemap as hit_test_marker_line in target view so the hit lands on the
+// frame_map as hit_test_marker_line in target view so the hit lands on the
 // visually-drawn stem. Trim is the active tab's, and applies in both 'W'
 // and 'P' views. When both bounds are within reach, the nearer wins.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,

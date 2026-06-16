@@ -108,7 +108,7 @@ private:
     // Single source of truth for app.target_buffer_start_frame: the
     // full-target-frame coordinate that target_buffer[0] represents. 0 for a
     // full-song (no-trim) render; with trim set, the trim-begin source frame
-    // mapped through the target-view timemap (the engine renders only the trim
+    // mapped through the target-view frame_map (the engine renders only the trim
     // range, so buffer frame 0 is the trim's target-frame start). Requires
     // app.target_buffer_frames to be set. Called from on_render_done (after a
     // fresh render) and from ensure_ready's clean rebind (so a cached buffer

@@ -31,7 +31,7 @@ struct EngineParams {
     // for clearing or reserving.
     std::vector<float>* output_buffer = nullptr;
 
-    std::vector<std::pair<size_t, size_t>> timemap;  // src_frame, tgt_frame
+    std::vector<std::pair<size_t, size_t>> frame_map;  // src_frame, tgt_frame
 
     int    N                          = 4096;
     bool   limiter                    = false;
@@ -51,13 +51,13 @@ struct EngineParams {
 
     // Optional synthesis frame window. When has_trim is false the engine
     // synthesizes the whole frame map (unchanged full-render behavior). When
-    // true, the engine builds the full frame map over the supplied timemap and
+    // true, the engine builds the full frame map over the supplied frame_map and
     // source as usual, then synthesizes only the contiguous frame window whose
     // source read positions cover [trim_begin_src, trim_end_src]. The window
     // is selected against the full frame map so it always lands on frame
     // boundaries; the emitted output is then a constant integer offset of
     // window_begin * R_s from the corresponding full render. Domain: absolute
-    // source frames, same domain as phase_reset_frames on the full-timemap path.
+    // source frames, same domain as phase_reset_frames on the full-frame_map path.
     bool    has_trim        = false;
     int64_t trim_begin_src  = 0;
     int64_t trim_end_src     = 0;
@@ -65,7 +65,7 @@ struct EngineParams {
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation
 // (worker observed `cancel_flag` set at a frame boundary) from genuine
-// failure (open errors, bad timemap, etc.).
+// failure (open errors, bad frame_map, etc.).
 enum class EngineResult { Success, Failed, Cancelled };
 
 // `cancel_flag` is optional. When non-null, the synthesis loop checks it

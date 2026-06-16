@@ -6,7 +6,7 @@
 #include "render.h"
 #include "warpmarkers.h"
 #include "platform_wayland.h"
-#include "engine/stft_container.h"   // TimeMapSegment
+#include "engine/stft_container.h"   // FrameMapSegment
 
 #include <cairo/cairo.h>
 #include <string>
@@ -81,7 +81,7 @@ struct WaveformCache {
     // the source-view and target-view caches: a `t` toggle flips it
     // without disturbing the source-domain inputs, forcing a cache rebuild.
     // fp_timemap_hash captures the warp marker / trim state baked into
-    // the timemap the target paint just consumed; any authoring edit in
+    // the frame_map the target paint just consumed; any authoring edit in
     // source view that would shift the deformity invalidates the target
     // view's last cached paint on its next entry.
     int64_t   fp_vp_start    = 0;
@@ -92,13 +92,13 @@ struct WaveformCache {
     bool      fp_target      = false;
     uint64_t  fp_timemap_hash = 0;
 
-    // Stage B (layered-paint): the timemap baked into the live waveform
+    // Stage B (layered-paint): the frame_map baked into the live waveform
     // pixels. The stem cache reads this to render target-view stems
     // against the same coordinate system the displayed waveform uses, so
     // stems and waveform pixels snap together at the completion swap
     // instead of diverging during the rebuild window. Empty in source
     // view; empty before the first completion has fired.
-    std::vector<TimeMapSegment> fp_timemap;
+    std::vector<FrameMapSegment> fp_timemap;
 
     // Stage A: pending-slot surface and fingerprint. The worker renders
     // into pending_surface; the completion handler swaps it into surface
@@ -118,10 +118,10 @@ struct WaveformCache {
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_timemap_hash = 0;
 
-    // Stage B: the timemap the in-flight job is consuming. Set at
+    // Stage B: the frame_map the in-flight job is consuming. Set at
     // dispatch alongside the other pending_fp_*; swapped into fp_timemap
     // at completion.
-    std::vector<TimeMapSegment> pending_fp_timemap;
+    std::vector<FrameMapSegment> pending_fp_timemap;
 
     // Supersede slot: when dirty-detect sees a new viewport mid-render,
     // it stashes the desired fingerprint here instead of dispatching.
@@ -137,7 +137,7 @@ struct WaveformCache {
     long long supersede_audio_gen   = -1;
     bool      supersede_target      = false;
     uint64_t  supersede_timemap_hash = 0;
-    std::vector<TimeMapSegment> supersede_timemap;
+    std::vector<FrameMapSegment> supersede_timemap;
 
     // Stage A: `dirty` no longer drives the dispatch decision (the
     // pending_fp_* comparison does). It remains as a startup/clear flag:
@@ -412,7 +412,7 @@ struct GuiPaintHandler {
     // the displayed domain. Wired from main.cpp into Viewport via the
     // request_waveform_pan_ callback. Falls back to the worker / a synchronous
     // full render for every case that is not a clean translate of the current
-    // plate (no plate, worker busy, drag, resize, view/timemap change,
+    // plate (no plate, worker busy, drag, resize, view/frame_map change,
     // over-a-window flick); the on_tick backstop catches any residual drift.
     void pan_waveform_incremental(int64_t new_vp_start);
 
@@ -431,7 +431,7 @@ private:
         bool     is_target     = false;
         uint64_t timemap_hash  = 0;
         int      channel_count = 0;
-        std::vector<TimeMapSegment> timemap;   // empty in source view
+        std::vector<FrameMapSegment> frame_map;   // empty in source view
         bool     valid         = false;        // false if degenerate / loading
     };
 
@@ -442,7 +442,7 @@ private:
     // chips that cap them). Computing it in one place keeps chip and stem in
     // lockstep — same positions, same has/selected bits — so they always read
     // as one continuous unit. Positions are translated into the displayed
-    // domain (target-view timemap from wf_cache.fp_timemap, or source-frame),
+    // domain (target-view frame_map from wf_cache.fp_timemap, or source-frame),
     // matching the marker stems' coordinate system. Render view forces the
     // bounds off (trim is a source-view authoring concept).
     struct DisplayedTrim {

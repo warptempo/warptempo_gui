@@ -50,8 +50,8 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     }
 }
 
-// Validate strict monotonicity of a (src,tgt) timemap. Returns true if OK.
-bool validate_timemap_monotonic(const std::vector<TimeMapSegment>& tm) {
+// Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
+bool validate_timemap_monotonic(const std::vector<FrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
         if (tm[i].src_frame <= tm[i - 1].src_frame) {
             std::cerr << "Error: timemap entry " << i << " has non-monotonic src_frame ("
@@ -103,13 +103,13 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // Populate timemap from caller and validate monotonicity.
-    audio_stft.timemap.clear();
-    audio_stft.timemap.reserve(p.timemap.size());
-    for (const auto& e : p.timemap) {
-        audio_stft.timemap.push_back({e.first, e.second});
+    // Populate frame_map from caller and validate monotonicity.
+    audio_stft.frame_map.clear();
+    audio_stft.frame_map.reserve(p.frame_map.size());
+    for (const auto& e : p.frame_map) {
+        audio_stft.frame_map.push_back({e.first, e.second});
     }
-    if (!validate_timemap_monotonic(audio_stft.timemap)) return EngineResult::Failed;
+    if (!validate_timemap_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {
@@ -127,7 +127,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.src_samples = p.source_audio_samples;
     audio_stft.channels = audio_stft.src_info.channels;
-    audio_stft.target_total_frames = audio_stft.timemap.back().tgt_frame + audio_stft.N;
+    audio_stft.target_total_frames = audio_stft.frame_map.back().tgt_frame + audio_stft.N;
 
     audio_stft.init_fftw();
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
@@ -163,19 +163,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     // Emit cap (length oracle + render==target length): the rendered output ends
     // at the target-frame position of the window's last source sample. Full
-    // render: end_src == timemap.back().src_frame, so the cap is last_tgt.
+    // render: end_src == frame_map.back().src_frame, so the cap is last_tgt.
     // Windowed render: end_src == trim_end_src, rebased onto the windowed output
     // axis by window_offset. Samples past this are OLA decay tail over
     // (near-)silent material and do not determine head or interior alignment.
     {
         const int64_t end_src = p.has_trim
             ? p.trim_end_src
-            : static_cast<int64_t>(audio_stft.timemap.back().src_frame);
+            : static_cast<int64_t>(audio_stft.frame_map.back().src_frame);
         const int64_t window_offset =
             static_cast<int64_t>(audio_stft.synth_frame_begin) *
             static_cast<int64_t>(audio_stft.R_s);
         const double tgt_end =
-            map_source_to_target(static_cast<size_t>(end_src), audio_stft.timemap);
+            map_source_to_target(static_cast<size_t>(end_src), audio_stft.frame_map);
         audio_stft.emit_sample_cap =
             static_cast<int64_t>(std::llround(tgt_end)) - window_offset;
         if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;

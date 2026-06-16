@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/stft_container.h"   // TimeMapSegment
+#include "engine/stft_container.h"   // FrameMapSegment
 
 #include <atomic>
 #include <cairo/cairo.h>
@@ -42,7 +42,7 @@ struct WaveformJob {
     // source view; populated for target view from the value paint-side
     // computed (or app.drag.frozen_timemap during a target-view drag). The
     // worker reads — never builds — this.
-    std::vector<TimeMapSegment> timemap;
+    std::vector<FrameMapSegment> frame_map;
 
     // Surface to render into. Owned by the cache (the cache's pending-slot
     // surface). The worker only writes pixels; the cache lifecycle owns
@@ -153,4 +153,4 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<TimeMapSegment>* timemap_or_null);
+    const std::vector<FrameMapSegment>* timemap_or_null);

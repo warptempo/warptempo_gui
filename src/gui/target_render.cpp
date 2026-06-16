@@ -194,7 +194,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 void GuiTargetRender::recompute_target_buffer_start_frame() {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
     // with trim set, to map_source_to_target(trim_begin_frame) against the
-    // full-source timemap, since the engine rendered only the trim range.
+    // full-source frame_map, since the engine rendered only the trim range.
     // Compute only after target_buffer_frames is set so a failed/empty buffer
     // does not leave a stale anchor.
     app.target_buffer_start_frame = 0;

@@ -13,7 +13,7 @@
 // Tristate result of do_render. Returned from the synchronous entry point
 // and propagated through GuiAsyncRenderer to on_done callbacks.
 //   - Success:   pipeline ran to completion; final output exists on disk.
-//   - Failed:    early-return error path (timemap build, engine, subprocess,
+//   - Failed:    early-return error path (frame_map build, engine, subprocess,
 //                rename); diagnostics already on stderr.
 //   - Cancelled: cancel_flag was observed mid-pipeline; partial output
 //                cleaned up by cleanup_all; no final file on disk.
@@ -53,7 +53,7 @@ struct RenderRequest {
     // submission paths. Lifted out of warp markers per the brief: trim
     // now lives in .settings (trim_begin / trim_end keys), not on b=/e=
     // markers. The render pipeline forwards these to TimemapBuildInput,
-    // which drives the timemap post-pass + write_trimmed_wav cut.
+    // which drives the frame_map post-pass + write_trimmed_wav cut.
     bool   has_trim_begin = false;
     double trim_begin_sec = 0.0;
     bool   has_trim_end   = false;

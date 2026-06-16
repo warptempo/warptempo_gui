@@ -304,7 +304,7 @@ private:
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Translates app.viewport_start_sample / playhead_cursor_sample / zoom_level
-    // through the current timemap in place (forward on S→T, inverse on
+    // through the current frame_map in place (forward on S→T, inverse on
     // T→S) so the visible viewport stays the same screen-pixel extent
     // across the toggle. Stops playback (target view has no playback in
     // brief 1) and invalidates the whole window. Silent no-op while

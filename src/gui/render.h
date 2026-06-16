@@ -1,7 +1,7 @@
 #pragma once
 #include "warpmarkers.h"
 #include "phase_reset_markers.h"
-#include "engine/stft_container.h"   // TimeMapSegment for target-view waveform
+#include "engine/stft_container.h"   // FrameMapSegment for target-view waveform
 
 #include <cairo/cairo.h>
 #include <cmath>
@@ -325,9 +325,9 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_status_message(cairo_t* cr, GuiRect area, const char* msg);
 
 // Draws one channel's waveform into `area`, displaying samples in
-// [viewport_start_sample, viewport_end_sample). When `timemap` is null
+// [viewport_start_sample, viewport_end_sample). When `frame_map` is null
 // (source view) the viewport range is interpreted in source-frame and
-// each column reads `audio.get_peak_range` directly. When `timemap` is
+// each column reads `audio.get_peak_range` directly. When `frame_map` is
 // non-null (target view) the viewport range is target-frame: each
 // column's [t0, t1) is translated to source-frame via
 // `map_target_to_source` before the pyramid read, producing the
@@ -345,7 +345,7 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<TimeMapSegment>* timemap = nullptr);
+                     const std::vector<FrameMapSegment>* frame_map = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.
@@ -381,10 +381,10 @@ void render_playhead(cairo_t* cr,
 // kMarker; marker stems do not dim — only the out-of-trim sample pixels
 // dim, via on_redraw's ATOP overlay (see kWaveformDimmed). Brief C retired
 // the global out-of-trim dim and it stays retired for stems.
-// `timemap` (default null) shifts marker positioning into the target-frame
+// `frame_map` (default null) shifts marker positioning into the target-frame
 // domain when target view is active: each marker's source-frame position is
 // run through `map_source_to_target` before viewport clipping and column
-// placement. Null timemap = identity, exact pre-brief-2 behavior.
+// placement. Null frame_map = identity, exact pre-brief-2 behavior.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
@@ -392,7 +392,7 @@ void render_markers(cairo_t* cr,
                     long long viewport_end_sample,
                     int sample_rate,
                     const std::set<int>& selected_set,
-                    const std::vector<TimeMapSegment>* timemap = nullptr,
+                    const std::vector<FrameMapSegment>* frame_map = nullptr,
                     const DragOverlay* drag_overlay = nullptr,
                     cairo_surface_t* ink_plate = nullptr);
 
@@ -402,7 +402,7 @@ void render_markers(cairo_t* cr,
 // (the flag chip's bottom, via flag_chip_bottom_y, down to waveform bottom).
 // Color is
 // kTrimMarker, or kSelected when that bound is selected. `trim.begin` /
-// `trim.end` are in the displayed domain (already timemap-translated by
+// `trim.end` are in the displayed domain (already frame_map-translated by
 // the caller), so no further translation happens here — the columns are
 // placed exactly like marker stems against the same viewport. View-
 // independent: drawn identically in 'W' and 'P' views.
@@ -484,11 +484,11 @@ struct FlagEditorOverlay {
 // Disabled markers render identically to enabled markers in the top strip;
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
-// `timemap`: same target-frame translation as render_markers. The greedy
+// `frame_map`: same target-frame translation as render_markers. The greedy
 // pack and elision still walk left-to-right, so in target view the pack
-// rule is applied against post-translation positions (a region the timemap
+// rule is applied against post-translation positions (a region the frame_map
 // stretches may un-elide flags that were elided in source view; a region
-// the timemap compresses may elide flags that were visible there).
+// the frame_map compresses may elide flags that were visible there).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   const std::vector<GuiWarpMarker>& markers,
@@ -498,7 +498,7 @@ void render_flags(cairo_t* cr,
                   double font_size,
                   const std::set<int>& selected_set,
                   const FlagEditorOverlay& editor = {},
-                  const std::vector<TimeMapSegment>* timemap = nullptr,
+                  const std::vector<FrameMapSegment>* frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
                   bool iteration_on = false);
 
@@ -525,7 +525,7 @@ void render_one_editor_flag(
     double font_size,
     const std::set<int>& selected_set,
     const FlagEditorOverlay& editor,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const std::vector<FrameMapSegment>* frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr,
     bool iteration_on = false);
 
@@ -534,11 +534,11 @@ void render_one_editor_flag(
 // caller uses these for hit-testing. No cairo context is needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
-// `timemap` parameter mirrors render_flags so the two stay in sync. Brief 2
+// `frame_map` parameter mirrors render_flags so the two stay in sync. Brief 2
 // adds it for symmetry — target view's hover/iter/BPM popups are gated off
-// elsewhere, so this helper is not yet called with a non-null timemap. A
+// elsewhere, so this helper is not yet called with a non-null frame_map. A
 // future brief that re-enables popup paint in target view will route the
-// timemap through here without further signature churn.
+// frame_map through here without further signature churn.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     const std::vector<GuiWarpMarker>& markers,
@@ -546,7 +546,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const std::vector<FrameMapSegment>* frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr,
     bool iteration_on = false);
 
@@ -561,7 +561,7 @@ void render_phase_reset_markers(cairo_t* cr,
                               long long viewport_end_sample,
                               int sample_rate,
                               const std::set<int>& selected_set,
-                              const std::vector<TimeMapSegment>* timemap = nullptr,
+                              const std::vector<FrameMapSegment>* frame_map = nullptr,
                               const DragOverlay* drag_overlay = nullptr,
                               cairo_surface_t* ink_plate = nullptr);
 
@@ -578,7 +578,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             double font_size,
                             const std::set<int>& selected_set,
-                            const std::vector<TimeMapSegment>* timemap = nullptr,
+                            const std::vector<FrameMapSegment>* frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
@@ -588,7 +588,7 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     double font_size,
-    const std::vector<TimeMapSegment>* timemap = nullptr,
+    const std::vector<FrameMapSegment>* frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr);
 
 // Returns the text that render_flags would draw for `markers[idx]`. Used
