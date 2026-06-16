@@ -122,17 +122,17 @@ std::string normalize_scale_string(const std::string& s) {
 }
 
 // Parse a new-format payload (the part after the pipe) into a partly-
-// populated GuiWarpMarker — sets tempo/label fields only. Cross-marker checks
-// (label_ref existence, label_def uniqueness) are the caller's job.
+// populated WarpMarker base — sets tempo/label fields only. Cross-marker
+// checks (label_ref existence, label_def uniqueness) are the caller's job.
 //
-// On success, returns true and the GuiWarpMarker carries the parsed payload.
+// On success, returns true and the WarpMarker carries the parsed payload.
 // On failure, returns false and `error_out` is set.
 //
 // `disabled_in` is plumbed through so the caller can attach a metadata
 // flag (`#`) that came from outside the payload. Time and trim flags
 // are not handled here.
 bool parse_new_payload(const std::string& payload,
-                       GuiWarpMarker& m,
+                       WarpMarker& m,
                        std::string& error_out) {
     if (payload.empty()) {
         error_out = "empty payload";
@@ -192,7 +192,7 @@ bool parse_new_payload(const std::string& payload,
         return true;
     }
 
-    // Two parts: (TEMPO[*SCALE] | pass) : label_def. The three GuiWarpMarker
+    // Two parts: (TEMPO[*SCALE] | pass) : label_def. The three WarpMarker
     // state axes (tempo source, label relationship, disabled) are
     // independent; `pass:LABEL` is the inheriting + label_def combination.
     const std::string tempo_with_scale = payload.substr(0, colon);
@@ -248,7 +248,7 @@ namespace warpmarkers_internal {
 
 bool parse_single_canonical_line(
     const std::string& raw_line,
-    GuiWarpMarker& out,
+    WarpMarker& out,
     std::string* error_out) {
 
     auto fail = [&](const char* msg) {
@@ -270,7 +270,7 @@ bool parse_single_canonical_line(
         }
     }
 
-    out = GuiWarpMarker{};
+    out = WarpMarker{};
 
     // [#]?  MM:SS.SSS  |  PAYLOAD
     if (!t.empty() && t[0] == '#') {

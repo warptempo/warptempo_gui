@@ -35,7 +35,7 @@ struct LabelCacheEntry {
 }  // namespace
 
 std::vector<MarkerForRender> resolve_markers_for_render(
-    const std::vector<GuiWarpMarker>& src) {
+    const std::vector<WarpMarker>& src) {
 
     // First pass: collect disabled label names.
     std::vector<std::string> disabled;
@@ -391,7 +391,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     int sample_rate,
     long total_frames) {
     TimemapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(markers);
+    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;

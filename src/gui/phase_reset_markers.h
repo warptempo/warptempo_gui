@@ -4,12 +4,20 @@
 #include <string>
 #include <vector>
 
-// One phase reset marker, the GUI's authoring view: a phase reset authored at
-// `time_seconds`, with an optional `disabled` flag.
-struct GuiPhaseResetMarker {
+// One phase reset marker's serialized form — position plus an optional
+// disabled flag. The recipe/parser domain consumes this base directly; the
+// engine-internal PhaseResetMarker (stft_container.h, synth_frame/src_frame)
+// is a different, engine-private type and never co-visible with this one.
+struct PhaseResetMarker {
     double time_seconds  = 0.0;
     bool   disabled      = false;
 };
+
+// The GUI's authoring view. Adds no fields today; it exists so the GUI marker
+// store has its own type and the parser can fill the PhaseResetMarker base by
+// reference (a GuiPhaseResetMarker binds to PhaseResetMarker& by upcast),
+// mirroring the WarpMarker / GuiWarpMarker split.
+struct GuiPhaseResetMarker : PhaseResetMarker {};
 
 struct GuiPhaseResetMarkerError {
     int         line_number;   // 1-based; 0 means "file-level, no line"

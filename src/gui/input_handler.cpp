@@ -3643,7 +3643,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // to identity (the helpers return src_frame unchanged), which is
     // the right fallback when there are no qualifying markers.
     TimemapBuildInput tmin;
-    tmin.markers      = resolve_markers_for_render(app.warpmarkers.markers());
+    tmin.markers      = resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers()));
     tmin.scale        = app.engine_settings.scale;
     tmin.sample_rate  = audio.sample_rate();
     tmin.total_frames = static_cast<long>(audio.total_frames());

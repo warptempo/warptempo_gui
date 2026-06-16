@@ -53,14 +53,15 @@ bool parse_timestamp_token(const std::string& tok, double& out,
     return true;
 }
 
-// Parse "[#]MM:SS.mmm" into a GuiPhaseResetMarker. Returns true on
-// success; on failure, fills `err_msg` with a one-line diagnostic. Files
-// written by pre-X.8.3 builds (carrying an i/d status code or a
-// displaced_frame token) are rejected with "unexpected status code" so the
-// upgrade requirement surfaces to the user instead of silently misparsing.
-// Trim flags (b= / e=) are warp-only as of brief seven; encountering one on
-// a phase reset line is a parse error so the migration requirement surfaces.
-bool parse_line(const std::string& raw, GuiPhaseResetMarker& out, std::string& err_msg) {
+// Parse "[#]MM:SS.mmm" into the PhaseResetMarker base; the GUI load path
+// passes a GuiPhaseResetMarker by upcast. Returns true on success; on
+// failure, fills `err_msg` with a one-line diagnostic. Files written by
+// pre-X.8.3 builds (carrying an i/d status code or a displaced_frame token)
+// are rejected with "unexpected status code" so the upgrade requirement
+// surfaces to the user instead of silently misparsing. Trim flags (b= / e=)
+// are warp-only as of brief seven; encountering one on a phase reset line is
+// a parse error so the migration requirement surfaces.
+bool parse_line(const std::string& raw, PhaseResetMarker& out, std::string& err_msg) {
     std::string t = trim_ws(raw);
     if (t.empty()) {
         err_msg = "empty line";

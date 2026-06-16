@@ -6,7 +6,9 @@
 #include <string>
 #include <vector>
 
-// One warp marker, the GUI's authoring view. Three independent state axes:
+// One warp marker's serialized form — the seven fields the .warpmarkers
+// file round-trips, and the only fields the recipe/parser domain and the
+// engine-bound render path read. Three independent state axes:
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
 //      (`tempo_base` is the numeric value). `tempo_inherits == true` (a
@@ -24,7 +26,7 @@
 //      treated as disabled (cascade). The cascade rule applies only to
 //      label_def markers; a disabled non-label-def is locally disabled
 //      and does not propagate.
-struct GuiWarpMarker {
+struct WarpMarker {
     double time_seconds = 0.0;
 
     bool        tempo_inherits = false;
@@ -35,7 +37,16 @@ struct GuiWarpMarker {
     std::string label_ref;
 
     bool disabled      = false;
+};
 
+// The GUI's authoring view: a WarpMarker plus the session-only authoring
+// scratchpad. The scratchpad is never serialized and never crosses the
+// render boundary. The canonical per-line parser fills the WarpMarker base
+// by reference; a GuiWarpMarker binds to that WarpMarker& by upcast (no
+// slicing). At the render boundary the GUI slices a GuiWarpMarker vector
+// down to a std::vector<WarpMarker> via slice_to_warp_markers below, so the
+// resolver and the engine path never see these GUI-only fields.
+struct GuiWarpMarker : WarpMarker {
     // V.B iteration mode. Session-only render-parameter scratchpad: never
     // serialized, lost on app close, populated and edited inline via the
     // iteration popup that appears above each owning marker's flag rect
@@ -65,6 +76,17 @@ struct GuiWarpMarker {
     // closes the span and is not a member. -1 when unset. Not serialized.
     int  bpm_endpoint = -1;
 };
+
+// Slice a GUI authoring vector down to the serialized base. Each element is
+// copy-constructed as a WarpMarker from its GuiWarpMarker (the derived
+// iter_*/bpm_* state is dropped). Used at the render boundary so the
+// recipe/parser-domain resolver and the engine-bound pipeline never see
+// GUI-only fields. O(n) and called only on marker/scale change, not per
+// paint frame.
+inline std::vector<WarpMarker> slice_to_warp_markers(
+    const std::vector<GuiWarpMarker>& src) {
+    return std::vector<WarpMarker>(src.begin(), src.end());
+}
 
 struct GuiWarpMarkerError {
     int         line_number;   // 1-based; 0 means "file-level, no line"
@@ -252,15 +274,16 @@ inline bool parse_bpm_bracket(const std::string& s,
 
 namespace warpmarkers_internal {
 
-// Parse one canonical new-format line into a GuiWarpMarker. Used by the GUI
-// editor's commit path. Performs only line-local validation (format,
-// whitespace rejection, payload structure) — cross-marker rules (label_ref
-// existence, label_def uniqueness, time monotonicity) are the caller's
-// responsibility. On `pass`, tempo_base/tempo_scale are populated with
-// inert defaults (1.0 / "1.0000") — there is no cache to preserve.
+// Parse one canonical new-format line into the WarpMarker base. Used by the
+// GUI editor's commit path, which passes a GuiWarpMarker by upcast. Performs
+// only line-local validation (format, whitespace rejection, payload
+// structure) — cross-marker rules (label_ref existence, label_def
+// uniqueness, time monotonicity) are the caller's responsibility. On `pass`,
+// tempo_base/tempo_scale are populated with inert defaults (1.0 / "1.0000")
+// — there is no cache to preserve.
 bool parse_single_canonical_line(
     const std::string& raw_line,
-    GuiWarpMarker& out,
+    WarpMarker& out,
     std::string* error_out);
 
 } // namespace warpmarkers_internal

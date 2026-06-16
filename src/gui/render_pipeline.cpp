@@ -125,7 +125,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // --- Build timemap from in-memory markers. ---
     TimemapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(req.markers);
+    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
