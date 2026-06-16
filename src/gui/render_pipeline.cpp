@@ -295,21 +295,23 @@ RenderOutcome do_render(const RenderRequest& req,
         // resolves resets by binary search over the full frame map, so the
         // reset list is in absolute source frames regardless of trim — exactly
         // like the untrimmed branch always did. No trim re-basing.
-        ep.phase_reset_frames.reserve(req.phase_reset_frames.size());
-        for (size_t i = 0; i < req.phase_reset_frames.size(); ++i) {
-            const int64_t F = req.phase_reset_frames[i];
-            int64_t engine_frame = F - phase_reset_offset_samples;
-            if (engine_frame < 0) {
+        // Per-reset clamp notice: a reset within one offset of the start
+        // would displace before frame 0. Emit it here, ahead of the silent
+        // displacement assembly, so the user still sees which reset was
+        // affected (the lifted displace_phase_reset_frames clamps without
+        // logging). Condition, message and time match the prior loop exactly.
+        for (const int64_t F : req.phase_reset_frames) {
+            if (F - phase_reset_offset_samples < 0) {
                 std::fprintf(stderr,
                     "warptempo_gui: phase reset at %.3f s clamped to "
                     "engine frame 0 (offset shift would place it "
                     "before audio start)\n",
                     static_cast<double>(F) /
                         static_cast<double>(sample_rate));
-                engine_frame = 0;
             }
-            ep.phase_reset_frames.push_back(engine_frame);
         }
+        ep.phase_reset_frames = displace_phase_reset_frames(
+            req.phase_reset_frames, phase_reset_offset_samples);
 
         // Synthesis frame window from the trim bounds. When neither bound is
         // set, has_trim is false and the engine renders the whole map

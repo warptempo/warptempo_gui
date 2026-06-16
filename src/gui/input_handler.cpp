@@ -384,13 +384,10 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     const std::vector<GuiPhaseResetMarker> base_phase_resets =
         app.phase_reset_markers.markers();
-    std::vector<int64_t> base_phase_reset_frames;
-    for (const auto& t : base_phase_resets) {
-        if (t.disabled) continue;
-        base_phase_reset_frames.push_back(static_cast<int64_t>(
-            std::nearbyint(t.time_seconds *
-                           static_cast<double>(audio.sample_rate()))));
-    }
+    const std::vector<int64_t> base_phase_reset_frames =
+        phase_reset_source_frames(
+            slice_to_phase_reset_markers(base_phase_resets),
+            audio.sample_rate());
 
     std::vector<RenderRequest> reqs;
     reqs.reserve(bpm_values.size());
@@ -1293,13 +1290,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // differ across cells.
         const std::vector<GuiPhaseResetMarker> base_phase_resets =
             app.phase_reset_markers.markers();
-        std::vector<int64_t> base_phase_reset_frames;
-        for (const auto& t : base_phase_resets) {
-            if (t.disabled) continue;
-            base_phase_reset_frames.push_back(static_cast<int64_t>(
-                std::nearbyint(t.time_seconds *
-                               static_cast<double>(audio.sample_rate()))));
-        }
+        const std::vector<int64_t> base_phase_reset_frames =
+            phase_reset_source_frames(
+                slice_to_phase_reset_markers(base_phase_resets),
+                audio.sample_rate());
 
         // Cartesian product enumeration. `indices[k]` holds the
         // current cell coordinate along the k-th eligible marker

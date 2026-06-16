@@ -1,7 +1,8 @@
 #pragma once
 
 #include "warpmarkers.h"
-#include "frame_map.h"   // FrameMapSegment
+#include "phase_reset_markers.h"   // PhaseResetMarker
+#include "frame_map.h"             // FrameMapSegment
 
 #include <cstddef>
 #include <cstdint>
@@ -92,6 +93,22 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
 // resolver so the visible deformity matches what the engine would emit.
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<WarpMarker>& src);
+
+// Pure recipe assembly: phase-reset markers -> absolute source frames.
+// Drops disabled markers; converts time_seconds to a source frame via
+// nearbyint(time * sample_rate), matching the warp-marker time->frame
+// convention. The result is the undisplaced list used both for render-view
+// display and as the input to displace_phase_reset_frames.
+std::vector<int64_t> phase_reset_source_frames(
+    const std::vector<PhaseResetMarker>& markers, long sample_rate);
+
+// Pure: displace absolute source-frame resets to the engine's dispatch
+// frame by subtracting the locked one-hop offset, clamped at 0. The clamp is
+// silent here (no I/O); callers that want the per-reset "clamped before audio
+// start" notice detect it by source_frame < offset_samples. This is the full
+// displaced reset list the engine path hands over (and Brief 6 will slice).
+std::vector<int64_t> displace_phase_reset_frames(
+    const std::vector<int64_t>& source_frames, int64_t offset_samples);
 
 // Builds the target-view frame_map from live warp markers plus scale, mirroring
 // the resolve-then-build pipeline paint_handler's on_redraw uses for target-

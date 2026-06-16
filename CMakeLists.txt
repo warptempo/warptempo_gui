@@ -67,6 +67,7 @@ add_executable(warptempo_gui
     src/gui/playback_lifecycle.cpp
     src/gui/render_pipeline.cpp
     src/gui/timemap.cpp
+    src/gui/timemap_view.cpp
     src/gui/viewport.cpp
     src/gui/selection.cpp
     src/gui/settings_io.cpp

@@ -19,6 +19,14 @@ struct PhaseResetMarker {
 // mirroring the WarpMarker / GuiWarpMarker split.
 struct GuiPhaseResetMarker : PhaseResetMarker {};
 
+// Slice a GUI phase-reset vector down to the serialized base, mirroring
+// slice_to_warp_markers. Used at the render boundary so the recipe-domain
+// phase-reset assembly (phase_reset_source_frames) never sees the GUI type.
+inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
+    const std::vector<GuiPhaseResetMarker>& src) {
+    return std::vector<PhaseResetMarker>(src.begin(), src.end());
+}
+
 struct GuiPhaseResetMarkerError {
     int         line_number;   // 1-based; 0 means "file-level, no line"
     std::string message;
