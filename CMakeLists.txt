@@ -45,12 +45,60 @@ foreach(proto IN LISTS WAYLAND_PROTOCOL_SOURCES)
     list(APPEND WAYLAND_GENERATED_SOURCES ${proto_c} ${proto_h})
 endforeach()
 
-# --- Build the GUI (Cairo + selected platform backend) ---
 pkg_check_modules(CAIRO REQUIRED cairo)
 # JACK is required: miniaudio is initialized with the JACK backend explicitly
 # (no auto-fallback). On Arch this is satisfied by pipewire-jack.
 pkg_check_modules(JACK REQUIRED jack)
 
+# ============================================================
+#  warptempo_parser — recipe / file-parse core.
+#  Depends on sndfile + the standard library only. No fftw, no GUI,
+#  no engine. frame_map.h / time_format.h are shared headers in src/.
+# ============================================================
+add_library(warptempo_parser STATIC
+    src/parser/warpmarkers_parse.cpp
+    src/parser/phase_reset_markers_parse.cpp
+    src/parser/engine_settings_io.cpp
+    src/parser/timemap.cpp
+)
+target_include_directories(warptempo_parser
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/parser
+    PRIVATE
+        ${SNDFILE_INCLUDE_DIRS}
+)
+target_link_libraries(warptempo_parser PUBLIC ${SNDFILE_LIBRARIES})
+
+# ============================================================
+#  warptempo_engine — PGHI DSP core.
+#  Depends on sndfile + fftw3. Reads frame_map.h (header-only) from
+#  src/; no link edge to the parser archive.
+# ============================================================
+add_library(warptempo_engine STATIC
+    src/engine/engine.cpp
+    src/engine/limiter.cpp
+    src/engine/peak_limiter.cpp
+    src/engine/synthesis.cpp
+)
+target_include_directories(warptempo_engine
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/engine
+    PRIVATE
+        ${SNDFILE_INCLUDE_DIRS}
+        ${FFTW3_INCLUDE_DIRS}
+)
+target_link_libraries(warptempo_engine PUBLIC
+    ${SNDFILE_LIBRARIES}
+    ${FFTW3_THREADS_LIB}
+    ${FFTW3_LIBRARIES}
+    pthread
+)
+
+# ============================================================
+#  warptempo_gui — Cairo/Wayland front end. Links both archives.
+# ============================================================
 add_executable(warptempo_gui
     src/gui/main.cpp
     src/gui/app_state.cpp
@@ -60,20 +108,16 @@ add_executable(warptempo_gui
     src/gui/audio.cpp
     src/gui/render.cpp
     src/gui/warpmarkers.cpp
-    src/gui/warpmarkers_parse.cpp
     src/gui/text_editor.cpp
     src/gui/text_display.cpp
     src/gui/phase_reset_markers.cpp
-    src/gui/phase_reset_markers_parse.cpp
     src/gui/playback.cpp
     src/gui/playback_lifecycle.cpp
     src/gui/render_pipeline.cpp
-    src/gui/timemap.cpp
     src/gui/timemap_view.cpp
     src/gui/viewport.cpp
     src/gui/selection.cpp
     src/gui/settings_io.cpp
-    src/gui/engine_settings_io.cpp
     src/gui/undo.cpp
     src/gui/phase_reset_markers_ops.cpp
     src/gui/phase_reset_propagate.cpp
@@ -89,14 +133,11 @@ add_executable(warptempo_gui
     src/gui/paint_handler.cpp
     src/gui/input_handler.cpp
     src/gui/miniaudio_impl.cpp
-    src/engine/engine.cpp
-    src/engine/limiter.cpp
-    src/engine/peak_limiter.cpp
-    src/engine/synthesis.cpp
     ${WAYLAND_GENERATED_SOURCES}
 )
 target_include_directories(warptempo_gui PRIVATE
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/parser
     ${CMAKE_SOURCE_DIR}/src/engine
     ${CMAKE_SOURCE_DIR}/src/gui
     ${CMAKE_BINARY_DIR}/wayland-generated
@@ -105,18 +146,17 @@ target_include_directories(warptempo_gui PRIVATE
     ${XKBCOMMON_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${SNDFILE_INCLUDE_DIRS}
-    ${FFTW3_INCLUDE_DIRS}
     ${JACK_INCLUDE_DIRS}
 )
 target_link_libraries(warptempo_gui PRIVATE
+    warptempo_parser
+    warptempo_engine
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_CURSOR_LIBRARIES}
     ${XKBCOMMON_LIBRARIES}
     rt
     ${CAIRO_LIBRARIES}
     ${SNDFILE_LIBRARIES}
-    ${FFTW3_THREADS_LIB}
-    ${FFTW3_LIBRARIES}
     ${JACK_LIBRARIES}
     pthread
     dl
@@ -130,6 +170,11 @@ set_source_files_properties(src/gui/miniaudio_impl.cpp PROPERTIES
     COMPILE_FLAGS "-w")
 
 # --- Compiler Optimizations ---
+# Applied identically to all three targets. The engine's PGHI hot path and the
+# parser's frame-map math must compile under the same -O3 -march=native the
+# monolith used, or the split would silently deoptimize the DSP core.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(warptempo_gui PRIVATE -Wall -Wextra -O3 -march=native)
+    foreach(tgt warptempo_parser warptempo_engine warptempo_gui)
+        target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 -march=native)
+    endforeach()
 endif()
