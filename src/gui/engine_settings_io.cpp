@@ -88,8 +88,8 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "output_format") {
-        if (value != "wav" && value != "timemap" && value != "tempomap") {
-            reason = "must be one of {wav, timemap, tempomap}";
+        if (value != "wav" && value != "framemap" && value != "tempomap") {
+            reason = "must be one of {wav, framemap, tempomap}";
             return false;
         }
         out.output_format = value;

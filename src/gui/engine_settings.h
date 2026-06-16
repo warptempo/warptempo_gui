@@ -51,7 +51,7 @@ bool is_canonical_engine_key(const std::string& key);
 // Validate (key, value) per the canonical engine rules and assign to the
 // corresponding EngineSettings field on success. On failure, leaves `out`
 // untouched and fills `reason` with a short human constraint string
-// (e.g. "must be one of {wav, timemap, tempomap}"). Caller wraps with
+// (e.g. "must be one of {wav, framemap, tempomap}"). Caller wraps with
 // the surrounding "key 'X' has invalid value 'Y':" prefix. Used by both
 // read_engine_settings_from_file and GuiSettingsEditor::commit.
 //

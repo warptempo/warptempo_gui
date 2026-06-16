@@ -620,7 +620,7 @@ std::string resolve_inherited_tempo_scale(
 // input_handler.cpp can reach it from the on_motion body.
 //
 // V.A3b hover-popup text. Computes the same resolution math the engine
-// uses when emitting the .timemap, so the popup matches what the engine
+// uses when emitting the .warpframemap, so the popup matches what the engine
 // will produce. Pass markers emit "= TEMPO" or "= TEMPO*SCALE" (single
 // equals; resolved tempo of the nearest prior owning marker). Label_ref
 // markers emit "~= BASE*COMBINED_SCALE" (tilde-equals, mirroring engine

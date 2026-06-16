@@ -81,7 +81,7 @@ std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es) {
     const std::string ext =
-        (es.output_format == "timemap")  ? ".timemap" :
+        (es.output_format == "framemap")  ? ".warpframemap" :
         (es.output_format == "tempomap") ? ".tempomap" : ".wav";
     std::filesystem::path src(source_audio_path);
     std::filesystem::path dir = src.parent_path();
@@ -164,7 +164,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
-        if (output_format == "timemap")  return ".timemap";
+        if (output_format == "framemap")  return ".warpframemap";
         if (output_format == "tempomap") return ".tempomap";
         return ".wav";
     };
@@ -360,7 +360,7 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
     } else {
-        // output_format == "timemap" or "tempomap". No engine, no limiter.
+        // output_format == "framemap" or "tempomap". No engine, no limiter.
         // When trim is active, emit a sibling trimmed wav so the consumer
         // adapter operates on the trimmed source range; when there's no
         // trim, the consumer can use the original source directly.
@@ -379,7 +379,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 return RenderOutcome::Failed;
             }
         }
-        const bool ok = (output_format == "timemap")
+        const bool ok = (output_format == "framemap")
             ? write_standard_frame_map(final_output_path, tmres.standard,
                                      /*drop_zero_zero=*/false)
             : write_midi_tempomap(final_output_path, tmres.midi);
