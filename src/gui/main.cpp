@@ -89,11 +89,6 @@ namespace {
 // X.7.8b-2: kMarkerHitHalfPx moved to app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach them.
 
-// Time the cursor must dwell on a popup-eligible flag rect before the
-// hover popup appears. A continuous-state dwell duration (the cursor must
-// rest this long before the hover popup appears).
-constexpr int kHoverDelayMs       = 500;
-
 // ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
 // level 0 is the fit-file sentinel (table bypassed in samples_per_pixel_at).
 // Index N holds the ms/px for level N; each numeric step is exactly 2x the
@@ -709,24 +704,6 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
-                invalidate_timestamp_area();
-            }
-        }
-
-        // V.A3b: dwell-driven popup show. The motion handler already gates
-        // on warp view + no editor + no drag + no dialog and clears
-        // hover_popup when those conditions break, so here it's enough to
-        // check the elapsed time and re-validate eligibility.
-        if (!app.hover_popup.visible &&
-            app.hover_popup.marker_index >= 0 &&
-            popup_eligible_marker(app, app.hover_popup.marker_index)) {
-            const auto now = std::chrono::steady_clock::now();
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now - app.hover_popup.entry_time).count();
-            if (ms >= kHoverDelayMs) {
-                app.hover_popup.visible = true;
-                // Brief F: the hover readout paints on bottom_upper_row_area,
-                // so the bottom strip is what needs damage to show it.
                 invalidate_timestamp_area();
             }
         }

@@ -292,24 +292,23 @@ struct TrimDragState {
     SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
 };
 
-// V.A3b hover popup state. A popup-eligible warp marker (pass marker or
-// label_ref) under the cursor for kHoverDelayMs becomes a tooltip showing
-// the resolved tempo. The motion handler sets `marker_index` + `entry_time`
-// when the cursor first lands on an eligible rect; the tick handler flips
-// `visible` when the dwell threshold is crossed; mutation paths /
-// dismiss conditions clear the whole struct.
+// Hover popup state. A popup-eligible warp marker (pass marker or
+// label_ref) under the cursor shows a bottom-strip readout of its
+// resolved tempo. The motion and viewport-recompute handlers set
+// `marker_index` and `cached_text` and derive `visible` the instant the
+// cursor lands on an eligible rect (no dwell); mutation paths / dismiss
+// conditions clear the whole struct.
 //
-// `cached_text` is the popup's content string, computed on rect-entry
-// (when the dwell timer starts) and rendered at delay-completion.
-// Precomputing during the otherwise-idle delay window hides the
-// label_ref math (def lookup, frame-distance ratio) behind time the
-// user is already waiting through, so the popup-show frame doesn't
-// stutter. Discarded with the rest of the struct on rect-exit.
+// `cached_text` is the readout's content string, computed once per
+// rect-entry (def lookup, frame-distance ratio) and read unchanged by
+// the paint path, so paint never repeats the math. `visible` is simply
+// whether `cached_text` is non-empty. Discarded on rect-exit; there is
+// no asynchronous work to cancel — a transition recomputes the text and
+// the prior result is dropped.
 struct HoverPopupState {
     int         marker_index = -1;
     bool        visible      = false;
     std::string cached_text;
-    std::chrono::steady_clock::time_point entry_time{};
 };
 
 // What action triggered the modal prompt; the activate-response dispatch

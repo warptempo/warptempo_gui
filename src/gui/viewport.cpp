@@ -410,7 +410,7 @@ void Viewport::clear_hover_popup() {
 // playhead-driven viewport shift) so a stationary cursor's hover state
 // tracks the rects that just slid under it. Mirrors the on_motion
 // hover-detection branch: same gating, same hit-test, same state
-// transitions; the tick handler still drives the dwell-to-visible flip.
+// transitions; visibility is set immediately (no dwell).
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     // Dialog / drag / editor / queue still suppress hover in either
@@ -437,15 +437,12 @@ void Viewport::recompute_hover_at_cursor() {
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);
     if (hit != app.hover_popup.marker_index) {
-        if (app.hover_popup.visible) invalidate_timestamp_area();
+        // No dwell: recompute cached_text once, derive visible from it,
+        // damage the readout area when the old popup was showing or the
+        // new one will. Empty cached_text when `hit` is not popup-eligible
+        // (paint then skips the readout and keeps the strip clean).
+        const bool was_visible = app.hover_popup.visible;
         app.hover_popup.marker_index = hit;
-        app.hover_popup.visible      = false;
-        app.hover_popup.entry_time   =
-            std::chrono::steady_clock::now();
-        // Precompute the popup's display text at rect-entry so the
-        // delay-completion paint doesn't have to recompute it. Empty
-        // when `hit` is not popup-eligible (the redraw branch then
-        // skips paint and keeps the strip clean).
         if (app.render_view_enabled) {
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
@@ -461,5 +458,7 @@ void Viewport::recompute_hover_at_cursor() {
                           audio.sample_rate())
                     : std::string();
         }
+        app.hover_popup.visible = !app.hover_popup.cached_text.empty();
+        if (was_visible || app.hover_popup.visible) invalidate_timestamp_area();
     }
 }

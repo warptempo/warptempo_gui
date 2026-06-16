@@ -39,8 +39,8 @@ class GuiWaveformWorker;
 // -- Constants used by paint code ----------------------------------------
 //
 // X.7.8a: hoisted from main.cpp's anonymous namespace so paint_handler.cpp
-// can reach them. Other constants (kHoverDelayMs, kMarkerHitHalfPx,
-// kDirtyGapPx, kZoomMsPerPixel) are paint-handler-independent and stay in
+// can reach them. Other constants (kMarkerHitHalfPx, kDirtyGapPx,
+// kZoomMsPerPixel) are paint-handler-independent and stay in
 // main.cpp's anonymous namespace; kPlayheadHalfPx now lives in render.h.
 //
 // kProgressBarHeight was deleted with the load progress bar (replaced by a

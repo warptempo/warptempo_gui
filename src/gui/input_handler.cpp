@@ -2994,17 +2994,21 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
         if (hit != app.hover_popup.marker_index) {
             // Brief F: hover readout lives on the bottom strip now.
-            if (app.hover_popup.visible) viewport.invalidate_timestamp_area();
+            // No dwell: show the instant the cursor lands on an eligible
+            // flag. Recompute cached_text once per transition, derive
+            // visible from it, damage the readout area when the old popup
+            // was showing or the new one will.
+            const bool was_visible = app.hover_popup.visible;
             app.hover_popup.marker_index = hit;
-            app.hover_popup.visible      = false;
-            app.hover_popup.entry_time   =
-                std::chrono::steady_clock::now();
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
                     ? compute_hover_popup_text(
                           app.render_view_markers, hit,
                           app.render_view_src_sr)
                     : std::string();
+            app.hover_popup.visible = !app.hover_popup.cached_text.empty();
+            if (was_visible || app.hover_popup.visible)
+                viewport.invalidate_timestamp_area();
         }
         return;
     }
@@ -3139,8 +3143,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // No active gesture: run hover-popup detection. Only in warp
         // mode, with no editor, no dialog (already returned), no drag,
         // and not while iteration mode owns the popup space.
-        // The dwell timer is started/restarted on every transition into
-        // an eligible rect; the on_tick handler flips visibility.
+        // Visibility is set immediately on every transition into an
+        // eligible rect (no dwell, no tick involvement).
         if (app.active_markers_view == 'W' &&
             !app.iteration_mode_enabled &&
             !text_editor::is_active(app.top_flag_editor) &&
@@ -3148,19 +3152,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
             if (hit != app.hover_popup.marker_index) {
                 // Brief F: hover readout lives on the bottom strip now.
-                if (app.hover_popup.visible) viewport.invalidate_timestamp_area();
+                // No dwell: show immediately on rect-entry; recompute
+                // cached_text once, derive visible, damage when the old
+                // popup was showing or the new one will.
+                const bool was_visible = app.hover_popup.visible;
                 app.hover_popup.marker_index = hit;
-                app.hover_popup.visible      = false;
-                app.hover_popup.entry_time   =
-                    std::chrono::steady_clock::now();
-                // Precompute popup text at rect-entry so the
-                // delay-completion paint doesn't repeat the math.
                 app.hover_popup.cached_text =
                     popup_eligible_marker(app, hit)
                         ? compute_hover_popup_text(
                               app.warpmarkers.markers(), hit,
                               audio.sample_rate())
                         : std::string();
+                app.hover_popup.visible = !app.hover_popup.cached_text.empty();
+                if (was_visible || app.hover_popup.visible)
+                    viewport.invalidate_timestamp_area();
             }
         } else {
             viewport.clear_hover_popup();
