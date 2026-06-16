@@ -2,11 +2,14 @@
 
 #include <string>
 
-// Typed view of the seven engine-relevant settings keys. Promoted onto
+// Typed view of the five engine-relevant settings keys. Promoted onto
 // AppState as the live authoring store; carried by RenderRequest as the
 // only engine-settings carrier. Member-default-initialized to the values
 // format_default_settings_template emits (modulo title, which defaults to
-// empty and is overwritten at source load from the stem).
+// empty and is overwritten at source load from the stem). N and the
+// phase-reset lead-in are no longer fields here — both are locked to
+// canonical constants in render_pipeline.cpp (N = 4096; lead-in = one
+// synthesis hop).
 struct EngineSettings {
     std::string title;
     std::string output_format            = "wav";
@@ -15,9 +18,7 @@ struct EngineSettings {
                        // "36 beats @ 220 bpm from 00:32.008 to 00:46.562".
                        // Empty when no BPM render is the current baseline.
                        // Informational only — no engine or GUI effect.
-    int         N                        = 4096;
     bool        limiter                  = true;
-    double      phase_reset_offset_hops  = 1.0;
 };
 
 // Identifier for one field of EngineSettings. Stored on each
@@ -29,7 +30,5 @@ enum class EngineField {
     Scale,
     Bpm,
     OutputFormat,
-    N,
     Limiter,
-    PhaseResetOffsetHops,
 };

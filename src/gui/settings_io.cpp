@@ -146,9 +146,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "scale",                       SettingKind::EnginePassthrough,    EngineField::Scale,                   nullptr },
     { "bpm",                         SettingKind::EnginePassthrough,    EngineField::Bpm,                     nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
-    { "N",                           SettingKind::EnginePassthrough,    EngineField::N,                       nullptr },
     { "limiter",                     SettingKind::EnginePassthrough,    EngineField::Limiter,                 nullptr },
-    { "phase_reset_offset_hops",     SettingKind::EnginePassthrough,    EngineField::PhaseResetOffsetHops,    nullptr },
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
@@ -211,17 +209,8 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
             // bpm is a descriptor string; emit verbatim, empty when unset.
             out += es.bpm;
             break;
-        case EngineField::N:
-            std::snprintf(buf, sizeof(buf), "%d", es.N);
-            out += buf;
-            break;
         case EngineField::Limiter:
             out += es.limiter ? "true" : "false";
-            break;
-        case EngineField::PhaseResetOffsetHops:
-            std::snprintf(buf, sizeof(buf), "%.6f",
-                          es.phase_reset_offset_hops);
-            out += buf;
             break;
     }
 }
@@ -269,7 +258,7 @@ bool atomic_write_string_to_path(const std::string& path,
     return true;
 }
 
-// Append the engine block (the seven canonical engine keys, in
+// Append the engine block (the five canonical engine keys, in
 // kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file) to `out`. Shared by write_rendersettings.
 void append_engine_block(std::string& out, const EngineSettings& engine) {
@@ -371,9 +360,7 @@ std::optional<EngineSettings> read_engine_block_strict(
     require("title");
     require("output_format");
     require("scale");
-    require("N");
     require("limiter");
-    require("phase_reset_offset_hops");
 
     if (any_error) return std::nullopt;
     return es;
@@ -586,16 +573,6 @@ bool validate_engine_setting(const std::string& key,
         out.bpm = value;
         return true;
     }
-    if (key == "N") {
-        int v;
-        if (!parse_int_strict(value, v) ||
-            v < 256 || v > 8192 || (v % 4 != 0)) {
-            reason = "must be an integer divisible by 4 in [256, 8192]";
-            return false;
-        }
-        out.N = v;
-        return true;
-    }
     if (key == "limiter") {
         bool v;
         if (!parse_bool_strict(value, v)) {
@@ -603,15 +580,6 @@ bool validate_engine_setting(const std::string& key,
             return false;
         }
         out.limiter = v;
-        return true;
-    }
-    if (key == "phase_reset_offset_hops") {
-        double v;
-        if (!parse_double_strict(value, v) || !(v >= 0.0)) {
-            reason = "must be a finite double >= 0";
-            return false;
-        }
-        out.phase_reset_offset_hops = v;
         return true;
     }
     reason = "unknown engine key";

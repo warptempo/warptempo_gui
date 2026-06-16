@@ -25,6 +25,12 @@
 
 namespace {
 
+// Locked engine constants (formerly the EngineSettings N and
+// phase_reset_offset_hops fields). N is the canonical PGHI window length;
+// the phase-reset lead-in is one synthesis hop. Neither is authoring-tunable.
+constexpr int    kCanonicalN          = 4096;
+constexpr double kPhaseResetOffsetHops = 1.0;
+
 // Silent-on-missing unlink wrapper.
 void unlink_silent(const std::string& path) {
     if (path.empty()) return;
@@ -97,11 +103,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // range by construction here). ---
     const std::string& output_format = req.engine_settings.output_format;
     const double scale               = req.engine_settings.scale;
-    const int    N_fft               = req.engine_settings.N;
-    const double phase_reset_offset_hops_mult = req.engine_settings.phase_reset_offset_hops;
+    const int    N_fft               = kCanonicalN;
     const int    R_s                 = N_fft / 4;
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
-        std::nearbyint(phase_reset_offset_hops_mult *
+        std::nearbyint(kPhaseResetOffsetHops *
                        static_cast<double>(R_s)));
 
     // --- Probe source audio for sample rate / total frames. ---
