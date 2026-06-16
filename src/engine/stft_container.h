@@ -189,8 +189,24 @@ struct AudioSTFT {
     double peak_limiter_attack_ms    = 0.25;
     double peak_limiter_release_ms   = 0.5;
 
-    // Cached frame map (populated once in main, reused by all passes)
-    std::vector<int64_t> frame_map;
+    // Per-synthesis-frame source read schedule, evaluated once in
+    // engine.cpp and reused by every pass. source_frame_positions[m] is the
+    // source read position for synthesis frame m -- map_target_to_source
+    // sampled at t_s = m*R_s, minus the N/2 origin-centered analysis offset.
+    // This is the dense, materialized form of the warp; the warp itself
+    // (the piecewise-linear src->tgt segments) lives in the sparse segment
+    // map, not here.
+    //
+    // "Frame" is used in two distinct senses, kept separate on purpose:
+    //   - the INDEX m is a synthesis (STFT) frame -- one analysis/synthesis
+    //     hop, at output sample position m*R_s;
+    //   - the VALUE is a source sample-frame position (one multichannel
+    //     sample in the source), the same unit as the phase-reset frames.
+    // The sequence is monotonically non-decreasing, so engine.cpp can
+    // std::upper_bound it to invert a source position back to a synthesis
+    // frame (trim-window resolution, phase-reset placement); synthesis.cpp
+    // reads it forward as source_frame_positions[m].
+    std::vector<int64_t> source_frame_positions;
 
     // Synthesis frame window, resolved from EngineParams trim bounds in
     // engine.cpp after the frame map is built. [synth_frame_begin,
@@ -216,12 +232,14 @@ struct AudioSTFT {
     const std::atomic<bool>* cancel_flag = nullptr;
     bool cancellation_observed = false;
 
-    // --- Generate the canonical frame map ---
+    // --- Generate the canonical source frame positions ---
     // Centralizes the t_a accumulation logic to prevent floating-point drift
-    // between modules. Returns int64_t sequence of t_a_rounded values.
-    // t_s for frame m is implicitly m * R_s.
-    // R_a_actual for frame m is frame_map[m] - frame_map[m-1] (caller derives).
-    std::vector<int64_t> generate_frame_map() const {
+    // between modules. Returns the int64_t sequence of t_a_rounded values:
+    // source_frame_positions[m], indexed by synthesis frame m (output sample
+    // position m * R_s), valued in source sample-frames.
+    // R_a_actual for frame m is source_frame_positions[m] -
+    // source_frame_positions[m-1] (caller derives).
+    std::vector<int64_t> generate_source_frame_positions() const {
         // Synthesis frame m sits at output position t_s = m * R_s. Its source
         // read position is the exact inverse-timemap value at t_s, minus the
         // N/2 origin-centered analysis offset:
@@ -233,15 +251,16 @@ struct AudioSTFT {
         // identical to the old right-Riemann accumulation inside any single
         // constant-alpha segment; it differs only on boundary-crossing hops,
         // which is exactly the error being removed. R_a_actual for frame m is
-        // still frame_map[m] - frame_map[m-1] (caller derives); near a boundary
-        // that difference is now the exact straddled advance.
-        std::vector<int64_t> fmap;
+        // still source_frame_positions[m] - source_frame_positions[m-1]
+        // (caller derives); near a boundary that difference is now the exact
+        // straddled advance.
+        std::vector<int64_t> positions;
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
             double src = map_target_to_source(t_s, timemap)
                        - static_cast<double>(N) / 2.0;
-            fmap.push_back(static_cast<int64_t>(std::llround(src)));
+            positions.push_back(static_cast<int64_t>(std::llround(src)));
         }
-        return fmap;
+        return positions;
     }
 
     void init_fftw() {

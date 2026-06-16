@@ -72,7 +72,7 @@ bool validate_timemap_monotonic(const std::vector<TimeMapSegment>& tm) {
 } // namespace
 
 EngineResult run_warptempo_engine(const EngineParams& p,
-                                  std::vector<int64_t>* out_frame_map,
+                                  std::vector<int64_t>* out_source_frame_positions,
                                   int* out_R_s,
                                   int* out_synth_frame_begin,
                                   const std::atomic<bool>* cancel_flag) {
@@ -130,7 +130,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.target_total_frames = audio_stft.timemap.back().tgt_frame + audio_stft.N;
 
     audio_stft.init_fftw();
-    audio_stft.frame_map = audio_stft.generate_frame_map();
+    audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
 
     // Resolve the synthesis frame window against the full frame map. Default is
     // the whole map (full-render behavior). When p.has_trim is set, narrow
@@ -139,7 +139,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // window always lands on real frame indices, so the windowed output is a
     // constant integer offset of synth_frame_begin * R_s from the full render.
     {
-        const auto& fmw = audio_stft.frame_map;
+        const auto& fmw = audio_stft.source_frame_positions;
         const int num_frames = static_cast<int>(fmw.size());
         audio_stft.synth_frame_begin = 0;
         audio_stft.synth_frame_end   = num_frames;
@@ -211,7 +211,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p1_0 = std::chrono::steady_clock::now();
     audio_stft.phase_reset_markers.clear();
     audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
-    const auto& fm = audio_stft.frame_map;
+    const auto& fm = audio_stft.source_frame_positions;
     // The src-frame -> synth-frame upper_bound filter drops entries before
     // the first frame.
     for (size_t i = 0; i < p.phase_reset_frames.size(); ++i) {
@@ -285,7 +285,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     std::cout << "[Success] " << audio_stft.output_audio_file << "\n";
 
-    if (out_frame_map) *out_frame_map = audio_stft.frame_map;
+    if (out_source_frame_positions) *out_source_frame_positions = audio_stft.source_frame_positions;
     if (out_R_s)       *out_R_s       = audio_stft.R_s;
     if (out_synth_frame_begin) *out_synth_frame_begin = audio_stft.synth_frame_begin;
 

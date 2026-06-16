@@ -72,7 +72,7 @@ enum class EngineResult { Success, Failed, Cancelled };
 // at the top of each frame iteration; if set, the engine returns
 // EngineResult::Cancelled without writing the output wav.
 EngineResult run_warptempo_engine(const EngineParams& p,
-                                  std::vector<int64_t>* out_frame_map = nullptr,
+                                  std::vector<int64_t>* out_source_frame_positions = nullptr,
                                   int* out_R_s = nullptr,
                                   int* out_synth_frame_begin = nullptr,
                                   const std::atomic<bool>* cancel_flag = nullptr);

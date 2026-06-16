@@ -46,7 +46,7 @@ void Synthesis::synthesize_full(
     const int R_s        = stft.R_s;
     const int channels   = stft.channels;
     const int K          = Mfft / 2 + 1;
-    const auto& fm       = stft.frame_map;
+    const auto& fm       = stft.source_frame_positions;
     const int num_frames = static_cast<int>(fm.size());
     // Synthesis frame window [wbegin, wend): the half-open range of frames this
     // pass actually emits. num_frames stays the full map size and ta_for stays
