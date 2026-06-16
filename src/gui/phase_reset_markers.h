@@ -1,17 +1,9 @@
 #pragma once
 
-#include <cstdint>
+#include "phase_reset_markers_parse.h"
+
 #include <string>
 #include <vector>
-
-// One phase reset marker's serialized form — position plus an optional
-// disabled flag. The recipe/parser domain consumes this base directly; the
-// engine-internal PhaseResetMarker (stft_container.h, synth_frame/src_frame)
-// is a different, engine-private type and never co-visible with this one.
-struct PhaseResetMarker {
-    double time_seconds  = 0.0;
-    bool   disabled      = false;
-};
 
 // The GUI's authoring view. Adds no fields today; it exists so the GUI marker
 // store has its own type and the parser can fill the PhaseResetMarker base by
@@ -27,10 +19,7 @@ inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
     return std::vector<PhaseResetMarker>(src.begin(), src.end());
 }
 
-struct GuiPhaseResetMarkerError {
-    int         line_number;   // 1-based; 0 means "file-level, no line"
-    std::string message;
-};
+using GuiPhaseResetMarkerError = PhaseResetMarkerParseError;
 
 class GuiPhaseResetMarkers {
 public:

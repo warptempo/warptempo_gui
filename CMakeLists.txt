@@ -64,6 +64,7 @@ add_executable(warptempo_gui
     src/gui/text_editor.cpp
     src/gui/text_display.cpp
     src/gui/phase_reset_markers.cpp
+    src/gui/phase_reset_markers_parse.cpp
     src/gui/playback.cpp
     src/gui/playback_lifecycle.cpp
     src/gui/render_pipeline.cpp
