@@ -8,7 +8,7 @@
 #include "time_format.h"
 #include "timemap.h"
 #include "warpmarkers.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <algorithm>
 #include <chrono>

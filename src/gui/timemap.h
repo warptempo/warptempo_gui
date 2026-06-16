@@ -1,7 +1,7 @@
 #pragma once
 
 #include "warpmarkers.h"
-#include "engine/stft_container.h"   // FrameMapSegment
+#include "frame_map.h"   // FrameMapSegment
 
 #include <cstddef>
 #include <cstdint>

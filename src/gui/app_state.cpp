@@ -5,7 +5,7 @@
 #include "render.h"
 #include "text_editor.h"
 #include "timemap.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <cmath>
 #include <cstdint>

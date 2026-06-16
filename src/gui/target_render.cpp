@@ -2,7 +2,7 @@
 
 #include "app_state.h"
 #include "timemap.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <cmath>
 #include <cstdio>

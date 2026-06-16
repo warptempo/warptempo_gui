@@ -6,7 +6,7 @@
 #include "time_format.h"
 #include "timemap.h"
 #include "waveform_worker.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <chrono>
 #include <cmath>

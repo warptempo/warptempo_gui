@@ -6,7 +6,7 @@
 #include "render.h"
 #include "warpmarkers.h"
 #include "platform_wayland.h"
-#include "engine/stft_container.h"   // FrameMapSegment
+#include "frame_map.h"   // FrameMapSegment
 
 #include <cairo/cairo.h>
 #include <string>

@@ -8,7 +8,7 @@
 #include "text_editor.h"
 #include "time_format.h"
 #include "timemap.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <algorithm>
 #include <cctype>

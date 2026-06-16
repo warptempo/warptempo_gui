@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/stft_container.h"   // FrameMapSegment
+#include "frame_map.h"   // FrameMapSegment
 
 #include <atomic>
 #include <cairo/cairo.h>

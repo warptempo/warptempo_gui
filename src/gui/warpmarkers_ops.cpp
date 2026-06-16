@@ -6,7 +6,7 @@
 #include "platform_wayland.h"
 #include "target_render.h"
 #include "timemap.h"
-#include "engine/stft_container.h"
+#include "frame_map.h"
 
 #include <algorithm>
 #include <cmath>

@@ -1,7 +1,7 @@
 #pragma once
 #include "warpmarkers.h"
 #include "phase_reset_markers.h"
-#include "engine/stft_container.h"   // FrameMapSegment for target-view waveform
+#include "frame_map.h"   // FrameMapSegment for target-view waveform
 
 #include <cairo/cairo.h>
 #include <cmath>
