@@ -213,11 +213,12 @@ RenderOutcome do_render(const RenderRequest& req,
     // reset sidecar generation. timemap/tempomap paths leave these empty.
     std::vector<int64_t> engine_source_frame_positions;
     int engine_R_s = 0;
-    // Window origin resolved by the engine from the trim bounds (frame index
-    // of the windowed render's first emitted frame). Sub-brief 3 uses it with
-    // the now-full engine_source_frame_positions to place render-domain sidecars on the
-    // windowed time axis; this brief just captures it.
+    // The engine no longer windows (it renders the supplied map wholesale), so
+    // it returns synth_frame_begin == 0. The window origin is now computed at
+    // slice time (wbegin*R_s) and stored here for the render-domain marker
+    // sidecar; 0 when untrimmed.
     int engine_synth_frame_begin = 0;
+    int64_t window_offset_samples = 0;
 
     if (output_format == "wav") {
         // Absolute source-frame trim bounds. Full-timemap path: the engine
@@ -281,12 +282,25 @@ RenderOutcome do_render(const RenderRequest& req,
         } else {
             ep.output_audio_path = staging_output_path;
         }
-        // Full untrimmed timemap: the engine builds the whole frame map and
-        // synthesizes only the windowed frames (set via ep.has_trim below),
-        // so the windowed source reads match the full render frame-for-frame.
-        ep.frame_map.reserve(tmfull.standard.size());
-        for (const auto& s : tmfull.standard) {
-            ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+        // Trim is a parser-side slice of the full untrimmed map, not an engine
+        // window. When a bound is set, hand the engine the re-anchored
+        // sub-map covering the synthesis-frame window; the engine renders it
+        // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
+        // offset 0 (provably identical to the pre-slice behavior).
+        if (req.has_trim_begin || req.has_trim_end) {
+            const WindowedFrameMap w = slice_frame_map_to_trim_window(
+                tmfull.standard, trim_begin_src, trim_end_src, kCanonicalN, R_s);
+            window_offset_samples = w.window_offset_samples;
+            ep.emit_sample_cap = w.emit_sample_cap;
+            ep.frame_map.reserve(w.frame_map.size());
+            for (const auto& s : w.frame_map) {
+                ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+            }
+        } else {
+            ep.frame_map.reserve(tmfull.standard.size());
+            for (const auto& s : tmfull.standard) {
+                ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+            }
         }
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
@@ -312,15 +326,6 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         ep.phase_reset_frames = displace_phase_reset_frames(
             req.phase_reset_frames, phase_reset_offset_samples);
-
-        // Synthesis frame window from the trim bounds. When neither bound is
-        // set, has_trim is false and the engine renders the whole map
-        // (unchanged untrimmed behavior). When set, the engine narrows
-        // synthesis to the frames covering [trim_begin_src, trim_end_src] out
-        // of the full map.
-        ep.has_trim       = req.has_trim_begin || req.has_trim_end;
-        ep.trim_begin_src = trim_begin_src;
-        ep.trim_end_src   = trim_end_src;
 
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;
@@ -461,9 +466,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<int64_t>(tmres.trim_end_frame)
                 : static_cast<int64_t>(total_frames);
             const double sr_d = static_cast<double>(sample_rate);
-            const int64_t window_offset_samples =
-                static_cast<int64_t>(engine_synth_frame_begin) *
-                static_cast<int64_t>(engine_R_s);
+            // window_offset_samples was computed at slice time (wbegin*R_s);
+            // the engine no longer windows, so engine_synth_frame_begin is 0.
+            // (no recomputation here — reuse the slice's offset)
 
             // After the head-alignment brief, markers sit on the aligned
             // feature: a marker at source F displays at tgt(F) - window_offset

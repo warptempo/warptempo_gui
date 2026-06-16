@@ -49,18 +49,18 @@ struct EngineParams {
     // + active-detected (with displacement applied) entries.
     std::vector<int64_t> phase_reset_frames;
 
-    // Optional synthesis frame window. When has_trim is false the engine
-    // synthesizes the whole frame map (unchanged full-render behavior). When
-    // true, the engine builds the full frame map over the supplied frame_map and
-    // source as usual, then synthesizes only the contiguous frame window whose
-    // source read positions cover [trim_begin_src, trim_end_src]. The window
-    // is selected against the full frame map so it always lands on frame
-    // boundaries; the emitted output is then a constant integer offset of
-    // window_begin * R_s from the corresponding full render. Domain: absolute
-    // source frames, same domain as phase_reset_frames on the full-frame_map path.
-    bool    has_trim        = false;
-    int64_t trim_begin_src  = 0;
-    int64_t trim_end_src     = 0;
+    // Output-sample cap. When > 0, the engine emits exactly this many output
+    // samples and synthesizes only the frames needed to cover them; the rest of
+    // the supplied map is rendered into the discarded tail. When 0 (default),
+    // the cap is derived from the map's last anchor (full-render behavior). This
+    // is a pure output-length budget, not a trim window: the engine has no
+    // notion of trim begin/end source frames. A trimmed render supplies the
+    // parser's WindowedFrameMap::emit_sample_cap here.
+    int64_t emit_sample_cap = 0;
+
+    // The engine renders the supplied frame_map wholesale and is trim-ignorant:
+    // a trimmed render is produced by handing it a pre-sliced sub-map (the
+    // parser's slice_frame_map_to_trim_window), not by an internal window.
 };
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation

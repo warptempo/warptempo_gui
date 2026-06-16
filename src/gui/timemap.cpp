@@ -2,6 +2,7 @@
 
 #include "phase_reset_markers.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -407,6 +408,94 @@ std::vector<int64_t> displace_phase_reset_frames(
         if (engine_frame < 0) engine_frame = 0;
         out.push_back(engine_frame);
     }
+    return out;
+}
+
+WindowedFrameMap slice_frame_map_to_trim_window(
+    const std::vector<FrameMapSegment>& full_map,
+    int64_t trim_begin_src, int64_t trim_end_src,
+    int N, int R_s) {
+    WindowedFrameMap out;
+    if (full_map.empty()) { out.frame_map = full_map; return out; }
+
+    // Dense synthesis-frame source schedule over the FULL map. Identical to the
+    // engine's generate_source_frame_positions(): frame m at output m*R_s reads
+    // source map_target_to_source(m*R_s) - N/2, banker's-rounded to int64.
+    const int64_t target_total =
+        static_cast<int64_t>(full_map.back().tgt_frame) + N;
+    std::vector<int64_t> dense;
+    for (int64_t t_s = 0; t_s < target_total; t_s += R_s) {
+        const double src =
+            map_target_to_source(static_cast<size_t>(t_s), full_map)
+            - static_cast<double>(N) / 2.0;
+        dense.push_back(static_cast<int64_t>(std::llround(src)));
+    }
+    const int num_frames = static_cast<int>(dense.size());
+    if (num_frames == 0) { out.frame_map = full_map; return out; }
+
+    // Window [wbegin, wend): identical selection to the engine's removed block.
+    auto bit = std::upper_bound(dense.begin(), dense.end(), trim_begin_src);
+    int wbegin = (bit == dense.begin()) ? 0
+               : static_cast<int>((bit - dense.begin()) - 1);
+    if (wbegin > num_frames - 1) wbegin = num_frames - 1;
+    auto eit = std::upper_bound(dense.begin(), dense.end(), trim_end_src);
+    int wend = static_cast<int>(eit - dense.begin());
+    if (wend > num_frames) wend = num_frames;
+    if (wend < wbegin + 1) wend = wbegin + 1;
+
+    const int64_t offset =
+        static_cast<int64_t>(wbegin) * static_cast<int64_t>(R_s);
+    out.window_offset_samples = offset;
+
+    // Edge sources/targets on the full map's exact piecewise lines.
+    const int64_t start_src = static_cast<int64_t>(std::llround(
+        map_target_to_source(static_cast<size_t>(offset), full_map)));
+    const int64_t end_tgt_full = static_cast<int64_t>(std::llround(
+        map_source_to_target(static_cast<size_t>(trim_end_src), full_map)));
+
+    std::vector<FrameMapSegment>& sm = out.frame_map;
+    // Start anchor at output 0.
+    sm.push_back(FrameMapSegment{
+        static_cast<size_t>(start_src < 0 ? 0 : start_src), 0});
+    // Interior real segments strictly inside the window's output span, target
+    // shifted by -offset (rigid integer translation -> lines preserved exactly),
+    // source absolute. Skip any that would collide with the start anchor's
+    // source or land at/under target 0 (strict-monotonic guard).
+    for (const auto& s : full_map) {
+        const int64_t tf = static_cast<int64_t>(s.tgt_frame);
+        if (tf <= offset || tf >= end_tgt_full) continue;
+        const int64_t sf = static_cast<int64_t>(s.src_frame);
+        if (sf <= static_cast<int64_t>(sm.back().src_frame)) continue;       // src strict
+        const int64_t st = tf - offset;
+        if (st <= static_cast<int64_t>(sm.back().tgt_frame)) continue;       // tgt strict
+        sm.push_back(FrameMapSegment{static_cast<size_t>(sf),
+                                     static_cast<size_t>(st)});
+    }
+    // End on the first full-map anchor at or past trim_end_src (the anchor that
+    // closes the segment containing trim_end_src), target-shifted by -offset.
+    // Using a real anchor keeps the final segment on the full map's exact line,
+    // so source reads up to the trim boundary match a full render. The engine
+    // truncates at emit_sample_cap (below), so the span between trim_end_src and
+    // this anchor is synthesized into the discarded tail only. trim_end_src is
+    // bounded by the source length, so a closing anchor always exists (at worst
+    // full_map.back()).
+    for (const auto& s : full_map) {
+        if (static_cast<int64_t>(s.src_frame) < trim_end_src) continue;
+        const int64_t sf = static_cast<int64_t>(s.src_frame);
+        const int64_t st = static_cast<int64_t>(s.tgt_frame) - offset;
+        if (sf > static_cast<int64_t>(sm.back().src_frame) &&
+            st > static_cast<int64_t>(sm.back().tgt_frame)) {
+            sm.push_back(FrameMapSegment{static_cast<size_t>(sf),
+                                         static_cast<size_t>(st)});
+        }
+        break;
+    }
+
+    // Output-sample cap: the trim-end target on the full map, re-anchored. The
+    // engine emits up to this and no further, so the render ends exactly at the
+    // trim boundary even though the sub-map's last anchor sits past it.
+    const int64_t cap = end_tgt_full - offset;
+    out.emit_sample_cap = cap < 0 ? 0 : cap;
     return out;
 }
 

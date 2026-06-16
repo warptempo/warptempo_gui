@@ -132,53 +132,37 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.init_fftw();
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
 
-    // Resolve the synthesis frame window against the full frame map. Default is
-    // the whole map (full-render behavior). When p.has_trim is set, narrow
-    // [synth_frame_begin, synth_frame_end) to the contiguous range of frames
-    // whose source read positions cover [trim_begin_src, trim_end_src]. The
-    // window always lands on real frame indices, so the windowed output is a
-    // constant integer offset of synth_frame_begin * R_s from the full render.
+    // Synthesis window and emit cap. The engine renders the supplied map but
+    // emits only emit_sample_cap output samples. On the explicit-cap path (a
+    // trimmed render handed a pre-sliced sub-map), synthesis is bounded to the
+    // frames that touch [0, emit_sample_cap); frames past that write solely into
+    // the truncated tail, so omitting them is byte-identical and keeps trimmed
+    // renders from synthesizing to the sub-map's far closing anchor. On the
+    // default path (full render) the whole map is synthesized and the cap is the
+    // map's last-anchor target.
     {
-        const auto& fmw = audio_stft.source_frame_positions;
-        const int num_frames = static_cast<int>(fmw.size());
+        const int num_frames =
+            static_cast<int>(audio_stft.source_frame_positions.size());
         audio_stft.synth_frame_begin = 0;
-        audio_stft.synth_frame_end   = num_frames;
-        if (p.has_trim && num_frames > 0) {
-            // begin: largest b with fm[b] <= trim_begin_src (upper_bound then
-            // step back), clamped to [0, num_frames - 1].
-            auto bit = std::upper_bound(fmw.begin(), fmw.end(), p.trim_begin_src);
-            int b = (bit == fmw.begin()) ? 0
-                  : static_cast<int>((bit - fmw.begin()) - 1);
-            if (b > num_frames - 1) b = num_frames - 1;
-            // end: smallest e with fm[e] >= trim_end_src, one past it; clamp
-            // high to num_frames and low to b + 1.
-            auto eit = std::upper_bound(fmw.begin(), fmw.end(), p.trim_end_src);
-            int e = static_cast<int>(eit - fmw.begin());
-            if (e > num_frames)  e = num_frames;
-            if (e < b + 1)       e = b + 1;
-            audio_stft.synth_frame_begin = b;
-            audio_stft.synth_frame_end   = e;
+        if (p.emit_sample_cap > 0) {
+            audio_stft.emit_sample_cap = p.emit_sample_cap;
+            // Frames whose output start (m*R_s) is >= emit_sample_cap contribute
+            // nothing to the emitted region. Synthesize enough that the mono
+            // length (wcount-1)*R_s + N/2 exceeds the cap (so the cap, not the
+            // mono length, binds the output); the +2 frame margin guarantees it.
+            int64_t need = (p.emit_sample_cap / audio_stft.R_s) + 2;
+            if (need > num_frames) need = num_frames;
+            audio_stft.synth_frame_end = static_cast<int>(need);
+        } else {
+            audio_stft.synth_frame_end = num_frames;
+            const int64_t end_src =
+                static_cast<int64_t>(audio_stft.frame_map.back().src_frame);
+            const double tgt_end =
+                map_source_to_target(static_cast<size_t>(end_src),
+                                     audio_stft.frame_map);
+            audio_stft.emit_sample_cap = static_cast<int64_t>(std::llround(tgt_end));
+            if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
         }
-    }
-
-    // Emit cap (length oracle + render==target length): the rendered output ends
-    // at the target-frame position of the window's last source sample. Full
-    // render: end_src == frame_map.back().src_frame, so the cap is last_tgt.
-    // Windowed render: end_src == trim_end_src, rebased onto the windowed output
-    // axis by window_offset. Samples past this are OLA decay tail over
-    // (near-)silent material and do not determine head or interior alignment.
-    {
-        const int64_t end_src = p.has_trim
-            ? p.trim_end_src
-            : static_cast<int64_t>(audio_stft.frame_map.back().src_frame);
-        const int64_t window_offset =
-            static_cast<int64_t>(audio_stft.synth_frame_begin) *
-            static_cast<int64_t>(audio_stft.R_s);
-        const double tgt_end =
-            map_source_to_target(static_cast<size_t>(end_src), audio_stft.frame_map);
-        audio_stft.emit_sample_cap =
-            static_cast<int64_t>(std::llround(tgt_end)) - window_offset;
-        if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
     }
 
     double duration_sec = static_cast<double>(audio_stft.target_total_frames) /
