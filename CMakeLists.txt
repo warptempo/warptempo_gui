@@ -60,6 +60,7 @@ add_executable(warptempo_gui
     src/gui/audio.cpp
     src/gui/render.cpp
     src/gui/warpmarkers.cpp
+    src/gui/warpmarkers_parse.cpp
     src/gui/text_editor.cpp
     src/gui/text_display.cpp
     src/gui/phase_reset_markers.cpp

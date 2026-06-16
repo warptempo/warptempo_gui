@@ -1,43 +1,12 @@
 #pragma once
 
+#include "warpmarkers_parse.h"
+
 #include <cmath>
 #include <cstdio>
 #include <limits>
 #include <string>
 #include <vector>
-
-// One warp marker's serialized form — the seven fields the .warpmarkers
-// file round-trips, and the only fields the recipe/parser domain and the
-// engine-bound render path read. Three independent state axes:
-//
-//   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
-//      (`tempo_base` is the numeric value). `tempo_inherits == true` (a
-//      "pass" marker): the presentation tempo is resolved live by walking
-//      backward through the marker list to the nearest owning marker.
-//      `tempo_base`/`tempo_scale` carry inert defaults (1.0 / "1.0000")
-//      that are never read while the marker is inheriting.
-//
-//   2. Label relationship. At most one of `label_def` and `label_ref` is
-//      non-empty. `label_def` marks a label origin; `label_ref` cites one.
-//
-//   3. Disabled flag. Allowed on any marker. A disabled marker has its
-//      tempo contribution silenced. When the disabled marker is a
-//      `label_def`, all `label_ref` markers pointing to it are also
-//      treated as disabled (cascade). The cascade rule applies only to
-//      label_def markers; a disabled non-label-def is locally disabled
-//      and does not propagate.
-struct WarpMarker {
-    double time_seconds = 0.0;
-
-    bool        tempo_inherits = false;
-    double      tempo_base     = 1.0;
-    std::string tempo_scale;
-
-    std::string label_def;
-    std::string label_ref;
-
-    bool disabled      = false;
-};
 
 // The GUI's authoring view: a WarpMarker plus the session-only authoring
 // scratchpad. The scratchpad is never serialized and never crosses the
@@ -88,10 +57,7 @@ inline std::vector<WarpMarker> slice_to_warp_markers(
     return std::vector<WarpMarker>(src.begin(), src.end());
 }
 
-struct GuiWarpMarkerError {
-    int         line_number;   // 1-based; 0 means "file-level, no line"
-    std::string message;
-};
+using GuiWarpMarkerError = WarpMarkerParseError;
 
 class GuiWarpMarkers {
 public:
@@ -172,6 +138,9 @@ private:
 // cascade rule applies: the ref inherits its target label_def's
 // disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
+
+// (parse_single_canonical_line is declared in warpmarkers_parse.h, included
+// above; flag_editor.cpp sees it transitively through this header.)
 
 // Brief D iteration mode: format the inline bracket segment spliced into
 // an eligible flag after `tempo_base`. The leading `+` is the
@@ -271,19 +240,3 @@ inline bool parse_bpm_bracket(const std::string& s,
     hi    = h;
     return true;
 }
-
-namespace warpmarkers_internal {
-
-// Parse one canonical new-format line into the WarpMarker base. Used by the
-// GUI editor's commit path, which passes a GuiWarpMarker by upcast. Performs
-// only line-local validation (format, whitespace rejection, payload
-// structure) — cross-marker rules (label_ref existence, label_def
-// uniqueness, time monotonicity) are the caller's responsibility. On `pass`,
-// tempo_base/tempo_scale are populated with inert defaults (1.0 / "1.0000")
-// — there is no cache to preserve.
-bool parse_single_canonical_line(
-    const std::string& raw_line,
-    WarpMarker& out,
-    std::string* error_out);
-
-} // namespace warpmarkers_internal
