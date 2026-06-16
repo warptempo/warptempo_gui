@@ -46,7 +46,7 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<FrameMapSegment>* timemap_or_null) {
+    const std::vector<FrameMapSegment>* frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     cairo_t* ccr = cairo_create(dest);
@@ -69,7 +69,7 @@ void render_waveform_to_cache_surface(
         render_waveform(ccr, cache_area, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null);
+                        frame_map_or_null);
     } else if (channel_count >= 2) {
         // Channel gap removed (kChannelGapPx deleted): the 1972 Krips material
         // is effectively never unity, so the two channels' inner excursions do
@@ -84,11 +84,11 @@ void render_waveform_to_cache_surface(
         render_waveform(ccr, ch0, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null);
+                        frame_map_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         vp_start, vp_end,
                         kWaveform,
-                        timemap_or_null);
+                        frame_map_or_null);
     }
     cairo_destroy(ccr);
 }
@@ -122,7 +122,7 @@ static void render_waveform_strip_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start_full,
     int64_t vp_end_full,
-    const std::vector<FrameMapSegment>* timemap_or_null) {
+    const std::vector<FrameMapSegment>* frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
     if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
     if (vp_end_full <= vp_start_full) return;
@@ -157,17 +157,17 @@ static void render_waveform_strip_to_cache_surface(
         const GuiRect a{strip_x, kWaveformInsetPx, strip_w, inset_h};
         render_waveform(ccr, a, audio, 0,
                         strip_vp_start, strip_vp_end,
-                        kWaveform, timemap_or_null);
+                        kWaveform, frame_map_or_null);
     } else if (channel_count >= 2) {
         const int ch_h = inset_h / 2;
         const GuiRect ch0{strip_x, kWaveformInsetPx, strip_w, ch_h};
         const GuiRect ch1{strip_x, kWaveformInsetPx + ch_h, strip_w, ch_h};
         render_waveform(ccr, ch0, audio, 0,
                         strip_vp_start, strip_vp_end,
-                        kWaveform, timemap_or_null);
+                        kWaveform, frame_map_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         strip_vp_start, strip_vp_end,
-                        kWaveform, timemap_or_null);
+                        kWaveform, frame_map_or_null);
     }
     cairo_restore(ccr);
     cairo_destroy(ccr);
@@ -445,8 +445,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             const int64_t  vp_start_disp = wf_cache.fp_vp_start;
             const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
             const std::vector<FrameMapSegment>* tmap_disp =
-                (wf_cache.fp_target && !wf_cache.fp_timemap.empty())
-                    ? &wf_cache.fp_timemap : nullptr;
+                (wf_cache.fp_target && !wf_cache.fp_frame_map.empty())
+                    ? &wf_cache.fp_frame_map : nullptr;
 
             // Built once, threaded into the live render_one_editor_flag
             // call below. Reads only app.top_flag_editor, which has no
@@ -556,9 +556,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             if (!app.render_view_enabled &&
                 app.active_audio_view == 'T') {
                 if (app.drag.active) {
-                    dbg_tmap = app.drag.frozen_timemap;
+                    dbg_tmap = app.drag.frozen_frame_map;
                 } else {
-                    dbg_tmap = build_target_view_timemap(
+                    dbg_tmap = build_target_view_frame_map(
                         app, sr,
                         static_cast<long>(audio.total_frames()));
                 }
@@ -837,17 +837,17 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 
     const bool is_target = (app.active_audio_view == 'T') &&
                            !app.render_view_enabled;
-    std::vector<FrameMapSegment> target_timemap;
-    uint64_t target_timemap_hash = 0;
+    std::vector<FrameMapSegment> target_frame_map;
+    uint64_t target_frame_map_hash = 0;
     if (is_target) {
         if (app.drag.active) {
-            target_timemap = app.drag.frozen_timemap;
+            target_frame_map = app.drag.frozen_frame_map;
         } else {
             const TargetTimemapCache& c =
                 target_view_timemap_cached(app, sr,
                     static_cast<long>(audio.total_frames()));
-            target_timemap      = c.frame_map;       // job needs an owned snapshot
-            target_timemap_hash = c.hash;
+            target_frame_map      = c.frame_map;       // job needs an owned snapshot
+            target_frame_map_hash = c.hash;
         }
     }
 
@@ -856,9 +856,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.is_target     = is_target;
-    in.timemap_hash  = target_timemap_hash;
+    in.frame_map_hash  = target_frame_map_hash;
     in.channel_count = audio.render_channels();
-    in.frame_map       = std::move(target_timemap);
+    in.frame_map       = std::move(target_frame_map);
     in.valid         = true;
     return in;
 }
@@ -886,7 +886,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_ah   != in.area_h)          return true;
         if (fp_t    != in.is_target)       return true;
         if (!drag_freeze) {
-            if (fp_h  != in.timemap_hash)     return true;
+            if (fp_h  != in.frame_map_hash)     return true;
         }
         return false;
     };
@@ -898,7 +898,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_audio_gen,
         wf_cache.pending_fp_target,
-        wf_cache.pending_fp_timemap_hash);
+        wf_cache.pending_fp_frame_map_hash);
 
     if (!diff_vs_pending) return;
 
@@ -914,8 +914,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_audio_gen   = app.audio_generation;
         wf_cache.supersede_target      = in.is_target;
-        wf_cache.supersede_timemap_hash = in.timemap_hash;
-        wf_cache.supersede_timemap     = std::move(in.frame_map);
+        wf_cache.supersede_frame_map_hash = in.frame_map_hash;
+        wf_cache.supersede_frame_map     = std::move(in.frame_map);
         return;
     }
 
@@ -941,11 +941,11 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_h         = in.area_h;
     job.audio_gen      = app.audio_generation;
     job.target         = in.is_target;
-    job.timemap_hash   = in.timemap_hash;
+    job.frame_map_hash   = in.frame_map_hash;
     // Stage B: stash a copy of the frame_map on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
-    wf_cache.pending_fp_timemap = in.frame_map;
+    wf_cache.pending_fp_frame_map = in.frame_map;
     job.frame_map        = std::move(in.frame_map);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = in.channel_count;
@@ -957,7 +957,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_audio_gen   = app.audio_generation;
     wf_cache.pending_fp_target      = in.is_target;
-    wf_cache.pending_fp_timemap_hash = in.timemap_hash;
+    wf_cache.pending_fp_frame_map_hash = in.frame_map_hash;
 
     waveform_worker.dispatch(std::move(job),
         [this](bool ok) { on_waveform_render_done(ok); });
@@ -969,7 +969,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
             "warptempo_gui: waveform worker reported failure; will retry "
             "on next tick\n");
         wf_cache.supersede = false;
-        wf_cache.supersede_timemap.clear();
+        wf_cache.supersede_frame_map.clear();
         // Make sure the next maybe_enqueue tick sees the live fingerprint
         // as dirty so we retry. The simplest way is to mark pending_fp_*
         // dirty by resetting audio_gen — comparison will mismatch.
@@ -1009,13 +1009,13 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
-        job.timemap_hash   = wf_cache.supersede_timemap_hash;
+        job.frame_map_hash   = wf_cache.supersede_frame_map_hash;
         // Stage B: thread the supersede frame_map into both the job and
-        // pending_fp_timemap, the same way the idle-path dispatch does.
+        // pending_fp_frame_map, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
         // displayable copy for the post-completion stem rebuild.
-        wf_cache.pending_fp_timemap = wf_cache.supersede_timemap;
-        job.frame_map        = std::move(wf_cache.supersede_timemap);
+        wf_cache.pending_fp_frame_map = wf_cache.supersede_frame_map;
+        job.frame_map        = std::move(wf_cache.supersede_frame_map);
         job.surface        = wf_cache.pending_surface;
         job.channel_count  = audio.render_channels();
         job.audio          = &audio;
@@ -1026,10 +1026,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_audio_gen   = wf_cache.supersede_audio_gen;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
-        wf_cache.pending_fp_timemap_hash = wf_cache.supersede_timemap_hash;
+        wf_cache.pending_fp_frame_map_hash = wf_cache.supersede_frame_map_hash;
 
         wf_cache.supersede = false;
-        wf_cache.supersede_timemap.clear();
+        wf_cache.supersede_frame_map.clear();
 
         waveform_worker.dispatch(std::move(job),
             [this](bool ok2) { on_waveform_render_done(ok2); });
@@ -1049,11 +1049,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
-    wf_cache.fp_timemap_hash = wf_cache.pending_fp_timemap_hash;
+    wf_cache.fp_frame_map_hash = wf_cache.pending_fp_frame_map_hash;
     // Stage B: publish the in-flight job's frame_map to the displayed slot
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
-    std::swap(wf_cache.fp_timemap,     wf_cache.pending_fp_timemap);
+    std::swap(wf_cache.fp_frame_map,     wf_cache.pending_fp_frame_map);
     wf_cache.dirty           = false;
 
     // Invalidate the waveform area so the next paint blits the new
@@ -1131,7 +1131,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // publish the current viewport ourselves, so the slot must not
     // re-dispatch an old one on a later tick.
     wf_cache.supersede = false;
-    wf_cache.supersede_timemap.clear();
+    wf_cache.supersede_frame_map.clear();
 
     // Render into the LIVE surface directly. Reuse-or-recreate on
     // dimension mismatch, mirroring the dispatch path.
@@ -1167,8 +1167,8 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_audio_gen    = app.audio_generation;
     wf_cache.fp_target       = in.is_target;
-    wf_cache.fp_timemap_hash = in.timemap_hash;
-    wf_cache.fp_timemap      = in.frame_map;
+    wf_cache.fp_frame_map_hash = in.frame_map_hash;
+    wf_cache.fp_frame_map      = in.frame_map;
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
@@ -1176,8 +1176,8 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_audio_gen    = app.audio_generation;
     wf_cache.pending_fp_target       = in.is_target;
-    wf_cache.pending_fp_timemap_hash = in.timemap_hash;
-    wf_cache.pending_fp_timemap      = in.frame_map;
+    wf_cache.pending_fp_frame_map_hash = in.frame_map_hash;
+    wf_cache.pending_fp_frame_map      = in.frame_map;
 
     wf_cache.dirty = false;
 
@@ -1201,7 +1201,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 // (target) domain, the plate is uniformly indexed in that domain
 // (render_waveform maps column i -> vp_start + spp*i, then target->source via
 // the frame_map), and the frame_map is invariant across a pan (marker/scale edits
-// rebuild it and stay on the worker path, caught by the fp_timemap_hash gate
+// rebuild it and stay on the worker path, caught by the fp_frame_map_hash gate
 // below). So a uniform pixel shift is exactly as correct in target view as in
 // source view.
 //
@@ -1229,7 +1229,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         wf_cache.width     != in.area_w ||
         wf_cache.height    != in.area_h ||
         wf_cache.fp_target       != in.is_target ||
-        wf_cache.fp_timemap_hash != in.timemap_hash ||
+        wf_cache.fp_frame_map_hash != in.frame_map_hash ||
         wf_cache.fp_audio_gen    != app.audio_generation) {
         maybe_enqueue_waveform_render();
         return;
@@ -1402,7 +1402,7 @@ GuiPaintHandler::compute_displayed_trim() const {
     // Positions read LIVE from app state (no waveform-cache coupling): trim
     // no longer affects waveform pixels, so they must follow the cursor every
     // motion tick rather than lagging a worker-completion swap. Target-view
-    // positions map through the displayed frame_map (wf_cache.fp_timemap) — the
+    // positions map through the displayed frame_map (wf_cache.fp_frame_map) — the
     // same coordinate system the marker stems use — which trim does not
     // perturb, so it is stable across a trim drag.
     const int sr = audio.sample_rate();
@@ -1412,15 +1412,15 @@ GuiPaintHandler::compute_displayed_trim() const {
     } else if (wf_cache.fp_target) {
         const auto src_trim = compute_trim_samples(
             app, sr, audio.total_frames());
-        if (!wf_cache.fp_timemap.empty()) {
+        if (!wf_cache.fp_frame_map.empty()) {
             const long long t0 = static_cast<long long>(std::nearbyint(
                 map_source_to_target(
                     static_cast<size_t>(src_trim.first),
-                    wf_cache.fp_timemap)));
+                    wf_cache.fp_frame_map)));
             const long long t1 = static_cast<long long>(std::nearbyint(
                 map_source_to_target(
                     static_cast<size_t>(src_trim.second),
-                    wf_cache.fp_timemap)));
+                    wf_cache.fp_frame_map)));
             t = {t0, t1};
         } else {
             t = src_trim;
@@ -1505,7 +1505,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
     const bool     is_target    = wf_cache.fp_target;
-    const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
+    const uint64_t frame_map_hash = wf_cache.fp_frame_map_hash;
     const long long audio_gen   = wf_cache.fp_audio_gen;
 
     // Marker-driven inputs: read live from app state.
@@ -1540,7 +1540,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_area_w                  == surface_w &&
         stem_cache.fp_area_h                  == surface_h &&
         stem_cache.fp_target                  == is_target &&
-        stem_cache.fp_timemap_hash            == timemap_hash &&
+        stem_cache.fp_frame_map_hash            == frame_map_hash &&
         stem_cache.fp_warpmarker_generation   == warp_gen &&
         stem_cache.fp_phase_reset_generation  == phase_gen &&
         stem_cache.fp_drag_overlay_hash       == drag_hash &&
@@ -1597,8 +1597,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // stem positions consistent with the displayed waveform during the
     // worker's rebuild window.
     const std::vector<FrameMapSegment>* tmap_arg =
-        (is_target && !wf_cache.fp_timemap.empty())
-            ? &wf_cache.fp_timemap : nullptr;
+        (is_target && !wf_cache.fp_frame_map.empty())
+            ? &wf_cache.fp_frame_map : nullptr;
 
     // Drag overlay: pass through only when a drag is live. During a
     // drag the fingerprint mismatches every tick on the drag-overlay
@@ -1657,7 +1657,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_area_w                    = surface_w;
     stem_cache.fp_area_h                    = surface_h;
     stem_cache.fp_target                    = is_target;
-    stem_cache.fp_timemap_hash              = timemap_hash;
+    stem_cache.fp_frame_map_hash              = frame_map_hash;
     stem_cache.fp_warpmarker_generation     = warp_gen;
     stem_cache.fp_phase_reset_generation    = phase_gen;
     stem_cache.fp_drag_overlay_hash         = drag_hash;
@@ -1716,7 +1716,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
     const bool     is_target    = wf_cache.fp_target;
-    const uint64_t timemap_hash = wf_cache.fp_timemap_hash;
+    const uint64_t frame_map_hash = wf_cache.fp_frame_map_hash;
     const long long audio_gen   = wf_cache.fp_audio_gen;
 
     // Marker-driven inputs from app state.
@@ -1758,7 +1758,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_target                  == is_target &&
-        flag_cache.fp_timemap_hash            == timemap_hash &&
+        flag_cache.fp_frame_map_hash            == frame_map_hash &&
         flag_cache.fp_warpmarker_generation   == warp_gen &&
         flag_cache.fp_phase_reset_generation  == phase_gen &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
@@ -1802,8 +1802,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int sr = audio.sample_rate();
 
     const std::vector<FrameMapSegment>* tmap_arg =
-        (is_target && !wf_cache.fp_timemap.empty())
-            ? &wf_cache.fp_timemap : nullptr;
+        (is_target && !wf_cache.fp_frame_map.empty())
+            ? &wf_cache.fp_frame_map : nullptr;
 
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
@@ -1882,7 +1882,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_target                  = is_target;
-    flag_cache.fp_timemap_hash            = timemap_hash;
+    flag_cache.fp_frame_map_hash            = frame_map_hash;
     flag_cache.fp_warpmarker_generation   = warp_gen;
     flag_cache.fp_phase_reset_generation  = phase_gen;
     flag_cache.fp_drag_overlay_hash       = drag_hash;

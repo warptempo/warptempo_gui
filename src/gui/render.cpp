@@ -1440,11 +1440,11 @@ double flag_pending_text_left_x(
     // Empty / null frame_map falls through to identity, matching the
     // render-side helpers' convention. Not reachable mid-drag (begin_drag
     // clears the editor; the click handler exits before any drag begins),
-    // so a fresh build is correct and app.drag.frozen_timemap need not be
+    // so a fresh build is correct and app.drag.frozen_frame_map need not be
     // consulted.
     double ms = mv[marker_idx].time_seconds * sr;
     if (app.active_audio_view == 'T') {
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         if (!tmap.empty()) {

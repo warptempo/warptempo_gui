@@ -82,7 +82,7 @@ std::string format_domain_timestamp(double source_seconds,
                (in_target ? " target time" : " source time");
     }
 
-    const auto tmap = build_target_view_timemap(app, sr, total);
+    const auto tmap = build_target_view_frame_map(app, sr, total);
     if (tmap.empty()) {
         // Degenerate frame_map — fall back to untranslated source seconds
         // with a source-time label so the message is still well-defined.

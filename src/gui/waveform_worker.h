@@ -36,11 +36,11 @@ struct WaveformJob {
     int       area_h           = 0;
     long long audio_gen        = -1;
     bool      target           = false;
-    uint64_t  timemap_hash     = 0;
+    uint64_t  frame_map_hash     = 0;
 
-    // Timemap snapshot the worker dereferences during the render. Empty for
+    // Frame-map snapshot the worker dereferences during the render. Empty for
     // source view; populated for target view from the value paint-side
-    // computed (or app.drag.frozen_timemap during a target-view drag). The
+    // computed (or app.drag.frozen_frame_map during a target-view drag). The
     // worker reads — never builds — this.
     std::vector<FrameMapSegment> frame_map;
 
@@ -153,4 +153,4 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<FrameMapSegment>* timemap_or_null);
+    const std::vector<FrameMapSegment>* frame_map_or_null);

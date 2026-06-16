@@ -80,12 +80,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    std::vector<FrameMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_frame_map;
     if (!rv && app.active_audio_view == 'T') {
-        target_timemap = build_target_view_timemap(
+        target_frame_map = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
-    const bool use_tmap = !target_timemap.empty();
+    const bool use_tmap = !target_frame_map.empty();
     for (int i = 0; i < n; ++i) {
         double ms;
         if (rv_trans) {
@@ -105,7 +105,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
             const size_t q = (ms < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(ms));
-            ms = map_source_to_target(q, target_timemap);
+            ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) continue;
         if (ms >= vp + static_cast<double>(visible)) continue;
@@ -139,12 +139,12 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    std::vector<FrameMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_frame_map;
     if (app.active_audio_view == 'T') {
-        target_timemap = build_target_view_timemap(
+        target_frame_map = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
-    const bool use_tmap = !target_timemap.empty();
+    const bool use_tmap = !target_frame_map.empty();
 
     auto bound_dist = [&](double seconds, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
@@ -153,7 +153,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
             const size_t q = (ms < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(ms));
-            ms = map_source_to_target(q, target_timemap);
+            ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) return kMarkerHitHalfPx + 1;
         if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
@@ -196,12 +196,12 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    std::vector<FrameMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_frame_map;
     if (app.active_audio_view == 'T') {
-        target_timemap = build_target_view_timemap(
+        target_frame_map = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
-    const bool use_tmap = !target_timemap.empty();
+    const bool use_tmap = !target_frame_map.empty();
 
     const int kMiss = std::numeric_limits<int>::max();
 
@@ -222,7 +222,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             const size_t q = (ms < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(ms));
-            ms = map_source_to_target(q, target_timemap);
+            ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) return kMiss;
         if (ms >= vp + static_cast<double>(visible)) return kMiss;
@@ -280,19 +280,19 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     //
     // During a drag, route through the frozen frame_map captured at
     // begin_drag so hit-rect positions match the frozen-coord paint.
-    std::vector<FrameMapSegment> target_timemap;
+    std::vector<FrameMapSegment> target_frame_map;
     if (!app.render_view_enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
-            target_timemap = app.drag.frozen_timemap;
+            target_frame_map = app.drag.frozen_frame_map;
         } else {
-            target_timemap = build_target_view_timemap(
+            target_frame_map = build_target_view_frame_map(
                 app, audio.sample_rate(),
                 static_cast<long>(audio.total_frames()));
         }
     }
     const std::vector<FrameMapSegment>* tmap_arg =
-        target_timemap.empty() ? nullptr : &target_timemap;
+        target_frame_map.empty() ? nullptr : &target_frame_map;
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (app.drag.active) {

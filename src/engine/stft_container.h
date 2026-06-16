@@ -151,7 +151,7 @@ struct AudioSTFT {
     double bin_hz_width = 0.0;
     size_t target_total_frames = 0;
 
-    // Timemap
+    // Frame map
     std::vector<FrameMapSegment> frame_map;
 
     // Windows

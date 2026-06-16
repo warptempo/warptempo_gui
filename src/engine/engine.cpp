@@ -51,7 +51,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 }
 
 // Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
-bool validate_timemap_monotonic(const std::vector<FrameMapSegment>& tm) {
+bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
         if (tm[i].src_frame <= tm[i - 1].src_frame) {
             std::cerr << "Error: timemap entry " << i << " has non-monotonic src_frame ("
@@ -109,7 +109,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     for (const auto& e : p.frame_map) {
         audio_stft.frame_map.push_back({e.first, e.second});
     }
-    if (!validate_timemap_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
+    if (!validate_frame_map_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {

@@ -379,13 +379,13 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     return true;
 }
 
-TimemapRealRange real_segments(const TimemapBuildResult& r) {
+FrameMapRealRange real_segments(const TimemapBuildResult& r) {
     auto b = r.standard.begin() + (r.has_trim_begin_anchor ? 1 : 0);
     auto e = r.standard.end()   - (r.has_trim_end_anchor   ? 1 : 0);
     return {b, e};
 }
 
-std::vector<FrameMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
@@ -424,7 +424,7 @@ const TargetTimemapCache& target_view_timemap_cached(
         c.sample_rate == sample_rate && c.total_frames == total_frames) {
         return c;
     }
-    c.frame_map = build_target_view_timemap(
+    c.frame_map = build_target_view_frame_map(
         app.warpmarkers.markers(), scale, sample_rate, total_frames);
     uint64_t h = 0xcbf29ce484222325ULL;
     for (const auto& s : c.frame_map) {
@@ -452,7 +452,7 @@ const TargetTimemapCache& target_view_timemap_cached(
     return c;
 }
 
-std::vector<FrameMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_frame_map(
     const AppState& app, int sample_rate, long total_frames) {
     return target_view_timemap_cached(app, sample_rate, total_frames).frame_map;
 }

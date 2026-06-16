@@ -115,7 +115,7 @@ void Selection::cycle_selection(bool forward) {
     // comparable to playhead_cursor_sample / viewport_start_sample below.
     std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
+        tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
     auto frame_of = [&](int i) -> int64_t {
@@ -228,7 +228,7 @@ void Selection::sync_playhead_to_last_selected() {
     // lands at the marker's displayed (target-frame) position.
     int64_t target_sample = src_sample;
     if (app.active_audio_view == 'T') {
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
         target_sample = to_domain_frame(app, src_sample, tmap);
     }

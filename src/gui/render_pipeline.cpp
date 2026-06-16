@@ -31,7 +31,7 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-bool write_standard_timemap(const std::string& path,
+bool write_standard_frame_map(const std::string& path,
                             const std::vector<FrameMapSegment>& segs,
                             bool drop_zero_zero) {
     std::ofstream of(path);
@@ -368,7 +368,7 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
         const bool ok = (output_format == "timemap")
-            ? write_standard_timemap(final_output_path, tmres.standard,
+            ? write_standard_frame_map(final_output_path, tmres.standard,
                                      /*drop_zero_zero=*/false)
             : write_midi_tempomap(final_output_path, tmres.midi);
         if (!ok) {
@@ -447,7 +447,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // render-domain time is the full-render output sample minus the
             // window origin. When untrimmed, engine_synth_frame_begin is 0 so
             // window_offset_samples is 0 and this reduces to old behavior.
-            const TimemapRealRange real = real_segments(tmfull);
+            const FrameMapRealRange real = real_segments(tmfull);
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
             const int64_t trim_end = tmres.trimmed

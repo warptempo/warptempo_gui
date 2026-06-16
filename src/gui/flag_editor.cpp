@@ -179,7 +179,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
         // the marker's displayed (target-frame) position.
         int64_t sample = src_sample;
         if (app.active_audio_view == 'T') {
-            const auto tmap = build_target_view_timemap(
+            const auto tmap = build_target_view_frame_map(
                 app, sr, static_cast<long>(audio.total_frames()));
             sample = to_domain_frame(app, src_sample, tmap);
         }

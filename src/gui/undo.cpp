@@ -176,7 +176,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 // marker's displayed position, mirroring
                 // Selection::sync_playhead_to_last_selected.
                 if (app.active_audio_view == 'T') {
-                    const auto tmap = build_target_view_timemap(
+                    const auto tmap = build_target_view_frame_map(
                         app, sr,
                         static_cast<long>(selection.audio.total_frames()));
                     target_sample =
@@ -260,7 +260,7 @@ void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
             // Source-frame → active-domain translation, as in the warp
             // helper above and Selection::sync_playhead_to_last_selected.
             if (app.active_audio_view == 'T') {
-                const auto tmap = build_target_view_timemap(
+                const auto tmap = build_target_view_frame_map(
                     app, sr,
                     static_cast<long>(selection.audio.total_frames()));
                 target_sample =

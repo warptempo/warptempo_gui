@@ -85,7 +85,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
         time_seconds * static_cast<double>(sr)));
     int64_t sample = src_sample;
     if (app.active_audio_view == 'T') {
-        const auto tmap_after = build_target_view_timemap(
+        const auto tmap_after = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
         sample = to_domain_frame(app, src_sample, tmap_after);
     }
@@ -107,7 +107,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
     if (sr <= 0) return;
     std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
+        tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t src_frame =
@@ -122,7 +122,7 @@ void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
     if (sr <= 0) return;
     std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
+        tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t src_frame =
@@ -443,7 +443,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(
                 static_cast<double>(mouse_x - area.x) * spp));
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
         const int64_t anchor_frame_src =
             to_source_frame(app, anchor_frame_active, tmap);
@@ -508,7 +508,7 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     // through DragOverlay unconditionally. Build may fail (returns empty)
     // — in that case paint walks the identity fallback for the duration
     // of the drag, which is the correct degradation.
-    d.frozen_timemap = build_target_view_timemap(
+    d.frozen_frame_map = build_target_view_frame_map(
         app, sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
     // active-mode snapshot if motion landed; otherwise it's discarded.
@@ -602,16 +602,16 @@ void GuiWarpMarkersOps::commit_drag() {
     int64_t playhead_src_anchor = 0;
     if (moved && !phase_reset && app.active_audio_view == 'T') {
         playhead_src_anchor = to_source_frame(
-            app, app.playhead_cursor_sample, app.drag.frozen_timemap);
+            app, app.playhead_cursor_sample, app.drag.frozen_frame_map);
         reanchor_playhead = true;
     }
     // Cascade validation for warp drags. The frozen-coord regime keeps
     // build_timemaps from running during motion (paint sources from the
-    // pre-drag snapshot in app.drag.frozen_timemap), so a drag end-state
+    // pre-drag snapshot in app.drag.frozen_frame_map), so a drag end-state
     // that violates the per-segment label_ref final_multiplier ceiling
     // can otherwise land in the live store and leave the next
-    // build_target_view_timemap call returning empty. Construct the
-    // proposed post-write warp marker vector, run build_target_view_timemap
+    // build_target_view_frame_map call returning empty. Construct the
+    // proposed post-write warp marker vector, run build_target_view_frame_map
     // against it, and reject the drag on empty result. Phase-reset markers
     // don't participate in label cascade, so this branch is warp-only.
     if (moved && !phase_reset) {
@@ -624,7 +624,7 @@ void GuiWarpMarkersOps::commit_drag() {
         }
         // Builds from a proposed list, intentionally bypasses the
         // live-state cache.
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             proposed, app.engine_settings.scale, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         if (tmap.empty()) {
@@ -672,7 +672,7 @@ void GuiWarpMarkersOps::commit_drag() {
     viewport.invalidate_waveform_area();
     if (reanchor_playhead) {
         const int sr = audio.sample_rate();
-        const auto new_map = build_target_view_timemap(
+        const auto new_map = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
         viewport.move_playhead_to(
             to_domain_frame(app, playhead_src_anchor, new_map));
@@ -758,7 +758,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             if (idx == 0 || mv[idx].time_seconds == 0.0) return;
         }
         const double sr_d = static_cast<double>(sr);
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
@@ -849,7 +849,7 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     // taking the delta so the resulting shift is source-seconds.
     std::vector<FrameMapSegment> tmap;
     if (app.active_audio_view == 'T') {
-        tmap = build_target_view_timemap(
+        tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
     const int64_t ph_src =

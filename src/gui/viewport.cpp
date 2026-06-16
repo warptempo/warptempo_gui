@@ -36,7 +36,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         if (!vs.has_trim_begin && !vs.has_trim_end) {
             return {0, live_total};
         }
-        const auto tmap = build_target_view_timemap(app, sr, total);
+        const auto tmap = build_target_view_frame_map(app, sr, total);
         int64_t begin_tgt = 0;
         int64_t end_tgt   = live_total;
         if (vs.has_trim_begin) {
@@ -431,7 +431,7 @@ void Viewport::recompute_hover_at_cursor() {
         return;
     }
     // Brief 3a: target view's hover popup runs the same way as
-    // source view's. hit_test_flag builds the target_timemap
+    // source view's. hit_test_flag builds the target_frame_map
     // internally when active_audio_view == Target so the flag rects it
     // walks match what paint_handler renders at translated columns.
     const int hit = hit_test_flag(app, audio,

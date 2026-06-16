@@ -68,11 +68,11 @@ struct TimemapBuildResult {
 // tmres.standard with the synthetic trim anchors (if any) excluded at
 // both ends. Used by the render sidecar lockstep walk so injected
 // anchors do not surface as ghost markers in render-view.
-struct TimemapRealRange {
+struct FrameMapRealRange {
     std::vector<FrameMapSegment>::const_iterator begin;
     std::vector<FrameMapSegment>::const_iterator end;
 };
-TimemapRealRange real_segments(const TimemapBuildResult& r);
+FrameMapRealRange real_segments(const TimemapBuildResult& r);
 
 // Returns true on success; false on any validation failure (message logged
 // to stderr). Failure conditions: tempo > 9.99, tempo <= 0,
@@ -101,20 +101,20 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // fails or yields no segments. Callers in target view route this through
 // compute_flag_hit_rects / render_flags / popup-hit helpers so hit-test
 // math and paint stay in sync.
-std::vector<FrameMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
     long total_frames);
 
-// AppState-driven overload of build_target_view_timemap. Pulls the live
+// AppState-driven overload of build_target_view_frame_map. Pulls the live
 // warp marker store and engine_settings.scale from `app`; otherwise
 // identical to the markers-and-scale overload above. Both input and
 // paint paths in target view route through this helper so the segment
 // list they walk is byte-identical. Defined in timemap.cpp; an
 // AppState forward declaration suffices here.
 struct AppState;
-std::vector<FrameMapSegment> build_target_view_timemap(
+std::vector<FrameMapSegment> build_target_view_frame_map(
     const AppState& app, int sample_rate, long total_frames);
 
 // Memoized target-view frame_map. One entry, keyed on the inputs that

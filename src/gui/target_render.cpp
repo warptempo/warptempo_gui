@@ -201,7 +201,7 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     const ViewState& vs = active_view_state(app);
     if (vs.has_trim_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
-        const auto tmap = build_target_view_timemap(
+        const auto tmap = build_target_view_frame_map(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         const int64_t trim_begin_frame = static_cast<int64_t>(

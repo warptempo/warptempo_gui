@@ -124,11 +124,11 @@ struct DragState {
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
     // Pre-drag frame_map snapshot. Captured at begin_drag via
-    // build_target_view_timemap so paint can route selected-marker
+    // build_target_view_frame_map so paint can route selected-marker
     // positions and target-view waveform through a frozen coordinate
     // system for the duration of the drag. Empty when source view is
     // active at begin_drag time, or when the build failed.
-    std::vector<FrameMapSegment> frozen_timemap;
+    std::vector<FrameMapSegment> frozen_frame_map;
     // Full pre-drag marker state. Captured at button-press so commit_drag
     // can push it onto the undo stack when motion landed; discarded on
     // commit when no motion occurred (DragState is reset wholesale there).
