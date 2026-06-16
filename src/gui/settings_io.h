@@ -80,37 +80,6 @@ bool create_if_missing(const std::filesystem::path& p,
 // read_engine_settings_from_file.
 bool parse_settings_file(const std::string& path, ParsedSettings& out);
 
-// True iff `key` is one of the seven canonical engine setting keys.
-// Driven from the EnginePassthrough subset of kSettingsOrder.
-bool is_canonical_engine_key(const std::string& key);
-
-// Validate (key, value) per the canonical engine rules and assign to the
-// corresponding EngineSettings field on success. On failure, leaves `out`
-// untouched and fills `reason` with a short human constraint string
-// (e.g. "must be one of {wav, timemap, tempomap}"). Caller wraps with
-// the surrounding "key 'X' has invalid value 'Y':" prefix. Used by both
-// read_engine_settings_from_file and GuiSettingsEditor::commit.
-//
-// Returns false with reason "unknown engine key" if `key` is not in
-// the canonical engine set — defensible against callers that didn't
-// pre-gate on is_canonical_engine_key.
-bool validate_engine_setting(const std::string& key,
-                              const std::string& value,
-                              EngineSettings& out,
-                              std::string& reason);
-
-// Strict deserializer. Walks `path` looking for canonical engine-key
-// lines and returns the populated typed struct. On any violation
-// (unknown key, duplicate, parse failure, missing required key, file
-// not openable) returns std::nullopt and logs every violation to
-// stderr as `warptempo_gui: engine settings rejected: <reason>`.
-//
-// Non-engine canonical lines (view-state keys, follow, active_markers_view,
-// playback_speed, trim variants) are ignored by this function;
-// parse_settings_file handles them.
-std::optional<EngineSettings> read_engine_settings_from_file(
-    const std::string& path);
-
 // Tolerant view-state contents of `.rendersettings`. Missing keys are
 // silently defaulted (fit-file zoom for `zoom`, zero for viewport/
 // playhead); malformed values are silent-skipped. Engine-block lines
@@ -131,9 +100,9 @@ RenderViewState read_rendersettings_view_state(
 
 // Strict engine-block reader for `.rendersettings`. Same per-field
 // validator and same stderr line shape as read_engine_settings_from_file.
-// View-state lines (viewport_start, zoom, playhead) are skipped.
-// Any other unknown key, malformed value, missing required key, or
-// duplicate → nullopt with a stderr line per violation.
+// Non-engine lines (the view-state keys and any unknown key) are ignored.
+// Only a duplicate engine key, an invalid engine value, a missing required
+// key, or an unopenable file → nullopt with a stderr line per violation.
 std::optional<EngineSettings> read_rendersettings_engine_block(
     const std::filesystem::path& path);
 

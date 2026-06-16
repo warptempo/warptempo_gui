@@ -33,10 +33,13 @@ constexpr int kMaxPendingCharsFlagIter = 40;
 // Brief X.2 BPM popup. Cap matches the brief's per-Kind tightening for
 // `<beats>@[<lo>,<hi>]` editing.
 constexpr int kMaxPendingCharsBpm = 13;
-// Settings prompt. The longest realistic typed-field key (28 chars for
-// `tab_a_viewport_start=44100000`) sits well under this cap; the headroom
-// is reserved for hand-authored passthrough keys.
-constexpr int kMaxPendingCharsSettings = 64;
+// Settings prompt. Sized for the free-text provenance fields (url, notes),
+// which carry no length limit beyond what the OS imposes on the resulting
+// `.settings` line and filename; 64 was too tight for a typical URL. The
+// scalar keys are still bounded by their commit-time validators, not by
+// this cap. A value wider than the window runs off the right edge while
+// typing (no horizontal scroll) but commits and persists in full.
+constexpr int kMaxPendingCharsSettings = 1024;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind selects which keys produce a

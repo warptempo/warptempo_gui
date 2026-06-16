@@ -12,7 +12,6 @@
 #include <fcntl.h>
 #include <fstream>
 #include <limits>
-#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <system_error>
@@ -63,38 +62,8 @@ bool parse_float_full(const std::string& s, float& out) {
     return true;
 }
 
-// Strict-parse helpers shared by validate_engine_setting. Each consumes
-// the entire string; trailing garbage is rejected. Non-finite doubles
-// are rejected. Integer overflow into out-of-int-range is rejected.
-
-bool parse_double_strict(const std::string& s, double& out) {
-    if (s.empty()) return false;
-    try {
-        std::size_t pos = 0;
-        const double v = std::stod(s, &pos);
-        if (pos != s.size()) return false;
-        if (!std::isfinite(v)) return false;
-        out = v;
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
-
-bool parse_int_strict(const std::string& s, int& out) {
-    if (s.empty()) return false;
-    try {
-        std::size_t pos = 0;
-        const long v = std::stol(s, &pos, 10);
-        if (pos != s.size()) return false;
-        if (v < std::numeric_limits<int>::min() ||
-            v > std::numeric_limits<int>::max()) return false;
-        out = static_cast<int>(v);
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
+// Lenient bool parser shared by parse_settings_file (the tab_*_read_only
+// branches). Accepts the canonical truthy/falsy token set.
 
 bool parse_bool_strict(const std::string& s, bool& out) {
     if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
@@ -145,6 +114,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "title",                       SettingKind::EnginePassthrough,    EngineField::Title,                   nullptr },
     { "scale",                       SettingKind::EnginePassthrough,    EngineField::Scale,                   nullptr },
     { "bpm",                         SettingKind::EnginePassthrough,    EngineField::Bpm,                     nullptr },
+    { "notes",                       SettingKind::EnginePassthrough,    EngineField::Notes,                   nullptr },
+    { "url",                         SettingKind::EnginePassthrough,    EngineField::Url,                     nullptr },
+    { "cover",                       SettingKind::EnginePassthrough,    EngineField::Cover,                   nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     { "limiter",                     SettingKind::EnginePassthrough,    EngineField::Limiter,                 nullptr },
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
@@ -166,28 +138,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
 
-// True if `key` is in the EnginePassthrough subset of kSettingsOrder OR
-// in the legacy singleton trim set. Used by read_engine_settings_from_file
-// to decide whether a line is a non-engine canonical line (skipped) or
-// an unknown line (error).
-bool is_canonical_non_engine_key(const std::string& key) {
-    if (key == "trim_begin" || key == "trim_end") return true;
-    for (const auto& desc : kSettingsOrder) {
-        if (desc.kind != SettingKind::EnginePassthrough && key == desc.key) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Skip predicate for the `.rendersettings` strict engine-block reader.
-// View-state lines (bare names, no `render_` prefix) are silently
-// skipped; every other non-engine key falls through to the strict
-// "unknown engine key" error.
-bool is_rendersettings_view_state_key(const std::string& key) {
-    return key == "viewport_start" || key == "zoom" || key == "playhead";
-}
-
 // Append the value of `field` from `es` to `out`, using the same format
 // strings the on-disk template encodes (%.6f for doubles, %d for ints,
 // true|false for the limiter flag, raw string for title / output_format).
@@ -208,6 +158,15 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
         case EngineField::Bpm:
             // bpm is a descriptor string; emit verbatim, empty when unset.
             out += es.bpm;
+            break;
+        case EngineField::Notes:
+            out += es.notes;
+            break;
+        case EngineField::Url:
+            out += es.url;
+            break;
+        case EngineField::Cover:
+            out += es.cover;
             break;
         case EngineField::Limiter:
             out += es.limiter ? "true" : "false";
@@ -258,7 +217,7 @@ bool atomic_write_string_to_path(const std::string& path,
     return true;
 }
 
-// Append the engine block (the five canonical engine keys, in
+// Append the engine block (the eight canonical engine keys, in
 // kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file) to `out`. Shared by write_rendersettings.
 void append_engine_block(std::string& out, const EngineSettings& engine) {
@@ -293,77 +252,6 @@ void append_view_state_block(std::string& out,
     out += "playhead=";
     out += buf;
     out += '\n';
-}
-
-// Shared strict engine-block scan. `skip_pred` returns true for
-// non-engine keys that should be silent-skipped; every other
-// non-engine key is rejected as "unknown engine key". Used by both
-// read_engine_settings_from_file (skips canonical non-engine /
-// legacy-trim keys) and read_rendersettings_engine_block (skips the
-// three bare view-state keys).
-std::optional<EngineSettings> read_engine_block_strict(
-        const std::string& path,
-        bool (*skip_pred)(const std::string&)) {
-    auto report = [](const std::string& reason) {
-        std::fprintf(stderr,
-            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
-    };
-
-    EngineSettings es{};
-    bool any_error = false;
-    std::set<std::string> seen;
-
-    std::ifstream f(path);
-    if (!f) {
-        report("could not open '" + path + "'");
-        any_error = true;
-    } else {
-        std::string line;
-        while (std::getline(f, line)) {
-            const std::string trimmed = trim_ws(line);
-            if (trimmed.empty()) continue;
-            if (trimmed[0] == '#') continue;
-            const size_t eq = trimmed.find('=');
-            if (eq == std::string::npos) continue;
-            const std::string key   = trim_ws(trimmed.substr(0, eq));
-            const std::string value = trim_ws(trimmed.substr(eq + 1));
-            if (key.empty()) continue;
-
-            if (skip_pred(key)) continue;
-
-            if (!is_canonical_engine_key(key)) {
-                report("unknown engine key '" + key + "'");
-                any_error = true;
-                continue;
-            }
-            if (!seen.insert(key).second) {
-                report("duplicate key '" + key + "'");
-                any_error = true;
-                continue;
-            }
-            std::string reason;
-            if (!validate_engine_setting(key, value, es, reason)) {
-                report("key '" + key + "' has invalid value '" + value +
-                       "': " + reason);
-                any_error = true;
-                continue;
-            }
-        }
-    }
-
-    auto require = [&](const char* key) {
-        if (seen.count(key) == 0) {
-            report(std::string("missing required key '") + key + "'");
-            any_error = true;
-        }
-    };
-    require("title");
-    require("output_format");
-    require("scale");
-    require("limiter");
-
-    if (any_error) return std::nullopt;
-    return es;
 }
 
 } // namespace
@@ -510,87 +398,6 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
     return true;
 }
 
-bool is_canonical_engine_key(const std::string& key) {
-    for (const auto& desc : kSettingsOrder) {
-        if (desc.kind == SettingKind::EnginePassthrough && key == desc.key) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool validate_engine_setting(const std::string& key,
-                              const std::string& value,
-                              EngineSettings& out,
-                              std::string& reason) {
-    if (key == "title") {
-        // Preserve the prior settings_get behavior: strip a matching
-        // leading/trailing double-quote pair, then validate non-empty
-        // after whitespace trim and no embedded newline.
-        std::string v = value;
-        if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
-            v = v.substr(1, v.size() - 2);
-        }
-        std::size_t a = 0;
-        while (a < v.size() &&
-               std::isspace(static_cast<unsigned char>(v[a]))) ++a;
-        std::size_t b = v.size();
-        while (b > a &&
-               std::isspace(static_cast<unsigned char>(v[b - 1]))) --b;
-        v = v.substr(a, b - a);
-        if (v.empty()) {
-            reason = "must be non-empty after whitespace trim";
-            return false;
-        }
-        if (v.find('\n') != std::string::npos) {
-            reason = "must not contain an embedded newline";
-            return false;
-        }
-        out.title = std::move(v);
-        return true;
-    }
-    if (key == "output_format") {
-        if (value != "wav" && value != "timemap" && value != "tempomap") {
-            reason = "must be one of {wav, timemap, tempomap}";
-            return false;
-        }
-        out.output_format = value;
-        return true;
-    }
-    if (key == "scale") {
-        double v;
-        if (!parse_double_strict(value, v) || !(v > 0.0)) {
-            reason = "must be a finite double strictly greater than 0";
-            return false;
-        }
-        out.scale = v;
-        return true;
-    }
-    if (key == "bpm") {
-        // bpm is a free-text provenance descriptor on one line. Any value
-        // is accepted verbatim (caller already trims the line); empty is
-        // the canonical "unset" form (`bpm=`).
-        out.bpm = value;
-        return true;
-    }
-    if (key == "limiter") {
-        bool v;
-        if (!parse_bool_strict(value, v)) {
-            reason = "must be one of {true, false, 1, 0, yes, no, on, off}";
-            return false;
-        }
-        out.limiter = v;
-        return true;
-    }
-    reason = "unknown engine key";
-    return false;
-}
-
-std::optional<EngineSettings> read_engine_settings_from_file(
-    const std::string& path) {
-    return read_engine_block_strict(path, &is_canonical_non_engine_key);
-}
-
 RenderViewState read_rendersettings_view_state(
         const std::filesystem::path& path) {
     RenderViewState out;
@@ -623,8 +430,11 @@ RenderViewState read_rendersettings_view_state(
 
 std::optional<EngineSettings> read_rendersettings_engine_block(
         const std::filesystem::path& path) {
-    return read_engine_block_strict(path.string(),
-                                    &is_rendersettings_view_state_key);
+    // Identical semantics to read_engine_settings_from_file: canonical
+    // engine keys are read, every non-engine line (the three view-state
+    // keys and anything else) is ignored. read_rendersettings_view_state
+    // is the reader for the view-state side.
+    return read_engine_settings_from_file(path.string());
 }
 
 bool write_rendersettings(const std::filesystem::path& path,

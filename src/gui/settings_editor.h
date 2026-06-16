@@ -48,4 +48,10 @@ struct GuiSettingsEditor {
     void open();
     void exit_no_commit();
     void commit();
+    // Tab handler for the prompt: when an engine key is typed with an empty
+    // value side (e.g. `notes=`), replace the value side with that key's
+    // current stored value for recall and editing. No-op when the value
+    // side is already non-empty, when there is no `=`, or when the key is
+    // not a canonical engine key.
+    void autocomplete_value();
 };

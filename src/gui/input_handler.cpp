@@ -646,6 +646,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // edit. Routed before queue/drag/playhead Esc handlers so Esc
     // cancels the edit first.
     if (text_editor::is_active(app.settings_editor)) {
+        // Bare Tab autocompletes the value side of `key=` with the key's
+        // current stored value (canonical engine keys only), for recall and
+        // editing. Only an unmodified Tab is intercepted; Shift / Ctrl /
+        // Alt + Tab fall through to handle_key unchanged.
+        if (key == GuiKeys::Tab && !ctrl && !shift && !alt) {
+            settings_editor.autocomplete_value();
+            return;
+        }
         const auto action = text_editor::handle_key(
             app.settings_editor, key, mods);
         if (action == text_editor::KeyAction::CommitRequested) {

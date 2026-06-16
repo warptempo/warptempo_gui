@@ -79,7 +79,12 @@ void GuiSettingsEditor::commit() {
     if (!text_editor::is_active(app.settings_editor)) return;
     const std::string& pending = app.settings_editor.pending;
 
-    // Strict shape: exactly one `=`, non-empty whitespace-free key.
+    // Shape: split on the first `=`. The key is everything before it
+    // (validated whitespace-free below, so it never contains `=`); the
+    // value is everything after and may itself contain `=`, so a free-text
+    // value such as a url= with a `?v=` query parameter or a notes= line
+    // commits intact. This matches read_engine_settings_from_file, which
+    // also splits on the first `=`.
     const size_t eq = pending.find('=');
     auto reject = [&](const char* reason) {
         app.settings_editor.red = true;
@@ -88,9 +93,6 @@ void GuiSettingsEditor::commit() {
             "warptempo_gui: settings edit rejected: %s\n", reason);
     };
     if (eq == std::string::npos) { reject("missing '='"); return; }
-    if (pending.find('=', eq + 1) != std::string::npos) {
-        reject("more than one '='"); return;
-    }
     const std::string key   = trim_ws(pending.substr(0, eq));
     const std::string value = trim_ws(pending.substr(eq + 1));
     if (key.empty()) { reject("empty key"); return; }
@@ -211,4 +213,32 @@ void GuiSettingsEditor::commit() {
     // user-visible way, but the trigger is cheap and the target render
     // surfaces in target view.)
     target_render.trigger();
+}
+
+void GuiSettingsEditor::autocomplete_value() {
+    if (!text_editor::is_active(app.settings_editor)) return;
+    const std::string pending = app.settings_editor.pending;
+
+    const size_t eq = pending.find('=');
+    if (eq == std::string::npos) return;  // no `key=` yet; nothing to complete
+
+    // Only fill an empty value side, so an in-progress value is never
+    // overwritten. Whitespace-only counts as empty.
+    if (!trim_ws(pending.substr(eq + 1)).empty()) return;
+
+    const std::string key = trim_ws(pending.substr(0, eq));
+    const std::optional<std::string> cur =
+        format_engine_setting_value(app.engine_settings, key);
+    if (!cur) return;  // not a canonical engine key (trim / view-state / unknown)
+
+    // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The
+    // prefix is the typed text up to and including the first `=`, kept
+    // verbatim; replace_selection fills the value at the cursor.
+    app.settings_editor.pending          = pending.substr(0, eq + 1);
+    app.settings_editor.cursor_pos       =
+        static_cast<int>(app.settings_editor.pending.size());
+    app.settings_editor.selection_anchor = -1;
+    text_editor::replace_selection(app.settings_editor, *cur);
+
+    viewport.invalidate_timestamp_area();
 }
