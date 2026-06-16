@@ -206,11 +206,11 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Populated by the wav (warptempo engine) path for render-domain phase
     // reset sidecar generation. timemap/tempomap paths leave these empty.
-    std::vector<int64_t> engine_frame_map;
+    std::vector<int64_t> engine_source_frame_positions;
     int engine_R_s = 0;
     // Window origin resolved by the engine from the trim bounds (frame index
     // of the windowed render's first emitted frame). Sub-brief 3 uses it with
-    // the now-full engine_frame_map to place render-domain sidecars on the
+    // the now-full engine_source_frame_positions to place render-domain sidecars on the
     // windowed time axis; this brief just captures it.
     int engine_synth_frame_begin = 0;
 
@@ -324,7 +324,7 @@ RenderOutcome do_render(const RenderRequest& req,
         };
 
         const EngineResult er = run_warptempo_engine(
-            ep, &engine_frame_map, &engine_R_s, &engine_synth_frame_begin,
+            ep, &engine_source_frame_positions, &engine_R_s, &engine_synth_frame_begin,
             cancel_flag);
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
@@ -440,7 +440,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
         // Only wav renders produce these — timemap/tempomap formats skip
-        // the engine, so engine_frame_map and engine_R_s are unset.
+        // the engine, so engine_source_frame_positions and engine_R_s are unset.
         if (output_format == "wav" && !tmres.standard.empty() &&
             sample_rate > 0) {
             // Walk the FULL timemap (no synthetic trim anchors); each emitted
