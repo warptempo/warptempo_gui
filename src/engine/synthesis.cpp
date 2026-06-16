@@ -51,9 +51,10 @@ void Synthesis::synthesize_full(
     // Synthesis frame window [wbegin, wend): the half-open range of frames this
     // pass actually emits. num_frames stays the full map size and ta_for stays
     // absolute over the full fm; only the emit range narrows. Defaults describe
-    // the whole map (full-render behavior); engine.cpp narrows them when
-    // EngineParams::has_trim is set. wend == 0 means "unset" (a caller that
-    // bypassed engine.cpp's resolution) -> treat as the full map.
+    // the whole map (full-render behavior); engine.cpp narrows synth_frame_end
+    // when EngineParams::emit_sample_cap is set (a trimmed render). wend == 0
+    // means "unset" (a caller that bypassed engine.cpp's resolution) -> treat
+    // as the full map.
     const int wbegin = stft.synth_frame_begin;
     const int wend   = (stft.synth_frame_end > 0) ? stft.synth_frame_end
                                                   : num_frames;

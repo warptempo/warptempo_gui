@@ -159,11 +159,13 @@ struct AudioSTFT {
     // reads it forward as source_frame_positions[m].
     std::vector<int64_t> source_frame_positions;
 
-    // Synthesis frame window, resolved from EngineParams trim bounds in
+    // Synthesis frame window, resolved from EngineParams::emit_sample_cap in
     // engine.cpp after the frame map is built. [synth_frame_begin,
     // synth_frame_end) is the half-open range of frames synthesize_full emits.
-    // Defaults describe the whole map; engine.cpp narrows them only when
-    // EngineParams::has_trim is set.
+    // synth_frame_begin is always 0 (a trimmed render is a pre-sliced sub-map
+    // anchored at output 0, not an internal window); engine.cpp narrows
+    // synth_frame_end to the frames covering [0, emit_sample_cap) when an
+    // explicit cap is set, and leaves it at the full map otherwise.
     int synth_frame_begin = 0;
     int synth_frame_end   = 0;   // 0 means "use full map" until engine sets it
 
