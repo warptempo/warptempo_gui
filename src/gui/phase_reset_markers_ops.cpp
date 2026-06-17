@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "target_render.h"
+#include "time_format.h"
 #include "timemap.h"
 #include "frame_map.h"
 
@@ -35,6 +36,9 @@
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
+    // Snap before the within-eps dup check so the check and the stored
+    // marker both see the grid value (mirrors warp drop_marker).
+    time_seconds = snap_to_timestamp_grid(time_seconds);
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
@@ -190,8 +194,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
-            const double t_src_new =
-                map_target_to_source(q, tmap) / sr_d;
+            const double t_src_new = snap_to_timestamp_grid(
+                map_target_to_source(q, tmap) / sr_d);
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;

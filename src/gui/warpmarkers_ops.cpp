@@ -5,6 +5,7 @@
 #include "phase_reset_markers_ops.h"
 #include "platform_wayland.h"
 #include "target_render.h"
+#include "time_format.h"
 #include "timemap.h"
 #include "frame_map.h"
 
@@ -47,6 +48,9 @@
 void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
+    // Snap before the within-eps dup check so the check and the stored
+    // marker both see the grid value.
+    time_seconds = snap_to_timestamp_grid(time_seconds);
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
@@ -548,7 +552,8 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
 
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        const double new_t = app.drag.original_times[k] + delta;
+        const double new_t =
+            snap_to_timestamp_grid(app.drag.original_times[k] + delta);
         if (k >= app.drag.moveable_times.size()) continue;
         if (app.drag.moveable_times[k] == new_t) continue;
         app.drag.moveable_times[k] = new_t;
@@ -780,8 +785,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
-            const double t_src_new =
-                map_target_to_source(q, tmap) / sr_d;
+            const double t_src_new = snap_to_timestamp_grid(
+                map_target_to_source(q, tmap) / sr_d);
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;

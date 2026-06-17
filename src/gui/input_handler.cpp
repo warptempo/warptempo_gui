@@ -3256,10 +3256,14 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
         tmap = build_target_view_frame_map(
             app, sr, static_cast<long>(audio.total_frames()));
     }
-    const int64_t cand_frame =
+    int64_t cand_frame =
         to_source_frame(app, app.playhead_cursor_sample, tmap);
+    // Snap the candidate at derivation, then recompute cand_frame from the
+    // snapped value so the toggle-off compare and the opposite-bound
+    // collision compare (both frame-based) match what will be stored.
     const double cand_seconds =
-        static_cast<double>(cand_frame) / sr_d;
+        snap_to_timestamp_grid(static_cast<double>(cand_frame) / sr_d);
+    cand_frame = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
 
     bool&   this_has      = (side == TrimSide::Begin) ? app.has_trim_begin     : app.has_trim_end;
     double& this_seconds  = (side == TrimSide::Begin) ? app.trim_begin_seconds : app.trim_end_seconds;
@@ -3494,8 +3498,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (delta < min_delta) delta = min_delta;
         if (delta > max_delta) delta = max_delta;
 
-        const double new_begin = static_cast<double>(orig_begin_f + delta) / sr_d;
-        const double new_end   = static_cast<double>(orig_end_f   + delta) / sr_d;
+        const double new_begin = snap_to_timestamp_grid(
+            static_cast<double>(orig_begin_f + delta) / sr_d);
+        const double new_end   = snap_to_timestamp_grid(
+            static_cast<double>(orig_end_f   + delta) / sr_d);
         if (app.trim_begin_seconds != new_begin ||
             app.trim_end_seconds   != new_end) {
             app.trim_begin_seconds = new_begin;
@@ -3540,7 +3546,11 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         }
     }
 
-    const double new_seconds = static_cast<double>(src_frame) / sr_d;
+    // Single-bound drag: snap the derived seconds the same way the group
+    // branch above does, so the change-detection compare and the store
+    // both operate on the grid value the bound will persist at.
+    const double new_seconds =
+        snap_to_timestamp_grid(static_cast<double>(src_frame) / sr_d);
     double& field = app.trim_drag.is_begin ? app.trim_begin_seconds
                                            : app.trim_end_seconds;
     if (field != new_seconds) {

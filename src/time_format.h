@@ -22,3 +22,11 @@ inline std::string format_timestamp(double seconds) {
     std::snprintf(buf, sizeof(buf), "%02ld:%02ld.%03ld", m, s, ms);
     return buf;
 }
+
+// Snap `seconds` to the millisecond grid the .settings / .warpmarkers /
+// .phaseresetmarkers formats persist at. Defined as the persistence
+// round-trip so an authored value equals its own reloaded value exactly.
+// Idempotent: snapping an already-gridded value is a no-op.
+inline double snap_to_timestamp_grid(double seconds) {
+    return parse_timestamp(format_timestamp(seconds));
+}
