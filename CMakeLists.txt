@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(warptempo_gui VERSION 2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
