@@ -49,7 +49,7 @@ struct GuiWarpMarker : WarpMarker {
 // Slice a GUI authoring vector down to the serialized base. Each element is
 // copy-constructed as a WarpMarker from its GuiWarpMarker (the derived
 // iter_*/bpm_* state is dropped). Used at the render boundary so the
-// recipe/parser-domain resolver and the engine-bound pipeline never see
+// parser-domain resolver and the engine-bound pipeline never see
 // GUI-only fields. O(n) and called only on marker/scale change, not per
 // paint frame.
 inline std::vector<WarpMarker> slice_to_warp_markers(

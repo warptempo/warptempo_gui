@@ -20,7 +20,7 @@ pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
 
 # ============================================================
-#  warptempo_parser — recipe / file-parse core.
+#  warptempo_parser — map / file-parse core.
 #  Depends on sndfile + the standard library only. No fftw, no GUI,
 #  no engine. frame_map.h / time_format.h are shared headers in src/.
 # ============================================================
@@ -29,7 +29,7 @@ add_library(warptempo_parser STATIC
     src/parser/phase_reset_markers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/timemap.cpp
-    src/parser/recipe_output.cpp
+    src/parser/map_output.cpp
 )
 target_include_directories(warptempo_parser
     PUBLIC
@@ -183,15 +183,15 @@ if(WARPTEMPO_BUILD_GUI)
 endif()
 
 # ============================================================
-#  warptempo_recipe — headless recipe emitter (parser-only).
+#  warptempo_map — headless map emitter (parser-only).
 #  Reads <source-stem>.{warpmarkers,settings} and writes the framemap /
 #  tempomap artifact the GUI would for the same project. No engine, no audio.
 # ============================================================
-option(WARPTEMPO_BUILD_RECIPE_CLI "Build the headless recipe (framemap/tempomap) CLI" OFF)
-if(WARPTEMPO_BUILD_RECIPE_CLI)
-    add_executable(warptempo_recipe src/cli/recipe_main.cpp)
-    target_include_directories(warptempo_recipe PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_recipe PRIVATE warptempo_parser)
+option(WARPTEMPO_BUILD_MAP_CLI "Build the headless map (framemap/tempomap) CLI" OFF)
+if(WARPTEMPO_BUILD_MAP_CLI)
+    add_executable(warptempo_map src/cli/map_main.cpp)
+    target_include_directories(warptempo_map PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_map PRIVATE warptempo_parser)
 endif()
 
 # --- Compiler Optimizations ---
@@ -203,8 +203,8 @@ set(WARPTEMPO_OPT_TARGETS warptempo_parser warptempo_engine)
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
 endif()
-if(WARPTEMPO_BUILD_RECIPE_CLI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_recipe)
+if(WARPTEMPO_BUILD_MAP_CLI)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_map)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})

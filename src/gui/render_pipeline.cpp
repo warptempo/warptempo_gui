@@ -5,7 +5,7 @@
 #include "audio.h"
 #include "render.h"
 #include "phase_reset_markers.h"
-#include "recipe_output.h"
+#include "map_output.h"
 #include "settings_io.h"
 #include "timemap.h"
 
@@ -39,7 +39,7 @@ void unlink_silent(const std::string& path) {
 }
 
 // write_standard_frame_map and write_midi_tempomap moved to the parser
-// (recipe_output.cpp) so the GUI render pipeline and the headless recipe CLI
+// (map_output.cpp) so the GUI render pipeline and the headless map CLI
 // emit byte-identical artifacts from one implementation.
 
 // resolve_markers_for_render moved to timemap.cpp (public function) so the

@@ -84,7 +84,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
 
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
-// is recipe-domain and reads no GUI-only fields). Filters out markers that
+// is parser-domain and reads no GUI-only fields). Filters out markers that
 // are references to disabled-defined labels and disabled label-definition
 // markers (and thereby all refs to them). The inherit walk-back is applied
 // here so MarkerForRender carries a concrete tempo_base / tempo_scale —
@@ -94,7 +94,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<WarpMarker>& src);
 
-// Pure recipe assembly: phase-reset markers -> absolute source frames.
+// Pure parser-domain assembly: phase-reset markers -> absolute source frames.
 // Drops disabled markers; converts time_seconds to a source frame via
 // nearbyint(time * sample_rate), matching the warp-marker time->frame
 // convention. The result is the undisplaced list used both for render-view

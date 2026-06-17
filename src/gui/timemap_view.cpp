@@ -7,7 +7,7 @@
 #include <vector>
 
 // GUI target-view frame_map helpers, split out of timemap.cpp so the
-// recipe-build core (resolve_markers_for_render / build_timemaps / the
+// build core (resolve_markers_for_render / build_timemaps / the
 // phase-reset assembly) carries no AppState dependency and can move to
 // libwarptempo_parser in Brief 9. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the

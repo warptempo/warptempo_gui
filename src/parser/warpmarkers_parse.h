@@ -4,7 +4,7 @@
 #include <vector>
 
 // One warp marker's serialized form — the seven fields the .warpmarkers
-// file round-trips, and the only fields the recipe/parser domain and the
+// file round-trips, and the only fields the parser domain and the
 // engine-bound render path read. Three independent state axes:
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo

@@ -1,7 +1,7 @@
 #include "warpmarkers_parse.h"   // WarpMarker, parse_warpmarkers_file
 #include "engine_settings.h"     // EngineSettings, read_engine_settings_from_file
 #include "timemap_core.h"        // TimemapBuildInput/Result, resolve, build_timemaps
-#include "recipe_output.h"       // write_standard_frame_map / write_midi_tempomap
+#include "map_output.h"          // write_standard_frame_map / write_midi_tempomap
 
 #include <sndfile.h>
 
@@ -18,13 +18,13 @@ void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio> [--format framemap|tempomap] [-o <output>]\n"
         "  Reads <source-stem>.warpmarkers and <source-stem>.settings beside\n"
-        "  the source audio and writes the framemap or tempomap recipe.\n",
+        "  the source audio and writes the framemap or tempomap.\n",
         argv0);
 }
 
 // Trim is GUI view-state (settings_io.cpp parses trim_begin / trim_end into
 // the active view), outside the parser library's EngineSettings. Until that
-// parse is relocated to the parser the recipe CLI cannot honor trim, so it
+// parse is relocated to the parser the map CLI cannot honor trim, so it
 // refuses a project whose .settings carries an active trim bound rather than
 // emit an untrimmed map. Separator-agnostic: the key is the leading run up to
 // the first space, tab, or '='.
@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
     if (std::filesystem::exists(set_path)) {
         if (settings_has_active_trim(set_path)) {
             std::fprintf(stderr,
-                "warptempo_recipe: '%s' sets a trim bound; trimmed projects are "
-                "not yet supported by the recipe CLI\n", set_path.c_str());
+                "warptempo_map: '%s' sets a trim bound; trimmed projects are "
+                "not yet supported by the map CLI\n", set_path.c_str());
             return 1;
         }
         std::optional<EngineSettings> parsed =
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     const std::string fmt = !fmt_override.empty() ? fmt_override : es.output_format;
     if (fmt != "framemap" && fmt != "tempomap") {
         std::fprintf(stderr,
-            "warptempo_recipe: nothing to emit for output_format '%s' "
+            "warptempo_map: nothing to emit for output_format '%s' "
             "(this tool writes framemap or tempomap; pass --format)\n",
             fmt.c_str());
         return 1;
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
         WarpMarkersParse wmp = parse_warpmarkers_file(wm_path);
         if (!wmp.ok) {
             for (const auto& e : wmp.errors)
-                std::fprintf(stderr, "warptempo_recipe: %s:%d: %s\n",
+                std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
                              wm_path.c_str(), e.line_number, e.message.c_str());
             return 1;
         }
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
     SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
     if (!sf) {
         std::fprintf(stderr,
-            "warptempo_recipe: could not open source '%s'\n", source_path.c_str());
+            "warptempo_map: could not open source '%s'\n", source_path.c_str());
         return 1;
     }
     const long sample_rate  = info.samplerate;
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
     TimemapBuildResult out;
     if (!build_timemaps(in, out)) {
-        std::fprintf(stderr, "warptempo_recipe: timemap build failed\n");
+        std::fprintf(stderr, "warptempo_map: timemap build failed\n");
         return 1;
     }
 
@@ -139,6 +139,6 @@ int main(int argc, char** argv) {
         : write_midi_tempomap(out_path, out.midi);
     if (!ok) return 1;
 
-    std::fprintf(stderr, "warptempo_recipe: wrote %s\n", out_path.c_str());
+    std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
     return 0;
 }

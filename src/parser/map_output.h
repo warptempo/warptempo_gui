@@ -9,7 +9,7 @@
 // Serialize a built frame map to the canonical .warpframemap text form: one
 // "src_frame tgt_frame" line per segment. When drop_zero_zero is true a
 // leading (0,0) anchor is omitted. Shared by the GUI render pipeline and the
-// headless recipe CLI so both emit byte-identical artifacts.
+// headless map CLI so both emit byte-identical artifacts.
 bool write_standard_frame_map(const std::string& path,
                               const std::vector<FrameMapSegment>& segs,
                               bool drop_zero_zero);

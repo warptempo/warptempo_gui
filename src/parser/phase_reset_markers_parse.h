@@ -4,7 +4,7 @@
 #include <vector>
 
 // One phase reset marker's serialized form — position plus an optional
-// disabled flag. The recipe/parser domain consumes this base directly; the
+// disabled flag. The parser domain consumes this base directly; the
 // engine-internal PhaseResetMarker (stft_container.h, synth_frame/src_frame)
 // is a different, engine-private type and never co-visible with this one.
 struct PhaseResetMarker {
