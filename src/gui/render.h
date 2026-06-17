@@ -606,33 +606,18 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
 // Walks backward from `index` through `markers` to find the nearest marker
-// that owns its tempo (tempo_inherits == false and not a label reference).
-// Returns 1.0 if no such marker exists (shouldn't happen given the time-0
-// invariant, but defensive for edge cases during authoring).
+// that owns its tempo: tempo_inherits == false, not a label reference, and
+// not disabled. Disabled markers are skipped because the engine drops them
+// before resolution (resolve_markers_for_render / walk_back_owning_tempo), so
+// a disabled marker contributes no tempo downstream; this walk matches that
+// rule. Returns 1.0 if no such marker exists (shouldn't happen given the
+// time-0 invariant, but defensive for edge cases during authoring).
 double resolve_inherited_tempo(const std::vector<GuiWarpMarker>& markers, int index);
 
 // Companion to resolve_inherited_tempo: returns the scale string of the
 // inherited source, or "" if none.
 std::string resolve_inherited_tempo_scale(
     const std::vector<GuiWarpMarker>& markers, int index);
-
-// X.7.8b-3: promoted out of main.cpp's anonymous namespace so
-// input_handler.cpp can reach it from the on_motion body.
-//
-// V.A3b hover-popup text. Computes the same resolution math the engine
-// uses when emitting the .warpframemap, so the popup matches what the engine
-// will produce. Pass markers emit "= TEMPO" or "= TEMPO*SCALE" (single
-// equals; resolved tempo of the nearest prior owning marker). Label_ref
-// markers emit "~= BASE*COMBINED_SCALE" (tilde-equals, mirroring engine
-// behavior). BASE is rendered at 2 decimals; COMBINED_SCALE is
-// `def_scale * multiplier` when the def has a typed scale, else just
-// `multiplier`, rendered at 4 decimals. Returns "" when the marker
-// doesn't qualify for a hover popup (owning, missing def, malformed).
-//
-// Sibling to resolve_inherited_tempo / flag_text_for_marker — same
-// rendering-time text formatting role over GuiWarpMarker, same TU.
-std::string compute_hover_popup_text(
-    const std::vector<GuiWarpMarker>& mv, int idx, int sample_rate);
 
 // Per-character pixel advance for the monospace font at kFlagFontSize.
 // Measured once at startup via init_monospace_grid_metrics(); returns

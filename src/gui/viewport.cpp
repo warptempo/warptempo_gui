@@ -446,14 +446,14 @@ void Viewport::recompute_hover_at_cursor() {
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
                     ? compute_hover_popup_text(
-                          app.render_view_markers, hit,
+                          slice_to_warp_markers(app.render_view_markers), hit,
                           app.render_view_src_sr)
                     : std::string();
         } else {
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
                     ? compute_hover_popup_text(
-                          app.warpmarkers.markers(), hit,
+                          slice_to_warp_markers(app.warpmarkers.markers()), hit,
                           audio.sample_rate())
                     : std::string();
         }

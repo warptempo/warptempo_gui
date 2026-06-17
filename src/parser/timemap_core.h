@@ -94,6 +94,30 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<WarpMarker>& src);
 
+// Backward inheritance walk over parser-domain markers: from `index`, scan
+// earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
+// false, not a label reference, and not disabled. Disabled markers are skipped
+// because the engine drops them before resolution, so a disabled marker
+// contributes no tempo downstream. Returns 1.0 (tempo) / "" (scale) if none is
+// found. This is the single canonical inheritance walk: resolve_markers_for_render
+// and compute_hover_popup_text both call it, so the popup display always
+// matches the tempo the engine resolves.
+double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
+std::string resolve_inherited_tempo_scale(
+    const std::vector<WarpMarker>& markers, int index);
+
+// Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
+// parser-domain string/math — computes the same resolution the engine uses
+// when emitting the framemap, so the popup matches what will be rendered. Pass
+// markers emit "= TEMPO" or "= TEMPO*SCALE" (resolved tempo of the nearest
+// prior owning marker). Label_ref markers emit "~= BASE*COMBINED_SCALE" (BASE
+// at 2 decimals; COMBINED_SCALE = def_scale * multiplier when the def has a
+// typed scale, else multiplier, at 4 decimals). Returns "" when the marker
+// does not qualify (owning, missing def, malformed). GUI callers slice their
+// GuiWarpMarker store to WarpMarker (slice_to_warp_markers) before calling.
+std::string compute_hover_popup_text(
+    const std::vector<WarpMarker>& mv, int idx, int sample_rate);
+
 // Pure parser-domain assembly: phase-reset markers -> absolute source frames.
 // Drops disabled markers; converts time_seconds to a source frame via
 // nearbyint(time * sample_rate), matching the warp-marker time->frame
