@@ -6,8 +6,6 @@
 #include "selection.h"
 #include "viewport.h"
 
-struct GuiTargetRender;
-
 // X.7.7: active-views management cluster, extracted from main.cpp's inline
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
 // two view-axis swap operations (W/P markers and A/B tab) plus their
@@ -27,20 +25,17 @@ struct GuiActiveViews {
     Viewport&             viewport;
     Selection&            selection;
     GuiPlaybackLifecycle& playback_lifecycle;
-    GuiTargetRender&   target_render;
 
     GuiActiveViews(AppState&             app_,
                    const GuiAudio&       audio_,
                    Viewport&             viewport_,
                    Selection&            selection_,
-                   GuiPlaybackLifecycle& playback_lifecycle_,
-                   GuiTargetRender&   target_render_)
+                   GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
-          playback_lifecycle(playback_lifecycle_),
-          target_render(target_render_) {}
+          playback_lifecycle(playback_lifecycle_) {}
 
     void       refresh_active_tab_view_from_app();
     ViewState* active_view_state();

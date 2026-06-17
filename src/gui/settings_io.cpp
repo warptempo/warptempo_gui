@@ -118,13 +118,16 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "cover",                       SettingKind::EnginePassthrough,    EngineField::Cover,                   nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     { "limiter",                     SettingKind::EnginePassthrough,    EngineField::Limiter,                 nullptr },
+    // Project render trim — a sibling project field, not an engine key and not
+    // GUI view-state. Sits between the engine block and the view-state band.
+    { "trim_begin",                  SettingKind::OptionalTrimBegin,    EngineField::Title,                   nullptr },
+    { "trim_end",                    SettingKind::OptionalTrimEnd,      EngineField::Title,                   nullptr },
+    // GUI view-state band begins.
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    { "trim_begin",                  SettingKind::OptionalTrimBegin,    EngineField::Title,                   nullptr },
-    { "trim_end",                    SettingKind::OptionalTrimEnd,      EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },

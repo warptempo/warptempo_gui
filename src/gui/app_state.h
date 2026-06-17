@@ -269,7 +269,7 @@ struct EditorTextDragState {
 enum class LastSelGroup { Markers, Trim };
 
 // Brief C: Ctrl+drag of a trim boundary stem. Parallel to DragState but
-// writes the per-tab trim store directly (no overlay): motion mutates the
+// writes the project trim directly (no overlay): motion mutates the
 // dragged bound's seconds live, release pushes a single SettingsSnapshot
 // undo. `pre` is captured at drag-begin so release can push the inverse.
 // Session-only.
@@ -868,7 +868,7 @@ bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 
 // Free-function form of GuiActiveViews::active_view_state() restricted to
-// source-view (the A/B tab pair). The renderer / trim path / the b/e/u
+// source-view (the A/B tab pair). The renderer / the b/e/u
 // handlers don't have access to GuiActiveViews but need to reach the active
 // tab's view-state from an AppState reference alone. Source-view-only:
 // render-view callers must keep using GuiActiveViews::active_view_state(),
@@ -919,7 +919,7 @@ enum class TrimHit { None, Begin, End };
 // column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
 // bounds (has_trim_begin / has_trim_end) are testable. Walks the same
 // frame_map as hit_test_marker_line in target view so the hit lands on the
-// visually-drawn stem. Trim is the active tab's, and applies in both 'W'
+// visually-drawn stem. Trim is project-level, and applies in both 'W'
 // and 'P' views. When both bounds are within reach, the nearer wins.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);

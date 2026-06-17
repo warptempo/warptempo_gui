@@ -221,7 +221,7 @@ struct StemCache {
 
     // Brief C: trim boundary stems share this cache. The begin/end frame
     // positions ride fp_trim_begin / fp_trim_end above; these capture the
-    // per-tab has-set + selected bits so the cache rebuilds when a bound
+    // project has-set + selected bits so the cache rebuilds when a bound
     // appears/disappears or its selection toggles.
     bool      fp_trim_has_begin              = false;
     bool      fp_trim_has_end                = false;

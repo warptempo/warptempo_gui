@@ -1,7 +1,5 @@
 #include "active_views.h"
 
-#include "target_render.h"
-
 #include <cstdio>
 #include <string>
 
@@ -132,11 +130,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Per-tab trim is engine input. Switching tabs in target view
-    // invalidates the target buffer (rendered against the leaving
-    // tab's trim) — fire a fresh render against the entering tab.
-    // No-op in source view.
-    target_render.trigger();
 }
 
 // `p` key: toggle into/out of phase reset view. Phase reset markers are

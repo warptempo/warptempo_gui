@@ -478,7 +478,7 @@ int main(int argc, char** argv) {
                               flag_cache, waveform_worker, viewport,
                               target_render);
     GuiActiveViews active_views(app, audio, viewport, selection,
-                                playback_lifecycle, target_render);
+                                playback_lifecycle);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,

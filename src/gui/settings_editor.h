@@ -16,10 +16,9 @@ struct GuiTargetRender;
 //
 // commit() routes the typed key through three paths:
 // 1. View-state keys (viewport / zoom / playhead / follow / active_markers_view /
-//    playback_speed, plus the per-tab trim keys) are rejected — they have
-//    dedicated gestures.
+//    playback_speed) are rejected — they have dedicated gestures.
 // 2. trim_begin / trim_end parse the value as MM:SS.mmm and write through
-//    to the active tab's ViewState; push a settings-undo entry.
+//    to the project trim; push a settings-undo entry.
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown

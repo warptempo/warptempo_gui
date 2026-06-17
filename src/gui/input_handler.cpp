@@ -1947,7 +1947,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // `u` (no modifier) unsets the active tab's trim bounds. `Shift+U`
+    // `u` (no modifier) unsets the project trim bounds. `Shift+U`
     // clears the selection set (UI-only — no dirty, no playhead move).
     // Trim un-set is undoable as a settings entry: snapshot pre-state,
     // mutate, push.
@@ -1972,7 +1972,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Shift+b / Shift+e clear the active tab's trim_begin / trim_end
+    // Shift+b / Shift+e clear the project trim_begin / trim_end
     // unconditionally. Plain b / e (no shift) set the same fields at
     // the playhead and toggle off only on equal-frame re-press; the
     // shift form makes the unset gesture independent of playhead
@@ -3235,7 +3235,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 // existing trim toggles it off. A candidate equal-frame to the opposite
 // trim refuses (would collapse the trim region). A candidate that would
 // invert the trim ordering auto-swaps with the opposite trim. Otherwise
-// a simple set. Per-tab: reads and writes the active tab's trim fields.
+// a simple set. Project-level: reads and writes the project trim fields.
 // Each mutation pushes a settings-undo entry so b/e/u are reversible.
 //
 // Side-parameterized to share the body between Begin and End. The
@@ -3632,7 +3632,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // translates source-frame viewport / playhead / total_frames across
     // the WHOLE song, so the frame_map must too — see the matching
     // comment in paint_handler.cpp's per-paint recompute. Passing the
-    // active tab's trim here would shrink the segment list to the
+    // the project trim here would shrink the segment list to the
     // exposition's source-frame range and identity-extrapolate the
     // post-exposition tail from the wrong tgt_frame anchor.
     tmin.has_trim_begin = false;
