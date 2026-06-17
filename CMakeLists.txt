@@ -29,7 +29,7 @@ add_library(warptempo_parser STATIC
     src/parser/phase_reset_markers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/settings_trim.cpp
-    src/parser/timemap.cpp
+    src/parser/frame_map_build.cpp
     src/parser/map_output.cpp
 )
 target_include_directories(warptempo_parser

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "frame_map.h"      // FrameMapSegment
-#include "timemap_core.h"   // TempomapEntry
+#include "frame_map_build.h"   // TempomapEntry
 
 #include <cstdint>
 #include <string>

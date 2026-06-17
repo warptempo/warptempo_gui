@@ -2,7 +2,7 @@
 #include "phase_reset_markers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "timemap_core.h"               // TimemapBuildInput/Result, resolve,
+#include "frame_map_build.h"               // TimemapBuildInput/Result, resolve,
                                         // build_timemaps, phase_reset_source_frames
 #include "map_output.h"                 // write_standard_frame_map /
                                         // write_midi_tempomap / write_reset_map

@@ -1,4 +1,4 @@
-#include "timemap_core.h"
+#include "frame_map_build.h"
 
 #include <algorithm>
 #include <cmath>
@@ -50,7 +50,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 
     // Inherited-tempo resolution for pass markers is the canonical
     // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
-    // declared in timemap_core.h) — the same walk the hover popup uses. Called
+    // declared in frame_map_build.h) — the same walk the hover popup uses. Called
     // directly at the tempo_inherits branch.
 
     std::vector<MarkerForRender> out;
