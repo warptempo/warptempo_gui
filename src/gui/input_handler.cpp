@@ -3226,16 +3226,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
 // b / e key handlers. Both share the same shape: the playhead's current
 // sample frame is the candidate. Re-press at the same frame as the
 // existing trim toggles it off. A candidate equal-frame to the opposite
-// trim refuses (would collapse the trim region). A candidate that would
-// invert the trim ordering auto-swaps with the opposite trim. Otherwise
-// a simple set. Project-level: reads and writes the project trim fields.
-// Each mutation pushes a settings-undo entry so b/e/u are reversible.
+// trim refuses (would collapse the trim region). A candidate that lands
+// past the opposite trim places this bound and disables the opposite
+// bound (no swap). Otherwise a simple set. Project-level: reads and writes
+// the project trim fields. Each mutation pushes a settings-undo entry so
+// b/e/u are reversible.
 //
 // Side-parameterized to share the body between Begin and End. The
-// load-bearing asymmetry is the auto-swap direction: Begin accepts a
-// candidate past the existing trim_end, End accepts a candidate before
-// the existing trim_begin. Both swaps then route cand_seconds into the
-// opposite-side field and the old opposite-side seconds into this side.
+// load-bearing asymmetry is the direction that counts as "past the other":
+// Begin is past when the candidate is after trim_end, End is past when the
+// candidate is before trim_begin. The past-the-other outcome keeps this
+// bound at the candidate and clears the opposite bound (has / seconds /
+// selected), rather than swapping the two.
 void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -3263,6 +3265,7 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     bool&   this_sel      = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
     bool&   other_has     = (side == TrimSide::Begin) ? app.has_trim_end       : app.has_trim_begin;
     double& other_seconds = (side == TrimSide::Begin) ? app.trim_end_seconds   : app.trim_begin_seconds;
+    bool&   other_sel     = (side == TrimSide::Begin) ? app.trim_end_selected  : app.trim_begin_selected;
     const char letter     = (side == TrimSide::Begin) ? 'b' : 'e';
 
     // Toggle-off: same frame as the existing this-side trim.
@@ -3283,9 +3286,8 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     }
 
     // Equal-frame collision with the opposite-side trim refuses (would
-    // collapse the trim region). Past-the-other auto-swaps: candidate
-    // becomes the opposite-side trim, old opposite-side seconds becomes
-    // this-side trim.
+    // collapse the trim region). Past-the-other places this bound at the
+    // candidate and disables the opposite bound.
     if (other_has) {
         const int64_t other_frame = static_cast<int64_t>(
             std::nearbyint(other_seconds * sr_d));
@@ -3299,11 +3301,16 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
             ? (cand_frame > other_frame)
             : (cand_frame < other_frame);
         if (cand_is_past_other) {
+            // Past-the-other no longer swaps. Place this bound at the
+            // candidate and disable the opposite bound: setting Begin past
+            // End drops End; setting End before Begin drops Begin. The
+            // surviving single bound leaves a half-open trim region.
             SettingsSnapshot pre = capture_current_settings(app);
-            const double old_other = other_seconds;
-            other_seconds = cand_seconds;
-            this_seconds  = old_other;
             this_has      = true;
+            this_seconds  = cand_seconds;
+            other_has     = false;
+            other_seconds = 0.0;
+            other_sel     = false;
             undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -3507,8 +3514,37 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     double& field = app.trim_drag.is_begin ? app.trim_begin_seconds
                                            : app.trim_end_seconds;
     if (field != new_seconds) {
+        const bool first_motion = !app.trim_drag.moved;
         field = new_seconds;
         app.trim_drag.moved = true;
+        // First-motion selection collapse: a real drag focuses the trim
+        // group on the dragged bound only, mirroring the warp drag's
+        // pending_collapse_to_hit (warpmarkers_ops.cpp apply_drag_motion).
+        // Motion-gated so a Ctrl+click without motion is left to
+        // commit_trim_drag's no-motion toggle branch. last_sel_group was
+        // already set to Trim in begin_trim_drag.
+        if (first_motion) {
+            app.trim_begin_selected = app.trim_drag.is_begin;
+            app.trim_end_selected   = !app.trim_drag.is_begin;
+        }
+        // Track the playhead on the dragged bound for the whole drag. Trim
+        // is a render-time cut and is NOT in build_target_view_frame_map, so
+        // the bound carries no deformation: the playhead follows it
+        // continuously, with no frozen-map / re-anchor (unlike warp drag's
+        // commit_drag). new_seconds is source-domain; inverse-translate to
+        // target-domain in target view, the same conversion the plain-click
+        // landing in handle_trim_boundary_press uses. The bound is clamped
+        // within the waveform area, so move_playhead_to never scrolls
+        // mid-drag, and playback was already stopped at drag-begin.
+        const int64_t src_sample = static_cast<int64_t>(
+            std::nearbyint(new_seconds * sr_d));
+        int64_t sample = src_sample;
+        if (app.active_audio_view == 'T') {
+            const auto tmap = build_target_view_frame_map(
+                app, sr, static_cast<long>(audio.total_frames()));
+            sample = to_domain_frame(app, src_sample, tmap);
+        }
+        viewport.move_playhead_to(sample);
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
     }
