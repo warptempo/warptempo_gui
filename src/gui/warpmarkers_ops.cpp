@@ -285,9 +285,16 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 // The first marker is silently skipped (it must own its tempo).
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
+    if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker, so the
+    // operation (and the resulting selection) targets last_selected only.
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
     const auto& mv_const = app.warpmarkers.markers();
+    // Single-marker resolve via the canonical parser walk (slice once).
+    const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
@@ -300,9 +307,9 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m->tempo_scale    = "1.0000";
         } else if (m->tempo_inherits) {
             const double resolved_tempo =
-                resolve_inherited_tempo(mv_const, idx);
+                resolve_inherited_tempo(resolved_src, idx);
             const std::string resolved_scale =
-                resolve_inherited_tempo_scale(mv_const, idx);
+                resolve_inherited_tempo_scale(resolved_src, idx);
             m->tempo_inherits = false;
             m->tempo_base     = resolved_tempo;
             m->tempo_scale    = resolved_scale;
@@ -350,9 +357,15 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // Clamps to [0.01, 9.99]. Only dirties / invalidates on real change.
 void GuiWarpMarkersOps::adjust_tempo(double delta) {
     if (app.selected_markers.empty()) return;
+    if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker.
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
     const auto& mv_const = app.warpmarkers.markers();
+    // Single-marker resolve via the canonical parser walk (slice once).
+    const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
@@ -361,8 +374,8 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         double      start_tempo;
         std::string start_scale;
         if (m->tempo_inherits) {
-            start_tempo = resolve_inherited_tempo(mv_const, idx);
-            start_scale = resolve_inherited_tempo_scale(mv_const, idx);
+            start_tempo = resolve_inherited_tempo(resolved_src, idx);
+            start_scale = resolve_inherited_tempo_scale(resolved_src, idx);
         } else {
             start_tempo = m->tempo_base;
             start_scale = m->tempo_scale;
@@ -402,17 +415,15 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
         return app.warpmarkers.markers()[idx].time_seconds;
     };
 
-    // Drag target: entire selection if hit is in it, else just the hit.
-    // In the single-drag case the selection collapse to {hit} is
-    // deferred until motion is observed (see pending_collapse_to_hit).
+    // Drag is a single-marker fine-tuning gesture: it always moves only the
+    // grabbed marker, regardless of the current selection — each marker is
+    // placed deliberately, and group drag does more harm than good. The
+    // selection collapse to {hit} is deferred until motion is observed (see
+    // pending_collapse_to_hit), so a click without a drag leaves the
+    // selection untouched.
     std::set<int> drag_set;
-    bool pending_collapse = false;
-    if (app.selected_markers.count(hit)) {
-        drag_set = app.selected_markers;
-    } else {
-        drag_set.insert(hit);
-        pending_collapse = true;
-    }
+    drag_set.insert(hit);
+    bool pending_collapse = true;
 
     // First-marker protection: refuse index 0 and any effective-time-0
     // marker. Runs before any selection mutation so a refused drag
@@ -752,6 +763,10 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // Stop playback first — Ctrl+Left/Right is the only caller path.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
+    if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker.
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
@@ -844,6 +859,10 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
 void GuiWarpMarkersOps::jump_selection_to_playhead() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker, so the
+    // anchor and the shifted marker are one and the same.
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const auto& mv = app.warpmarkers.markers();

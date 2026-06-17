@@ -258,27 +258,6 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
     return text;
 }
 
-double resolve_inherited_tempo(const std::vector<GuiWarpMarker>& markers, int index) {
-    for (int i = index - 1; i >= 0; --i) {
-        const auto& m = markers[i];
-        if (!m.tempo_inherits && m.label_ref.empty() && !m.disabled) {
-            return m.tempo_base;
-        }
-    }
-    return 1.0;
-}
-
-std::string resolve_inherited_tempo_scale(
-    const std::vector<GuiWarpMarker>& markers, int index) {
-    for (int i = index - 1; i >= 0; --i) {
-        const auto& m = markers[i];
-        if (!m.tempo_inherits && m.label_ref.empty() && !m.disabled) {
-            return m.tempo_scale;
-        }
-    }
-    return {};
-}
-
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);

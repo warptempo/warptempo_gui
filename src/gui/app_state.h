@@ -277,9 +277,7 @@ struct TrimDragState {
     bool active   = false;
     bool is_begin = false;   // which bound the cursor is dragging
     bool moved    = false;   // whether motion actually changed the bound
-    bool group    = false;   // true = both bounds move rigidly together
     double orig_seconds       = 0.0;  // dragged bound's pre-drag value (Escape-restore)
-    double orig_other_seconds = 0.0;  // other bound's pre-drag value (group drag)
     // Press position in source-domain seconds, captured at drag-begin.
     // Motion applies the cursor's displacement from here (anchor-relative),
     // matching warp-marker drag — so the bound tracks the grab point with no

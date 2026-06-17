@@ -605,20 +605,6 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
-// Walks backward from `index` through `markers` to find the nearest marker
-// that owns its tempo: tempo_inherits == false, not a label reference, and
-// not disabled. Disabled markers are skipped because the engine drops them
-// before resolution (resolve_markers_for_render / walk_back_owning_tempo), so
-// a disabled marker contributes no tempo downstream; this walk matches that
-// rule. Returns 1.0 if no such marker exists (shouldn't happen given the
-// time-0 invariant, but defensive for edge cases during authoring).
-double resolve_inherited_tempo(const std::vector<GuiWarpMarker>& markers, int index);
-
-// Companion to resolve_inherited_tempo: returns the scale string of the
-// inherited source, or "" if none.
-std::string resolve_inherited_tempo_scale(
-    const std::vector<GuiWarpMarker>& markers, int index);
-
 // Per-character pixel advance for the monospace font at kFlagFontSize.
 // Measured once at startup via init_monospace_grid_metrics(); returns
 // 0 if not yet measured. Used by click-to-position-cursor in the

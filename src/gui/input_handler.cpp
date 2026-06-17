@@ -939,16 +939,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Escape && app.trim_drag.active) {
         double& field = app.trim_drag.is_begin ? app.trim_begin_seconds
                                                 : app.trim_end_seconds;
-        double& other = app.trim_drag.is_begin ? app.trim_end_seconds
-                                                : app.trim_begin_seconds;
         bool changed = false;
         if (field != app.trim_drag.orig_seconds) {
             field = app.trim_drag.orig_seconds;
-            changed = true;
-        }
-        // Group drag moved both bounds; restore the other one too.
-        if (app.trim_drag.group && other != app.trim_drag.orig_other_seconds) {
-            other = app.trim_drag.orig_other_seconds;
             changed = true;
         }
         if (changed) {
@@ -3441,14 +3434,8 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x) {
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.moved        = false;
-    // Group drag when both bounds are set AND both selected: dragging either
-    // one rigidly translates the pair (region width preserved).
-    app.trim_drag.group        = app.trim_begin_selected && app.trim_end_selected
-                              && app.has_trim_begin && app.has_trim_end;
     app.trim_drag.orig_seconds = is_begin ? app.trim_begin_seconds
                                           : app.trim_end_seconds;
-    app.trim_drag.orig_other_seconds = is_begin ? app.trim_end_seconds
-                                                 : app.trim_begin_seconds;
     // Grab anchor: the press position in source-domain seconds. Motion moves
     // the bound by the cursor's displacement from here, so it tracks the grab
     // point with no snap (mirrors begin_drag's anchor_mouse_time_seconds).
@@ -3478,40 +3465,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     const double delta_seconds = cursor_seconds - app.trim_drag.anchor_seconds;
 
     const int64_t total = static_cast<int64_t>(audio.total_frames());
-
-    if (app.trim_drag.group) {
-        // Rigid pair translation: the dragged bound's desired source frame is
-        // its pre-drag frame plus the anchor-relative delta; that delta moves
-        // both bounds, preserving region width. The delta is clamped against
-        // both file edges so the region stops as a unit rather than one bound
-        // collapsing into the other.
-        const int64_t orig_begin_f = static_cast<int64_t>(std::nearbyint(
-            (app.trim_drag.is_begin ? app.trim_drag.orig_seconds
-                                    : app.trim_drag.orig_other_seconds) * sr_d));
-        const int64_t orig_end_f = static_cast<int64_t>(std::nearbyint(
-            (app.trim_drag.is_begin ? app.trim_drag.orig_other_seconds
-                                    : app.trim_drag.orig_seconds) * sr_d));
-
-        int64_t delta = static_cast<int64_t>(std::nearbyint(delta_seconds * sr_d));
-        const int64_t min_delta = -orig_begin_f;        // begin >= 0
-        const int64_t max_delta = total - orig_end_f;    // end   <= total
-        if (delta < min_delta) delta = min_delta;
-        if (delta > max_delta) delta = max_delta;
-
-        const double new_begin = snap_to_timestamp_grid(
-            static_cast<double>(orig_begin_f + delta) / sr_d);
-        const double new_end   = snap_to_timestamp_grid(
-            static_cast<double>(orig_end_f   + delta) / sr_d);
-        if (app.trim_begin_seconds != new_begin ||
-            app.trim_end_seconds   != new_end) {
-            app.trim_begin_seconds = new_begin;
-            app.trim_end_seconds   = new_end;
-            app.trim_drag.moved = true;
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-        }
-        return;
-    }
 
     // Single-bound: pre-drag frame plus the anchor-relative delta.
     const int64_t orig_f = static_cast<int64_t>(
