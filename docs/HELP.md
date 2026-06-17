@@ -46,7 +46,19 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-This produces a single executable at `build/warptempo_gui`. The engine sources under `src/engine/` link into the same target — there is no separate engine library. `-O3 -march=native` is always on for GCC and Clang, so the binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+The build always produces two static archives — `libwarptempo_parser` (the `.warpmarkers` / `.phaseresetmarkers` / `.settings` readers and the frame-map / tempomap build; depends on sndfile and the standard library only) and `libwarptempo_engine` (the PGHI synthesis core; depends on sndfile and fftw3) — and, by default, the `warptempo_gui` application that links both behind the Cairo/Wayland front end. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+
+Four executables can be built from those two libraries, each a different slice of the pipeline, selected by CMake options:
+
+`warptempo_gui` (default, `-DWARPTEMPO_BUILD_GUI=ON`) is the interactive authoring application — parser plus engine plus the Cairo/Wayland GUI. This is the normal build.
+
+`warptempo_map` (`-DWARPTEMPO_BUILD_MAP_CLI=ON`) is parser-only. It reads a project's `.warpmarkers` and `.settings` beside the source audio and writes the framemap, tempomap, or resetmap — the portable map artifacts — without the engine or the GUI.
+
+`warptempo_render` (`-DWARPTEMPO_BUILD_RENDER_CLI=ON`) is parser plus engine. It reads a full project and writes the warped wav the GUI would render for it, headless — no display, no GUI toolchain.
+
+`warptempo_synthesis` (`-DWARPTEMPO_BUILD_SYNTHESIS_CLI=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files.
+
+To build the libraries and any CLI tools on a headless host that has none of the GUI's Wayland / Cairo / JACK packages, add `-DWARPTEMPO_BUILD_GUI=OFF`; the two archives and the enabled CLI tools build without touching the GUI dependency discovery.
 
 There is no `make install` target. The binary is self-contained: copy it to anywhere on `$PATH` (typically `~/.local/bin/` or `/usr/local/bin/`) to make it available system-wide.
 
