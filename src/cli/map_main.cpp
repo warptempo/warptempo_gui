@@ -1,5 +1,6 @@
 #include "warpmarkers_parse.h"   // WarpMarker, parse_warpmarkers_file
 #include "engine_settings.h"     // EngineSettings, read_engine_settings_from_file
+#include "settings_trim.h"        // SettingsTrim, read_settings_trim
 #include "timemap_core.h"        // TimemapBuildInput/Result, resolve, build_timemaps
 #include "map_output.h"          // write_standard_frame_map / write_midi_tempomap
 
@@ -7,7 +8,6 @@
 
 #include <cstdio>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -20,28 +20,6 @@ void usage(const char* argv0) {
         "  Reads <source-stem>.warpmarkers and <source-stem>.settings beside\n"
         "  the source audio and writes the framemap or tempomap.\n",
         argv0);
-}
-
-// Trim is GUI view-state (settings_io.cpp parses trim_begin / trim_end into
-// the active view), outside the parser library's EngineSettings. Until that
-// parse is relocated to the parser the map CLI cannot honor trim, so it
-// refuses a project whose .settings carries an active trim bound rather than
-// emit an untrimmed map. Separator-agnostic: the key is the leading run up to
-// the first space, tab, or '='.
-bool settings_has_active_trim(const std::string& set_path) {
-    std::ifstream f(set_path);
-    if (!f) return false;
-    std::string line;
-    while (std::getline(f, line)) {
-        size_t i = 0;
-        while (i < line.size() && (line[i] == ' ' || line[i] == '\t')) ++i;
-        size_t k = i;
-        while (k < line.size() &&
-               line[k] != ' ' && line[k] != '\t' && line[k] != '=') ++k;
-        const std::string key = line.substr(i, k - i);
-        if (key == "trim_begin" || key == "trim_end") return true;
-    }
-    return false;
 }
 
 }  // namespace
@@ -65,18 +43,14 @@ int main(int argc, char** argv) {
     const std::string set_path = (parent / (stem + ".settings")).string();
 
     // --- settings (engine block); defaults if the file is absent ---
-    EngineSettings es;  // scale 1.0, output_format "wav", title "" by default
+    EngineSettings es;    // scale 1.0, output_format "wav", title "" by default
+    SettingsTrim   trim;  // all-false => untrimmed when .settings is absent
     if (std::filesystem::exists(set_path)) {
-        if (settings_has_active_trim(set_path)) {
-            std::fprintf(stderr,
-                "warptempo_map: '%s' sets a trim bound; trimmed projects are "
-                "not yet supported by the map CLI\n", set_path.c_str());
-            return 1;
-        }
         std::optional<EngineSettings> parsed =
             read_engine_settings_from_file(set_path);
         if (!parsed) return 1;  // reader already logged the violations
         es = *parsed;
+        trim = read_settings_trim(set_path);
     }
 
     // --- emit format: --format overrides the project setting ---
@@ -115,12 +89,16 @@ int main(int argc, char** argv) {
     const long total_frames = static_cast<long>(info.frames);
     sf_close(sf);
 
-    // --- resolve + build (trim forced off; refused above) ---
+    // --- resolve + build (trim honored from the project .settings) ---
     TimemapBuildInput in;
-    in.markers      = resolve_markers_for_render(markers);
-    in.scale        = es.scale;
-    in.sample_rate  = sample_rate;
-    in.total_frames = total_frames;
+    in.markers        = resolve_markers_for_render(markers);
+    in.scale          = es.scale;
+    in.sample_rate    = sample_rate;
+    in.total_frames   = total_frames;
+    in.has_trim_begin = trim.has_begin;
+    in.trim_begin_sec = trim.begin_sec;
+    in.has_trim_end   = trim.has_end;
+    in.trim_end_sec   = trim.end_sec;
 
     TimemapBuildResult out;
     if (!build_timemaps(in, out)) {

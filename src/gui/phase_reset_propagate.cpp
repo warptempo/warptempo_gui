@@ -253,8 +253,8 @@ void PhaseResetPropagate::paste_apply() {
         if (dst_dur <= 0.0) continue;
         for (const auto& p : clip_blocks[i].placements) {
             GuiPhaseResetMarker nm;
-            nm.time_seconds =
-                std::max(0.0, dst_start + p.fractional_position * dst_dur);
+            nm.time_seconds = snap_to_timestamp_grid(
+                std::max(0.0, dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
             app.phase_reset_markers.insert_marker(std::move(nm));
         }
