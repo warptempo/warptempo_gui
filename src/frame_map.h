@@ -2,6 +2,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <optional>
+#include <sstream>
+#include <string>
 #include <vector>
 
 struct FrameMapSegment {
@@ -52,4 +57,61 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<FrameMapS
     }
     const auto& last = map.back();
     return last.src_frame + (tgt_frame - last.tgt_frame);
+}
+
+// --- Map-file readers (header-only, dependency-free) -----------------------
+// Inverses of the parser's write_standard_frame_map / write_reset_map. They
+// live here, not in the parser's map_output.cpp, so the engine-only
+// warptempo_synthesis driver can read both artifacts while linking
+// libwarptempo_engine alone (no parser archive). The formats are trivial
+// integer text, specified at each writer in map_output.cpp; keep these in
+// lockstep with those writers.
+//
+// .warpframemap: one "src_frame tgt_frame" line per segment (space-separated,
+// non-negative integers; a leading 0 0 anchor is present unless dropped at
+// write). Blank / whitespace-only lines are skipped. Any malformed line
+// (non-integer, missing field, or trailing garbage) fails the whole read
+// (std::nullopt), so a truncated or corrupt file never feeds the engine a
+// partial map. A missing/unopenable file is also std::nullopt.
+inline std::optional<std::vector<FrameMapSegment>>
+read_standard_frame_map(const std::string& path) {
+    std::ifstream in(path);
+    if (!in) return std::nullopt;
+    std::vector<FrameMapSegment> segs;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+        std::istringstream ls(line);
+        unsigned long long s = 0, t = 0;
+        if (!(ls >> s >> t)) return std::nullopt;
+        std::string extra;
+        if (ls >> extra) return std::nullopt;  // trailing garbage
+        segs.push_back(FrameMapSegment{static_cast<size_t>(s),
+                                       static_cast<size_t>(t)});
+    }
+    return segs;
+}
+
+// .resetmap: one undisplaced source-frame integer per line (non-negative),
+// in file order. Blank / whitespace-only lines skipped; any malformed line
+// fails the whole read. The file carries only active resets (the writer's
+// caller drops disabled markers), so there is no '#'/disabled syntax to
+// handle. A missing/unopenable file is std::nullopt; an empty-but-readable
+// file yields an empty list (a valid "no resets" render input).
+inline std::optional<std::vector<int64_t>>
+read_reset_map(const std::string& path) {
+    std::ifstream in(path);
+    if (!in) return std::nullopt;
+    std::vector<int64_t> frames;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+        std::istringstream ls(line);
+        long long f = 0;
+        if (!(ls >> f)) return std::nullopt;
+        std::string extra;
+        if (ls >> extra) return std::nullopt;  // trailing garbage
+        frames.push_back(static_cast<int64_t>(f));
+    }
+    return frames;
 }

@@ -3,6 +3,7 @@
 #include "frame_map.h"      // FrameMapSegment
 #include "timemap_core.h"   // TempomapEntry
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -18,3 +19,14 @@ bool write_standard_frame_map(const std::string& path,
 // "target_time_sec multiplier" line per entry at fixed 16-digit precision.
 bool write_midi_tempomap(const std::string& path,
                          const std::vector<TempomapEntry>& entries);
+
+// Serialize an undisplaced source-frame phase-reset list to the canonical
+// .resetmap text form: one source-frame integer per line, in input order.
+// The companion to write_standard_frame_map on the phase-reset axis — the
+// frame-domain export warptempo_map emits and the engine-only synthesis
+// driver consumes (read_reset_map in frame_map.h). The caller supplies the
+// already-resolved active source frames (phase_reset_source_frames drops
+// disabled markers and converts time->source frame via nearbyint), so this
+// writer applies no policy: it does not displace, sort, or dedupe.
+bool write_reset_map(const std::string& path,
+                     const std::vector<int64_t>& source_frames);

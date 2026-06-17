@@ -36,3 +36,18 @@ bool write_midi_tempomap(const std::string& path,
     }
     return true;
 }
+
+bool write_reset_map(const std::string& path,
+                     const std::vector<int64_t>& source_frames) {
+    std::ofstream of(path);
+    if (!of) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: could not write resetmap '%s'\n",
+            path.c_str());
+        return false;
+    }
+    for (const int64_t f : source_frames) {
+        of << f << "\n";
+    }
+    return true;
+}

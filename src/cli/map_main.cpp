@@ -1,11 +1,15 @@
-#include "warpmarkers_parse.h"   // WarpMarker, parse_warpmarkers_file
-#include "engine_settings.h"     // EngineSettings, read_engine_settings_from_file
-#include "settings_trim.h"        // SettingsTrim, read_settings_trim
-#include "timemap_core.h"        // TimemapBuildInput/Result, resolve, build_timemaps
-#include "map_output.h"          // write_standard_frame_map / write_midi_tempomap
+#include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
+#include "phase_reset_markers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
+#include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
+#include "settings_trim.h"              // SettingsTrim, read_settings_trim
+#include "timemap_core.h"               // TimemapBuildInput/Result, resolve,
+                                        // build_timemaps, phase_reset_source_frames
+#include "map_output.h"                 // write_standard_frame_map /
+                                        // write_midi_tempomap / write_reset_map
 
 #include <sndfile.h>
 
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <optional>
@@ -16,9 +20,14 @@ namespace {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> [--format framemap|tempomap] [-o <output>]\n"
-        "  Reads <source-stem>.warpmarkers and <source-stem>.settings beside\n"
-        "  the source audio and writes the framemap or tempomap.\n",
+        "usage: %s <source-audio> [--format framemap|tempomap|resetmap] [-o <output>]\n"
+        "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
+        "  and <source-stem>.settings beside the source audio and writes the\n"
+        "  framemap, tempomap, or resetmap. framemap/tempomap are built from the\n"
+        "  warp markers; resetmap is the undisplaced source-frame phase-reset\n"
+        "  list (the frame-domain companion the synthesis engine consumes).\n"
+        "  resetmap must be requested via --format; it is never a settings\n"
+        "  output_format.\n",
         argv0);
 }
 
@@ -40,6 +49,7 @@ int main(int argc, char** argv) {
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem     = src.stem().string();
     const std::string wm_path  = (parent / (stem + ".warpmarkers")).string();
+    const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
     // --- settings (engine block); defaults if the file is absent ---
@@ -53,30 +63,19 @@ int main(int argc, char** argv) {
         trim = read_settings_trim(set_path);
     }
 
-    // --- emit format: --format overrides the project setting ---
+    // --- emit format: --format overrides the project setting. resetmap is a
+    // CLI-only format (read_engine_settings_from_file only accepts wav /
+    // framemap / tempomap), so it can arrive only through --format. ---
     const std::string fmt = !fmt_override.empty() ? fmt_override : es.output_format;
-    if (fmt != "framemap" && fmt != "tempomap") {
+    if (fmt != "framemap" && fmt != "tempomap" && fmt != "resetmap") {
         std::fprintf(stderr,
             "warptempo_map: nothing to emit for output_format '%s' "
-            "(this tool writes framemap or tempomap; pass --format)\n",
+            "(this tool writes framemap, tempomap, or resetmap; pass --format)\n",
             fmt.c_str());
         return 1;
     }
 
-    // --- markers; empty if the file is absent ---
-    std::vector<WarpMarker> markers;
-    if (std::filesystem::exists(wm_path)) {
-        WarpMarkersParse wmp = parse_warpmarkers_file(wm_path);
-        if (!wmp.ok) {
-            for (const auto& e : wmp.errors)
-                std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
-                             wm_path.c_str(), e.line_number, e.message.c_str());
-            return 1;
-        }
-        markers = std::move(wmp.markers);
-    }
-
-    // --- source sample rate / total frames ---
+    // --- source sample rate / total frames (every format needs the rate) ---
     SF_INFO info{};
     info.format = 0;
     SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
@@ -88,6 +87,49 @@ int main(int argc, char** argv) {
     const long sample_rate  = info.samplerate;
     const long total_frames = static_cast<long>(info.frames);
     sf_close(sf);
+
+    // --- resetmap: undisplaced source-frame phase-reset list. Independent of
+    // the warp markers and the timemap build — reads only the phase-reset
+    // sidecar and the source sample rate. phase_reset_source_frames drops
+    // disabled markers and converts time->source frame via nearbyint, the
+    // same conversion the GUI and render CLI apply before displacing. The file
+    // is undisplaced by design: the one-hop lead-in is the engine's synthesis
+    // convention, re-applied driver-side, not baked into the portable file.
+    // An absent sidecar yields an empty (valid) resetmap. ---
+    if (fmt == "resetmap") {
+        std::vector<PhaseResetMarker> resets;
+        if (std::filesystem::exists(pr_path)) {
+            PhaseResetMarkersParse prp = parse_phaseresetmarkers_file(pr_path);
+            if (!prp.ok) {
+                for (const auto& e : prp.errors)
+                    std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
+                                 pr_path.c_str(), e.line_number, e.message.c_str());
+                return 1;
+            }
+            resets = std::move(prp.markers);
+        }
+        const std::vector<int64_t> source_frames =
+            phase_reset_source_frames(resets, sample_rate);
+
+        if (out_path.empty())
+            out_path = (parent / (stem + ".resetmap")).string();
+        if (!write_reset_map(out_path, source_frames)) return 1;
+        std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
+        return 0;
+    }
+
+    // --- framemap / tempomap: built from the warp markers. ---
+    std::vector<WarpMarker> markers;
+    if (std::filesystem::exists(wm_path)) {
+        WarpMarkersParse wmp = parse_warpmarkers_file(wm_path);
+        if (!wmp.ok) {
+            for (const auto& e : wmp.errors)
+                std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
+                             wm_path.c_str(), e.line_number, e.message.c_str());
+            return 1;
+        }
+        markers = std::move(wmp.markers);
+    }
 
     // --- resolve + build (trim honored from the project .settings) ---
     TimemapBuildInput in;
