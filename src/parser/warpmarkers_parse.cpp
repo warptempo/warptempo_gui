@@ -231,19 +231,11 @@ std::string normalize_scale_string(const std::string& s) {
     }
 }
 
-} // namespace warpmarkers_internal
-
-// --- public single-line parser ---------------------------------------------
+// --- single-line parser -----------------------------------------------------
 //
-// Used by the GUI text editor to validate a single canonical line during
-// commit. Cross-marker checks (label_ref existence, label_def uniqueness)
-// are the caller's responsibility — pass `known_label_defs` with the names
-// of every other marker's label_def so the editor can reject refs to
-// undefined labels. Time monotonicity isn't checked (single line).
-//
-// Defined in the header as a free function for editor reuse.
-namespace warpmarkers_internal {
-
+// Parses one canonical line into a WarpMarker, doing line-local validation
+// only. Cross-marker checks (label_ref existence, label_def uniqueness,
+// time monotonicity) are left to the caller.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line) {
 
