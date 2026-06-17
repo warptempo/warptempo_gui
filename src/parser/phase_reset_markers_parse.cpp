@@ -4,6 +4,7 @@
 
 #include <cctype>
 #include <cstring>
+#include <expected>
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -45,25 +46,23 @@ bool parse_timestamp_token(const std::string& tok, double& out,
     return true;
 }
 
-// Parse "[#]MM:SS.mmm" into the PhaseResetMarker base; the GUI load path
-// passes a GuiPhaseResetMarker by upcast. Returns true on success; on
-// failure, fills `err_msg` with a one-line diagnostic. Files written by
+// Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
+// success; on failure, returns a one-line diagnostic. Files written by
 // pre-X.8.3 builds (carrying an i/d status code or a displaced_frame token)
 // are rejected with "unexpected status code" so the upgrade requirement
 // surfaces to the user instead of silently misparsing. Trim flags (b= / e=)
 // are warp-only as of brief seven; encountering one on a phase reset line is
 // a parse error so the migration requirement surfaces.
-bool parse_line(const std::string& raw, PhaseResetMarker& out, std::string& err_msg) {
+std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) {
+    PhaseResetMarker out;
     std::string t = trim_ws(raw);
     if (t.empty()) {
-        err_msg = "empty line";
-        return false;
+        return std::unexpected<std::string>("empty line");
     }
 
     if (starts_with(t, "b=") || starts_with(t, "e=")) {
-        err_msg = "phase_reset trim flags not supported; "
-                  "move b= / e= to a warp marker";
-        return false;
+        return std::unexpected<std::string>("phase_reset trim flags not supported; "
+                  "move b= / e= to a warp marker");
     }
 
     if (!t.empty() && t[0] == '#') {
@@ -78,12 +77,10 @@ bool parse_line(const std::string& raw, PhaseResetMarker& out, std::string& err_
         while (iss >> tk) toks.push_back(std::move(tk));
     }
     if (toks.empty()) {
-        err_msg = "missing timestamp";
-        return false;
+        return std::unexpected<std::string>("missing timestamp");
     }
     if (toks.size() > 1) {
-        err_msg = "unexpected status code";
-        return false;
+        return std::unexpected<std::string>("unexpected status code");
     }
 
     // The phase-reset mode token (`|peak`/`|heap`/`|pass`) was removed when
@@ -93,15 +90,14 @@ bool parse_line(const std::string& raw, PhaseResetMarker& out, std::string& err_
     // silently accepting and ignoring the suffix.
     const std::string& token = toks[0];
     if (token.find('|') != std::string::npos) {
-        err_msg = "phase-reset mode tokens removed; "
-                  "strip the trailing |peak/|heap/|pass";
-        return false;
+        return std::unexpected<std::string>("phase-reset mode tokens removed; "
+                  "strip the trailing |peak/|heap/|pass");
     }
 
-    if (!parse_timestamp_token(token, out.time_seconds, err_msg)) {
-        return false;
-    }
-    return true;
+    std::string err;
+    if (!parse_timestamp_token(token, out.time_seconds, err))
+        return std::unexpected(std::move(err));
+    return out;
 }
 
 } // namespace
@@ -144,13 +140,13 @@ PhaseResetMarkersParse parse_phaseresetmarkers_file(const std::string& path) {
             continue;
         }
 
-        PhaseResetMarker m;
-        std::string err;
-        if (!parse_line(t, m, err)) {
-            result.errors.push_back({line_number, err});
+        auto parsed = parse_line(t);
+        if (!parsed) {
+            result.errors.push_back({line_number, std::move(parsed.error())});
             parse_ok = false;
             continue;
         }
+        PhaseResetMarker m = std::move(*parsed);
         // Strictly-ascending order is keyed on time_seconds: the
         // visible position of the marker.
         const double eff = m.time_seconds;

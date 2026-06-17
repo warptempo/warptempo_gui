@@ -280,8 +280,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     GuiWarpMarker parsed;
     std::string err;
-    bool ok = warpmarkers_internal::parse_single_canonical_line(
-        candidate, parsed, &err);
+    auto result = warpmarkers_internal::parse_single_canonical_line(candidate);
+    bool ok = result.has_value();
+    if (ok) {
+        static_cast<WarpMarker&>(parsed) = std::move(*result);
+    } else {
+        err = std::move(result.error());
+    }
 
     // Cross-marker checks (edit target excluded).
     if (ok && !parsed.label_ref.empty()) {

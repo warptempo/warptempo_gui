@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <expected>
 #include <fstream>
 #include <map>
 #include <regex>
@@ -243,31 +244,20 @@ std::string normalize_scale_string(const std::string& s) {
 // Defined in the header as a free function for editor reuse.
 namespace warpmarkers_internal {
 
-bool parse_single_canonical_line(
-    const std::string& raw_line,
-    WarpMarker& out,
-    std::string* error_out) {
+std::expected<WarpMarker, std::string> parse_single_canonical_line(
+    const std::string& raw_line) {
 
-    auto fail = [&](const char* msg) {
-        if (error_out) *error_out = msg;
-        return false;
-    };
-    auto fail_s = [&](const std::string& msg) {
-        if (error_out) *error_out = msg;
-        return false;
-    };
+    WarpMarker out{};
 
     std::string t = raw_line;
-    if (t.empty()) return fail("empty line");
+    if (t.empty()) return std::unexpected<std::string>("empty line");
 
     // No whitespace anywhere on the line.
     for (char c : t) {
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
-            return fail("no whitespace allowed in canonical line");
+            return std::unexpected<std::string>("no whitespace allowed in canonical line");
         }
     }
-
-    out = WarpMarker{};
 
     // [#]?  MM:SS.SSS  |  PAYLOAD
     if (!t.empty() && t[0] == '#') {
@@ -276,17 +266,20 @@ bool parse_single_canonical_line(
     }
 
     if (t.size() < 9 || !is_valid_time_format(t.substr(0, 9))) {
-        return fail_s("invalid time format: " + t.substr(0, std::min<size_t>(9, t.size())));
+        return std::unexpected<std::string>("invalid time format: " + t.substr(0, std::min<size_t>(9, t.size())));
     }
     out.time_seconds = parse_timestamp(t.substr(0, 9));
     t.erase(0, 9);
 
     if (t.empty() || t[0] != '|') {
-        return fail("expected '|' after timestamp");
+        return std::unexpected<std::string>("expected '|' after timestamp");
     }
     t.erase(0, 1);
 
-    return parse_new_payload(t, out, *error_out);
+    std::string err;
+    if (!parse_new_payload(t, out, err))
+        return std::unexpected(std::move(err));
+    return out;
 }
 
 } // namespace warpmarkers_internal

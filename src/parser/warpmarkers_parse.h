@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <string>
 #include <vector>
 
@@ -62,15 +63,14 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path);
 
 namespace warpmarkers_internal {
 
-// Parse one canonical new-format line into the WarpMarker base. Used by the
-// GUI editor's commit path (flag_editor), which passes a GuiWarpMarker by
-// upcast. Line-local validation only — cross-marker rules (label_ref
-// existence, label_def uniqueness, time monotonicity) are the caller's. On
-// `pass`, tempo_base/tempo_scale are populated with inert defaults.
-bool parse_single_canonical_line(
-    const std::string& raw_line,
-    WarpMarker& out,
-    std::string* error_out);
+// Parse one canonical new-format line into a WarpMarker. Used by the GUI
+// editor's commit path (flag_editor). Line-local validation only —
+// cross-marker rules (label_ref existence, label_def uniqueness, time
+// monotonicity) are the caller's. On `pass`, tempo_base/tempo_scale are
+// populated with inert defaults. Returns the marker on success, or a
+// one-line diagnostic on failure.
+std::expected<WarpMarker, std::string> parse_single_canonical_line(
+    const std::string& raw_line);
 
 // Canonicalize a scale string to the one-digit-dot-four-decimals form.
 // Owned here because both the parser and the GUI writer must agree on the
