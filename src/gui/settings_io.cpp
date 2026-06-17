@@ -1,6 +1,7 @@
 #include "settings_io.h"
 
 #include "app_state.h"
+#include "settings_trim.h"
 #include "time_format.h"
 
 #include <cctype>
@@ -256,21 +257,6 @@ void append_view_state_block(std::string& out,
 
 } // namespace
 
-// MM:SS.mmm shape validator: exactly 9 chars, ':' at index 2, '.' at
-// index 5, digits elsewhere. Matches the canonical marker timestamp
-// shape parse_timestamp expects. Returns true if parse_timestamp can
-// be safely called on `s`. Exposed so settings_editor.cpp can route
-// trim_begin / trim_end values through the same predicate.
-bool is_settings_timestamp(const std::string& s) {
-    if (s.size() != 9) return false;
-    if (s[2] != ':' || s[5] != '.') return false;
-    for (size_t i = 0; i < s.size(); ++i) {
-        if (i == 2 || i == 5) continue;
-        if (s[i] < '0' || s[i] > '9') return false;
-    }
-    return true;
-}
-
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
     std::error_code ec;
@@ -348,36 +334,6 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_playback_speed = true;
                 out.playback_speed = v;
             }
-        } else if (key == "trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_trim_begin = true;
-                out.trim_begin     = parse_timestamp(value);
-            }
-        } else if (key == "trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_trim_end = true;
-                out.trim_end     = parse_timestamp(value);
-            }
-        } else if (key == "tab_a_trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_a_trim_begin = true;
-                out.tab_a_trim_begin     = parse_timestamp(value);
-            }
-        } else if (key == "tab_a_trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_a_trim_end = true;
-                out.tab_a_trim_end     = parse_timestamp(value);
-            }
-        } else if (key == "tab_b_trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_b_trim_begin = true;
-                out.tab_b_trim_begin     = parse_timestamp(value);
-            }
-        } else if (key == "tab_b_trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_b_trim_end = true;
-                out.tab_b_trim_end     = parse_timestamp(value);
-            }
         } else if (key == "tab_a_read_only") {
             bool v;
             if (parse_bool_strict(value, v)) {
@@ -395,6 +351,18 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         // Unknown keys: silent-skip here; read_engine_settings_from_file
         // surfaces them as errors.
     }
+
+    // Trim bounds: parsed by the parser library's reader so the map and
+    // render CLIs share one implementation with the GUI. The per-tab vs
+    // legacy precedence still lives in file_loader's apply step, which reads
+    // these same ParsedSettings fields.
+    const SettingsTrim t = read_settings_trim(path);
+    out.has_trim_begin       = t.has_legacy_begin; out.trim_begin       = t.legacy_begin_sec;
+    out.has_trim_end         = t.has_legacy_end;   out.trim_end         = t.legacy_end_sec;
+    out.has_tab_a_trim_begin = t.has_tab_a_begin;  out.tab_a_trim_begin = t.tab_a_begin_sec;
+    out.has_tab_a_trim_end   = t.has_tab_a_end;    out.tab_a_trim_end   = t.tab_a_end_sec;
+    out.has_tab_b_trim_begin = t.has_tab_b_begin;  out.tab_b_trim_begin = t.tab_b_begin_sec;
+    out.has_tab_b_trim_end   = t.has_tab_b_end;    out.tab_b_trim_end   = t.tab_b_end_sec;
     return true;
 }
 

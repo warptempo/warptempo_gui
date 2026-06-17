@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "settings_trim.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -60,11 +61,6 @@ struct ParsedSettings {
     bool    has_tab_b_read_only  = false;
     bool    tab_b_read_only      = false;
 };
-
-// Strict shape validator for MM:SS.mmm settings timestamps. Exposed so
-// the settings editor's commit() can reuse the same parsing predicate
-// it routes through on file load.
-bool is_settings_timestamp(const std::string& s);
 
 // Ensure `p` exists with `contents`. If the file already exists, leave it
 // alone. Returns true on success or if file already exists. Failures are
