@@ -10,6 +10,6 @@ The `examples/` directory contains the working corpus: the 1972 Krips / Royal Co
 
 [Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
 
-Linux + Wayland (JACK audio). Build instructions, conceptual model, hotkey reference, and file formats are in `docs/HELP.md`.
+Linux + Wayland (JACK audio) for the GUI; the headless CLI tools build and run without Wayland or JACK, including under WSL2. Build instructions, conceptual model, hotkey reference, and file formats are in `docs/HELP.md`.
 
 Licensed GPL v3. See `LICENSE`.

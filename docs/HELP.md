@@ -4,7 +4,11 @@
 
 ## Dependencies
 
-Build requires a C++17 toolchain (GCC 9+ or Clang 10+), CMake 3.10+, pkg-config, and the wayland-scanner tool plus the development headers for cairo, fftw3, libsndfile, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
+Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3 and libsndfile. These are the complete dependency set for the two libraries and the three headless CLI tools (`warptempo_map`, `warptempo_render`, `warptempo_synthesis`); none of the GUI packages below are needed for them.
+
+The default GUI build additionally requires the wayland-scanner tool and the development headers for cairo, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
+
+The `std::expected`-based parser pins the compiler floor at GCC 12 / Clang 16. On distributions whose default compiler is older — Ubuntu 22.04 ships GCC 11, for example — install a newer toolchain (`g++-12` or later) and select it with `-DCMAKE_CXX_COMPILER=g++-12`.
 
 Arch Linux:
 
@@ -35,7 +39,18 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config \
     pipewire-jack-audio-connection-kit-devel
 ```
 
-A Wayland compositor is required at runtime — there is no X11 backend. Tested compositors include labwc, sway, and Hyprland; GNOME and KDE Wayland sessions should work but are not regularly exercised.
+For a headless build — the two libraries plus any of the CLI tools, with no GUI — only the core dependencies are needed. Omit the cairo / wayland / wayland-protocols / libxkbcommon / JACK packages from the lists above and configure with `-DWARPTEMPO_BUILD_GUI=OFF` (see the Build section). On Debian / Ubuntu the dependency set reduces to:
+
+```bash
+sudo apt install build-essential cmake pkg-config \
+    libfftw3-dev libsndfile1-dev
+```
+
+A Wayland compositor is required at runtime — there is no X11 backend. Tested compositors include labwc, sway, and Hyprland; GNOME and KDE Wayland sessions should work but are not regularly exercised. The headless CLI tools need no compositor and no audio server; they read and write files only.
+
+Windows (WSL2): the project builds and runs under WSL2 with a Debian or Ubuntu userland — install the Debian / Ubuntu dependencies above inside the WSL distribution and build normally. The headless CLI tools behave as on any Linux host. The GUI is not supported under WSL: WSLg provides a Wayland compositor but routes audio through PulseAudio, not JACK, and the application has no non-JACK audio path.
+
+macOS: the GUI is not supported — it is a Wayland-native client and macOS has no Wayland. The headless CLI tools are portable C++ and should build with Homebrew dependencies (`brew install cmake pkg-config fftw libsndfile`) and `-DWARPTEMPO_BUILD_GUI=OFF`, though this path is not regularly tested.
 
 ## Build
 
