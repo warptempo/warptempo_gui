@@ -3517,25 +3517,34 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const bool first_motion = !app.trim_drag.moved;
         field = new_seconds;
         app.trim_drag.moved = true;
-        // First-motion selection collapse: a real drag focuses the trim
-        // group on the dragged bound only, mirroring the warp drag's
-        // pending_collapse_to_hit (warpmarkers_ops.cpp apply_drag_motion).
-        // Motion-gated so a Ctrl+click without motion is left to
-        // commit_trim_drag's no-motion toggle branch. last_sel_group was
-        // already set to Trim in begin_trim_drag.
+        // First-motion selection collapse: a real drag focuses the whole
+        // selection on the dragged bound. Delegated to select_trim_boundary
+        // (non-additive) — the same helper a trim click uses — so the rule
+        // (select the dragged bound, drop the opposite bound AND any
+        // warp/phase-reset marker selection, make Trim the active group)
+        // lives in one place. Motion-gated so a Ctrl+click without motion is
+        // left to commit_trim_drag's no-motion toggle branch.
         if (first_motion) {
-            app.trim_begin_selected = app.trim_drag.is_begin;
-            app.trim_end_selected   = !app.trim_drag.is_begin;
+            select_trim_boundary(
+                app.trim_drag.is_begin ? TrimHit::Begin : TrimHit::End,
+                /*additive=*/false);
         }
-        // Track the playhead on the dragged bound for the whole drag. Trim
-        // is a render-time cut and is NOT in build_target_view_frame_map, so
-        // the bound carries no deformation: the playhead follows it
-        // continuously, with no frozen-map / re-anchor (unlike warp drag's
-        // commit_drag). new_seconds is source-domain; inverse-translate to
-        // target-domain in target view, the same conversion the plain-click
-        // landing in handle_trim_boundary_press uses. The bound is clamped
-        // within the waveform area, so move_playhead_to never scrolls
-        // mid-drag, and playback was already stopped at drag-begin.
+        // Track the playhead on the dragged bound for the whole drag,
+        // mirroring the warp marker-drag tracking in the motion handler
+        // (right after apply_drag_motion): set app.playhead_cursor_sample
+        // DIRECTLY rather than via move_playhead_to, so the viewport is
+        // deliberately not followed — the user pans manually if the drag
+        // runs past the edge. move_playhead_to would scroll when an
+        // off-center grab pushes the bound a few pixels past the visible
+        // edge; the marker drag never scrolls, and symmetry is the point.
+        // Trim is a render-time cut and is NOT in build_target_view_frame_map,
+        // so the bound carries no deformation: new_seconds (source-domain)
+        // maps straight to the playhead, inverse-translated to target-domain
+        // in target view. No predictor resync and no scanner-sample sync,
+        // both matching the marker-drag block — trim drag stopped playback at
+        // begin, so the scanner is inactive and a play reseeks from the
+        // cursor. The invalidate_waveform_area below repaints the playhead
+        // columns along with the moved trim shading.
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(new_seconds * sr_d));
         int64_t sample = src_sample;
@@ -3544,7 +3553,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
                 app, sr, static_cast<long>(audio.total_frames()));
             sample = to_domain_frame(app, src_sample, tmap);
         }
-        viewport.move_playhead_to(sample);
+        app.playhead_cursor_sample = sample;
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
     }

@@ -573,16 +573,16 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
     if (any_changed) {
         const bool first_motion = !app.drag.moved;
         app.drag.moved = true;
-        // Apply the deferred selection collapse on the press-to-motion
-        // edge, only if begin_drag noted that the hit marker was not
-        // in the prior selection. After this point the drag is
-        // committed to being a real drag, so the visible selection
-        // should match what's being dragged.
+        // Selection collapse on the press-to-motion edge: once a drag is
+        // real, focus the whole selection on the single grabbed marker.
+        // Delegated to Selection::set_single_selection — the same helper a
+        // marker click uses — so the rule (drop the rest of the marker
+        // selection AND any trim-boundary selection, make Markers the active
+        // group) lives in one place. Deferred to first motion
+        // (pending_collapse_to_hit, always armed at begin_drag) so a click
+        // without a drag leaves selection untouched.
         if (first_motion && app.drag.pending_collapse_to_hit) {
-            const int hit = app.drag.hit_marker;
-            app.selected_markers.clear();
-            app.selected_markers.insert(hit);
-            app.last_selected_marker = hit;
+            selection.set_single_selection(app.drag.hit_marker);
             app.drag.pending_collapse_to_hit = false;
         }
         viewport.invalidate_waveform_area();

@@ -168,6 +168,14 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
+    if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker,
+    // mirroring nudge_selected_markers (warpmarkers_ops.cpp). Phase resets
+    // carry no tempo, so there is no inherit/tempo analog to collapse —
+    // only nudge and jump. The existing per-marker loop then runs over the
+    // singleton.
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
@@ -267,6 +275,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
 void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // Fine-tuning op: collapse the selection to the focused marker, so the
+    // anchor and the shifted marker are one and the same — mirroring
+    // jump_selection_to_playhead (warpmarkers_ops.cpp).
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const auto& tv = app.phase_reset_markers.markers();
