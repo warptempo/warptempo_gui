@@ -33,25 +33,23 @@ void Selection::set_single_selection(int idx) {
     // A fresh single-select in the marker group drops any trim-boundary
     // selection — the two groups are orthogonal, but selecting a marker as
     // the sole selection means trim is no longer selected.
-    ViewState& vs = active_view_state(app);
-    const bool had_trim = vs.trim_begin_selected || vs.trim_end_selected;
-    vs.trim_begin_selected = false;
-    vs.trim_end_selected   = false;
+    const bool had_trim = app.trim_begin_selected || app.trim_end_selected;
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
     viewport.invalidate_top_strip();
     if (had_trim) viewport.invalidate_waveform_area();
 }
 
 void Selection::clear_selection() {
-    ViewState& vs = active_view_state(app);
-    const bool had_trim = vs.trim_begin_selected || vs.trim_end_selected;
+    const bool had_trim = app.trim_begin_selected || app.trim_end_selected;
     const bool had_markers =
         !app.selected_markers.empty() || app.last_selected_marker != -1;
     if (!had_trim && !had_markers) return;   // nothing selected anywhere
 
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    vs.trim_begin_selected = false;
-    vs.trim_end_selected   = false;
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
     app.last_sel_group = LastSelGroup::Markers;
 
     viewport.invalidate_top_strip();

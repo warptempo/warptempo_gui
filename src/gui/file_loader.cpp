@@ -128,6 +128,16 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
+    // Project trim is no longer cleared implicitly by the fresh-ViewState
+    // assignment (it lives on AppState now). Reset it explicitly before the
+    // line-194 initial-playhead read so an untrimmed project loaded after a
+    // trimmed one sees unset trim (playhead at sample 0, not stale begin).
+    app.has_trim_begin      = false;
+    app.has_trim_end        = false;
+    app.trim_begin_seconds  = 0.0;
+    app.trim_end_seconds    = 0.0;
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
     app.last_sel_group = LastSelGroup::Markers;
     // Fresh file = fresh history. Both stacks cleared; the loaded state
@@ -240,33 +250,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.active_markers_view = ps.has_active_markers_view ? ps.active_markers_view : 'W';
         app.active_tab_view     = ps.has_active_tab_view     ? ps.active_tab_view     : 'A';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
-        // Trim: per-tab keys take precedence; the legacy singleton form,
-        // when present without any per-tab keys, applies to tab_a only
-        // (tab_b stays at default). When both are present, per-tab wins
-        // — settings_io.cpp evaluates the typed-key branches in the order
-        // listed so the per-tab branch shadows the legacy one for the same
-        // ParsedSettings field.
-        if (ps.has_tab_a_trim_begin) {
-            app.tab_a.has_trim_begin     = true;
-            app.tab_a.trim_begin_seconds = ps.tab_a_trim_begin;
-        } else if (ps.has_trim_begin) {
-            app.tab_a.has_trim_begin     = true;
-            app.tab_a.trim_begin_seconds = ps.trim_begin;
+        // Trim: a single project-level value. Apply each bound when its key
+        // is present; absence leaves the load-time reset (above) in place.
+        if (ps.has_trim_begin) {
+            app.has_trim_begin     = true;
+            app.trim_begin_seconds = ps.trim_begin;
         }
-        if (ps.has_tab_a_trim_end) {
-            app.tab_a.has_trim_end       = true;
-            app.tab_a.trim_end_seconds   = ps.tab_a_trim_end;
-        } else if (ps.has_trim_end) {
-            app.tab_a.has_trim_end       = true;
-            app.tab_a.trim_end_seconds   = ps.trim_end;
-        }
-        if (ps.has_tab_b_trim_begin) {
-            app.tab_b.has_trim_begin     = true;
-            app.tab_b.trim_begin_seconds = ps.tab_b_trim_begin;
-        }
-        if (ps.has_tab_b_trim_end) {
-            app.tab_b.has_trim_end       = true;
-            app.tab_b.trim_end_seconds   = ps.tab_b_trim_end;
+        if (ps.has_trim_end) {
+            app.has_trim_end       = true;
+            app.trim_end_seconds   = ps.trim_end;
         }
         if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
         if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
@@ -393,6 +385,16 @@ void GuiFileLoader::revert_to_blank() {
 
     app.tab_a = ViewState{};
     app.tab_b = ViewState{};
+
+    // Project trim lives on AppState; the fresh-ViewState assignment above
+    // no longer clears it. Reset explicitly so no trim carries into the
+    // next load.
+    app.has_trim_begin      = false;
+    app.has_trim_end        = false;
+    app.trim_begin_seconds  = 0.0;
+    app.trim_end_seconds    = 0.0;
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
 
     // View-selector triplet defaults, in bottom-bar order [S/T] [W/P] [A/B].
     app.active_audio_view   = 'S';

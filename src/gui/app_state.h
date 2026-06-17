@@ -57,17 +57,13 @@ enum class OpKind { Create, Destroy, Move, Other };
 
 // Wholesale snapshot of the authoring-class settings. Captured at undo-push
 // time and restored on undo/redo. Holds the typed EngineSettings plus the
-// per-tab trim quadruples for both tabs. Cost stays negligible per entry.
+// project-level trim pair. Cost stays negligible per entry.
 struct SettingsSnapshot {
     EngineSettings engine_settings;
-    double tab_a_trim_begin     = 0.0;
-    double tab_a_trim_end       = 0.0;
-    bool   tab_a_has_trim_begin = false;
-    bool   tab_a_has_trim_end   = false;
-    double tab_b_trim_begin     = 0.0;
-    double tab_b_trim_end       = 0.0;
-    bool   tab_b_has_trim_begin = false;
-    bool   tab_b_has_trim_end   = false;
+    double trim_begin     = 0.0;
+    double trim_end       = 0.0;
+    bool   has_trim_begin = false;
+    bool   has_trim_end   = false;
 };
 
 // One entry on either stack. Carries the pre-mutation marker snapshot plus
@@ -358,26 +354,6 @@ struct ViewState {
     std::set<int> phase_reset_selected;
     int           phase_reset_last_selected = -1;
 
-    // Per-tab trim region. Moved here so each A/B tab can carry its own
-    // trim independently and so trim edits participate in the undo domain
-    // as part of the SettingsSnapshot. Seconds for sample-rate stability
-    // (consistent with marker times). has_trim_* distinguishes "no trim
-    // set" from "trim set to 0.0" — both round-trip through .settings.
-    double trim_begin_seconds = 0.0;
-    double trim_end_seconds   = 0.0;
-    bool   has_trim_begin     = false;
-    bool   has_trim_end       = false;
-
-    // Brief C: transient per-tab selection of the trim boundary stems.
-    // A separate selection channel from the marker sets (selected_markers
-    // / phase_reset_selected) — the two groups are orthogonal and can be
-    // co-selected. Not persisted to .settings; defaults false and resets
-    // on file load (the ViewState{} default covers it). Which group a
-    // group-acting gesture (Delete, Ctrl+drag) targets is decided by
-    // AppState::last_sel_group.
-    bool   trim_begin_selected = false;
-    bool   trim_end_selected   = false;
-
     // Per-tab read-only lock. Toggled by bare `o`. While true, the active
     // tab admits a subset of keys (navigation, playback, view-switch) and
     // its mouse handlers block authoring gestures (drop, drag, label
@@ -586,9 +562,9 @@ struct AppState {
     // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
     // (tab_a or tab_b) is mirrored into the live AppState fields.
     // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
-    // each hold an independent viewport/zoom/playhead/trim/selection
-    // tuple, but share the same warpmarkers, phase_reset_markers, and
-    // engine_settings.
+    // each hold an independent viewport/zoom/playhead/selection
+    // tuple, but share the same warpmarkers, phase_reset_markers,
+    // engine_settings, and project-level trim.
     ViewState tab_a;
     ViewState tab_b;
     char active_tab_view = 'A';
@@ -599,6 +575,27 @@ struct AppState {
     // by RenderRequest at dispatch; serialized to .settings on Ctrl+S.
     // Default-constructed before any source load.
     EngineSettings engine_settings;
+
+    // Project-level trim region. One trim per project (shared across both
+    // A/B tabs), so it lives on AppState rather than per-tab ViewState.
+    // Trim edits participate in the undo domain as part of the
+    // SettingsSnapshot. Seconds for sample-rate stability (consistent with
+    // marker times). has_trim_* distinguishes "no trim set" from "trim set
+    // to 0.0" — both round-trip through .settings. Reset on file load /
+    // revert.
+    double trim_begin_seconds = 0.0;
+    double trim_end_seconds   = 0.0;
+    bool   has_trim_begin     = false;
+    bool   has_trim_end       = false;
+
+    // Brief C: transient selection of the trim boundary stems. A separate
+    // selection channel from the marker sets (selected_markers /
+    // phase_reset_selected) — the two groups are orthogonal and can be
+    // co-selected. Not persisted to .settings; defaults false and resets on
+    // file load. Which group a group-acting gesture (Delete, Ctrl+drag)
+    // targets is decided by last_sel_group.
+    bool   trim_begin_selected = false;
+    bool   trim_end_selected   = false;
 
     // Bottom-strip command prompt. Active only when a close / revert /
     // re-detect gesture fires while a confirmation is required. See Part
@@ -884,7 +881,7 @@ inline const ViewState& active_view_state(const AppState& a) {
 }
 
 // Snapshot the authoring-class settings from `app` (engine_settings +
-// per-tab trim quadruples). Called by Undo's push helpers at push time
+// project-level trim pair). Called by Undo's push helpers at push time
 // so every entry carries-everywhere; also called by do_undo / do_redo
 // when constructing the inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);

@@ -1391,13 +1391,12 @@ GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
     const bool rve = app.render_view_enabled;
 
-    // has-set + selected bits come live from the active A/B tab; render view
+    // has-set + selected bits come live from the project trim; render view
     // forces them off (the render waveform has no trim).
-    const ViewState& tvs = active_view_state(app);
-    out.has_begin      = !rve && tvs.has_trim_begin;
-    out.has_end        = !rve && tvs.has_trim_end;
-    out.begin_selected = out.has_begin && tvs.trim_begin_selected;
-    out.end_selected   = out.has_end   && tvs.trim_end_selected;
+    out.has_begin      = !rve && app.has_trim_begin;
+    out.has_end        = !rve && app.has_trim_end;
+    out.begin_selected = out.has_begin && app.trim_begin_selected;
+    out.end_selected   = out.has_end   && app.trim_end_selected;
 
     // Positions read LIVE from app state (no waveform-cache coupling): trim
     // no longer affects waveform pixels, so they must follow the cursor every

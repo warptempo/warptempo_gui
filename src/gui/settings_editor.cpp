@@ -53,10 +53,9 @@ namespace {
 
 // Keys with a dedicated authoring gesture; rejected by commit() to keep
 // the settings editor as a single canonical entry point for everything
-// else. The per-tab trim keys are rejected because trim is also typed
-// via the canonical `trim_begin` / `trim_end` keys (which route to the
-// active tab); exposing the per-tab spelling here would be a parallel
-// pathway with the same content.
+// else. Trim is handled separately below via the canonical `trim_begin` /
+// `trim_end` keys (which route to the project trim), so it is not listed
+// here.
 bool is_view_state_key(const std::string& k) {
     return k == "tab_a_viewport_start"   ||
            k == "tab_a_zoom"             ||
@@ -66,11 +65,7 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_b_playhead_cursor"  ||
            k == "follow"                 ||
            k == "active_markers_view"    ||
-           k == "playback_speed"         ||
-           k == "tab_a_trim_begin"       ||
-           k == "tab_a_trim_end"         ||
-           k == "tab_b_trim_begin"       ||
-           k == "tab_b_trim_end";
+           k == "playback_speed";
 }
 
 } // namespace
@@ -112,11 +107,9 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // 3b. Typed-field trim keys: parse MM:SS.mmm, write to the active
-    // tab, push a settings-undo entry. The canonical spelling
-    // (trim_begin / trim_end without a tab prefix) always routes to the
-    // active tab; the per-tab spellings hit the view-state rejection
-    // above.
+    // 3b. Typed-field trim keys: parse MM:SS.mmm, write the project trim,
+    // push a settings-undo entry. The canonical spelling (trim_begin /
+    // trim_end) is the only trim key; there is no per-tab spelling.
     if (key == "trim_begin" || key == "trim_end") {
         if (!is_settings_timestamp(value)) {
             app.settings_editor.red = true;
@@ -128,13 +121,12 @@ void GuiSettingsEditor::commit() {
         }
         const double secs = parse_timestamp(value);
         SettingsSnapshot pre = capture_current_settings(app);
-        ViewState& vs = active_view_state(app);
         if (key == "trim_begin") {
-            vs.has_trim_begin     = true;
-            vs.trim_begin_seconds = secs;
+            app.has_trim_begin     = true;
+            app.trim_begin_seconds = secs;
         } else {
-            vs.has_trim_end     = true;
-            vs.trim_end_seconds = secs;
+            app.has_trim_end     = true;
+            app.trim_end_seconds = secs;
         }
         undo.push_settings_undo(std::move(pre));
         std::fprintf(stderr,

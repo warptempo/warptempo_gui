@@ -344,20 +344,16 @@ void Undo::do_undo() {
         active_views.switch_active_tab_view_to(entry.tab);
     }
 
-    // Restore settings (engine_settings + per-tab trim) before the marker
+    // Restore settings (engine_settings + project trim) before the marker
     // swap. Marker entries get their settings field populated from app
     // at push time (carry-everywhere), so the restore is a no-op for
     // marker-only ops. Settings-only entries get the actual pre-edit
     // settings restored here.
-    app.engine_settings             = std::move(entry.settings.engine_settings);
-    app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
-    app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
-    app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;
-    app.tab_a.has_trim_end          = entry.settings.tab_a_has_trim_end;
-    app.tab_b.trim_begin_seconds    = entry.settings.tab_b_trim_begin;
-    app.tab_b.trim_end_seconds      = entry.settings.tab_b_trim_end;
-    app.tab_b.has_trim_begin        = entry.settings.tab_b_has_trim_begin;
-    app.tab_b.has_trim_end          = entry.settings.tab_b_has_trim_end;
+    app.engine_settings    = std::move(entry.settings.engine_settings);
+    app.trim_begin_seconds = entry.settings.trim_begin;
+    app.trim_end_seconds   = entry.settings.trim_end;
+    app.has_trim_begin     = entry.settings.has_trim_begin;
+    app.has_trim_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
@@ -455,15 +451,11 @@ void Undo::do_redo() {
         active_views.switch_active_tab_view_to(entry.tab);
     }
 
-    app.engine_settings             = std::move(entry.settings.engine_settings);
-    app.tab_a.trim_begin_seconds    = entry.settings.tab_a_trim_begin;
-    app.tab_a.trim_end_seconds      = entry.settings.tab_a_trim_end;
-    app.tab_a.has_trim_begin        = entry.settings.tab_a_has_trim_begin;
-    app.tab_a.has_trim_end          = entry.settings.tab_a_has_trim_end;
-    app.tab_b.trim_begin_seconds    = entry.settings.tab_b_trim_begin;
-    app.tab_b.trim_end_seconds      = entry.settings.tab_b_trim_end;
-    app.tab_b.has_trim_begin        = entry.settings.tab_b_has_trim_begin;
-    app.tab_b.has_trim_end          = entry.settings.tab_b_has_trim_end;
+    app.engine_settings    = std::move(entry.settings.engine_settings);
+    app.trim_begin_seconds = entry.settings.trim_begin;
+    app.trim_end_seconds   = entry.settings.trim_end;
+    app.has_trim_begin     = entry.settings.has_trim_begin;
+    app.has_trim_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);

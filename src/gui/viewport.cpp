@@ -30,24 +30,23 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // S-view.
         const int sr = audio.sample_rate();
         const long total = static_cast<long>(audio.total_frames());
-        const ViewState& vs = active_view_state(app);
         const int64_t live_total =
             live_total_frames(app, audio);
-        if (!vs.has_trim_begin && !vs.has_trim_end) {
+        if (!app.has_trim_begin && !app.has_trim_end) {
             return {0, live_total};
         }
         const auto tmap = build_target_view_frame_map(app, sr, total);
         int64_t begin_tgt = 0;
         int64_t end_tgt   = live_total;
-        if (vs.has_trim_begin) {
+        if (app.has_trim_begin) {
             const int64_t begin_src = static_cast<int64_t>(
-                std::nearbyint(vs.trim_begin_seconds *
+                std::nearbyint(app.trim_begin_seconds *
                                static_cast<double>(sr)));
             begin_tgt = to_domain_frame(app, begin_src, tmap);
         }
-        if (vs.has_trim_end) {
+        if (app.has_trim_end) {
             const int64_t end_src = static_cast<int64_t>(
-                std::nearbyint(vs.trim_end_seconds *
+                std::nearbyint(app.trim_end_seconds *
                                static_cast<double>(sr)));
             end_tgt = to_domain_frame(app, end_src, tmap);
         }

@@ -50,33 +50,13 @@ SettingsTrim read_settings_trim(const std::string& path) {
 
         if (key == "trim_begin") {
             if (is_settings_timestamp(value)) {
-                out.has_legacy_begin = true;
-                out.legacy_begin_sec = parse_timestamp(value);
+                out.has_begin = true;
+                out.begin_sec = parse_timestamp(value);
             }
         } else if (key == "trim_end") {
             if (is_settings_timestamp(value)) {
-                out.has_legacy_end = true;
-                out.legacy_end_sec = parse_timestamp(value);
-            }
-        } else if (key == "tab_a_trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_a_begin = true;
-                out.tab_a_begin_sec = parse_timestamp(value);
-            }
-        } else if (key == "tab_a_trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_a_end = true;
-                out.tab_a_end_sec = parse_timestamp(value);
-            }
-        } else if (key == "tab_b_trim_begin") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_b_begin = true;
-                out.tab_b_begin_sec = parse_timestamp(value);
-            }
-        } else if (key == "tab_b_trim_end") {
-            if (is_settings_timestamp(value)) {
-                out.has_tab_b_end = true;
-                out.tab_b_end_sec = parse_timestamp(value);
+                out.has_end = true;
+                out.end_sec = parse_timestamp(value);
             }
         }
     }

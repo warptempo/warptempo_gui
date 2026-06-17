@@ -100,13 +100,10 @@ void GuiTargetRender::dispatch_render_now() {
     req.markers           = app.warpmarkers.markers();
     req.phase_resets      = app.phase_reset_markers.markers();
     req.engine_settings   = app.engine_settings;
-    {
-        const ViewState& vs = active_view_state(app);
-        req.has_trim_begin  = vs.has_trim_begin;
-        req.trim_begin_sec  = vs.trim_begin_seconds;
-        req.has_trim_end    = vs.has_trim_end;
-        req.trim_end_sec    = vs.trim_end_seconds;
-    }
+    req.has_trim_begin  = app.has_trim_begin;
+    req.trim_begin_sec  = app.trim_begin_seconds;
+    req.has_trim_end    = app.has_trim_end;
+    req.trim_end_sec    = app.trim_end_seconds;
     for (const auto& m : app.phase_reset_markers.markers()) {
         if (m.disabled) continue;
         req.phase_reset_frames.push_back(static_cast<int64_t>(
@@ -198,14 +195,13 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     // Compute only after target_buffer_frames is set so a failed/empty buffer
     // does not leave a stale anchor.
     app.target_buffer_start_frame = 0;
-    const ViewState& vs = active_view_state(app);
-    if (vs.has_trim_begin && app.target_buffer_frames > 0 &&
+    if (app.has_trim_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto tmap = build_target_view_frame_map(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         const int64_t trim_begin_frame = static_cast<int64_t>(
-            std::nearbyint(vs.trim_begin_seconds *
+            std::nearbyint(app.trim_begin_seconds *
                            static_cast<double>(audio.sample_rate())));
         const double tgt = map_source_to_target(
             static_cast<size_t>(trim_begin_frame < 0

@@ -84,10 +84,8 @@ enum class SettingKind {
     ActiveTabViewChar,
     PlaybackSpeedFloat,
     FollowFlag,
-    OptionalTrimBegin_A,
-    OptionalTrimEnd_A,
-    OptionalTrimBegin_B,
-    OptionalTrimEnd_B,
+    OptionalTrimBegin,
+    OptionalTrimEnd,
     ReadOnly_A,
     ReadOnly_B,
     ViewportStart_A,
@@ -125,10 +123,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    { "tab_a_trim_begin",            SettingKind::OptionalTrimBegin_A,  EngineField::Title,                   nullptr },
-    { "tab_a_trim_end",              SettingKind::OptionalTrimEnd_A,    EngineField::Title,                   nullptr },
-    { "tab_b_trim_begin",            SettingKind::OptionalTrimBegin_B,  EngineField::Title,                   nullptr },
-    { "tab_b_trim_end",              SettingKind::OptionalTrimEnd_B,    EngineField::Title,                   nullptr },
+    { "trim_begin",                  SettingKind::OptionalTrimBegin,    EngineField::Title,                   nullptr },
+    { "trim_end",                    SettingKind::OptionalTrimEnd,      EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
@@ -353,16 +349,11 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
     }
 
     // Trim bounds: parsed by the parser library's reader so the map and
-    // render CLIs share one implementation with the GUI. The per-tab vs
-    // legacy precedence still lives in file_loader's apply step, which reads
-    // these same ParsedSettings fields.
+    // render CLIs share one implementation with the GUI. A single
+    // project-level trim, applied flat in file_loader's apply step.
     const SettingsTrim t = read_settings_trim(path);
-    out.has_trim_begin       = t.has_legacy_begin; out.trim_begin       = t.legacy_begin_sec;
-    out.has_trim_end         = t.has_legacy_end;   out.trim_end         = t.legacy_end_sec;
-    out.has_tab_a_trim_begin = t.has_tab_a_begin;  out.tab_a_trim_begin = t.tab_a_begin_sec;
-    out.has_tab_a_trim_end   = t.has_tab_a_end;    out.tab_a_trim_end   = t.tab_a_end_sec;
-    out.has_tab_b_trim_begin = t.has_tab_b_begin;  out.tab_b_trim_begin = t.tab_b_begin_sec;
-    out.has_tab_b_trim_end   = t.has_tab_b_end;    out.tab_b_trim_end   = t.tab_b_end_sec;
+    out.has_trim_begin = t.has_begin; out.trim_begin = t.begin_sec;
+    out.has_trim_end   = t.has_end;   out.trim_end   = t.end_sec;
     return true;
 }
 
@@ -478,6 +469,10 @@ bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,
     const ViewState& tab_b,
+    bool has_trim_begin,
+    double trim_begin_seconds,
+    bool has_trim_end,
+    double trim_end_seconds,
     bool follow,
     char active_audio_view,
     char active_markers_view,
@@ -525,35 +520,19 @@ bool write_settings_file(
                 data += follow ? "true" : "false";
                 data += '\n';
                 break;
-            case SettingKind::OptionalTrimBegin_A:
-                if (tab_a.has_trim_begin) {
+            case SettingKind::OptionalTrimBegin:
+                if (has_trim_begin) {
                     data += desc.key;
                     data += '=';
-                    data += format_timestamp(tab_a.trim_begin_seconds);
+                    data += format_timestamp(trim_begin_seconds);
                     data += '\n';
                 }
                 break;
-            case SettingKind::OptionalTrimEnd_A:
-                if (tab_a.has_trim_end) {
+            case SettingKind::OptionalTrimEnd:
+                if (has_trim_end) {
                     data += desc.key;
                     data += '=';
-                    data += format_timestamp(tab_a.trim_end_seconds);
-                    data += '\n';
-                }
-                break;
-            case SettingKind::OptionalTrimBegin_B:
-                if (tab_b.has_trim_begin) {
-                    data += desc.key;
-                    data += '=';
-                    data += format_timestamp(tab_b.trim_begin_seconds);
-                    data += '\n';
-                }
-                break;
-            case SettingKind::OptionalTrimEnd_B:
-                if (tab_b.has_trim_end) {
-                    data += desc.key;
-                    data += '=';
-                    data += format_timestamp(tab_b.trim_end_seconds);
+                    data += format_timestamp(trim_end_seconds);
                     data += '\n';
                 }
                 break;
