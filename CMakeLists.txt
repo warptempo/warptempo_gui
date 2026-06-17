@@ -29,6 +29,7 @@ add_library(warptempo_parser STATIC
     src/parser/phase_reset_markers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/timemap.cpp
+    src/parser/recipe_output.cpp
 )
 target_include_directories(warptempo_parser
     PUBLIC
@@ -181,6 +182,18 @@ if(WARPTEMPO_BUILD_GUI)
         COMPILE_FLAGS "-w")
 endif()
 
+# ============================================================
+#  warptempo_recipe — headless recipe emitter (parser-only).
+#  Reads <source-stem>.{warpmarkers,settings} and writes the framemap /
+#  tempomap artifact the GUI would for the same project. No engine, no audio.
+# ============================================================
+option(WARPTEMPO_BUILD_RECIPE_CLI "Build the headless recipe (framemap/tempomap) CLI" OFF)
+if(WARPTEMPO_BUILD_RECIPE_CLI)
+    add_executable(warptempo_recipe src/cli/recipe_main.cpp)
+    target_include_directories(warptempo_recipe PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_recipe PRIVATE warptempo_parser)
+endif()
+
 # --- Compiler Optimizations ---
 # Applied identically to every target that exists in this configuration. The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
@@ -189,6 +202,9 @@ endif()
 set(WARPTEMPO_OPT_TARGETS warptempo_parser warptempo_engine)
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
+endif()
+if(WARPTEMPO_BUILD_RECIPE_CLI)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_recipe)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})

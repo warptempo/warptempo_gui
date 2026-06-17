@@ -5,6 +5,7 @@
 #include "audio.h"
 #include "render.h"
 #include "phase_reset_markers.h"
+#include "recipe_output.h"
 #include "settings_io.h"
 #include "timemap.h"
 
@@ -37,38 +38,9 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-bool write_standard_frame_map(const std::string& path,
-                            const std::vector<FrameMapSegment>& segs,
-                            bool drop_zero_zero) {
-    std::ofstream of(path);
-    if (!of) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: could not write timemap '%s'\n",
-            path.c_str());
-        return false;
-    }
-    for (const auto& s : segs) {
-        if (drop_zero_zero && s.src_frame == 0 && s.tgt_frame == 0) continue;
-        of << s.src_frame << " " << s.tgt_frame << "\n";
-    }
-    return true;
-}
-
-bool write_midi_tempomap(const std::string& path,
-                         const std::vector<TempomapEntry>& entries) {
-    std::ofstream of(path);
-    if (!of) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: could not write tempomap '%s'\n",
-            path.c_str());
-        return false;
-    }
-    of << std::fixed << std::setprecision(16);
-    for (const auto& e : entries) {
-        of << e.target_time_sec << " " << e.multiplier << "\n";
-    }
-    return true;
-}
+// write_standard_frame_map and write_midi_tempomap moved to the parser
+// (recipe_output.cpp) so the GUI render pipeline and the headless recipe CLI
+// emit byte-identical artifacts from one implementation.
 
 // resolve_markers_for_render moved to timemap.cpp (public function) so the
 // target-view paint can reach it without crossing the render_pipeline
