@@ -195,6 +195,19 @@ if(WARPTEMPO_BUILD_MAP_CLI)
     target_link_libraries(warptempo_map PRIVATE warptempo_parser)
 endif()
 
+# ============================================================
+#  warptempo_render — headless wav render CLI (parser + engine).
+#  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes the
+#  warped wav the GUI would render for the same project. Runs the full PGHI
+#  engine; output_format must be wav (warptempo_map covers framemap/tempomap).
+# ============================================================
+option(WARPTEMPO_BUILD_RENDER_CLI "Build the headless wav render CLI" OFF)
+if(WARPTEMPO_BUILD_RENDER_CLI)
+    add_executable(warptempo_render src/cli/render_main.cpp)
+    target_include_directories(warptempo_render PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_render PRIVATE warptempo_parser warptempo_engine)
+endif()
+
 # --- Compiler Optimizations ---
 # Applied identically to every target that exists in this configuration. The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
@@ -206,6 +219,9 @@ if(WARPTEMPO_BUILD_GUI)
 endif()
 if(WARPTEMPO_BUILD_MAP_CLI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_map)
+endif()
+if(WARPTEMPO_BUILD_RENDER_CLI)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_render)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})
