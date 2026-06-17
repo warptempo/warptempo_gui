@@ -208,6 +208,20 @@ if(WARPTEMPO_BUILD_RENDER_CLI)
     target_link_libraries(warptempo_render PRIVATE warptempo_parser warptempo_engine)
 endif()
 
+# ============================================================
+#  warptempo_synthesis — engine-only synthesis driver.
+#  Reads a prebuilt framemap [+ resetmap] + source wav and writes the warped
+#  wav by running the PGHI engine directly. Links libwarptempo_engine ALONE —
+#  no parser archive: the map readers are header-only (frame_map.h) and the
+#  one-hop phase-reset displacement is inlined. Trim is not an engine concern.
+# ============================================================
+option(WARPTEMPO_BUILD_SYNTHESIS_CLI "Build the headless engine-only synthesis CLI" OFF)
+if(WARPTEMPO_BUILD_SYNTHESIS_CLI)
+    add_executable(warptempo_synthesis src/cli/synthesis_main.cpp)
+    target_include_directories(warptempo_synthesis PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_synthesis PRIVATE warptempo_engine)
+endif()
+
 # --- Compiler Optimizations ---
 # Applied identically to every target that exists in this configuration. The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
@@ -222,6 +236,9 @@ if(WARPTEMPO_BUILD_MAP_CLI)
 endif()
 if(WARPTEMPO_BUILD_RENDER_CLI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_render)
+endif()
+if(WARPTEMPO_BUILD_SYNTHESIS_CLI)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_synthesis)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})
