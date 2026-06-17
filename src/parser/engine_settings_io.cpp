@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <expected>
 #include <fstream>
 #include <limits>
 #include <set>
@@ -157,63 +158,43 @@ std::optional<std::string> format_engine_setting_value(
     return std::nullopt;
 }
 
-std::optional<EngineSettings> read_engine_settings_from_file(
+std::expected<EngineSettings, std::string> read_engine_settings_from_file(
         const std::string& path) {
-    auto report = [](const std::string& reason) {
-        std::fprintf(stderr,
-            "warptempo_gui: engine settings rejected: %s\n", reason.c_str());
-    };
-
     EngineSettings es{};
-    bool any_error = false;
     std::set<std::string> seen;
 
     std::ifstream f(path);
     if (!f) {
-        report("could not open '" + path + "'");
-        any_error = true;
-    } else {
-        std::string line;
-        while (std::getline(f, line)) {
-            const std::string trimmed = trim_ws(line);
-            if (trimmed.empty()) continue;
-            if (trimmed[0] == '#') continue;
-            const size_t eq = trimmed.find('=');
-            if (eq == std::string::npos) continue;
-            const std::string key   = trim_ws(trimmed.substr(0, eq));
-            const std::string value = trim_ws(trimmed.substr(eq + 1));
-            if (key.empty()) continue;
+        return std::unexpected("could not open '" + path + "'");
+    }
+    std::string line;
+    while (std::getline(f, line)) {
+        const std::string trimmed = trim_ws(line);
+        if (trimmed.empty()) continue;
+        if (trimmed[0] == '#') continue;
+        const size_t eq = trimmed.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string key   = trim_ws(trimmed.substr(0, eq));
+        const std::string value = trim_ws(trimmed.substr(eq + 1));
+        if (key.empty()) continue;
 
-            // Ignore anything that is not a canonical engine key:
-            // view-state keys, legacy keys, typos, foreign keys.
-            if (!is_canonical_engine_key(key)) continue;
+        // Ignore anything that is not a canonical engine key:
+        // view-state keys, legacy keys, typos, foreign keys.
+        if (!is_canonical_engine_key(key)) continue;
 
-            if (!seen.insert(key).second) {
-                report("duplicate key '" + key + "'");
-                any_error = true;
-                continue;
-            }
-            std::string reason;
-            if (!validate_engine_setting(key, value, es, reason)) {
-                report("key '" + key + "' has invalid value '" + value +
-                       "': " + reason);
-                any_error = true;
-                continue;
-            }
+        if (!seen.insert(key).second) {
+            return std::unexpected("duplicate key '" + key + "'");
+        }
+        std::string reason;
+        if (!validate_engine_setting(key, value, es, reason)) {
+            return std::unexpected("key '" + key + "' has invalid value '" +
+                                   value + "': " + reason);
         }
     }
 
-    auto require = [&](const char* key) {
-        if (seen.count(key) == 0) {
-            report(std::string("missing required key '") + key + "'");
-            any_error = true;
-        }
-    };
-    require("title");
-    require("output_format");
-    require("scale");
-    require("limiter");
-
-    if (any_error) return std::nullopt;
+    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
+        if (seen.count(k) == 0)
+            return std::unexpected(std::string("missing required key '") + k + "'");
+    }
     return es;
 }

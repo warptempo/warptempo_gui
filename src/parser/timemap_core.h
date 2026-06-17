@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <string>
 #include <vector>
 
@@ -75,12 +76,15 @@ struct FrameMapRealRange {
 };
 FrameMapRealRange real_segments(const TimemapBuildResult& r);
 
-// Returns true on success; false on any validation failure (message logged
-// to stderr). Failure conditions: tempo > 9.99, tempo <= 0,
-// src_frame > total_frames, src_frame - prev_src_frame < 1, undefined label
-// reference, duplicate label definition, final_multiplier > 9.9999 on label
-// refs, begin_time at 00:00.000.
-bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out);
+// Returns the built TimemapBuildResult on success, or std::unexpected carrying
+// the first violated condition (a concise lowercase reason; callers add their
+// own context prefix). Does not log. Failure conditions, in check order:
+// invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
+// src_frame > total_frames, src_frame - prev_src_frame < 1, tempo > 9.99,
+// tempo <= 0, duplicate label definition, undefined label reference,
+// final_multiplier > 9.9999 on label refs.
+std::expected<TimemapBuildResult, std::string> build_timemaps(
+    const TimemapBuildInput& in);
 
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver

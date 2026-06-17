@@ -273,8 +273,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (!es) {
             std::fprintf(stderr,
                 "warptempo_gui: source load aborted: invalid engine "
-                "settings in '%s'\n",
-                app.settings_path.c_str());
+                "settings in '%s': %s\n",
+                app.settings_path.c_str(), es.error().c_str());
             revert_to_blank();
             return false;
         }

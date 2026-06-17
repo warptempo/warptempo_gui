@@ -33,9 +33,10 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     tmin.trim_begin_sec = 0.0;
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
-    TimemapBuildResult tmres;
     std::vector<FrameMapSegment> out;
-    if (!build_timemaps(tmin, tmres)) return out;
+    auto r = build_timemaps(tmin);
+    if (!r) return out;
+    const TimemapBuildResult& tmres = *r;
     out.reserve(tmres.standard.size());
     for (const auto& s : tmres.standard) {
         out.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});

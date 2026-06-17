@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <optional>
 #include <string>
 
@@ -75,10 +76,11 @@ std::optional<std::string> format_engine_setting_value(
 // Strict deserializer. Walks `path` looking for canonical engine-key
 // lines and returns the populated typed struct. Lines whose key is not a
 // canonical engine key are ignored (view-state keys, unknown keys, blank
-// and comment lines). On any violation of an engine line (duplicate key,
-// invalid value, missing required key, file not openable) returns
-// std::nullopt and logs every violation to stderr as
-// `warptempo_gui: engine settings rejected: <reason>`. Required keys are
-// title, output_format, scale, limiter; bpm, notes, url, and cover are optional.
-std::optional<EngineSettings> read_engine_settings_from_file(
+// and comment lines). Performs no I/O beyond reading `path`: it does not
+// log. On the first violation it encounters (file not openable, duplicate
+// key, invalid value, or — after the scan — a missing required key) it
+// returns std::unexpected carrying that one reason; the caller decides how
+// to surface it. Required keys are title, output_format, scale, limiter;
+// bpm, notes, url, and cover are optional.
+std::expected<EngineSettings, std::string> read_engine_settings_from_file(
     const std::string& path);

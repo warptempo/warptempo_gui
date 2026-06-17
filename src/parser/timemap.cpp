@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <expected>
 #include <iostream>
 #include <map>
 #include <string>
@@ -198,8 +199,9 @@ std::string compute_hover_popup_text(
     return "";
 }
 
-bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
-    out = TimemapBuildResult{};
+std::expected<TimemapBuildResult, std::string> build_timemaps(
+    const TimemapBuildInput& in) {
+    TimemapBuildResult out;
 
     const auto&  markers      = in.markers;
     const double scale        = in.scale;
@@ -207,8 +209,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
     const long   total_frames = in.total_frames;
 
     if (sample_rate <= 0 || total_frames <= 0) {
-        std::cerr << "warptempo_gui: timemap error: invalid source audio metadata\n";
-        return false;
+        return std::unexpected("invalid source audio metadata");
     }
 
     // Trim range comes from .settings (TimemapBuildInput::trim_*), no
@@ -234,13 +235,12 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
             : static_cast<double>(total_frames);
 
         if (src_frame > static_cast<double>(total_frames)) {
-            std::cerr << "warptempo_gui: timemap error: marker time exceeds source length\n";
-            return false;
+            return std::unexpected("marker time exceeds source length at marker "
+                                   + std::to_string(i));
         }
         if (src_frame - src_f_prev < 1.0) {
-            std::cerr << "warptempo_gui: timemap error: marker segment < 1 frame at index "
-                      << i << "\n";
-            return false;
+            return std::unexpected("marker segment < 1 frame at marker "
+                                   + std::to_string(i));
         }
 
         const auto& m = markers[i];
@@ -251,14 +251,13 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
             if (tempo_val > 9.99) {
-                std::cerr << "warptempo_gui: timemap error: tempo > 9.99 at marker "
-                          << i << "\n";
-                return false;
+                return std::unexpected("tempo " + std::to_string(tempo_val)
+                                       + " exceeds 9.99 at marker "
+                                       + std::to_string(i));
             }
             if (tempo_val <= 0.0) {
-                std::cerr << "warptempo_gui: timemap error: tempo <= 0 at marker "
-                          << i << "\n";
-                return false;
+                return std::unexpected("tempo " + std::to_string(tempo_val)
+                                       + " <= 0 at marker " + std::to_string(i));
             }
 
             double delta_src = src_frame - src_f_prev;
@@ -267,9 +266,8 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
 
             if (!m.label_def.empty()) {
                 if (label_cache.count(m.label_def)) {
-                    std::cerr << "warptempo_gui: timemap error: duplicate label definition '"
-                              << m.label_def << "'\n";
-                    return false;
+                    return std::unexpected("duplicate label definition: "
+                                           + m.label_def);
                 }
                 LabelCacheEntry e;
                 e.delta_tgt   = delta_tgt;
@@ -302,9 +300,8 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         if (!m.label_ref.empty()) {
             auto it = label_cache.find(m.label_ref);
             if (it == label_cache.end()) {
-                std::cerr << "warptempo_gui: timemap error: undefined label reference '"
-                          << m.label_ref << "'\n";
-                return false;
+                return std::unexpected("undefined label reference: "
+                                       + m.label_ref);
             }
             const LabelCacheEntry& lbl = it->second;
             target_frame = tgt_f_prev + lbl.delta_tgt;
@@ -321,9 +318,9 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
                 final_multiplier = s_val * multiplier;
             }
             if (final_multiplier > 9.9999) {
-                std::cerr << "warptempo_gui: timemap error: label final multiplier > 9.9999 at marker "
-                          << i << " (label '" << m.label_ref << "')\n";
-                return false;
+                return std::unexpected("label final multiplier > 9.9999 at marker "
+                                       + std::to_string(i) + " (label: "
+                                       + m.label_ref + ")");
             }
         } else {
             double tempo_val = effective_tempo(m);
@@ -471,7 +468,7 @@ bool build_timemaps(const TimemapBuildInput& in, TimemapBuildResult& out) {
         out.trim_end_frame   = static_cast<size_t>(end_frame);
     }
 
-    return true;
+    return out;
 }
 
 FrameMapRealRange real_segments(const TimemapBuildResult& r) {

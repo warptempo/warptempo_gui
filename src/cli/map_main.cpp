@@ -56,9 +56,13 @@ int main(int argc, char** argv) {
     EngineSettings es;    // scale 1.0, output_format "wav", title "" by default
     SettingsTrim   trim;  // all-false => untrimmed when .settings is absent
     if (std::filesystem::exists(set_path)) {
-        std::optional<EngineSettings> parsed =
-            read_engine_settings_from_file(set_path);
-        if (!parsed) return 1;  // reader already logged the violations
+        auto parsed = read_engine_settings_from_file(set_path);
+        if (!parsed) {
+            std::fprintf(stderr,
+                "warptempo_map: engine settings rejected: %s\n",
+                parsed.error().c_str());
+            return 1;
+        }
         es = *parsed;
         trim = read_settings_trim(set_path);
     }
@@ -142,11 +146,13 @@ int main(int argc, char** argv) {
     in.has_trim_end   = trim.has_end;
     in.trim_end_sec   = trim.end_sec;
 
-    TimemapBuildResult out;
-    if (!build_timemaps(in, out)) {
-        std::fprintf(stderr, "warptempo_map: timemap build failed\n");
+    auto r = build_timemaps(in);
+    if (!r) {
+        std::fprintf(stderr,
+            "warptempo_map: timemap build failed: %s\n", r.error().c_str());
         return 1;
     }
+    TimemapBuildResult out = std::move(*r);
 
     // --- output path: -o, else the sibling convention ---
     if (out_path.empty()) {

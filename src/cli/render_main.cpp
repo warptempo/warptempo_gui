@@ -64,9 +64,13 @@ int main(int argc, char** argv) {
     EngineSettings es;    // scale 1.0, output_format "wav", limiter true, title ""
     SettingsTrim   trim;  // all-false => untrimmed when .settings is absent
     if (std::filesystem::exists(set_path)) {
-        std::optional<EngineSettings> parsed =
-            read_engine_settings_from_file(set_path);
-        if (!parsed) return 1;  // reader already logged the violations
+        auto parsed = read_engine_settings_from_file(set_path);
+        if (!parsed) {
+            std::fprintf(stderr,
+                "warptempo_render: engine settings rejected: %s\n",
+                parsed.error().c_str());
+            return 1;
+        }
         es = *parsed;
         trim = read_settings_trim(set_path);
     }
@@ -155,11 +159,13 @@ int main(int argc, char** argv) {
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
 
-    TimemapBuildResult tmfull;
-    if (!build_timemaps(tmin, tmfull)) {
-        std::fprintf(stderr, "warptempo_render: timemap build failed\n");
+    auto r = build_timemaps(tmin);
+    if (!r) {
+        std::fprintf(stderr,
+            "warptempo_render: timemap build failed: %s\n", r.error().c_str());
         return 1;
     }
+    TimemapBuildResult tmfull = std::move(*r);
 
     // --- absolute source-frame trim bounds (nearbyint per the rounding rule;
     // defaults span the full extent). ---

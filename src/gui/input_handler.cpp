@@ -3647,9 +3647,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     tmin.trim_begin_sec = 0.0;
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
-    TimemapBuildResult tmres;
     std::vector<FrameMapSegment> tmap;
-    if (build_timemaps(tmin, tmres)) {
+    auto r = build_timemaps(tmin);
+    if (r) {
+        const TimemapBuildResult& tmres = *r;
         tmap.reserve(tmres.standard.size());
         for (const auto& s : tmres.standard) {
             tmap.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});

@@ -396,7 +396,9 @@ std::optional<EngineSettings> read_rendersettings_engine_block(
     // engine keys are read, every non-engine line (the three view-state
     // keys and anything else) is ignored. read_rendersettings_view_state
     // is the reader for the view-state side.
-    return read_engine_settings_from_file(path.string());
+    auto r = read_engine_settings_from_file(path.string());
+    if (!r) return std::nullopt;
+    return *r;
 }
 
 bool write_rendersettings(const std::filesystem::path& path,

@@ -106,11 +106,14 @@ RenderOutcome do_render(const RenderRequest& req,
     tmin.has_trim_end   = req.has_trim_end;
     tmin.trim_end_sec   = req.trim_end_sec;
 
-    TimemapBuildResult tmres;
-    if (!build_timemaps(tmin, tmres)) {
-        std::fprintf(stderr, "warptempo_gui: render error: timemap build failed\n");
+    auto r = build_timemaps(tmin);
+    if (!r) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: timemap build failed: %s\n",
+            r.error().c_str());
         return RenderOutcome::Failed;
     }
+    TimemapBuildResult tmres = std::move(*r);
 
     // Full (untrimmed) timemap for the wav engine path. A trimmed wav render
     // hands the engine the canonical untrimmed frame map and windows it,
@@ -127,12 +130,14 @@ RenderOutcome do_render(const RenderRequest& req,
     tmin_full.trim_begin_sec = 0.0;
     tmin_full.has_trim_end   = false;
     tmin_full.trim_end_sec   = 0.0;
-    TimemapBuildResult tmfull;
-    if (!build_timemaps(tmin_full, tmfull)) {
+    auto rfull = build_timemaps(tmin_full);
+    if (!rfull) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: full timemap build failed\n");
+            "warptempo_gui: render error: full timemap build failed: %s\n",
+            rfull.error().c_str());
         return RenderOutcome::Failed;
     }
+    TimemapBuildResult tmfull = std::move(*rfull);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
