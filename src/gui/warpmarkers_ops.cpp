@@ -732,7 +732,7 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
     for (int idx : app.selected_markers) {
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
-        m->time_seconds += delta;
+        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
     return true;
 }
@@ -877,7 +877,7 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     for (int idx : app.selected_markers) {
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
-        m->time_seconds += delta;
+        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
     undo.push_undo(std::move(pre_state), OpKind::Move, hint_last);
     undo.recompute_dirty();

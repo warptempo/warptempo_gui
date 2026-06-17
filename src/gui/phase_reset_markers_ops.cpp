@@ -252,7 +252,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
         if (!m) continue;
-        m->time_seconds += delta;
+        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
     undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
     selection.sync_playhead_to_last_selected();
@@ -299,7 +299,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     for (int idx : app.selected_markers) {
         GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
         if (!m) continue;
-        m->time_seconds += delta;
+        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
     undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
     undo.recompute_dirty();
