@@ -174,49 +174,6 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
     }
 }
 
-// Atomic write: tmp + fsync + rename, preserving the existing file's
-// permission bits when present. Same shape as the inline I/O inside
-// write_settings_file. Shared by write_rendersettings and
-// update_rendersettings_view_state.
-bool atomic_write_string_to_path(const std::string& path,
-                                 const std::string& data) {
-    mode_t mode = 0644;
-    struct stat st;
-    if (::stat(path.c_str(), &st) == 0) mode = st.st_mode & 07777;
-
-    const std::string tmp_path = path + ".tmp";
-    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
-    if (fd < 0) return false;
-
-    size_t written = 0;
-    while (written < data.size()) {
-        const ssize_t n = ::write(fd, data.data() + written,
-                                  data.size() - written);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            ::close(fd);
-            ::unlink(tmp_path.c_str());
-            return false;
-        }
-        written += static_cast<size_t>(n);
-    }
-    if (::fsync(fd) != 0) {
-        ::close(fd);
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    if (::close(fd) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    ::chmod(tmp_path.c_str(), mode);
-    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    return true;
-}
-
 // Append the engine block (the eight canonical engine keys, in
 // kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file) to `out`. Shared by write_rendersettings.
@@ -255,6 +212,49 @@ void append_view_state_block(std::string& out,
 }
 
 } // namespace
+
+// Atomic write: tmp + fsync + rename, preserving the existing file's
+// permission bits when present (0644 fallback). Shared by
+// write_rendersettings, update_rendersettings_view_state,
+// write_settings_file, and the warp/phase-reset marker writers.
+bool atomic_write_string_to_path(const std::string& path,
+                                 const std::string& data) {
+    mode_t mode = 0644;
+    struct stat st;
+    if (::stat(path.c_str(), &st) == 0) mode = st.st_mode & 07777;
+
+    const std::string tmp_path = path + ".tmp";
+    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
+    if (fd < 0) return false;
+
+    size_t written = 0;
+    while (written < data.size()) {
+        const ssize_t n = ::write(fd, data.data() + written,
+                                  data.size() - written);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            ::close(fd);
+            ::unlink(tmp_path.c_str());
+            return false;
+        }
+        written += static_cast<size_t>(n);
+    }
+    if (::fsync(fd) != 0) {
+        ::close(fd);
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    if (::close(fd) != 0) {
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    ::chmod(tmp_path.c_str(), mode);
+    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
+        ::unlink(tmp_path.c_str());
+        return false;
+    }
+    return true;
+}
 
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
@@ -584,39 +584,5 @@ bool write_settings_file(
         }
     }
 
-    mode_t mode = 0644;
-    struct stat st;
-    if (::stat(path.c_str(), &st) == 0) mode = st.st_mode & 07777;
-
-    const std::string tmp_path = path + ".tmp";
-    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
-    if (fd < 0) return false;
-
-    size_t written = 0;
-    while (written < data.size()) {
-        const ssize_t n = ::write(fd, data.data() + written,
-                                  data.size() - written);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            ::close(fd);
-            ::unlink(tmp_path.c_str());
-            return false;
-        }
-        written += static_cast<size_t>(n);
-    }
-    if (::fsync(fd) != 0) {
-        ::close(fd);
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    if (::close(fd) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    ::chmod(tmp_path.c_str(), mode);
-    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    return true;
+    return atomic_write_string_to_path(path, data);
 }

@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # its Wayland/Cairo/JACK toolchain are optional, so the libraries can be built
 # on a headless host that has none of the GUI platform packages installed.
 # Turning this OFF skips all GUI dependency discovery and the warptempo_gui
-# executable. Brief 10 adds the headless CLI executables under their own
-# options following this same pattern.
+# executable while still building the two static archives and the headless
+# CLI executables.
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 
 # --- Dependencies shared by the libraries (always required) ---

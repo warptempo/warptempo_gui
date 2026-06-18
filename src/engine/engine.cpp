@@ -43,6 +43,9 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     // (synthesis.cpp) are the parallelism; FFTW internal threads on a single
     // 8192 transform are net-negative and would nest.
     if (fftw_init_threads()) {
+        // Single-thread FFTW planning is a determinism invariant: a multi-threaded
+        // transform splits the work nondeterministically, breaking bit-identical
+        // output. Must stay 1.
         fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
     } else {

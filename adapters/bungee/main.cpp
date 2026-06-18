@@ -12,13 +12,13 @@
 #define BUNGEE_VERSION "unknown"
 #endif
 
-struct TimeMapPoint {
+struct FrameMapPoint {
     double source_frame;
     double target_frame;
 };
 
 // Helper: Calculates how many Output Frames are needed to render the input
-long calculate_output_duration(long total_input_frames, const std::vector<TimeMapPoint>& map) {
+long calculate_output_duration(long total_input_frames, const std::vector<FrameMapPoint>& map) {
     if (map.empty()) return total_input_frames;
     if (total_input_frames <= map.front().source_frame) return total_input_frames;
 
@@ -41,7 +41,7 @@ long calculate_output_duration(long total_input_frames, const std::vector<TimeMa
     return (long)(last.target_frame + ((total_input_frames - last.source_frame) * (last_out / last_in)));
 }
 
-void get_timemap_status(double target_frame, const std::vector<TimeMapPoint>& map, double& out_source_frame, double& out_speed) {
+void get_map_status(double target_frame, const std::vector<FrameMapPoint>& map, double& out_source_frame, double& out_speed) {
     if (map.empty()) {
         out_source_frame = target_frame;
         out_speed = 1.0;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <input> <timemap.txt> <output.wav>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input> <map.warpframemap> <output.wav>" << std::endl;
         return 1;
     }
 
@@ -124,26 +124,26 @@ int main(int argc, char* argv[]) {
     int sample_rate = sfinfo.samplerate;
     int channels = sfinfo.channels;
 
-    std::vector<TimeMapPoint> timemap;
+    std::vector<FrameMapPoint> framemap;
     std::ifstream mapfile(argv[2]);
     double src, tgt;
     while (mapfile >> src >> tgt) {
-        timemap.push_back({src, tgt});
+        framemap.push_back({src, tgt});
     }
-    
-    std::sort(timemap.begin(), timemap.end(), [](const TimeMapPoint& a, const TimeMapPoint& b) {
+
+    std::sort(framemap.begin(), framemap.end(), [](const FrameMapPoint& a, const FrameMapPoint& b) {
         return a.target_frame < b.target_frame;
     });
     
     // --- NEW AUTO-ANCHOR FIX ---
     // If the map is missing the start point (0->0), we cannot calculate speed.
     // We implicitly add it here to ensure we always have at least 2 points (Start and End).
-    if (timemap.empty() || timemap.front().target_frame > 0.0) {
-        timemap.insert(timemap.begin(), {0.0, 0.0});
+    if (framemap.empty() || framemap.front().target_frame > 0.0) {
+        framemap.insert(framemap.begin(), {0.0, 0.0});
     }
 
     // --- AUTO-CALCULATE OUTPUT DURATION ---
-    long total_job_frames = calculate_output_duration(sfinfo.frames, timemap);
+    long total_job_frames = calculate_output_duration(sfinfo.frames, framemap);
     
     // Update output info to match this duration
     SF_INFO out_sfinfo = sfinfo; 
@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
         }
         
         double mapped_source_pos, mapped_speed;
-        get_timemap_status((double)current_output_frames_generated, timemap, mapped_source_pos, mapped_speed);
+        get_map_status((double)current_output_frames_generated, framemap, mapped_source_pos, mapped_speed);
         
         request.speed = mapped_speed;
         request.position = mapped_source_pos; 

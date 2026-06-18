@@ -291,7 +291,7 @@ void Undo::do_undo() {
     // Render view is read-only: undo and redo are silent no-ops so the
     // underlying source-view marker lists are not mutated behind the
     // user's back while the UI says render view is read-only.
-    if (app.render_view_enabled) return;
+    if (app.render_view.enabled) return;
     // Peek the entry on top of the undo stack: if the tab it targets is
     // currently read-only, undo is a silent no-op. Read-only is a reversible
     // per-tab toggle, so honored-ness is decided by the target tab's state
@@ -405,7 +405,7 @@ void Undo::do_undo() {
 
 void Undo::do_redo() {
     if (app.history.redo_stack.empty()) return;
-    if (app.render_view_enabled) return;
+    if (app.render_view.enabled) return;
     // Symmetric to do_undo: peek the entry on top of the redo stack and bail
     // silently if its target tab is currently read-only. Entry stays on the
     // stack; unlocking the tab restores reachability.

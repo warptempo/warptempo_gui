@@ -12,17 +12,17 @@ using namespace std;
 
 const int BUFFER_SIZE = 2048;
 
-struct TimeMapPoint {
+struct FrameMapPoint {
     long src_frame;
     long tgt_frame;
 };
 
-// [UPDATED] Loader for integer-based .timemap (from parser)
-vector<TimeMapPoint> loadTimeMap(const string& filename) {
-    vector<TimeMapPoint> map;
+// Loader for integer-based .warpframemap (from parser)
+vector<FrameMapPoint> loadFrameMap(const string& filename) {
+    vector<FrameMapPoint> map;
     ifstream infile(filename);
     if (!infile.is_open()) {
-        cerr << "Error: Could not open timemap: " << filename << endl;
+        cerr << "Error: Could not open frame map: " << filename << endl;
         exit(1);
     }
     
@@ -36,7 +36,7 @@ vector<TimeMapPoint> loadTimeMap(const string& filename) {
     
     // Safety check: Ensure map has at least 2 points to process a segment
     if (map.size() < 2) {
-        cerr << "Warning: Timemap too short, adding default end point." << endl;
+        cerr << "Warning: Frame map too short, adding default end point." << endl;
         if (map.empty() || (map.back().src_frame == 0 && map.back().tgt_frame == 0)) {
              // Fallback if file was empty or only had 0 0
              map.push_back({0, 0});
@@ -49,9 +49,9 @@ vector<TimeMapPoint> loadTimeMap(const string& filename) {
 }
 
 int main(int argc, char* argv[]) {
-    // Usage: adapter <in.wav> <out.wav> <map.timemap>
+    // Usage: adapter <in.wav> <out.wav> <map.warpframemap>
     if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <in.wav> <out.wav> <map.timemap>" << endl;
+        cerr << "Usage: " << argv[0] << " <in.wav> <out.wav> <map.warpframemap>" << endl;
         return 1;
     }
 
@@ -87,18 +87,18 @@ int main(int argc, char* argv[]) {
     // Seek: 0 (Auto)
     // Overlap: 8 ms
 
-    vector<TimeMapPoint> timeMap = loadTimeMap(mapPath);
+    vector<FrameMapPoint> frameMap = loadFrameMap(mapPath);
     vector<float> inputBuffer(BUFFER_SIZE * sfInfoInput.channels);
     vector<float> outputBuffer(BUFFER_SIZE * sfInfoInput.channels);
 
     long current_src_pos = 0;
     
-    for (size_t i = 1; i < timeMap.size(); ++i) {
-        long target_src = timeMap[i].src_frame;
-        long target_tgt = timeMap[i].tgt_frame;
-        
-        long prev_src = timeMap[i-1].src_frame;
-        long prev_tgt = timeMap[i-1].tgt_frame;
+    for (size_t i = 1; i < frameMap.size(); ++i) {
+        long target_src = frameMap[i].src_frame;
+        long target_tgt = frameMap[i].tgt_frame;
+
+        long prev_src = frameMap[i-1].src_frame;
+        long prev_tgt = frameMap[i-1].tgt_frame;
         
         double src_delta = (double)(target_src - prev_src);
         double tgt_delta = (double)(target_tgt - prev_tgt);

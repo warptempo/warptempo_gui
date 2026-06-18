@@ -488,7 +488,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // this fill is mandatory whenever overlay.marker_index >= 0
             // — otherwise that flag's pixels would be missing entirely.
             if (overlay.marker_index >= 0 &&
-                !app.render_view_enabled &&
+                !app.render_view.enabled &&
                 app.active_markers_view != 'P') {
                 render_one_editor_flag(
                     cr, top_strip,
@@ -551,7 +551,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
             std::vector<FrameMapSegment> dbg_tmap;
-            if (!app.render_view_enabled &&
+            if (!app.render_view.enabled &&
                 app.active_audio_view == 'T') {
                 if (app.drag.active) {
                     dbg_tmap = app.drag.frozen_frame_map;
@@ -573,9 +573,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             }
 
             std::vector<FlagHitRect> dbg_rects;
-            if (app.render_view_enabled) {
+            if (app.render_view.enabled) {
                 dbg_rects = compute_flag_hit_rects(
-                    top_strip, app.render_view_markers,
+                    top_strip, app.render_view.markers,
                     dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
                     nullptr, dbg_drag);
             } else if (app.active_markers_view == 'P') {
@@ -652,7 +652,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 if (seconds > 5999.999) seconds = 5999.999;
 
                 std::string assembled = format_timestamp(seconds);
-                if (!app.render_view_enabled) {
+                if (!app.render_view.enabled) {
                     assembled += ' ';
                     assembled += (app.active_audio_view == 'T'
                                     ? 'T' : 'S');
@@ -664,12 +664,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         assembled += ' ';
                         assembled += "(read-only)";
                     }
-                } else if (app.render_view_index >= 0 &&
-                           app.render_view_index <
+                } else if (app.render_view.index >= 0 &&
+                           app.render_view.index <
                                static_cast<int>(
-                                   app.render_view_list.size())) {
+                                   app.render_view.list.size())) {
                     const auto& e =
-                        app.render_view_list[app.render_view_index];
+                        app.render_view.list[app.render_view.index];
                     assembled += ' ';
                     assembled += e.batch_folder.filename().string();
                     assembled += '/';
@@ -834,7 +834,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     const int     sr       = audio.sample_rate();
 
     const bool is_target = (app.active_audio_view == 'T') &&
-                           !app.render_view_enabled;
+                           !app.render_view.enabled;
     std::vector<FrameMapSegment> target_frame_map;
     uint64_t target_frame_map_hash = 0;
     if (is_target) {
@@ -1386,7 +1386,7 @@ uint64_t hash_selection(const std::set<int>& s,
 GuiPaintHandler::DisplayedTrim
 GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
-    const bool rve = app.render_view_enabled;
+    const bool rve = app.render_view.enabled;
 
     // has-set + selected bits come live from the project trim; render view
     // forces them off (the render waveform has no trim).
@@ -1510,7 +1510,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const bool     drag_active = app.drag.active;
     const char     mv          = app.active_markers_view;
-    const bool     rve         = app.render_view_enabled;
+    const bool     rve         = app.render_view.enabled;
     const uint64_t sel_hash    = hash_selection(app.selected_markers,
                                                 app.last_selected_marker);
 
@@ -1625,7 +1625,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 
     if (mv == 'P') {
         const auto& list = rve
-            ? app.render_view_phase_resets
+            ? app.render_view.phase_resets
             : app.phase_reset_markers.markers();
         render_phase_reset_markers(
             ccr, local_area, list,
@@ -1634,7 +1634,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             wf_cache.surface);
     } else {
         const auto& list = rve
-            ? app.render_view_markers
+            ? app.render_view.markers
             : app.warpmarkers.markers();
         render_markers(
             ccr, local_area, list,
@@ -1723,7 +1723,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    const bool      rve        = app.render_view_enabled;
+    const bool      rve        = app.render_view.enabled;
     // Iteration mode only affects warp-view (non-render) flags;
     // render view resets the toggle off, so this is false there.
     const bool      iter_on    = app.iteration_mode_enabled &&
@@ -1820,7 +1820,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         if (mv == 'P') {
             render_phase_reset_flags(
                 ccr, local_top_strip,
-                app.render_view_phase_resets,
+                app.render_view.phase_resets,
                 vp_start, vp_end, sr,
                 kFlagFontSize,
                 app.selected_markers,
@@ -1828,7 +1828,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                 drag_overlay);
         } else {
             render_flags(ccr, local_top_strip,
-                         app.render_view_markers,
+                         app.render_view.markers,
                          vp_start, vp_end, sr,
                          kFlagFontSize,
                          app.selected_markers,

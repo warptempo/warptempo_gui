@@ -1,10 +1,9 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
-#include "engine/engine_geometry.h"   // kCanonicalN, kPhaseResetOffsetHops
+#include "engine/engine_geometry.h"   // kCanonicalN, kCanonicalRs, canonical_phase_reset_offset_samples
 #include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
 
 #include <sndfile.h>
 
-#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -138,9 +137,9 @@ int main(int argc, char** argv) {
 
     // --- locked engine geometry ---
     const int     N_fft = kCanonicalN;
-    const int     R_s   = N_fft / 4;
-    const int64_t phase_reset_offset_samples = static_cast<int64_t>(
-        std::nearbyint(kPhaseResetOffsetHops * static_cast<double>(R_s)));
+    const int     R_s   = kCanonicalRs;
+    const int64_t phase_reset_offset_samples =
+        canonical_phase_reset_offset_samples();
 
     // --- engine params ---
     EngineParams ep;

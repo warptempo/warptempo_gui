@@ -240,6 +240,9 @@ struct AudioSTFT {
             w.fft_in   = fftw_alloc_real(M);
             std::fill(w.fft_in, w.fft_in + M, 0.0);
             w.fft_out  = fftw_alloc_complex(M / 2 + 1);
+            // FFTW_ESTIMATE is a determinism invariant: it builds a fixed plan,
+            // whereas FFTW_MEASURE/FFTW_PATIENT time the host and may pick a
+            // different algorithm run-to-run, breaking bit-identical output.
             w.plan_fwd = fftw_plan_dft_r2c_1d(M, w.fft_in, w.fft_out, FFTW_ESTIMATE);
             w.ifft_in  = fftw_alloc_complex(M / 2 + 1);
             w.ifft_out = fftw_alloc_real(M);

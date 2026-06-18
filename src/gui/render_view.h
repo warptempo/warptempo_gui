@@ -38,7 +38,7 @@ struct GuiRenderView {
     GuiTargetRender&  target_render;
 
     // Parked source audio. Populated only while
-    // app.render_view_enabled is true — std::move'd off `audio` on
+    // app.render_view.enabled is true — std::move'd off `audio` on
     // toggle-in and std::move'd back on toggle-out so the source
     // doesn't have to be re-read from disk. Default-constructed
     // (empty / total_frames() == 0) when render-view is off.
@@ -74,8 +74,8 @@ struct GuiRenderView {
 
     // Re-enumerate the renders/ folder and merge per-entry persisted
     // state (state, persisted_size, persisted_mtime) from the existing
-    // app.render_view_list into the refreshed list, keyed by wav_path.
-    // Updates app.render_view_index to follow the currently-viewed
+    // app.render_view.list into the refreshed list, keyed by wav_path.
+    // Updates app.render_view.index to follow the currently-viewed
     // entry by wav_path; if the current entry was deleted, the index
     // clamps to the closest surviving original position. Returns true
     // if the list is non-empty after refresh; false if the refresh
@@ -97,7 +97,7 @@ struct GuiRenderView {
     // batch finishes uncancelled with at least one render on disk.
     // Mirrors the R-key toggle-on entry sequence, but targets the
     // first list entry whose batch_folder matches batch_folder
-    // instead of last_render_view_path. By the input-handler
+    // instead of render_view.last_path. By the input-handler
     // gatekeeper invariant, render-view must be off on entry —
     // this method early-returns defensively otherwise.
     void auto_open_batch_at_first_file(

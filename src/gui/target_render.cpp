@@ -144,11 +144,11 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // a render-view entry during render already cancelled this render and
         // does not want playback bound to target_buffer: rebinding here would
         // clobber source.wav / the render-view buffer. Gate it out by both
-        // active_audio_view and render_view_enabled, matching the "actually in
+        // active_audio_view and render_view.enabled, matching the "actually in
         // target view" idiom. is_dirty_ therefore stays set through a render-
         // view visit, so the next true target-view entry re-renders — correct,
         // never stale, and consistent with the source-toggle case.
-        if (app.active_audio_view == 'T' && !app.render_view_enabled &&
+        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
             app.target_buffer_frames > 0) {
             // The trigger always freezes playback before dispatch, so
             // the device should still be stopped here. The rebind helper

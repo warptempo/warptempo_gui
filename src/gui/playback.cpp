@@ -12,12 +12,15 @@
 
 // Implementation notes
 // --------------------
-// The audio callback runs on miniaudio's internal thread. Its only contract
-// with the main thread is through three relaxed atomics: cursor_, speed_,
-// playing_. Relaxed ordering is enough because none of the atomics guards
-// non-atomic data — they are plain scalar reads whose value we want to see
-// "eventually". The sample buffer is read-only from the audio thread's
-// point of view, and its address lives across the device's entire life.
+// The audio callback runs on miniaudio's internal thread. Its contract with
+// the main thread is through a small set of atomics. Most are relaxed scalar
+// reads whose value we want to see "eventually" (cursor, speed). The exception
+// is the `playing` flag: play() stores it with release ordering as the last
+// step of its publish block, and the callback loads it with acquire ordering
+// at its gate, so a callback that sees playing == true is guaranteed to see the
+// range and pending-start stores that preceded the release. The sample buffer
+// is read-only from the audio thread's point of view, and its address lives
+// across the device's entire life.
 //
 // Speed changes are applied at buffer granularity. A set_speed() call
 // between callback invocations is picked up on the next fill; the speed
@@ -164,7 +167,7 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* /*pInput*/,
         return;
     }
 
-    if (!impl->playing.load(std::memory_order_relaxed)) {
+    if (!impl->playing.load(std::memory_order_acquire)) {
         std::memset(pOutput, 0,
                     sizeof(float) * frameCount * pDevice->playback.channels);
         return;
@@ -266,9 +269,12 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     if (end_sample > impl_->total_frames) end_sample = impl_->total_frames;
     if (end_sample <= start_sample) return;
 
-    // Publish the new range before flipping playing to true, so the audio
-    // callback sees a consistent view. Relaxed is fine — the playing flag is
-    // the only thing the callback guards on, and we set it last.
+    // The range and anchor stores below are relaxed; they are published to the
+    // audio callback by the release store on `playing` at the end of this
+    // block. The callback gates on an acquire load of `playing`, so observing
+    // playing == true establishes a happens-before edge that guarantees it also
+    // observes every store sequenced before that release. `playing` is the sole
+    // synchronization point.
     //
     // `pending_start` hands off the restart position to the audio thread,
     // which reseats its private `fractional_cursor` at the top of the next
@@ -280,14 +286,16 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
 
     // Anchor the predictor to start_sample directly: the audio thread may
     // not yet have processed pending_start, so the cursor atomic still
-    // reflects the previous session. Sample first, then ns — a torn main-
-    // thread read yields fresh-sample + stale-time (under-extrapolates,
-    // self-correcting).
+    // reflects the previous session. The anchor pair is written and read only
+    // on the main thread, and each 8-byte aligned load is atomic on the target,
+    // so there is no torn read; the predictor tolerates only bounded staleness
+    // (the anchor lagging real playback between resyncs), which self-corrects
+    // at the next resync.
     const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     impl_->anchor_sample.store(start_sample, std::memory_order_relaxed);
     impl_->anchor_ns.store(now_ns, std::memory_order_relaxed);
-    impl_->playing.store(true, std::memory_order_relaxed);
+    impl_->playing.store(true, std::memory_order_release);
 }
 
 void GuiPlayback::resync_predictor() {

@@ -265,6 +265,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     // -- Own FFTW plans/scratch (destroyed at every return) --
     double*       fwd_in   = fftw_alloc_real(M_lim);
     fftw_complex* fwd_out  = fftw_alloc_complex(K_lim);
+    // FFTW_ESTIMATE here is a determinism invariant (fixed plan, no host timing);
+    // FFTW_MEASURE/FFTW_PATIENT would break bit-identical output.
     fftw_plan     plan_fwd = fftw_plan_dft_r2c_1d(M_lim, fwd_in, fwd_out, FFTW_ESTIMATE);
     fftw_complex* inv_in   = fftw_alloc_complex(K_lim);
     double*       inv_out  = fftw_alloc_real(M_lim);

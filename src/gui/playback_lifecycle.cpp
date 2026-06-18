@@ -85,7 +85,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
     // scanner offscreen and yanks the viewport to file/trim start.
     int64_t scanner_launch;
     if (app.active_audio_view == 'T' &&
-        !app.render_view_enabled) {
+        !app.render_view.enabled) {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet
         // — Space's outer gate in input_handler.cpp already checks this,
@@ -123,7 +123,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
     // user has follow mode toggled on, so always run it on press.
     viewport.follow_scroll_if_needed();
     const bool force_one_x =
-        app.render_view_enabled || app.active_audio_view == 'T';
+        app.render_view.enabled || app.active_audio_view == 'T';
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     playback.play(start, end);
 }
@@ -138,7 +138,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
 // the reseek site: the user's click is a positional intent that takes
 // precedence over visual centering (unlike Space's start-of-listening).
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
-    if (app.active_audio_view == 'T' && !app.render_view_enabled) {
+    if (app.active_audio_view == 'T' && !app.render_view.enabled) {
         if (app.target_buffer_frames <= 0) { playback.stop(); return; }
         const int64_t bias  = app.target_buffer_start_frame;
         const int64_t local = sample - bias;

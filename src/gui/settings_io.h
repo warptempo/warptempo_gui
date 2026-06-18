@@ -51,6 +51,13 @@ struct ParsedSettings {
     bool    tab_b_read_only      = false;
 };
 
+// Atomic write: tmp + fsync + rename, preserving the existing file's
+// permission bits when present (0644 fallback). Returns false on any I/O
+// failure, removing the partial `.tmp` first. Shared by the .settings,
+// .rendersettings, .warpmarkers, and .phaseresetmarkers writers.
+bool atomic_write_string_to_path(const std::string& path,
+                                 const std::string& data);
+
 // Ensure `p` exists with `contents`. If the file already exists, leave it
 // alone. Returns true on success or if file already exists. Failures are
 // non-fatal — the audio load still proceeds.

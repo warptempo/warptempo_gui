@@ -12,7 +12,7 @@
 #include "signalsmith-stretch.h"
 
 // Convenience struct for our map points
-struct TimemapPoint {
+struct FrameMapPoint {
     long long source;
     long long target;
 };
@@ -49,12 +49,12 @@ int main(int argc, char* argv[]) {
 
     // 1. Argument Validation
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <input.wav> <timemap.txt> <output.wav>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input.wav> <map.warpframemap> <output.wav>" << std::endl;
         std::cerr << "       " << argv[0] << " -v (to see version)" << std::endl;
         return 1;
     }
     std::string inputPath = argv[1];
-    std::string timemapPath = argv[2];
+    std::string mapPath = argv[2];
     std::string outputPath = argv[3];
 
     // 2. Load Input Audio
@@ -74,11 +74,11 @@ int main(int argc, char* argv[]) {
 
     auto inputPlanar = interleavedToPlanar(inputBuffer, channels, inputFrames);
 
-    // 3. Load Timemap
-    std::ifstream timemapFile(timemapPath);
-    std::vector<TimemapPoint> mapPoints;
+    // 3. Load frame map
+    std::ifstream mapFile(mapPath);
+    std::vector<FrameMapPoint> mapPoints;
     std::string line;
-    while (std::getline(timemapFile, line)) {
+    while (std::getline(mapFile, line)) {
         if (line.empty()) continue;
         std::stringstream ss(line);
         long long src, tgt;
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (mapPoints.empty()) {
-        std::cerr << "Error: Timemap is empty." << std::endl;
+        std::cerr << "Error: Frame map is empty." << std::endl;
         return 1;
     }
 

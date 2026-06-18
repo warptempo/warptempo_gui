@@ -298,7 +298,7 @@ int max_valid_numeric_level(int waveform_width_px,
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
-    if (a.active_audio_view == 'T' && !a.render_view_enabled) {
+    if (a.active_audio_view == 'T' && !a.render_view.enabled) {
         const TargetMapCache& c = target_view_map_cached(
             a, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
@@ -763,7 +763,7 @@ int main(int argc, char** argv) {
         // buffer would skew the playhead.
         int64_t translated = cur;
         if (app.active_audio_view == 'T' &&
-            !app.render_view_enabled &&
+            !app.render_view.enabled &&
             app.target_buffer_frames > 0) {
             translated = cur + app.target_buffer_start_frame;
         }

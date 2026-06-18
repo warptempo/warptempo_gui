@@ -180,12 +180,12 @@ std::pair<uintmax_t, int64_t> GuiRenderView::wav_stat_tuple(
 // the user has not flipped mode in this render-view session);
 // either way it is current at stash time.
 void GuiRenderView::stash_render_view_selection_to_active_entry() {
-    if (app.render_view_index < 0 ||
-        app.render_view_index >=
-            static_cast<int>(app.render_view_list.size())) {
+    if (app.render_view.index < 0 ||
+        app.render_view.index >=
+            static_cast<int>(app.render_view.list.size())) {
         return;
     }
-    auto& e = app.render_view_list[app.render_view_index];
+    auto& e = app.render_view.list[app.render_view.index];
     if (app.active_markers_view == 'P') {
         e.state.phase_reset_selected      = app.selected_markers;
         e.state.phase_reset_last_selected = app.last_selected_marker;
@@ -198,10 +198,10 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
     e.persisted_mtime = stat.second;
 }
 
-// Loads the render at app.render_view_list[index] into the active
+// Loads the render at app.render_view.list[index] into the active
 // `audio`, parking the source audio on first entry. Parses sibling
 // <basename>.warpmarkers and <basename>.phaseresetmarkers into
-// app.render_view_markers/phase resets and computes F_begin/F_end
+// app.render_view.markers/phase resets and computes F_begin/F_end
 // against the cached source sr/total. Stops playback before the
 // swap and re-binds the playback device. Returns true on success;
 // on failure logs to stderr and the prior state is preserved.
@@ -211,10 +211,10 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // selection. Mismatch leaves the live selection empty.
 bool GuiRenderView::load_render_view_at(int index) {
     if (index < 0 ||
-        index >= static_cast<int>(app.render_view_list.size())) {
+        index >= static_cast<int>(app.render_view.list.size())) {
         return false;
     }
-    auto& e = app.render_view_list[index];
+    auto& e = app.render_view.list[index];
     // Leaving target view for render view, same as the T→S toggle: cancel any
     // in-flight target render so it does not keep pegging the cores under
     // render-view playback and cannot rebind playback to target_buffer behind
@@ -286,13 +286,13 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.audio_generation++;
 
     // Render-view has no trim — the rendered audio is already trimmed.
-    app.render_view_src_F_begin = 0;
-    app.render_view_src_F_end   = app.render_view_src_total;
+    app.render_view.src_F_begin = 0;
+    app.render_view.src_F_end   = app.render_view.src_total;
 
-    app.render_view_markers           = std::move(loaded_warp);
-    app.render_view_phase_resets        = std::move(loaded_trans);
-    app.render_view_index             = index;
-    app.last_render_view_path         = e.wav_path.string();
+    app.render_view.markers           = std::move(loaded_warp);
+    app.render_view.phase_resets        = std::move(loaded_trans);
+    app.render_view.index             = index;
+    app.render_view.last_path         = e.wav_path.string();
 
     // Stat-tuple-gated selection restore. A
     // matching persisted tuple (non-zero, equal to current) means
@@ -366,7 +366,7 @@ void GuiRenderView::restore_source_audio() {
     // Leaving render view: clear the flag BEFORE the synchronous waveform
     // kick at the end of this function. kick_waveform_sync resolves to
     // force_synchronous_waveform_rebuild, whose compute_waveform_render_inputs
-    // derives is_target as (active_audio_view == 'T') && !render_view_enabled.
+    // derives is_target as (active_audio_view == 'T') && !render_view.enabled.
     // If the flag is still set when the kick runs, is_target is false, the
     // plate is rendered with no frame_map (an unwarped source plate) and that
     // non-target fingerprint is published; the next on_redraw then sees the
@@ -374,7 +374,7 @@ void GuiRenderView::restore_source_audio() {
     // which is the visible flash on the render -> target transition. Clearing
     // here, ahead of the source_audio_held guard, makes every leave path
     // correct without each call site having to order the flag itself.
-    app.render_view_enabled = false;
+    app.render_view.enabled = false;
     if (source_audio_held.total_frames() == 0) return;
     playback.stop();
     playback.shutdown();
@@ -432,9 +432,9 @@ void GuiRenderView::restore_source_audio() {
 }
 
 // Re-enumerate the renders/ folder and migrate persisted per-entry
-// state from the existing app.render_view_list into the refreshed
+// state from the existing app.render_view.list into the refreshed
 // list, keyed by wav_path. Mirrors the migration block in the R-key
-// toggle-on path, but operates on the live render_view_list (in-
+// toggle-on path, but operates on the live render_view.list (in-
 // session) rather than on a freshly-arrived list. Caller is
 // responsible for stashing selection / writing rendersettings for the
 // outgoing entry *before* calling this, since the merge does not
@@ -444,23 +444,23 @@ bool GuiRenderView::refresh_render_view_list() {
     std::vector<AppState::RenderViewEntry> fresh =
         this->enumerate_render_view_list();
     if (fresh.empty()) {
-        app.render_view_list.clear();
-        app.render_view_index = -1;
+        app.render_view.list.clear();
+        app.render_view.index = -1;
         return false;
     }
 
-    const int prior_index = app.render_view_index;
+    const int prior_index = app.render_view.index;
     std::string current_wav_path;
     if (prior_index >= 0 &&
-        prior_index < static_cast<int>(app.render_view_list.size())) {
+        prior_index < static_cast<int>(app.render_view.list.size())) {
         current_wav_path =
-            app.render_view_list[prior_index].wav_path.string();
+            app.render_view.list[prior_index].wav_path.string();
     }
 
-    if (!app.render_view_list.empty()) {
+    if (!app.render_view.list.empty()) {
         std::map<std::string,
             AppState::RenderViewEntry*> prior;
-        for (auto& pe : app.render_view_list) {
+        for (auto& pe : app.render_view.list) {
             prior[pe.wav_path.string()] = &pe;
         }
         for (auto& ne : fresh) {
@@ -473,12 +473,12 @@ bool GuiRenderView::refresh_render_view_list() {
         }
     }
 
-    app.render_view_list = std::move(fresh);
+    app.render_view.list = std::move(fresh);
 
     int new_index = -1;
     if (!current_wav_path.empty()) {
-        for (size_t i = 0; i < app.render_view_list.size(); ++i) {
-            if (app.render_view_list[i].wav_path.string() ==
+        for (size_t i = 0; i < app.render_view.list.size(); ++i) {
+            if (app.render_view.list[i].wav_path.string() ==
                 current_wav_path) {
                 new_index = static_cast<int>(i);
                 break;
@@ -486,13 +486,13 @@ bool GuiRenderView::refresh_render_view_list() {
         }
     }
     if (new_index < 0) {
-        const int n = static_cast<int>(app.render_view_list.size());
+        const int n = static_cast<int>(app.render_view.list.size());
         int clamped = prior_index;
         if (clamped < 0)  clamped = 0;
         if (clamped >= n) clamped = n - 1;
         new_index = clamped;
     }
-    app.render_view_index = new_index;
+    app.render_view.index = new_index;
     return true;
 }
 
@@ -501,7 +501,7 @@ bool GuiRenderView::refresh_render_view_list() {
 // handler.cpp, with one substitution: the target index is the
 // first list entry whose batch_folder matches the passed-in
 // batch_folder argument, rather than the entry whose wav_path
-// matches app.last_render_view_path.
+// matches app.render_view.last_path.
 //
 // Per the input-handler gatekeeper invariant (S / E / Ctrl+Alt+R /
 // Ctrl+Alt+E / Ctrl+Alt+I are all dropped while render-view is active,
@@ -512,7 +512,7 @@ bool GuiRenderView::refresh_render_view_list() {
 // would corrupt the existing session.
 void GuiRenderView::auto_open_batch_at_first_file(
         const std::filesystem::path& batch_folder) {
-    if (app.render_view_enabled) return;
+    if (app.render_view.enabled) return;
     if (app.source_audio_path.empty()) return;
 
     std::vector<AppState::RenderViewEntry> list =
@@ -524,13 +524,13 @@ void GuiRenderView::auto_open_batch_at_first_file(
     }
 
     // Migrate persisted per-entry state from the prior
-    // app.render_view_list (which survived toggle-off) into the
+    // app.render_view.list (which survived toggle-off) into the
     // freshly enumerated list, keyed by wav_path. Same shape as
     // the R-toggle entry-path migration.
-    if (!app.render_view_list.empty()) {
+    if (!app.render_view.list.empty()) {
         std::map<std::string,
             AppState::RenderViewEntry*> prior;
-        for (auto& pe : app.render_view_list) {
+        for (auto& pe : app.render_view.list) {
             prior[pe.wav_path.string()] = &pe;
         }
         for (auto& ne : list) {
@@ -558,16 +558,16 @@ void GuiRenderView::auto_open_batch_at_first_file(
         return;
     }
 
-    app.render_view_src_sr    = audio.sample_rate();
-    app.render_view_src_total = audio.total_frames();
-    app.render_view_list      = std::move(list);
+    app.render_view.src_sr    = audio.sample_rate();
+    app.render_view.src_total = audio.total_frames();
+    app.render_view.list      = std::move(list);
     // E.4 behavior 3: iter/BPM modes persist across render-view enter/leave.
     // The flags are inert inside render view (input gate drops i/M; paint
-    // gates on !render_view_enabled), so they're simply restored on exit.
-    app.render_view_enabled    = true;
+    // gates on !render_view.enabled), so they're simply restored on exit.
+    app.render_view.enabled    = true;
     if (!this->load_render_view_at(target)) {
-        app.render_view_enabled = false;
-        app.render_view_list.clear();
+        app.render_view.enabled = false;
+        app.render_view.list.clear();
     }
 }
 
@@ -578,9 +578,9 @@ void GuiRenderView::auto_open_batch_at_first_file(
 // performed before calling refresh_render_view_list.
 void GuiRenderView::exit_render_view_and_clear() {
     this->restore_source_audio();
-    app.render_view_markers.clear();
-    app.render_view_phase_resets.clear();
-    app.render_view_index             = -1;
-    app.render_view_src_F_begin       = 0;
-    app.render_view_src_F_end         = 0;
+    app.render_view.markers.clear();
+    app.render_view.phase_resets.clear();
+    app.render_view.index             = -1;
+    app.render_view.src_F_begin       = 0;
+    app.render_view.src_F_end         = 0;
 }

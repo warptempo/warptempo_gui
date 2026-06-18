@@ -14,7 +14,7 @@
 
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         // Render-view has no trim — the loaded audio is already
         // render-domain (trim baked in at render time).
         return {0, audio.total_frames()};
@@ -422,7 +422,7 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    if (!app.render_view_enabled &&
+    if (!app.render_view.enabled &&
         (app.active_markers_view != 'W' || app.iteration_mode_enabled)) {
         clear_hover_popup();
         return;
@@ -440,12 +440,12 @@ void Viewport::recompute_hover_at_cursor() {
         // (paint then skips the readout and keeps the strip clean).
         const bool was_visible = app.hover_popup.visible;
         app.hover_popup.marker_index = hit;
-        if (app.render_view_enabled) {
+        if (app.render_view.enabled) {
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
                     ? compute_hover_popup_text(
-                          slice_to_warp_markers(app.render_view_markers), hit,
-                          app.render_view_src_sr)
+                          slice_to_warp_markers(app.render_view.markers), hit,
+                          app.render_view.src_sr)
                     : std::string();
         } else {
             app.hover_popup.cached_text =

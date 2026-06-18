@@ -330,7 +330,7 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (owner.bpm_lo    <= 0) return false;
     if (owner.bpm_hi    <= 0) return false;
 
-    // Span endpoint is explicit (set on the `m` two-marker gate, part 1).
+    // Span endpoint is explicit (set on the `m` two-marker span gate).
     const int endpoint_idx = owner.bpm_endpoint;
     if (endpoint_idx <= owner_idx ||
         endpoint_idx >= static_cast<int>(base_markers.size())) {
@@ -416,7 +416,8 @@ bool GuiInputHandler::render_bpm_sweep() {
             cell_markers[i].tempo_base     = 1.0;       // inert default
             cell_markers[i].tempo_scale    = "1.0000";  // model's inert scale
             // label_def on a span-internal marker is preserved (refs are
-            // excluded from spans by the part-1 gate, but a def may exist);
+            // excluded from spans by the `m` two-marker span gate, but a
+            // def may exist);
             // only the tempo fields are rewritten. Do not touch label_def,
             // disabled, or any non-tempo field.
         }
@@ -425,7 +426,7 @@ bool GuiInputHandler::render_bpm_sweep() {
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
         // Provenance descriptor for this cell's .rendersettings; promoted
-        // verbatim into .settings on Ctrl+Alt+C commit (part 3).
+        // verbatim into .settings on Ctrl+Alt+C commit.
         cell_settings.bpm =
             format_bpm_descriptor(owner.bpm_beats, bpm,
                                   owner.time_seconds,
@@ -718,7 +719,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // active, and so the new render_view.auto_open_batch_at_
     // first_file method handles only the "render-view is off"
     // case.
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         const bool is_r =
             (key == GuiKeys::R && !ctrl && !shift && !alt);
         const bool is_nav =
@@ -802,7 +803,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // trim set/unset, disabled-flag toggle, paste, iteration / BPM
     // mode, render dispatch, queue add, undo/redo) is silently
     // dropped at this gate.
-    if (!app.render_view_enabled && active_view_state(app).read_only) {
+    if (!app.render_view.enabled && active_view_state(app).read_only) {
         const bool is_o =
             (key == GuiKeys::O && !ctrl && !shift && !alt);
         const bool is_play_pause = is_play_pause_key(key);
@@ -1372,10 +1373,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // outside render-view.
     if (ctrl && alt && !shift &&
         key == GuiKeys::C) {
-        if (!app.render_view_enabled) return;
-        if (app.render_view_index < 0) return;
+        if (!app.render_view.enabled) return;
+        if (app.render_view.index < 0) return;
 
-        // app.render_view_markers / _phase_resets are now
+        // app.render_view.markers / .phase_resets are now
         // render-domain (loaded from .renderwarpmarkers /
         // .renderphaseresetmarkers for display). The commit promotes
         // the render's *source-domain*
@@ -1385,7 +1386,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // committing render-domain values into authoring would corrupt
         // the source coordinate system.
         const auto& cur_e =
-            app.render_view_list[app.render_view_index];
+            app.render_view.list[app.render_view.index];
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_trans;
         {
@@ -1502,13 +1503,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         app.bpm_mode_enabled       = false;
 
         render_view.restore_source_audio();
-        app.render_view_list.clear();
-        app.render_view_markers.clear();
-        app.render_view_phase_resets.clear();
-        app.render_view_index             = -1;
-        app.render_view_src_F_begin       = 0;
-        app.render_view_src_F_end         = 0;
-        app.last_render_view_path.clear();
+        app.render_view.list.clear();
+        app.render_view.markers.clear();
+        app.render_view.phase_resets.clear();
+        app.render_view.index             = -1;
+        app.render_view.src_F_begin       = 0;
+        app.render_view.src_F_end         = 0;
+        app.render_view.last_path.clear();
 
         std::error_code ec;
         if (std::filesystem::is_directory(renders_root, ec)) {
@@ -1542,10 +1543,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // target-view binding. Source view AND render view fall through
         // unchanged: render view plays its own loaded render buffer, not
         // target_buffer, so this in-flight / empty-buffer target gating must
-        // not apply to it. render_view_enabled overrides active_audio_view
+        // not apply to it. render_view.enabled overrides active_audio_view
         // here, matching the "actually in target view" idiom in
-        // playback_lifecycle (active_audio_view == 'T' && !render_view_enabled).
-        if (app.active_audio_view == 'T' && !app.render_view_enabled &&
+        // playback_lifecycle (active_audio_view == 'T' && !render_view.enabled).
+        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
             !playback.is_playing()) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
@@ -1765,7 +1766,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::R && !ctrl && !shift && !alt) {
         if (app.source_audio_path.empty()) return;
         if (app.loading) return;
-        if (!app.render_view_enabled) {
+        if (!app.render_view.enabled) {
             std::vector<AppState::RenderViewEntry> list =
                 render_view.enumerate_render_view_list();
             if (list.empty()) {
@@ -1778,15 +1779,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
             // Migrate persisted selection from
             // the prior render-view session (still on the old
-            // app.render_view_list) into the freshly enumerated
+            // app.render_view.list) into the freshly enumerated
             // list, keyed by wav_path. Entries that disappeared
             // since last session simply lose their persisted state;
             // newly added entries start with default-empty
             // persistence (no match → load_render_view_at clears).
-            if (!app.render_view_list.empty()) {
+            if (!app.render_view.list.empty()) {
                 std::map<std::string,
                     AppState::RenderViewEntry*> prior;
-                for (auto& pe : app.render_view_list) {
+                for (auto& pe : app.render_view.list) {
                     prior[pe.wav_path.string()] = &pe;
                 }
                 for (auto& ne : list) {
@@ -1799,54 +1800,54 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 }
             }
             int target = 0;
-            if (!app.last_render_view_path.empty()) {
+            if (!app.render_view.last_path.empty()) {
                 for (size_t i = 0; i < list.size(); ++i) {
                     if (list[i].wav_path.string() ==
-                        app.last_render_view_path) {
+                        app.render_view.last_path) {
                         target = static_cast<int>(i);
                         break;
                     }
                 }
             }
-            app.render_view_src_sr    = audio.sample_rate();
-            app.render_view_src_total = audio.total_frames();
-            app.render_view_list      = std::move(list);
+            app.render_view.src_sr    = audio.sample_rate();
+            app.render_view.src_total = audio.total_frames();
+            app.render_view.list      = std::move(list);
             // E.4 behavior 3: iter/BPM modes persist across render-view
             // enter/leave. The flags are inert inside render view (input
-            // gate drops i/M; paint gates on !render_view_enabled) and are
+            // gate drops i/M; paint gates on !render_view.enabled) and are
             // restored on exit. Ctrl+Alt+C is now the only forced reset.
-            app.render_view_enabled    = true;
+            app.render_view.enabled    = true;
             // Render-view shares the global active_markers_view
             // flag, so the user's chosen mode carries across the
             // view-domain transition without per-entry restore.
             if (!render_view.load_render_view_at(target)) {
-                app.render_view_enabled = false;
-                app.render_view_list.clear();
+                app.render_view.enabled = false;
+                app.render_view.list.clear();
             }
         } else {
             // Capture the just-viewed render's zoom/viewport/playhead
             // before restoring source-audio state. Not done on the
             // Ctrl+Alt+C commit path — the renders folder is wiped
             // immediately after commit, so the write would be lost.
-            if (app.render_view_index >= 0 &&
-                app.render_view_index <
-                    static_cast<int>(app.render_view_list.size())) {
+            if (app.render_view.index >= 0 &&
+                app.render_view.index <
+                    static_cast<int>(app.render_view.list.size())) {
                 render_view.write_rendersettings_for(
-                    app.render_view_list[app.render_view_index]);
+                    app.render_view.list[app.render_view.index]);
             }
             // Stash the live selection onto
             // the active entry so the next toggle-on can restore
             // it (gated by the wav's stat tuple still matching).
-            // render_view_list is intentionally NOT cleared here
+            // render_view.list is intentionally NOT cleared here
             // — re-entry migrates its persisted_* fields into the
             // freshly enumerated list.
             render_view.stash_render_view_selection_to_active_entry();
             render_view.restore_source_audio();
-            app.render_view_markers.clear();
-            app.render_view_phase_resets.clear();
-            app.render_view_index             = -1;
-            app.render_view_src_F_begin       = 0;
-            app.render_view_src_F_end         = 0;
+            app.render_view.markers.clear();
+            app.render_view.phase_resets.clear();
+            app.render_view.index             = -1;
+            app.render_view.src_F_begin       = 0;
+            app.render_view.src_F_end         = 0;
         }
         return;
     }
@@ -1996,7 +1997,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Shift+Left / Shift+Right navigates the render-view
-    // list with wraparound. Active only when render_view_enabled is
+    // list with wraparound. Active only when render_view.enabled is
     // true; in source-view these chords fall through to the normal
     // playhead-by-pixel handler in the switch below. Wraparound:
     // Shift+Right past the end loops to index 0,
@@ -2007,15 +2008,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // computing the target index. New batch folders or wavs that
     // appeared since render-view was entered become visible; deleted
     // entries vanish. Empty-after-refresh exits render-view.
-    if (app.render_view_enabled && shift && !ctrl && !alt &&
+    if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right)) {
         // Capture outgoing state and stash selection before refresh —
         // refresh_render_view_list may reorder/drop entries.
-        if (app.render_view_index >= 0 &&
-            app.render_view_index <
-                static_cast<int>(app.render_view_list.size())) {
+        if (app.render_view.index >= 0 &&
+            app.render_view.index <
+                static_cast<int>(app.render_view.list.size())) {
             render_view.write_rendersettings_for(
-                app.render_view_list[app.render_view_index]);
+                app.render_view.list[app.render_view.index]);
         }
         // Stash the outgoing entry's
         // selection so re-navigating back later (in the same
@@ -2031,8 +2032,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
 
-        const int n = static_cast<int>(app.render_view_list.size());
-        int next = app.render_view_index;
+        const int n = static_cast<int>(app.render_view.list.size());
+        int next = app.render_view.index;
         if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
         else                       next = (next + 1) % n;
         render_view.load_render_view_at(next);
@@ -2042,17 +2043,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Shift+Home / Shift+End: jump render-view to first / last entry,
     // clamped (no wraparound — Shift+Home at index 0 stays at 0,
     // Shift+End at the last entry stays). Gated on
-    // app.render_view_enabled; outside render-view the chord is a
+    // app.render_view.enabled; outside render-view the chord is a
     // silent no-op (the bare-key switch at the bottom of this
     // function is modifier-strict). Same pre-nav refresh of the
     // renders/ folder.
-    if (app.render_view_enabled && shift && !ctrl && !alt &&
+    if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
-        if (app.render_view_index >= 0 &&
-            app.render_view_index <
-                static_cast<int>(app.render_view_list.size())) {
+        if (app.render_view.index >= 0 &&
+            app.render_view.index <
+                static_cast<int>(app.render_view.list.size())) {
             render_view.write_rendersettings_for(
-                app.render_view_list[app.render_view_index]);
+                app.render_view.list[app.render_view.index]);
         }
         render_view.stash_render_view_selection_to_active_entry();
 
@@ -2061,9 +2062,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
 
-        const int n = static_cast<int>(app.render_view_list.size());
+        const int n = static_cast<int>(app.render_view.list.size());
         const int target = (key == GuiKeys::Home) ? 0 : (n - 1);
-        if (target == app.render_view_index) return;
+        if (target == app.render_view.index) return;
         render_view.load_render_view_at(target);
         return;
     }
@@ -2150,15 +2151,15 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     if (app.active_markers_view == 'P') {
         // Render-view recenters on the displayed render-domain phase
         // resets; authoring recenters on the live store.
-        const auto& tv = app.render_view_enabled
-            ? app.render_view_phase_resets
+        const auto& tv = app.render_view.enabled
+            ? app.render_view.phase_resets
             : app.phase_reset_markers.markers();
         if (idx >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
             tv[idx].time_seconds * static_cast<double>(sr)));
     } else {
-        const auto& mv = app.render_view_enabled
-            ? app.render_view_markers
+        const auto& mv = app.render_view.enabled
+            ? app.render_view.markers
             : app.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
@@ -2385,14 +2386,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // pass through unchanged. Drag-create and top-strip playhead
     // movement are silent no-ops so the read-only invariant on
     // marker state is preserved. Hover-popup motion still runs in
-    // the motion handler against render_view_markers.
+    // the motion handler against render_view.markers.
     // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag
     // begin/motion, etc.) and in to_source_frame helpers used by
     // those writers.
 
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         // Wheel events arrive via on_wheel (coalesced per pointer frame), not
         // here; a stray wheel button is caught by the Left-only gate below.
         if (button != GuiMouseButton::Left) return;
@@ -2421,8 +2422,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         std::set<int>& sel = app.selected_markers;
         int& last_sel      = app.last_selected_marker;
         const int n = sub_t
-            ? static_cast<int>(app.render_view_phase_resets.size())
-            : static_cast<int>(app.render_view_markers.size());
+            ? static_cast<int>(app.render_view.phase_resets.size())
+            : static_cast<int>(app.render_view.markers.size());
         if (hit >= 0 && hit < n) {
             if (shift) {
                 auto it = sel.find(hit);
@@ -2447,11 +2448,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             int64_t sample;
             if (sub_t) {
                 sample = static_cast<int64_t>(std::nearbyint(
-                    app.render_view_phase_resets[hit].time_seconds *
+                    app.render_view.phase_resets[hit].time_seconds *
                     static_cast<double>(sr)));
             } else {
                 sample = static_cast<int64_t>(std::nearbyint(
-                    app.render_view_markers[hit].time_seconds *
+                    app.render_view.markers[hit].time_seconds *
                     static_cast<double>(sr)));
             }
             viewport.move_playhead_to(sample);
@@ -2862,9 +2863,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // when a drag is in flight, snap the
     // playhead to the visible sub-view's markers (3px epsilon),
     // matching source-view's gesture. Otherwise run hover popup
-    // detection against render_view_markers (suppressed in phase reset
+    // detection against render_view.markers (suppressed in phase reset
     // sub-view because hit_test_flag short-circuits to -1).
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         if (app.playhead_drag.active) {
             viewport.clear_hover_popup();
             if (!mods.primary_button_held) {
@@ -2881,11 +2882,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (hit >= 0) {
                 if (app.active_markers_view == 'P') {
                     new_playhead = static_cast<int64_t>(std::nearbyint(
-                        app.render_view_phase_resets[hit].time_seconds *
+                        app.render_view.phase_resets[hit].time_seconds *
                         static_cast<double>(sr)));
                 } else {
                     new_playhead = static_cast<int64_t>(std::nearbyint(
-                        app.render_view_markers[hit].time_seconds *
+                        app.render_view.markers[hit].time_seconds *
                         static_cast<double>(sr)));
                 }
             } else {
@@ -2942,11 +2943,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     const double hi_t = static_cast<double>(b) / sr_d;
                     const bool swept = (app.active_markers_view == 'P')
                         ? sweep_select_interval(
-                              app, app.render_view_phase_resets,
+                              app, app.render_view.phase_resets,
                               lo_t, hi_t, forward,
                               app.playhead_drag.press_marker_idx)
                         : sweep_select_interval(
-                              app, app.render_view_markers,
+                              app, app.render_view.markers,
                               lo_t, hi_t, forward,
                               app.playhead_drag.press_marker_idx);
                     if (swept)
@@ -2970,8 +2971,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.hover_popup.cached_text =
                 popup_eligible_marker(app, hit)
                     ? compute_hover_popup_text(
-                          slice_to_warp_markers(app.render_view_markers), hit,
-                          app.render_view_src_sr)
+                          slice_to_warp_markers(app.render_view.markers), hit,
+                          app.render_view.src_sr)
                     : std::string();
             app.hover_popup.visible = !app.hover_popup.cached_text.empty();
             if (was_visible || app.hover_popup.visible)

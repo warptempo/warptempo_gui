@@ -98,8 +98,8 @@ struct UndoEntry {
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
-// Storing per-marker (min_allowed, max_allowed) as the spec suggests works
-// for a contiguous drag set, but a non-contiguous set (e.g. indices 2 and
+// Storing per-marker (min_allowed, max_allowed) works for a contiguous
+// drag set, but a non-contiguous set (e.g. indices 2 and
 // 5 selected, 3 and 4 not) can be bounded more tightly by the nearest
 // non-selected neighbors of every dragged marker. We precompute a single
 // scalar `delta_min` / `delta_max` that's correct for both cases: the delta
@@ -363,6 +363,15 @@ struct AppState {
     // Left in place rather than chased across its several write sites.
     float   load_progress         = 0.0f;
 
+    // Live working copy of the active view's state (viewport / zoom /
+    // playhead here, plus selected_markers / last_selected_marker below).
+    // This is an INTENTIONAL cache of the active view's per-view slot, not
+    // accidental duplication: the paint path and the input handlers touch
+    // these constantly, and the active backing store varies (source tab A/B
+    // vs the active render-view entry), so reading through active_view_state()
+    // on every access would be both hot and conditional. The slot is synced
+    // to/from these fields only at view-switch boundaries (see active_views).
+    // Do not collapse this into a projection — the duplication is the design.
     int64_t playhead_cursor_sample = 0;
     int     zoom_level             = 0;
     int64_t viewport_start_sample  = 0;
@@ -674,16 +683,6 @@ struct AppState {
     // the flag at a time, maintained as an invariant by the toggle.
     bool bpm_mode_enabled = false;
 
-    // Render analysis mode. Plain `r` toggles between source-view
-    // (authoring) and render-view (read-only auditioning of rendered
-    // outputs from <source_parent>/renders/). All authoring state above
-    // is preserved untouched while render-view is active; this struct
-    // holds the parallel context that drives render-view's display.
-    bool render_view_enabled = false;
-    // Path to the last-displayed render's .wav, persisted across toggle
-    // off/on cycles within a session. Empty before the first entry; reset
-    // to whatever path was active when the previous toggle-off fired.
-    std::string last_render_view_path;
     // One entry in the flat list of valid renders enumerated on toggle-in.
     struct RenderViewEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
@@ -704,25 +703,39 @@ struct AppState {
         uintmax_t     persisted_size             = 0;
         int64_t       persisted_mtime            = 0;
     };
-    std::vector<RenderViewEntry> render_view_list;
-    int                          render_view_index = -1;     // -1 = unset
-    // The current render's loaded markers + phase resets, parsed from
-    // sibling `<basename>.renderwarpmarkers` /
-    // `<basename>.renderphaseresetmarkers`.
-    std::vector<GuiWarpMarker>       render_view_markers;
-    std::vector<GuiPhaseResetMarker>    render_view_phase_resets;
-    // Source-frame mapping of the current render: F_begin..F_end (source
-    // sample-rate frames) is what the render's full audio covers. When the
-    // render's warpmarkers carry no `b=` flag, F_begin is 0; when it carries
-    // no `e=` flag, F_end is the source's total_frames. Used by the render
-    // -view waveform mapping and the timestamp readout.
-    int64_t                      render_view_src_F_begin = 0;
-    int64_t                      render_view_src_F_end   = 0;
-    // Source audio's sample rate / total frames at the time render-view
-    // was entered. Cached so timestamp computation and trim resolution
-    // don't have to peek at the swapped-out source GuiAudio.
-    int                          render_view_src_sr      = 0;
-    int64_t                      render_view_src_total   = 0;
+
+    // Render analysis mode. Plain `r` toggles between source-view
+    // (authoring) and render-view (read-only auditioning of rendered
+    // outputs from <source_parent>/renders/). All authoring state above
+    // is preserved untouched while render-view is active; this struct
+    // holds the parallel context that drives render-view's display.
+    struct RenderViewContext {
+        bool enabled = false;
+        // Path to the last-displayed render's .wav, persisted across toggle
+        // off/on cycles within a session. Empty before the first entry; reset
+        // to whatever path was active when the previous toggle-off fired.
+        std::string last_path;
+        std::vector<RenderViewEntry> list;
+        int                          index = -1;     // -1 = unset
+        // The current render's loaded markers + phase resets, parsed from
+        // sibling `<basename>.renderwarpmarkers` /
+        // `<basename>.renderphaseresetmarkers`.
+        std::vector<GuiWarpMarker>       markers;
+        std::vector<GuiPhaseResetMarker>    phase_resets;
+        // Source-frame mapping of the current render: F_begin..F_end (source
+        // sample-rate frames) is what the render's full audio covers. When the
+        // render's warpmarkers carry no `b=` flag, F_begin is 0; when it carries
+        // no `e=` flag, F_end is the source's total_frames. Used by the render
+        // -view waveform mapping and the timestamp readout.
+        int64_t                      src_F_begin = 0;
+        int64_t                      src_F_end   = 0;
+        // Source audio's sample rate / total frames at the time render-view
+        // was entered. Cached so timestamp computation and trim resolution
+        // don't have to peek at the swapped-out source GuiAudio.
+        int                          src_sr      = 0;
+        int64_t                      src_total   = 0;
+    };
+    RenderViewContext render_view;
 };
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared

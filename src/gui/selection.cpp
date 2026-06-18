@@ -17,8 +17,8 @@ void Selection::repair_last_selected() {
     if (app.selected_markers.empty()) {
         app.last_selected_marker = -1;
     } else {
-        // Pick the largest remaining index (spec: "the largest remaining
-        // index in selected_markers, or -1 if empty").
+        // Pick the largest remaining index in selected_markers (or -1
+        // if empty).
         app.last_selected_marker = *app.selected_markers.rbegin();
     }
 }
@@ -96,10 +96,10 @@ void Selection::cycle_selection(bool forward) {
     // prune_live_selection. Bind const refs once so the count, frame_of,
     // and is_disabled reads below all index the same vectors.
     const std::vector<GuiWarpMarker>& warp_vec =
-        app.render_view_enabled ? app.render_view_markers
+        app.render_view.enabled ? app.render_view.markers
                                 : app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& reset_vec =
-        app.render_view_enabled ? app.render_view_phase_resets
+        app.render_view.enabled ? app.render_view.phase_resets
                                 : app.phase_reset_markers.markers();
 
     const int n = phase_reset
@@ -171,10 +171,10 @@ void Selection::select_prev_marker() { cycle_selection(false); }
 
 void Selection::prune_live_selection() {
     int n = 0;
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         n = (app.active_markers_view == 'P')
-            ? static_cast<int>(app.render_view_phase_resets.size())
-            : static_cast<int>(app.render_view_markers.size());
+            ? static_cast<int>(app.render_view.phase_resets.size())
+            : static_cast<int>(app.render_view.markers.size());
     } else {
         n = (app.active_markers_view == 'P')
             ? static_cast<int>(app.phase_reset_markers.markers().size())

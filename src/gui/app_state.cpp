@@ -55,7 +55,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     const int64_t visible = samples_visible(app, audio);
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
-    const bool rv = app.render_view_enabled;
+    const bool rv = app.render_view.enabled;
     // In render-view, the visible sub-view's
     // list drives hit-testing. 'P' reads phase reset time_seconds and
     // converts to source frames via the source sample rate
@@ -63,9 +63,9 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     const bool rv_trans = rv && app.active_markers_view == 'P';
     const int n =
         rv_trans
-            ? static_cast<int>(app.render_view_phase_resets.size())
+            ? static_cast<int>(app.render_view.phase_resets.size())
             : rv
-                ? static_cast<int>(app.render_view_markers.size())
+                ? static_cast<int>(app.render_view.markers.size())
                 : (app.active_markers_view == 'P')
                     ? static_cast<int>(app.phase_reset_markers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
@@ -83,10 +83,10 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     for (int i = 0; i < n; ++i) {
         double ms;
         if (rv_trans) {
-            ms = app.render_view_phase_resets[i].time_seconds *
+            ms = app.render_view.phase_resets[i].time_seconds *
                  static_cast<double>(sr);
         } else if (rv) {
-            ms = app.render_view_markers[i].time_seconds *
+            ms = app.render_view.markers[i].time_seconds *
                  static_cast<double>(sr);
         } else if (app.active_markers_view == 'P') {
             ms = app.phase_reset_markers.markers()[i].time_seconds *
@@ -117,7 +117,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
     // Trim editing is a source-view authoring gesture against the active
     // A/B tab; render-view has its own (trim-less) display.
-    if (app.render_view_enabled) return TrimHit::None;
+    if (app.render_view.enabled) return TrimHit::None;
     if (!app.has_trim_begin && !app.has_trim_end) return TrimHit::None;
 
     const GuiRect area = waveform_area(app);
@@ -168,7 +168,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Same gating as hit_test_trim_boundary: source-view authoring against
     // the active A/B tab, only set bounds are testable.
-    if (app.render_view_enabled) return TrimHit::None;
+    if (app.render_view.enabled) return TrimHit::None;
     if (!app.has_trim_begin && !app.has_trim_end) return TrimHit::None;
 
     // The b/e chips fill top_upper_row_area exactly (the painted
@@ -253,7 +253,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // Render-view's phase reset sub-view paints no
     // flags; short-circuit to no-hit so click and hover paths see a
     // bare top strip.
-    if (app.render_view_enabled &&
+    if (app.render_view.enabled &&
         app.active_markers_view == 'P') {
         return -1;
     }
@@ -273,7 +273,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // During a drag, route through the frozen frame_map captured at
     // begin_drag so hit-rect positions match the frozen-coord paint.
     std::vector<FrameMapSegment> target_frame_map;
-    if (!app.render_view_enabled &&
+    if (!app.render_view.enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
             target_frame_map = app.drag.frozen_frame_map;
@@ -293,9 +293,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay = &drag_overlay_storage;
     }
     std::vector<FlagHitRect> rects;
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         rects = compute_flag_hit_rects(
-            top, app.render_view_markers,
+            top, app.render_view.markers,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             nullptr, drag_overlay);
     } else if (app.active_markers_view == 'P') {
@@ -326,12 +326,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // reference is now an explicit argument.
 bool popup_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;
-    if (app.render_view_enabled) {
+    if (app.render_view.enabled) {
         // In render-view, hover popups apply against the loaded
         // render's warpmarkers regardless of the pre-toggle mode.
         // Iteration-mode is forced off on toggle-in so its gate is
         // implicitly satisfied here too.
-        const auto& mv = app.render_view_markers;
+        const auto& mv = app.render_view.markers;
         if (idx >= static_cast<int>(mv.size())) return false;
         const auto& m = mv[idx];
         return m.tempo_inherits || !m.label_ref.empty();

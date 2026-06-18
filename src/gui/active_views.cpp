@@ -21,6 +21,18 @@
 // Free function calls (clamp_viewport_start) keep their original spelling —
 // declared at file scope in app_state.h.
 
+// Boundary sync points for the live/slot view-state cache. The live
+// AppState view fields (viewport / zoom / playhead / selection) are the
+// working copy; the per-view slots are synced only here. The live fields
+// are pushed into the active slot on Ctrl+Tab (pre-flip) and Ctrl+S
+// (pre-write) via refresh_active_tab_view_from_app, and the destination
+// slot is restored into the live fields on switch. During normal editing
+// only the live fields move and the backing slot is intentionally stale
+// until the next boundary. active_view_state() resolves the active slot:
+// the active tab's slot in source view, the active render entry's `state`
+// in render view, or nullptr when render-view is on with no valid entry
+// (callers no-op on nullptr rather than writing a fallback slot).
+
 // Overwrite the active tab's snapshot with the live AppState viewport /
 // zoom / playhead. Shared by Ctrl+Tab (pre-flip) and Ctrl+S (pre-write)
 // so "remembered spot" semantics stay consistent between the two paths.
@@ -47,11 +59,11 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // active view-state is available; callers must handle nullptr
 // by no-op-ing rather than silently corrupting a fallback slot.
 ViewState* GuiActiveViews::active_view_state() {
-    if (app.render_view_enabled) {
-        if (app.render_view_index >= 0 &&
-            app.render_view_index <
-                static_cast<int>(app.render_view_list.size())) {
-            return &app.render_view_list[app.render_view_index].state;
+    if (app.render_view.enabled) {
+        if (app.render_view.index >= 0 &&
+            app.render_view.index <
+                static_cast<int>(app.render_view.list.size())) {
+            return &app.render_view.list[app.render_view.index].state;
         }
         // Render-view enabled but no valid entry. Return null
         // rather than silently writing render-view indices into

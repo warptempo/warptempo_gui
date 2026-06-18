@@ -312,9 +312,17 @@ std::expected<MapBuildResult, std::string> build_maps(
 
             double final_multiplier = multiplier;
             if (!lbl.tempo_scale.empty()) {
+                // The parser validates every scale to the strict N.NNNN
+                // syntax, so std::stod cannot throw on a well-formed load; a
+                // throw here means a malformed scale slipped past parse.
                 double s_val = 0.0;
                 try { s_val = std::stod(lbl.tempo_scale); }
-                catch (...) { s_val = 0.0; }
+                catch (...) {
+                    return std::unexpected("malformed tempo scale at marker "
+                                           + std::to_string(i) + " (label: "
+                                           + m.label_ref + "): "
+                                           + lbl.tempo_scale);
+                }
                 final_multiplier = s_val * multiplier;
             }
             if (final_multiplier > 9.9999) {

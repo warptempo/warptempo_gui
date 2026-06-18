@@ -133,11 +133,12 @@ int main(int argc, char** argv) {
     const long total_frames = static_cast<long>(info.frames);
     sf_close(sf);
 
-    // --- locked engine geometry (mirrors render_pipeline.cpp) ---
+    // --- locked engine geometry (shared with render_pipeline.cpp and
+    // engine_main.cpp via engine_geometry.h) ---
     const int     N_fft = kCanonicalN;
-    const int     R_s   = N_fft / 4;
-    const int64_t phase_reset_offset_samples = static_cast<int64_t>(
-        std::nearbyint(kPhaseResetOffsetHops * static_cast<double>(R_s)));
+    const int     R_s   = kCanonicalRs;
+    const int64_t phase_reset_offset_samples =
+        canonical_phase_reset_offset_samples();
 
     // --- full (untrimmed) frame map. The engine always renders the full map;
     // trim is applied by slicing it, never by an engine window. This is

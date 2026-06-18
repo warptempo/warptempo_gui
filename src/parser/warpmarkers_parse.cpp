@@ -440,10 +440,17 @@ parse_warpmarkers_file(const std::string& path) {
                 const size_t star = tempo_raw.find('*');
                 const std::string base_part = (star == std::string::npos)
                     ? tempo_raw : tempo_raw.substr(0, star);
+                const std::string scale = (star == std::string::npos)
+                    ? std::string() : tempo_raw.substr(star + 1);
+                // The scale field uses the strict N.NNNN syntax even on the
+                // legacy load path; only the base part allows legacy
+                // arithmetic.
+                if (star != std::string::npos && !is_valid_scale_format(scale))
+                    return fail(line_number,
+                        "scale must be N.NNNN format: " + scale);
                 m.tempo_inherits = false;
                 m.tempo_base     = eval_math_string(base_part);
-                m.tempo_scale    = (star == std::string::npos)
-                    ? std::string() : tempo_raw.substr(star + 1);
+                m.tempo_scale    = scale;
                 have_prev_numeric = true;
             } else {
                 if (!is_valid_label_format(tempo_raw))

@@ -1,14 +1,13 @@
 #include "phase_reset_markers.h"
 
+#include "settings_io.h"
 #include "time_format.h"
 
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
-#include <fcntl.h>
 #include <limits>
 #include <sstream>
-#include <sys/stat.h>
 #include <unistd.h>
 
 std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
@@ -67,44 +66,8 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
     }
     const std::string data = out.str();
 
-    mode_t mode = 0644;
-    struct stat st;
-    if (::stat(path.c_str(), &st) == 0) {
-        mode = st.st_mode & 07777;
-    }
-
-    const std::string tmp_path = path + ".tmp";
-    int fd = ::open(tmp_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
-    if (fd < 0) return false;
-
-    size_t written = 0;
-    while (written < data.size()) {
-        const ssize_t n = ::write(fd, data.data() + written,
-                                  data.size() - written);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            ::close(fd);
-            ::unlink(tmp_path.c_str());
-            return false;
-        }
-        written += static_cast<size_t>(n);
-    }
-    if (::fsync(fd) != 0) {
-        ::close(fd);
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    if (::close(fd) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    ::chmod(tmp_path.c_str(), mode);
-
-    if (::rename(tmp_path.c_str(), path.c_str()) != 0) {
-        ::unlink(tmp_path.c_str());
-        return false;
-    }
-    return true;
+    // tmp + fsync + rename, preserving the existing file's mode.
+    return atomic_write_string_to_path(path, data);
 }
 
 bool GuiPhaseResetMarkers::delete_file(const std::string& path) const {
