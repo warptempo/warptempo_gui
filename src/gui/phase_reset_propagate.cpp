@@ -67,9 +67,11 @@ std::vector<DestBlock> walk_named_blocks(
 // currently in. The input is always a source-domain seconds value (warp
 // markers, clipboard blocks, and dest_blocks all live in source seconds).
 // In source view: identity, labeled " source time". In target view:
-// forward-translate via the live target-view frame_map, labeled
-// " target time". Degenerate frame_map / sample_rate falls back to the
-// untranslated source seconds + " source time" label.
+// forward-translate to the active domain via source_frame_to_active_domain,
+// labeled " target time". A degenerate (empty / failed-build) target-view map
+// translates as identity, so the timestamp reads through unchanged but stays
+// labeled " target time", consistent with the identity fallback the rest of
+// the target-view paint uses on an empty map.
 std::string format_domain_timestamp(double source_seconds,
                                     const AppState& app,
                                     const GuiAudio& audio) {
@@ -82,16 +84,11 @@ std::string format_domain_timestamp(double source_seconds,
                (in_target ? " target time" : " source time");
     }
 
-    const auto tmap = build_target_view_frame_map(app, sr, total);
-    if (tmap.empty()) {
-        // Degenerate frame_map — fall back to untranslated source seconds
-        // with a source-time label so the message is still well-defined.
-        return format_timestamp(source_seconds) + " source time";
-    }
     const int64_t src_frame =
         static_cast<int64_t>(std::nearbyint(source_seconds *
                                             static_cast<double>(sr)));
-    const int64_t dom_frame = to_domain_frame(app, src_frame, tmap);
+    const int64_t dom_frame =
+        source_frame_to_active_domain(app, audio, src_frame);
     const double dom_seconds =
         static_cast<double>(dom_frame) / static_cast<double>(sr);
     return format_timestamp(dom_seconds) + " target time";
