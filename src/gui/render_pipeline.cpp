@@ -71,10 +71,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // range by construction here). ---
     const std::string& output_format = req.engine_settings.output_format;
     const double scale               = req.engine_settings.scale;
-    const int    N_fft               = kCanonicalN;
-    const int    R_s                 = kCanonicalRs;
-    const int64_t phase_reset_offset_samples =
-        canonical_phase_reset_offset_samples();
+    const int    N_fft               = kN;
+    const int    R_s                 = kRs;
 
     // --- Probe source audio for sample rate / total frames. ---
     SF_INFO src_info{};

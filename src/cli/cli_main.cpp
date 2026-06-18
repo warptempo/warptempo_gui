@@ -9,7 +9,7 @@
                                         // slice_frame_map_to_trim_window,
                                         // load_source_range_to_buffer
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
-#include "engine/engine_geometry.h"     // kCanonicalN, kPhaseResetOffsetHops
+#include "engine/engine_geometry.h"     // kN, kRs, phase_reset_offset_samples
 #include "render_assembly.h"            // assign_engine_frame_map
 
 #include <sndfile.h>
@@ -135,10 +135,8 @@ int main(int argc, char** argv) {
 
     // --- locked engine geometry (shared with render_pipeline.cpp and
     // engine_main.cpp via engine_geometry.h) ---
-    const int     N_fft = kCanonicalN;
-    const int     R_s   = kCanonicalRs;
-    const int64_t phase_reset_offset_samples =
-        canonical_phase_reset_offset_samples();
+    const int     N_fft = kN;
+    const int     R_s   = kRs;
 
     // --- full (untrimmed) frame map. The engine always renders the full map;
     // trim is applied by slicing it, never by an engine window. This is

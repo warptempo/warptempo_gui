@@ -129,7 +129,7 @@ constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 // edges.
 constexpr double kRowGapPx = 0.0;
 
-// Defensive window floor (the canonical XRandR minimum). Enforced two ways:
+// Defensive window floor (a conservative 640x480 minimum). Enforced two ways:
 // the Wayland set_min_size hint at toplevel creation, and an internal clamp in
 // the geometry helpers so the waveform arithmetic is always valid regardless of
 // what the compositor sends. Not sized to fit content — the longest dialogue

@@ -1,5 +1,5 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
-#include "engine/engine_geometry.h"   // kCanonicalN, kCanonicalRs, canonical_phase_reset_offset_samples
+#include "engine/engine_geometry.h"   // kN, kRs, phase_reset_offset_samples
 #include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
 
 #include <sndfile.h>
@@ -136,10 +136,8 @@ int main(int argc, char** argv) {
     }
 
     // --- locked engine geometry ---
-    const int     N_fft = kCanonicalN;
-    const int     R_s   = kCanonicalRs;
-    const int64_t phase_reset_offset_samples =
-        canonical_phase_reset_offset_samples();
+    const int     N_fft = kN;
+    const int     R_s   = kRs;
 
     // --- engine params ---
     EngineParams ep;
