@@ -31,20 +31,20 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         const int sr = audio.sample_rate();
         const int64_t live_total =
             live_total_frames(app, audio);
-        if (!app.has_trim_begin && !app.has_trim_end) {
+        if (!app.trim.has_begin && !app.trim.has_end) {
             return {0, live_total};
         }
         int64_t begin_tgt = 0;
         int64_t end_tgt   = live_total;
-        if (app.has_trim_begin) {
+        if (app.trim.has_begin) {
             const int64_t begin_src = static_cast<int64_t>(
-                std::nearbyint(app.trim_begin_seconds *
+                std::nearbyint(app.trim.begin_seconds *
                                static_cast<double>(sr)));
             begin_tgt = source_frame_to_active_domain(app, audio, begin_src);
         }
-        if (app.has_trim_end) {
+        if (app.trim.has_end) {
             const int64_t end_src = static_cast<int64_t>(
-                std::nearbyint(app.trim_end_seconds *
+                std::nearbyint(app.trim.end_seconds *
                                static_cast<double>(sr)));
             end_tgt = source_frame_to_active_domain(app, audio, end_src);
         }

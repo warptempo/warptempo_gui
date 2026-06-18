@@ -122,11 +122,11 @@ void GuiSettingsEditor::commit() {
         const double secs = parse_timestamp(value);
         SettingsSnapshot pre = capture_current_settings(app);
         if (key == "trim_begin") {
-            app.has_trim_begin     = true;
-            app.trim_begin_seconds = secs;
+            app.trim.has_begin     = true;
+            app.trim.begin_seconds = secs;
         } else {
-            app.has_trim_end     = true;
-            app.trim_end_seconds = secs;
+            app.trim.has_end     = true;
+            app.trim.end_seconds = secs;
         }
         undo.push_settings_undo(std::move(pre));
         std::fprintf(stderr,

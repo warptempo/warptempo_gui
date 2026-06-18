@@ -340,10 +340,10 @@ void Undo::do_undo() {
     // marker-only ops. Settings-only entries get the actual pre-edit
     // settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    app.trim_begin_seconds = entry.settings.trim_begin;
-    app.trim_end_seconds   = entry.settings.trim_end;
-    app.has_trim_begin     = entry.settings.has_trim_begin;
-    app.has_trim_end       = entry.settings.has_trim_end;
+    app.trim.begin_seconds = entry.settings.trim_begin;
+    app.trim.end_seconds   = entry.settings.trim_end;
+    app.trim.has_begin     = entry.settings.has_trim_begin;
+    app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
@@ -442,10 +442,10 @@ void Undo::do_redo() {
     }
 
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    app.trim_begin_seconds = entry.settings.trim_begin;
-    app.trim_end_seconds   = entry.settings.trim_end;
-    app.has_trim_begin     = entry.settings.has_trim_begin;
-    app.has_trim_end       = entry.settings.has_trim_end;
+    app.trim.begin_seconds = entry.settings.trim_begin;
+    app.trim.end_seconds   = entry.settings.trim_end;
+    app.trim.has_begin     = entry.settings.has_trim_begin;
+    app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);

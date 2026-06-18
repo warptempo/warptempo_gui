@@ -1390,8 +1390,8 @@ GuiPaintHandler::compute_displayed_trim() const {
 
     // has-set + selected bits come live from the project trim; render view
     // forces them off (the render waveform has no trim).
-    out.has_begin      = !rve && app.has_trim_begin;
-    out.has_end        = !rve && app.has_trim_end;
+    out.has_begin      = !rve && app.trim.has_begin;
+    out.has_end        = !rve && app.trim.has_end;
     out.begin_selected = out.has_begin && app.trim_begin_selected;
     out.end_selected   = out.has_end   && app.trim_end_selected;
 

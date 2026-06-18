@@ -133,10 +133,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // assignment (it lives on AppState now). Reset it explicitly before the
     // line-194 initial-playhead read so an untrimmed project loaded after a
     // trimmed one sees unset trim (playhead at sample 0, not stale begin).
-    app.has_trim_begin      = false;
-    app.has_trim_end        = false;
-    app.trim_begin_seconds  = 0.0;
-    app.trim_end_seconds    = 0.0;
+    app.trim.has_begin      = false;
+    app.trim.has_end        = false;
+    app.trim.begin_seconds  = 0.0;
+    app.trim.end_seconds    = 0.0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
@@ -227,12 +227,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // Trim: a single project-level value. Apply each bound when its key
         // is present; absence leaves the load-time reset (above) in place.
         if (ps.has_trim_begin) {
-            app.has_trim_begin     = true;
-            app.trim_begin_seconds = ps.trim_begin;
+            app.trim.has_begin     = true;
+            app.trim.begin_seconds = ps.trim_begin;
         }
         if (ps.has_trim_end) {
-            app.has_trim_end       = true;
-            app.trim_end_seconds   = ps.trim_end;
+            app.trim.has_end       = true;
+            app.trim.end_seconds   = ps.trim_end;
         }
         if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
         if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
@@ -363,10 +363,10 @@ void GuiFileLoader::revert_to_blank() {
     // Project trim lives on AppState; the fresh-ViewState assignment above
     // no longer clears it. Reset explicitly so no trim carries into the
     // next load.
-    app.has_trim_begin      = false;
-    app.has_trim_end        = false;
-    app.trim_begin_seconds  = 0.0;
-    app.trim_end_seconds    = 0.0;
+    app.trim.has_begin      = false;
+    app.trim.has_end        = false;
+    app.trim.begin_seconds  = 0.0;
+    app.trim.end_seconds    = 0.0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
 

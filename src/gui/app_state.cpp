@@ -17,10 +17,10 @@
 SettingsSnapshot capture_current_settings(const AppState& app) {
     SettingsSnapshot s;
     s.engine_settings = app.engine_settings;
-    s.trim_begin      = app.trim_begin_seconds;
-    s.trim_end        = app.trim_end_seconds;
-    s.has_trim_begin  = app.has_trim_begin;
-    s.has_trim_end    = app.has_trim_end;
+    s.trim_begin      = app.trim.begin_seconds;
+    s.trim_end        = app.trim.end_seconds;
+    s.has_trim_begin  = app.trim.has_begin;
+    s.has_trim_end    = app.trim.has_end;
     return s;
 }
 
@@ -118,7 +118,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     // Trim editing is a source-view authoring gesture against the active
     // A/B tab; render-view has its own (trim-less) display.
     if (app.render_view.enabled) return TrimHit::None;
-    if (!app.has_trim_begin && !app.has_trim_end) return TrimHit::None;
+    if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
 
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
@@ -154,8 +154,8 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
         return std::abs(b_px - click_rel_x);
     };
 
-    const int db = bound_dist(app.trim_begin_seconds, app.has_trim_begin);
-    const int de = bound_dist(app.trim_end_seconds, app.has_trim_end);
+    const int db = bound_dist(app.trim.begin_seconds, app.trim.has_begin);
+    const int de = bound_dist(app.trim.end_seconds, app.trim.has_end);
     const bool begin_ok = db <= kMarkerHitHalfPx;
     const bool end_ok   = de <= kMarkerHitHalfPx;
     if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
@@ -169,7 +169,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // Same gating as hit_test_trim_boundary: source-view authoring against
     // the active A/B tab, only set bounds are testable.
     if (app.render_view.enabled) return TrimHit::None;
-    if (!app.has_trim_begin && !app.has_trim_end) return TrimHit::None;
+    if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
 
     // The b/e chips fill top_upper_row_area exactly (the painted
     // chip box top/height equal this row). A press outside that vertical band
@@ -235,8 +235,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         return std::abs(mouse_x - rx);
     };
 
-    const int db = chip_dist(app.trim_begin_seconds, app.has_trim_begin, "b");
-    const int de = chip_dist(app.trim_end_seconds,   app.has_trim_end,   "e");
+    const int db = chip_dist(app.trim.begin_seconds, app.trim.has_begin, "b");
+    const int de = chip_dist(app.trim.end_seconds,   app.trim.has_end,   "e");
 
     // Overlapping chips: the renderer elides the right one, but guard the tie
     // by preferring the bound whose column is nearer the press, mirroring

@@ -581,13 +581,16 @@ struct AppState {
     // A/B tabs), so it lives on AppState rather than per-tab ViewState.
     // Trim edits participate in the undo domain as part of the
     // SettingsSnapshot. Seconds for sample-rate stability (consistent with
-    // marker times). has_trim_* distinguishes "no trim set" from "trim set
-    // to 0.0" — both round-trip through .settings. Reset on file load /
-    // revert.
-    double trim_begin_seconds = 0.0;
-    double trim_end_seconds   = 0.0;
-    bool   has_trim_begin     = false;
-    bool   has_trim_end       = false;
+    // marker times). has_begin / has_end distinguish "no trim set" from
+    // "trim set to 0.0" — both round-trip through .settings. Reset on file
+    // load / revert.
+    struct TrimState {
+        double begin_seconds = 0.0;
+        double end_seconds   = 0.0;
+        bool   has_begin     = false;
+        bool   has_end       = false;
+    };
+    TrimState trim;
 
     // Transient selection of the trim boundary stems. A separate
     // selection channel from the marker sets (selected_markers /
@@ -921,7 +924,7 @@ enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
 // column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
-// bounds (has_trim_begin / has_trim_end) are testable. Walks the same
+// bounds (trim.has_begin / trim.has_end) are testable. Walks the same
 // frame_map as hit_test_marker_line in target view so the hit lands on the
 // visually-drawn stem. Trim is project-level, and applies in both 'W'
 // and 'P' views. When both bounds are within reach, the nearer wins.

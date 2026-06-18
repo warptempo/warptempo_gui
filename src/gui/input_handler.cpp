@@ -448,10 +448,10 @@ bool GuiInputHandler::render_bpm_sweep() {
         req.phase_resets           = base_phase_resets;
         req.phase_reset_frames     = base_phase_reset_frames;
         req.engine_settings      = std::move(cell_settings);
-        req.has_trim_begin       = app.has_trim_begin;
-        req.trim_begin_sec       = app.trim_begin_seconds;
-        req.has_trim_end         = app.has_trim_end;
-        req.trim_end_sec         = app.trim_end_seconds;
+        req.has_trim_begin       = app.trim.has_begin;
+        req.trim_begin_sec       = app.trim.begin_seconds;
+        req.has_trim_end         = app.trim.has_end;
+        req.trim_end_sec         = app.trim.end_seconds;
         req.batch_folder         = batch_folder.string();
         req.batch_basename       = std::move(basename);
         reqs.push_back(std::move(req));
@@ -938,8 +938,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // pre-drag value (the drag mutated the live store per motion event)
     // and ends the gesture without an undo entry.
     if (key == GuiKeys::Escape && app.trim_drag.active) {
-        double& field = app.trim_drag.is_begin ? app.trim_begin_seconds
-                                                : app.trim_end_seconds;
+        double& field = app.trim_drag.is_begin ? app.trim.begin_seconds
+                                                : app.trim.end_seconds;
         bool changed = false;
         if (field != app.trim_drag.orig_seconds) {
             field = app.trim_drag.orig_seconds;
@@ -1005,10 +1005,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         req.markers              = app.warpmarkers.markers();
         req.phase_resets           = app.phase_reset_markers.markers();
         req.engine_settings      = app.engine_settings;
-        req.has_trim_begin       = app.has_trim_begin;
-        req.trim_begin_sec       = app.trim_begin_seconds;
-        req.has_trim_end         = app.has_trim_end;
-        req.trim_end_sec         = app.trim_end_seconds;
+        req.has_trim_begin       = app.trim.has_begin;
+        req.trim_begin_sec       = app.trim.begin_seconds;
+        req.has_trim_end         = app.trim.has_end;
+        req.trim_end_sec         = app.trim.end_seconds;
         for (const auto& m : app.phase_reset_markers.markers()) {
             if (m.disabled) continue;
             req.phase_reset_frames.push_back(static_cast<int64_t>(
@@ -1139,10 +1139,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.markers              = q.markers;
             req.phase_resets           = q.phase_resets;
             req.engine_settings      = app.engine_settings;
-            req.has_trim_begin       = app.has_trim_begin;
-            req.trim_begin_sec       = app.trim_begin_seconds;
-            req.has_trim_end         = app.has_trim_end;
-            req.trim_end_sec         = app.trim_end_seconds;
+            req.has_trim_begin       = app.trim.has_begin;
+            req.trim_begin_sec       = app.trim.begin_seconds;
+            req.has_trim_end         = app.trim.has_end;
+            req.trim_end_sec         = app.trim.end_seconds;
             for (const auto& m : q.phase_resets) {
                 if (m.disabled) continue;
                 req.phase_reset_frames.push_back(static_cast<int64_t>(
@@ -1333,10 +1333,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.phase_resets           = base_phase_resets;
             req.phase_reset_frames     = base_phase_reset_frames;
             req.engine_settings      = app.engine_settings;
-            req.has_trim_begin       = app.has_trim_begin;
-            req.trim_begin_sec       = app.trim_begin_seconds;
-            req.has_trim_end         = app.has_trim_end;
-            req.trim_end_sec         = app.trim_end_seconds;
+            req.has_trim_begin       = app.trim.has_begin;
+            req.trim_begin_sec       = app.trim.begin_seconds;
+            req.has_trim_end         = app.trim.has_end;
+            req.trim_end_sec         = app.trim.end_seconds;
             req.batch_folder         = batch_folder.string();
             req.batch_basename       = std::move(basename);
             reqs.push_back(std::move(req));
@@ -1948,12 +1948,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (shift) {
             selection.clear_selection();
         } else {
-            if (app.has_trim_begin || app.has_trim_end) {
+            if (app.trim.has_begin || app.trim.has_end) {
                 SettingsSnapshot pre = capture_current_settings(app);
-                app.has_trim_begin      = false;
-                app.has_trim_end        = false;
-                app.trim_begin_seconds  = 0.0;
-                app.trim_end_seconds    = 0.0;
+                app.trim.has_begin      = false;
+                app.trim.has_end        = false;
+                app.trim.begin_seconds  = 0.0;
+                app.trim.end_seconds    = 0.0;
                 app.trim_begin_selected = false;
                 app.trim_end_selected   = false;
                 undo.push_settings_undo(std::move(pre));
@@ -3228,11 +3228,11 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
         snap_to_timestamp_grid(static_cast<double>(cand_frame) / sr_d);
     cand_frame = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
 
-    bool&   this_has      = (side == TrimSide::Begin) ? app.has_trim_begin     : app.has_trim_end;
-    double& this_seconds  = (side == TrimSide::Begin) ? app.trim_begin_seconds : app.trim_end_seconds;
+    bool&   this_has      = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
+    double& this_seconds  = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
     bool&   this_sel      = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
-    bool&   other_has     = (side == TrimSide::Begin) ? app.has_trim_end       : app.has_trim_begin;
-    double& other_seconds = (side == TrimSide::Begin) ? app.trim_end_seconds   : app.trim_begin_seconds;
+    bool&   other_has     = (side == TrimSide::Begin) ? app.trim.has_end       : app.trim.has_begin;
+    double& other_seconds = (side == TrimSide::Begin) ? app.trim.end_seconds   : app.trim.begin_seconds;
     bool&   other_sel     = (side == TrimSide::Begin) ? app.trim_end_selected  : app.trim_begin_selected;
     const char letter     = (side == TrimSide::Begin) ? 'b' : 'e';
 
@@ -3322,8 +3322,8 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
 }
 
 void GuiInputHandler::handle_trim_unset(TrimSide side) {
-    bool&   this_has     = (side == TrimSide::Begin) ? app.has_trim_begin     : app.has_trim_end;
-    double& this_seconds = (side == TrimSide::Begin) ? app.trim_begin_seconds : app.trim_end_seconds;
+    bool&   this_has     = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
+    double& this_seconds = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
     bool&   this_sel     = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
     if (!this_has) return;
     SettingsSnapshot pre = capture_current_settings(app);
@@ -3399,14 +3399,14 @@ bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
 void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
-    if (is_begin ? !app.has_trim_begin : !app.has_trim_end) {
+    if (is_begin ? !app.trim.has_begin : !app.trim.has_end) {
         return;
     }
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.moved        = false;
-    app.trim_drag.orig_seconds = is_begin ? app.trim_begin_seconds
-                                          : app.trim_end_seconds;
+    app.trim_drag.orig_seconds = is_begin ? app.trim.begin_seconds
+                                          : app.trim.end_seconds;
     // Grab anchor: the press position in source-domain seconds. Motion moves
     // the bound by the cursor's displacement from here, so it tracks the grab
     // point with no snap (mirrors begin_drag's anchor_mouse_time_seconds).
@@ -3455,16 +3455,16 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     const int64_t eps_frames = static_cast<int64_t>(
         std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
     if (app.trim_drag.is_begin) {
-        if (app.has_trim_end) {
+        if (app.trim.has_end) {
             const int64_t end_f = static_cast<int64_t>(
-                std::nearbyint(app.trim_end_seconds * sr_d));
+                std::nearbyint(app.trim.end_seconds * sr_d));
             if (src_frame > end_f - eps_frames) src_frame = end_f - eps_frames;
             if (src_frame < 0) src_frame = 0;
         }
     } else {
-        if (app.has_trim_begin) {
+        if (app.trim.has_begin) {
             const int64_t begin_f = static_cast<int64_t>(
-                std::nearbyint(app.trim_begin_seconds * sr_d));
+                std::nearbyint(app.trim.begin_seconds * sr_d));
             if (src_frame < begin_f + eps_frames) src_frame = begin_f + eps_frames;
             if (src_frame > total) src_frame = total;
         }
@@ -3475,8 +3475,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // both operate on the grid value the bound will persist at.
     const double new_seconds =
         snap_to_timestamp_grid(static_cast<double>(src_frame) / sr_d);
-    double& field = app.trim_drag.is_begin ? app.trim_begin_seconds
-                                           : app.trim_end_seconds;
+    double& field = app.trim_drag.is_begin ? app.trim.begin_seconds
+                                           : app.trim.end_seconds;
     if (field != new_seconds) {
         const bool first_motion = !app.trim_drag.moved;
         field = new_seconds;
@@ -3536,10 +3536,10 @@ void GuiInputHandler::commit_trim_drag() {
 }
 
 void GuiInputHandler::delete_selected_trim() {
-    if (app.trim_begin_selected && app.has_trim_begin) {
+    if (app.trim_begin_selected && app.trim.has_begin) {
         handle_trim_unset(TrimSide::Begin);
     }
-    if (app.trim_end_selected && app.has_trim_end) {
+    if (app.trim_end_selected && app.trim.has_end) {
         handle_trim_unset(TrimSide::End);
     }
     app.trim_begin_selected = false;
@@ -3563,8 +3563,8 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
     // reposition-drag grab and intentionally does not move the playhead,
     // matching the Ctrl+marker reposition. The hit-test that routed here only
     // fires when the boundary exists, so trim_begin/end_seconds is set.
-    const double sec = (which == TrimHit::Begin) ? app.trim_begin_seconds
-                                                 : app.trim_end_seconds;
+    const double sec = (which == TrimHit::Begin) ? app.trim.begin_seconds
+                                                 : app.trim.end_seconds;
     const int sr = audio.sample_rate();
     const int64_t src_sample =
         static_cast<int64_t>(std::nearbyint(sec * static_cast<double>(sr)));

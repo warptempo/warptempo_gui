@@ -244,13 +244,13 @@ std::pair<long long, long long> compute_trim_samples(
     long long end   = total_frames;
     const double sr = static_cast<double>(sample_rate);
 
-    if (a.has_trim_begin) {
+    if (a.trim.has_begin) {
         begin = static_cast<long long>(
-            std::nearbyint(a.trim_begin_seconds * sr));
+            std::nearbyint(a.trim.begin_seconds * sr));
     }
-    if (a.has_trim_end) {
+    if (a.trim.has_end) {
         end = static_cast<long long>(
-            std::nearbyint(a.trim_end_seconds * sr));
+            std::nearbyint(a.trim.end_seconds * sr));
     }
     if (begin < 0) begin = 0;
     if (begin > total_frames) begin = total_frames;
