@@ -1171,7 +1171,7 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             wl_registry_bind(r, name, &zxdg_decoration_manager_v1_interface, 1));
     } else if (std::strcmp(interface, wl_output_interface.name) == 0) {
         // Bind only the first wl_output advertised. Multi-monitor is out of
-        // scope for this brief; the first output's refresh rate is used as
+        // scope here; the first output's refresh rate is used as
         // the timerfd interval source.
         if (!wl_output_) {
             const uint32_t v = std::min<uint32_t>(version, 2);

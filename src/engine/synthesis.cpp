@@ -326,8 +326,8 @@ void Synthesis::synthesize_full(
     // Run each channel's pipeline concurrently. ch 0 runs on this (main) thread
     // so its progress output isn't interleaved; ch 1..n-1 get worker threads.
     // All per-channel state is private to run_channel and fft_ws[ch] is
-    // per-channel, so the passes are independent — see the race audit in the
-    // brief. Join before the interleave below.
+    // per-channel, so the passes are independent. Join before the interleave
+    // below.
     const auto _wall0 = prof_clock::now();
     {
         std::vector<std::thread> workers;
