@@ -19,8 +19,8 @@
 #include <utility>
 #include <vector>
 
-// X.7.5a: warp-authoring cluster. Method bodies are byte-identical to
-// the lambdas they replaced in main.cpp, with these mechanical rewrites:
+// Warp-authoring cluster. Method bodies map onto the original main.cpp
+// lambdas via these mechanical rewrites:
 //
 //   push_undo, push_undo_phase_reset,
 //   push_undo_both                 → undo.push_undo*
@@ -32,7 +32,6 @@
 //   move_playhead_to               → viewport.move_playhead_to
 //   stop_playback_if_playing       → playback_lifecycle.stop_playback_if_playing
 //   clear_hover_popup              → viewport.clear_hover_popup
-//                                    (X.7.13 retired the std::function forwarders)
 //   resolve_inherited_tempo,
 //   resolve_inherited_tempo_scale,
 //   current_samples_per_pixel,
@@ -73,7 +72,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
         nm.tempo_scale.clear();
     }
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
-    // Newly-dropped marker becomes the sole selection per chunk I.
+    // Newly-dropped marker becomes the sole selection.
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
     app.last_selected_marker = new_idx;
@@ -313,9 +312,9 @@ void GuiWarpMarkersOps::toggle_inherits() {
     target_render.trigger();
 }
 
-// Toggle the disabled flag on each selected marker. Per chunk U patch 3
-// the flag is allowed on any marker (cascade still applies only when the
-// toggled marker is a label_def).
+// Toggle the disabled flag on each selected marker. The flag is allowed
+// on any marker (cascade still applies only when the toggled marker is a
+// label_def).
 void GuiWarpMarkersOps::toggle_disabled() {
     if (app.selected_markers.empty()) return;
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
@@ -726,8 +725,8 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
 // Nudge selected markers by +/- 1 pixel of source time at current zoom.
 // direction: -1 for earlier (up/left), +1 for later (down/right).
 //
-// Brief 3b: target view interprets the nudge visually — each selected
-// marker shifts by direction * 1 target-pixel; the resulting source-
+// Target view interprets the nudge visually — each selected marker
+// shifts by direction * 1 target-pixel; the resulting source-
 // seconds delta per marker depends on the local alpha, so the per-
 // marker shifts diverge. Validation walks each marker's proposed new
 // source-time against its non-selected source-domain neighbors; the

@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <string>
 
-// X.7.7: active-views management cluster. Method bodies are byte-identical
+// Active-views management cluster. Method bodies are byte-identical
 // to the lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   active_view_state,
@@ -15,7 +15,7 @@
 //   invalidate_timestamp_area       → viewport.invalidate_timestamp_area
 //   clear_hover_popup               → viewport.clear_hover_popup
 //   stop_playback_if_playing        → playback_lifecycle.stop_playback_if_playing
-//                                     (X.7.13 retired the std::function forwarders)
+//                                     (retired the std::function forwarders)
 //   settings_get                    → free function, takes app explicitly
 //
 // Free function calls (clamp_viewport_start) keep their original spelling —
@@ -40,7 +40,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     }
 }
 
-// Brief J.2 Section 1: indirection that returns the currently
+// Indirection that returns the currently
 // active ViewState — the slot that holds the inactive-mode
 // selection. Source-view: the active tab. Render-view: the
 // active render entry's `state`. Returns nullptr when no valid

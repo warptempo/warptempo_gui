@@ -183,8 +183,8 @@ void render_marker_stems_impl(
     cairo_set_line_width(cr, 1.0);
 
     // Per-marker color picks {kMarker, kSelected} from selected_set.
-    // Disabled markers are skipped entirely (no stem). Brief C retired
-    // the out-of-trim dim, so there is a single pass. Per-marker stroke
+    // Disabled markers are skipped entirely (no stem). The out-of-trim
+    // dim was retired, so there is a single pass. Per-marker stroke
     // is fine at editor marker counts; do not introduce batching without
     // profiling.
     for (size_t i = 0; i < markers.size(); ++i) {
@@ -228,7 +228,7 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
     return flag_text(markers, idx);
 }
 
-// Brief D: the single iteration-aware text composer. Returns the plain
+// The single iteration-aware text composer. Returns the plain
 // flag_text for ineligible markers or when iteration mode is off; for an
 // eligible owning marker with iteration on, splices the inline bracket
 // after `tempo_base` and before any `*scale`/`:label`
@@ -311,7 +311,7 @@ void render_waveform(cairo_t* cr,
     // level whose stride is <= spp; below stride 32, fall through to raw.
     //
     // In target view (frame_map != nullptr) `samples_per_pixel` is in
-    // target-frame units. Brief 1 accepts the resulting imprecision —
+    // target-frame units. The resulting imprecision is accepted —
     // tempo-compressed regions paint from a coarser pyramid level than
     // they "should," and stretched regions from a finer one. Aesthetic,
     // not functional.
@@ -630,7 +630,7 @@ void render_trim_flags(cairo_t* cr,
 
     // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
     // iterate_visible_flags_impl does for the lower row, one row higher. The
-    // box is monospace_row_h() tall (Defect B) and baseline sits
+    // box is monospace_row_h() tall and baseline sits
     // monospace_row_baseline_offset() below its top, so placing the box bottom
     // (= baseline_y - baseline_off + row_h) at flag_chip_bottom_y gives this
     // baseline. The chip thus fills its full upper-row slot.
@@ -715,7 +715,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);
 
-    // Defect B (F.trim.3): the step-1 fill box fills its full row slot rather
+    // The step-1 fill box fills its full row slot rather
     // than the tight glyph bounding box — that geometry now lives entirely
     // inside flag_chip_rect (height = cached monospace_row_h(), top = baseline
     // lifted by monospace_row_baseline_offset()), so baseline_y sits centered
@@ -866,7 +866,7 @@ void iterate_visible_flags_impl(
     // Place the rect's bottom edge exactly at the flag chip bottom (the
     // single source of truth shared with the stem renderers). The strip
     // bottom is the waveform area top, since the strips are contiguous, so
-    // flag_chip_bottom_y reads off that boundary. Defect B (F.trim.3): the box
+    // flag_chip_bottom_y reads off that boundary. The box
     // is monospace_row_h() tall and the baseline sits
     // monospace_row_baseline_offset() below its top, so solving for the box
     // bottom (= baseline_y - baseline_off + row_h) at flag_chip_bottom_y gives
@@ -926,11 +926,10 @@ void iterate_visible_flags_impl(
     }
 }
 
-// Stage C: paint body shared between render_flags' paint_one lambda and
+// Paint body shared between render_flags' paint_one lambda and
 // render_one_editor_flag. Inputs (i, text_left, baseline_y, text, ext)
 // match the iterate_visible_flags_impl emit signature; the remaining
-// args carry through what was lambda-captured before. Behavior is
-// byte-identical to the pre-Stage-C paint_one lambda inside render_flags.
+// args carry through what was lambda-captured before.
 void paint_one_flag_with_overlay(
     cairo_t* cr,
     int i,
@@ -946,8 +945,8 @@ void paint_one_flag_with_overlay(
 
     const std::string draw_text = is_editing ? editor.pending : text;
 
-    // Fill table (Brief B.2): parse-fail > selected > default(kMarker).
-    // Brief C: trim membership no longer dims the chip.
+    // Fill table: parse-fail > selected > default(kMarker).
+    // Trim membership no longer dims the chip.
     GuiColor fill_col;
     if (is_parse_fail)      fill_col = kAccent;
     else if (is_selected)   fill_col = kSelected;
@@ -996,7 +995,7 @@ void render_flags(cairo_t* cr,
 
     const double hl_pad = kFlagPadXPx;
 
-    // Brief Y.5: collect emit args during the left-to-right iterate pass,
+    // Collect emit args during the left-to-right iterate pass,
     // then paint the collected list in REVERSE order. The pack rule inside
     // iterate_visible_flags_impl still elides right-of-collision flags
     // (leftmost wins), and reverse paint order makes the leftmost flag's
@@ -1021,14 +1020,14 @@ void render_flags(cairo_t* cr,
         },
         [&](int i, double text_left, double baseline_y,
             const std::string& text) {
-            // Stage C: skip-guard. The flag-cache rebuild passes the
+            // Skip-guard. The flag-cache rebuild passes the
             // FlagPayload-editor target through editor.marker_index so
             // this branch fires and the cache leaves a transparent hole
             // over the editor target's pixel column; the live editor
             // render owns those pixels via render_one_editor_flag.
-            // Defensive against pre-Stage-C callers as well — when
+            // Defensive for callers without an editor target as well — when
             // editor.marker_index == -1 (the default), the guard never
-            // fires, and behavior is identical to the pre-Stage-C path.
+            // fires, and every visible flag paints into the cache.
             if (editor.marker_index == i) return;
             emits.push_back({i, text_left, baseline_y, text});
         });
@@ -1107,8 +1106,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // Mirror render_flags: uniform y/height for the hit rect so clicks
     // register consistently across flag types. The rect comes from the shared
     // flag_chip_rect helper, the same one render_editor_text_box fills, so the
-    // painted chip and this hit rect are the same rectangle by construction
-    // (Defect B / F-flaggeom).
+    // painted chip and this hit rect are the same rectangle by construction.
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
                                sample_rate, frame_map, drag_overlay,
@@ -1149,7 +1147,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
         });
 }
 
-// ---------- Phase reset marker rendering (chunk S.2.2) ----------
+// ---------- Phase reset marker rendering ----------
 
 namespace {
 
@@ -1229,7 +1227,7 @@ void render_phase_reset_flags(cairo_t* cr,
 
     const double hl_pad = kFlagPadXPx;
 
-    // Brief Y.5: collect-then-reverse-paint, mirroring render_flags. With no
+    // Collect-then-reverse-paint, mirroring render_flags. With no
     // per-flag editor every visible flag paints straight into the cache.
     struct PhaseResetEmit {
         int                  i;

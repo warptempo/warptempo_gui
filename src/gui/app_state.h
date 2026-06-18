@@ -42,7 +42,7 @@ constexpr int kZoomTableSize    = 10;
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// X.7.8b-2: hoisted from main.cpp's anonymous namespace so the hit_test_*
+// Hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them.
 constexpr int kMarkerHitHalfPx    = 4;
@@ -70,7 +70,7 @@ struct SettingsSnapshot {
 // a pre-op selection hint (so Undo-of-Destroy / Undo-of-Move can restore
 // a sensible selection anchor) and the op kind.
 //
-// Chunk S.2.2: every entry now also carries the pre-mutation phase reset
+// Every entry also carries the pre-mutation phase reset
 // snapshot and the mode the operation was performed in. Both lists are
 // always restored on undo/redo so the inverse is symmetric regardless of
 // which list the op actually touched. `op_mode` lets undo flip the active
@@ -136,7 +136,7 @@ struct DragState {
     // the playhead during motion so the audio cursor follows the grabbed
     // marker as it moves.
     int                    hit_marker           = -1;
-    // Which list this drag operates on (chunk S.2.2). The motion / commit
+    // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
     char                   drag_mode = 'W';
@@ -191,8 +191,8 @@ struct UndoHistory {
     // reference was on the redo stack, it's orphaned (saved_valid = false).
     // If pushing would evict the bottom of the undo stack and the saved
     // reference pointed at or below the evicted entry, it's pinned to the
-    // new bottom — per Part 5 of the chunk brief, that's the least-
-    // surprising user-facing behavior even though it's not strictly correct.
+    // new bottom — that's the least-surprising user-facing behavior even
+    // though it's not strictly correct.
     void push(UndoEntry entry) {
         if (saved_valid && saved_distance > 0) saved_valid = false;
         redo_stack.clear();
@@ -257,13 +257,13 @@ struct EditorTextDragState {
     bool active = false;
 };
 
-// Brief C: which selection group the most recent selecting gesture
+// Which selection group the most recent selecting gesture
 // targeted. Group-acting gestures (Delete, Ctrl+drag) act on exactly one
 // group, chosen by this tag. Set to Trim when a click/gesture lands on a
 // trim boundary, Markers when it lands on a marker.
 enum class LastSelGroup { Markers, Trim };
 
-// Brief C: Ctrl+drag of a trim boundary stem. Parallel to DragState but
+// Ctrl+drag of a trim boundary stem. Parallel to DragState but
 // writes the project trim directly (no overlay): motion mutates the
 // dragged bound's seconds live, release pushes a single SettingsSnapshot
 // undo. `pre` is captured at drag-begin so release can push the inverse.
@@ -327,16 +327,16 @@ struct PromptState {
 // Navigational bookmark. Holds a snapshot of the three fields that define
 // what the user sees and where playback would start. Not in the undo domain.
 //
-// Chunk S.2.2: each tab also carries per-mode selection slots so switching
+// Each tab also carries per-mode selection slots so switching
 // tabs (Ctrl+Tab) and switching modes (`p`) both restore the right
 // selection set for the destination cell. The active selection lives in
 // AppState; these slots are the persistent snapshots.
 //
-// Brief J.1: the same struct is reused by RenderViewEntry::state to carry
+// The same struct is reused by RenderViewEntry::state to carry
 // per-render persisted view-state across render-view exit/enter and
 // batch-nav. Render-view entries leave the viewport/zoom/playhead fields
-// at default in J.1 (those still flow through the live AppState fields
-// and the .rendersettings sidecar; J.2 will reroute them through `state`).
+// at default (those still flow through the live AppState fields
+// and the .rendersettings sidecar).
 struct ViewState {
     int64_t viewport_start_sample      = 0;
     int     zoom_level                 = 0;
@@ -393,8 +393,7 @@ struct AppState {
     // Negative sentinel = no stash.
     double playhead_scanner_old_px_stash = -1.0;
 
-    // Companion files discovered alongside the loaded audio. Chunk E just
-    // records these; later chunks will parse their contents.
+    // Companion files discovered alongside the loaded audio.
     std::string warpmarkers_path;
     std::string settings_path;
     // Sibling `.phaseresetmarkers` path. Computed at file load. Empty when
@@ -402,30 +401,31 @@ struct AppState {
     std::string phase_reset_markers_path;
 
     // Absolute or relative path of the currently loaded audio file. Used by
-    // the chunk-Q render hotkey stub to compute the output path. Empty when
-    // no file is loaded (blank state).
+    // the render hotkeys (Ctrl+Alt+R / Ctrl+E / Ctrl+Alt+E / Ctrl+Alt+I) and
+    // the render pipeline to compute output paths. Empty when no file is
+    // loaded (blank state).
     std::string source_audio_path;
 
     // Parsed warp markers for the currently loaded audio. Empty on load
     // failure or before the first audio load.
     GuiWarpMarkers  warpmarkers;
 
-    // Parsed phase reset markers (chunk S.2.2). Authored by the GUI but not
-    // yet consumed by the render pipeline (S.3 will wire that up).
+    // Parsed phase reset markers. Authored by the GUI but not
+    // yet consumed by the render pipeline.
     GuiPhaseResetMarkers phase_reset_markers;
 
     // Multi-selection set + focus. `last_selected_marker` is either -1 or
     // a member of `selected_markers`; keyed operations (Tab cycling, `j`)
     // anchor on it.
     //
-    // Chunk S.2.2: this pair holds the *active* selection — i.e. for the
+    // This pair holds the *active* selection — i.e. for the
     // current tab + current `active_markers_view`. The persistent per-tab per-mode
     // slots live on ViewState and are saved/restored on mode/tab transitions.
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
-    // Active markers view: 'W' = warp markers, 'P' = phase reset markers
-    // (chunk S.2.2). Toggled by `p`. Determines which marker collection
+    // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
+    // Toggled by `p`. Determines which marker collection
     // is visible / edited / hit-tested and which color set is used for
     // the playhead and selected indicators.
     char active_markers_view = 'W';
@@ -436,10 +436,9 @@ struct AppState {
     // W/P. While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
     // interpretation flips on toggle. Render-view leaves this
-    // unchanged — `t` is dropped in render-view. Brief 1 was
-    // read-only in target view; the target-render audio subsystem
-    // (briefs 1-3 of the target-render sequence) makes target view
-    // playable with live engine output.
+    // unchanged — `t` is dropped in render-view. Target view was
+    // formerly read-only; the target-render audio subsystem makes target
+    // view playable with live engine output.
     char active_audio_view = 'S';
 
     // Memoized target-view frame_map (see timemap.h). Mutable: consulted and
@@ -454,22 +453,22 @@ struct AppState {
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;
 
-    // Brief C: Ctrl+drag of a trim boundary stem. Cleared on button
+    // Ctrl+drag of a trim boundary stem. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
-    // F2.1: mouse drag-to-select inside the active text editor. Cleared on
+    // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
 
-    // Brief C: which selection group the last selecting gesture targeted.
+    // Which selection group the last selecting gesture targeted.
     // Drives Delete / Ctrl+drag group dispatch. Session-only.
     LastSelGroup last_sel_group = LastSelGroup::Markers;
 
-    // V.A3b hover-popup state. See HoverPopupState above.
+    // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
-    // V.A3b Addendum 3: cursor screen position from the last on_motion
+    // Cursor screen position from the last on_motion
     // event. Used by recompute_hover_at_cursor() to re-evaluate hover
     // after a viewport mutation (when the cursor is stationary but rects
     // have shifted). -1 means "no motion seen yet".
@@ -581,7 +580,7 @@ struct AppState {
     bool   has_trim_begin     = false;
     bool   has_trim_end       = false;
 
-    // Brief C: transient selection of the trim boundary stems. A separate
+    // Transient selection of the trim boundary stems. A separate
     // selection channel from the marker sets (selected_markers /
     // phase_reset_selected) — the two groups are orthogonal and can be
     // co-selected. Not persisted to .settings; defaults false and resets on
@@ -591,12 +590,12 @@ struct AppState {
     bool   trim_end_selected   = false;
 
     // Bottom-strip command prompt. Active only when a close / revert /
-    // re-detect gesture fires while a confirmation is required. See Part
-    // 2 of chunk Q (originally a centered modal dialog; brief H.5 moves
-    // the same modal semantics into the bottom strip).
+    // re-detect gesture fires while a confirmation is required. Originally
+    // a centered modal dialog; the same modal semantics now live in the
+    // bottom strip.
     PromptState prompt;
 
-    // Top-flag text editor (V.A1). Active only when editing a flag rect
+    // Top-flag text editor. Active only when editing a flag rect
     // in warp view. The editor owns the keyboard while active and
     // overlays a custom rect + cursor on top of render_flags.
     text_editor::State top_flag_editor;
@@ -616,7 +615,7 @@ struct AppState {
     // on_tick clamp (see main.cpp). 0 = not yet observed.
     int64_t last_tick_live_total = 0;
 
-    // Render-queue state (chunk U). `queue_running` is true only inside the
+    // Render-queue state. `queue_running` is true only inside the
     // Ctrl+Alt+R queue walker. The Esc handler checks it to scope the
     // cancel binding away from normal interaction. `queue_cancel_requested`
     // is set by Esc during a queue run and read between entries.
@@ -639,14 +638,14 @@ struct AppState {
     // any one command, so future commands can reuse it.
     std::string transient_status_message;
 
-    // Chunk W: in-memory queue of pending renders. Ctrl+E pushes a
+    // In-memory queue of pending renders. Ctrl+E pushes a
     // snapshot of the current authoring state onto the back of this list;
     // Ctrl+Alt+E consumes it, materializing one batch folder per execution
     // with one rendered output per queued entry. The list is session-only:
     // discarded on app close, never written to disk between sessions.
     // Settings are not snapshotted per-entry — all entries render against
     // the GUI's live `engine_settings` at execution time, mirroring the
-    // chunk-U convention.
+    // single-render convention.
     struct QueuedRender {
         std::string                source_audio_path;
         std::vector<GuiWarpMarker>     markers;
@@ -661,21 +660,21 @@ struct AppState {
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
 
-    // V.B iteration mode. Toggled by plain `i` in warp view (no-op in
+    // Iteration mode. Toggled by plain `i` in warp view (no-op in
     // phase reset view). Session-only; survives view-switches but is lost
     // on app close. When true, hover popups are suppressed and a
     // persistent iteration popup is rendered above every owning
     // marker's flag rect.
     bool iteration_mode_enabled = false;
 
-    // Brief X.2 BPM mode. Toggled by plain `m` in warp view. Mutually
+    // BPM mode. Toggled by plain `m` in warp view. Mutually
     // exclusive with iteration_mode_enabled (toggling one ON forces the
     // other OFF). Session-only. The BPM owner is identified at runtime
     // by walking markers for bpm_owner=true; at most one marker holds
     // the flag at a time, maintained as an invariant by the toggle.
     bool bpm_mode_enabled = false;
 
-    // Chunk W: render analysis mode. Plain `r` toggles between source-view
+    // Render analysis mode. Plain `r` toggles between source-view
     // (authoring) and render-view (read-only auditioning of rendered
     // outputs from <source_parent>/renders/). All authoring state above
     // is preserved untouched while render-view is active; this struct
@@ -691,14 +690,13 @@ struct AppState {
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
 
-        // Brief J.1: per-entry persisted view-state across render-view
+        // Per-entry persisted view-state across render-view
         // exit/enter and batch-nav. Selection + sub-mode are valid only
         // when the wav still has the same (size, mtime) as when stashed;
         // mismatch on reload drops them silently. The viewport/zoom/
-        // playhead fields on `state` are unused in J.1 — render-view's
+        // playhead fields on `state` are unused — render-view's
         // viewport state continues to flow through the live AppState
-        // fields and the .rendersettings sidecar; J.2 will reroute them
-        // through `state`.
+        // fields and the .rendersettings sidecar.
         ViewState state;
 
         // Stat-tuple key for selection validity. Captured when stashed,
@@ -887,7 +885,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // invalidation rect, which is gone. Rename rides its own commit.)
 bool bottom_strip_wide(const AppState& app);
 
-// X.7.8b-2: promoted from lambdas in main(). Mode-aware hit-tests against
+// Promoted from lambdas in main(). Mode-aware hit-tests against
 // the visible marker / flag / popup geometry. Bodies live in app_state.cpp
 // and pull in cairo + paint_handler.h for the popup-rect math; the
 // signatures stay free of cairo so the header keeps a clean include list.
@@ -905,7 +903,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// Brief C: which trim boundary, if any, a waveform-area click lands on.
+// Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
@@ -921,7 +919,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 // against each set bound's painted CHIP RECT in the upper top row rather
 // than the stem column. The chip glyph ("b"/"e") is drawn hl_pad to the
 // right of the bound's column, so a column-only test misses clicks on the
-// visible chip (F.trim.4). The rect mirrors regular-flag hit geometry
+// visible chip. The rect mirrors regular-flag hit geometry
 // (flag_chip_rect, the shared chip-rect helper): x = round(text_left),
 // w = round(glyph_advance + 2*kFlagPadXPx), with y/h from the row metrics;
 // the same rect the renderers fill, so paint and hit cannot drift.
@@ -930,7 +928,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 
-// X.7.8b-3: promoted from a lambda in main(). True iff the warp marker
+// Promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
 // display a numeric tempo (pass markers and label_ref markers qualify;
 // owning markers don't). Render-view honors the loaded render's

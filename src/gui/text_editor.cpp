@@ -277,7 +277,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     }
 
     // Printable insertion (length-capped). BpmBracket gets a tighter cap
-    // than the default (brief X.2): the strict format `<beats>@[<lo>,<hi>]`
+    // than the default: the strict format `<beats>@[<lo>,<hi>]`
     // tops out at 12 chars, so 13 leaves one char of typo slack.
     // Accept any printable character the keyboard produced. The platform
     // resolved the effective codepoint (shift / layout applied) via
@@ -313,7 +313,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     }
 
     // The editor does not own this key. Report NotConsumed so the caller can
-    // route it (Brief 2: cancel the edit and let the global command run).
+    // route it (cancel the edit and let the global command run).
     return KeyAction::NotConsumed;
 }
 

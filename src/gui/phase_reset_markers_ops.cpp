@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-// X.7.4: phase reset authoring cluster. Method bodies are byte-identical to
-// the lambdas they replaced in main.cpp, with these mechanical rewrites:
+// Phase reset authoring cluster. Method bodies map onto the original
+// main.cpp lambdas via these mechanical rewrites:
 //
 //   push_undo*                  → undo.push_undo*
 //   recompute_dirty             → undo.recompute_dirty
@@ -27,7 +27,6 @@
 //   move_playhead_to            → viewport.move_playhead_to
 //   current_samples_per_pixel   → free function
 //   stop_playback_if_playing    → playback_lifecycle.stop_playback_if_playing
-//                                 (X.7.13 retired the std::function forwarder)
 
 // Drop a phase reset marker at `time_seconds`. Rejects creation within
 // kMarkerHitHalfPx pixels at current zoom of an existing phase reset marker.
@@ -152,8 +151,8 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
 // Nudge selected phase resets by +/- 1 source-pixel of seconds. Direction:
 // -1 for earlier, +1 for later. Symmetric with nudge_selected_markers.
 //
-// Brief 3b: target view interprets nudge visually — see the matching
-// note on nudge_selected_markers. Per-marker shifts, all-or-nothing.
+// Target view interprets nudge visually — see the matching note on
+// nudge_selected_markers. Per-marker shifts, all-or-nothing.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     playback_lifecycle.stop_playback_if_playing();

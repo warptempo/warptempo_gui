@@ -77,16 +77,16 @@
 
 namespace {
 
-// X.7.8a: kFlagFontSize, kTimestampPadX, and kTabLetterGapPx now live in
+// kFlagFontSize, kTimestampPadX, and kTabLetterGapPx now live in
 // paint_handler.h so paint_handler.cpp can reach them; the constants below
 // are paint-handler-independent and stay file-local. (kProgressBarHeight,
 // formerly in this group, was deleted with the load progress bar.)
 
-// Brief F replaced the window-proportional strip ratios with a fixed-pixel
+// The window-proportional strip ratios were replaced with a fixed-pixel
 // mirrored grid; the strip/row geometry now derives from monospace_row_h(),
 // kRowGapPx, and kFlagBottomLiftPx (see the geometry helpers below).
 
-// X.7.8b-2: kMarkerHitHalfPx moved to app_state.h so the hit_test_* free
+// kMarkerHitHalfPx moved to app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach them.
 
 // ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
@@ -115,26 +115,26 @@ constexpr double kDirtyGapPx              = 8.0;
 // position) now lives in render.h as a single shared inline constexpr,
 // reached here via the render.h include.
 
-// X.7.8b-1: Brief X.3 BPM-sweep math primitive (BaseTempoScale +
+// The BPM-sweep math primitive (BaseTempoScale +
 // compute_base_tempo_scale) moved out of this anonymous namespace into
 // input_handler.h so input_handler.cpp can reach it.
 // GuiInputHandler::render_bpm_sweep is the sole caller.
 
-// X.7.8b-3: compute_hover_popup_text moved to render.{h,cpp} so
+// compute_hover_popup_text moved to render.{h,cpp} so
 // input_handler.cpp can reach it from on_motion. It sits next to
 // resolve_inherited_tempo / flag_text_for_marker — same rendering-
 // time text formatting role over GuiWarpMarker, same TU.
 
 // OpKind, UndoEntry, DragState, UndoHistory, PlayheadDragState,
 // HoverPopupState, DialogTrigger, PromptState, ViewState, AppState live in
-// app_state.h (extracted in brief X.7.1 alongside the Viewport struct).
+// app_state.h, alongside the Viewport struct.
 
 
-// X.7.9: ParsedSettings + the settings parse / format / write helpers
+// ParsedSettings + the settings parse / format / write helpers
 // moved to settings_io.{h,cpp} so file_loader.cpp and save_markers can
 // both reach them.
 
-// X.7.8a: WaveformCache was promoted to paint_handler.{h,cpp} so
+// WaveformCache was promoted to paint_handler.{h,cpp} so
 // paint_handler.cpp can reach it. The instance is still a local in
 // main() and is passed by reference into GuiPaintHandler.
 
@@ -143,7 +143,7 @@ constexpr double kDirtyGapPx              = 8.0;
 // Geometry helpers — public to viewport.cpp via app_state.h. samples_per_pixel_at
 // remains main-private (`static`).
 //
-// Brief F: fixed-pixel mirrored four-row grid. Top and bottom strips are equal
+// Fixed-pixel mirrored four-row grid. Top and bottom strips are equal
 // pixel height regardless of window size; the waveform flexes in the middle.
 // Each strip is two text rows of the cached row height monospace_row_h(),
 // packed tight: the inter-row gap kRowGapPx (G), the waveform-side gap, and the
@@ -191,7 +191,7 @@ GuiRect waveform_area(const AppState& a) {
 }
 
 // Top strip rows, counted down from the window top with all gaps now zero:
-// top_upper_row starts flush at y=0 (the F.trim b/e flag row), top_lower_row
+// top_upper_row starts flush at y=0 (the b/e trim-flag row), top_lower_row
 // sits immediately below it (the regular warp/phase-reset flag chips), and the
 // waveform area begins immediately below that. The regular chip's bottom edge
 // is therefore flush with the waveform area top — exactly flag_chip_bottom_y.
@@ -380,13 +380,13 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead line inside the waveform AND
-    // the chunk-P triangle indicator in the flag strip above it.
+    // the triangle indicator in the flag strip above it.
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// Brief F: the status line and the transient/modal chain now occupy the two
+// The status line and the transient/modal chain now occupy the two
 // rows of the bottom strip, so the invalidation region is the whole bottom
 // strip rect (both rows repaint together).
 GuiRect timestamp_invalidate_rect(const AppState& a) {
@@ -410,12 +410,12 @@ int main(int argc, char** argv) {
     GuiPlayback  playback;
     GuiPlatform  gui;
     WaveformCache wf_cache;
-    // Stage B: marker stems live on their own surface, rebuilt
+    // Marker stems live on their own surface, rebuilt
     // synchronously from on_tick. Constructed alongside wf_cache so they
     // share the same lifetime; passed by reference into GuiPaintHandler
     // and (for the destroy_surface hook) GuiFileLoader.
     StemCache     stem_cache;
-    // Stage C: top-strip flag rects live on their own surface, rebuilt
+    // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick alongside the stem cache. Same lifetime
     // shape, same passed-by-reference plumbing.
     FlagCache     flag_cache;
@@ -425,16 +425,16 @@ int main(int argc, char** argv) {
 
     // -- Viewport + invalidation helpers ------------------------------------
     //
-    // X.7.1: the viewport-mutator and invalidation lambdas have been hoisted
+    // The viewport-mutator and invalidation lambdas have been hoisted
     // onto the Viewport struct in viewport.{cpp,h}. The lambdas below are
     // one-line forwarders so callsites elsewhere in main() don't need to
     // change. `invalidate_timestamp_area` is gone — its body was
     // byte-identical to invalidate_timestamp_area, so all of its former
     // callsites now call invalidate_timestamp_area directly. `bottom_strip
-    // _wide` was promoted to a free function in app_state.{h,cpp} in
-    // X.7.8a so paint_handler.cpp can reach it without a capture.
+    // _wide` was promoted to a free function in app_state.{h,cpp}
+    // so paint_handler.cpp can reach it without a capture.
     //
-    // X.7.13: the nine std::function forward-declares previously kept here
+    // The nine std::function forward-declares previously kept here
     // (recompute_hover_at_cursor, clear_hover_popup, stop_playback_if_playing,
     // refresh_active_tab_view_from_app, save_markers, request_close_or_revert,
     // prompt_activate_response, toggle_playback, set_playback_speed) were
@@ -455,7 +455,7 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start async renderer; exiting\n");
         return 1;
     }
-    // Stage A: waveform-cache rebuild runs on this dedicated worker; the
+    // Waveform-cache rebuild runs on this dedicated worker; the
     // paint thread becomes blit-only. Must be constructed before
     // GuiPaintHandler (which takes it as a reference) and before
     // GuiFileLoader (which calls wait_until_idle before swapping audio).
@@ -552,21 +552,21 @@ int main(int argc, char** argv) {
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
 
-    // X.7.8b-3: popup_eligible_marker moved to a free function in
+    // popup_eligible_marker moved to a free function in
     // app_state.{h,cpp}. The remaining callers in this TU
     // (Viewport::recompute_hover_at_cursor, on_tick) reach it directly
     // with the new (app, idx) signature; on_motion calls it from
-    // input_handler.cpp. V.A3b / V.B comments live above the
-    // declaration in app_state.h.
+    // input_handler.cpp. The hover-popup and iteration-mode comments live
+    // above the declaration in app_state.h.
 
-    // X.7.5a: the drag and selection-shift lambdas have been hoisted onto
+    // The drag and selection-shift lambdas have been hoisted onto
     // the GuiWarpMarkersOps struct in warpmarkers_ops.{cpp,h}.
 
-    // X.7.8b-2: the shared wheel handler (handle_wheel) moved to
+    // The shared wheel handler (handle_wheel) moved to
     // GuiInputHandler as a private helper method. on_button_press is
-    // its only caller after this brief.
+    // its only caller.
 
-    // X.7.8b-1: the multi-render queue runner (run_render_batch +
+    // The multi-render queue runner (run_render_batch +
     // RenderBatchResult) had no callers outside the on_key body. It moved
     // to GuiInputHandler as a private helper method (see input_handler.h).
 
@@ -604,7 +604,7 @@ int main(int argc, char** argv) {
 
     // -- File loading --------------------------------------------------------
     //
-    // X.7.9: load_file, revert_to_blank, and load_then_drain moved to
+    // load_file, revert_to_blank, and load_then_drain moved to
     // file_loader.{h,cpp} on GuiFileLoader. The drop-accept predicate and
     // the on_file_drop handler stay here as one-line lambdas that capture
     // file_loader; the predicate has no reference to the loader.
@@ -628,7 +628,7 @@ int main(int argc, char** argv) {
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the atomic playing flag.
     gui.set_on_tick([&]() {
-        // Stage A: dirty-detect for the waveform cache. Compares the
+        // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either
         // dispatches to the worker, sets the supersede slot, or no-ops.
         // Runs first so the worker is kicked off before any of the
@@ -669,7 +669,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        // Stage B: stem-cache dirty-detect. Runs AFTER the waveform's
+        // Stem-cache dirty-detect. Runs AFTER the waveform's
         // dirty-detect on purpose — both layers key their displayed-
         // viewport inputs off wf_cache.fp_*, so on a viewport-change
         // tick the waveform enqueues and the stems hold the OLD
@@ -677,7 +677,7 @@ int main(int argc, char** argv) {
         // on_tick) wf_cache.fp_* already carries the new viewport, so
         // stems snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_stem_cache();
-        // Stage C: flag-rect cache dirty-detect. Same ordering rule as
+        // Flag-rect cache dirty-detect. Same ordering rule as
         // the stem cache — keyed off wf_cache.fp_* so flags, stems, and
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();

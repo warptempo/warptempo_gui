@@ -59,7 +59,7 @@ public:
     // Removes the marker at `index`. No-op if out of range.
     void remove_marker(int index);
 
-    // Stage B: bumps generation_ on call. Same shape as GuiWarpMarkers
+    // Bumps generation_ on call. Same shape as GuiWarpMarkers
     // — contract is "you may mutate"; a spurious bump (caller read-only)
     // costs one stem rebuild on the next tick.
     GuiPhaseResetMarker* marker_mut(int index) {
@@ -78,8 +78,8 @@ public:
         ++generation_;
     }
 
-    // Stage B: monotonically-increasing token bumped on every mutating
-    // method. Mirrors GuiWarpMarkers::generation().
+    // Monotonically-increasing token bumped on every mutating method.
+    // Mirrors GuiWarpMarkers::generation().
     long long generation() const { return generation_; }
 
 private:

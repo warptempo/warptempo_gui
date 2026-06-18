@@ -17,7 +17,7 @@
 // down to a std::vector<WarpMarker> via slice_to_warp_markers below, so the
 // resolver and the engine path never see these GUI-only fields.
 struct GuiWarpMarker : WarpMarker {
-    // V.B iteration mode. Session-only render-parameter scratchpad: never
+    // Iteration mode. Session-only render-parameter scratchpad: never
     // serialized, lost on app close, populated and edited inline via the
     // iteration popup that appears above each owning marker's flag rect
     // when iteration mode is on. NaN means "blank" (popup shows []); when
@@ -25,7 +25,7 @@ struct GuiWarpMarker : WarpMarker {
     double iter_start = std::numeric_limits<double>::quiet_NaN();
     double iter_end   = std::numeric_limits<double>::quiet_NaN();
 
-    // Brief X.2 BPM mode. Session-only authoring state for basetempo-scale
+    // BPM mode. Session-only authoring state for basetempo-scale
     // sweeps; never serialized, lost on app close. The mode is a two-marker
     // explicit span: of the two selected markers, the earlier owns
     // (bpm_owner=true) and the later closes the span (its index held in this
@@ -34,7 +34,7 @@ struct GuiWarpMarker : WarpMarker {
     // implicit: bpm_beats > 0 means the owner has authored a value (parser
     // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
     // The value form is "<beats>@[<lo>,<hi>]" with positive integers and
-    // lo <= hi. Math/render is X.3.
+    // lo <= hi.
     bool bpm_owner = false;
     int  bpm_beats = 0;
     int  bpm_lo    = 0;
@@ -88,7 +88,7 @@ public:
 
     // Mutable accessor for keyboard/mouse toggles that edit a single marker
     // in place without changing its time (so list order is preserved).
-    // Stage B: bumps generation_ on call. Contract is "you may mutate"; a
+    // Bumps generation_ on call. Contract is "you may mutate"; a
     // spurious bump (caller read-only) costs one stem rebuild on the next
     // tick — negligible.
     GuiWarpMarker* marker_mut(int index) {
@@ -99,8 +99,8 @@ public:
 
     // Bulk-mutable accessor. Callers must not reorder by time_seconds; the
     // class assumes strict-monotonic order. Exposed for operations that
-    // twiddle a flag across many markers at once. Stage B: bumps
-    // generation_ on call (same rationale as marker_mut).
+    // twiddle a flag across many markers at once. Bumps generation_ on
+    // call (same rationale as marker_mut).
     std::vector<GuiWarpMarker>& markers_mut() {
         ++generation_;
         return markers_;
@@ -111,8 +111,8 @@ public:
         ++generation_;
     }
 
-    // Stage B: monotonically-increasing token bumped on every mutating
-    // method. Consumers (stem cache fingerprint) detect any marker-store
+    // Monotonically-increasing token bumped on every mutating method.
+    // Consumers (stem cache fingerprint) detect any marker-store
     // change by comparing generations rather than diffing contents.
     long long generation() const { return generation_; }
 
@@ -121,9 +121,9 @@ private:
     long long                    generation_ = 0;
 };
 
-// True if the marker at `idx` should render as disabled. Per chunk U
-// patch 3, `disabled` is allowed on any marker — a locally set flag
-// always counts. For an active (non-locally-disabled) `label_ref`, the
+// True if the marker at `idx` should render as disabled. `disabled` is
+// allowed on any marker — a locally set flag always counts. For an
+// active (non-locally-disabled) `label_ref`, the
 // cascade rule applies: the ref inherits its target label_def's
 // disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
@@ -131,7 +131,7 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 
-// Brief D iteration mode: format the inline bracket segment spliced into
+// Iteration mode: format the inline bracket segment spliced into
 // an eligible flag after `tempo_base`. The leading `+` is the
 // "relative to base" cue; the blank (both iter values NaN) renders as the
 // zero-filled `+[+0.00,+0.00]`, set values as `+[%+0.2f,%+0.2f]` (no
@@ -147,21 +147,21 @@ inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
     return buf;
 }
 
-// V.B iteration mode: an owning marker (tempo_inherits=false AND no
+// Iteration mode: an owning marker (tempo_inherits=false AND no
 // label_ref) gets a persistent iteration popup. Pass markers and
 // label_ref markers are excluded; disabled status does not matter.
 inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
 
-// Brief X.2 BPM mode: same eligibility shape as iter (owning marker, no
+// BPM mode: same eligibility shape as iter (owning marker, no
 // label_ref). Defined separately so the two predicates can diverge later
 // without cascading edits.
 inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
 
-// Brief X.2 BPM mode: format the bracket-editor text for marker `m`.
+// BPM mode: format the bracket-editor text for marker `m`.
 // "[]" when this marker is not the BPM owner (matches iter's empty form
 // exactly), or when it is the owner with bpm_beats == 0 (owner-but-blank,
 // set by the `m`-toggle-on transition before any commit; bpm_beats > 0 is
@@ -178,7 +178,7 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
     return buf;
 }
 
-// Brief X.2 BPM mode: strict parser for "<beats>@[<lo>,<hi>]". All three
+// BPM mode: strict parser for "<beats>@[<lo>,<hi>]". All three
 // values must be positive integers; lo <= hi (degenerate lo=hi is valid);
 // no whitespace, no decimals, no missing fields, no alternate forms. On
 // failure returns false and leaves out-params unchanged.

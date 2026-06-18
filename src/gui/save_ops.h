@@ -5,7 +5,7 @@
 #include "undo.h"
 #include "viewport.h"
 
-// X.7.12: save-pipeline operations, extracted from main.cpp's
+// Save-pipeline operations, extracted from main.cpp's
 // save_markers lambda. Coordinates the three on-disk writes
 // (.warpmarkers, .phaseresetmarkers, .settings) and the per-save
 // bookkeeping (active-tab snapshot refresh, history mark_saved,

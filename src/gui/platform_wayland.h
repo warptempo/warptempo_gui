@@ -78,7 +78,7 @@ public:
     // GuiAsyncRenderer::on_completion_event).
     void set_worker_completion_fd(int fd, std::function<void()> on_event);
 
-    // Stage A: parallel hookup for the GuiWaveformWorker's completion
+    // Parallel hookup for the GuiWaveformWorker's completion
     // eventfd. The poll set grows a fourth pollfd; on POLLIN the loop
     // reads the counter and invokes this callback (routes to
     // GuiWaveformWorker::on_completion_event).
@@ -171,7 +171,7 @@ private:
     int  worker_completion_fd_ = -1;
     std::function<void()> on_worker_completion_;
 
-    // Stage A: waveform-worker completion fd. Same lifetime story as the
+    // Waveform-worker completion fd. Same lifetime story as the
     // async-renderer fd above. -1 when no waveform worker is registered.
     int  waveform_worker_completion_fd_ = -1;
     std::function<void()> on_waveform_worker_completion_;

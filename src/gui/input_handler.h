@@ -30,18 +30,16 @@
 
 struct GuiPaintHandler;
 
-// X.7.8b-1: keyboard input handler. Owns the on_key callback body extracted
+// Keyboard input handler. Owns the on_key callback body extracted
 // verbatim from main.cpp's lambda at the original main.cpp:1588. Lifetime is
 // the same scope as the other operation structs.
 //
-// X.7.8b-2 adds on_button_press / on_button_release as public methods plus
-// the shared wheel handler as a private helper.
-//
-// X.7.8b-3 adds on_motion the same way.
+// Also provides on_button_press / on_button_release as public methods plus
+// the shared wheel handler as a private helper, and on_motion the same way.
 
-// -- Brief X.3 BPM-sweep math primitive ---------------------------------
+// -- BPM-sweep math primitive -------------------------------------------
 //
-// X.7.8b-1: promoted out of main.cpp's anonymous namespace so
+// Promoted out of main.cpp's anonymous namespace so
 // input_handler.cpp can reach it. render_bpm_sweep() is the sole caller;
 // if a future TU needs it the home is open for relocation.
 //
@@ -90,10 +88,10 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // -- GuiInputHandler ----------------------------------------------------
 //
 // run_render_batch was a non-trivial lambda local to main() with three
-// callers, all inside the on_key body. After this brief it has zero
-// remaining callers in main.cpp, so it moves onto this struct as a private
+// callers, all inside the on_key body. It now has zero
+// remaining callers in main.cpp, so it lives on this struct as a private
 // helper. RenderBatchResult was a struct local to main() (no other
-// callers); it becomes a nested type here for the same reason.
+// callers); it is a nested type here for the same reason.
 struct GuiInputHandler {
     AppState&                app;
     const GuiAudio&          audio;
@@ -210,7 +208,7 @@ private:
     // strip. The summary log is the caller's concern.
     void finalize_render_run();
 
-    // Brief E: sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
+    // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
@@ -244,7 +242,7 @@ private:
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
-    // X.7.8b-2: shared wheel handler covering source-view and render-view.
+    // Shared wheel handler covering source-view and render-view.
     // Promoted from a lambda in main.cpp:1444 because on_button_press is
     // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-
     // pan (10%), plain = zoom; Ctrl+wheel moves the playhead by one pixel
@@ -284,7 +282,7 @@ private:
     void stop_playback_if_scanner_out_of_trim();
     void handle_trim_unset(TrimSide side);
 
-    // Brief C: mouse gestures on the trim boundary stems. on_press routes a
+    // Mouse gestures on the trim boundary stems. on_press routes a
     // waveform-area press that misses every marker but lands on a trim
     // boundary here. Ctrl begins a drag; plain/Shift selects within the
     // trim group. All update app.last_sel_group = Trim.
@@ -306,8 +304,8 @@ private:
     // Translates app.viewport_start_sample / playhead_cursor_sample / zoom_level
     // through the current frame_map in place (forward on S→T, inverse on
     // T→S) so the visible viewport stays the same screen-pixel extent
-    // across the toggle. Stops playback (target view has no playback in
-    // brief 1) and invalidates the whole window. Silent no-op while
+    // across the toggle. Stops playback (target view has no playback)
+    // and invalidates the whole window. Silent no-op while
     // render-view is active — the render-view gate above this dispatcher
     // already drops bare `t`.
     void handle_active_audio_view_toggle();

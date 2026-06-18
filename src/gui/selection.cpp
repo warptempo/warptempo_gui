@@ -27,7 +27,7 @@ void Selection::set_single_selection(int idx) {
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
-    // Brief C: a marker-selecting gesture makes Markers the group that
+    // A marker-selecting gesture makes Markers the group that
     // Delete / Ctrl+drag act on.
     app.last_sel_group = LastSelGroup::Markers;
     // A fresh single-select in the marker group drops any trim-boundary

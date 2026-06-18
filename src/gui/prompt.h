@@ -7,7 +7,7 @@
 #include "save_ops.h"
 #include "viewport.h"
 
-// X.7.10: prompt state machine, extracted from main.cpp's inline
+// Prompt state machine, extracted from main.cpp's inline
 // lambdas. Owns the unsaved-work dialog and the paste-confirm
 // dialog. Two entry points are exposed: request_close_or_revert
 // (called by Ctrl+Q, Ctrl+W, and the WM-close callback) and

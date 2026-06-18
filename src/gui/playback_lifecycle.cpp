@@ -134,7 +134,7 @@ void GuiPlaybackLifecycle::toggle_playback() {
 // trim_end_sample()) but is always-on rather than toggling. Called from
 // the press and motion handlers during a playhead-drag when playback was
 // alive at press time. Out-of-range positions in target view fall back to
-// stop — the brief specifies in-range-only semantics. No follow-scroll at
+// stop — in-range-only semantics. No follow-scroll at
 // the reseek site: the user's click is a positional intent that takes
 // precedence over visual centering (unlike Space's start-of-listening).
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {

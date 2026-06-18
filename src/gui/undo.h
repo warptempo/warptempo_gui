@@ -10,7 +10,7 @@
 
 struct GuiTargetRender;
 
-// X.7.3: undo-cluster operations, extracted from main.cpp's inline lambdas.
+// Undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
 // write; bodies are byte-identical to the originals modulo `this->` access
 // on the captured references. clear_hover_popup is reached through

@@ -36,7 +36,6 @@ bool GuiWarpMarkers::save(const std::string& path,
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:
         //   [#]?MM:SS.SSS|PAYLOAD
-        // PAYLOAD per Part 1A of V.A1.
         if (m.disabled) out << '#';
         out << format_timestamp(m.time_seconds) << '|';
 

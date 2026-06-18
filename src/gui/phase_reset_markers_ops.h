@@ -11,8 +11,7 @@
 class GuiAudio;
 struct GuiTargetRender;
 
-// X.7.4: phase reset authoring cluster, extracted from main.cpp's inline
-// lambdas. clear_hover_popup is reached through viewport;
+// Phase reset authoring cluster. clear_hover_popup is reached through viewport;
 // stop_playback_if_playing through playback_lifecycle.
 struct GuiPhaseResetMarkersOps {
     AppState&             app;

@@ -14,8 +14,8 @@
 
 class GuiAudio;
 
-// Stage A: layered-paint refactor. The waveform-cache rebuild moves off the
-// paint thread onto a dedicated worker. Shape mirrors GuiAsyncRenderer
+// The waveform-cache rebuild runs off the
+// paint thread on a dedicated worker. Shape mirrors GuiAsyncRenderer
 // byte-for-byte: single std::thread, single-in-flight job, condition-variable
 // wakeup, stop-on-shutdown atomic, completion signaled via an eventfd that
 // the platform run loop poll()s. The cache lifecycle owns the destination
@@ -141,7 +141,7 @@ private:
 // invokes it indirectly only via the worker; this declaration is here for
 // callers that need to render synchronously outside the worker).
 //
-// Stage A: render runs on the worker thread; nothing in this function
+// Render runs on the worker thread; nothing in this function
 // touches main-thread cairo state. perf_counters increments inside
 // render_waveform fire from the worker thread when kDebugPerf=true — see
 // the comment in render.h.

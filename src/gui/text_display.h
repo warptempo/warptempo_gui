@@ -1,9 +1,9 @@
 #pragma once
 
-// Brief B.2: this is the live plain-text tier. `draw_line` is the plain
+// This is the live plain-text tier. `draw_line` is the plain
 // text-display primitive consumed by the bottom strip's assembled row and
 // the modal prompt / queue overlays (paint_handler.cpp). The anchored
-// `render` entry point below is retained for Brief F's bottom-strip hover
+// `render` entry point below is retained for the bottom-strip hover
 // readout (currently caller-less). Do not delete.
 
 #include "render.h"
@@ -17,12 +17,12 @@
 // caller manages visibility timing, anchor computation, color choice, and
 // region invalidation.
 //
-// First use: V.A3b's hover popup over pass / label_ref flag rects. Future
+// First use: the hover popup over pass / label_ref flag rects. Future
 // uses include settings dialogs and other hover hints.
 
 namespace text_display {
 
-// Plain text-display tier (Brief B.2). Draws `content` left-anchored with
+// Plain text-display tier. Draws `content` left-anchored with
 // its baseline at (x, baseline_y), in monospace at `font_size`, tinted
 // `color`. No fill, no outline, no cursor — those live in the editor tier
 // (render_editor_text_box). Returns the measured x_advance so flow callers
@@ -41,7 +41,7 @@ struct State {
     // this rect's top edge.
     GuiRect     anchor          = {0, 0, 0, 0};
 
-    // Content string. Typically short (a tempo display in V.A3b's case).
+    // Content string. Typically short (a tempo display, for example).
     std::string content;
 
     // Caller-driven visibility flag. When false, render() is a no-op.

@@ -14,7 +14,7 @@
 
 class GuiWaveformWorker;
 
-// X.7.8a: paint handler cluster. Owns the on_redraw and on_resize callback
+// Paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, extracted verbatim from main.cpp's lambdas. Bodies use the
 // reference members below in place of the original lambda captures; the
 // only behavior change is the indirection.
@@ -23,14 +23,14 @@ class GuiWaveformWorker;
 // GuiPlatform / WaveformCache exist. Lifetime is the same scope as the other
 // operation structs (Undo, Selection, GuiActiveViews, etc.).
 //
-// Reference list deviates from the original brief:
-//   - The brief listed Viewport& and std::function<bool(int)>&
-//     popup_eligible_marker, but a verbatim body copy reveals that paint
-//     never calls a Viewport method (geometry queries go through free
-//     functions waveform_area / top_strip_area / current_samples_per_pixel
-//     declared in app_state.h) and never calls popup_eligible_marker (the
-//     eligibility check is inlined as `tempo_inherits || !label_ref.empty()`
-//     at each hover-popup paint site). Both omitted to avoid dead weight.
+// Reference list notes:
+//   - Viewport& and std::function<bool(int)>& popup_eligible_marker are
+//     deliberately omitted: paint never calls a Viewport method (geometry
+//     queries go through free functions waveform_area / top_strip_area /
+//     current_samples_per_pixel declared in app_state.h) and never calls
+//     popup_eligible_marker (the eligibility check is inlined as
+//     `tempo_inherits || !label_ref.empty()` at each hover-popup paint
+//     site). Both omitted to avoid dead weight.
 //   - GuiPlatform& is added because paint calls gui.playhead_triangle_surface()
 //     for the playhead's triangle indicator.
 //   - GuiPlayback& is non-const because on_resize calls
@@ -38,7 +38,7 @@ class GuiWaveformWorker;
 
 // -- Constants used by paint code ----------------------------------------
 //
-// X.7.8a: hoisted from main.cpp's anonymous namespace so paint_handler.cpp
+// Hoisted from main.cpp's anonymous namespace so paint_handler.cpp
 // can reach them. Other constants (kMarkerHitHalfPx, kDirtyGapPx,
 // kZoomMsPerPixel) are paint-handler-independent and stay in
 // main.cpp's anonymous namespace; kPlayheadHalfPx now lives in render.h.
@@ -48,14 +48,14 @@ class GuiWaveformWorker;
 // kFlagFontSize lives in render.h so render.cpp can reach it without
 // pulling paint_handler.h into the lower-layer include graph.
 
-// Timestamp text layout (bottom-left of the status strip). Brief F replaced
-// the window-bottom baseline anchor (kTimestampBaselineFromBottom) with
-// row-relative baselines derived from bottom_lower_row_area /
+// Timestamp text layout (bottom-left of the status strip). The
+// window-bottom baseline anchor (kTimestampBaselineFromBottom) was replaced
+// with row-relative baselines derived from bottom_lower_row_area /
 // bottom_upper_row_area.
 constexpr int      kTimestampPadX            = 8;
 constexpr double   kTabLetterGapPx           = 10.0;
 
-// F2.1: single source for the two bottom-strip editor prefixes. The paint
+// Single source for the two bottom-strip editor prefixes. The paint
 // sites (render_bottom_strip_editor calls) and the mouse drag-to-select
 // geometry helper (active_editor_text in input_handler.cpp) both derive
 // the editable text's char-0 origin from these, so the origin math can
@@ -92,7 +92,7 @@ struct WaveformCache {
     bool      fp_target      = false;
     uint64_t  fp_frame_map_hash = 0;
 
-    // Stage B (layered-paint): the frame_map baked into the live waveform
+    // Layered-paint: the frame_map baked into the live waveform
     // pixels. The stem cache reads this to render target-view stems
     // against the same coordinate system the displayed waveform uses, so
     // stems and waveform pixels snap together at the completion swap
@@ -100,7 +100,7 @@ struct WaveformCache {
     // view; empty before the first completion has fired.
     std::vector<FrameMapSegment> fp_frame_map;
 
-    // Stage A: pending-slot surface and fingerprint. The worker renders
+    // Pending-slot surface and fingerprint. The worker renders
     // into pending_surface; the completion handler swaps it into surface
     // and copies pending_fp_* into fp_*. While a render is in flight,
     // pending_fp_* describes what the worker is producing — dirty-detect
@@ -118,7 +118,7 @@ struct WaveformCache {
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_frame_map_hash = 0;
 
-    // Stage B: the frame_map the in-flight job is consuming. Set at
+    // The frame_map the in-flight job is consuming. Set at
     // dispatch alongside the other pending_fp_*; swapped into fp_frame_map
     // at completion.
     std::vector<FrameMapSegment> pending_fp_frame_map;
@@ -139,7 +139,7 @@ struct WaveformCache {
     uint64_t  supersede_frame_map_hash = 0;
     std::vector<FrameMapSegment> supersede_frame_map;
 
-    // Stage A: `dirty` no longer drives the dispatch decision (the
+    // `dirty` no longer drives the dispatch decision (the
     // pending_fp_* comparison does). It remains as a startup/clear flag:
     // set at construction and at destroy_surface to indicate "the live
     // surface has no valid pixels yet, show nothing until the first
@@ -172,7 +172,7 @@ struct WaveformCache {
     ~WaveformCache() { destroy_surface(); }
 };
 
-// -- Off-screen pixel cache for the marker stems (Stage B) ---------------
+// -- Off-screen pixel cache for the marker stems ------------------------
 //
 // Mirrors WaveformCache's "live" side but with no pending/supersede plumbing
 // — stem rebuilds are synchronous on the main thread (sub-millisecond at
@@ -219,7 +219,7 @@ struct StemCache {
     bool      fp_render_view_enabled         = false;
     uint64_t  fp_selection_hash              = 0;
 
-    // Brief C: trim boundary stems share this cache. The begin/end frame
+    // Trim boundary stems share this cache. The begin/end frame
     // positions ride fp_trim_begin / fp_trim_end above; these capture the
     // project has-set + selected bits so the cache rebuilds when a bound
     // appears/disappears or its selection toggles.
@@ -246,7 +246,7 @@ struct StemCache {
     ~StemCache() { destroy_surface(); }
 };
 
-// -- Off-screen pixel cache for the top-strip flag rects (Stage C) -------
+// -- Off-screen pixel cache for the top-strip flag rects ----------------
 //
 // Mirrors StemCache's shape: synchronous main-thread rebuild fingerprinted
 // against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
@@ -285,14 +285,14 @@ struct FlagCache {
     char      fp_active_markers_view      = '\0';
     bool      fp_render_view_enabled      = false;
     int       fp_flag_editor_target       = -1;
-    // Brief D: iteration mode splices the inline bracket into eligible
+    // Iteration mode splices the inline bracket into eligible
     // flags. Toggling `i` changes the painted text without bumping any
     // generation, so it must be part of the cache identity. (Iter-value
     // edits route through marker_mut and already bump the warp generation
     // above, so they need no separate hash here.)
     bool      fp_iteration_mode_enabled   = false;
 
-    // F.trim: the begin/end trim flag chips ride this cache (they live in
+    // The begin/end trim flag chips ride this cache (they live in
     // top_upper_row_area, inside top_strip_area). Their pixels depend on the
     // displayed-domain bound positions, whether each bound is set, and each
     // bound's selected bit — none of which bump any marker generation, so
@@ -323,7 +323,7 @@ struct FlagCache {
 
 // -- GuiPaintHandler -----------------------------------------------------
 //
-// X.7.8a: extracted from main.cpp's set_on_redraw / set_on_resize lambdas.
+// Extracted from main.cpp's set_on_redraw / set_on_resize lambdas.
 // Reference members map to the long-lived state the paint code reads.
 // The struct is constructed once, then the original lambda registrations
 // become one-line calls into these methods.
@@ -357,7 +357,7 @@ struct GuiPaintHandler {
     void on_redraw(cairo_t* cr, int x, int y, int w, int h);
     void on_resize(int w, int h);
 
-    // Stage A: dirty-detect. Compares the current desired waveform
+    // Dirty-detect. Compares the current desired waveform
     // fingerprint against pending_fp_* (the fingerprint the worker is
     // producing, or the last published live fingerprint when idle).
     // - Equal: return; the worker is already producing the right pixels
@@ -371,14 +371,14 @@ struct GuiPaintHandler {
     // Called from on_tick.
     void maybe_enqueue_waveform_render();
 
-    // Stage A: invoked from the worker's DoneCallback (which fires on the
+    // Invoked from the worker's DoneCallback (which fires on the
     // main thread, via the eventfd handler the platform layer routes
     // through GuiWaveformWorker::on_completion_event). Either dispatches
     // a supersede job, or swaps the pending surface into the live slot
     // and invalidates the waveform area.
     void on_waveform_render_done(bool ok);
 
-    // Stage B: dirty-detect for the stem cache. Called from on_tick AFTER
+    // Dirty-detect for the stem cache. Called from on_tick AFTER
     // maybe_enqueue_waveform_render. Reads displayed-viewport inputs from
     // wf_cache.fp_*; reads marker-driven inputs from app state. If the
     // fingerprint matches, no-ops. Otherwise rebuilds the offscreen
@@ -387,7 +387,7 @@ struct GuiPaintHandler {
     // pixels.
     void maybe_rebuild_stem_cache();
 
-    // Stage C: dirty-detect for the flag-rect cache. Called from on_tick
+    // Dirty-detect for the flag-rect cache. Called from on_tick
     // AFTER maybe_rebuild_stem_cache so all three layers (waveform, stems,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. Reads displayed-viewport inputs from

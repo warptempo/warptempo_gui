@@ -134,7 +134,7 @@ std::vector<int64_t> phase_reset_source_frames(
 // frame by subtracting the locked one-hop offset, clamped at 0. The clamp is
 // silent here (no I/O); callers that want the per-reset "clamped before audio
 // start" notice detect it by source_frame < offset_samples. This is the full
-// displaced reset list the engine path hands over (and Brief 6 will slice).
+// displaced reset list the engine path hands over.
 std::vector<int64_t> displace_phase_reset_frames(
     const std::vector<int64_t>& source_frames, int64_t offset_samples);
 

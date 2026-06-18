@@ -34,10 +34,10 @@ bool parse_timestamp_token(const std::string& tok, double& out,
 
 // Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
 // success; on failure, returns a one-line diagnostic. Files written by
-// pre-X.8.3 builds (carrying an i/d status code or a displaced_frame token)
+// older builds (carrying an i/d status code or a displaced_frame token)
 // are rejected with "unexpected status code" so the upgrade requirement
 // surfaces to the user instead of silently misparsing. Trim flags (b= / e=)
-// are warp-only as of brief seven; encountering one on a phase reset line is
+// are warp-only; encountering one on a phase reset line is
 // a parse error so the migration requirement surfaces.
 std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) {
     PhaseResetMarker out;

@@ -48,7 +48,7 @@ void render(cairo_t* cr, const State& s, double font_size) {
     cairo_text_extents(cr, s.content.c_str(), &ext);
 
     // The popup's text-left aligns with anchor.x. The caller decides what
-    // that x represents — for the V.A3b hover popup it is the anchored
+    // that x represents — for the hover popup it is the anchored
     // rect's text-origin so popup and rect text share a column.
     const double text_left = static_cast<double>(s.anchor.x);
 

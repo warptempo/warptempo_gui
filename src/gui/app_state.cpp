@@ -24,14 +24,13 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
-// X.7.8a: promoted from a lambda in main(). Body is verbatim from the
-// original at main.cpp:942-944, with the AppState reach reached through
+// Promoted from a lambda in main(). The AppState is reached through
 // the explicit argument rather than a capture.
 bool bottom_strip_wide(const AppState& app) {
     return app.prompt.active ||
            !app.queue_progress_text.empty() ||
            text_editor::is_active(app.settings_editor) ||
-           // Brief E: the BPM editor reuses top_flag_editor with the
+           // The BPM editor reuses top_flag_editor with the
            // BpmBracket kind but paints in the bottom strip, so it widens
            // the strip like the settings editor. A FlagPayload /
            // IterationBracket top_flag_editor edits over the flag in the
@@ -40,9 +39,8 @@ bool bottom_strip_wide(const AppState& app) {
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
-// X.7.8b-2: hit_test_* promoted from lambdas at main.cpp:1214-1368. Bodies
-// are byte-identical to the originals modulo identifier spelling: the
-// captured `app` and `audio` references are now explicit arguments. The
+// hit_test_* promoted from lambdas in main(). The captured `app` and
+// `audio` references are now explicit arguments. The
 // kMarkerHitHalfPx / kFlagFontSize constants resolve through app_state.h /
 // paint_handler.h respectively.
 
@@ -58,7 +56,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
     const bool rv = app.render_view_enabled;
-    // Brief F Section 3: in render-view, the visible sub-view's
+    // In render-view, the visible sub-view's
     // list drives hit-testing. 'P' reads phase reset time_seconds and
     // converts to source frames via the source sample rate
     // (matching source-view's phase reset branch).
@@ -71,7 +69,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : (app.active_markers_view == 'P')
                     ? static_cast<int>(app.phase_reset_markers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
-    // Brief 3b: target view paints marker stems at map_source_to_target
+    // Target view paints marker stems at map_source_to_target
     // translated positions; the hit test must walk the same frame_map so
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
@@ -173,7 +171,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (app.render_view_enabled) return TrimHit::None;
     if (!app.has_trim_begin && !app.has_trim_end) return TrimHit::None;
 
-    // The b/e chips fill top_upper_row_area exactly (Defect B: the painted
+    // The b/e chips fill top_upper_row_area exactly (the painted
     // chip box top/height equal this row). A press outside that vertical band
     // is not on a chip — the column-based stem test handles the rest.
     const GuiRect row = top_upper_row_area(app);
@@ -252,7 +250,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
-    // Brief F Section 3: render-view's phase reset sub-view paints no
+    // Render-view's phase reset sub-view paints no
     // flags; short-circuit to no-hit so click and hover paths see a
     // bare top strip.
     if (app.render_view_enabled &&
@@ -265,7 +263,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
-    // Brief 3a: target view's flags paint at translated positions
+    // Target view's flags paint at translated positions
     // (compute_flag_hit_rects with a non-null frame_map), so hit-test
     // must walk the same frame_map. Build it locally — same construction
     // as paint_handler's on_redraw, trim forced off. Empty in source-
@@ -306,7 +304,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             tmap_arg, drag_overlay);
     } else {
-        // Brief D: warp hit-rects must track the bracketed flag width so
+        // Warp hit-rects must track the bracketed flag width so
         // clicks land on the iteration-mode chip. This branch is reached
         // only in warp view (not render view, not 'P').
         rects = compute_flag_hit_rects(
@@ -324,8 +322,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     return -1;
 }
 
-// X.7.8b-3: promoted from a lambda at the original main.cpp:794-812.
-// Body is verbatim modulo identifier spelling: the captured `app`
+// Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.
 bool popup_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;

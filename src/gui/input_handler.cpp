@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-// X.7.8b-1: keyboard input handler. Method bodies are byte-identical to the
+// Keyboard input handler. Method bodies are byte-identical to the
 // lambdas they replaced in main.cpp (set_on_key at the original main.cpp:1588;
 // run_render_batch at the original main.cpp:1539). The only changes are:
 //
@@ -69,7 +69,7 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
-// Brief 4c: sweep-select every marker in the time-ordered `markers` list
+// Sweep-select every marker in the time-ordered `markers` list
 // whose time_seconds falls in [lo_t, hi_t], iterating in travel order
 // (ascending indices when `forward`, else descending) so the final
 // last_selected_marker lands on the most recently passed marker. Skips
@@ -282,7 +282,7 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
     // maybe_dispatch_pending here.
 }
 
-// Brief E: human-readable provenance descriptor for a committed BPM cell,
+// Human-readable provenance descriptor for a committed BPM cell,
 // e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats and bpm are
 // integers; the two timestamps are the span's owner and endpoint marker
 // times, formatted via the shared mm:ss.mmm formatter. Stored verbatim in
@@ -297,7 +297,7 @@ static std::string format_bpm_descriptor(int beats, int bpm,
            format_timestamp(end_seconds);
 }
 
-// Brief E (formerly Brief X.3): sweep every BPM in the BPM owner's
+// Sweep every BPM in the BPM owner's
 // [bpm_lo, bpm_hi] range, computing (base_tempo, scale) per cell and
 // rendering one .wav per cell into
 // `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell
@@ -547,18 +547,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // V.A1 top-flag editor owns the keyboard while active. Routes here
+    // The top-flag editor owns the keyboard while active. Routes here
     // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
     // first; Esc with no active edit falls through to the rest.
     if (text_editor::is_active(app.top_flag_editor)) {
         const auto action = text_editor::handle_key(
             app.top_flag_editor, key, mods);
         if (action == text_editor::KeyAction::CommitRequested) {
-            // Brief D: iteration editing is a widened-grammar FlagPayload
+            // Iteration editing is a widened-grammar FlagPayload
             // commit (commit_top_flag_edit), not a separate bracket editor.
             if (app.top_flag_editor.kind ==
                     text_editor::Kind::BpmBracket) {
-                // Brief E: Enter commits + renders + closes in one action.
+                // Enter commits + renders + closes in one action.
                 // A successful commit stores the values on the owner and
                 // closes the editor; only then does the BPM sweep fire. A
                 // parse failure leaves the editor open (red) and renders
@@ -675,7 +675,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // No return — fall through.
     }
 
-    // Chunk W: render-view input gate. While render-view is active
+    // Render-view input gate. While render-view is active
     // only keys driving navigation / playback / exit / commit are
     // honored; every authoring key is silently dropped so a stray
     // press can't mutate state through a swapped-out view.
@@ -688,15 +688,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Home/End (no mods)     → playhead to absolute file bounds
     //                              (render-view has no trim — see
     //                              viewport.cpp trim_range)
-    //   - Esc                    → top-level no-op (chunk Q)
-    //   - p (no mods)            → toggle warp/phase reset sub-view (Brief F)
+    //   - Esc                    → top-level no-op
+    //   - p (no mods)            → toggle warp/phase reset sub-view
     //   - Tab / Shift+Tab /      → cycle marker focus (no A/B tabs in
     //     IsoLeftTab               render-view, so Ctrl+Tab / Ctrl+Shift+Tab
     //                              stay no-ops; cycles the render-domain
     //                              collection per the active p-state)
-    //   - Ctrl+Q / Ctrl+W        → close-prompt routing (Brief F)
-    //   - Up/Down (no mods)      → zoom in/out (Brief S.2)
-    //   - =/- (no mods)          → zoom in/out symbol-key alias (Brief S.2)
+    //   - Ctrl+Q / Ctrl+W        → close-prompt routing
+    //   - Up/Down (no mods)      → zoom in/out
+    //   - =/- (no mods)          → zoom in/out symbol-key alias
     //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
     //   - f (no mods)          → follow mode toggle
     //   - c (no mods)            → center+max-zoom-in on playhead
@@ -867,7 +867,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Brief 3b: target-view keyboard authoring is fully unblocked.
+    // Target-view keyboard authoring is fully unblocked.
     // Every binding source view honors runs in target view too; the
     // input-to-source-frame boundary translation lives at the individual
     // handlers (drop_marker_at_playhead, handle_trim_*, nudge_*, etc.).
@@ -968,8 +968,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+E: snapshot current authoring state into the in-memory
     // render queue. No disk writes; on-disk authoring files are untouched.
     // Settings are not snapshotted per-entry — the queue walker uses
-    // the live engine_settings at execution time, mirroring the
-    // chunk-U convention. (Chunk W: snapshots moved from disk to memory.)
+    // the live engine_settings at execution time.
     if (ctrl && !alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return;
@@ -985,7 +984,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Ctrl+Alt+R: single render into the source directory using `title`
-    // from settings. Mirrors the pre-Chunk-W non-batch path inside
+    // from settings. Mirrors the non-batch path inside
     // do_render: empty batch_folder/batch_basename triggers the
     // engine/limiter-prefix naming. Title-not-set is a hard error
     // surfaced from do_render. Does not consult the in-memory queue and
@@ -1159,7 +1158,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Brief T: Ctrl+Alt+I renders the Cartesian product of the
+    // Ctrl+Alt+I renders the Cartesian product of the
     // per-marker iter ranges authored in iteration mode. Output lands
     // in `<source_parent>/renders/<N>_render_iterations/`, with one
     // .wav per cell named `<seq>_<delta_csv>.wav`. The CSV holds the
@@ -1358,11 +1357,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Brief E: the BPM sweep render formerly bound to Ctrl+Alt+M now lives
+    // The BPM sweep render formerly bound to Ctrl+Alt+M now lives
     // in render_bpm_sweep(), fired by Enter in the bottom-strip BPM editor
     // after a successful commit. The keystroke is retired here.
 
-    // Chunk W: Ctrl+Alt+C commits the displayed render's markers
+    // Ctrl+Alt+C commits the displayed render's markers
     // and phase resets into authoring memory. Single cross-file undo
     // entry; both warp_dirty and phase_reset_dirty are recomputed.
     // After the commit succeeds: render-view exits, the parked
@@ -1376,7 +1375,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!app.render_view_enabled) return;
         if (app.render_view_index < 0) return;
 
-        // Addendum 3: app.render_view_markers / _phase_resets are now
+        // app.render_view_markers / _phase_resets are now
         // render-domain (loaded from .renderwarpmarkers /
         // .renderphaseresetmarkers for display). The commit promotes
         // the render's *source-domain*
@@ -1423,7 +1422,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         app.phase_reset_markers.markers_mut() = std::move(src_trans);
         app.selected_markers.clear();
         app.last_selected_marker = -1;
-        // Brief J.2 Section 4: the active tab's per-mode slots
+        // The active tab's per-mode slots
         // referenced the OLD app.warpmarkers/phase resets we just
         // replaced. Clear them so restore_source_audio loads
         // empty into the live pair (and so a later mode flip
@@ -1652,8 +1651,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // `p` (no modifiers) toggles phase reset view globally. Brief
-    // J.2: render-view shares the global active_markers_view flag, so a
+    // `p` (no modifiers) toggles phase reset view globally.
+    // Render-view shares the global active_markers_view flag, so a
     // single handler serves both views. Render-view inherits the
     // engine precondition check from toggle_active_markers_view.
     if (key == GuiKeys::P && !ctrl && !shift && !alt) {
@@ -1661,7 +1660,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // V.B `i` (no modifiers) toggles iteration mode in warp. Silent
+    // `i` (no modifiers) toggles iteration mode in warp. Silent
     // no-op in phase reset view (phase reset flags carry no tempo to
     // iterate). The editor-active branch above already swallows any
     // keystroke while a popup edit is in flight, so this code only
@@ -1669,7 +1668,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // so iteration popups appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
         if (app.active_markers_view == 'W') {
-            // Brief X.2: mutual exclusion. Toggling iter ON forces
+            // Mutual exclusion. Toggling iter ON forces
             // BPM mode off; toggling iter OFF leaves BPM untouched.
             const bool turning_on = !app.iteration_mode_enabled;
             if (turning_on && app.bpm_mode_enabled) {
@@ -1681,7 +1680,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         return;
     }
-    // V.B Shift+I: bulk-clear every marker's iter values AND exit
+    // Shift+I: bulk-clear every marker's iter values AND exit
     // iteration mode in one keystroke ("stop authoring this mode").
     // Only fires while iteration mode is on; otherwise silent no-op.
     if (key == GuiKeys::I && !ctrl && shift && !alt) {
@@ -1693,7 +1692,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Brief E `m` (no modifiers): open the BPM editor on the earlier of two
+    // `m` (no modifiers): open the BPM editor on the earlier of two
     // selected markers that define an explicit span, or — if BPM mode is
     // already on — toggle it (and the editor) off. Warp view only; silent
     // no-op in phase reset view. Mutual exclusion with iter mode is handled
@@ -1754,13 +1753,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Chunk W: plain `r` toggles render analysis mode. Source audio
+    // Plain `r` toggles render analysis mode. Source audio
     // must be loaded; otherwise silent no-op (nothing to base the
     // renders folder lookup on). Toggle-on enumerates the renders
     // folder and loads either the last-displayed render (if its
     // path is still in the list) or the first entry; an empty
     // enumeration aborts the toggle. Iteration mode is forcibly
-    // disabled on entry per the chunk W brief; the prior value is
+    // disabled on entry; the prior value is
     // not restored on toggle-off — the user re-enables it
     // explicitly if desired.
     if (key == GuiKeys::R && !ctrl && !shift && !alt) {
@@ -1777,7 +1776,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                         .parent_path().string().c_str());
                 return;
             }
-            // Brief F Section 4: migrate persisted selection from
+            // Migrate persisted selection from
             // the prior render-view session (still on the old
             // app.render_view_list) into the freshly enumerated
             // list, keyed by wav_path. Entries that disappeared
@@ -1817,7 +1816,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // gate drops i/M; paint gates on !render_view_enabled) and are
             // restored on exit. Ctrl+Alt+C is now the only forced reset.
             app.render_view_enabled    = true;
-            // Brief J.2: render-view shares the global active_markers_view
+            // Render-view shares the global active_markers_view
             // flag, so the user's chosen mode carries across the
             // view-domain transition without per-entry restore.
             if (!render_view.load_render_view_at(target)) {
@@ -1835,7 +1834,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 render_view.write_rendersettings_for(
                     app.render_view_list[app.render_view_index]);
             }
-            // Brief F Section 4: stash the live selection onto
+            // Stash the live selection onto
             // the active entry so the next toggle-on can restore
             // it (gated by the wav's stat tuple still matching).
             // render_view_list is intentionally NOT cleared here
@@ -1875,7 +1874,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     if (key == GuiKeys::Delete && !ctrl) {
-        // Brief C: Delete acts on the group named by last_sel_group. With
+        // Delete acts on the group named by last_sel_group. With
         // a trim boundary last-selected, clear the selected bound(s) and
         // leave markers untouched; otherwise the marker-delete runs.
         if (app.last_sel_group == LastSelGroup::Trim) {
@@ -1996,11 +1995,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Chunk W: Shift+Left / Shift+Right navigates the render-view
+    // Shift+Left / Shift+Right navigates the render-view
     // list with wraparound. Active only when render_view_enabled is
     // true; in source-view these chords fall through to the normal
-    // playhead-by-pixel handler in the switch below. Wraparound
-    // mirrors the brief: Shift+Right past the end loops to index 0,
+    // playhead-by-pixel handler in the switch below. Wraparound:
+    // Shift+Right past the end loops to index 0,
     // Shift+Left before index 0 loops to the last entry.
     //
     // Pre-nav refresh: re-enumerate the renders/ folder and merge
@@ -2018,7 +2017,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             render_view.write_rendersettings_for(
                 app.render_view_list[app.render_view_index]);
         }
-        // Brief F Section 4: stash the outgoing entry's
+        // Stash the outgoing entry's
         // selection so re-navigating back later (in the same
         // session) restores it. load_render_view_at then loads
         // the destination's own persisted state if its stat tuple
@@ -2100,7 +2099,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // must not toggle end-time via GuiKeys::E).
     if (!ctrl && !shift && !alt) {
         switch (key) {
-        case GuiKeys::Escape: /* top-level Escape is a no-op (chunk Q) */ break;
+        case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
         case GuiKeys::Left:   playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_pixels(-1);         break;
         case GuiKeys::Right:  playback_lifecycle.stop_playback_if_playing();
@@ -2218,7 +2217,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     paint_handler.force_synchronous_waveform_rebuild();
 }
 
-// X.7.8b-2: shared wheel handler. Verbatim from the lambda at the original
+// Shared wheel handler. Verbatim from the lambda at the original
 // main.cpp:1444 — only difference is the captured viewport / playhead
 // helpers now resolve through this struct's reference members.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
@@ -2289,7 +2288,7 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     handle_wheel(dir, count, mods.ctrl, mods.alt, inside_waveform, inside_top);
 }
 
-// X.7.8b-2: button-press handler. Verbatim from the lambda at the original
+// Button-press handler. Verbatim from the lambda at the original
 // main.cpp:1483; the captured operation-struct lambdas (begin_drag,
 // drop_marker, drop_phase_reset_at_position, set_single_selection, etc.)
 // are rewritten to direct method calls on the appropriate operation
@@ -2376,7 +2375,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
 
-    // Chunk W: render-view mouse gate. Left-click on a marker line
+    // Render-view mouse gate. Left-click on a marker line
     // (in the waveform area) or a flag rect (in the top strip)
     // toggles selection and jumps the playhead to the marker;
     // left-click elsewhere in the waveform area positions the
@@ -2387,7 +2386,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // movement are silent no-ops so the read-only invariant on
     // marker state is preserved. Hover-popup motion still runs in
     // the motion handler against render_view_markers.
-    // Brief 3b: target-view mouse authoring is unblocked. Fall through
+    // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag
     // begin/motion, etc.) and in to_source_frame helpers used by
@@ -2397,7 +2396,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Wheel events arrive via on_wheel (coalesced per pointer frame), not
         // here; a stray wheel button is caught by the Left-only gate below.
         if (button != GuiMouseButton::Left) return;
-        // Brief F Section 3: in phase reset sub-view, top-strip clicks
+        // In phase reset sub-view, top-strip clicks
         // are silent no-ops (phase resets have no flag rects). Bail
         // before hit-testing so we don't attempt selection bookkeeping
         // on a non-existent flag pack.
@@ -2415,7 +2414,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
         else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
         else                  return;
-        // Brief J.2 Section 3: live selection lives in the global
+        // Live selection lives in the global
         // pair regardless of view domain. active_markers_view tells us
         // which marker list the indices map to.
         const bool sub_t = (app.active_markers_view == 'P');
@@ -2456,7 +2455,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static_cast<double>(sr)));
             }
             viewport.move_playhead_to(sample);
-            // Brief F Section 2: any waveform-area press starts a
+            // Any waveform-area press starts a
             // playhead-drag gesture. Top-strip flag-click does not.
             if (inside_waveform) {
                 if (was_playing_rv && sample != playhead_at_entry_rv) {
@@ -2471,7 +2470,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
         // Empty-space click in the waveform area: clear the active
         // sub-view's selection (unless Shift) and move the playhead.
-        // Brief F Section 2: also start a playhead-drag gesture so
+        // Also start a playhead-drag gesture so
         // the motion handler's snap logic kicks in.
         if (inside_waveform) {
             if (!shift &&
@@ -2511,13 +2510,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
-        // V.A1 editor: mouse handling.
+        // Editor: mouse handling.
         //   click inside top strip on the editing target: re-position
         //     cursor at the clicked byte (handled inside enter_*_edit)
         //   click inside top strip on a different flag: switch target
         //   click anywhere else: exit edit (no commit), then fall
         //     through so the click routes through normal handling.
-        // Brief B2: the iter/BPM bracket-popup switch routes have been
+        // The iter/BPM bracket-popup switch routes have been
         // deleted along with the popup surfaces. A click in the top
         // strip while a bracket editor is active falls through to the
         // normal flag hit-test; D / E will re-wire bracket entry once
@@ -2541,10 +2540,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
         }
 
-        // Brief B2: the iter/BPM popup-click priority block has been
+        // The iter/BPM popup-click priority block has been
         // deleted along with the popup surfaces. Clicks in iter/BPM
         // mode fall through to the consolidated flag/marker hit-test
-        // below until D / E re-wire bracket entry.
+        // below.
 
         // Consolidated hit-test across waveform (marker line) and top
         // strip (flag rect). A flag click behaves exactly like a click
@@ -2553,7 +2552,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         bool in_click_region = false;
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
-            // Brief C: a waveform press that misses every marker but lands
+            // A waveform press that misses every marker but lands
             // on a trim boundary stem routes to the trim gesture path.
             // Markers take priority on a shared column.
             if (hit < 0) {
@@ -2567,13 +2566,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             in_click_region = true;
         } else if (inside_top) {
-            // F.trim.1: the trim stem is grabbable along its whole visible
+            // The trim stem is grabbable along its whole visible
             // extent in the top strip, mirroring the in-waveform stem.
             // Markers take priority on a shared column, so try the flag
             // hit-test first; only on a miss does the trim path fill in.
             hit = hit_test_flag(app, audio, x, y);
             if (hit < 0) {
-                // F.trim.4: the b/e chip glyph is painted hl_pad RIGHT of the
+                // The b/e chip glyph is painted hl_pad RIGHT of the
                 // bound's column, so a column-only test misses clicks on the
                 // visible chip. In the upper row, test the painted chip RECT
                 // first (mirroring regular-flag hit geometry); fall through to
@@ -2723,7 +2722,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // per pointer frame through on_wheel -> handle_wheel.
 }
 
-// X.7.8b-2: button-release handler. Verbatim from the lambda at the
+// Button-release handler. Verbatim from the lambda at the
 // original main.cpp:1835; commit_drag and set_single_selection are
 // rewritten to direct method calls on warpops / selection respectively.
 void GuiInputHandler::finalize_editor_text_drag() {
@@ -2795,7 +2794,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
     warpops.commit_drag();
 }
 
-// X.7.8b-3: motion handler. Verbatim from the lambda at the original
+// Motion handler. Verbatim from the lambda at the original
 // main.cpp:1319; the operation-struct method calls (apply_drag_motion,
 // commit_drag, move_playhead_to, invalidate_top_strip,
 // invalidate_timestamp_area, invalidate_playhead_columns) are rewritten
@@ -2808,7 +2807,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if constexpr (kDebugPerf) {
         app.last_input_event_time = std::chrono::steady_clock::now();
     }
-    // V.A3b Addendum 3: record latest cursor coords so viewport
+    // Record latest cursor coords so viewport
     // mutators can re-evaluate hover at the cursor's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
@@ -2842,7 +2841,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Brief C: trim-boundary drag motion. Handled before the render-view
+    // Trim-boundary drag motion. Handled before the render-view
     // and marker-drag branches; only ever active in source view (the only
     // place begin_trim_drag fires). A lost button commits at the current
     // position, mirroring the marker-drag motion handler.
@@ -2855,12 +2854,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_trim_drag(mouse_x);
         return;
     }
-    // Brief 3b: target-view motion authoring is unblocked. Fall through
+    // Target-view motion authoring is unblocked. Fall through
     // to source-view's drag / playhead-drag / hover handling; per-site
     // translation (drag anchor capture, motion delta conversion, hit
     // tests) lives in the handlers below.
-    // Chunk W: render-view motion handler. Brief F Section 2 adds
-    // playhead-drag snap support: when a drag is in flight, snap the
+    // Render-view motion handler with playhead-drag snap support:
+    // when a drag is in flight, snap the
     // playhead to the visible sub-view's markers (3px epsilon),
     // matching source-view's gesture. Otherwise run hover popup
     // detection against render_view_markers (suppressed in phase reset
@@ -2961,7 +2960,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
         if (hit != app.hover_popup.marker_index) {
-            // Brief F: hover readout lives on the bottom strip now.
+            // Hover readout lives on the bottom strip now.
             // No dwell: show the instant the cursor lands on an eligible
             // flag. Recompute cached_text once per transition, derive
             // visible from it, damage the readout area when the old popup
@@ -3107,7 +3106,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             !app.queue_running) {
             const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
             if (hit != app.hover_popup.marker_index) {
-                // Brief F: hover readout lives on the bottom strip now.
+                // Hover readout lives on the bottom strip now.
                 // No dwell: show immediately on rect-entry; recompute
                 // cached_text once, derive visible, damage when the old
                 // popup was showing or the new one will.
@@ -3344,7 +3343,7 @@ void GuiInputHandler::handle_trim_unset_end() {
     handle_trim_unset(TrimSide::End);
 }
 
-// --- Brief C: trim boundary mouse gestures ------------------------------
+// --- Trim boundary mouse gestures ---------------------------------------
 
 void GuiInputHandler::select_trim_boundary(TrimHit which, bool additive) {
     if (which == TrimHit::None) return;
@@ -3445,7 +3444,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (src_frame < 0) src_frame = 0;
     if (src_frame > total) src_frame = total;
 
-    // Clamp against the other bound. F.trim.2 Defect 2: the dragged bound
+    // Clamp against the other bound: the dragged bound
     // stops kMarkerHitHalfPx pixels (at the current zoom) short of the other
     // bound, the same eps the warp drag uses (warpmarkers_ops.cpp ~429), so
     // the b/e stems never reach visual coincidence — matching the tightest

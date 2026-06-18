@@ -91,7 +91,7 @@ struct GuiTargetRender {
     // in_flight_, requests worker cancellation and leaves the buffer
     // clear to on_render_done's Cancelled branch (asynchronous); else
     // synchronously clears target_buffer / frames / start_frame.
-    // Replaces the inline buffer-clear that brief 2 used.
+    // Replaces an earlier inline buffer-clear.
     void cancel_for_load();
 
 private:

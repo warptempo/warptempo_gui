@@ -12,7 +12,7 @@
 class GuiWaveformWorker;
 struct GuiTargetRender;
 
-// X.7.9: file-lifecycle operations, extracted from main.cpp's inline
+// File-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
 // playback-init pipeline (load_file) and its companion revert-to-blank
 // operation. Both manipulate the same per-file AppState fields and the

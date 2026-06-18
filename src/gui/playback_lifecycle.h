@@ -6,7 +6,7 @@
 #include "platform_wayland.h"
 #include "viewport.h"
 
-// X.7.11: playback-orchestration operations, extracted from
+// Playback-orchestration operations, extracted from
 // main.cpp's inline lambdas. Owns the four GUI-level wrappers
 // around GuiPlayback's mechanism: stop on gesture, restore the
 // visible playhead at end-of-play, toggle play/stop, and apply a

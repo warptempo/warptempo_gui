@@ -21,7 +21,7 @@
 
 namespace {
 
-// Brief D: strict signed two-decimal parse (sign, >=1 integer digit, '.',
+// Strict signed two-decimal parse (sign, >=1 integer digit, '.',
 // exactly two fraction digits). Leading/trailing ASCII whitespace is
 // trimmed first so the bracket's `, ` separator round-trips. Lifted from
 // the retired commit_iter_edit lambda.
@@ -45,7 +45,7 @@ bool parse_signed_2dp(const std::string& raw, double& out) {
     return true;
 }
 
-// Brief D: extract the inline iteration bracket from a flag payload edited
+// Extract the inline iteration bracket from a flag payload edited
 // under the widened grammar. Searches for the `+[` segment after the
 // tempo token; on match, removes `+[ ... ]` from `payload` and writes the
 // parsed bounds (lo <= hi) to `lo_out`/`hi_out`. The all-zero blank
@@ -79,8 +79,8 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
 
 } // namespace
 
-// X.7.5b: flag-editor cluster. Method bodies are byte-identical to the
-// lambdas they replaced in main.cpp, with these mechanical rewrites:
+// Flag-editor cluster. Method bodies map onto the original main.cpp
+// lambdas via these mechanical rewrites:
 //
 //   push_undo                      → undo.push_undo
 //   recompute_dirty                → undo.recompute_dirty
@@ -88,7 +88,6 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
 //   invalidate_waveform_area       → viewport.invalidate_waveform_area
 //   invalidate_timestamp_area      → viewport.invalidate_timestamp_area
 //   clear_hover_popup              → viewport.clear_hover_popup
-//                                    (X.7.13 retired the std::function forwarder)
 //   exit_top_flag_edit_no_commit   → this->exit_top_flag_edit_no_commit
 //   build_locked_prefix            → this->build_locked_prefix
 //
@@ -124,7 +123,7 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
 // gates and seed-text builders, then delegate here. `iter_grammar` widens
 // the FlagPayload editor's accepted vocabulary/cap for the inline
-// iteration bracket (Brief D). `text_left_x < 0` falls back to
+// iteration bracket. `text_left_x < 0` falls back to
 // flag_pending_text_left_x(app, audio, idx) — that path serves the
 // top-flag editor whose layout is computed on the fly; the popup
 // editors get the value from the click hit-test and pass it in.
@@ -215,7 +214,7 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
-    // Brief D: in iteration mode the whole-flag editor opens over the
+    // In iteration mode the whole-flag editor opens over the
     // bracketed flag (seed = the iteration-aware composed text) and runs
     // the widened grammar. Eligibility mirrors the display gate so pass /
     // label_ref flags edit as plain canonical lines even with iter on.
@@ -250,7 +249,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // Brief D: in iteration mode the buffer may carry the inline bracket
+    // In iteration mode the buffer may carry the inline bracket
     // after `tempo_base`. Strip and capture it here (iteration-mode
     // wrapper) so parse_single_canonical_line stays bracket-unaware. NaN
     // bounds mean "blank/clear"; a malformed bracket red-flashes without
@@ -383,7 +382,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
-    // Brief D: apply the parsed iteration bracket. Session-only; NaN
+    // Apply the parsed iteration bracket. Session-only; NaN
     // bounds clear the sweep. The marker_mut above already bumped the
     // warp generation, so the flag cache repaints the bracket regardless
     // of whether the canonical fields moved.
@@ -445,7 +444,7 @@ void GuiFlagEditor::bulk_clear_iter_values() {
     viewport.invalidate_top_strip();
 }
 
-// Brief E: open the bottom-strip BPM editor on `idx`. Seed pending is the
+// Open the bottom-strip BPM editor on `idx`. Seed pending is the
 // current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the bottom-strip paint branch supplies
@@ -474,9 +473,9 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
 // parse_bpm_bracket. On parse failure the editor stays open with a red
 // outline and false is returned; on success the parsed values are stored
 // on the marker (the marker is already the BPM owner), the editor closes,
-// and true is returned. Brief X.2: no undo entry — BPM values are
-// session-only, treated like view state. Brief E: the Enter dispatch fires
-// render_bpm_sweep() when this returns true.
+// and true is returned. No undo entry — BPM values are session-only,
+// treated like view state. The Enter dispatch fires render_bpm_sweep()
+// when this returns true.
 bool GuiFlagEditor::commit_bpm_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return false;
     if (app.top_flag_editor.kind !=
@@ -528,13 +527,13 @@ bool GuiFlagEditor::commit_bpm_edit() {
     return true;
 }
 
-// Brief X.2 / E: full mode-on transition for BPM mode. Validates the
+// Full mode-on transition for BPM mode. Validates the
 // activation gate, toggles iter mode off if active, maintains the
 // single-owner invariant, and marks the earlier of the two selected
 // markers as the BPM owner (preserving prior values when re-toggling on the
 // same owner), then flips the mode flag. The span endpoint is now explicit
 // — supplied by the `m` handler and recorded on the owner's bpm_endpoint —
-// so this no longer auto-selects an endpoint cue. Brief E's `m` handler
+// so this no longer auto-selects an endpoint cue. The `m` handler
 // calls this and then opens the bottom-strip BPM editor on the owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;

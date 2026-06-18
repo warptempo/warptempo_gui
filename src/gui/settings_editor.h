@@ -10,7 +10,7 @@ struct GuiTargetRender;
 
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
-// the V.A1 flag editor (text_editor::State, kind-dispatched keyboard
+// the flag editor (text_editor::State, kind-dispatched keyboard
 // vocabulary, red on parse failure) but painted in the bottom strip
 // instead of over the flag rect.
 //

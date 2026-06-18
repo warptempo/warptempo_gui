@@ -30,7 +30,7 @@ inline double princarg(double phase) {
     return phase - 2.0 * M_PI * std::floor((phase + M_PI) / (2.0 * M_PI));
 }
 
-// PGHI ("heap") tunables (Part 2). kPghiTol is the significance threshold,
+// PGHI ("heap") tunables. kPghiTol is the significance threshold,
 // relative to the per-frame-pair peak magnitude (the LTFAT default, ~-120 dB);
 // it decides only which bins may ANCHOR a frequency-spread, never who gets a
 // phase. kPghiFreqStep is the per-bin frequency step b_a (constant for the r2c

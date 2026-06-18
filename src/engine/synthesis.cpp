@@ -108,10 +108,10 @@ void Synthesis::synthesize_full(
 
     // One mono output stream per channel. Each channel computes its whole
     // output independently into its own buffer; the streams are interleaved
-    // only at the end. This is the channel-major restructure (brief C.1): a
+    // only at the end. This is the channel-major restructure: a
     // pure reorganization of the previously frame-major loop, with each
-    // channel's pipeline state now fully local to run_channel so brief C.2
-    // can hand each channel to its own thread.
+    // channel's pipeline state fully local to run_channel so each
+    // channel can be handed to its own thread.
     std::vector<std::vector<float>> mono(channels);
     struct ChProf { int64_t analysis=0, heap=0, synthspec=0, ifft=0, ola=0; };
     std::vector<ChProf> chprof(channels);
@@ -141,9 +141,9 @@ void Synthesis::synthesize_full(
         std::vector<PghiHeapNode> heap_scratch; heap_scratch.reserve(K2);
         // Per-channel quiet-bin RNG. Each stream is consumed only by its own
         // channel, in bin order, so the draw sequence is identical whether
-        // channels run serially (now) or on separate threads (C.2) — which is
-        // what keeps C bit-identical to B. Seed scheme matches brief B exactly;
-        // the golden-ratio stride just separates the seeds.
+        // channels run serially or on separate threads — which is
+        // what keeps the threaded output bit-identical to the serial output.
+        // The golden-ratio stride just separates the seeds.
         std::mt19937 rng(static_cast<std::uint32_t>(
             0x5715E11u ^ (static_cast<std::uint32_t>(ch) * 0x9E3779B9u)));
         const float* psrc = &planar[static_cast<size_t>(ch) * src_frames];

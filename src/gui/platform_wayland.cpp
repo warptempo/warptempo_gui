@@ -66,7 +66,7 @@
 // playhead is where it should be without a visible jump.
 //
 // This separation is structurally identical to the project's approach to
-// phase coherence in the phase vocoder. The Laroche-Dolson phase vocoder
+// phase coherence in the phase vocoder. The project's PGHI phase vocoder
 // sacrifices phase coherence at transients, accepting the discontinuity
 // rather than coloring the signal with transient enhancement. The user
 // manually places phase reset markers at transients, where the natural
@@ -585,7 +585,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo_gui");
     xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo_gui");
     xdg_toplevel_set_maximized(xdg_toplevel_);
-    // Brief F: ask the compositor to refuse sizing the surface below the
+    // Ask the compositor to refuse sizing the surface below the
     // 640x480 floor. The geometry helpers also clamp internally, so the
     // waveform arithmetic stays valid even if a compositor ignores the hint.
     xdg_toplevel_set_min_size(xdg_toplevel_,
@@ -1059,7 +1059,7 @@ void GuiPlatform::run() {
         wl_display_flush(wl_display_);
 
         // pfds[2] is the async-render completion eventfd; pfds[3] is the
-        // waveform-worker completion eventfd (Stage A). When no fd is
+        // waveform-worker completion eventfd. When no fd is
         // registered (fd == -1), events=0 so poll() ignores the slot —
         // same trick used for "watch only when we care."
         struct pollfd pfds[4];

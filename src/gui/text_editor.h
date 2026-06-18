@@ -8,15 +8,14 @@
 #include <string>
 
 // Generic in-place text editor for a small constrained vocabulary, used
-// by the V.A1 top-flag editor. State is a POD-ish struct so callers can
+// by the top-flag editor. State is a POD-ish struct so callers can
 // keep it inline on AppState. Validation, commit semantics, and visual
 // rendering are the caller's concerns; this module only handles the
 // keyboard-driven mutation of `pending` + cursor state and exposes hooks
 // for blink and the parse-failure red flash.
 //
-// Reuse: V.A3 hover popups and V.B bottom-flag iteration syntax will
-// supply different validators and writers but reuse this state shape and
-// keystroke routing.
+// Reuse: hover popups and bottom-flag iteration syntax supply different
+// validators and writers but reuse this state shape and keystroke routing.
 
 namespace text_editor {
 
@@ -26,11 +25,11 @@ namespace text_editor {
 // remain available so an over-cap pending (loaded from a hand-edited
 // file) can be trimmed back to canonical form.
 constexpr int kMaxPendingChars = 16;
-// Brief D: iteration-mode FlagPayload editing widens the accepted grammar
+// Iteration-mode FlagPayload editing widens the accepted grammar
 // to admit the inline `+[lo, hi]` bracket, so the cap must clear the
 // longest bracketed flag (`9.99+[-99.99, +99.99]*1.2345:a.aa` ≈ 35 chars).
 constexpr int kMaxPendingCharsFlagIter = 40;
-// Brief X.2 BPM popup. Cap matches the brief's per-Kind tightening for
+// BPM popup. Cap matches the per-Kind tightening for
 // `<beats>@[<lo>,<hi>]` editing.
 constexpr int kMaxPendingCharsBpm = 13;
 // Settings prompt. Sized for the free-text provenance fields (url, notes),
@@ -43,9 +42,9 @@ constexpr int kMaxPendingCharsSettings = 1024;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind selects which keys produce a
-// printable character. V.A1's flag editor uses FlagPayload (digits,
-// letters, `.`, `*`, `:`); V.B's iteration popup uses IterationBracket
-// (digits, `.`, `+`, `-`, `,`, `[`, `]`); brief X.2's BPM popup uses
+// printable character. The flag editor uses FlagPayload (digits,
+// letters, `.`, `*`, `:`); the iteration popup uses IterationBracket
+// (digits, `.`, `+`, `-`, `,`, `[`, `]`); the BPM popup uses
 // BpmBracket (digits, `@`, `,`, `[`, `]`); the settings-prompt editor
 // uses SettingsAssignment (letters, digits, `.`, `=`, `_`, `-`, `:`).
 enum class Kind {
@@ -58,14 +57,14 @@ enum class Kind {
 // State for a single editable rect.
 struct State {
     // Identifier of the entity being edited. -1 means "not editing".
-    // The caller decides what this means (a marker index in V.A1).
+    // The caller decides what this means (a marker index for the flag editor).
     int target = -1;
 
     // Vocabulary discriminator. The caller sets this in `enter()` and
     // the keystroke handler routes printable detection accordingly.
     Kind kind = Kind::FlagPayload;
 
-    // Brief D: when true on a FlagPayload editor, the accepted grammar is
+    // When true on a FlagPayload editor, the accepted grammar is
     // widened to admit the inline iteration bracket characters
     // (`+ - [ ] ,`) and the longer FlagIter length cap. Set at `enter()`
     // from iteration_mode_enabled; does nothing for other kinds.

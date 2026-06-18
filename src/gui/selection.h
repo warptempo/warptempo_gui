@@ -8,7 +8,7 @@
 class GuiAudio;
 class GuiPlayback;
 
-// X.7.2: selection-cluster operations, extracted from main.cpp's inline
+// Selection-cluster operations, extracted from main.cpp's inline
 // lambdas. The struct holds references to the long-lived state the methods
 // read and write; bodies are byte-identical to the originals modulo `this->`
 // access on the captured references.

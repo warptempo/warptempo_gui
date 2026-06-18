@@ -157,7 +157,7 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         invalidate_playhead_columns(old_px, new_px);
     }
     invalidate_timestamp_area();
-    // V.A3b Addendum 3: viewport may have shifted (Home/End or any
+    // Viewport may have shifted (Home/End or any
     // playhead jump that pushed the viewport). Re-evaluate hover at
     // the cursor's last known coords.
     if (viewport_changed) {
@@ -213,7 +213,7 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
     // already covered by invalidate_timestamp_area above.)
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    // V.A3b Addendum 3: rects shifted under the (possibly stationary)
+    // Rects shifted under the (possibly stationary)
     // cursor — re-evaluate hover.
     recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
@@ -309,7 +309,7 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
         // changes.)
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // V.A3b Addendum 3: rects shifted under the (possibly
+        // Rects shifted under the (possibly
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
@@ -343,7 +343,7 @@ void Viewport::center_viewport_on_playhead() {
         invalidate_waveform_area();
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // V.A3b Addendum 3: rects shifted under the (possibly
+        // Rects shifted under the (possibly
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
@@ -394,15 +394,15 @@ void Viewport::follow_scroll_if_needed() {
 }
 
 // Reset the hover popup state. If the popup was visible, invalidate the
-// bottom strip so the next paint erases it (Brief F moved the hover readout
-// to bottom_upper_row_area). Safe to call from any path.
+// bottom strip so the next paint erases it (the hover readout lives in
+// bottom_upper_row_area). Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.visible;
     app.hover_popup = HoverPopupState{};
     if (was_visible) invalidate_timestamp_area();
 }
 
-// V.A3b Addendum 3: re-evaluate hover at the cursor's last on_motion
+// Re-evaluate hover at the cursor's last on_motion
 // coordinates. Called after viewport mutations (zoom, scroll, center,
 // playhead-driven viewport shift) so a stationary cursor's hover state
 // tracks the rects that just slid under it. Mirrors the on_motion
@@ -427,7 +427,7 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    // Brief 3a: target view's hover popup runs the same way as
+    // Target view's hover popup runs the same way as
     // source view's. hit_test_flag builds the target_frame_map
     // internally when active_audio_view == Target so the flag rects it
     // walks match what paint_handler renders at translated columns.

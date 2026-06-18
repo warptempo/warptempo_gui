@@ -18,13 +18,12 @@
 // source sample, which shifts pitch along with tempo. This matches the
 // user's Reaper-style workflow expectation.
 //
-// Predictor design note (Brief R)
-// -------------------------------
+// Predictor design note
+// ---------------------
 // The cursor predictor is a free-running linear extrapolator anchored at
 // (anchor_sample, anchor_ns) and re-anchored only at events of acceptable
 // visible discontinuity, never inside the audio callback. The set of
-// resync events is fixed by Brief N's mechanism, mapped onto the post-Q
-// topology: playhead jumps via move_playhead, zoom in/out via the shared
+// resync events: playhead jumps via move_playhead, zoom in/out via the shared
 // apply_zoom_change helper, the resize fit-file fallback,
 // sync_playhead_to_last_selected (live nudges and undo/redo restores),
 // set_playback_speed, follow-mode off-to-on, marker-drag hover,
@@ -33,10 +32,10 @@
 // viewport recenter via center_viewport_on_playhead (C key).
 //
 // Two alternatives were considered and rejected. A free-running predictor
-// with no resync (Brief O state) is insufficient for medium-zoom playback
+// with no resync is insufficient for medium-zoom playback
 // over windows long enough for steady_clock vs sample-clock skew to
 // accumulate to visible drift. A continuous audio-thread timestamp publish
-// with main-thread extrapolation against the latest publish (Brief M) is
+// with main-thread extrapolation against the latest publish is
 // rejected on perceptual grounds: a 100 Hz resync cadence at audio-buffer
 // rate produces a periodic high-frequency signal that the user is
 // sensitive to, even at sub-sample per-resync amplitudes.

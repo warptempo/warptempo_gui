@@ -15,12 +15,12 @@
 #include <utility>
 #include <vector>
 
-// X.7.6: render-view cluster. Method bodies are byte-identical to the
+// Render-view cluster. Method bodies are byte-identical to the
 // lambdas they replaced in main.cpp, with these mechanical rewrites:
 //
 //   clear_hover_popup            → viewport.clear_hover_popup
 //   refresh_active_tab_view_from_app  → active_views.refresh_active_tab_view_from_app
-//                                  (X.7.13 retired the std::function forwarders)
+//                                  (the std::function forwarders were retired)
 //   prune_live_selection         → selection.prune_live_selection
 //   rendersettings_path,
 //   write_rendersettings_for,
@@ -156,7 +156,7 @@ void GuiRenderView::apply_rendersettings_for(
     clamp_viewport_start(app, audio);
 }
 
-// Brief F Section 4: capture (size, mtime_seconds) for a wav path.
+// Capture (size, mtime_seconds) for a wav path.
 // Errors → (0, 0), interpreted as "no valid stat tuple" by callers
 // (forces a mismatch on compare). Uses stat() directly because
 // C++17's std::filesystem::file_time_type isn't portably
@@ -170,7 +170,7 @@ std::pair<uintmax_t, int64_t> GuiRenderView::wav_stat_tuple(
             static_cast<int64_t>(st.st_mtime)};
 }
 
-// Brief J.2 Section 4: stash the live selection into the active
+// Stash the live selection into the active
 // RenderViewEntry's matching-mode slot, along with the wav's
 // current stat tuple. No-op when no entry is active. Called from
 // the render-view exit path and from the batch-nav path
@@ -206,7 +206,7 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // swap and re-binds the playback device. Returns true on success;
 // on failure logs to stderr and the prior state is preserved.
 //
-// Brief F Section 4: when the destination entry's persisted stat
+// When the destination entry's persisted stat
 // tuple matches the wav's current stat, restores the persisted
 // selection. Mismatch leaves the live selection empty.
 bool GuiRenderView::load_render_view_at(int index) {
@@ -294,7 +294,7 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view_index             = index;
     app.last_render_view_path         = e.wav_path.string();
 
-    // Brief F Section 4: stat-tuple-gated selection restore. A
+    // Stat-tuple-gated selection restore. A
     // matching persisted tuple (non-zero, equal to current) means
     // the wav hasn't changed since stash; replay the persisted
     // selection. Mismatch (or never-stashed defaults) drops to
@@ -307,7 +307,7 @@ bool GuiRenderView::load_render_view_at(int index) {
         cur_stat.first  == e.persisted_size &&
         cur_stat.second == e.persisted_mtime;
     if (stat_match) {
-        // Brief J.2 Section 4: load only the matching-mode slot
+        // Load only the matching-mode slot
         // into the live pair. The OTHER-mode slot stays on state
         // and gets swapped in if mode flips during this render-
         // view session via switch_active_markers_view_to.
@@ -394,7 +394,7 @@ void GuiRenderView::restore_source_audio() {
     app.viewport_start_sample = t.viewport_start_sample;
     app.zoom_level            = t.zoom_level;
     app.playhead_cursor_sample       = t.playhead_cursor_sample;
-    // Brief J.2 Section 4: load the matching-mode slot into the
+    // Load the matching-mode slot into the
     // live pair. Live pair held render-view selection while
     // render-view was active; restoring source-view requires
     // pulling the source tab's matching-mode slot back in.

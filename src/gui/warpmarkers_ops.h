@@ -12,8 +12,7 @@ class GuiAudio;
 class GuiPlatform;
 struct GuiTargetRender;
 
-// X.7.5a: warp-authoring cluster, extracted from main.cpp's inline
-// lambdas. Covers the basic authoring lambdas (drop / delete / toggle /
+// Warp-authoring cluster. Covers the basic authoring lambdas (drop / delete / toggle /
 // adjust / clear), the drag cluster (begin / apply / commit, mode-aware
 // across warp and phase reset lists), and the selection-shift cluster
 // (nudge / jump-to-playhead and their shared bounds helper).

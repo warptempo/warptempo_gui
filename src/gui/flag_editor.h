@@ -12,9 +12,8 @@
 
 struct GuiTargetRender;
 
-// X.7.5b: flag-editor cluster, extracted from main.cpp's inline lambdas.
-// Covers the top-flag canonical-line editor (V.A1), the V.B iteration
-// popup editor, the Brief X.2 BPM popup editor, the Shift+I/Shift+M bulk
+// Flag-editor cluster. Covers the top-flag canonical-line editor, the
+// iteration popup editor, the BPM popup editor, the Shift+I/Shift+M bulk
 // clears, and the BPM-mode enter/exit transitions. clear_hover_popup is
 // reached through viewport.
 struct GuiFlagEditor {
@@ -47,7 +46,7 @@ struct GuiFlagEditor {
                                  double text_left_x = -1.0);
     // Returns true iff the pending buffer parsed and committed (editor
     // closed). False on parse failure (editor stays open, red) or an
-    // invalid target. Brief E: the caller fires render_bpm_sweep() on true.
+    // invalid target. The caller fires render_bpm_sweep() on true.
     bool commit_bpm_edit();
     void enter_bpm_mode();
     void exit_bpm_mode();

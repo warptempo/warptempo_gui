@@ -6,7 +6,7 @@
 #include "selection.h"
 #include "viewport.h"
 
-// X.7.7: active-views management cluster, extracted from main.cpp's inline
+// Active-views management cluster, extracted from main.cpp's inline
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
 // two view-axis swap operations (W/P markers and A/B tab) plus their
 // shared snapshot machinery: active-tab snapshot push

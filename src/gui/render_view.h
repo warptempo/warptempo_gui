@@ -15,7 +15,7 @@
 
 struct GuiTargetRender;
 
-// X.7.6: render-view cluster, extracted from main.cpp's inline lambdas.
+// Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
 // the .rendersettings sidecar (per-render zoom/viewport/playhead persistence),
 // the per-entry selection stash with stat-tuple gating, the load-into-active-audio
@@ -37,7 +37,7 @@ struct GuiRenderView {
     GuiActiveViews&   active_views;
     GuiTargetRender&  target_render;
 
-    // Chunk W: parked source audio. Populated only while
+    // Parked source audio. Populated only while
     // app.render_view_enabled is true — std::move'd off `audio` on
     // toggle-in and std::move'd back on toggle-out so the source
     // doesn't have to be re-read from disk. Default-constructed

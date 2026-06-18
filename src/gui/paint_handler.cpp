@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-// X.7.8a: paint cluster. Method bodies are byte-identical to the lambdas
+// Paint cluster. Method bodies are byte-identical to the lambdas
 // they replaced in main.cpp (set_on_redraw at the original main.cpp:999
 // and set_on_resize at the original main.cpp:1892). The only changes are:
 //
@@ -29,7 +29,7 @@
 
 // -- render_waveform_to_cache_surface ------------------------------------
 //
-// Stage A: extracted from on_redraw's inline cairo_create/cairo_destroy
+// Extracted from on_redraw's inline cairo_create/cairo_destroy
 // block (the body that lived between fingerprint-check and blit). Runs on
 // the waveform worker thread when the main path goes through GuiWaveformWorker;
 // the function itself is thread-agnostic — it touches only the dest surface
@@ -242,10 +242,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect exposed{x, y, w, h};
         const int     sr         = audio.sample_rate();
 
-        // Stage C: live viewport / target-frame_map / trim computations
+        // Live viewport / target-frame_map / trim computations
         // that used to drive on_redraw's render_flags / render_markers
         // calls have moved into the cache rebuild paths (waveform via
-        // Stage A's worker, stems via maybe_rebuild_stem_cache, flags
+        // the worker, stems via maybe_rebuild_stem_cache, flags
         // via maybe_rebuild_flag_cache). on_redraw now reads
         // wf_cache.fp_* for displayed-viewport inputs and treats every
         // strip as a blit-then-overlay path.
@@ -265,7 +265,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         {
             const auto wf0 = clock::now();
 
-            // Stage A: the synchronous rebuild that used to live in this
+            // The synchronous rebuild that used to live in this
             // block is gone. wf_cache.surface is now produced by one of
             // three paths, all of which leave this paint path blit-only:
             //   1. Worker full render — maybe_enqueue_waveform_render
@@ -288,9 +288,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // live surface currently holds. For worker-path renders that may
             // be a one- or two-frame-old viewport during the worker-rebuild
             // window; the incremental pan path updates the plate in the same
-            // frame, so it has no such lag. Stages B and C close any
-            // mismatch by layering markers and flags onto surfaces keyed off
-            // the same displayed-viewport.
+            // frame, so it has no such lag. The stem and flag layers close
+            // any mismatch by layering markers and flags onto surfaces keyed
+            // off the same displayed-viewport.
             //
             // If wf_cache.surface is null (initial load, before the first
             // worker completion), the blit is skipped and the background
@@ -364,7 +364,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
-            // Stage B: the marker stems live on stem_cache.surface,
+            // The marker stems live on stem_cache.surface,
             // rebuilt synchronously from on_tick via
             // maybe_rebuild_stem_cache. The paint path is blit-only.
             // Like the waveform cache, this surface may be null on the
@@ -405,18 +405,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const double px_x = playhead_pixel_x(app, audio,
                                              wf_cache.fp_vp_start, disp_spp);
 
-        // Flag annotations in the top strip. After Stage C the steady-
-        // state flag-rect pixels live on flag_cache.surface (rebuilt
-        // from on_tick via maybe_rebuild_flag_cache); on_redraw blits
-        // the cache and then paints the per-frame live work — the
-        // FlagPayload editor's pending text + cursor. Brief B2: the
-        // hover / iter / BPM popup paint paths and their dispatch are
-        // deleted; iter and BPM modes are presentation-dark until D / E
-        // re-home their surfaces.
+        // Flag annotations in the top strip. The steady-state flag-rect
+        // pixels live on flag_cache.surface (rebuilt from on_tick via
+        // maybe_rebuild_flag_cache); on_redraw blits the cache and then
+        // paints the per-frame live work — the FlagPayload editor's
+        // pending text + cursor. The hover / iter / BPM popup paint paths
+        // and their dispatch are deleted; iter and BPM modes are
+        // presentation-dark until they re-home their surfaces.
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
 
-            // Stage C: the steady-state flag-rect pixels are cached on
+            // The steady-state flag-rect pixels are cached on
             // flag_cache.surface, rebuilt synchronously from on_tick via
             // maybe_rebuild_flag_cache. The paint path blits the cache
             // first; the per-frame live work that follows is the
@@ -436,7 +435,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 cairo_restore(cr);
             }
 
-            // Stage C: displayed-viewport locals for live items that
+            // Displayed-viewport locals for live items that
             // must align with the cached flag pixels. The cache renders
             // against wf_cache.fp_*; the live editor flag and popup
             // anchor math reads these *_disp locals so it agrees with
@@ -473,15 +472,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                         app.top_flag_editor);
             }
 
-            // Stage C: the flag-rect pass has moved into the cache
-            // rebuild above. What's left here is live work — the
-            // FlagPayload editor's pending text + cursor (which would
-            // otherwise drag the cache fingerprint on every keystroke
-            // and blink flip). Brief B2: the hover / iter / BPM popup
-            // surfaces are deleted; iteration and BPM modes are
-            // presentation-dark until D / E re-home their entries, and
-            // the hover dwell mechanism still runs but has no on-screen
-            // reader until Brief F.
+            // The flag-rect pass has moved into the cache rebuild above.
+            // What's left here is live work — the FlagPayload editor's
+            // pending text + cursor (which would otherwise drag the cache
+            // fingerprint on every keystroke and blink flip). The hover /
+            // iter / BPM popup surfaces are deleted; iteration and BPM
+            // modes are presentation-dark until they re-home their
+            // entries, and the hover dwell mechanism still runs but has no
+            // on-screen reader.
             //
             // Live editor flag: only paints in W marker-view and not
             // render-view (FlagPayload editor isn't available in either
@@ -511,9 +509,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         // Playhead drawn last so its stem and triangle paint over any
-        // marker connector pixels they share a column with — the brief
-        // mandates the playhead never be occluded by marker stems or
-        // flag annotations. The triangle indicator lives in the top
+        // marker connector pixels they share a column with — the
+        // playhead must never be occluded by marker stems or flag
+        // annotations. The triangle indicator lives in the top
         // strip, so render whenever either the waveform or top strip is
         // exposed; otherwise a flag-strip-only repaint would erase the
         // triangle.
@@ -608,7 +606,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_restore(cr);
         }
 
-        // Bottom strip (Brief F): two text rows of equal height mirroring
+        // Bottom strip: two text rows of equal height mirroring
         // the top strip. The status line lives on the lower (outer) row and
         // paints UNCONDITIONALLY — it is no longer the trailing else of a
         // chain, so it stays visible while an editor is open on the upper
@@ -717,7 +715,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                     cr, static_cast<double>(kTimestampPadX), upper_baseline,
                     app.queue_progress_text, kText, kFlagFontSize);
             } else if (text_editor::is_active(app.settings_editor)) {
-                // Settings prompt overlay (Brief B.2): "setting: <pending>"
+                // Settings prompt overlay: "setting: <pending>"
                 // through the shared bottom-strip editor helper. Fill is
                 // kBackground normally, kAccent on parse failure (handled
                 // inside the helper).
@@ -728,7 +726,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             } else if (text_editor::is_active(app.top_flag_editor) &&
                        app.top_flag_editor.kind ==
                            text_editor::Kind::BpmBracket) {
-                // Brief E: BPM editor overlay, through the same bottom-strip
+                // BPM editor overlay, through the same bottom-strip
                 // editor helper as the settings branch above. top_flag_editor
                 // with kind==BpmBracket only ever paints here, never over the
                 // flag in the top strip.
@@ -737,9 +735,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                            static_cast<double>(kTimestampPadX),
                                            upper_baseline);
             } else if (app.hover_popup.visible) {
-                // B2 deleted the floating hover popup paint but kept the
-                // dwell mechanism; Brief F gives it a home as the
-                // lowest-priority upper-row branch. cached_text is the
+                // The floating hover popup paint was deleted but the dwell
+                // mechanism kept; it now lives as the lowest-priority
+                // upper-row branch. cached_text is the
                 // resolved-tempo string from compute_hover_popup_text.
                 text_display::draw_line(
                     cr, static_cast<double>(kTimestampPadX), upper_baseline,
@@ -809,7 +807,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     }
 }
 
-// -- Stage A: waveform-worker dirty-detect and completion ----------------
+// -- Waveform-worker dirty-detect and completion -------------------------
 //
 // maybe_enqueue_waveform_render: called from on_tick. Computes the desired
 // waveform fingerprint (mirrors the input computation on_redraw does), and
@@ -870,8 +868,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // Drag-freeze gate: during a target-view drag the frame_map-derived
     // inputs are excluded from the dirty-detect comparison, so non-drag
     // viewport changes (which would still update pending_fp_* if they
-    // happened) trigger a render but pure drag-motion does not. See the
-    // original brief 3b comment in on_redraw.
+    // happened) trigger a render but pure drag-motion does not.
     const bool drag_freeze = in.is_target && app.drag.active;
 
     auto fingerprint_differs = [&](
@@ -942,7 +939,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio_gen      = app.audio_generation;
     job.target         = in.is_target;
     job.frame_map_hash   = in.frame_map_hash;
-    // Stage B: stash a copy of the frame_map on the pending slot so the
+    // Stash a copy of the frame_map on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_frame_map = in.frame_map;
@@ -1010,7 +1007,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
         job.frame_map_hash   = wf_cache.supersede_frame_map_hash;
-        // Stage B: thread the supersede frame_map into both the job and
+        // Thread the supersede frame_map into both the job and
         // pending_fp_frame_map, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
         // displayable copy for the post-completion stem rebuild.
@@ -1050,7 +1047,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_audio_gen    = wf_cache.pending_fp_audio_gen;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_frame_map_hash = wf_cache.pending_fp_frame_map_hash;
-    // Stage B: publish the in-flight job's frame_map to the displayed slot
+    // Publish the in-flight job's frame_map to the displayed slot
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_frame_map,     wf_cache.pending_fp_frame_map);
@@ -1328,7 +1325,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
 
-// -- Stage B: marker stem cache dirty-detect and rebuild -----------------
+// -- Marker stem cache dirty-detect and rebuild --------------------------
 //
 // Called from on_tick AFTER maybe_enqueue_waveform_render. Reads displayed-
 // viewport inputs from wf_cache.fp_* (the LIVE waveform fingerprint — the
@@ -1368,7 +1365,7 @@ uint64_t hash_drag_overlay(const DragState& d) {
 }
 
 // FNV-1a over the live selection set + last-selected anchor. Folded
-// into the FlagCache fingerprint (Stage C) to avoid distributing a
+// into the FlagCache fingerprint to avoid distributing a
 // generation-bump across the fifteen mutation sites of selected_markers.
 uint64_t hash_selection(const std::set<int>& s,
                         int last_selected) {
@@ -1492,7 +1489,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     if (area.w <= 0 || area.h <= 0) return;
 
     // Surface includes the stem overhang above the waveform — see the
-    // geometry note in StemCache's class comment. After F.trim the overhang
+    // geometry note in StemCache's class comment. The overhang
     // is the TALLER trim value (stem_cache_overhang_px = kStemAboveWaveformPx
     // + row_h + gap) so the upper-row trim stem is not clipped at its top;
     // marker stems land transparently lower in the same surface.
@@ -1517,7 +1514,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const uint64_t sel_hash    = hash_selection(app.selected_markers,
                                                 app.last_selected_marker);
 
-    // Brief C: trim boundary stems. Positions ride trim_begin / trim_end
+    // Trim boundary stems. Positions ride trim_begin / trim_end
     // (displayed domain), has-set + selected bits from the active A/B tab.
     // Computed by the shared helper so the flag cache's b/e chips read the
     // exact same values (chip + stem are one unit).
@@ -1611,11 +1608,11 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // Brief C: trim boundary stems, painted in both 'W' and 'P' views.
+    // Trim boundary stems, painted in both 'W' and 'P' views.
     // Positions are the displayed-domain trim frames (already translated);
     // the has-set / selected bits decide which stems draw and in what
     // color.
-    // F.trim.2 Defect 3: painted BEFORE the regular marker stems so that
+    // Painted BEFORE the regular marker stems so that
     // where a trim bound and a regular marker share a column the regular
     // stem (painted last on this shared surface) sits in front; the taller
     // trim stem reads as "underneath," reachable by its hotkey.
@@ -1682,7 +1679,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         surface_h);
 }
 
-// -- Stage C: flag-rect cache dirty-detect and rebuild -------------------
+// -- Flag-rect cache dirty-detect and rebuild ----------------------------
 //
 // Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
 // displayed-viewport half of the fingerprint; same live-app-state reads
@@ -1708,7 +1705,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int surface_h = top_strip.h;
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
-    // positioned at marker times only. F.trim adds the b/e trim chips to this
+    // positioned at marker times only. The b/e trim chips also ride this
     // strip, so the displayed-domain trim positions + has/selected bits (from
     // the shared helper, identical to the stem cache's) are now part of the
     // flag cache's identity.
@@ -1727,13 +1724,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
     const bool      rve        = app.render_view_enabled;
-    // Brief D: iteration mode only affects warp-view (non-render) flags;
+    // Iteration mode only affects warp-view (non-render) flags;
     // render view resets the toggle off, so this is false there.
     const bool      iter_on    = app.iteration_mode_enabled &&
                                  mv == 'W' && !rve;
 
     // FlagPayload editor target drives the skip-guard (cache leaves a
-    // hole for the live editor render to fill). Brief B2: the iter/BPM
+    // hole for the live editor render to fill). The iter/BPM
     // popup-editor outline-suppression channel was removed along with
     // the popup surfaces; the IterationBracket / BpmBracket kinds no
     // longer feed the cache fingerprint.
@@ -1745,7 +1742,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_target = app.top_flag_editor.target;
     }
 
-    // F.trim: displayed-domain trim state for the b/e chips (shared helper,
+    // Displayed-domain trim state for the b/e chips (shared helper,
     // same values the stem cache paints its stems at).
     const DisplayedTrim dtrim = compute_displayed_trim();
 
@@ -1860,7 +1857,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      iter_on);
     }
 
-    // F.trim: the b/e trim chips cap their stems in the upper top row. Painted
+    // The b/e trim chips cap their stems in the upper top row. Painted
     // in both 'W' and 'P' views (like the stems); the dtrim has-bits force
     // them off in render view, so render_trim_flags early-returns there. The
     // real waveform_area sets the upper-row chip bottom; the top strip's

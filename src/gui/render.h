@@ -41,7 +41,7 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 }
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
-// target-frame in target view). After Brief C, trim no longer dims any
+// target-frame in target view). Trim no longer dims any
 // renderer — it is consumed only by render_trim_stems to place the two
 // boundary stems. Values match the convention in compute_trim_samples
 // (main.cpp).
@@ -50,7 +50,7 @@ struct TrimRange {
     int64_t end;
 };
 
-// Brief H palette: bases shared across the renderer module and
+// Palette: bases shared across the renderer module and
 // main.cpp.
 inline constexpr GuiColor kBackground       = hex(0x1A1A1F);
 inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
@@ -60,8 +60,8 @@ inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 // blitted plate — NOT baked into the plate, which is trim-agnostic. ATOP
 // uses the plate's alpha as the mask, so only painted sample pixels are
 // recolored (gaps stay background) at the exact tuned RGB, no blend. This
-// is a standalone tunable color, NOT a global dim factor — Brief C retired
-// the global out-of-trim dim and that stays retired; nothing but the sample
+// is a standalone tunable color, NOT a global dim factor — the global
+// out-of-trim dim was retired and stays retired; nothing but the sample
 // pixels dim. Default is roughly kWaveform blended ~55% toward kBackground
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
@@ -72,7 +72,7 @@ inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
-// Brief C: trim boundary stem color (#F67400 orange). Distinct from
+// Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
 // trim begin/end paints as a vertical stem in this color, or kSelected
 // when that boundary is selected.
@@ -120,9 +120,9 @@ constexpr double kFlagBottomLiftPx = 0.0;
 // component tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
-// Brief F: fixed-pixel mirrored four-row strip grid. G is the single tunable
+// Fixed-pixel mirrored four-row strip grid. G is the single tunable
 // inter-row gap, shared between the two rows of each strip; it doubles as the
-// trim-flag-to-regular-flag distance consumed by F.trim. One named constant,
+// trim-flag-to-regular-flag distance. One named constant,
 // one place to change it. Now 0 — the two rows of each strip touch, and the
 // waveform-side and outer (window-edge) gaps (both kFlagBottomLiftPx, also 0)
 // vanish, so rows and strips pack tight against each other and the window
@@ -175,7 +175,7 @@ double monospace_advance();
 
 // Which strip row a chip's bottom edge sits at. Lower is the regular
 // warp/phase-reset flag row (now flush with the waveform area top, since
-// kFlagBottomLiftPx is 0); Upper is the F.trim begin/end row, one row + one
+// kFlagBottomLiftPx is 0); Upper is the begin/end trim-flag row, one row + one
 // inter-row gap higher.
 enum class ChipRow { Lower, Upper };
 
@@ -222,7 +222,7 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 //   baseline_y  - the text baseline y the caller solved for its row (Lower row
 //                 for regular/phase-reset chips, Upper for trim). The box top is
 //                 baseline_y - monospace_row_baseline_offset(); the height is
-//                 the full monospace_row_h() slot (Defect B geometry).
+//                 the full monospace_row_h() slot.
 //
 // Returns the integer GuiRect [x, y, w, h]; rounding happens here, once.
 // Consumers use the returned ints directly — no consumer re-rounds or
@@ -262,7 +262,7 @@ inline int stem_cache_overhang_px() {
 // the compiler folds it to a constant at compile time.
 constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
 
-// Brief B.2 editor text-box primitive. Draws the full editable-text-box
+// Editor text-box primitive. Draws the full editable-text-box
 // anatomy shared by the flag-payload editor (top strip) and the settings
 // editor (bottom strip), in paint order: solid fill behind the editable
 // region, optional static prefix, editable text, selection swap, and a
@@ -274,7 +274,7 @@ constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
 // text when `prefix` is empty). The editable region paints at
 // `anchor_x + prefix_advance`; the solid fill covers only the editable
 // region (the prefix, if any, sits to its left on the canvas), via the
-// shared flag_chip_rect helper. Defect B (F.trim.3): the box height is the cached
+// shared flag_chip_rect helper. The box height is the cached
 // monospace_row_h() (the same metric the strip rows use) and the top is
 // `baseline_y - monospace_row_baseline_offset()`, so the box fills its full
 // row slot — callers solve baseline_y so the box bottom lands at the slot
@@ -379,12 +379,12 @@ void render_playhead(cairo_t* cr,
 // reference inherits the disabled flag of its defining marker). Disabled
 // markers are skipped entirely. Selected markers paint kSelected, the rest
 // kMarker; marker stems do not dim — only the out-of-trim sample pixels
-// dim, via on_redraw's ATOP overlay (see kWaveformDimmed). Brief C retired
-// the global out-of-trim dim and it stays retired for stems.
+// dim, via on_redraw's ATOP overlay (see kWaveformDimmed). The global
+// out-of-trim dim was retired and it stays retired for stems.
 // `frame_map` (default null) shifts marker positioning into the target-frame
 // domain when target view is active: each marker's source-frame position is
 // run through `map_source_to_target` before viewport clipping and column
-// placement. Null frame_map = identity, exact pre-brief-2 behavior.
+// placement. Null frame_map = identity.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
@@ -396,7 +396,7 @@ void render_markers(cairo_t* cr,
                     const DragOverlay* drag_overlay = nullptr,
                     cairo_surface_t* ink_plate = nullptr);
 
-// Brief C: draws the trim begin/end boundary stems. Each set bound
+// Draws the trim begin/end boundary stems. Each set bound
 // (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
 // domain-frame column, spanning the same vertical extent as marker stems
 // (the flag chip's bottom, via flag_chip_bottom_y, down to waveform bottom).
@@ -417,7 +417,7 @@ void render_trim_stems(cairo_t* cr,
                        bool end_selected,
                        cairo_surface_t* ink_plate = nullptr);
 
-// F.trim: draws the begin/end trim-boundary flag chips in the upper top row.
+// Draws the begin/end trim-boundary flag chips in the upper top row.
 // Each set bound (gated by `has_begin` / `has_end`) paints a single-glyph
 // chip — `b` for begin, `e` for end — capping its stem as one continuous
 // unit. Chip color mirrors the stem exactly: kTrimMarker, or kSelected when
@@ -441,7 +441,7 @@ void render_trim_flags(cairo_t* cr,
                        bool has_end,
                        bool end_selected);
 
-// Editor overlay used by V.A1's top-flag editor. When `marker_index >= 0`
+// Editor overlay used by the top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is
 // replaced with `pending` and the background paints either kMarker (normal)
 // or kAccent (when `is_red` indicates parse failure). A 1px-wide cursor is
@@ -452,7 +452,7 @@ struct FlagEditorOverlay {
     int         marker_index        = -1;
     std::string pending;
     int         cursor_pos          = 0;
-    // Brief seven: selection range within `pending`. When
+    // Selection range within `pending`. When
     // `has_selection` is true, the renderer paints a foreground/
     // background swap over [selection_start, selection_end). The
     // cursor continues to paint normally on top, producing the
@@ -472,13 +472,13 @@ struct FlagEditorOverlay {
 // `1.28*1.2345`, owned+def `1.28:a.01`, owned+scale+def `1.28*1.2345:a.01`,
 // inherit `pass`, label reference `a.01`.
 //
-// Brief H three-state model: each flag renders in one of three states.
+// Three-state model: each flag renders in one of three states.
 //   1. Not selected: text in `kText`, no background fill.
 //   2. Selected, editor not engaged: background fill in `kMarker`, text
 //      in `kText`. No cursor.
 //   3. Selected, editor engaged: state 2 plus a 1-px blinking cursor.
 // Parse-fail variant of state 2/3: fill is `kAccent` instead of `kMarker`.
-// Brief C: trim membership has no effect on flags — they always paint
+// Trim membership has no effect on flags — they always paint
 // full-brightness.
 //
 // Disabled markers render identically to enabled markers in the top strip;
@@ -502,7 +502,7 @@ void render_flags(cairo_t* cr,
                   const DragOverlay* drag_overlay = nullptr,
                   bool iteration_on = false);
 
-// Stage C: paints ONE flag — the FlagPayload-editor target — with the
+// Paints ONE flag — the FlagPayload-editor target — with the
 // live pending text, selection swap, and blinking cursor. Same greedy-
 // pack and elision rules as render_flags so the flag lands at the same
 // pixel column the cache rendered the other flags at. `editor.marker_
@@ -534,11 +534,11 @@ void render_one_editor_flag(
 // caller uses these for hit-testing. No cairo context is needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
-// `frame_map` parameter mirrors render_flags so the two stay in sync. Brief 2
-// adds it for symmetry — target view's hover/iter/BPM popups are gated off
-// elsewhere, so this helper is not yet called with a non-null frame_map. A
-// future brief that re-enables popup paint in target view will route the
-// frame_map through here without further signature churn.
+// `frame_map` parameter mirrors render_flags so the two stay in sync. In
+// target view the flags paint at translated positions, so this helper is
+// called with a non-null frame_map and the hit-rects walk the same map (see
+// app_state's hit-test path). In source and render view it is null and
+// positions are untranslated.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     const std::vector<GuiWarpMarker>& markers,
@@ -550,7 +550,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     const DragOverlay* drag_overlay = nullptr,
     bool iteration_on = false);
 
-// Phase reset marker analogues (chunk S.2.2). Same pixel layout as the warp
+// Phase reset marker analogues. Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
 // instead of warp markers) and the supplied color set. `disabled` is taken
 // directly from each phase reset (no label-cascade like warp markers).
@@ -568,7 +568,7 @@ void render_phase_reset_markers(cairo_t* cr,
 // The phase-reset chip is an invariable single `p` (the peak/heap/pass
 // phase-MODEL concept was removed once heap became the sole engine). Two
 // states only: default fill `kMarker`, selected fill `kSelected`. No editor,
-// no parse-fail state. Brief C: trim membership has no effect — flags always
+// no parse-fail state. Trim membership has no effect — flags always
 // paint full-brightness.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
@@ -596,7 +596,7 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 // content) when entering edit mode on a flag.
 std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int idx);
 
-// Brief D: iteration-aware sibling of flag_text_for_marker. Returns the
+// Iteration-aware sibling of flag_text_for_marker. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
 // `tempo_base`. The single canonical composer for warp flag text — used
@@ -638,7 +638,7 @@ double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
 
-// One-line toggle for the render-path perf instrumentation (chunk M). When
+// One-line toggle for the render-path perf instrumentation. When
 // false, all perf_counters increments and [dbg perf] stderr emissions in
 // the redraw path are compiled out.
 constexpr bool kDebugPerf = false;
@@ -654,7 +654,7 @@ constexpr bool kDebugHitRects = false;
 // perf_counters::reset() before a measured pass and reads the totals
 // afterwards. Single-threaded, no synchronization.
 //
-// Stage A and beyond: the wf_cols / wf_pyramid_samples increments may
+// The wf_cols / wf_pyramid_samples increments may
 // fire from the waveform worker thread when kDebugPerf=true. The
 // counters are not thread-safe — diagnostic use only.
 namespace perf_counters {
