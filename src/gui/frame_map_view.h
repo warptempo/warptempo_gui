@@ -11,7 +11,7 @@
 // view waveform translation. Trim is forced off — target view paints the
 // WHOLE song; the frame_map must describe the whole song with warp segments
 // where markers exist and identity outside (see paint_handler.cpp commentary
-// next to the same construction). Returns an empty vector if build_timemaps
+// next to the same construction). Returns an empty vector if build_maps
 // fails or yields no segments. Callers in target view route this through
 // compute_flag_hit_rects / render_flags / popup-hit helpers so hit-test
 // math and paint stay in sync.
@@ -38,7 +38,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
 // rebuild, so the waveform-cache fingerprint reads it instead of
 // rehashing per tick. A failed or empty build is cached too (empty
 // frame_map, hash 0) — callers already treat an empty map as identity.
-struct TargetTimemapCache {
+struct TargetMapCache {
     bool      valid        = false;
     long long markers_gen  = -1;
     double    scale        = 0.0;
@@ -60,7 +60,7 @@ struct TargetTimemapCache {
 // next call with a changed key (single-threaded GUI use only — the
 // waveform worker receives its own copy via the job, never this
 // reference).
-const TargetTimemapCache& target_view_timemap_cached(
+const TargetMapCache& target_view_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Inverse-translate a domain-frame coordinate (active-domain) into a
@@ -86,7 +86,7 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // common case: translating a single coordinate between the source-frame domain
 // and the active-domain using the LIVE target-view map. Source view: identity,
 // no map built. Target view: routes through the memoized
-// target_view_timemap_cached, so even repeated calls (e.g. inside a loop) cost
+// target_view_map_cached, so even repeated calls (e.g. inside a loop) cost
 // only a cache-key comparison after the first build. Use these at every input /
 // playhead boundary that currently hand-builds build_target_view_frame_map
 // solely to feed one to_domain_frame / to_source_frame.

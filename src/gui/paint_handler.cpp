@@ -841,8 +841,8 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         if (app.drag.active) {
             target_frame_map = app.drag.frozen_frame_map;
         } else {
-            const TargetTimemapCache& c =
-                target_view_timemap_cached(app, sr,
+            const TargetMapCache& c =
+                target_view_map_cached(app, sr,
                     static_cast<long>(audio.total_frames()));
             target_frame_map      = c.frame_map;       // job needs an owned snapshot
             target_frame_map_hash = c.hash;

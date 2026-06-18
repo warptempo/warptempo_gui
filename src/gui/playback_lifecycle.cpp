@@ -59,7 +59,7 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // target buffer. Speed is forced to 1.0 here (sibling case to
 // render view): target view's whole purpose is that audio plays the
 // user's authored warp, so an extra speed multiplier on top would
-// defeat the brief. The persistent app.playback_speed is left
+// defeat that purpose. The persistent app.playback_speed is left
 // untouched; toggling back to source view restores it naturally
 // because set_playback_speed refuses writes in target view.
 void GuiPlaybackLifecycle::toggle_playback() {
@@ -154,8 +154,8 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
 
 // Helpers for Shift+<digit> speed selection. Refused silently in target
 // view: target view's audio is the warped target buffer, and adding
-// a playback-speed multiplier on top would defeat the brief's whole
-// premise (the audible result must match the authored warp, not the
+// a playback-speed multiplier on top would defeat the premise
+// (the audible result must match the authored warp, not the
 // warp scaled by an extra factor). The persistent app.playback_speed
 // is left untouched so a T→S round trip restores whatever rate the
 // user last set in source view. This is the only path that writes

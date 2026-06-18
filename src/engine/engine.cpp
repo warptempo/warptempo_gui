@@ -54,13 +54,13 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
         if (tm[i].src_frame <= tm[i - 1].src_frame) {
-            std::cerr << "Error: timemap entry " << i << " has non-monotonic src_frame ("
+            std::cerr << "Error: frame_map entry " << i << " has non-monotonic src_frame ("
                       << tm[i - 1].src_frame << " -> "
                       << tm[i].src_frame << ").\n";
             return false;
         }
         if (tm[i].tgt_frame <= tm[i - 1].tgt_frame) {
-            std::cerr << "Error: timemap entry " << i << " has non-monotonic tgt_frame ("
+            std::cerr << "Error: frame_map entry " << i << " has non-monotonic tgt_frame ("
                       << tm[i - 1].tgt_frame << " -> "
                       << tm[i].tgt_frame << ").\n";
             return false;

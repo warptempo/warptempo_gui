@@ -599,7 +599,7 @@ void GuiWarpMarkersOps::commit_drag() {
         reanchor_playhead = true;
     }
     // Cascade validation for warp drags. The frozen-coord regime keeps
-    // build_timemaps from running during motion (paint sources from the
+    // build_maps from running during motion (paint sources from the
     // pre-drag snapshot in app.drag.frozen_frame_map), so a drag end-state
     // that violates the per-segment label_ref final_multiplier ceiling
     // can otherwise land in the live store and leave the next

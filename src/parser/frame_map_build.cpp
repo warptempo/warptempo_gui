@@ -199,9 +199,9 @@ std::string compute_hover_popup_text(
     return "";
 }
 
-std::expected<TimemapBuildResult, std::string> build_timemaps(
-    const TimemapBuildInput& in) {
-    TimemapBuildResult out;
+std::expected<MapBuildResult, std::string> build_maps(
+    const MapBuildInput& in) {
+    MapBuildResult out;
 
     const auto&  markers      = in.markers;
     const double scale        = in.scale;
@@ -212,7 +212,7 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
         return std::unexpected("invalid source audio metadata");
     }
 
-    // Trim range comes from .settings (TimemapBuildInput::trim_*), no
+    // Trim range comes from .settings (MapBuildInput::trim_*), no
     // longer from per-marker flags. The post-pass below filters frame_map
     // segments by source frame against this range.
     // A begin of <= 0 means "start at the start", identical to no begin
@@ -282,8 +282,8 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
         src_f_prev = src_frame;
     }
 
-    // Pass 2: emit standard frame_map + midi tempomap entries.
-    out.standard.push_back({0, 0});
+    // Pass 2: emit frame_map segments + tempo_map entries.
+    out.frame_map.push_back({0, 0});
 
     src_f_prev = 0.0;
     tgt_f_prev = 0.0;
@@ -334,24 +334,24 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
             double effective_multiplier = seg_src_dur / seg_tgt_dur;
             last_valid_multiplier = effective_multiplier;
             double seg_start_time = tgt_f_prev / static_cast<double>(sample_rate);
-            out.midi.push_back({seg_start_time, effective_multiplier});
+            out.tempo_map.push_back({seg_start_time, effective_multiplier});
         }
 
         size_t sf = static_cast<size_t>(std::llrint(src_frame));
         size_t tf = static_cast<size_t>(std::llrint(target_frame));
-        out.standard.push_back({sf, tf});
+        out.frame_map.push_back({sf, tf});
 
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;
     }
 
     double final_tgt_sec = tgt_f_prev / static_cast<double>(sample_rate);
-    out.midi.push_back({final_tgt_sec, last_valid_multiplier});
+    out.tempo_map.push_back({final_tgt_sec, last_valid_multiplier});
 
-    // Trim post-pass. Shifts both standard and midi vectors to begin at the
-    // trim start; drops entries outside [begin_frame, end_frame]. Injects
-    // synthetic boundary anchors into standard (and, on the end side, midi)
-    // when the trim boundaries do not align with real warp markers, so the
+    // Trim post-pass. Shifts both frame_map and tempo_map vectors to begin at
+    // the trim start; drops entries outside [begin_frame, end_frame]. Injects
+    // synthetic boundary anchors into frame_map (and, on the end side,
+    // tempo_map) when the trim boundaries do not align with real warp markers, so the
     // engine reads target_total_frames = anchor + N rather than truncating
     // at the last in-range marker.
     if (has_begin || has_end) {
@@ -362,14 +362,14 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
             ? static_cast<long>(std::nearbyint(end_sec   * sample_rate))
             : total_frames;
 
-        // Snapshot the pre-shift standard for boundary interpolation; the
-        // shift loop below moves into out.standard. The engine helper
+        // Snapshot the pre-shift frame_map for boundary interpolation; the
+        // shift loop below moves into out.frame_map. The engine helper
         // map_source_to_target takes std::vector<FrameMapSegment> (engine
         // struct), so build a one-shot element-wise copy.
-        std::vector<FrameMapSegment> pre_shift_standard = out.standard;
+        std::vector<FrameMapSegment> pre_shift_frame_map = out.frame_map;
         std::vector<FrameMapSegment> pre_shift_eng;
-        pre_shift_eng.reserve(pre_shift_standard.size());
-        for (const auto& s : pre_shift_standard) {
+        pre_shift_eng.reserve(pre_shift_frame_map.size());
+        for (const auto& s : pre_shift_frame_map) {
             pre_shift_eng.push_back({s.src_frame, s.tgt_frame});
         }
 
@@ -387,29 +387,29 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
             ? static_cast<long>(std::nearbyint(
                   map_source_to_target(static_cast<size_t>(end_frame),
                                        pre_shift_eng)))
-            : (pre_shift_standard.empty()
+            : (pre_shift_frame_map.empty()
                   ? 0
-                  : static_cast<long>(pre_shift_standard.back().tgt_frame));
+                  : static_cast<long>(pre_shift_frame_map.back().tgt_frame));
 
-        std::vector<FrameMapSegment> std_shifted;
-        for (const auto& seg : pre_shift_standard) {
+        std::vector<FrameMapSegment> frame_map_shifted;
+        for (const auto& seg : pre_shift_frame_map) {
             long sf = static_cast<long>(seg.src_frame);
             long tf = static_cast<long>(seg.tgt_frame);
             if (sf >= begin_frame && sf <= end_frame) {
-                std_shifted.push_back({
+                frame_map_shifted.push_back({
                     static_cast<size_t>(sf - begin_frame),
                     static_cast<size_t>(tf - begin_tgt)
                 });
             }
         }
-        out.standard = std::move(std_shifted);
+        out.frame_map = std::move(frame_map_shifted);
 
         // Begin anchor: prepend (0, 0) when no surviving entry shifted to
         // src_frame == 0. The interpolated begin_tgt above guarantees
         // strict monotonicity against the first real entry.
         if (has_begin &&
-            (out.standard.empty() || out.standard.front().src_frame != 0)) {
-            out.standard.insert(out.standard.begin(), FrameMapSegment{0, 0});
+            (out.frame_map.empty() || out.frame_map.front().src_frame != 0)) {
+            out.frame_map.insert(out.frame_map.begin(), FrameMapSegment{0, 0});
             out.has_trim_begin_anchor = true;
         }
 
@@ -418,9 +418,9 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
         if (has_end) {
             const size_t end_src_shifted =
                 static_cast<size_t>(end_frame - begin_frame);
-            if (out.standard.empty() ||
-                out.standard.back().src_frame != end_src_shifted) {
-                out.standard.push_back(FrameMapSegment{
+            if (out.frame_map.empty() ||
+                out.frame_map.back().src_frame != end_src_shifted) {
+                out.frame_map.push_back(FrameMapSegment{
                     end_src_shifted,
                     static_cast<size_t>(end_tgt - begin_tgt)
                 });
@@ -432,35 +432,35 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
             double begin_tgt_sec = static_cast<double>(begin_tgt) / sample_rate;
             double end_tgt_sec   = static_cast<double>(end_tgt)   / sample_rate;
 
-            std::vector<TempomapEntry> midi_shifted;
+            std::vector<TempoMapEntry> tempo_map_shifted;
             double active_multiplier = 1.0;
             bool   start_point_written = false;
-            for (const auto& e : out.midi) {
+            for (const auto& e : out.tempo_map) {
                 if (e.target_time_sec < begin_tgt_sec) {
                     active_multiplier = e.multiplier;
                 } else if (e.target_time_sec <= end_tgt_sec) {
                     if (!start_point_written) {
                         if (e.target_time_sec > begin_tgt_sec) {
-                            midi_shifted.push_back({0.0, active_multiplier});
+                            tempo_map_shifted.push_back({0.0, active_multiplier});
                         }
                         start_point_written = true;
                     }
-                    midi_shifted.push_back({e.target_time_sec - begin_tgt_sec, e.multiplier});
+                    tempo_map_shifted.push_back({e.target_time_sec - begin_tgt_sec, e.multiplier});
                     active_multiplier = e.multiplier;
                 }
             }
             if (!start_point_written) {
-                midi_shifted.push_back({0.0, active_multiplier});
+                tempo_map_shifted.push_back({0.0, active_multiplier});
             }
-            // End anchor for midi: a final tempo event at the trim_end
+            // End anchor for tempo_map: a final tempo event at the trim_end
             // timestamp carrying the multiplier active just before the
             // boundary — a no-op tempo change that gives DAWs the correct
-            // track length. Mirrors the standard end anchor's presence.
+            // track length. Mirrors the frame_map end anchor's presence.
             if (out.has_trim_end_anchor) {
-                midi_shifted.push_back(
+                tempo_map_shifted.push_back(
                     {end_tgt_sec - begin_tgt_sec, active_multiplier});
             }
-            out.midi = std::move(midi_shifted);
+            out.tempo_map = std::move(tempo_map_shifted);
         }
 
         out.trimmed          = true;
@@ -471,9 +471,9 @@ std::expected<TimemapBuildResult, std::string> build_timemaps(
     return out;
 }
 
-FrameMapRealRange real_segments(const TimemapBuildResult& r) {
-    auto b = r.standard.begin() + (r.has_trim_begin_anchor ? 1 : 0);
-    auto e = r.standard.end()   - (r.has_trim_end_anchor   ? 1 : 0);
+FrameMapRealRange real_segments(const MapBuildResult& r) {
+    auto b = r.frame_map.begin() + (r.has_trim_begin_anchor ? 1 : 0);
+    auto e = r.frame_map.end()   - (r.has_trim_end_anchor   ? 1 : 0);
     return {b, e};
 }
 

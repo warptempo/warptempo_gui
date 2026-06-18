@@ -2,10 +2,10 @@
 #include "phase_reset_markers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "frame_map_build.h"               // TimemapBuildInput/Result, resolve,
-                                        // build_timemaps, phase_reset_source_frames
-#include "map_output.h"                 // write_standard_frame_map /
-                                        // write_midi_tempomap / write_reset_map
+#include "frame_map_build.h"               // MapBuildInput/Result, resolve,
+                                        // build_maps, phase_reset_source_frames
+#include "map_output.h"                 // write_frame_map /
+                                        // write_tempo_map / write_reset_map
 
 #include <sndfile.h>
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     sf_close(sf);
 
     // --- resetmap: undisplaced source-frame phase-reset list. Independent of
-    // the warp markers and the timemap build — reads only the phase-reset
+    // the warp markers and the map build — reads only the phase-reset
     // sidecar and the source sample rate. phase_reset_source_frames drops
     // disabled markers and converts time->source frame via nearbyint, the
     // same conversion the GUI and render CLI apply before displacing. The file
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
     }
 
     // --- resolve + build (trim honored from the project .settings) ---
-    TimemapBuildInput in;
+    MapBuildInput in;
     in.markers        = resolve_markers_for_render(markers);
     in.scale          = es.scale;
     in.sample_rate    = sample_rate;
@@ -147,13 +147,13 @@ int main(int argc, char** argv) {
     in.has_trim_end   = trim.has_end;
     in.trim_end_sec   = trim.end_sec;
 
-    auto r = build_timemaps(in);
+    auto r = build_maps(in);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_parser: timemap build failed: %s\n", r.error().c_str());
+            "warptempo_parser: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    TimemapBuildResult out = std::move(*r);
+    MapBuildResult out = std::move(*r);
 
     // --- output path: -o, else the sibling convention ---
     if (out_path.empty()) {
@@ -162,13 +162,13 @@ int main(int argc, char** argv) {
     }
 
     if (fmt == "framemap") {
-        if (auto w = write_standard_frame_map(out_path, out.standard,
+        if (auto w = write_frame_map(out_path, out.frame_map,
                                               /*drop_zero_zero=*/false); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
     } else {
-        if (auto w = write_midi_tempomap(out_path, out.midi); !w) {
+        if (auto w = write_tempo_map(out_path, out.tempo_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }

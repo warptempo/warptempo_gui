@@ -10,10 +10,10 @@
 #include <string>
 #include <vector>
 
-// In-memory timemap-generation used by the engine. Math is organized as
+// In-memory map build used by the engine. Math is organized as
 // Pass 1, Pass 2, and a trim post-pass.
 
-struct TempomapEntry {
+struct TempoMapEntry {
     double target_time_sec;
     double multiplier;
 };
@@ -31,15 +31,15 @@ struct MarkerForRender {
     std::string label_ref;
 };
 
-struct TimemapBuildInput {
+struct MapBuildInput {
     std::vector<MarkerForRender> markers;
 
     double scale        = 1.0;   // from settings; 1.0 default
     long   sample_rate  = 0;     // from the source audio file
     long   total_frames = 0;     // from the source audio file
 
-    // Settings-side trim, lifted out of warp markers (brief: move trim
-    // from marker b=/e= flags to project settings). When has_trim_begin
+    // Settings-side trim, lifted out of warp markers into project settings
+    // (formerly marker b=/e= flags). When has_trim_begin
     // is false, no begin trim is applied; same for end. Times are in
     // seconds, matching the .settings file representation.
     bool   has_trim_begin = false;
@@ -48,17 +48,17 @@ struct TimemapBuildInput {
     double trim_end_sec   = 0.0;
 };
 
-struct TimemapBuildResult {
-    std::vector<FrameMapSegment> standard;
-    std::vector<TempomapEntry>  midi;
+struct MapBuildResult {
+    std::vector<FrameMapSegment> frame_map;
+    std::vector<TempoMapEntry>  tempo_map;
 
-    // Populated when TimemapBuildInput carries trim_begin / trim_end.
+    // Populated when MapBuildInput carries trim_begin / trim_end.
     bool   trimmed          = false;
     size_t trim_begin_frame = 0;
     size_t trim_end_frame   = 0;   // exclusive; == total_frames if no end
 
     // True when the post-pass injected a synthetic begin/end entry into
-    // standard (and, for end, midi) because the trim boundary did not
+    // frame_map (and, for end, tempo_map) because the trim boundary did not
     // align with a real warp marker. Engine- and adapter-facing consumers
     // read these anchors as valid waypoints; the GUI-facing render sidecar
     // walk strips them via real_segments() below.
@@ -67,24 +67,24 @@ struct TimemapBuildResult {
 };
 
 // Iterator range over the "real" segments of a built frame_map — i.e.
-// tmres.standard with the synthetic trim anchors (if any) excluded at
+// the result's frame_map with the synthetic trim anchors (if any) excluded at
 // both ends. Used by the render sidecar lockstep walk so injected
 // anchors do not surface as ghost markers in render-view.
 struct FrameMapRealRange {
     std::vector<FrameMapSegment>::const_iterator begin;
     std::vector<FrameMapSegment>::const_iterator end;
 };
-FrameMapRealRange real_segments(const TimemapBuildResult& r);
+FrameMapRealRange real_segments(const MapBuildResult& r);
 
-// Returns the built TimemapBuildResult on success, or std::unexpected carrying
+// Returns the built MapBuildResult on success, or std::unexpected carrying
 // the first violated condition (a concise lowercase reason; callers add their
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames, src_frame - prev_src_frame < 1, tempo > 9.99,
 // tempo <= 0, duplicate label definition, undefined label reference,
 // final_multiplier > 9.9999 on label refs.
-std::expected<TimemapBuildResult, std::string> build_timemaps(
-    const TimemapBuildInput& in);
+std::expected<MapBuildResult, std::string> build_maps(
+    const MapBuildInput& in);
 
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver

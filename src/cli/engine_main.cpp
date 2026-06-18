@@ -1,6 +1,6 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
 #include "engine/engine_geometry.h"   // kCanonicalN, kPhaseResetOffsetHops
-#include "frame_map.h"       // FrameMapSegment, read_standard_frame_map, read_reset_map
+#include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
 
 #include <sndfile.h>
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
     // --- framemap (required) ---
     std::optional<std::vector<FrameMapSegment>> fm =
-        read_standard_frame_map(framemap_path);
+        read_frame_map(framemap_path);
     if (!fm) {
         std::fprintf(stderr,
             "warptempo_engine: could not read framemap '%s' "
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     ep.limiter      = !no_limiter;   // on by default; --no-limiter clears it
     ep.limiter_diag = false;
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults, matching
-    // render_pipeline / render_main.
+    // render_pipeline / cli_main.
 
     // Phase resets: the resetmap holds undisplaced source frames. Displace each
     // by one synthesis hop (-R_s), clamped at 0 — the inlined equivalent of the

@@ -351,7 +351,7 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         // surfaces them as errors.
     }
 
-    // Trim bounds: parsed by the parser library's reader so the map and
+    // Trim bounds: parsed by the parser library's reader so the parser and
     // render CLIs share one implementation with the GUI. A single
     // project-level trim, applied flat in file_loader's apply step.
     const SettingsTrim t = read_settings_trim(path);

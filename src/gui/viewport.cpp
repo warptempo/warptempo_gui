@@ -369,8 +369,8 @@ void Viewport::invalidate_all() {
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
 // at play press too (when scanner == cursor by invariant), so the same
 // landing rule left-edge-aligns the viewport on the cursor if it was
-// offscreen — matching the brief's "issue scanner forth from a visible
-// cursor" requirement.
+// offscreen — so the scanner always issues forth from a visible
+// cursor.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;

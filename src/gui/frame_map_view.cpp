@@ -8,7 +8,7 @@
 #include <vector>
 
 // GUI target-view frame_map helpers, split out of frame_map_build.cpp so the
-// build core (resolve_markers_for_render / build_timemaps / the
+// build core (resolve_markers_for_render / build_maps / the
 // phase-reset assembly) carries no AppState dependency and lives in
 // libwarptempo_parser. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
@@ -19,7 +19,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     double scale,
     int sample_rate,
     long total_frames) {
-    TimemapBuildInput tmin;
+    MapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
@@ -35,19 +35,19 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
     std::vector<FrameMapSegment> out;
-    auto r = build_timemaps(tmin);
+    auto r = build_maps(tmin);
     if (!r) return out;
-    const TimemapBuildResult& tmres = *r;
-    out.reserve(tmres.standard.size());
-    for (const auto& s : tmres.standard) {
+    const MapBuildResult& tmres = *r;
+    out.reserve(tmres.frame_map.size());
+    for (const auto& s : tmres.frame_map) {
         out.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});
     }
     return out;
 }
 
-const TargetTimemapCache& target_view_timemap_cached(
+const TargetMapCache& target_view_map_cached(
     const AppState& app, int sample_rate, long total_frames) {
-    TargetTimemapCache& c = app.target_timemap_cache;
+    TargetMapCache& c = app.target_map_cache;
     const long long gen = app.warpmarkers.generation();
     const double scale  = app.engine_settings.scale;
     if (c.valid && c.markers_gen == gen && c.scale == scale &&
@@ -84,7 +84,7 @@ const TargetTimemapCache& target_view_timemap_cached(
 
 std::vector<FrameMapSegment> build_target_view_frame_map(
     const AppState& app, int sample_rate, long total_frames) {
-    return target_view_timemap_cached(app, sample_rate, total_frames).frame_map;
+    return target_view_map_cached(app, sample_rate, total_frames).frame_map;
 }
 
 int64_t to_source_frame(const AppState& app, int64_t domain_frame,
@@ -110,7 +110,7 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     if (app.active_audio_view == 'S') return source_frame;
-    const auto& tmap = target_view_timemap_cached(
+    const auto& tmap = target_view_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).frame_map;
     return to_domain_frame(app, source_frame, tmap);
@@ -119,7 +119,7 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame) {
     if (app.active_audio_view == 'S') return domain_frame;
-    const auto& tmap = target_view_timemap_cached(
+    const auto& tmap = target_view_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).frame_map;
     return to_source_frame(app, domain_frame, tmap);

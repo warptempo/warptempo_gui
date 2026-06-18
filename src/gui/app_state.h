@@ -441,9 +441,9 @@ struct AppState {
     // view playable with live engine output.
     char active_audio_view = 'S';
 
-    // Memoized target-view frame_map (see timemap.h). Mutable: consulted and
+    // Memoized target-view frame_map (see frame_map_view.h). Mutable: consulted and
     // refreshed from const hit-test paths.
-    mutable TargetTimemapCache target_timemap_cache;
+    mutable TargetMapCache target_map_cache;
 
     // Ctrl+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.

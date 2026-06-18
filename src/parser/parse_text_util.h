@@ -1,6 +1,8 @@
 #pragma once
 
+#include <expected>
 #include <string>
+#include <utility>
 
 namespace warptempo_parse {
 
@@ -22,6 +24,15 @@ inline void strip_bom(std::string& s) {
         static_cast<unsigned char>(s[2]) == 0xBF) {
         s.erase(0, 3);
     }
+}
+
+// Prefix a reader error with "line N: " when ln > 0, otherwise pass the
+// message through unchanged. Returns std::unexpected so a std::expected-
+// returning reader can `return prefix_line_error(ln, msg);` directly.
+inline std::unexpected<std::string> prefix_line_error(int ln, std::string msg) {
+    return std::unexpected(ln > 0
+        ? "line " + std::to_string(ln) + ": " + std::move(msg)
+        : std::move(msg));
 }
 
 }  // namespace warptempo_parse

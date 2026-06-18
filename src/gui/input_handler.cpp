@@ -3584,7 +3584,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // what the engine would emit. An empty / failed build degenerates
     // to identity (the helpers return src_frame unchanged), which is
     // the right fallback when there are no qualifying markers.
-    TimemapBuildInput tmin;
+    MapBuildInput tmin;
     tmin.markers      = resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers()));
     tmin.scale        = app.engine_settings.scale;
     tmin.sample_rate  = audio.sample_rate();
@@ -3601,11 +3601,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
     std::vector<FrameMapSegment> tmap;
-    auto r = build_timemaps(tmin);
+    auto r = build_maps(tmin);
     if (r) {
-        const TimemapBuildResult& tmres = *r;
-        tmap.reserve(tmres.standard.size());
-        for (const auto& s : tmres.standard) {
+        const MapBuildResult& tmres = *r;
+        tmap.reserve(tmres.frame_map.size());
+        for (const auto& s : tmres.frame_map) {
             tmap.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});
         }
     }

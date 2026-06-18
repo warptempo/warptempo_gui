@@ -50,9 +50,9 @@ struct RenderRequest {
     std::vector<GuiPhaseResetMarker> phase_resets;
 
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
-    // submission paths. Lifted out of warp markers per the brief: trim
+    // submission paths. Lifted out of warp markers into project settings: trim
     // now lives in .settings (trim_begin / trim_end keys), not on b=/e=
-    // markers. The render pipeline forwards these to TimemapBuildInput,
+    // markers. The render pipeline forwards these to MapBuildInput,
     // which drives the frame_map post-pass + write_trimmed_wav cut.
     bool   has_trim_begin = false;
     double trim_begin_sec = 0.0;

@@ -260,11 +260,7 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
 
 std::expected<std::vector<WarpMarker>, std::string>
 parse_warpmarkers_file(const std::string& path) {
-    auto fail = [](int ln, std::string msg) -> std::unexpected<std::string> {
-        return std::unexpected(ln > 0
-            ? "line " + std::to_string(ln) + ": " + std::move(msg)
-            : std::move(msg));
-    };
+    auto fail = warptempo_parse::prefix_line_error;
     std::vector<WarpMarker> markers;
 
     std::ifstream f(path);

@@ -34,11 +34,11 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-// write_standard_frame_map and write_midi_tempomap moved to the parser
-// (map_output.cpp) so the GUI render pipeline and the headless map CLI
+// write_frame_map and write_tempo_map moved to the parser
+// (map_output.cpp) so the GUI render pipeline and the headless parser CLI
 // emit byte-identical artifacts from one implementation.
 
-// resolve_markers_for_render moved to timemap.cpp (public function) so the
+// resolve_markers_for_render moved to frame_map_build.cpp (public function) so the
 // target-view paint can reach it without crossing the render_pipeline
 // boundary. Both callers — do_render below and the GUI paint in
 // paint_handler — receive the same resolved list.
@@ -91,8 +91,8 @@ RenderOutcome do_render(const RenderRequest& req,
     const long total_frames = static_cast<long>(src_info.frames);
     sf_close(sf);
 
-    // --- Build timemap from in-memory markers. ---
-    TimemapBuildInput tmin;
+    // --- Build the maps from in-memory markers. ---
+    MapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
@@ -102,38 +102,38 @@ RenderOutcome do_render(const RenderRequest& req,
     tmin.has_trim_end   = req.has_trim_end;
     tmin.trim_end_sec   = req.trim_end_sec;
 
-    auto r = build_timemaps(tmin);
+    auto r = build_maps(tmin);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: timemap build failed: %s\n",
+            "warptempo_gui: render error: map build failed: %s\n",
             r.error().c_str());
         return RenderOutcome::Failed;
     }
-    TimemapBuildResult tmres = std::move(*r);
+    MapBuildResult tmres = std::move(*r);
 
-    // Full (untrimmed) timemap for the wav engine path. A trimmed wav render
+    // Full (untrimmed) frame map for the wav engine path. A trimmed wav render
     // hands the engine the canonical untrimmed frame map and windows it,
     // rather than rebuilding a local trimmed map; that inherited t_a history
     // from frame 0 is what makes the windowed render null against the full
-    // render. build_timemaps already produces the untrimmed segment list when
-    // trim is forced off, so reuse it instead of duplicating the timemap math.
-    // tmres stays the source for the timemap/tempomap else-branch (which keeps
-    // its trimmed timemap + -trimmed.wav sibling); tmfull feeds the engine and
+    // render. build_maps already produces the untrimmed segment list when
+    // trim is forced off, so reuse it instead of duplicating the map math.
+    // tmres stays the source for the frame-map/tempo-map else-branch (which keeps
+    // its trimmed frame map + -trimmed.wav sibling); tmfull feeds the engine and
     // the render-domain sidecar block. Declared here (not inside the wav
     // branch) so the sidecar block outside the branch can read it.
-    TimemapBuildInput tmin_full = tmin;
+    MapBuildInput tmin_full = tmin;
     tmin_full.has_trim_begin = false;
     tmin_full.trim_begin_sec = 0.0;
     tmin_full.has_trim_end   = false;
     tmin_full.trim_end_sec   = 0.0;
-    auto rfull = build_timemaps(tmin_full);
+    auto rfull = build_maps(tmin_full);
     if (!rfull) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: full timemap build failed: %s\n",
+            "warptempo_gui: render error: full map build failed: %s\n",
             rfull.error().c_str());
         return RenderOutcome::Failed;
     }
-    TimemapBuildResult tmfull = std::move(*rfull);
+    MapBuildResult tmfull = std::move(*rfull);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
@@ -183,7 +183,7 @@ RenderOutcome do_render(const RenderRequest& req,
                  output_format.c_str(), final_output_path.c_str());
 
     // Populated by the wav (warptempo engine) path for render-domain phase
-    // reset sidecar generation. timemap/tempomap paths leave these empty.
+    // reset sidecar generation. frame-map/tempo-map paths leave these empty.
     std::vector<int64_t> engine_source_frame_positions;
     int engine_R_s = 0;
     // The engine no longer windows (it renders the supplied map wholesale), so
@@ -194,10 +194,10 @@ RenderOutcome do_render(const RenderRequest& req,
     int64_t window_offset_samples = 0;
 
     if (output_format == "wav") {
-        // Absolute source-frame trim bounds. Full-timemap path: the engine
+        // Absolute source-frame trim bounds. Full-frame-map path: the engine
         // resolves the synthesis window by binary search over the full frame
         // map, so these are absolute source frames (nearbyint per the
-        // architecture rounding rule — matches timemap.cpp's own trim cut).
+        // architecture rounding rule — matches frame_map_build.cpp's own trim cut).
         // When a bound is unset it defaults to the full extent (0 / total),
         // which leaves the engine rendering the whole map.
         const int64_t trim_begin_src = req.has_trim_begin
@@ -263,12 +263,12 @@ RenderOutcome do_render(const RenderRequest& req,
         // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
         // offset 0 (provably identical to the pre-slice behavior).
         window_offset_samples = assign_engine_frame_map(
-            ep, tmfull.standard, req.has_trim_begin || req.has_trim_end,
+            ep, tmfull.frame_map, req.has_trim_begin || req.has_trim_end,
             trim_begin_src, trim_end_src, N_fft, R_s);
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;
-        // Absolute source-frame domain. On the full-timemap path the engine
+        // Absolute source-frame domain. On the full-frame-map path the engine
         // resolves resets by binary search over the full frame map, so the
         // reset list is in absolute source frames regardless of trim — exactly
         // like the untrimmed branch always did. No trim re-basing.
@@ -345,9 +345,9 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
         auto map_write = (output_format == "framemap")
-            ? write_standard_frame_map(final_output_path, tmres.standard,
+            ? write_frame_map(final_output_path, tmres.frame_map,
                                      /*drop_zero_zero=*/false)
-            : write_midi_tempomap(final_output_path, tmres.midi);
+            : write_tempo_map(final_output_path, tmres.tempo_map);
         if (!map_write) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                          map_write.error().c_str());
@@ -418,11 +418,11 @@ RenderOutcome do_render(const RenderRequest& req,
         // The source-domain pair above stays authoritative for
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
-        // Only wav renders produce these — timemap/tempomap formats skip
+        // Only wav renders produce these — frame-map/tempo-map formats skip
         // the engine, so engine_source_frame_positions and engine_R_s are unset.
-        if (output_format == "wav" && !tmres.standard.empty() &&
+        if (output_format == "wav" && !tmres.frame_map.empty() &&
             sample_rate > 0) {
-            // Walk the FULL timemap (no synthetic trim anchors); each emitted
+            // Walk the FULL frame map (no synthetic trim anchors); each emitted
             // render-domain time is the full-render output sample minus the
             // window origin. When untrimmed, engine_synth_frame_begin is 0 so
             // window_offset_samples is 0 and this reduces to old behavior.
@@ -437,12 +437,12 @@ RenderOutcome do_render(const RenderRequest& req,
             // the engine no longer windows, so engine_synth_frame_begin is 0.
             // (no recomputation here — reuse the slice's offset)
 
-            // After the head-alignment brief, markers sit on the aligned
+            // After head alignment, markers sit on the aligned
             // feature: a marker at source F displays at tgt(F) - window_offset
             // with no start-trim term.
 
             // Markers: lockstep walk between req.markers and the real-segment
-            // range of tmfull.standard (built trim-off, so no synthetic trim
+            // range of tmfull.frame_map (built trim-off, so no synthetic trim
             // anchors). Each non-disabled marker consumes the next-in-order
             // segment; the trim range gates only emission, not consumption, so
             // the lockstep stays in step with tmfull's all-segments vector.
@@ -477,7 +477,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 ++seg_it;
 
                 // Trim-range filter (inclusive both ends — matches the
-                // post-pass at timemap.cpp). Gates emission only; the segment
+                // post-pass at frame_map_build.cpp). Gates emission only; the segment
                 // above is already consumed.
                 const int64_t sf_abs = static_cast<int64_t>(
                     std::nearbyint(g.time_seconds * sr_d));
@@ -499,7 +499,7 @@ RenderOutcome do_render(const RenderRequest& req,
             }
 
             // Forward-map a source frame to its target frame via the same
-            // piecewise-linear timemap the warp markers use, so a phase-reset
+            // piecewise-linear frame map the warp markers use, so a phase-reset
             // marker displays at the clicked musical position -- identical
             // convention to source and target views. The engine still fires the
             // reset at F - phase_reset_offset_samples (the dispatch offset is an

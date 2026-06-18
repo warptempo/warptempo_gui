@@ -10,7 +10,7 @@
 // format_default_settings_template emits (modulo title, which defaults to
 // empty and is overwritten at source load from the stem). N and the
 // phase-reset lead-in are no longer fields here — both are locked to
-// canonical constants in render_pipeline.cpp (N = 4096; lead-in = one
+// canonical constants in engine/engine_geometry.h (N = 4096; lead-in = one
 // synthesis hop). bpm, notes, url, and cover are inert provenance: free text,
 // unvalidated, never read by the engine or acted on by the GUI.
 struct EngineSettings {

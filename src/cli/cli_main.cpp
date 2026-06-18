@@ -2,7 +2,7 @@
 #include "phase_reset_markers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "frame_map_build.h"               // TimemapBuildInput/Result, build_timemaps,
+#include "frame_map_build.h"               // MapBuildInput/Result, build_maps,
                                         // resolve_markers_for_render,
                                         // phase_reset_source_frames,
                                         // displace_phase_reset_frames,
@@ -71,8 +71,8 @@ int main(int argc, char** argv) {
         trim = read_settings_trim(set_path);
     }
 
-    // --- engine-only: this CLI renders wav. framemap/tempomap are the map
-    // CLI's job (the engine never runs for those). ---
+    // --- engine-only: this CLI renders wav. framemap/tempomap are
+    // warptempo_parser's job (the engine never runs for those). ---
     if (es.output_format != "wav") {
         std::fprintf(stderr,
             "warptempo_cli: output_format '%s' is not a wav render "
@@ -139,11 +139,11 @@ int main(int argc, char** argv) {
     const int64_t phase_reset_offset_samples = static_cast<int64_t>(
         std::nearbyint(kPhaseResetOffsetHops * static_cast<double>(R_s)));
 
-    // --- full (untrimmed) timemap. The engine always renders the full map;
+    // --- full (untrimmed) frame map. The engine always renders the full map;
     // trim is applied by slicing it, never by an engine window. This is
     // do_render's tmfull: its t_a history from frame 0 is what keeps a windowed
     // render sample-aligned with the full render. ---
-    TimemapBuildInput tmin;
+    MapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(markers);
     tmin.scale          = es.scale;
     tmin.sample_rate    = sample_rate;
@@ -153,13 +153,13 @@ int main(int argc, char** argv) {
     tmin.has_trim_end   = false;
     tmin.trim_end_sec   = 0.0;
 
-    auto r = build_timemaps(tmin);
+    auto r = build_maps(tmin);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_cli: timemap build failed: %s\n", r.error().c_str());
+            "warptempo_cli: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    TimemapBuildResult tmfull = std::move(*r);
+    MapBuildResult tmfull = std::move(*r);
 
     // --- absolute source-frame trim bounds (nearbyint per the rounding rule;
     // defaults span the full extent). ---
@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
     // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
     // do_render's wav branch. ---
     assign_engine_frame_map(
-        ep, tmfull.standard, trim.has_begin || trim.has_end,
+        ep, tmfull.frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
 
     ep.N            = N_fft;
