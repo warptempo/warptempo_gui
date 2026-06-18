@@ -3,7 +3,7 @@
 #include "audio.h"
 #include "target_render.h"
 #include "time_format.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <algorithm>
@@ -60,12 +60,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     // dropping at the current playhead, this is a no-op.
     const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
         time_seconds * static_cast<double>(sr)));
-    int64_t sample = src_sample;
-    if (app.active_audio_view == 'T') {
-        const auto tmap_after = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-        sample = to_domain_frame(app, src_sample, tmap_after);
-    }
+    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     viewport.move_playhead_to(sample);
     target_render.trigger();
 }
@@ -73,13 +68,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     const int64_t src_frame =
-        to_source_frame(app, app.playhead_cursor_sample, tmap);
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_phase_reset_at_position(t);
@@ -287,13 +277,8 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     const double anchor_t = tv[app.last_selected_marker].time_seconds;
     // Target view: inverse-translate playhead so the delta lives in
     // source-seconds (matching anchor_t's domain).
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     const int64_t ph_src =
-        to_source_frame(app, app.playhead_cursor_sample, tmap);
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double ph_t     = static_cast<double>(ph_src) /
                             static_cast<double>(sr);
     const double delta    = ph_t - anchor_t;

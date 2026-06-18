@@ -2,7 +2,7 @@
 
 #include "settings_io.h"
 #include "target_render.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "waveform_worker.h"
 
 #include "frame_map.h"

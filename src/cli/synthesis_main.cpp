@@ -1,4 +1,5 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
+#include "engine/engine_geometry.h"   // kCanonicalN, kPhaseResetOffsetHops
 #include "frame_map.h"       // FrameMapSegment, read_standard_frame_map, read_reset_map
 
 #include <sndfile.h>
@@ -12,12 +13,6 @@
 #include <vector>
 
 namespace {
-
-// Locked engine constants — identical to render_pipeline.cpp / render_main.cpp.
-// N is the canonical PGHI window; the phase-reset lead-in is one synthesis hop.
-// Neither is a flag or a variable in any warptempo driver.
-constexpr int    kCanonicalN           = 4096;
-constexpr double kPhaseResetOffsetHops = 1.0;
 
 void usage(const char* argv0) {
     std::fprintf(stderr,

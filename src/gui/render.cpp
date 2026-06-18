@@ -2,7 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "time_format.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 
 #include <algorithm>
 #include <cmath>

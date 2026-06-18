@@ -9,6 +9,8 @@
                                         // slice_frame_map_to_trim_window,
                                         // load_source_range_to_buffer
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
+#include "engine/engine_geometry.h"     // kCanonicalN, kPhaseResetOffsetHops
+#include "render_assembly.h"            // assign_engine_frame_map
 
 #include <sndfile.h>
 
@@ -22,12 +24,6 @@
 #include <vector>
 
 namespace {
-
-// Locked engine constants — identical to render_pipeline.cpp. N is the
-// canonical PGHI window; the phase-reset lead-in is one synthesis hop. Neither
-// is authoring-tunable.
-constexpr int    kCanonicalN           = 4096;
-constexpr double kPhaseResetOffsetHops = 1.0;
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
@@ -210,18 +206,9 @@ int main(int argc, char** argv) {
     // window. With a bound set, hand the engine the re-anchored sub-map and its
     // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
     // do_render's wav branch. ---
-    if (trim.has_begin || trim.has_end) {
-        const WindowedFrameMap w = slice_frame_map_to_trim_window(
-            tmfull.standard, trim_begin_src, trim_end_src, N_fft, R_s);
-        ep.emit_sample_cap = w.emit_sample_cap;
-        ep.frame_map.reserve(w.frame_map.size());
-        for (const auto& s : w.frame_map)
-            ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
-    } else {
-        ep.frame_map.reserve(tmfull.standard.size());
-        for (const auto& s : tmfull.standard)
-            ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
-    }
+    assign_engine_frame_map(
+        ep, tmfull.standard, trim.has_begin || trim.has_end,
+        trim_begin_src, trim_end_src, N_fft, R_s);
 
     ep.N            = N_fft;
     ep.limiter      = es.limiter;

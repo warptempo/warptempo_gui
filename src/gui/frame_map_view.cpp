@@ -1,17 +1,18 @@
-#include "timemap.h"
+#include "frame_map_view.h"
 
 #include "app_state.h"
+#include "audio.h"
 
 #include <cmath>
 #include <cstdint>
 #include <vector>
 
-// GUI target-view frame_map helpers, split out of timemap.cpp so the
+// GUI target-view frame_map helpers, split out of frame_map_view.cpp so the
 // build core (resolve_markers_for_render / build_timemaps / the
 // phase-reset assembly) carries no AppState dependency and can move to
 // libwarptempo_parser in Brief 9. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
-// memoized target-view cache. Declarations remain in timemap.h.
+// memoized target-view cache. Declarations remain in frame_map_view.h.
 
 std::vector<FrameMapSegment> build_target_view_frame_map(
     const std::vector<GuiWarpMarker>& markers,
@@ -104,4 +105,22 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
         : static_cast<size_t>(source_frame);
     return static_cast<int64_t>(
         std::nearbyint(map_source_to_target(q, frame_map)));
+}
+
+int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
+                                      int64_t source_frame) {
+    if (app.active_audio_view == 'S') return source_frame;
+    const auto& tmap = target_view_timemap_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).frame_map;
+    return to_domain_frame(app, source_frame, tmap);
+}
+
+int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
+                                      int64_t domain_frame) {
+    if (app.active_audio_view == 'S') return domain_frame;
+    const auto& tmap = target_view_timemap_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).frame_map;
+    return to_source_frame(app, domain_frame, tmap);
 }

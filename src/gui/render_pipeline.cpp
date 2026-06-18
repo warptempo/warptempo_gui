@@ -1,13 +1,15 @@
 #include "render_pipeline.h"
 
 #include "engine/engine.h"
+#include "engine/engine_geometry.h"
 #include "app_state.h"
 #include "audio.h"
 #include "render.h"
 #include "phase_reset_markers.h"
 #include "map_output.h"
 #include "settings_io.h"
-#include "timemap.h"
+#include "frame_map_view.h"
+#include "render_assembly.h"
 
 #include <algorithm>
 #include <atomic>
@@ -25,12 +27,6 @@
 #include <sndfile.h>
 
 namespace {
-
-// Locked engine constants (formerly the EngineSettings N and
-// phase_reset_offset_hops fields). N is the canonical PGHI window length;
-// the phase-reset lead-in is one synthesis hop. Neither is authoring-tunable.
-constexpr int    kCanonicalN          = 4096;
-constexpr double kPhaseResetOffsetHops = 1.0;
 
 // Silent-on-missing unlink wrapper.
 void unlink_silent(const std::string& path) {
@@ -264,21 +260,9 @@ RenderOutcome do_render(const RenderRequest& req,
         // sub-map covering the synthesis-frame window; the engine renders it
         // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
         // offset 0 (provably identical to the pre-slice behavior).
-        if (req.has_trim_begin || req.has_trim_end) {
-            const WindowedFrameMap w = slice_frame_map_to_trim_window(
-                tmfull.standard, trim_begin_src, trim_end_src, kCanonicalN, R_s);
-            window_offset_samples = w.window_offset_samples;
-            ep.emit_sample_cap = w.emit_sample_cap;
-            ep.frame_map.reserve(w.frame_map.size());
-            for (const auto& s : w.frame_map) {
-                ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
-            }
-        } else {
-            ep.frame_map.reserve(tmfull.standard.size());
-            for (const auto& s : tmfull.standard) {
-                ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
-            }
-        }
+        window_offset_samples = assign_engine_frame_map(
+            ep, tmfull.standard, req.has_trim_begin || req.has_trim_end,
+            trim_begin_src, trim_end_src, N_fft, R_s);
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;

@@ -6,7 +6,7 @@
 #include "platform_wayland.h"
 #include "target_render.h"
 #include "time_format.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <algorithm>
@@ -87,12 +87,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     // don't double-paint with the ones above.
     const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
         time_seconds * static_cast<double>(sr)));
-    int64_t sample = src_sample;
-    if (app.active_audio_view == 'T') {
-        const auto tmap_after = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-        sample = to_domain_frame(app, src_sample, tmap_after);
-    }
+    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     viewport.move_playhead_to(sample);
 
     // Discrete frame_map change while target view is displayed: the plate
@@ -109,13 +104,8 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
 void GuiWarpMarkersOps::drop_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     const int64_t src_frame =
-        to_source_frame(app, app.playhead_cursor_sample, tmap);
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_marker(t, /*inherit=*/false);
@@ -124,13 +114,8 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
 void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     const int64_t src_frame =
-        to_source_frame(app, app.playhead_cursor_sample, tmap);
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
     drop_marker(t, /*inherit=*/true);
@@ -418,12 +403,10 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     // Drag is a single-marker fine-tuning gesture: it always moves only the
     // grabbed marker, regardless of the current selection — each marker is
     // placed deliberately, and group drag does more harm than good. The
-    // selection collapse to {hit} is deferred until motion is observed (see
-    // pending_collapse_to_hit), so a click without a drag leaves the
-    // selection untouched.
+    // selection collapse to {hit} is deferred until motion is observed, so a
+    // click without a drag leaves the selection untouched.
     std::set<int> drag_set;
     drag_set.insert(hit);
-    bool pending_collapse = true;
 
     // First-marker protection: refuse index 0 and any effective-time-0
     // marker. Runs before any selection mutation so a refused drag
@@ -458,10 +441,8 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(
                 static_cast<double>(mouse_x - area.x) * spp));
-        const auto tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
         const int64_t anchor_frame_src =
-            to_source_frame(app, anchor_frame_active, tmap);
+            active_domain_to_source_frame(app, audio, anchor_frame_active);
         d.anchor_mouse_time_seconds =
             static_cast<double>(anchor_frame_src) / sr_d;
     } else {
@@ -534,7 +515,6 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     }
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
-    d.pending_collapse_to_hit = pending_collapse;
     app.drag = std::move(d);
     viewport.clear_hover_popup();
     return true;
@@ -578,12 +558,10 @@ void GuiWarpMarkersOps::apply_drag_motion(double raw_delta) {
         // Delegated to Selection::set_single_selection — the same helper a
         // marker click uses — so the rule (drop the rest of the marker
         // selection AND any trim-boundary selection, make Markers the active
-        // group) lives in one place. Deferred to first motion
-        // (pending_collapse_to_hit, always armed at begin_drag) so a click
+        // group) lives in one place. Deferred to first motion so a click
         // without a drag leaves selection untouched.
-        if (first_motion && app.drag.pending_collapse_to_hit) {
+        if (first_motion) {
             selection.set_single_selection(app.drag.hit_marker);
-            app.drag.pending_collapse_to_hit = false;
         }
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
@@ -687,11 +665,8 @@ void GuiWarpMarkersOps::commit_drag() {
     }
     viewport.invalidate_waveform_area();
     if (reanchor_playhead) {
-        const int sr = audio.sample_rate();
-        const auto new_map = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
         viewport.move_playhead_to(
-            to_domain_frame(app, playhead_src_anchor, new_map));
+            source_frame_to_active_domain(app, audio, playhead_src_anchor));
     }
     // Same discrete-frame_map-change class as drop_marker (see comment
     // there): the commit re-warps the plate, so render it synchronously
@@ -871,13 +846,8 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     // Target view: the playhead is target-domain; the anchor marker's
     // time_seconds is source-domain. Inverse-translate playhead before
     // taking the delta so the resulting shift is source-seconds.
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     const int64_t ph_src =
-        to_source_frame(app, app.playhead_cursor_sample, tmap);
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double ph_t =
         static_cast<double>(ph_src) / static_cast<double>(sr);
     const double delta = ph_t - anchor_t;

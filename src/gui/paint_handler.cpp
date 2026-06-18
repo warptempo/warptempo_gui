@@ -4,7 +4,7 @@
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "waveform_worker.h"
 #include "frame_map.h"
 

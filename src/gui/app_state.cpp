@@ -4,7 +4,7 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <cmath>

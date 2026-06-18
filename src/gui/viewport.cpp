@@ -4,7 +4,7 @@
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "platform_wayland.h"
 
 #include <algorithm>
@@ -29,26 +29,24 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // matching compute_trim_samples' unset-side semantics for
         // S-view.
         const int sr = audio.sample_rate();
-        const long total = static_cast<long>(audio.total_frames());
         const int64_t live_total =
             live_total_frames(app, audio);
         if (!app.has_trim_begin && !app.has_trim_end) {
             return {0, live_total};
         }
-        const auto tmap = build_target_view_frame_map(app, sr, total);
         int64_t begin_tgt = 0;
         int64_t end_tgt   = live_total;
         if (app.has_trim_begin) {
             const int64_t begin_src = static_cast<int64_t>(
                 std::nearbyint(app.trim_begin_seconds *
                                static_cast<double>(sr)));
-            begin_tgt = to_domain_frame(app, begin_src, tmap);
+            begin_tgt = source_frame_to_active_domain(app, audio, begin_src);
         }
         if (app.has_trim_end) {
             const int64_t end_src = static_cast<int64_t>(
                 std::nearbyint(app.trim_end_seconds *
                                static_cast<double>(sr)));
-            end_tgt = to_domain_frame(app, end_src, tmap);
+            end_tgt = source_frame_to_active_domain(app, audio, end_src);
         }
         if (begin_tgt < 0) begin_tgt = 0;
         if (begin_tgt > live_total) begin_tgt = live_total;

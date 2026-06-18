@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "playback.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <algorithm>
@@ -111,11 +111,6 @@ void Selection::cycle_selection(bool forward) {
     // marker source-frame == active-domain frame (identity). Target view:
     // forward-translate to active-domain so frame_of values are
     // comparable to playhead_cursor_sample / viewport_start_sample below.
-    std::vector<FrameMapSegment> tmap;
-    if (app.active_audio_view == 'T') {
-        tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-    }
     auto frame_of = [&](int i) -> int64_t {
         int64_t src_f;
         if (phase_reset) {
@@ -127,7 +122,7 @@ void Selection::cycle_selection(bool forward) {
                 warp_vec[i].time_seconds *
                 static_cast<double>(sr)));
         }
-        return to_domain_frame(app, src_f, tmap);
+        return source_frame_to_active_domain(app, audio, src_f);
     };
 
     // Disabled-skip predicate. Warp side respects label_ref cascade via
@@ -224,12 +219,8 @@ void Selection::sync_playhead_to_last_selected() {
     // Target view: the marker time_seconds is source-domain but the
     // playhead is active-domain. Forward-translate so the playhead
     // lands at the marker's displayed (target-frame) position.
-    int64_t target_sample = src_sample;
-    if (app.active_audio_view == 'T') {
-        const auto tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
-        target_sample = to_domain_frame(app, src_sample, tmap);
-    }
+    const int64_t target_sample =
+        source_frame_to_active_domain(app, audio, src_sample);
     jump_playhead_to(target_sample);
 }
 

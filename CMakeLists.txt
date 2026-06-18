@@ -127,7 +127,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/playback.cpp
         src/gui/playback_lifecycle.cpp
         src/gui/render_pipeline.cpp
-        src/gui/timemap_view.cpp
+        src/gui/frame_map_view.cpp
         src/gui/viewport.cpp
         src/gui/selection.cpp
         src/gui/settings_io.cpp

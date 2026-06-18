@@ -25,7 +25,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
 // warp marker store and engine_settings.scale from `app`; otherwise
 // identical to the markers-and-scale overload above. Both input and
 // paint paths in target view route through this helper so the segment
-// list they walk is byte-identical. Defined in timemap.cpp; an
+// list they walk is byte-identical. Defined in frame_map_view.cpp; an
 // AppState forward declaration suffices here.
 struct AppState;
 std::vector<FrameMapSegment> build_target_view_frame_map(
@@ -81,3 +81,21 @@ int64_t to_source_frame(const AppState& app, int64_t domain_frame,
 // whose time_seconds is source-domain).
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
                         const std::vector<FrameMapSegment>& frame_map);
+
+// Convenience wrappers that own the view-check and the cached map build for the
+// common case: translating a single coordinate between the source-frame domain
+// and the active-domain using the LIVE target-view map. Source view: identity,
+// no map built. Target view: routes through the memoized
+// target_view_timemap_cached, so even repeated calls (e.g. inside a loop) cost
+// only a cache-key comparison after the first build. Use these at every input /
+// playhead boundary that currently hand-builds build_target_view_frame_map
+// solely to feed one to_domain_frame / to_source_frame.
+//
+// NOT for sites translating against a non-live map — a drag's
+// app.drag.frozen_frame_map, or a proposed (pre-commit) marker list. Those keep
+// calling to_domain_frame / to_source_frame directly with their explicit map.
+class GuiAudio;
+int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
+                                      int64_t source_frame);
+int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
+                                      int64_t domain_frame);

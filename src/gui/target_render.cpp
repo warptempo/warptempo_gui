@@ -1,7 +1,7 @@
 #include "target_render.h"
 
 #include "app_state.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <cmath>

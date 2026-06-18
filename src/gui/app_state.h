@@ -5,7 +5,7 @@
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
 #include "phase_reset_markers.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "warpmarkers.h"
 
 #include <chrono>
@@ -140,7 +140,6 @@ struct DragState {
     // selection. The selection-collapse-to-{hit} mutation is deferred until
     // motion is actually observed, so a Ctrl+click without drag leaves the
     // selection untouched. Cleared on the first moved transition.
-    bool                   pending_collapse_to_hit = false;
     // Which list this drag operates on (chunk S.2.2). The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.

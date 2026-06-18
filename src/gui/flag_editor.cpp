@@ -7,7 +7,7 @@
 #include "render.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "timemap.h"
+#include "frame_map_view.h"
 #include "frame_map.h"
 
 #include <algorithm>
@@ -177,12 +177,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
         // Target view: marker time_seconds is source-domain; playhead
         // is active-domain. Forward-translate so the playhead lands on
         // the marker's displayed (target-frame) position.
-        int64_t sample = src_sample;
-        if (app.active_audio_view == 'T') {
-            const auto tmap = build_target_view_frame_map(
-                app, sr, static_cast<long>(audio.total_frames()));
-            sample = to_domain_frame(app, src_sample, tmap);
-        }
+        const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
         viewport.move_playhead_to(sample);
     }
 
