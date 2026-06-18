@@ -3,11 +3,13 @@
 #include "phase_reset_markers.h"
 #include "settings_io.h"
 #include "target_render.h"
+#include "time_format.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <fstream>
 #include <map>
 #include <string>
 #include <sys/stat.h>
@@ -198,6 +200,50 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
     e.persisted_mtime = stat.second;
 }
 
+// Lenient, display-only reader for a .renderwarpmarkers sidecar. These
+// sidecars are a re-timed display SUBSET of the source markers: they start
+// at the first real marker (no 00:00.000 anchor) and carry bare label
+// references whose definitions live in the source file, not here. The strict
+// authoring parser (parse_warpmarkers_file, reached via GuiWarpMarkers::load)
+// rejects both, so render-view reads through this reader instead — render-view
+// is a read-only overlay on already-canonical output and must accommodate the
+// canonical parser, not the reverse.
+//
+// The on-disk payload after the pipe IS the display string the flag painter
+// shows (flag_text returns label_ref verbatim when set), so the whole payload
+// is stored as label_ref with no payload-grammar parsing, no label resolution,
+// no tempo/scale parsing, and no validation. Tempo fields stay at their
+// defaults and label_def stays empty. Each line: skip blanks; a leading `#`
+// marks the marker disabled; split on the first `|` into timestamp|payload.
+// Lines with no pipe or an unparseable timestamp are skipped individually —
+// a bad line never fails the whole load, since this is display-only.
+static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
+        const std::string& path) {
+    std::vector<GuiWarpMarker> out;
+    std::ifstream f(path);
+    if (!f.is_open()) return out;
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        std::string t = line;
+        bool disabled = false;
+        if (t[0] == '#') {
+            disabled = true;
+            t.erase(0, 1);
+        }
+        const size_t pipe = t.find('|');
+        if (pipe == std::string::npos) continue;
+        const std::string left = t.substr(0, pipe);
+        if (!is_valid_timestamp_format(left)) continue;
+        GuiWarpMarker m;
+        m.time_seconds = parse_timestamp(left);
+        m.label_ref    = t.substr(pipe + 1);
+        m.disabled     = disabled;
+        out.push_back(std::move(m));
+    }
+    return out;
+}
+
 // Loads the render at app.render_view.list[index] into the active
 // `audio`, parking the source audio on first entry. Parses sibling
 // <basename>.warpmarkers and <basename>.phaseresetmarkers into
@@ -242,12 +288,7 @@ bool GuiRenderView::load_render_view_at(int index) {
             e.batch_folder / (e.basename + ".renderwarpmarkers");
         std::error_code ec;
         if (std::filesystem::exists(wmd, ec)) {
-            GuiWarpMarkers m;
-            if (auto r = m.load(wmd.string()); !r) {
-                std::fprintf(stderr, "warptempo_gui: render-view: %s: %s\n",
-                             wmd.string().c_str(), r.error().c_str());
-            }
-            loaded_warp = m.markers();
+            loaded_warp = read_render_view_warpmarkers(wmd.string());
         } else {
             std::fprintf(stderr,
                 "warptempo_gui: render-view: %s missing — markers will "

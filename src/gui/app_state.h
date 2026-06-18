@@ -8,6 +8,7 @@
 #include "frame_map_view.h"
 #include "warpmarkers.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -952,3 +953,47 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 // view with iteration mode off. Always false in phase reset view (no
 // pass concept).
 bool popup_eligible_marker(const AppState& app, int idx);
+
+// Sweep-select every marker in the time-ordered `markers` list whose
+// time_seconds falls in [lo_t, hi_t], iterating in travel order (ascending
+// indices when `forward`, else descending) so the final last_selected_marker
+// lands on the most recently passed marker. Skips press_marker_idx (preserves
+// the Shift-press toggle non-re-add guarantee) and already-selected indices.
+// Mutates app's selection set / focus / last_sel_group; returns true if
+// anything was added. Shared by the source/target and render-view playhead-drag
+// Shift sweeps (input_handler.cpp / input_render_view.cpp); templated on the
+// vector element type because the two stores hold different marker types that
+// both expose time_seconds. O(log n + added) per call.
+template <typename MarkerVec>
+bool sweep_select_interval(AppState& app, const MarkerVec& markers,
+                           double lo_t, double hi_t, bool forward,
+                           int press_marker_idx) {
+    if (lo_t > hi_t) return false;
+    // First index with time_seconds >= lo_t through the last with
+    // time_seconds <= hi_t (half-open [first, last)).
+    const int first = static_cast<int>(
+        std::lower_bound(markers.begin(), markers.end(), lo_t,
+                         [](const auto& m, double t) {
+                             return m.time_seconds < t;
+                         }) - markers.begin());
+    const int last = static_cast<int>(
+        std::upper_bound(markers.begin(), markers.end(), hi_t,
+                         [](double t, const auto& m) {
+                             return t < m.time_seconds;
+                         }) - markers.begin());
+    bool changed = false;
+    auto add = [&](int idx) {
+        if (idx == press_marker_idx) return;
+        if (app.selected_markers.count(idx)) return;
+        app.selected_markers.insert(idx);
+        app.last_selected_marker = idx;
+        app.last_sel_group = LastSelGroup::Markers;
+        changed = true;
+    };
+    if (forward) {
+        for (int i = first; i < last; ++i) add(i);
+    } else {
+        for (int i = last - 1; i >= first; --i) add(i);
+    }
+    return changed;
+}

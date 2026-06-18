@@ -309,4 +309,44 @@ private:
     // render-view is active — the render-view gate above this dispatcher
     // already drops bare `t`.
     void handle_active_audio_view_toggle();
+
+    // Render-view input helpers. Extracted verbatim from the mega event
+    // handlers (on_key / on_button_press / on_motion); each is a cohesive,
+    // behavior-preserving lift of one render-view-only block. They live on
+    // the class so their definitions can move to input_render_view.cpp.
+    //
+    // render_view_key_blocked: the on_key read-only allowlist as a predicate
+    // — true when `key`+`mods` is NOT one of the chords permitted while
+    // render-view is active (so the caller drops it with an early return).
+    bool render_view_key_blocked(GuiKey key, GuiInputState mods);
+
+    // handle_render_view_toggle: the bare-R enter/exit handler. Returns false
+    // if the chord is not bare R (caller falls through); otherwise performs
+    // the enter (enumerate, migrate persisted selection, load) or exit (stash
+    // rendersettings + selection, restore source, clear render-view state)
+    // and returns true.
+    bool handle_render_view_toggle(GuiKey key, GuiInputState mods);
+
+    // handle_render_view_nav: render-view list navigation. Handles both
+    // Shift+Left/Right (wraparound) and Shift+Home/End (clamp, no wrap).
+    // Returns true when it handled the chord (so the caller returns); false
+    // when neither chord matches (or render-view is off), so the caller falls
+    // through to the source-view handlers.
+    bool handle_render_view_nav(GuiKey key, GuiInputState mods);
+
+    // handle_render_view_press: the on_button_press render-view block. Fully
+    // terminating (the caller returns after it). Handles Left-only gating, the
+    // phase-reset top-strip no-op, marker hit-test + selection bookkeeping,
+    // playhead move, and waveform-press playhead-drag arming. Recomputes its
+    // own cheap geometry; derives `shift` from `mods`.
+    void handle_render_view_press(GuiMouseButton button, int x, int y,
+                                  bool inside_top, bool inside_waveform,
+                                  GuiInputState mods);
+
+    // handle_render_view_motion: the on_motion render-view block. Fully
+    // terminating (caller returns after it). During a playhead drag, snaps the
+    // playhead to the visible sub-view's markers (3px epsilon) with Shift
+    // sweep-select; otherwise runs hover-popup detection over the render-view
+    // markers. Recomputes its own cheap geometry.
+    void handle_render_view_motion(int mouse_x, int mouse_y, GuiInputState mods);
 };

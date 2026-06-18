@@ -147,6 +147,8 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/target_render.cpp
         src/gui/paint_handler.cpp
         src/gui/input_handler.cpp
+        src/gui/input_trim.cpp
+        src/gui/input_render_view.cpp
         src/gui/miniaudio_impl.cpp
         ${WAYLAND_GENERATED_SOURCES}
     )
