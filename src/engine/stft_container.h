@@ -211,7 +211,9 @@ struct AudioSTFT {
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
             double src = map_target_to_source(t_s, frame_map)
                        - static_cast<double>(N) / 2.0;
-            positions.push_back(static_cast<int64_t>(std::llround(src)));
+            // Round half-to-even (llrint), the project-wide convention; do not
+            // reintroduce llround (half-away-from-zero) here.
+            positions.push_back(static_cast<int64_t>(std::llrint(src)));
         }
         return positions;
     }

@@ -1,5 +1,6 @@
 #include "phase_reset_markers_parse.h"
 
+#include "parse_text_util.h"
 #include "time_format.h"
 
 #include <cctype>
@@ -11,34 +12,19 @@
 
 namespace {
 
-std::string trim_ws(const std::string& s) {
-    const char* ws = " \t\r\n";
-    const auto a = s.find_first_not_of(ws);
-    if (a == std::string::npos) return {};
-    const auto b = s.find_last_not_of(ws);
-    return s.substr(a, b - a + 1);
-}
+using warptempo_parse::strip_bom;
+using warptempo_parse::trim_ws;
 
 bool starts_with(const std::string& s, const char* pfx) {
     const size_t n = std::strlen(pfx);
     return s.size() >= n && s.compare(0, n, pfx) == 0;
 }
 
-void strip_bom(std::string& s) {
-    if (s.size() >= 3 &&
-        static_cast<unsigned char>(s[0]) == 0xEF &&
-        static_cast<unsigned char>(s[1]) == 0xBB &&
-        static_cast<unsigned char>(s[2]) == 0xBF) {
-        s.erase(0, 3);
-    }
-}
-
 // Parse a "MM:SS.mmm" timestamp token. Returns true and writes to `out` on
 // success; on failure fills `err_msg`.
 bool parse_timestamp_token(const std::string& tok, double& out,
                            std::string& err_msg) {
-    static const std::regex re("^([0-5][0-9]):([0-5][0-9])\\.[0-9]{3}$");
-    if (!std::regex_match(tok, re)) {
+    if (!is_valid_timestamp_format(tok)) {
         err_msg = "expected MM:SS.mmm timestamp: " + tok;
         return false;
     }
@@ -131,11 +117,11 @@ PhaseResetMarkersParse parse_phaseresetmarkers_file(const std::string& path) {
             continue;
         }
 
-        // Comment-line disambiguation: a `#` followed by digits is a
-        // disabled marker (handled by parse_line); a `#` followed by
-        // anything else is a comment that the canonical save() drops.
-        if (t[0] == '#' && (t.size() < 2 ||
-                            !std::isdigit(static_cast<unsigned char>(t[1])))) {
+        // Comment-line disambiguation, matching the warp parser: a `#` followed by a
+        // valid MM:SS.mmm timestamp is a disabled marker (handled by parse_line); a
+        // `#` followed by anything else is a comment the canonical save() drops.
+        if (t[0] == '#' &&
+            !(t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9)))) {
             result.had_nonstandard_content = true;
             continue;
         }

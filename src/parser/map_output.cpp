@@ -4,50 +4,41 @@
 #include <fstream>
 #include <iomanip>
 
-bool write_standard_frame_map(const std::string& path,
-                              const std::vector<FrameMapSegment>& segs,
-                              bool drop_zero_zero) {
+std::expected<void, std::string> write_standard_frame_map(
+    const std::string& path, const std::vector<FrameMapSegment>& segs,
+    bool drop_zero_zero) {
     std::ofstream of(path);
     if (!of) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: could not write timemap '%s'\n",
-            path.c_str());
-        return false;
+        return std::unexpected("could not write timemap '" + path + "'");
     }
     for (const auto& s : segs) {
         if (drop_zero_zero && s.src_frame == 0 && s.tgt_frame == 0) continue;
         of << s.src_frame << " " << s.tgt_frame << "\n";
     }
-    return true;
+    return {};
 }
 
-bool write_midi_tempomap(const std::string& path,
-                         const std::vector<TempomapEntry>& entries) {
+std::expected<void, std::string> write_midi_tempomap(
+    const std::string& path, const std::vector<TempomapEntry>& entries) {
     std::ofstream of(path);
     if (!of) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: could not write tempomap '%s'\n",
-            path.c_str());
-        return false;
+        return std::unexpected("could not write tempomap '" + path + "'");
     }
     of << std::fixed << std::setprecision(16);
     for (const auto& e : entries) {
         of << e.target_time_sec << " " << e.multiplier << "\n";
     }
-    return true;
+    return {};
 }
 
-bool write_reset_map(const std::string& path,
-                     const std::vector<int64_t>& source_frames) {
+std::expected<void, std::string> write_reset_map(
+    const std::string& path, const std::vector<int64_t>& source_frames) {
     std::ofstream of(path);
     if (!of) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: could not write resetmap '%s'\n",
-            path.c_str());
-        return false;
+        return std::unexpected("could not write resetmap '" + path + "'");
     }
     for (const int64_t f : source_frames) {
         of << f << "\n";
     }
-    return true;
+    return {};
 }

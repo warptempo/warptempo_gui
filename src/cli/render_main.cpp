@@ -187,8 +187,9 @@ int main(int argc, char** argv) {
             ? static_cast<size_t>(std::min<int64_t>(
                   total_frames, trim_end_src + end_margin))
             : static_cast<size_t>(total_frames);
-        if (!load_source_range_to_buffer(source_path, b, e,
-                                         src_samples, src_sr, src_ch)) {
+        if (auto r = load_source_range_to_buffer(source_path, b, e,
+                                         src_samples, src_sr, src_ch); !r) {
+            std::fprintf(stderr, "warptempo_render: %s\n", r.error().c_str());
             return 1;
         }
     }

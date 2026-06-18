@@ -1,5 +1,7 @@
 #include "engine_settings.h"
 
+#include "parse_text_util.h"
+
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -11,15 +13,7 @@
 
 namespace {
 
-std::string trim_ws(const std::string& s) {
-    size_t a = 0;
-    while (a < s.size() &&
-           std::isspace(static_cast<unsigned char>(s[a]))) ++a;
-    size_t b = s.size();
-    while (b > a &&
-           std::isspace(static_cast<unsigned char>(s[b - 1]))) --b;
-    return s.substr(a, b - a);
-}
+using warptempo_parse::trim_ws;
 
 // Strict value parsers for validate_engine_setting. Each consumes the
 // entire string; trailing garbage, non-finite doubles, and out-of-range

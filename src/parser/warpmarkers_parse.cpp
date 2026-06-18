@@ -1,5 +1,6 @@
 #include "warpmarkers_parse.h"
 
+#include "parse_text_util.h"
 #include "time_format.h"
 
 #include <algorithm>
@@ -14,18 +15,8 @@
 
 namespace {
 
-std::string trim_ws(const std::string& s) {
-    const char* ws = " \t\r\n";
-    const auto a = s.find_first_not_of(ws);
-    if (a == std::string::npos) return {};
-    const auto b = s.find_last_not_of(ws);
-    return s.substr(a, b - a + 1);
-}
-
-bool is_valid_time_format(const std::string& s) {
-    static const std::regex re("^([0-5][0-9]):([0-5][0-9])\\.[0-9]{3}$");
-    return std::regex_match(s, re);
-}
+using warptempo_parse::strip_bom;
+using warptempo_parse::trim_ws;
 
 bool is_valid_label_format(const std::string& s) {
     static const std::regex re("^[a-z]\\.[a-z0-9]{2}$");
@@ -88,15 +79,6 @@ std::vector<std::string> split_pipe(const std::string& s) {
 
 bool is_indented_raw(const std::string& raw) {
     return !raw.empty() && (raw[0] == ' ' || raw[0] == '\t');
-}
-
-void strip_bom(std::string& s) {
-    if (s.size() >= 3 &&
-        static_cast<unsigned char>(s[0]) == 0xEF &&
-        static_cast<unsigned char>(s[1]) == 0xBB &&
-        static_cast<unsigned char>(s[2]) == 0xBF) {
-        s.erase(0, 3);
-    }
 }
 
 // Parse a new-format payload (the part after the pipe) into a partly-
@@ -257,7 +239,7 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
         t.erase(0, 1);
     }
 
-    if (t.size() < 9 || !is_valid_time_format(t.substr(0, 9))) {
+    if (t.size() < 9 || !is_valid_timestamp_format(t.substr(0, 9))) {
         return std::unexpected<std::string>("invalid time format: " + t.substr(0, std::min<size_t>(9, t.size())));
     }
     out.time_seconds = parse_timestamp(t.substr(0, 9));
@@ -322,7 +304,7 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
         if (t.empty()) continue;
 
         if (!t.empty() && t[0] == '#') {
-            if (t.size() >= 10 && is_valid_time_format(t.substr(1, 9))) {
+            if (t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9))) {
                 t.erase(0, 1);
             } else {
                 continue;
@@ -396,7 +378,7 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
 
         bool line_disabled = false;
         if (!t.empty() && t[0] == '#') {
-            if (t.size() >= 10 && is_valid_time_format(t.substr(1, 9))) {
+            if (t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9))) {
                 line_disabled = true;
                 t.erase(0, 1);
             } else {
@@ -426,7 +408,7 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
             const std::string& time_raw = cols[0];
 
             if (time_raw.size() < 9 ||
-                !is_valid_time_format(time_raw.substr(0, 9))) {
+                !is_valid_timestamp_format(time_raw.substr(0, 9))) {
                 result.errors.push_back({line_number,
                     "invalid time format: " + time_raw});
                 parse_ok = false;
@@ -539,50 +521,17 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
 
         // ---------- New-format parse path -------------------------------
 
-        // Reject leftover parens-form input early.
-        if (t.find('(') != std::string::npos ||
-            t.find(')') != std::string::npos) {
-            result.errors.push_back({line_number,
-                "parens are not valid in the new format"});
+        auto parsed = warpmarkers_internal::parse_single_canonical_line(t);
+        if (!parsed) {
+            result.errors.push_back({line_number, std::move(parsed.error())});
             parse_ok = false;
             continue;
         }
+        WarpMarker m = std::move(*parsed);
+        if (line_disabled) m.disabled = true;
 
-        // Disallow whitespace adjacent to anything inside the line — the
-        // canonical form is whitespace-free entirely. trim_ws already
-        // trimmed leading/trailing; an internal space here is malformed.
-        if (t.find(' ') != std::string::npos ||
-            t.find('\t') != std::string::npos) {
-            result.errors.push_back({line_number,
-                "whitespace is not valid in the new format"});
-            parse_ok = false;
-            continue;
-        }
-
-        const size_t pipe = t.find('|');
-        if (pipe == std::string::npos) {
-            result.errors.push_back({line_number,
-                "missing '|' between time and payload"});
-            parse_ok = false;
-            continue;
-        }
-        if (t.find('|', pipe + 1) != std::string::npos) {
-            result.errors.push_back({line_number,
-                "too many pipes in line"});
-            parse_ok = false;
-            continue;
-        }
-
-        const std::string time_raw = t.substr(0, pipe);
-        const std::string payload  = t.substr(pipe + 1);
-
-        if (time_raw.size() != 9 || !is_valid_time_format(time_raw)) {
-            result.errors.push_back({line_number,
-                "invalid time format: " + time_raw});
-            parse_ok = false;
-            continue;
-        }
-        const double final_time = parse_timestamp(time_raw);
+        // `t.substr(0,9)` is a validated timestamp at this point.
+        const std::string time_raw = t.substr(0, 9);
 
         if (!first_marker_seen) {
             if (time_raw != "00:00.000") {
@@ -595,20 +544,9 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
             }
             first_marker_seen = true;
         }
-        if (last_time >= 0.0 && final_time <= last_time) {
+        if (last_time >= 0.0 && m.time_seconds <= last_time) {
             result.errors.push_back({line_number,
                 "time not strictly increasing: " + time_raw});
-            parse_ok = false;
-            continue;
-        }
-
-        WarpMarker m;
-        m.time_seconds  = final_time;
-        if (line_disabled) m.disabled = true;
-
-        std::string err;
-        if (!parse_new_payload(payload, m, err)) {
-            result.errors.push_back({line_number, err});
             parse_ok = false;
             continue;
         }

@@ -2,13 +2,6 @@
 
 #include <string>
 
-// Strict shape validator for MM:SS.mmm settings timestamps: exactly nine
-// chars, ':' at index 2, '.' at index 5, digits elsewhere. Returns true iff
-// parse_timestamp (time_format.h) can be safely called on `s`. Relocated
-// from settings_io.cpp so the GUI parse, the settings editor's commit(), and
-// the parser-library trim reader all route through one predicate.
-bool is_settings_timestamp(const std::string& s);
-
 // Typed carrier for the project-level trim the .settings format defines. Trim
 // is project view-state, deliberately kept OUT of EngineSettings; this is its
 // parser-library home. Times are seconds, decoded from the on-disk MM:SS.mmm
@@ -30,7 +23,7 @@ struct SettingsTrim {
 // unopenable file yields an all-false carrier, matching parse_settings_file's
 // "nothing to load" tolerance. One getline pass; blank lines, comment (#)
 // lines, and lines without '=' are skipped; each trim value is validated by
-// is_settings_timestamp and decoded by parse_timestamp. A malformed value is
+// is_valid_timestamp_format and decoded by parse_timestamp. A malformed value is
 // silent-skipped, leaving that slot unset. On a duplicate key the last
 // well-formed occurrence wins.
 SettingsTrim read_settings_trim(const std::string& path);

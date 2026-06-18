@@ -511,7 +511,8 @@ WindowedFrameMap slice_frame_map_to_trim_window(
 
     // Dense synthesis-frame source schedule over the FULL map. Identical to the
     // engine's generate_source_frame_positions(): frame m at output m*R_s reads
-    // source map_target_to_source(m*R_s) - N/2, banker's-rounded to int64.
+    // source map_target_to_source(m*R_s) - N/2, banker's-rounded to int64
+    // (llrint).
     const int64_t target_total =
         static_cast<int64_t>(full_map.back().tgt_frame) + N;
     std::vector<int64_t> dense;
@@ -519,7 +520,7 @@ WindowedFrameMap slice_frame_map_to_trim_window(
         const double src =
             map_target_to_source(static_cast<size_t>(t_s), full_map)
             - static_cast<double>(N) / 2.0;
-        dense.push_back(static_cast<int64_t>(std::llround(src)));
+        dense.push_back(static_cast<int64_t>(std::llrint(src)));
     }
     const int num_frames = static_cast<int>(dense.size());
     if (num_frames == 0) { out.frame_map = full_map; return out; }
@@ -539,9 +540,9 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     out.window_offset_samples = offset;
 
     // Edge sources/targets on the full map's exact piecewise lines.
-    const int64_t start_src = static_cast<int64_t>(std::llround(
+    const int64_t start_src = static_cast<int64_t>(std::llrint(
         map_target_to_source(static_cast<size_t>(offset), full_map)));
-    const int64_t end_tgt_full = static_cast<int64_t>(std::llround(
+    const int64_t end_tgt_full = static_cast<int64_t>(std::llrint(
         map_source_to_target(static_cast<size_t>(trim_end_src), full_map)));
 
     std::vector<FrameMapSegment>& sm = out.frame_map;
@@ -590,31 +591,27 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     return out;
 }
 
-bool write_trimmed_wav(const std::string& src_path,
+std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
                        const std::string& out_path,
                        size_t begin_frame,
                        size_t end_frame) {
     if (end_frame <= begin_frame) {
-        std::cerr << "warptempo_gui: trim error: end_frame <= begin_frame\n";
-        return false;
+        return std::unexpected("end_frame <= begin_frame");
     }
 
     SF_INFO src_info{};
     src_info.format = 0;
     SNDFILE* src = sf_open(src_path.c_str(), SFM_READ, &src_info);
     if (!src) {
-        std::cerr << "warptempo_gui: trim error: could not open source '" << src_path << "'\n";
-        return false;
+        return std::unexpected("could not open source '" + src_path + "'");
     }
     if (static_cast<sf_count_t>(end_frame) > src_info.frames) {
         sf_close(src);
-        std::cerr << "warptempo_gui: trim error: end_frame exceeds source length\n";
-        return false;
+        return std::unexpected("end_frame exceeds source length");
     }
     if (sf_seek(src, static_cast<sf_count_t>(begin_frame), SEEK_SET) < 0) {
         sf_close(src);
-        std::cerr << "warptempo_gui: trim error: sf_seek failed\n";
-        return false;
+        return std::unexpected("sf_seek failed");
     }
 
     SF_INFO out_info = src_info;
@@ -622,8 +619,7 @@ bool write_trimmed_wav(const std::string& src_path,
     SNDFILE* dst = sf_open(out_path.c_str(), SFM_WRITE, &out_info);
     if (!dst) {
         sf_close(src);
-        std::cerr << "warptempo_gui: trim error: could not create output '" << out_path << "'\n";
-        return false;
+        return std::unexpected("could not create output '" + out_path + "'");
     }
 
     const size_t kChunk = 65536;
@@ -636,45 +632,40 @@ bool write_trimmed_wav(const std::string& src_path,
         if (sf_writef_float(dst, buf.data(), got) != got) {
             sf_close(src);
             sf_close(dst);
-            std::cerr << "warptempo_gui: trim error: short write\n";
-            return false;
+            return std::unexpected("short write");
         }
         remaining -= static_cast<size_t>(got);
     }
 
     sf_close(src);
     sf_close(dst);
-    return true;
+    return {};
 }
 
-bool load_source_range_to_buffer(const std::string& src_path,
+std::expected<void, std::string> load_source_range_to_buffer(const std::string& src_path,
                                  size_t begin_frame,
                                  size_t end_frame,
                                  std::vector<float>& out_samples,
                                  int& out_sample_rate,
                                  int& out_channels) {
     if (end_frame <= begin_frame) {
-        std::cerr << "warptempo_gui: load_source error: end_frame <= begin_frame\n";
-        return false;
+        return std::unexpected("end_frame <= begin_frame");
     }
     SF_INFO src_info{};
     src_info.format = 0;
     SNDFILE* src = sf_open(src_path.c_str(), SFM_READ, &src_info);
     if (!src) {
-        std::cerr << "warptempo_gui: load_source error: could not open '"
-                  << src_path << "'\n";
-        return false;
+        return std::unexpected("could not open '" + src_path + "'");
     }
     if (static_cast<sf_count_t>(end_frame) > src_info.frames) {
         sf_close(src);
-        std::cerr << "warptempo_gui: load_source error: end_frame "
-                  << end_frame << " exceeds source length " << src_info.frames << "\n";
-        return false;
+        return std::unexpected("end_frame " + std::to_string(end_frame)
+                               + " exceeds source length "
+                               + std::to_string(src_info.frames));
     }
     if (sf_seek(src, static_cast<sf_count_t>(begin_frame), SEEK_SET) < 0) {
         sf_close(src);
-        std::cerr << "warptempo_gui: load_source error: sf_seek failed\n";
-        return false;
+        return std::unexpected("sf_seek failed");
     }
 
     out_sample_rate = src_info.samplerate;
@@ -687,9 +678,8 @@ bool load_source_range_to_buffer(const std::string& src_path,
                        static_cast<sf_count_t>(n_frames));
     sf_close(src);
     if (got != static_cast<sf_count_t>(n_frames)) {
-        std::cerr << "warptempo_gui: load_source error: short read ("
-                  << got << "/" << n_frames << ")\n";
-        return false;
+        return std::unexpected("short read (" + std::to_string(got) + "/"
+                               + std::to_string(n_frames) + ")");
     }
-    return true;
+    return {};
 }

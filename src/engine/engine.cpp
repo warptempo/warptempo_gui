@@ -160,7 +160,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             const double tgt_end =
                 map_source_to_target(static_cast<size_t>(end_src),
                                      audio_stft.frame_map);
-            audio_stft.emit_sample_cap = static_cast<int64_t>(std::llround(tgt_end));
+            audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
             if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
         }
     }

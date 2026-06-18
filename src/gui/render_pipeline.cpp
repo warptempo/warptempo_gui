@@ -230,8 +230,10 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<size_t>(std::min<int64_t>(
                       total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
-            if (!load_source_range_to_buffer(req.source_audio_path, b, e,
-                                             src_samples, src_sr, src_ch)) {
+            if (auto r = load_source_range_to_buffer(req.source_audio_path, b, e,
+                                             src_samples, src_sr, src_ch); !r) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             r.error().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
@@ -333,18 +335,22 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::filesystem::path(req.source_audio_path).stem().string();
             const std::string trimmed_path =
                 (out_dir / (src_stem + "-trimmed.wav")).string();
-            if (!write_trimmed_wav(req.source_audio_path, trimmed_path,
+            if (auto r = write_trimmed_wav(req.source_audio_path, trimmed_path,
                                    tmres.trim_begin_frame,
-                                   tmres.trim_end_frame)) {
+                                   tmres.trim_end_frame); !r) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             r.error().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
         }
-        const bool ok = (output_format == "framemap")
+        auto map_write = (output_format == "framemap")
             ? write_standard_frame_map(final_output_path, tmres.standard,
                                      /*drop_zero_zero=*/false)
             : write_midi_tempomap(final_output_path, tmres.midi);
-        if (!ok) {
+        if (!map_write) {
+            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                         map_write.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
         }

@@ -111,7 +111,7 @@ void GuiSettingsEditor::commit() {
     // push a settings-undo entry. The canonical spelling (trim_begin /
     // trim_end) is the only trim key; there is no per-tab spelling.
     if (key == "trim_begin" || key == "trim_end") {
-        if (!is_settings_timestamp(value)) {
+        if (!is_valid_timestamp_format(value)) {
             app.settings_editor.red = true;
             viewport.invalidate_timestamp_area();
             std::fprintf(stderr,

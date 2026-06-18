@@ -117,7 +117,10 @@ int main(int argc, char** argv) {
 
         if (out_path.empty())
             out_path = (parent / (stem + ".resetmap")).string();
-        if (!write_reset_map(out_path, source_frames)) return 1;
+        if (auto w = write_reset_map(out_path, source_frames); !w) {
+            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            return 1;
+        }
         std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
         return 0;
     }
@@ -160,10 +163,18 @@ int main(int argc, char** argv) {
         out_path = (parent / (stem + ext)).string();
     }
 
-    const bool ok = (fmt == "framemap")
-        ? write_standard_frame_map(out_path, out.standard, /*drop_zero_zero=*/false)
-        : write_midi_tempomap(out_path, out.midi);
-    if (!ok) return 1;
+    if (fmt == "framemap") {
+        if (auto w = write_standard_frame_map(out_path, out.standard,
+                                              /*drop_zero_zero=*/false); !w) {
+            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            return 1;
+        }
+    } else {
+        if (auto w = write_midi_tempomap(out_path, out.midi); !w) {
+            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            return 1;
+        }
+    }
 
     std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
     return 0;
