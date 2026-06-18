@@ -2,6 +2,7 @@
 
 #include "phase_reset_markers_parse.h"
 
+#include <expected>
 #include <string>
 #include <vector>
 
@@ -19,15 +20,13 @@ inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
     return std::vector<PhaseResetMarker>(src.begin(), src.end());
 }
 
-using GuiPhaseResetMarkerError = PhaseResetMarkerParseError;
-
 class GuiPhaseResetMarkers {
 public:
-    // Parses `path`. On success, populates markers() and returns true. On
-    // failure, errors() lists what went wrong (continues parsing after the
-    // first error so the caller sees the full set) and markers() is empty.
-    // A missing file is reported via errors() and returns false; no throw.
-    bool load(const std::string& path);
+    // Parses `path`. On success, populates markers() and returns the parsed
+    // markers. The first malformed line aborts the parse and returns a
+    // one-line error; a missing/unopenable file is a failure (callers that
+    // treat absence as "no markers" check existence first). No throw.
+    std::expected<void, std::string> load(const std::string& path);
 
     // Writes the canonical form to `path`. Atomic: writes to <path>.tmp,
     // fsyncs, then renames. Preserves existing permissions or uses 0644 if
@@ -50,12 +49,6 @@ public:
     bool delete_file(const std::string& path) const;
 
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
-    const std::vector<GuiPhaseResetMarkerError>&   errors()  const { return errors_; }
-
-    // True if load() observed content that the canonical save() would
-    // discard: comments or blank lines.
-    bool had_nonstandard_content() const { return had_nonstandard_content_; }
-    void clear_nonstandard_flag() { had_nonstandard_content_ = false; }
 
     // Inserts `m` at the position that preserves ascending time_seconds
     // order. Returns the insertion index. Equal-time collisions are
@@ -82,8 +75,6 @@ public:
 
     void clear() {
         markers_.clear();
-        errors_.clear();
-        had_nonstandard_content_ = false;
         ++generation_;
     }
 
@@ -93,7 +84,5 @@ public:
 
 private:
     std::vector<GuiPhaseResetMarker>      markers_;
-    std::vector<GuiPhaseResetMarkerError> errors_;
-    bool                           had_nonstandard_content_ = false;
     long long                      generation_ = 0;
 };

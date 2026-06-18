@@ -258,15 +258,18 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
 
 } // namespace warpmarkers_internal
 
-WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
-    WarpMarkersParse result;
-    bool parse_ok = true;
+std::expected<std::vector<WarpMarker>, std::string>
+parse_warpmarkers_file(const std::string& path) {
+    auto fail = [](int ln, std::string msg) -> std::unexpected<std::string> {
+        return std::unexpected(ln > 0
+            ? "line " + std::to_string(ln) + ": " + std::move(msg)
+            : std::move(msg));
+    };
+    std::vector<WarpMarker> markers;
 
     std::ifstream f(path);
-    if (!f.is_open()) {
-        result.errors.push_back({0, "cannot open file: " + path});
-        return result;
-    }
+    if (!f.is_open())
+        return std::unexpected("cannot open file: " + path);
 
     std::vector<std::string> raw_lines;
     {
@@ -367,12 +370,10 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
         const int line_number = static_cast<int>(idx + 1);
         const std::string& raw = raw_lines[idx];
         if (is_indented_raw(raw)) {
-            result.had_nonstandard_content = true;
             continue;
         }
         std::string t = trim_ws(raw);
         if (t.empty()) {
-            if (!raw.empty()) result.had_nonstandard_content = true;
             continue;
         }
 
@@ -382,12 +383,10 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
                 line_disabled = true;
                 t.erase(0, 1);
             } else {
-                result.had_nonstandard_content = true;
                 continue;
             }
         }
         if (t.empty()) {
-            result.had_nonstandard_content = true;
             continue;
         }
 
@@ -395,25 +394,16 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
         if (is_legacy_file) {
             const size_t sp = t.find(' ');
             if (sp != std::string::npos) {
-                result.had_nonstandard_content = true;
                 t = t.substr(0, sp);
             }
             const auto cols = split_pipe(t);
-            if (cols.size() < 2) {
-                result.errors.push_back({line_number,
-                    "need at least time|tempo columns"});
-                parse_ok = false;
-                continue;
-            }
+            if (cols.size() < 2)
+                return fail(line_number, "need at least time|tempo columns");
             const std::string& time_raw = cols[0];
 
             if (time_raw.size() < 9 ||
-                !is_valid_timestamp_format(time_raw.substr(0, 9))) {
-                result.errors.push_back({line_number,
-                    "invalid time format: " + time_raw});
-                parse_ok = false;
-                continue;
-            }
+                !is_valid_timestamp_format(time_raw.substr(0, 9)))
+                return fail(line_number, "invalid time format: " + time_raw);
             const std::string time_initial = time_raw.substr(0, 9);
             double final_time = parse_timestamp(time_initial);
             if (time_raw.size() > 9) {
@@ -421,22 +411,15 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
             }
 
             if (!first_marker_seen) {
-                if (time_initial != "00:00.000") {
-                    result.errors.push_back({line_number,
+                if (time_initial != "00:00.000")
+                    return fail(line_number,
                         "first marker must be 00:00.000 (got " + time_initial +
-                        ")"});
-                    parse_ok = false;
-                    first_marker_seen = true;
-                    continue;
-                }
+                        ")");
                 first_marker_seen = true;
             }
-            if (last_time >= 0.0 && final_time <= last_time) {
-                result.errors.push_back({line_number,
-                    "time not strictly increasing: " + time_initial});
-                parse_ok = false;
-                continue;
-            }
+            if (last_time >= 0.0 && final_time <= last_time)
+                return fail(line_number,
+                    "time not strictly increasing: " + time_initial);
 
             WarpMarker m;
             m.time_seconds  = final_time;
@@ -451,13 +434,9 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
                  tempo_raw[0] == '.');
 
             if (tempo_quoted) {
-                if (!have_prev_numeric) {
-                    result.errors.push_back({line_number,
-                        "ditto tempo \"\"\"\" has no preceding numeric tempo"});
-                    parse_ok = false;
-                    continue;
-                }
-                result.had_nonstandard_content = true;
+                if (!have_prev_numeric)
+                    return fail(line_number,
+                        "ditto tempo \"\"\"\" has no preceding numeric tempo");
                 m.tempo_inherits = true;
                 m.tempo_base     = 1.0;
                 m.tempo_scale    = "1.0000";
@@ -471,18 +450,12 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
                     ? std::string() : tempo_raw.substr(star + 1);
                 have_prev_numeric = true;
             } else {
-                if (!is_valid_label_format(tempo_raw)) {
-                    result.errors.push_back({line_number,
-                        "invalid tempo or label reference: " + tempo_raw});
-                    parse_ok = false;
-                    continue;
-                }
-                if (defined.count(tempo_raw) == 0) {
-                    result.errors.push_back({line_number,
-                        "reference to undefined label: " + tempo_raw});
-                    parse_ok = false;
-                    continue;
-                }
+                if (!is_valid_label_format(tempo_raw))
+                    return fail(line_number,
+                        "invalid tempo or label reference: " + tempo_raw);
+                if (defined.count(tempo_raw) == 0)
+                    return fail(line_number,
+                        "reference to undefined label: " + tempo_raw);
                 m.label_ref      = tempo_raw;
                 m.tempo_inherits = false;
                 m.tempo_base     = 0.0;
@@ -496,37 +469,28 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
                     def_disabled = true;
                     def.erase(0, 1);
                 }
-                if (!is_valid_label_format(def)) {
-                    result.errors.push_back({line_number,
-                        "invalid label definition: " + label_raw});
-                    parse_ok = false;
-                    continue;
-                }
-                if (!m.label_ref.empty()) {
-                    result.errors.push_back({line_number,
+                if (!is_valid_label_format(def))
+                    return fail(line_number,
+                        "invalid label definition: " + label_raw);
+                if (!m.label_ref.empty())
+                    return fail(line_number,
                         "marker cannot be both a label reference and a label "
-                        "definition"});
-                    parse_ok = false;
-                    continue;
-                }
+                        "definition");
                 m.label_def = def;
                 m.disabled  = def_disabled;
             }
             (void)line_disabled;
 
             last_time = m.time_seconds;
-            result.markers.push_back(std::move(m));
+            markers.push_back(std::move(m));
             continue;
         }
 
         // ---------- New-format parse path -------------------------------
 
         auto parsed = warpmarkers_internal::parse_single_canonical_line(t);
-        if (!parsed) {
-            result.errors.push_back({line_number, std::move(parsed.error())});
-            parse_ok = false;
-            continue;
-        }
+        if (!parsed)
+            return fail(line_number, std::move(parsed.error()));
         WarpMarker m = std::move(*parsed);
         if (line_disabled) m.disabled = true;
 
@@ -534,39 +498,26 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
         const std::string time_raw = t.substr(0, 9);
 
         if (!first_marker_seen) {
-            if (time_raw != "00:00.000") {
-                result.errors.push_back({line_number,
+            if (time_raw != "00:00.000")
+                return fail(line_number,
                     "first marker must be 00:00.000 (got " + time_raw +
-                    ")"});
-                parse_ok = false;
-                first_marker_seen = true;
-                continue;
-            }
+                    ")");
             first_marker_seen = true;
         }
-        if (last_time >= 0.0 && m.time_seconds <= last_time) {
-            result.errors.push_back({line_number,
-                "time not strictly increasing: " + time_raw});
-            parse_ok = false;
-            continue;
-        }
+        if (last_time >= 0.0 && m.time_seconds <= last_time)
+            return fail(line_number,
+                "time not strictly increasing: " + time_raw);
 
         // Cross-marker validation.
-        if (!m.label_ref.empty() && defined.count(m.label_ref) == 0) {
-            result.errors.push_back({line_number,
-                "reference to undefined label: " + m.label_ref});
-            parse_ok = false;
-            continue;
-        }
+        if (!m.label_ref.empty() && defined.count(m.label_ref) == 0)
+            return fail(line_number,
+                "reference to undefined label: " + m.label_ref);
         if (!m.label_def.empty()) {
-            if (seen_def_in_pass2.count(m.label_def)) {
-                result.errors.push_back({line_number,
+            if (seen_def_in_pass2.count(m.label_def))
+                return fail(line_number,
                     "duplicate label definition: " + m.label_def +
                     " (first defined at line " +
-                    std::to_string(seen_def_line[m.label_def]) + ")"});
-                parse_ok = false;
-                continue;
-            }
+                    std::to_string(seen_def_line[m.label_def]) + ")");
             seen_def_in_pass2.insert(m.label_def);
             seen_def_line[m.label_def] = line_number;
         }
@@ -576,17 +527,10 @@ WarpMarkersParse parse_warpmarkers_file(const std::string& path) {
         // through the marker list at every read site.
 
         last_time = m.time_seconds;
-        result.markers.push_back(std::move(m));
+        markers.push_back(std::move(m));
     }
 
-    if (!first_marker_seen) {
-        result.errors.push_back({0, "file contains no markers"});
-        parse_ok = false;
-    }
-
-    if (!parse_ok) {
-        result.markers.clear();
-    }
-    result.ok = parse_ok;
-    return result;
+    if (!first_marker_seen)
+        return std::unexpected(std::string("file contains no markers"));
+    return markers;
 }

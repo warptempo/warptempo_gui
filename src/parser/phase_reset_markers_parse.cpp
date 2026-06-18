@@ -88,15 +88,18 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
 
 } // namespace
 
-PhaseResetMarkersParse parse_phaseresetmarkers_file(const std::string& path) {
-    PhaseResetMarkersParse result;
-    bool parse_ok = true;
+std::expected<std::vector<PhaseResetMarker>, std::string>
+parse_phaseresetmarkers_file(const std::string& path) {
+    auto fail = [](int ln, std::string msg) -> std::unexpected<std::string> {
+        return std::unexpected(ln > 0
+            ? "line " + std::to_string(ln) + ": " + std::move(msg)
+            : std::move(msg));
+    };
+    std::vector<PhaseResetMarker> markers;
 
     std::ifstream f(path);
-    if (!f.is_open()) {
-        result.errors.push_back({0, "cannot open file: " + path});
-        return result;
-    }
+    if (!f.is_open())
+        return std::unexpected("cannot open file: " + path);
 
     std::vector<std::string> raw_lines;
     {
@@ -112,42 +115,24 @@ PhaseResetMarkersParse parse_phaseresetmarkers_file(const std::string& path) {
         const std::string& raw = raw_lines[idx];
         const std::string t = trim_ws(raw);
 
-        if (t.empty()) {
-            if (!raw.empty()) result.had_nonstandard_content = true;
-            continue;
-        }
+        if (t.empty()) continue;
 
-        // Comment-line disambiguation, matching the warp parser: a `#` followed by a
-        // valid MM:SS.mmm timestamp is a disabled marker (handled by parse_line); a
-        // `#` followed by anything else is a comment the canonical save() drops.
         if (t[0] == '#' &&
             !(t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9)))) {
-            result.had_nonstandard_content = true;
             continue;
         }
 
         auto parsed = parse_line(t);
-        if (!parsed) {
-            result.errors.push_back({line_number, std::move(parsed.error())});
-            parse_ok = false;
-            continue;
-        }
+        if (!parsed)
+            return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
-        // Strictly-ascending order is keyed on time_seconds: the
-        // visible position of the marker.
         const double eff = m.time_seconds;
-        if (last_time >= 0.0 && eff <= last_time) {
-            result.errors.push_back({line_number,
-                "time_seconds not strictly increasing: " +
-                format_timestamp(eff)});
-            parse_ok = false;
-            continue;
-        }
+        if (last_time >= 0.0 && eff <= last_time)
+            return fail(line_number,
+                "time_seconds not strictly increasing: " + format_timestamp(eff));
         last_time = eff;
-        result.markers.push_back(std::move(m));
+        markers.push_back(std::move(m));
     }
 
-    if (!parse_ok) result.markers.clear();
-    result.ok = parse_ok;
-    return result;
+    return markers;
 }

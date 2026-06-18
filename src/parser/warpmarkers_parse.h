@@ -37,29 +37,13 @@ struct WarpMarker {
     bool disabled      = false;
 };
 
-// One parse diagnostic. line_number is 1-based; 0 means "file-level, no line".
-struct WarpMarkerParseError {
-    int         line_number;
-    std::string message;
-};
-
-// Result of parse_warpmarkers_file. On failure (ok == false) markers is
-// empty and errors lists every violation in encounter order; on success
-// markers holds the parsed bases and errors is empty. had_nonstandard_content
-// is true when the file carried content the canonical save would discard
-// (comments, blank/indented lines, freeform trailing text, ditto tempos).
-struct WarpMarkersParse {
-    std::vector<WarpMarker>           markers;
-    std::vector<WarpMarkerParseError> errors;
-    bool                              had_nonstandard_content = false;
-    bool                              ok                      = false;
-};
-
-// Parse a .warpmarkers file (legacy or new format). Never throws; a missing
-// or unopenable file is reported as a file-level error with ok == false. This
+// Parse a .warpmarkers file (legacy or new format). Never throws. Returns the
+// parsed markers on success; on the first malformed line, or an unopenable
+// file, returns a one-line diagnostic (line-tagged where line-specific). This
 // is the canonical .warpmarkers reader for both the GUI store and the headless
 // CLI.
-WarpMarkersParse parse_warpmarkers_file(const std::string& path);
+std::expected<std::vector<WarpMarker>, std::string>
+parse_warpmarkers_file(const std::string& path);
 
 namespace warpmarkers_internal {
 

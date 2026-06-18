@@ -11,22 +11,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-bool GuiPhaseResetMarkers::load(const std::string& path) {
+std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
     markers_.clear();
-    errors_.clear();
-    had_nonstandard_content_ = false;
     ++generation_;
 
-    PhaseResetMarkersParse r = parse_phaseresetmarkers_file(path);
-    markers_.reserve(r.markers.size());
-    for (const PhaseResetMarker& pm : r.markers) {
+    auto r = parse_phaseresetmarkers_file(path);
+    if (!r) return std::unexpected(std::move(r.error()));
+
+    markers_.reserve(r->size());
+    for (const PhaseResetMarker& pm : *r) {
         GuiPhaseResetMarker g;                   // no extra fields today
         static_cast<PhaseResetMarker&>(g) = pm;  // copy the serialized base
         markers_.push_back(g);
     }
-    errors_ = std::move(r.errors);               // same type via the alias
-    had_nonstandard_content_ = r.had_nonstandard_content;
-    return r.ok;
+    return {};
 }
 
 bool GuiPhaseResetMarkers::save(const std::string& path) const {

@@ -24,7 +24,7 @@ std::expected<void, std::string> write_midi_tempomap(
 // Serialize an undisplaced source-frame phase-reset list to the canonical
 // .resetmap text form: one source-frame integer per line, in input order.
 // The companion to write_standard_frame_map on the phase-reset axis — the
-// frame-domain export warptempo_map emits and the engine-only synthesis
+// frame-domain export warptempo_parser emits and the engine-only synthesis
 // driver consumes (read_reset_map in frame_map.h). The caller supplies the
 // already-resolved active source frames (phase_reset_source_frames drops
 // disabled markers and converts time->source frame via nearbyint), so this

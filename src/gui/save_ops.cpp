@@ -8,13 +8,6 @@
 
 bool GuiSaveOps::save() {
     if (app.warpmarkers_path.empty()) return false;
-    if (app.first_save_pending && app.warpmarkers.had_nonstandard_content()) {
-        std::fprintf(stderr,
-            "warptempo_gui: first save in this session will discard "
-            "comments and freeform text from %s. Canonical format will "
-            "be written.\n",
-            app.warpmarkers_path.c_str());
-    }
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.
     active_views.refresh_active_tab_view_from_app();

@@ -16,7 +16,7 @@
 // block that decides cmp-stable output lives in exactly one place.
 //
 // Header-only inline: it calls slice_frame_map_to_trim_window from
-// libwarptempo_parser, which both warptempo_gui and warptempo_render already
+// libwarptempo_parser, which both warptempo_gui and warptempo_cli already
 // link, so no new compiled TU or CMake source entry is needed.
 inline int64_t assign_engine_frame_map(
         EngineParams& ep,

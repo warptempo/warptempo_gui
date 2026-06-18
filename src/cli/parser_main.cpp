@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         auto parsed = read_engine_settings_from_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
-                "warptempo_map: engine settings rejected: %s\n",
+                "warptempo_parser: engine settings rejected: %s\n",
                 parsed.error().c_str());
             return 1;
         }
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     const std::string fmt = !fmt_override.empty() ? fmt_override : es.output_format;
     if (fmt != "framemap" && fmt != "tempomap" && fmt != "resetmap") {
         std::fprintf(stderr,
-            "warptempo_map: nothing to emit for output_format '%s' "
+            "warptempo_parser: nothing to emit for output_format '%s' "
             "(this tool writes framemap, tempomap, or resetmap; pass --format)\n",
             fmt.c_str());
         return 1;
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
     if (!sf) {
         std::fprintf(stderr,
-            "warptempo_map: could not open source '%s'\n", source_path.c_str());
+            "warptempo_parser: could not open source '%s'\n", source_path.c_str());
         return 1;
     }
     const long sample_rate  = info.samplerate;
@@ -103,14 +103,13 @@ int main(int argc, char** argv) {
     if (fmt == "resetmap") {
         std::vector<PhaseResetMarker> resets;
         if (std::filesystem::exists(pr_path)) {
-            PhaseResetMarkersParse prp = parse_phaseresetmarkers_file(pr_path);
-            if (!prp.ok) {
-                for (const auto& e : prp.errors)
-                    std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
-                                 pr_path.c_str(), e.line_number, e.message.c_str());
+            auto prp = parse_phaseresetmarkers_file(pr_path);
+            if (!prp) {
+                std::fprintf(stderr, "warptempo_parser: %s: %s\n",
+                             pr_path.c_str(), prp.error().c_str());
                 return 1;
             }
-            resets = std::move(prp.markers);
+            resets = std::move(*prp);
         }
         const std::vector<int64_t> source_frames =
             phase_reset_source_frames(resets, sample_rate);
@@ -118,24 +117,23 @@ int main(int argc, char** argv) {
         if (out_path.empty())
             out_path = (parent / (stem + ".resetmap")).string();
         if (auto w = write_reset_map(out_path, source_frames); !w) {
-            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
-        std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
+        std::fprintf(stderr, "warptempo_parser: wrote %s\n", out_path.c_str());
         return 0;
     }
 
     // --- framemap / tempomap: built from the warp markers. ---
     std::vector<WarpMarker> markers;
     if (std::filesystem::exists(wm_path)) {
-        WarpMarkersParse wmp = parse_warpmarkers_file(wm_path);
-        if (!wmp.ok) {
-            for (const auto& e : wmp.errors)
-                std::fprintf(stderr, "warptempo_map: %s:%d: %s\n",
-                             wm_path.c_str(), e.line_number, e.message.c_str());
+        auto wmp = parse_warpmarkers_file(wm_path);
+        if (!wmp) {
+            std::fprintf(stderr, "warptempo_parser: %s: %s\n",
+                         wm_path.c_str(), wmp.error().c_str());
             return 1;
         }
-        markers = std::move(wmp.markers);
+        markers = std::move(*wmp);
     }
 
     // --- resolve + build (trim honored from the project .settings) ---
@@ -152,7 +150,7 @@ int main(int argc, char** argv) {
     auto r = build_timemaps(in);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_map: timemap build failed: %s\n", r.error().c_str());
+            "warptempo_parser: timemap build failed: %s\n", r.error().c_str());
         return 1;
     }
     TimemapBuildResult out = std::move(*r);
@@ -166,16 +164,16 @@ int main(int argc, char** argv) {
     if (fmt == "framemap") {
         if (auto w = write_standard_frame_map(out_path, out.standard,
                                               /*drop_zero_zero=*/false); !w) {
-            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
     } else {
         if (auto w = write_midi_tempomap(out_path, out.midi); !w) {
-            std::fprintf(stderr, "warptempo_map: %s\n", w.error().c_str());
+            std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
     }
 
-    std::fprintf(stderr, "warptempo_map: wrote %s\n", out_path.c_str());
+    std::fprintf(stderr, "warptempo_parser: wrote %s\n", out_path.c_str());
     return 0;
 }

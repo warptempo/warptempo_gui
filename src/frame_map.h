@@ -62,7 +62,7 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<FrameMapS
 // --- Map-file readers (header-only, dependency-free) -----------------------
 // Inverses of the parser's write_standard_frame_map / write_reset_map. They
 // live here, not in the parser's map_output.cpp, so the engine-only
-// warptempo_synthesis driver can read both artifacts while linking
+// warptempo_engine driver can read both artifacts while linking
 // libwarptempo_engine alone (no parser archive). The formats are trivial
 // integer text, specified at each writer in map_output.cpp; keep these in
 // lockstep with those writers.

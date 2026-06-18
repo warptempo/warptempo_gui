@@ -4,7 +4,7 @@
 
 ## Dependencies
 
-Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3 and libsndfile. These are the complete dependency set for the two libraries and the three headless CLI tools (`warptempo_map`, `warptempo_render`, `warptempo_synthesis`); none of the GUI packages below are needed for them.
+Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3 and libsndfile. These are the complete dependency set for the two libraries and the headless binaries — the two standalone module binaries (`warptempo_parser`, `warptempo_engine`) plus the headless render interface (`warptempo_cli`); none of the GUI packages below are needed for them.
 
 The default GUI build additionally requires the wayland-scanner tool and the development headers for cairo, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
 
@@ -67,11 +67,11 @@ Four executables can be built from those two libraries, each a different slice o
 
 `warptempo_gui` (default, `-DWARPTEMPO_BUILD_GUI=ON`) is the interactive authoring application — parser plus engine plus the Cairo/Wayland GUI. This is the normal build.
 
-`warptempo_map` (`-DWARPTEMPO_BUILD_MAP_CLI=ON`) is parser-only. It reads a project's `.warpmarkers` and `.settings` beside the source audio and writes the framemap, tempomap, or resetmap — the portable map artifacts — without the engine or the GUI.
+`warptempo_parser` (`-DWARPTEMPO_BUILD_PARSER=ON`) is parser-only. It reads a project's `.warpmarkers` and `.settings` beside the source audio and writes the framemap, tempomap, or resetmap — the portable map artifacts — without the engine or the GUI.
 
-`warptempo_render` (`-DWARPTEMPO_BUILD_RENDER_CLI=ON`) is parser plus engine. It reads a full project and writes the warped wav the GUI would render for it, headless — no display, no GUI toolchain.
+`warptempo_cli` (`-DWARPTEMPO_BUILD_CLI=ON`) is parser plus engine. It reads a full project and writes the warped wav the GUI would render for it, headless — no display, no GUI toolchain.
 
-`warptempo_synthesis` (`-DWARPTEMPO_BUILD_SYNTHESIS_CLI=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files.
+`warptempo_engine` (`-DWARPTEMPO_BUILD_ENGINE=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files.
 
 To build the libraries and any CLI tools on a headless host that has none of the GUI's Wayland / Cairo / JACK packages, add `-DWARPTEMPO_BUILD_GUI=OFF`; the two archives and the enabled CLI tools build without touching the GUI dependency discovery.
 

@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <expected>
 #include <limits>
 #include <string>
 #include <vector>
@@ -57,15 +58,13 @@ inline std::vector<WarpMarker> slice_to_warp_markers(
     return std::vector<WarpMarker>(src.begin(), src.end());
 }
 
-using GuiWarpMarkerError = WarpMarkerParseError;
-
 class GuiWarpMarkers {
 public:
-    // Parses `path`. On success, populates markers() and returns true. On
-    // failure, errors() lists what went wrong (continues parsing after the
-    // first error so the caller sees the full set) and markers() is empty.
-    // A missing file is reported via errors() and returns false; no throw.
-    bool load(const std::string& path);
+    // Parses `path`. On success, populates markers() and returns the parsed
+    // markers. The first malformed line aborts the parse and returns a
+    // one-line error; a missing/unopenable file is a failure (callers that
+    // treat absence as "no markers" check existence first). No throw.
+    std::expected<void, std::string> load(const std::string& path);
 
     // Writes the canonical form to `path`. Atomic: writes to
     // <path>.tmp, fsyncs, then renames. Preserves existing permissions or
@@ -79,12 +78,6 @@ public:
                      const std::vector<GuiWarpMarker>& markers);
 
     const std::vector<GuiWarpMarker>&       markers() const { return markers_; }
-    const std::vector<GuiWarpMarkerError>&  errors()  const { return errors_; }
-
-    // True if load() observed content that the canonical save() would
-    // discard: comments, blank lines, indented lines, freeform trailing
-    // text, or ditto tempos.
-    bool had_nonstandard_content() const { return had_nonstandard_content_; }
 
     // Inserts `m` at the position that preserves strict-monotonic order by
     // time_seconds. Returns the insertion index.
@@ -115,8 +108,6 @@ public:
 
     void clear() {
         markers_.clear();
-        errors_.clear();
-        had_nonstandard_content_ = false;
         ++generation_;
     }
 
@@ -127,8 +118,6 @@ public:
 
 private:
     std::vector<GuiWarpMarker>       markers_;
-    std::vector<GuiWarpMarkerError>  errors_;
-    bool                         had_nonstandard_content_ = false;
     long long                    generation_ = 0;
 };
 

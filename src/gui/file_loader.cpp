@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -148,50 +149,23 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phase_reset_dirty    = false;
     app.settings_dirty     = false;
     app.first_save_pending = true;
-    const bool markers_ok = app.warpmarkers.load(wm_path.string());
-    if (!markers_ok) {
-        for (const auto& err : app.warpmarkers.errors()) {
-            if (err.line_number > 0) {
-                std::fprintf(stderr,
-                             "warptempo_gui: %s:%d: %s\n",
-                             wm_path.string().c_str(),
-                             err.line_number, err.message.c_str());
-            } else {
-                std::fprintf(stderr,
-                             "warptempo_gui: %s: %s\n",
-                             wm_path.string().c_str(),
-                             err.message.c_str());
-            }
-        }
+    if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                     wm_path.string().c_str(), r.error().c_str());
     } else {
-        std::fprintf(stderr,
-                     "[warptempo_gui] parsed %zu markers from %s\n",
-                     app.warpmarkers.markers().size(),
-                     wm_path.string().c_str());
+        std::fprintf(stderr, "[warptempo_gui] parsed %zu markers from %s\n",
+                     app.warpmarkers.markers().size(), wm_path.string().c_str());
     }
 
     // Load .phaseresetmarkers if present. Missing file is fine — the
     // phase reset list is just empty. Parse errors are logged to stderr;
     // the warp side stays usable regardless.
     if (std::filesystem::exists(tm_path)) {
-        const bool tr_ok = app.phase_reset_markers.load(tm_path.string());
-        if (!tr_ok) {
-            for (const auto& err : app.phase_reset_markers.errors()) {
-                if (err.line_number > 0) {
-                    std::fprintf(stderr,
-                                 "warptempo_gui: %s:%d: %s\n",
-                                 tm_path.string().c_str(),
-                                 err.line_number, err.message.c_str());
-                } else {
-                    std::fprintf(stderr,
-                                 "warptempo_gui: %s: %s\n",
-                                 tm_path.string().c_str(),
-                                 err.message.c_str());
-                }
-            }
+        if (auto r = app.phase_reset_markers.load(tm_path.string()); !r) {
+            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                         tm_path.string().c_str(), r.error().c_str());
         } else {
-            std::fprintf(stderr,
-                         "[warptempo_gui] parsed %zu phase_resets from %s\n",
+            std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
                          app.phase_reset_markers.markers().size(),
                          tm_path.string().c_str());
         }

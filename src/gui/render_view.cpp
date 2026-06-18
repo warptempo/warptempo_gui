@@ -243,7 +243,10 @@ bool GuiRenderView::load_render_view_at(int index) {
         std::error_code ec;
         if (std::filesystem::exists(wmd, ec)) {
             GuiWarpMarkers m;
-            m.load(wmd.string());
+            if (auto r = m.load(wmd.string()); !r) {
+                std::fprintf(stderr, "warptempo_gui: render-view: %s: %s\n",
+                             wmd.string().c_str(), r.error().c_str());
+            }
             loaded_warp = m.markers();
         } else {
             std::fprintf(stderr,
@@ -258,7 +261,10 @@ bool GuiRenderView::load_render_view_at(int index) {
         std::error_code ec;
         if (std::filesystem::exists(tmd, ec)) {
             GuiPhaseResetMarkers t;
-            t.load(tmd.string());
+            if (auto r = t.load(tmd.string()); !r) {
+                std::fprintf(stderr, "warptempo_gui: render-view: %s: %s\n",
+                             tmd.string().c_str(), r.error().c_str());
+            }
             loaded_trans = t.markers();
         }
     }

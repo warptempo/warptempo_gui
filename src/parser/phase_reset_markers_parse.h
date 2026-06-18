@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <string>
 #include <vector>
 
@@ -12,26 +13,10 @@ struct PhaseResetMarker {
     bool   disabled      = false;
 };
 
-// One parse diagnostic. line_number is 1-based; 0 means "file-level, no line".
-struct PhaseResetMarkerParseError {
-    int         line_number;
-    std::string message;
-};
-
-// Result of parse_phaseresetmarkers_file. On failure (ok == false) markers is
-// empty and errors lists every violation in encounter order. An empty marker
-// list with ok == true is valid (an empty or comment-only file).
-// had_nonstandard_content is true when the file carried content the canonical
-// save would discard (comments or blank lines).
-struct PhaseResetMarkersParse {
-    std::vector<PhaseResetMarker>           markers;
-    std::vector<PhaseResetMarkerParseError> errors;
-    bool                                    had_nonstandard_content = false;
-    bool                                    ok                      = false;
-};
-
-// Parse a .phaseresetmarkers file. Never throws; a missing or unopenable file
-// is reported as a file-level error with ok == false. An empty or comment-only
-// file parses to an empty marker list with ok == true. This is the canonical
-// .phaseresetmarkers reader for both the GUI store and the headless CLI.
-PhaseResetMarkersParse parse_phaseresetmarkers_file(const std::string& path);
+// Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on
+// success; an empty or comment-only file yields an empty vector. On the first
+// malformed line, or an unopenable file, returns a one-line diagnostic
+// (line-tagged where line-specific). Canonical reader for the GUI store and the
+// headless CLI.
+std::expected<std::vector<PhaseResetMarker>, std::string>
+parse_phaseresetmarkers_file(const std::string& path);

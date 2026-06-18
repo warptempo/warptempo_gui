@@ -24,7 +24,7 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  Depends on sndfile + the standard library only. No fftw, no GUI,
 #  no engine. frame_map.h / time_format.h are shared headers in src/.
 # ============================================================
-add_library(warptempo_parser STATIC
+add_library(warptempo_parser_lib STATIC
     src/parser/warpmarkers_parse.cpp
     src/parser/phase_reset_markers_parse.cpp
     src/parser/engine_settings_io.cpp
@@ -32,27 +32,28 @@ add_library(warptempo_parser STATIC
     src/parser/frame_map_build.cpp
     src/parser/map_output.cpp
 )
-target_include_directories(warptempo_parser
+target_include_directories(warptempo_parser_lib
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/parser
     PRIVATE
         ${SNDFILE_INCLUDE_DIRS}
 )
-target_link_libraries(warptempo_parser PUBLIC ${SNDFILE_LIBRARIES})
+set_target_properties(warptempo_parser_lib PROPERTIES OUTPUT_NAME warptempo_parser)
+target_link_libraries(warptempo_parser_lib PUBLIC ${SNDFILE_LIBRARIES})
 
 # ============================================================
 #  warptempo_engine — PGHI DSP core.
 #  Depends on sndfile + fftw3. Reads frame_map.h (header-only) from
 #  src/; no link edge to the parser archive.
 # ============================================================
-add_library(warptempo_engine STATIC
+add_library(warptempo_engine_lib STATIC
     src/engine/engine.cpp
     src/engine/limiter.cpp
     src/engine/peak_limiter.cpp
     src/engine/synthesis.cpp
 )
-target_include_directories(warptempo_engine
+target_include_directories(warptempo_engine_lib
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/engine
@@ -60,7 +61,8 @@ target_include_directories(warptempo_engine
         ${SNDFILE_INCLUDE_DIRS}
         ${FFTW3_INCLUDE_DIRS}
 )
-target_link_libraries(warptempo_engine PUBLIC
+set_target_properties(warptempo_engine_lib PROPERTIES OUTPUT_NAME warptempo_engine)
+target_link_libraries(warptempo_engine_lib PUBLIC
     ${SNDFILE_LIBRARIES}
     ${FFTW3_THREADS_LIB}
     ${FFTW3_LIBRARIES}
@@ -162,8 +164,8 @@ if(WARPTEMPO_BUILD_GUI)
         ${JACK_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
-        warptempo_parser
-        warptempo_engine
+        warptempo_parser_lib
+        warptempo_engine_lib
         ${WAYLAND_CLIENT_LIBRARIES}
         ${WAYLAND_CURSOR_LIBRARIES}
         ${XKBCOMMON_LIBRARIES}
@@ -184,42 +186,44 @@ if(WARPTEMPO_BUILD_GUI)
 endif()
 
 # ============================================================
-#  warptempo_map — headless map emitter (parser-only).
+#  warptempo_parser — headless map emitter (parser-only).
 #  Reads <source-stem>.{warpmarkers,settings} and writes the framemap /
 #  tempomap artifact the GUI would for the same project. No engine, no audio.
 # ============================================================
-option(WARPTEMPO_BUILD_MAP_CLI "Build the headless map (framemap/tempomap) CLI" OFF)
-if(WARPTEMPO_BUILD_MAP_CLI)
-    add_executable(warptempo_map src/cli/map_main.cpp)
-    target_include_directories(warptempo_map PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_map PRIVATE warptempo_parser)
+option(WARPTEMPO_BUILD_PARSER
+       "Build the standalone warptempo_parser binary (the parser library always builds)" OFF)
+if(WARPTEMPO_BUILD_PARSER)
+    add_executable(warptempo_parser src/cli/parser_main.cpp)
+    target_include_directories(warptempo_parser PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_parser PRIVATE warptempo_parser_lib)
 endif()
 
 # ============================================================
-#  warptempo_render — headless wav render CLI (parser + engine).
+#  warptempo_cli — headless wav render CLI (parser + engine).
 #  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes the
 #  warped wav the GUI would render for the same project. Runs the full PGHI
-#  engine; output_format must be wav (warptempo_map covers framemap/tempomap).
+#  engine; output_format must be wav (warptempo_parser covers framemap/tempomap).
 # ============================================================
-option(WARPTEMPO_BUILD_RENDER_CLI "Build the headless wav render CLI" OFF)
-if(WARPTEMPO_BUILD_RENDER_CLI)
-    add_executable(warptempo_render src/cli/render_main.cpp)
-    target_include_directories(warptempo_render PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_render PRIVATE warptempo_parser warptempo_engine)
+option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
+if(WARPTEMPO_BUILD_CLI)
+    add_executable(warptempo_cli src/cli/cli_main.cpp)
+    target_include_directories(warptempo_cli PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_cli PRIVATE warptempo_parser_lib warptempo_engine_lib)
 endif()
 
 # ============================================================
-#  warptempo_synthesis — engine-only synthesis driver.
+#  warptempo_engine — engine-only synthesis driver.
 #  Reads a prebuilt framemap [+ resetmap] + source wav and writes the warped
 #  wav by running the PGHI engine directly. Links libwarptempo_engine ALONE —
 #  no parser archive: the map readers are header-only (frame_map.h) and the
 #  one-hop phase-reset displacement is inlined. Trim is not an engine concern.
 # ============================================================
-option(WARPTEMPO_BUILD_SYNTHESIS_CLI "Build the headless engine-only synthesis CLI" OFF)
-if(WARPTEMPO_BUILD_SYNTHESIS_CLI)
-    add_executable(warptempo_synthesis src/cli/synthesis_main.cpp)
-    target_include_directories(warptempo_synthesis PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_synthesis PRIVATE warptempo_engine)
+option(WARPTEMPO_BUILD_ENGINE
+       "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)
+if(WARPTEMPO_BUILD_ENGINE)
+    add_executable(warptempo_engine src/cli/engine_main.cpp)
+    target_include_directories(warptempo_engine PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(warptempo_engine PRIVATE warptempo_engine_lib)
 endif()
 
 # --- Compiler Optimizations ---
@@ -227,18 +231,18 @@ endif()
 # engine's PGHI hot path and the parser's frame-map math must compile under the
 # same -O3 -march=native the monolith used. warptempo_gui is appended only when
 # the GUI is being built.
-set(WARPTEMPO_OPT_TARGETS warptempo_parser warptempo_engine)
+set(WARPTEMPO_OPT_TARGETS warptempo_parser_lib warptempo_engine_lib)
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
 endif()
-if(WARPTEMPO_BUILD_MAP_CLI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_map)
+if(WARPTEMPO_BUILD_PARSER)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_parser)
 endif()
-if(WARPTEMPO_BUILD_RENDER_CLI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_render)
+if(WARPTEMPO_BUILD_CLI)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_cli)
 endif()
-if(WARPTEMPO_BUILD_SYNTHESIS_CLI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_synthesis)
+if(WARPTEMPO_BUILD_ENGINE)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_engine)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})

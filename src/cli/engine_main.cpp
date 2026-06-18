@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
         if (std::filesystem::exists(out_path, ec) &&
             std::filesystem::equivalent(out_path, source_path, ec)) {
             std::fprintf(stderr,
-                "warptempo_synthesis: output '%s' resolves to the source audio "
+                "warptempo_engine: output '%s' resolves to the source audio "
                 "file; refusing to overwrite the source\n",
                 out_path.c_str());
             return 1;
@@ -80,13 +80,13 @@ int main(int argc, char** argv) {
         read_standard_frame_map(framemap_path);
     if (!fm) {
         std::fprintf(stderr,
-            "warptempo_synthesis: could not read framemap '%s' "
+            "warptempo_engine: could not read framemap '%s' "
             "(missing, unreadable, or malformed)\n", framemap_path.c_str());
         return 1;
     }
     if (fm->empty()) {
         std::fprintf(stderr,
-            "warptempo_synthesis: framemap '%s' is empty; nothing to render\n",
+            "warptempo_engine: framemap '%s' is empty; nothing to render\n",
             framemap_path.c_str());
         return 1;
     }
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
         std::optional<std::vector<int64_t>> rm = read_reset_map(resetmap_path);
         if (!rm) {
             std::fprintf(stderr,
-                "warptempo_synthesis: could not read resetmap '%s' "
+                "warptempo_engine: could not read resetmap '%s' "
                 "(unreadable or malformed)\n", resetmap_path.c_str());
             return 1;
         }
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
         SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
         if (!sf) {
             std::fprintf(stderr,
-                "warptempo_synthesis: could not open source '%s'\n",
+                "warptempo_engine: could not open source '%s'\n",
                 source_path.c_str());
             return 1;
         }
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
         sf_close(sf);
         if (got != frames) {
             std::fprintf(stderr,
-                "warptempo_synthesis: short read on source '%s' (%lld/%lld)\n",
+                "warptempo_engine: short read on source '%s' (%lld/%lld)\n",
                 source_path.c_str(),
                 static_cast<long long>(got), static_cast<long long>(frames));
             return 1;
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     for (const int64_t F : reset_src) {
         if (F - phase_reset_offset_samples < 0) {
             std::fprintf(stderr,
-                "warptempo_synthesis: phase reset at source frame %lld clamped "
+                "warptempo_engine: phase reset at source frame %lld clamped "
                 "to engine frame 0 (offset shift would place it before audio "
                 "start)\n", static_cast<long long>(F));
         }
@@ -184,11 +184,11 @@ int main(int argc, char** argv) {
     // --- render (engine writes out_path directly) ---
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
-        std::fprintf(stderr, "warptempo_synthesis: engine %s\n",
+        std::fprintf(stderr, "warptempo_engine: engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
     }
 
-    std::fprintf(stderr, "warptempo_synthesis: wrote %s\n", out_path.c_str());
+    std::fprintf(stderr, "warptempo_engine: wrote %s\n", out_path.c_str());
     return 0;
 }

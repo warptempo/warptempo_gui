@@ -31,7 +31,7 @@ void usage(const char* argv0) {
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  warped wav the GUI would render for the same project. Runs the full\n"
-        "  PGHI engine; output_format must be wav (use warptempo_map for\n"
+        "  PGHI engine; output_format must be wav (use warptempo_parser for\n"
         "  framemap/tempomap). -o is required; there is no default sibling.\n",
         argv0);
 }
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         auto parsed = read_engine_settings_from_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
-                "warptempo_render: engine settings rejected: %s\n",
+                "warptempo_cli: engine settings rejected: %s\n",
                 parsed.error().c_str());
             return 1;
         }
@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
     // CLI's job (the engine never runs for those). ---
     if (es.output_format != "wav") {
         std::fprintf(stderr,
-            "warptempo_render: output_format '%s' is not a wav render "
-            "(use warptempo_map for framemap/tempomap)\n",
+            "warptempo_cli: output_format '%s' is not a wav render "
+            "(use warptempo_parser for framemap/tempomap)\n",
             es.output_format.c_str());
         return 1;
     }
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
         if (std::filesystem::exists(out_path, ec) &&
             std::filesystem::equivalent(out_path, source_path, ec)) {
             std::fprintf(stderr,
-                "warptempo_render: output '%s' resolves to the source audio "
+                "warptempo_cli: output '%s' resolves to the source audio "
                 "file; refusing to overwrite the source\n",
                 out_path.c_str());
             return 1;
@@ -99,27 +99,25 @@ int main(int argc, char** argv) {
     // --- markers; empty if the file is absent ---
     std::vector<WarpMarker> markers;
     if (std::filesystem::exists(wm_path)) {
-        WarpMarkersParse wmp = parse_warpmarkers_file(wm_path);
-        if (!wmp.ok) {
-            for (const auto& e : wmp.errors)
-                std::fprintf(stderr, "warptempo_render: %s:%d: %s\n",
-                             wm_path.c_str(), e.line_number, e.message.c_str());
+        auto wmp = parse_warpmarkers_file(wm_path);
+        if (!wmp) {
+            std::fprintf(stderr, "warptempo_cli: %s: %s\n",
+                         wm_path.c_str(), wmp.error().c_str());
             return 1;
         }
-        markers = std::move(wmp.markers);
+        markers = std::move(*wmp);
     }
 
     // --- phase reset markers; empty if the file is absent ---
     std::vector<PhaseResetMarker> resets;
     if (std::filesystem::exists(pr_path)) {
-        PhaseResetMarkersParse prp = parse_phaseresetmarkers_file(pr_path);
-        if (!prp.ok) {
-            for (const auto& e : prp.errors)
-                std::fprintf(stderr, "warptempo_render: %s:%d: %s\n",
-                             pr_path.c_str(), e.line_number, e.message.c_str());
+        auto prp = parse_phaseresetmarkers_file(pr_path);
+        if (!prp) {
+            std::fprintf(stderr, "warptempo_cli: %s: %s\n",
+                         pr_path.c_str(), prp.error().c_str());
             return 1;
         }
-        resets = std::move(prp.markers);
+        resets = std::move(*prp);
     }
 
     // --- source sample rate / total frames ---
@@ -128,7 +126,7 @@ int main(int argc, char** argv) {
     SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
     if (!sf) {
         std::fprintf(stderr,
-            "warptempo_render: could not open source '%s'\n", source_path.c_str());
+            "warptempo_cli: could not open source '%s'\n", source_path.c_str());
         return 1;
     }
     const long sample_rate  = info.samplerate;
@@ -158,7 +156,7 @@ int main(int argc, char** argv) {
     auto r = build_timemaps(tmin);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_render: timemap build failed: %s\n", r.error().c_str());
+            "warptempo_cli: timemap build failed: %s\n", r.error().c_str());
         return 1;
     }
     TimemapBuildResult tmfull = std::move(*r);
@@ -189,7 +187,7 @@ int main(int argc, char** argv) {
             : static_cast<size_t>(total_frames);
         if (auto r = load_source_range_to_buffer(source_path, b, e,
                                          src_samples, src_sr, src_ch); !r) {
-            std::fprintf(stderr, "warptempo_render: %s\n", r.error().c_str());
+            std::fprintf(stderr, "warptempo_cli: %s\n", r.error().c_str());
             return 1;
         }
     }
@@ -228,7 +226,7 @@ int main(int argc, char** argv) {
     for (const int64_t F : reset_src_frames) {
         if (F - phase_reset_offset_samples < 0) {
             std::fprintf(stderr,
-                "warptempo_render: phase reset at %.3f s clamped to engine "
+                "warptempo_cli: phase reset at %.3f s clamped to engine "
                 "frame 0 (offset shift would place it before audio start)\n",
                 static_cast<double>(F) / static_cast<double>(sample_rate));
         }
@@ -239,11 +237,11 @@ int main(int argc, char** argv) {
     // --- render. The engine writes out_path directly (no staging/rename). ---
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
-        std::fprintf(stderr, "warptempo_render: engine %s\n",
+        std::fprintf(stderr, "warptempo_cli: engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
     }
 
-    std::fprintf(stderr, "warptempo_render: wrote %s\n", out_path.c_str());
+    std::fprintf(stderr, "warptempo_cli: wrote %s\n", out_path.c_str());
     return 0;
 }

@@ -10,22 +10,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-bool GuiWarpMarkers::load(const std::string& path) {
+std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
     markers_.clear();
-    errors_.clear();
-    had_nonstandard_content_ = false;
     ++generation_;
 
-    WarpMarkersParse r = parse_warpmarkers_file(path);
-    markers_.reserve(r.markers.size());
-    for (const WarpMarker& wm : r.markers) {
+    auto r = parse_warpmarkers_file(path);
+    if (!r) return std::unexpected(std::move(r.error()));
+
+    markers_.reserve(r->size());
+    for (const WarpMarker& wm : *r) {
         GuiWarpMarker g;                    // session-only fields default
         static_cast<WarpMarker&>(g) = wm;   // copy the serialized base
         markers_.push_back(g);
     }
-    errors_ = std::move(r.errors);          // same type via the alias
-    had_nonstandard_content_ = r.had_nonstandard_content;
-    return r.ok;
+    return {};
 }
 
 bool GuiWarpMarkers::save(const std::string& path) const {
