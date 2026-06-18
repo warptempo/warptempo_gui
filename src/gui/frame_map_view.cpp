@@ -7,10 +7,10 @@
 #include <cstdint>
 #include <vector>
 
-// GUI target-view frame_map helpers, split out of frame_map_view.cpp so the
+// GUI target-view frame_map helpers, split out of frame_map_build.cpp so the
 // build core (resolve_markers_for_render / build_timemaps / the
-// phase-reset assembly) carries no AppState dependency and can move to
-// libwarptempo_parser in Brief 9. These helpers stay GUI-side: they read the
+// phase-reset assembly) carries no AppState dependency and lives in
+// libwarptempo_parser. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
 // memoized target-view cache. Declarations remain in frame_map_view.h.
 

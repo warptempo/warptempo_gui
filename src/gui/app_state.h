@@ -136,10 +136,6 @@ struct DragState {
     // the playhead during motion so the audio cursor follows the grabbed
     // marker as it moves.
     int                    hit_marker           = -1;
-    // True when begin_drag found the hit marker outside the current
-    // selection. The selection-collapse-to-{hit} mutation is deferred until
-    // motion is actually observed, so a Ctrl+click without drag leaves the
-    // selection untouched. Cleared on the first moved transition.
     // Which list this drag operates on (chunk S.2.2). The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
