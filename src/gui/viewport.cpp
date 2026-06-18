@@ -412,8 +412,7 @@ void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     // Dialog / drag / editor / queue still suppress hover in either
     // view. Source-view also requires warp view + iter mode off;
-    // render-view bypasses the mode checks because hover always
-    // applies against the loaded render's warpmarkers.
+    // render-view suppresses the hover popup entirely (read-only display).
     if (app.prompt.active ||
         app.drag.active ||
         app.playhead_drag.active ||
@@ -422,8 +421,13 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    if (!app.render_view.enabled &&
-        (app.active_markers_view != 'W' || app.iteration_mode_enabled)) {
+    if (app.render_view.enabled) {
+        // Render-view is read-only display, no hover popups — same rule as
+        // handle_render_view_motion.
+        clear_hover_popup();
+        return;
+    }
+    if (app.active_markers_view != 'W' || app.iteration_mode_enabled) {
         clear_hover_popup();
         return;
     }
@@ -440,21 +444,12 @@ void Viewport::recompute_hover_at_cursor() {
         // (paint then skips the readout and keeps the strip clean).
         const bool was_visible = app.hover_popup.visible;
         app.hover_popup.marker_index = hit;
-        if (app.render_view.enabled) {
-            app.hover_popup.cached_text =
-                popup_eligible_marker(app, hit)
-                    ? compute_hover_popup_text(
-                          slice_to_warp_markers(app.render_view.markers), hit,
-                          app.render_view.src_sr)
-                    : std::string();
-        } else {
-            app.hover_popup.cached_text =
-                popup_eligible_marker(app, hit)
-                    ? compute_hover_popup_text(
-                          slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                          audio.sample_rate())
-                    : std::string();
-        }
+        app.hover_popup.cached_text =
+            popup_eligible_marker(app, hit)
+                ? compute_hover_popup_text(
+                      slice_to_warp_markers(app.warpmarkers.markers()), hit,
+                      audio.sample_rate())
+                : std::string();
         app.hover_popup.visible = !app.hover_popup.cached_text.empty();
         if (was_visible || app.hover_popup.visible) invalidate_timestamp_area();
     }
