@@ -126,7 +126,7 @@ constexpr double kDirtyGapPx              = 8.0;
 // unit from flag_text_for_marker, which stays in render.cpp over
 // GuiWarpMarker.
 
-// OpKind, UndoEntry, DragState, UndoHistory, PlayheadDragState,
+// UndoEntry, DragState, UndoHistory, PlayheadDragState,
 // HoverPopupState, DialogTrigger, PromptState, ViewState, AppState live in
 // app_state.h, alongside the Viewport struct.
 

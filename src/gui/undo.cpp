@@ -53,13 +53,11 @@ void Undo::recompute_dirty() {
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
-void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
-                     int hint_last) {
+void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, int hint_last) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phase_reset_markers.markers();
     e.settings           = capture_current_settings(app);
-    e.op_kind            = op_kind;
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
@@ -68,12 +66,11 @@ void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, OpKind op_kind,
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
-                               OpKind op_kind, int hint_last) {
+                               int hint_last) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
     e.settings           = capture_current_settings(app);
-    e.op_kind            = op_kind;
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
@@ -83,12 +80,11 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> trans_pre,
-                          char op_mode, OpKind op_kind, int hint_last) {
+                          char op_mode, int hint_last) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(trans_pre);
     e.settings           = capture_current_settings(app);
-    e.op_kind            = op_kind;
     e.op_mode            = op_mode;
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
@@ -101,7 +97,6 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = app.phase_reset_markers.markers();
     e.settings           = std::move(pre_state);
-    e.op_kind            = OpKind::Other;
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
     e.hint_last_selected = app.last_selected_marker;
@@ -110,9 +105,21 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     recompute_dirty();
 }
 
-void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
-                                         const std::vector<GuiWarpMarker>& before) {
-    const auto& after = app.warpmarkers.markers();
+namespace {
+
+// Shared post-restore selection + playhead rule for both marker lists. After a
+// marker swap, classify before -> after as add / remove / same-count and set
+// the selection (and, where appropriate, the playhead) to the touched markers.
+// `fields_differ` is the same-count in-place-edit predicate; `remove_target_time`
+// chooses the playhead target among the removed markers (warp refines toward the
+// op's subject, phase-reset takes the rightmost).
+template <class M, class FieldsDiffer, class RemoveTargetTime>
+void apply_post_restore_rules_impl(AppState& app, Selection& selection,
+                                   const UndoEntry& entry,
+                                   const std::vector<M>& before,
+                                   const std::vector<M>& after,
+                                   FieldsDiffer  fields_differ,
+                                   RemoveTargetTime remove_target_time) {
     constexpr double kEps = 1e-9;
 
     std::set<int> target_set;
@@ -152,27 +159,13 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                     any       = true;
                 }
             }
-            // Prefer the operation's subject (hint) when it is itself one of
-            // the removed markers — symmetric to the restore branch below,
-            // which focuses hint_last_selected. For a cascaded label_def
-            // force-delete this lands the playhead on the def rather than the
-            // rightmost-in-time ref the cascade pulled in.
-            double target_time = rightmost;
-            const int hi = entry.hint_last_selected;
-            if (any && hi >= 0 && hi < static_cast<int>(before.size())) {
-                const double ht = before[hi].time_seconds;
-                auto it = std::lower_bound(after_times.begin(),
-                                           after_times.end(), ht - kEps);
-                const bool matched = (it != after_times.end() &&
-                                      std::abs(*it - ht) < kEps);
-                if (!matched) target_time = ht;
-            }
             if (any) {
+                const double target_time =
+                    remove_target_time(before, after_times, rightmost, kEps);
                 const int64_t src_sample = static_cast<int64_t>(
                     std::nearbyint(target_time * static_cast<double>(sr)));
-                // The marker's time_seconds is source-domain; the
-                // playhead is active-domain. In target view forward-
-                // translate so the playhead lands at the restored
+                // time_seconds is source-domain; the playhead is active-domain.
+                // Forward-translate so the playhead lands at the restored
                 // marker's displayed position, mirroring
                 // Selection::sync_playhead_to_last_selected.
                 const int64_t target_sample = source_frame_to_active_domain(
@@ -183,16 +176,12 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         return;
-    } else if (entry.op_kind == OpKind::Move) {
+    } else {  // same count: flag any in-place edit
         for (size_t i = 0; i < after.size(); ++i) {
-            if (std::abs(after[i].time_seconds -
-                         before[i].time_seconds) > kEps) {
+            if (fields_differ(after[i], before[i], kEps))
                 target_set.insert(static_cast<int>(i));
-            }
         }
         want_playhead_jump = !target_set.empty();
-    } else {
-        return;
     }
 
     if (target_set.empty()) return;
@@ -208,82 +197,55 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
     selection.sync_playhead_to_last_selected();
 }
 
-void Undo::apply_post_restore_rules_phase_reset(const UndoEntry& entry,
-                                              const std::vector<GuiPhaseResetMarker>& before) {
-    const auto& after = app.phase_reset_markers.markers();
-    constexpr double kEps = 1e-9;
+}  // namespace
 
-    std::set<int> target_set;
-    bool want_playhead_jump = false;
-
-    if (after.size() > before.size()) {
-        std::vector<double> before_times;
-        before_times.reserve(before.size());
-        for (const auto& m : before) before_times.push_back(m.time_seconds);
-        std::sort(before_times.begin(), before_times.end());
-        for (size_t i = 0; i < after.size(); ++i) {
-            const double t = after[i].time_seconds;
-            auto it = std::lower_bound(before_times.begin(),
-                                       before_times.end(), t - kEps);
-            const bool matched = (it != before_times.end() &&
-                                  std::abs(*it - t) < kEps);
-            if (!matched) target_set.insert(static_cast<int>(i));
-        }
-        want_playhead_jump = !target_set.empty();
-    } else if (after.size() < before.size()) {
-        std::vector<double> after_times;
-        after_times.reserve(after.size());
-        for (const auto& m : after) after_times.push_back(m.time_seconds);
-        std::sort(after_times.begin(), after_times.end());
-        double rightmost = 0.0;
-        bool   any       = false;
-        for (const auto& m : before) {
-            const double t = m.time_seconds;
-            auto it = std::lower_bound(after_times.begin(),
-                                       after_times.end(), t - kEps);
-            const bool matched = (it != after_times.end() &&
-                                  std::abs(*it - t) < kEps);
-            if (!matched && (!any || t > rightmost)) {
-                rightmost = t;
-                any       = true;
+void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
+                                         const std::vector<GuiWarpMarker>& before) {
+    apply_post_restore_rules_impl(
+        app, selection, entry, before, app.warpmarkers.markers(),
+        [](const GuiWarpMarker& a, const GuiWarpMarker& b, double kEps) {
+            return std::abs(a.time_seconds - b.time_seconds) > kEps
+                || a.disabled       != b.disabled
+                || a.tempo_inherits != b.tempo_inherits
+                || std::abs(a.tempo_base - b.tempo_base) > kEps
+                || a.tempo_scale    != b.tempo_scale
+                || a.label_def      != b.label_def
+                || a.label_ref      != b.label_ref;
+        },
+        [&entry](const std::vector<GuiWarpMarker>& bef,
+                 const std::vector<double>& after_times,
+                 double rightmost, double kEps) {
+            // Prefer the op's subject when it is itself one of the removed
+            // markers, so a cascaded label_def force-delete lands the playhead
+            // on the def rather than the rightmost-in-time ref the cascade
+            // pulled in.
+            double target_time = rightmost;
+            const int hi = entry.hint_last_selected;
+            if (hi >= 0 && hi < static_cast<int>(bef.size())) {
+                const double ht = bef[hi].time_seconds;
+                auto it = std::lower_bound(after_times.begin(),
+                                           after_times.end(), ht - kEps);
+                const bool matched = (it != after_times.end() &&
+                                      std::abs(*it - ht) < kEps);
+                if (!matched) target_time = ht;
             }
-        }
-        if (any) {
-            const int sr = selection.audio.sample_rate();
-            const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
-                rightmost * static_cast<double>(sr)));
-            // Source-frame → active-domain translation, as in the warp
-            // helper above and Selection::sync_playhead_to_last_selected.
-            const int64_t target_sample = source_frame_to_active_domain(
-                app, selection.audio, src_sample);
-            selection.jump_playhead_to(target_sample);
-        }
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        return;
-    } else if (entry.op_kind == OpKind::Move) {
-        for (size_t i = 0; i < after.size(); ++i) {
-            if (std::abs(after[i].time_seconds -
-                         before[i].time_seconds) > kEps) {
-                target_set.insert(static_cast<int>(i));
-            }
-        }
-        want_playhead_jump = !target_set.empty();
-    } else {
-        return;
-    }
+            return target_time;
+        });
+}
 
-    if (target_set.empty()) return;
-
-    app.selected_markers = target_set;
-    if (target_set.count(entry.hint_last_selected)) {
-        app.last_selected_marker = entry.hint_last_selected;
-    } else {
-        app.last_selected_marker = *target_set.rbegin();
-    }
-
-    if (!want_playhead_jump) return;
-    selection.sync_playhead_to_last_selected();
+void Undo::apply_post_restore_rules_phase_reset(
+        const UndoEntry& entry,
+        const std::vector<GuiPhaseResetMarker>& before) {
+    apply_post_restore_rules_impl(
+        app, selection, entry, before, app.phase_reset_markers.markers(),
+        [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b, double kEps) {
+            return std::abs(a.time_seconds - b.time_seconds) > kEps
+                || a.disabled != b.disabled;
+        },
+        [](const std::vector<GuiPhaseResetMarker>&,
+           const std::vector<double>&, double rightmost, double) {
+            return rightmost;
+        });
 }
 
 void Undo::do_undo() {
@@ -313,7 +275,6 @@ void Undo::do_undo() {
     redo_entry.snapshot           = app.warpmarkers.markers();
     redo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
     redo_entry.settings           = capture_current_settings(app);
-    redo_entry.op_kind            = entry.op_kind;
     redo_entry.op_mode            = entry.op_mode;
     redo_entry.tab                = entry.tab;
     redo_entry.hint_last_selected = entry.hint_last_selected;
@@ -424,7 +385,6 @@ void Undo::do_redo() {
     undo_entry.snapshot           = app.warpmarkers.markers();
     undo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
     undo_entry.settings           = capture_current_settings(app);
-    undo_entry.op_kind            = entry.op_kind;
     undo_entry.op_mode            = entry.op_mode;
     undo_entry.tab                = entry.tab;
     undo_entry.hint_last_selected = entry.hint_last_selected;

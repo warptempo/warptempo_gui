@@ -51,7 +51,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
     app.last_selected_marker = new_idx;
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Create, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -96,7 +96,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Destroy, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -117,7 +117,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
         changed = true;
     }
     if (!changed) return;
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -222,8 +222,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             if (!m) continue;
             m->time_seconds = t_new;
         }
-        undo.push_undo_phase_reset(std::move(pre_state),
-                                   OpKind::Move, hint_last);
+        undo.push_undo_phase_reset(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected();
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
@@ -251,7 +250,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         if (!m) continue;
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     selection.sync_playhead_to_last_selected();
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -298,7 +297,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
         if (!m) continue;
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Move, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

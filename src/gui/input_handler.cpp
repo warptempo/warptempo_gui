@@ -1349,7 +1349,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
 
         undo.push_undo_both(std::move(warp_pre), std::move(trans_pre),
-                       'W', OpKind::Other, hint_last);
+                       'W', hint_last);
         undo.recompute_dirty();
 
         // Folder-gated engine-settings commit. BPM batch folders are

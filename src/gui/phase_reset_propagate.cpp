@@ -257,7 +257,7 @@ void PhaseResetPropagate::paste_apply() {
         }
     }
 
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -388,7 +388,7 @@ void PhaseResetPropagate::paste_state_apply() {
     // silently swallow a later Undo gesture intended for it. The pixel /
     // render flush stays gated on any_change: there is nothing to repaint
     // when no flag changed.
-    undo.push_undo_phase_reset(std::move(pre_state), OpKind::Other,
+    undo.push_undo_phase_reset(std::move(pre_state),
                                hint_last);
     undo.recompute_dirty();
     if (any_change) {

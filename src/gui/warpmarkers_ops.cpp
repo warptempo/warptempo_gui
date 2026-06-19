@@ -76,7 +76,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
     app.last_selected_marker = new_idx;
-    undo.push_undo(std::move(pre_state), OpKind::Create, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -173,7 +173,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    undo.push_undo(std::move(pre_state), OpKind::Destroy, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -252,7 +252,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    undo.push_undo(std::move(pre_state), OpKind::Destroy, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -305,7 +305,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
         changed = true;
     }
     if (!changed) return;
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -327,7 +327,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
         changed = true;
     }
     if (!changed) return;
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -374,7 +374,7 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         changed = true;
     }
     if (!changed) return;
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
@@ -655,9 +655,9 @@ void GuiWarpMarkersOps::commit_drag() {
     app.drag = DragState{};
     if (moved) {
         if (phase_reset) {
-            undo.push_undo_phase_reset(std::move(snap_t), OpKind::Move, hint_last);
+            undo.push_undo_phase_reset(std::move(snap_t), hint_last);
         } else {
-            undo.push_undo(std::move(snap_w), OpKind::Move, hint_last);
+            undo.push_undo(std::move(snap_w), hint_last);
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();
@@ -803,7 +803,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             if (!m) continue;
             m->time_seconds = t_new;
         }
-        undo.push_undo(std::move(pre_state), OpKind::Move, hint_last);
+        undo.push_undo(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected();
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
@@ -818,7 +818,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
     if (apply_selection_shift(delta_s)) {
-        undo.push_undo(std::move(pre_state), OpKind::Move, hint_last);
+        undo.push_undo(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected();
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
@@ -867,7 +867,7 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
         if (!m) continue;
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
-    undo.push_undo(std::move(pre_state), OpKind::Move, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

@@ -54,14 +54,6 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // (in input_handler.cpp) can reach them.
 constexpr int kMarkerHitHalfPx    = 4;
 
-// Op-kind tag carried on every undo/redo entry. Marker selection collapses
-// per kind on undo: Create restores selection to the just-created marker,
-// Destroy restores to the hint-last-selected captured pre-op so the user
-// gets back the focus they had, Move/Other use the snapshot's last_selected
-// to reproduce playhead behavior; count-preserving ops split Move vs Other
-// so Move can restore the "what just moved" selection.
-enum class OpKind { Create, Destroy, Move, Other };
-
 // Wholesale snapshot of the authoring-class settings. Captured at undo-push
 // time and restored on undo/redo. Holds the typed EngineSettings plus the
 // project-level trim pair. Cost stays negligible per entry.
@@ -75,7 +67,7 @@ struct SettingsSnapshot {
 
 // One entry on either stack. Carries the pre-mutation marker snapshot plus
 // a pre-op selection hint (so Undo-of-Destroy / Undo-of-Move can restore
-// a sensible selection anchor) and the op kind.
+// a sensible selection anchor).
 //
 // Every entry also carries the pre-mutation phase reset
 // snapshot and the mode the operation was performed in. Both lists are
@@ -97,7 +89,6 @@ struct UndoEntry {
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
-    OpKind                    op_kind              = OpKind::Other;
     int                       hint_last_selected   = -1;
 };
 
@@ -173,7 +164,7 @@ struct DragOverlay {
 };
 
 // Two-stack undo/redo history for marker mutations. Entries are full
-// snapshots of the marker vector plus an op-kind tag and pre-op selection
+// snapshots of the marker vector plus a pre-op selection
 // hint — small enough to store directly rather than diff. Both stacks are
 // capped at kCap; the oldest undo entry is evicted when the cap is exceeded.
 //

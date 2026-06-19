@@ -402,7 +402,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m->disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
 
     text_editor::deactivate(app.top_flag_editor);
 
@@ -440,7 +440,7 @@ void GuiFlagEditor::bulk_clear_iter_values() {
         m.iter_start = std::numeric_limits<double>::quiet_NaN();
         m.iter_end   = std::numeric_limits<double>::quiet_NaN();
     }
-    undo.push_undo(std::move(pre_state), OpKind::Other, hint_last);
+    undo.push_undo(std::move(pre_state), hint_last);
     viewport.invalidate_top_strip();
 }
 
