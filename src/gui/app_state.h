@@ -662,13 +662,19 @@ struct AppState {
     // Ctrl+Alt+E consumes it, materializing one batch folder per execution
     // with one rendered output per queued entry. The list is session-only:
     // discarded on app close, never written to disk between sessions.
-    // Settings are not snapshotted per-entry — all entries render against
-    // the GUI's live `engine_settings` at execution time, mirroring the
-    // single-render convention.
+    // Each entry is a complete render snapshot — markers, phase resets,
+    // engine settings, and trim are all captured at enqueue time, so two
+    // queued states that differ only in trim or settings still render
+    // distinctly.
     struct QueuedRender {
         std::string                source_audio_path;
         std::vector<GuiWarpMarker>     markers;
         std::vector<GuiPhaseResetMarker>  phase_resets;
+        EngineSettings              engine_settings;
+        bool                        has_trim_begin = false;
+        double                      trim_begin_sec = 0.0;
+        bool                        has_trim_end   = false;
+        double                      trim_end_sec   = 0.0;
     };
     std::vector<QueuedRender> queued_renders;
 

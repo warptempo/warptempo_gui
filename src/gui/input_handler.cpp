@@ -124,6 +124,19 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 
 } // namespace
 
+AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
+    AppState::QueuedRender q;
+    q.source_audio_path = app.source_audio_path;
+    q.markers            = app.warpmarkers.markers();
+    q.phase_resets       = app.phase_reset_markers.markers();
+    q.engine_settings    = app.engine_settings;
+    q.has_trim_begin     = app.trim.has_begin;
+    q.trim_begin_sec     = app.trim.begin_seconds;
+    q.has_trim_end       = app.trim.has_end;
+    q.trim_end_sec       = app.trim.end_seconds;
+    return q;
+}
+
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
@@ -874,16 +887,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+E: snapshot current authoring state into the in-memory
     // render queue. No disk writes; on-disk authoring files are untouched.
-    // Settings are not snapshotted per-entry — the queue walker uses
-    // the live engine_settings at execution time.
+    // Each entry now snapshots its full render state (markers, phase
+    // resets, engine settings, trim).
     if (ctrl && !alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return;
-        AppState::QueuedRender q;
-        q.source_audio_path = app.source_audio_path;
-        q.markers           = app.warpmarkers.markers();
-        q.phase_resets        = app.phase_reset_markers.markers();
-        app.queued_renders.push_back(std::move(q));
+        app.queued_renders.push_back(snapshot_current_queued_render());
         std::fprintf(stderr,
             "warptempo_gui: queued render (%zu in queue)\n",
             app.queued_renders.size());
@@ -965,11 +974,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return;
         if (app.queued_renders.empty()) {
-            AppState::QueuedRender q;
-            q.source_audio_path = app.source_audio_path;
-            q.markers           = app.warpmarkers.markers();
-            q.phase_resets      = app.phase_reset_markers.markers();
-            app.queued_renders.push_back(std::move(q));
+            app.queued_renders.push_back(snapshot_current_queued_render());
             std::fprintf(stderr,
                 "warptempo_gui: queue empty; enqueueing current state "
                 "and rendering\n");
@@ -1044,11 +1049,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             req.source_audio_path    = q.source_audio_path;
             req.markers              = q.markers;
             req.phase_resets           = q.phase_resets;
-            req.engine_settings      = app.engine_settings;
-            req.has_trim_begin       = app.trim.has_begin;
-            req.trim_begin_sec       = app.trim.begin_seconds;
-            req.has_trim_end         = app.trim.has_end;
-            req.trim_end_sec         = app.trim.end_seconds;
+            req.engine_settings      = q.engine_settings;
+            req.has_trim_begin       = q.has_trim_begin;
+            req.trim_begin_sec       = q.trim_begin_sec;
+            req.has_trim_end         = q.has_trim_end;
+            req.trim_end_sec         = q.trim_end_sec;
             for (const auto& m : q.phase_resets) {
                 if (m.disabled) continue;
                 req.phase_reset_frames.push_back(static_cast<int64_t>(

@@ -208,6 +208,12 @@ private:
     // strip. The summary log is the caller's concern.
     void finalize_render_run();
 
+    // Build a QueuedRender from the current live AppState: source path,
+    // markers, phase resets, engine settings, and the four trim fields.
+    // Shared by the two Ctrl+E / Ctrl+Alt+E enqueue sites so they can't
+    // drift apart in which fields they snapshot.
+    AppState::QueuedRender snapshot_current_queued_render() const;
+
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The
