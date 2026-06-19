@@ -1979,15 +1979,11 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     // damage / hover / worker-kick path fires once per frame regardless of
     // burst size. count == 1 reproduces the old single-detent behavior.
     if (count < 1) count = 1;
-    if (ctrl && alt) {
+    if (ctrl) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / 50);
-        viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
-        return;
-    }
-    if (ctrl) {
-        playback_lifecycle.stop_playback_if_playing();
-        viewport.move_playhead_pixels((button == GuiMouseButton::WheelUp ? -count : +count));
+        viewport.scroll_viewport(
+            (button == GuiMouseButton::WheelUp ? -step : +step) * count);
         return;
     }
     if (alt) {
