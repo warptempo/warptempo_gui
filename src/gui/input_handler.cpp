@@ -122,6 +122,36 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
     g.ed->cursor_pos = idx;
 }
 
+// Single construction point for the four dispatch paths below (single
+// render, queue batch, BPM-sweep batch, iteration batch). Derives
+// phase_reset_frames internally via the same filter-disabled +
+// banker's-round path the BPM/iteration batches already used, so all four
+// dispatch sites stay in lockstep on that derivation.
+RenderRequest build_render_request(std::string source_audio_path,
+                                   std::vector<GuiWarpMarker> markers,
+                                   std::vector<GuiPhaseResetMarker> phase_resets,
+                                   EngineSettings engine_settings,
+                                   bool has_trim_begin, double trim_begin_sec,
+                                   bool has_trim_end,   double trim_end_sec,
+                                   long sample_rate,
+                                   std::string batch_folder = {},
+                                   std::string batch_basename = {}) {
+    RenderRequest req;
+    req.source_audio_path  = std::move(source_audio_path);
+    req.markers            = std::move(markers);
+    req.engine_settings    = std::move(engine_settings);
+    req.phase_reset_frames = phase_reset_source_frames(
+        slice_to_phase_reset_markers(phase_resets), sample_rate);
+    req.phase_resets       = std::move(phase_resets);
+    req.has_trim_begin     = has_trim_begin;
+    req.trim_begin_sec     = trim_begin_sec;
+    req.has_trim_end       = has_trim_end;
+    req.trim_end_sec       = trim_end_sec;
+    req.batch_folder       = std::move(batch_folder);
+    req.batch_basename     = std::move(batch_basename);
+    return req;
+}
+
 } // namespace
 
 AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
@@ -351,10 +381,6 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     const std::vector<GuiPhaseResetMarker> base_phase_resets =
         app.phase_reset_markers.markers();
-    const std::vector<int64_t> base_phase_reset_frames =
-        phase_reset_source_frames(
-            slice_to_phase_reset_markers(base_phase_resets),
-            audio.sample_rate());
 
     std::vector<RenderRequest> reqs;
     reqs.reserve(bpm_values.size());
@@ -409,19 +435,13 @@ bool GuiInputHandler::render_bpm_sweep() {
         std::string basename = num_buf;
         basename += rest_buf;
 
-        RenderRequest req;
-        req.source_audio_path    = app.source_audio_path;
-        req.markers              = std::move(cell_markers);
-        req.phase_resets           = base_phase_resets;
-        req.phase_reset_frames     = base_phase_reset_frames;
-        req.engine_settings      = std::move(cell_settings);
-        req.has_trim_begin       = app.trim.has_begin;
-        req.trim_begin_sec       = app.trim.begin_seconds;
-        req.has_trim_end         = app.trim.has_end;
-        req.trim_end_sec         = app.trim.end_seconds;
-        req.batch_folder         = batch_folder.string();
-        req.batch_basename       = std::move(basename);
-        reqs.push_back(std::move(req));
+        reqs.push_back(build_render_request(
+            app.source_audio_path, std::move(cell_markers), base_phase_resets,
+            std::move(cell_settings),
+            app.trim.has_begin, app.trim.begin_seconds,
+            app.trim.has_end,   app.trim.end_seconds,
+            audio.sample_rate(),
+            batch_folder.string(), std::move(basename)));
         ++seq;
     }
 
@@ -915,21 +935,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // contract local.
         if (async_renderer.is_busy()) return;
 
-        RenderRequest req;
-        req.source_audio_path    = app.source_audio_path;
-        req.markers              = app.warpmarkers.markers();
-        req.phase_resets           = app.phase_reset_markers.markers();
-        req.engine_settings      = app.engine_settings;
-        req.has_trim_begin       = app.trim.has_begin;
-        req.trim_begin_sec       = app.trim.begin_seconds;
-        req.has_trim_end         = app.trim.has_end;
-        req.trim_end_sec         = app.trim.end_seconds;
-        for (const auto& m : app.phase_reset_markers.markers()) {
-            if (m.disabled) continue;
-            req.phase_reset_frames.push_back(static_cast<int64_t>(
-                std::nearbyint(m.time_seconds *
-                               static_cast<double>(audio.sample_rate()))));
-        }
+        RenderRequest req = build_render_request(
+            app.source_audio_path, app.warpmarkers.markers(),
+            app.phase_reset_markers.markers(), app.engine_settings,
+            app.trim.has_begin, app.trim.begin_seconds,
+            app.trim.has_end,   app.trim.end_seconds,
+            audio.sample_rate());
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render. The dispatch hands the request to
         // the worker thread; on_done fires on the GUI thread when the
@@ -1045,24 +1056,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 i + 1, total,
                 batch_folder.filename().string().c_str(), num_buf);
 
-            RenderRequest req;
-            req.source_audio_path    = q.source_audio_path;
-            req.markers              = q.markers;
-            req.phase_resets           = q.phase_resets;
-            req.engine_settings      = q.engine_settings;
-            req.has_trim_begin       = q.has_trim_begin;
-            req.trim_begin_sec       = q.trim_begin_sec;
-            req.has_trim_end         = q.has_trim_end;
-            req.trim_end_sec         = q.trim_end_sec;
-            for (const auto& m : q.phase_resets) {
-                if (m.disabled) continue;
-                req.phase_reset_frames.push_back(static_cast<int64_t>(
-                    std::nearbyint(m.time_seconds *
-                                   static_cast<double>(audio.sample_rate()))));
-            }
-            req.batch_folder   = batch_folder.string();
-            req.batch_basename = num_buf;
-            reqs.push_back(std::move(req));
+            reqs.push_back(build_render_request(
+                q.source_audio_path, q.markers, q.phase_resets, q.engine_settings,
+                q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
+                audio.sample_rate(),
+                batch_folder.string(), num_buf));
         }
 
         if (async_renderer.is_busy()) return;
@@ -1192,10 +1190,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // differ across cells.
         const std::vector<GuiPhaseResetMarker> base_phase_resets =
             app.phase_reset_markers.markers();
-        const std::vector<int64_t> base_phase_reset_frames =
-            phase_reset_source_frames(
-                slice_to_phase_reset_markers(base_phase_resets),
-                audio.sample_rate());
 
         // Cartesian product enumeration. `indices[k]` holds the
         // current cell coordinate along the k-th eligible marker
@@ -1238,19 +1232,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     std::numeric_limits<double>::quiet_NaN();
             }
 
-            RenderRequest req;
-            req.source_audio_path    = app.source_audio_path;
-            req.markers              = std::move(cell_markers);
-            req.phase_resets           = base_phase_resets;
-            req.phase_reset_frames     = base_phase_reset_frames;
-            req.engine_settings      = app.engine_settings;
-            req.has_trim_begin       = app.trim.has_begin;
-            req.trim_begin_sec       = app.trim.begin_seconds;
-            req.has_trim_end         = app.trim.has_end;
-            req.trim_end_sec         = app.trim.end_seconds;
-            req.batch_folder         = batch_folder.string();
-            req.batch_basename       = std::move(basename);
-            reqs.push_back(std::move(req));
+            reqs.push_back(build_render_request(
+                app.source_audio_path, std::move(cell_markers), base_phase_resets,
+                app.engine_settings,
+                app.trim.has_begin, app.trim.begin_seconds,
+                app.trim.has_end,   app.trim.end_seconds,
+                audio.sample_rate(),
+                batch_folder.string(), std::move(basename)));
 
             // Increment rightmost dimension; carry left on overflow.
             // The last cell leaves indices in an overflowed state but
