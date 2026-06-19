@@ -38,6 +38,7 @@ public:
     ~GuiPlatform();
 
     bool init(int width, int height, const char* title);
+    void set_title(const std::string& title);
     void shutdown();
     void run();
     void request_exit();

@@ -117,6 +117,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phase_reset_markers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
+    gui.set_title(path);
 
     create_if_missing(wm_path, "00:00.000|1.00\n");
     create_if_missing(set_path, format_default_settings_template(stem));
@@ -357,6 +358,7 @@ void GuiFileLoader::revert_to_blank() {
     app.phase_reset_markers_path.clear();
     app.settings_path.clear();
     app.source_audio_path.clear();
+    gui.set_title("warptempo_gui");
     app.pending_drop_path.clear();
     app.engine_settings = EngineSettings{};
 

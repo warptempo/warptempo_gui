@@ -92,6 +92,8 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
             other_seconds = 0.0;
             other_sel     = false;
             undo.push_settings_undo(std::move(pre));
+            if (side == TrimSide::Begin)
+                viewport.move_playhead_to(viewport.trim_begin_sample());
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
@@ -104,6 +106,8 @@ void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
     this_has     = true;
     this_seconds = cand_seconds;
     undo.push_settings_undo(std::move(pre));
+    if (side == TrimSide::Begin)
+        viewport.move_playhead_to(viewport.trim_begin_sample());
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();

@@ -582,7 +582,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     xdg_toplevel_ = xdg_surface_get_toplevel(xdg_surface_);
     xdg_toplevel_add_listener(xdg_toplevel_, &s_toplevel_listener, this);
-    xdg_toplevel_set_title(xdg_toplevel_, title ? title : "warptempo_gui");
+    set_title(title ? title : "warptempo_gui");
     xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo_gui");
     xdg_toplevel_set_maximized(xdg_toplevel_);
     // Ask the compositor to refuse sizing the surface below the
@@ -658,6 +658,11 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     wl_surface_commit(wl_surface_);
 
     return true;
+}
+
+void GuiPlatform::set_title(const std::string& title) {
+    if (!xdg_toplevel_) return;
+    xdg_toplevel_set_title(xdg_toplevel_, title.c_str());
 }
 
 // ---------------------------------------------------------------------------
