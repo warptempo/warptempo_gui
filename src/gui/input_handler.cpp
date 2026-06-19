@@ -1482,14 +1482,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare 0 toggles between fit-file and max-zoom-in (kMinNumericLevel).
-    // From fit-file → kMinNumericLevel (centered on playhead via
-    // apply_zoom_change's numeric branch). From any numeric level →
-    // fit-file. Two presses from any state always reach max-zoom-in;
-    // C remains the always-direct max-in gesture. Digits 1..9 are
+    // From fit-file → kSnapZoomLevel (the 2.4 s snap level, centered on
+    // playhead via apply_zoom_change's numeric branch). From any numeric
+    // level → fit-file. So `0` toggles between fit-file and the 2.4 s snap
+    // level; C remains the always-direct max-in gesture. Digits 1..9 are
     // intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         if (app.zoom_level == kFitFileLevel) {
-            viewport.apply_zoom_change(kMinNumericLevel);
+            viewport.apply_zoom_change(kSnapZoomLevel);
         } else {
             viewport.apply_zoom_change(kFitFileLevel);
         }
@@ -1865,7 +1865,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
             break;
         }
-        case GuiKeys::C:      viewport.apply_zoom_change(kMinNumericLevel);
+        case GuiKeys::C:      viewport.apply_zoom_change(kSnapZoomLevel);
                         viewport.center_viewport_on_playhead();    break;
         case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                         viewport.move_playhead_to(viewport.trim_begin_sample()); break;
@@ -1931,12 +1931,12 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         app.playhead_scanner_sample = sample;
     }
 
-    // Zoom to max-numeric if not already there (no-op at max zoom, where
-    // this artifact occurs), then center. center_viewport_on_playhead is
-    // now the SOLE viewport write in this path: it reads the cursor we
-    // just set and scrolls once to center it, emitting one coherent set
-    // of waveform + top-strip damage against the final viewport.
-    viewport.apply_zoom_change(kMinNumericLevel);
+    // Zoom to the 2.4 s snap level if not already there, then center.
+    // center_viewport_on_playhead is now the SOLE viewport write in this
+    // path: it reads the cursor we just set and scrolls once to center it,
+    // emitting one coherent set of waveform + top-strip damage against the
+    // final viewport.
+    viewport.apply_zoom_change(kSnapZoomLevel);
     viewport.center_viewport_on_playhead();
 
     // center_viewport_on_playhead only invalidates when the viewport

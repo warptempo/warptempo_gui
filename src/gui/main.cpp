@@ -94,16 +94,17 @@ namespace {
 // Index N holds the ms/px for level N; each numeric step is exactly 2x the
 // previous. kZoomTableSize (in app_state.h) is the size of this table.
 constexpr double kZoomMsPerPixel[] = {
-    -1.0,    // [0]  unused — key 0 = level 0 = fit-file, table bypassed
-     1.25,   // [1]  level 1: most zoomed in (2.4 s visible at 1920 px)
-     2.5,    // [2]  level 2: 4.8 s
-     5.0,    // [3]  level 3: 9.6 s
-    10.0,    // [4]  level 4: 19.2 s
-    20.0,    // [5]  level 5: 38.4 s
-    40.0,    // [6]  level 6: 76.8 s
-    80.0,    // [7]  level 7: 153.6 s
-   160.0,    // [8]  level 8: 307.2 s
-   320.0,    // [9]  level 9: 614.4 s (most zoomed out numeric)
+    -1.0,    // [0]  fit-file sentinel
+     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only
+     1.25,   // [2]  2.4 s  — snap level (kSnapZoomLevel)
+     2.5,    // [3]  4.8 s
+     5.0,    // [4]  9.6 s
+    10.0,    // [5]  19.2 s
+    20.0,    // [6]  38.4 s
+    40.0,    // [7]  76.8 s
+    80.0,    // [8]  153.6 s
+   160.0,    // [9]  307.2 s
+   320.0,    // [10] 614.4 s
 };
 static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
               == static_cast<size_t>(kZoomTableSize),

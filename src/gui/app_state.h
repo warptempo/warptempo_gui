@@ -28,13 +28,19 @@ class GuiAudio;
 // previous in ms-per-pixel. kZoomTableSize is the size of the table in
 // main.cpp (one sentinel slot at index 0 plus the numeric levels).
 //
-// Identity binding for the bare-digit keys: digit N selects level N.
-// Smaller digit = less file per window = more zoomed in; digit 0 =
-// fit-file (most file possible).
+// Bare-digit keys are unbound for zoom: only `0` toggles between fit-file
+// and the snap level, and `C` is the direct max-in. Smaller numeric level
+// = less file per window = more zoomed in; level 0 = fit-file (most file
+// possible). kMinNumericLevel is the deepest level continuous manual
+// zoom-in can reach (1.2 s); kSnapZoomLevel is the level every snap/toggle
+// gesture lands on (2.4 s, one step shallower).
 constexpr int kFitFileLevel     = 0;
 constexpr int kMinNumericLevel  = 1;
-constexpr int kMaxNumericLevel  = 9;
-constexpr int kZoomTableSize    = 10;
+constexpr int kSnapZoomLevel    = 2;   // 2.4 s — snap/toggle target; manual
+                                       // zoom-in can go one step deeper to
+                                       // kMinNumericLevel (1.2 s)
+constexpr int kMaxNumericLevel  = 10;
+constexpr int kZoomTableSize    = 11;
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it
