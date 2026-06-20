@@ -169,9 +169,21 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 void Viewport::move_playhead_pixels(int delta_px) {
     if (audio.total_frames() <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
-    const int64_t delta_samples =
-        static_cast<int64_t>(std::nearbyint(delta_px * spp));
-    move_playhead_to(app.playhead_cursor_sample + delta_samples);
+    if (spp <= 0.0) return;
+    // Snap to the grid the renderer draws on: the playhead column is
+    // floor((cursor - viewport_start)/spp + 0.5). Resolve the current column,
+    // step it by delta_px, then map back to a sample at that column. This
+    // makes one keypress move exactly one pixel even when spp is fractional
+    // (e.g. the 2.4 s zoom), instead of a sub-pixel sample step that can leave
+    // the displayed column unchanged. Finer adjustment is the 1.2 s zoom's job.
+    const double cur_px =
+        static_cast<double>(app.playhead_cursor_sample - app.viewport_start_sample)
+        / spp;
+    const int64_t cur_col = static_cast<int64_t>(std::floor(cur_px + 0.5));
+    const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
+    const int64_t new_sample = app.viewport_start_sample +
+        static_cast<int64_t>(std::nearbyint(static_cast<double>(target_col) * spp));
+    move_playhead_to(new_sample);
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper
