@@ -279,6 +279,19 @@ struct TrimDragState {
     SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
 };
 
+// Ctrl+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
+// driven by pointer motion. Parallel to the ctrl+wheel detent
+// (samples_visible/50), but the wheel keeps its quantized step while this
+// pans by the exact per-event pixel delta.
+struct ScrollDragState {
+    bool   active   = false;
+    // Pointer x (px) at the previous motion event, seeded at the ctrl+press.
+    int    last_x   = 0;
+    // Fractional sample-domain remainder carried between motion events so the
+    // 1:1 pixel pan tracks exactly without drifting over a long drag.
+    double accum_samples = 0.0;
+};
+
 // Hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor shows a bottom-strip readout of its
 // resolved tempo. The motion and viewport-recompute handlers set
@@ -463,6 +476,10 @@ struct AppState {
     // Ctrl+drag of a trim boundary stem. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
+
+    // Ctrl+drag on empty waveform (stepped viewport scroll). Cleared on
+    // button release and file load.
+    ScrollDragState scroll_drag;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.

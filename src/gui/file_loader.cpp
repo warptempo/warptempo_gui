@@ -135,6 +135,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
+    app.scroll_drag = ScrollDragState{};
     // Project trim is no longer cleared implicitly by the fresh-ViewState
     // assignment (it lives on AppState now). Reset it explicitly before the
     // line-194 initial-playhead read so an untrimmed project loaded after a
@@ -352,6 +353,7 @@ void GuiFileLoader::revert_to_blank() {
     app.drag          = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag     = TrimDragState{};
+    app.scroll_drag   = ScrollDragState{};
     app.last_sel_group = LastSelGroup::Markers;
     app.hover_popup   = HoverPopupState{};
     app.history.reset();

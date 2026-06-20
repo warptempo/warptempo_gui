@@ -1978,6 +1978,7 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // A wheel event during an active drag is ignored, matching on_button_press.
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
+    if (app.scroll_drag.active) return;
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
@@ -2199,14 +2200,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (!in_click_region) return;
 
         if (ctrl) {
-            // Ctrl branch: marker-reposition drag or no-op on empty.
-            // Read-only refuses the drag-begin so app.drag.active never
-            // enters flight state; motion / release / Escape paths all
-            // short-circuit on !app.drag.active.
-            if (active_view_state(app).read_only) {
-                return;
-            }
+            // Ctrl branch: marker-reposition drag on a marker, or a stepped
+            // scroll-drag on empty waveform. The marker drag mutates marker
+            // positions, so read-only refuses the drag-begin (app.drag.active
+            // never enters flight state; motion / release / Escape paths all
+            // short-circuit on !app.drag.active). The scroll-drag only moves
+            // the viewport, so it is allowed in read-only.
             if (hit >= 0) {
+                if (active_view_state(app).read_only) {
+                    return;
+                }
                 // begin_drag preserves the multi-selection if `hit` is in
                 // it, else collapses to just `hit`. Motion decides whether
                 // it actually becomes a drag vs. a plain click.
@@ -2214,8 +2217,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 warpops.begin_drag(hit, x);
                 if (was_playing_ctrl)
                     app.follow_overridden_for_session = true;
+                return;
             }
-            // else: Ctrl+press on empty space is a silent no-op.
+            // Ctrl+press on empty waveform arms a stepped scroll-drag (no-op
+            // in the top strip). The scroll happens on motion.
+            if (inside_waveform) {
+                app.scroll_drag.active        = true;
+                app.scroll_drag.last_x        = x;
+                app.scroll_drag.accum_samples = 0.0;
+            }
             return;
         }
 
@@ -2381,6 +2391,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
     }
     if (text_editor::is_active(app.settings_editor)) return;
     if (button != GuiMouseButton::Left) return;
+    if (app.scroll_drag.active) {
+        app.scroll_drag = ScrollDragState{};
+        return;
+    }
     if (app.playhead_drag.active) {
         // Selection is committed live during the drag (see on_motion); the
         // release only ends the gesture. A click without a drag keeps the
@@ -2441,6 +2455,33 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (text_editor::is_active(app.settings_editor)) {
+        viewport.clear_hover_popup();
+        return;
+    }
+    // Ctrl+drag on empty waveform: continuous 1:1 viewport pan. Each motion
+    // event pans by its exact pixel delta (dx * samples-per-pixel); the
+    // fractional sample remainder is carried in accum_samples so a long drag
+    // does not drift off 1:1. scroll_viewport drives the incremental
+    // shift-and-strip fast-path, so per-event work is a memmove plus a dx-wide
+    // strip render. The wheel keeps its quantized detent step; only the drag is
+    // continuous.
+    if (app.scroll_drag.active) {
+        if (!mods.primary_button_held) {     // button lost -> end like release
+            app.scroll_drag = ScrollDragState{};
+            return;
+        }
+        const double spp = current_samples_per_pixel(app, audio);
+        const int    dx  = mouse_x - app.scroll_drag.last_x;
+        app.scroll_drag.last_x = mouse_x;
+        app.scroll_drag.accum_samples += static_cast<double>(dx) * spp;
+        const int64_t whole =
+            static_cast<int64_t>(app.scroll_drag.accum_samples);  // trunc to 0
+        if (whole != 0) {
+            app.scroll_drag.accum_samples -= static_cast<double>(whole);
+            // Grab-pan: drag right (dx > 0) reveals earlier content, so the
+            // viewport moves left.
+            viewport.scroll_viewport(-whole);
+        }
         viewport.clear_hover_popup();
         return;
     }
