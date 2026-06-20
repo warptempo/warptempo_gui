@@ -122,36 +122,6 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
     g.ed->cursor_pos = idx;
 }
 
-// Single construction point for the four dispatch paths below (single
-// render, queue batch, BPM-sweep batch, iteration batch). Derives
-// phase_reset_frames internally via the same filter-disabled +
-// banker's-round path the BPM/iteration batches already used, so all four
-// dispatch sites stay in lockstep on that derivation.
-RenderRequest build_render_request(std::string source_audio_path,
-                                   std::vector<GuiWarpMarker> markers,
-                                   std::vector<GuiPhaseResetMarker> phase_resets,
-                                   EngineSettings engine_settings,
-                                   bool has_trim_begin, double trim_begin_sec,
-                                   bool has_trim_end,   double trim_end_sec,
-                                   long sample_rate,
-                                   std::string batch_folder = {},
-                                   std::string batch_basename = {}) {
-    RenderRequest req;
-    req.source_audio_path  = std::move(source_audio_path);
-    req.markers            = std::move(markers);
-    req.engine_settings    = std::move(engine_settings);
-    req.phase_reset_frames = phase_reset_source_frames(
-        slice_to_phase_reset_markers(phase_resets), sample_rate);
-    req.phase_resets       = std::move(phase_resets);
-    req.has_trim_begin     = has_trim_begin;
-    req.trim_begin_sec     = trim_begin_sec;
-    req.has_trim_end       = has_trim_end;
-    req.trim_end_sec       = trim_end_sec;
-    req.batch_folder       = std::move(batch_folder);
-    req.batch_basename     = std::move(batch_basename);
-    return req;
-}
-
 } // namespace
 
 AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {

@@ -99,21 +99,12 @@ void GuiTargetRender::dispatch_render_now() {
     app.target_buffer_frames = 0;
     app.target_buffer_start_frame = 0;
 
-    RenderRequest req;
-    req.source_audio_path = app.source_audio_path;
-    req.markers           = app.warpmarkers.markers();
-    req.phase_resets      = app.phase_reset_markers.markers();
-    req.engine_settings   = app.engine_settings;
-    req.has_trim_begin  = app.trim.has_begin;
-    req.trim_begin_sec  = app.trim.begin_seconds;
-    req.has_trim_end    = app.trim.has_end;
-    req.trim_end_sec    = app.trim.end_seconds;
-    for (const auto& m : app.phase_reset_markers.markers()) {
-        if (m.disabled) continue;
-        req.phase_reset_frames.push_back(static_cast<int64_t>(
-            std::nearbyint(m.time_seconds *
-                           static_cast<double>(audio.sample_rate()))));
-    }
+    RenderRequest req = build_render_request(
+        app.source_audio_path, app.warpmarkers.markers(),
+        app.phase_reset_markers.markers(), app.engine_settings,
+        app.trim.has_begin, app.trim.begin_seconds,
+        app.trim.has_end,   app.trim.end_seconds,
+        audio.sample_rate());
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The limited chain (spectral + peak backstop)

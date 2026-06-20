@@ -105,3 +105,20 @@ RenderOutcome do_render(const RenderRequest& req,
 std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es);
+
+// Assemble a RenderRequest from GUI authoring state. Single construction point
+// shared by every dispatch path (single render, queue batch, BPM-sweep batch,
+// iteration batch, and the target-view buffer render). Derives
+// phase_reset_frames internally via slice_to_phase_reset_markers +
+// phase_reset_source_frames so all callers stay in lockstep on that
+// filter-disabled + banker's-round derivation. output_buffer is left at its
+// nullptr default; the target-view caller sets it after the call.
+RenderRequest build_render_request(std::string source_audio_path,
+                                   std::vector<GuiWarpMarker> markers,
+                                   std::vector<GuiPhaseResetMarker> phase_resets,
+                                   EngineSettings engine_settings,
+                                   bool has_trim_begin, double trim_begin_sec,
+                                   bool has_trim_end,   double trim_end_sec,
+                                   long sample_rate,
+                                   std::string batch_folder = {},
+                                   std::string batch_basename = {});
