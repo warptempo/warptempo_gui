@@ -280,9 +280,7 @@ struct TrimDragState {
 };
 
 // Ctrl+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
-// driven by pointer motion. Parallel to the ctrl+wheel detent
-// (samples_visible/50), but the wheel keeps its quantized step while this
-// pans by the exact per-event pixel delta.
+// driven by pointer motion, panning by the exact per-event pixel delta.
 struct ScrollDragState {
     bool   active   = false;
     // Pointer x (px) at the previous motion event, seeded at the ctrl+press.

@@ -248,11 +248,10 @@ private:
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
-    // Shared wheel handler covering source-view and render-view.
-    // Promoted from a lambda in main.cpp:1444 because on_button_press is
-    // its only caller. Ctrl+Alt = fine-pan (2% of viewport), Alt = coarse-
-    // pan (10%), plain = zoom; Ctrl+wheel moves the playhead by one pixel
-    // (and stops playback), matching the bare Left/Right keyboard binding.
+    // Shared wheel handler covering source-view and render-view; on_wheel is
+    // its only caller. Alt = pan (10% of the visible span per detent), plain
+    // = zoom. Ctrl is not a wheel modifier and is swallowed here — fine
+    // viewport positioning is Ctrl+drag on empty waveform.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool alt,
                       bool inside_waveform, bool inside_top);
 

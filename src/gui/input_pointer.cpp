@@ -185,9 +185,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // toggles selection and jumps the playhead to the marker;
     // left-click elsewhere in the waveform area positions the
     // playhead (with playback stop) and clears the selection unless
-    // Shift is held. All wheel chords (zoom, Alt/Ctrl+Alt pan,
-    // Ctrl+wheel playhead-move) are pure viewport / playhead ops and
-    // pass through unchanged. Drag-create and top-strip playhead
+    // Shift is held. All wheel chords (zoom, Alt pan) are pure viewport
+    // ops and pass through unchanged. Drag-create and top-strip playhead
     // movement are silent no-ops so the read-only invariant on
     // marker state is preserved. Hover-popup motion still runs in
     // the motion handler against render_view.markers.

@@ -139,14 +139,13 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     if (app.viewport_start_sample != old_vp) viewport_changed = true;
 
     if (viewport_changed) {
-        // One-shot discrete viewport shift (Home / End, navigate-to-marker, an
-        // arrow nudge or Ctrl+wheel scrub that pushed the playhead past the
-        // edge). Render the plate synchronously so the playhead / marker
-        // overlays do not land a frame ahead of the new viewport window. The
-        // one continuous caller — the playhead drag — clamps its target to the
-        // visible area and so never reaches this branch; the callers that do
-        // reach it are discrete or frame-coalesced (Ctrl+wheel coalesces to one
-        // move per pointer frame), so a full sync render here is bounded.
+        // One-shot discrete viewport shift (Home / End, navigate-to-marker, or
+        // an arrow nudge that pushed the playhead past the edge). Render the
+        // plate synchronously so the playhead / marker overlays do not land a
+        // frame ahead of the new viewport window. The one continuous caller —
+        // the playhead drag — clamps its target to the visible area and so
+        // never reaches this branch; the callers that do reach it are all
+        // discrete, so a full sync render here is bounded.
         // kick_waveform_sync emits the same waveform-region damage
         // invalidate_waveform_area does, so the explicit call is left as a
         // harmless coalesced duplicate.

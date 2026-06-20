@@ -5,7 +5,7 @@
 #include <cstdio>
 
 // Gesture-stop: called at the top of any handler that will move the
-// cursor (keys, button press, Ctrl+wheel, undo/redo, tab switch).
+// cursor (keys, button press, undo/redo, tab switch).
 // Stops the audio thread and restores the split-playhead invariant:
 // when the scanner is inactive its sample equals the cursor's sample.
 // The cursor is not touched here — the caller is about to commit a new
