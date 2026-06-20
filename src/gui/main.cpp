@@ -541,6 +541,9 @@ int main(int argc, char** argv) {
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
+    std::string pending_initial_load = cli_path ? std::string(cli_path) : std::string();
+    bool        initial_load_done    = false;
+
     // -- Redraw -------------------------------------------------------------
 
     gui.set_on_redraw([&](cairo_t* cr, int x, int y, int w, int h) {
@@ -629,6 +632,27 @@ int main(int argc, char** argv) {
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the atomic playing flag.
     gui.set_on_tick([&]() {
+        // Startup file load, deferred out of pre-run() so the window maps and
+        // paints first (the compositor's initial configure / first frame only
+        // land once run() is pumping). Gated on has_initial_configure() so the
+        // load — and its loading notice — run against a mapped, painted surface.
+        // Mirrors on_file_drop, which already loads from inside the loop. Drops
+        // queued during the startup load run immediately after, as the old
+        // pre-run block did.
+        if (!initial_load_done && !pending_initial_load.empty() &&
+            gui.has_initial_configure()) {
+            initial_load_done = true;
+            const std::string p = std::move(pending_initial_load);
+            pending_initial_load.clear();
+            file_loader.load_file(p);
+            while (!app.pending_drop_path.empty()) {
+                std::string next = std::move(app.pending_drop_path);
+                app.pending_drop_path.clear();
+                file_loader.load_file(next);
+            }
+            return;  // loaded state paints on the next tick
+        }
+
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either
         // dispatches to the worker, sets the supersede slot, or no-ops.
@@ -798,19 +822,6 @@ int main(int argc, char** argv) {
     // window isn't briefly blank on fast disks.
     gui.invalidate_region(0, 0, app.width, app.height);
     gui.drain_events();
-
-    if (cli_path) {
-        if (!file_loader.load_file(cli_path)) {
-            gui.shutdown();
-            return 1;
-        }
-        // Any drops queued during the startup load run now.
-        while (!app.pending_drop_path.empty()) {
-            std::string next = std::move(app.pending_drop_path);
-            app.pending_drop_path.clear();
-            file_loader.load_file(next);
-        }
-    }
 
     gui.run();
     // Tear the audio device down before the sample buffer goes out of scope.

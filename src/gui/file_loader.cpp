@@ -44,18 +44,19 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     app.loading       = true;
     app.load_progress = 0.0f;
+    app.queue_progress_text = "loading...";
     gui.invalidate_region(0, 0, app.width, app.height);
-    gui.drain_events();
+    gui.paint_now();
 
     GuiAudio next;
     const auto t0 = std::chrono::steady_clock::now();
     const bool ok = next.load(path, [&](float p) {
         // load_progress is no longer read anywhere (the determinate bar was
-        // replaced by a static "building waveform cache..." status message
-        // painted once at load entry); the write is kept harmlessly. With a
-        // static message there is no per-tick repaint, so this callback no
-        // longer invalidates a bar strip — it only pumps the event loop so the
-        // compositor stays responsive across a multi-frame build.
+        // replaced by a static "loading..." status painted once at load
+        // entry); the write is kept harmlessly. With a static message there
+        // is no per-tick repaint, so this callback no longer invalidates a
+        // bar strip — it only pumps the event loop so the compositor stays
+        // responsive across a multi-frame load.
         app.load_progress = p;
         gui.drain_events();
     });
@@ -64,6 +65,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     if (!ok) {
         app.loading       = false;
         app.load_progress = 0.0f;
+        app.queue_progress_text.clear();
         gui.invalidate_region(0, 0, app.width, app.height);
         return false;
     }
@@ -117,7 +119,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phase_reset_markers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
-    gui.set_title(path);
+    gui.set_title(path + " - warptempo_gui");
 
     create_if_missing(wm_path, "00:00.000|1.00\n");
     create_if_missing(set_path, format_default_settings_template(stem));
@@ -296,6 +298,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
                  audio.num_levels(), load_ms);
+
+    // Source-view load ends with an empty status; a target-view load lets
+    // ensure_ready() -> trigger() replace it with "updating..." for the
+    // eager preview below, so there is no gap in feedback.
+    app.queue_progress_text.clear();
 
     // If the parsed settings landed us in target view, dispatch a fresh
     // target render now so the first Space press is ready without a

@@ -318,12 +318,6 @@ struct FlagHitRect {
 
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 
-// Centered single-line status message, shown in place of the (removed) load
-// progress bar for the duration of app.loading. Selects the monospace face,
-// measures the string via monospace_advance(), centers it in `area`
-// horizontally and on `area`'s vertical mid-line, and shows it in kText.
-void render_status_message(cairo_t* cr, GuiRect area, const char* msg);
-
 // Draws one channel's waveform into `area`, displaying samples in
 // [viewport_start_sample, viewport_end_sample). When `frame_map` is null
 // (source view) the viewport range is interpreted in source-frame and

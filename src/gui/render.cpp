@@ -266,28 +266,6 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
-void render_status_message(cairo_t* cr, GuiRect area, const char* msg) {
-    if (!msg || area.w <= 0 || area.h <= 0) return;
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, kFlagFontSize);
-    // Monospace arithmetic for the width (glyph count * monospace_advance()),
-    // the same convention as the flag and editor paths; centered horizontally
-    // in `area` and vertically on its mid-line. Antialiasing stays on — this
-    // is glyph text.
-    const double text_w =
-        static_cast<double>(std::strlen(msg)) * monospace_advance();
-    const double tx = area.x + (area.w - text_w) * 0.5;
-    const double ty = area.y + area.h * 0.5
-                    + monospace_row_baseline_offset() - monospace_row_h() * 0.5;
-    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
-    cairo_move_to(cr, tx, ty);
-    cairo_show_text(cr, msg);
-    cairo_restore(cr);
-}
-
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,

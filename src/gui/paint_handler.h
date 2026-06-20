@@ -44,7 +44,8 @@ class GuiWaveformWorker;
 // main.cpp's anonymous namespace; kPlayheadHalfPx now lives in render.h.
 //
 // kProgressBarHeight was deleted with the load progress bar (replaced by a
-// centered status message during app.loading; see render_status_message).
+// bottom-left "loading..." status during app.loading, painted directly in
+// GuiPaintHandler::on_redraw's loading branch).
 // kFlagFontSize lives in render.h so render.cpp can reach it without
 // pulling paint_handler.h into the lower-layer include graph.
 

@@ -234,8 +234,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     render_background(cr, x, y, w, h);
 
     if (app.loading) {
-        render_status_message(cr, waveform_area(app),
-                              "building waveform cache...");
+        // Blank plate during load; the only feedback is the bottom-strip
+        // upper-row status ("loading..."), the same slot renders use. Painted
+        // here because the total>0 bottom-strip block below does not run while
+        // loading (and total_frames is 0 on a cold launch).
+        const GuiRect upper_row = bottom_upper_row_area(app);
+        const double  upper_baseline =
+            upper_row.y + monospace_row_baseline_offset();
+        text_display::draw_line(
+            cr, static_cast<double>(kTimestampPadX), upper_baseline,
+            app.queue_progress_text, kText, kFlagFontSize);
     } else if (audio.total_frames() > 0) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);

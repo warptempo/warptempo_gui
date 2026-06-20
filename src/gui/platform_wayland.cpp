@@ -1137,6 +1137,15 @@ void GuiPlatform::drain_events() {
     if (wl_display_) wl_display_dispatch_pending(wl_display_);
 }
 
+void GuiPlatform::paint_now() {
+    // Synchronous render + commit + flush for the one case that can't wait for
+    // run()'s frame-callback loop: a blocking load. paint_one_frame is null-safe
+    // before the initial configure and no-ops on empty damage; the flush pushes
+    // the commit to the compositor now instead of on the loop's next pass.
+    paint_one_frame();
+    if (wl_display_) wl_display_flush(wl_display_);
+}
+
 // ---------------------------------------------------------------------------
 // Refresh-rate detection
 // ---------------------------------------------------------------------------

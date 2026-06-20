@@ -44,6 +44,7 @@ public:
     void request_exit();
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
+    void paint_now();
 
     // Regular clipboard (CLIPBOARD selection, not PRIMARY). clipboard_set_text
     // claims the selection with our text as the payload; clipboard_get_text
@@ -57,6 +58,7 @@ public:
     int height() const;
     int playback_tick_ms() const;
     cairo_surface_t* playhead_triangle_surface() const;
+    bool has_initial_configure() const { return has_initial_configure_; }
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
