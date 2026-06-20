@@ -1552,7 +1552,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
 // main.cpp:1444 — only difference is the captured viewport / playhead
 // helpers now resolve through this struct's reference members.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
-                                   bool ctrl, bool alt,
+                                   bool, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
@@ -1561,12 +1561,10 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     // damage / hover / worker-kick path fires once per frame regardless of
     // burst size. count == 1 reproduces the old single-detent behavior.
     if (count < 1) count = 1;
-    // Ctrl is no longer a wheel modifier: fine viewport positioning is now
-    // Ctrl+drag on empty waveform. A wheel event with Ctrl held is swallowed
-    // so it neither zooms nor pans — the user is signaling a drag-modifier
-    // intent, not a zoom. This also covers Ctrl+Alt, since Ctrl short-
-    // circuits before the Alt branch.
-    if (ctrl) return;
+    // Ctrl is not a wheel modifier: fine viewport positioning is Ctrl+drag on
+    // empty waveform, not the wheel. Ctrl is ignored here and the event falls
+    // through — Ctrl+wheel zooms (the plain-wheel path below) and
+    // Ctrl+Alt+wheel pans (the Alt path, since Alt is still checked).
     if (alt) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / 10);

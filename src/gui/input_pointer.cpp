@@ -173,7 +173,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         y >= top.y && y < top.y + top.h;
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
-    // (alt is consulted only by wheel chords, which now arrive via on_wheel.)
+    const bool alt   = mods.alt;
 
     // Defensive: a second press during a drag is ignored (left button
     // should still be held down for a drag to exist).
@@ -299,28 +299,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         if (!in_click_region) return;
 
-        if (ctrl) {
-            // Ctrl branch: marker-reposition drag on a marker, or a stepped
-            // scroll-drag on empty waveform. The marker drag mutates marker
-            // positions, so read-only refuses the drag-begin (app.drag.active
-            // never enters flight state; motion / release / Escape paths all
-            // short-circuit on !app.drag.active). The scroll-drag only moves
-            // the viewport, so it is allowed in read-only.
-            if (hit >= 0) {
-                if (active_view_state(app).read_only) {
-                    return;
-                }
-                // begin_drag preserves the multi-selection if `hit` is in
-                // it, else collapses to just `hit`. Motion decides whether
-                // it actually becomes a drag vs. a plain click.
-                const bool was_playing_ctrl = playback.is_playing();
-                warpops.begin_drag(hit, x);
-                if (was_playing_ctrl)
-                    app.follow_overridden_for_session = true;
-                return;
-            }
-            // Ctrl+press on empty waveform arms a stepped scroll-drag (no-op
-            // in the top strip). The scroll happens on motion.
+        if (alt) {
+            // Alt+drag pans the viewport — a stepped scroll-drag on the
+            // waveform, regardless of whether the press landed on a marker.
+            // Pan is Alt's job (and Ctrl+Alt's, since Alt is tested before
+            // Ctrl), so a pan never grabs a marker. No-op in the top strip; the
+            // scroll happens on motion. The scroll-drag only moves the viewport,
+            // so it is allowed in read-only. It deliberately does NOT override
+            // follow mode: a pan during playback moves the view along with the
+            // audio rather than signaling a stop, unlike the marker / trim /
+            // playhead drags, which override follow for the session.
             if (inside_waveform) {
                 app.scroll_drag.active        = true;
                 app.scroll_drag.last_x        = x;
@@ -329,7 +317,28 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Non-Ctrl: plain or Shift press. In the waveform area this
+        if (ctrl && hit >= 0) {
+            // Ctrl+drag on a marker repositions it (the mouse counterpart of
+            // the Ctrl+Left / Ctrl+Right nudge). Ctrl is the marker modifier;
+            // panning is Alt+drag. The marker drag mutates marker positions,
+            // so read-only refuses the drag-begin (app.drag.active never
+            // enters flight state; motion / release / Escape paths all
+            // short-circuit on !app.drag.active).
+            if (active_view_state(app).read_only) {
+                return;
+            }
+            // begin_drag preserves the multi-selection if `hit` is in
+            // it, else collapses to just `hit`. Motion decides whether
+            // it actually becomes a drag vs. a plain click.
+            const bool was_playing_ctrl = playback.is_playing();
+            warpops.begin_drag(hit, x);
+            if (was_playing_ctrl)
+                app.follow_overridden_for_session = true;
+            return;
+        }
+
+        // Plain, Shift, or Ctrl-on-empty press (Alt and Ctrl-on-marker
+        // returned above). In the waveform area this
         // starts a playhead-drag gesture. In the top strip (flag click) a
         // W-view plain click enters the warp canonical-line editor;
         // Shift+click keeps the legacy multi-select toggle + playhead move.

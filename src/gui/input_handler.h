@@ -250,7 +250,8 @@ private:
 
     // Shared wheel handler covering source-view and render-view; on_wheel is
     // its only caller. Alt = pan (10% of the visible span per detent), plain
-    // = zoom. Ctrl is not a wheel modifier and is swallowed here — fine
+    // = zoom. Ctrl is not a wheel modifier — it is ignored and the event
+    // falls through, so Ctrl+wheel zooms and Ctrl+Alt+wheel pans. Fine
     // viewport positioning is Ctrl+drag on empty waveform.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool alt,
                       bool inside_waveform, bool inside_top);

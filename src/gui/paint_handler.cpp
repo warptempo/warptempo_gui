@@ -1258,6 +1258,10 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         wf_cache.fp_vp_end           = in.vp_end;
         wf_cache.pending_fp_vp_start = in.vp_start;
         wf_cache.pending_fp_vp_end   = in.vp_end;
+        // Plate bookkeeping advanced to the new viewport; bring the overlay
+        // caches with it so stems / flags / dim do not lag the plate.
+        maybe_rebuild_stem_cache();
+        maybe_rebuild_flag_cache();
         const GuiRect a = waveform_area(app);
         gui.invalidate_region(0, 0, app.width, a.y + a.h);
         return;
@@ -1268,6 +1272,12 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     // inline strip work strictly bounded to at most a window width.
     if (delta_px >= plate_w || delta_px <= -plate_w) {
         force_synchronous_waveform_rebuild();
+        // force_synchronous_waveform_rebuild publishes the fingerprint but
+        // leaves the stem / flag rebuild to a later tick; do it now so the
+        // fast-flick frame is fully consistent rather than relying on an
+        // on_tick that may not run before the next paint.
+        maybe_rebuild_stem_cache();
+        maybe_rebuild_flag_cache();
         return;
     }
 
@@ -1328,6 +1338,18 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     wf_cache.fp_vp_end           = in.vp_end;
     wf_cache.pending_fp_vp_start = in.vp_start;
     wf_cache.pending_fp_vp_end   = in.vp_end;
+
+    // The plate advanced synchronously in this event. Rebuild the stem and
+    // flag caches now, against the just-published fingerprint, so the overlay
+    // layers (stems, flags, and the dim they paint under markers) move in
+    // lockstep with the plate. Without this they lag until the next on_tick
+    // dirty-check, and a continuous drag shows the markers and their dim
+    // trailing the waveform by a step. Both rebuilds are fingerprint-guarded
+    // and cheap; this mirrors force_synchronous_waveform_rebuild, which
+    // likewise publishes the fingerprint so the same-tick stem/flag rebuild
+    // reads the new viewport.
+    maybe_rebuild_stem_cache();
+    maybe_rebuild_flag_cache();
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
