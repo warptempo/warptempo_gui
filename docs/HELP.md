@@ -201,7 +201,7 @@ Four settings fields are inert provenance: they are carried in `.settings` but n
 
 **General.** `Ctrl+Z` undoes and `Ctrl+Shift+Z` redoes; settings edits, trim changes, and marker edits all participate in the same undo history. `Esc` cancels an in-flight async render, queue run, or playhead drag, and dismisses an open editor or prompt; with nothing pending it is a no-op.
 
-**Mouse.** The scroll wheel zooms; held with `Alt` it pans the viewport. A single left-click selects the marker or sets the playhead at the click point. A double-click in the waveform drops a marker there — a warp marker in W view (hold `Shift` to drop an inheriting one), or a phase reset in P view (where `Shift` is ignored). `Ctrl` with a left-drag on a marker repositions it, the mouse equivalent of the `Ctrl+Left` / `Ctrl+Right` nudge; `Alt` with a left-drag pans the viewport.
+**Mouse.** The scroll wheel zooms; held with `Alt` it pans the viewport. Held with `Ctrl`, the wheel nudges the focused warp marker's base tempo by ±0.01 per detent — wheel up lowers, wheel down raises — the mouse equivalent of `Ctrl+Up` / `Ctrl+Down`; it acts only when a warp marker is selected and, like other authoring gestures, does nothing in read-only or render view. A single left-click selects the marker or sets the playhead at the click point. A double-click in the waveform drops a marker there — a warp marker in W view (hold `Shift` to drop an inheriting one), or a phase reset in P view (where `Shift` is ignored). `Ctrl` with a left-drag on a marker repositions it, the mouse equivalent of the `Ctrl+Left` / `Ctrl+Right` nudge; `Alt` with a left-drag pans the viewport.
 
 ## Examples
 
