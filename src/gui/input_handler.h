@@ -249,12 +249,12 @@ private:
                                 text_editor::State& s);
 
     // Shared wheel handler covering source-view and render-view; on_wheel is
-    // its only caller. Alt = pan (10% of the visible span per detent), plain
-    // = zoom. Ctrl is not a wheel modifier — it is ignored and the event
-    // falls through, so Ctrl+wheel zooms and Ctrl+Alt+wheel pans. Fine
-    // viewport positioning is Ctrl+drag on empty waveform.
-    void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool alt,
-                      bool inside_waveform, bool inside_top);
+    // its only caller. Exact-match modifiers: plain = zoom, Alt = pan (10% of
+    // the visible span per detent), Ctrl = nudge the focused warp marker's base
+    // tempo by 0.01 per detent. Any other combination (Shift+wheel,
+    // Ctrl+Alt+wheel, ...) no-ops.
+    void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
+                      bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
     // playback, move the playhead onto the newly focused marker, and

@@ -254,6 +254,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // on its marker line.
         int hit = -1;
         bool in_click_region = false;
+        // A trim-boundary press is consumed only for its recognized gestures:
+        // a Ctrl-exact reposition-drag, or a plain / Shift select+navigate. Alt
+        // is reserved for panning (Alt+drag over a trim stem pans, ignoring the
+        // boundary), and Ctrl+Shift — like every other unrecognized combo —
+        // falls through to no-op at the strict guard below. So only these combos
+        // consume the boundary hit; the rest fall through to the cascade.
+        const bool trim_gesture = !alt && !(ctrl && shift);
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
             // A waveform press that misses every marker but lands
@@ -261,7 +268,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Markers take priority on a shared column.
             if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
-                if (th != TrimHit::None) {
+                if (th != TrimHit::None && trim_gesture) {
                     handle_trim_boundary_press(th, ctrl, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
@@ -287,7 +294,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const TrimHit th = (chip != TrimHit::None)
                                        ? chip
                                        : hit_test_trim_boundary(app, audio, x);
-                if (th != TrimHit::None) {
+                if (th != TrimHit::None && trim_gesture) {
                     handle_trim_boundary_press(th, ctrl, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
@@ -299,16 +306,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         if (!in_click_region) return;
 
-        if (alt) {
-            // Alt+drag pans the viewport — a stepped scroll-drag on the
-            // waveform, regardless of whether the press landed on a marker.
-            // Pan is Alt's job (and Ctrl+Alt's, since Alt is tested before
-            // Ctrl), so a pan never grabs a marker. No-op in the top strip; the
-            // scroll happens on motion. The scroll-drag only moves the viewport,
-            // so it is allowed in read-only. It deliberately does NOT override
-            // follow mode: a pan during playback moves the view along with the
-            // audio rather than signaling a stop, unlike the marker / trim /
-            // playhead drags, which override follow for the session.
+        if (alt && !ctrl && !shift) {
+            // Alt+drag (exact) pans the viewport — a stepped scroll-drag on the
+            // waveform, regardless of whether the press landed on a marker, so a
+            // pan never grabs a marker. No-op in the top strip; the scroll
+            // happens on motion. The scroll-drag only moves the viewport, so it
+            // is allowed in read-only. It deliberately does NOT override follow
+            // mode: a pan during playback moves the view along with the audio
+            // rather than signaling a stop, unlike the marker / trim / playhead
+            // drags, which override follow for the session.
             if (inside_waveform) {
                 app.scroll_drag.active        = true;
                 app.scroll_drag.last_x        = x;
@@ -317,13 +323,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        if (ctrl && hit >= 0) {
-            // Ctrl+drag on a marker repositions it (the mouse counterpart of
-            // the Ctrl+Left / Ctrl+Right nudge). Ctrl is the marker modifier;
-            // panning is Alt+drag. The marker drag mutates marker positions,
-            // so read-only refuses the drag-begin (app.drag.active never
-            // enters flight state; motion / release / Escape paths all
-            // short-circuit on !app.drag.active).
+        if (ctrl && !alt && !shift && hit >= 0) {
+            // Ctrl+drag (exact) on a marker repositions it (the mouse
+            // counterpart of the Ctrl+Left / Ctrl+Right nudge). Ctrl is the
+            // marker modifier; panning is Alt+drag. Ctrl on empty waveform is
+            // not a gesture and no-ops at the strict guard below. The marker
+            // drag mutates marker positions, so read-only refuses the
+            // drag-begin (app.drag.active never enters flight state; motion /
+            // release / Escape paths all short-circuit on !app.drag.active).
             if (active_view_state(app).read_only) {
                 return;
             }
@@ -337,14 +344,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Plain, Shift, or Ctrl-on-empty press (Alt and Ctrl-on-marker
-        // returned above). In the waveform area this
-        // starts a playhead-drag gesture. In the top strip (flag click) a
-        // W-view plain click enters the warp canonical-line editor;
-        // Shift+click keeps the legacy multi-select toggle + playhead move.
-        // A P-view plain click is navigation (single-select + playhead),
-        // falling through to the selection block below; phase resets have
-        // no per-flag editor.
+        // Strict modifier matching: pan is Alt-exact and marker reposition is
+        // Ctrl-exact (both handled above). Any remaining modifier combination
+        // — Ctrl on empty, Ctrl+Alt, Shift+Alt, Ctrl+Shift, ... — is not a
+        // recognized waveform gesture and no-ops here. Only the plain or
+        // Shift-modified base press proceeds (Shift adjusts the selection).
+        if (ctrl || alt) return;
+
+        // Plain or Shift press. In the waveform area this starts a
+        // playhead-drag gesture. In the top strip (flag click) a W-view plain
+        // click enters the warp canonical-line editor; Shift+click keeps the
+        // multi-select toggle + playhead move. A P-view plain click is
+        // navigation (single-select + playhead), falling through to the
+        // selection block below; phase resets have no per-flag editor.
         if (inside_top) {
             if (hit >= 0) {
                 if (!shift && app.active_markers_view != 'P') {

@@ -309,7 +309,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // is 0.10, Shift+9 is 0.90. Applies immediately whether or not
     // playback is active — the audio callback picks up the new atomic
     // on the next buffer.
-    if (shift && !ctrl) {
+    if (shift && !ctrl && !alt) {
         switch (key) {
         case GuiKeys::Digit0: playback_lifecycle.set_playback_speed(1.0f); return;
         case GuiKeys::Digit1: playback_lifecycle.set_playback_speed(0.1f); return;
@@ -343,7 +343,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Z undo / Ctrl+Shift+Z redo. Placed before the GuiKeys::S save
     // handling so modifier dispatch reads left-to-right in the source.
     // Both are silent no-ops when their respective stack is empty.
-    if (ctrl && key == GuiKeys::Z) {
+    if (ctrl && !alt && key == GuiKeys::Z) {
         if (shift) undo.do_redo();
         else       undo.do_undo();
         return;
@@ -359,11 +359,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The platform boundary case-folds letters and delivers the
     // unshifted GuiKey, so a Shift+letter press arrives as the lowercase
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
-    if (key == GuiKeys::S) {
-        if (ctrl)                          save_ops.save();
-        else if (app.active_markers_view == 'P')   phase_resets.drop_phase_reset_at_playhead();
-        else if (shift)                    warpops.drop_inherit_marker_at_playhead();
-        else                               warpops.drop_marker_at_playhead();
+    if (key == GuiKeys::S && !alt) {
+        if (ctrl && !shift)              save_ops.save();
+        else if (!ctrl && app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
+        else if (!ctrl && shift)         warpops.drop_inherit_marker_at_playhead();
+        else if (!ctrl && !shift)        warpops.drop_marker_at_playhead();
         return;
     }
     // Shift+P: toggle inherit (warp only).
@@ -378,7 +378,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         else                        warpops.toggle_disabled();
         return;
     }
-    if (key == GuiKeys::Delete && !ctrl) {
+    if (key == GuiKeys::Delete && !ctrl && !alt) {
         // Delete acts on the group named by last_sel_group. With
         // a trim boundary last-selected, clear the selected bound(s) and
         // leave markers untouched; otherwise the marker-delete runs.
@@ -419,7 +419,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // clears the selection set (UI-only — no dirty, no playhead move).
     // Trim un-set is undoable as a settings entry: snapshot pre-state,
     // mutate, push.
-    if (key == GuiKeys::U && !ctrl) {
+    if (key == GuiKeys::U && !ctrl && !alt) {
         if (shift) {
             selection.clear_selection();
         } else {
@@ -465,7 +465,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // `j` jumps the selected set to the playhead, anchored on
     // last_selected_marker. All-or-nothing clamp check.
-    if (key == GuiKeys::J && !shift && !ctrl) {
+    if (key == GuiKeys::J && !shift && !ctrl && !alt) {
         if (app.active_markers_view == 'P') phase_resets.jump_phase_reset_selection_to_playhead();
         else                        warpops.jump_selection_to_playhead();
         return;
@@ -477,12 +477,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (handle_render_view_nav(key, mods)) return;
 
     // Ctrl+Left / Ctrl+Right: nudge selected markers by one pixel.
-    if (ctrl && !shift && key == GuiKeys::Left) {
+    if (ctrl && !shift && !alt && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
-    if (ctrl && !shift && key == GuiKeys::Right) {
+    if (ctrl && !shift && !alt && key == GuiKeys::Right) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;
@@ -593,28 +593,43 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
 // main.cpp:1444 — only difference is the captured viewport / playhead
 // helpers now resolve through this struct's reference members.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
-                                   bool, bool alt,
+                                   bool ctrl, bool shift, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
     // (always >= 1 from the platform). Each chord scales its single per-step
     // action by that count and applies it in ONE viewport call, so the
     // damage / hover / worker-kick path fires once per frame regardless of
-    // burst size. count == 1 reproduces the old single-detent behavior.
+    // burst size. count == 1 reproduces the single-detent behavior.
     if (count < 1) count = 1;
-    // Ctrl is not a wheel modifier: fine viewport positioning is Ctrl+drag on
-    // empty waveform, not the wheel. Ctrl is ignored here and the event falls
-    // through — Ctrl+wheel zooms (the plain-wheel path below) and
-    // Ctrl+Alt+wheel pans (the Alt path, since Alt is still checked).
-    if (alt) {
+    // Strict modifier matching: each wheel chord is an exact match.
+    if (ctrl && !shift && !alt) {
+        // Ctrl+wheel: nudge the focused warp marker's base tempo by 0.01 per
+        // detent (WheelUp lowers, WheelDown raises), carrying tempo_scale
+        // through unchanged. This is the wheel alias of the Ctrl+Up/Down nudge
+        // and mutates marker data, so it is refused while render-view owns the
+        // display and while the active tab is read-only — guards on_key's
+        // prologue applies to Ctrl+Up/Down but that on_wheel does not carry.
+        // adjust_tempo is a no-op when no marker is selected.
+        if (app.render_view.enabled) return;
+        if (active_view_state(app).read_only) return;
+        const double delta =
+            (button == GuiMouseButton::WheelUp ? -0.01 : +0.01) *
+            static_cast<double>(count);
+        warpops.adjust_tempo(delta);
+        return;
+    }
+    if (alt && !ctrl && !shift) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / 10);
         viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
         return;
     }
-    // Plain wheel = zoom. WheelUp zooms out, WheelDown zooms in; apply the
-    // net level change in a single apply_zoom_change (inside zoom_steps).
-    viewport.zoom_steps(button == GuiMouseButton::WheelUp ? -count : +count);
+    if (!ctrl && !shift && !alt) {
+        // WheelUp zooms out, WheelDown zooms in; the net level change applies
+        // in a single apply_zoom_change inside zoom_steps.
+        viewport.zoom_steps(button == GuiMouseButton::WheelUp ? -count : +count);
+    }
 }
 
 // Coalesced wheel entry point. The platform delivers one of these per
@@ -651,7 +666,7 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         x >= top.x && x < top.x + top.w &&
         y >= top.y && y < top.y + top.h;
 
-    handle_wheel(dir, count, mods.ctrl, mods.alt, inside_waveform, inside_top);
+    handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt, inside_waveform, inside_top);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

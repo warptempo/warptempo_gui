@@ -364,6 +364,10 @@ void GuiInputHandler::delete_selected_trim() {
 
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
                                                  bool shift, int mouse_x) {
+    // The caller consumes a trim press only for recognized gestures: a
+    // Ctrl-exact reposition-drag, or a plain / Shift select+navigate. Alt and
+    // Ctrl+Shift are filtered upstream, so `ctrl` here is the exact reposition
+    // chord and the else-branch is a plain-or-Shift select.
     if (which == TrimHit::None) return;
     if (ctrl) {
         // Read-only refuses the drag-begin so app.trim_drag.active never
