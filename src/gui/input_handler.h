@@ -275,6 +275,20 @@ private:
     // one (on_key then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
 
+    // P / I / M letter-key handlers: Ctrl+P-family phase-reset clipboard ops,
+    // `p` view toggle, `i` / Shift+I iteration, `m` bpm mode. Returns true if
+    // key+mods matched one (on_key then returns), false otherwise.
+    bool handle_mode_keys(GuiKey key, GuiInputState mods);
+
+    // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /
+    // Shift+Tab / IsoLeftTab cycle marker focus. Returns true if key+mods
+    // matched one (on_key then returns), false otherwise.
+    bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
+
+    // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
+    // Home-End / trim begin-end. Caller gates on no modifiers held.
+    void handle_plain_bare_keys(GuiKey key);
+
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false if the key is a command, in
     // which case the edit is cancelled here and on_key runs the command.

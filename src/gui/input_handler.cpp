@@ -349,160 +349,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Ctrl+P: copy phase reset placements from a two-warp-marker
-    // selection into the session clipboard. W-mode only; phase reset
-    // mode is a silent no-op. Off-count selection in W-mode emits a
-    // one-line stderr nudge.
-    if (key == GuiKeys::P && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') return;
-        if (app.selected_markers.size() != 2) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset copy: select exactly two warp "
-                "markers\n");
-            return;
-        }
-        phase_reset_propagate.copy_from_selection();
-        return;
-    }
-
-    // Ctrl+Alt+P: paste clipboard phase resets onto the destination
-    // anchored at the single selected warp marker. W-mode only; phase
-    // reset mode is a silent no-op. Empty clipboard is a silent no-op.
-    // Opens a confirmation prompt before any mutation.
-    if (key == GuiKeys::P && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') return;
-        if (app.phase_reset_clipboard.empty()) return;
-        if (app.selected_markers.size() != 1) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset paste: select exactly one warp "
-                "marker\n");
-            return;
-        }
-        phase_reset_propagate.open_paste_confirmation();
-        return;
-    }
-
-    // Ctrl+Alt+Shift+P: propagate the enabled/disabled *state* of
-    // clipboard placements onto the matching destination region's
-    // phase resets, in order. Positions are not modified. W-mode only;
-    // phase reset mode is a silent no-op. Empty clipboard is a silent
-    // no-op. Unlike Ctrl+Alt+P, no confirmation prompt — applies
-    // directly. Divergence/mismatch is reported via the bottom-strip
-    // transient status message rather than a modal dialog.
-    if (key == GuiKeys::P && ctrl && shift && alt) {
-        if (app.active_markers_view != 'W') return;
-        if (app.phase_reset_clipboard.empty()) return;
-        if (app.selected_markers.size() != 1) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset state-paste: select exactly one "
-                "warp marker\n");
-            return;
-        }
-        phase_reset_propagate.paste_state_apply();
-        return;
-    }
-
-    // `p` (no modifiers) toggles phase reset view globally.
-    // Render-view shares the global active_markers_view flag, so a
-    // single handler serves both views. Render-view inherits the
-    // engine precondition check from toggle_active_markers_view.
-    if (key == GuiKeys::P && !ctrl && !shift && !alt) {
-        active_views.toggle_active_markers_view();
-        return;
-    }
-
-    // `i` (no modifiers) toggles iteration mode in warp. Silent
-    // no-op in phase reset view (phase reset flags carry no tempo to
-    // iterate). The editor-active branch above already swallows any
-    // keystroke while a popup edit is in flight, so this code only
-    // runs with no active editor. Toggling repaints the top strip
-    // so iteration popups appear or vanish in one frame.
-    if (key == GuiKeys::I && !ctrl && !shift && !alt) {
-        if (app.active_markers_view == 'W') {
-            // Mutual exclusion. Toggling iter ON forces
-            // BPM mode off; toggling iter OFF leaves BPM untouched.
-            const bool turning_on = !app.iteration_mode_enabled;
-            if (turning_on && app.bpm_mode_enabled) {
-                app.bpm_mode_enabled = false;
-            }
-            app.iteration_mode_enabled = !app.iteration_mode_enabled;
-            viewport.clear_hover_popup();
-            viewport.invalidate_top_strip();
-        }
-        return;
-    }
-    // Shift+I: bulk-clear every marker's iter values AND exit
-    // iteration mode in one keystroke ("stop authoring this mode").
-    // Only fires while iteration mode is on; otherwise silent no-op.
-    if (key == GuiKeys::I && !ctrl && shift && !alt) {
-        if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
-            flag_editor.bulk_clear_iter_values();
-            app.iteration_mode_enabled = false;
-            viewport.invalidate_top_strip();
-        }
-        return;
-    }
-
-    // `m` (no modifiers): open the BPM editor on the earlier of two
-    // selected markers that define an explicit span, or — if BPM mode is
-    // already on — toggle it (and the editor) off. Warp view only; silent
-    // no-op in phase reset view. Mutual exclusion with iter mode is handled
-    // inside enter_bpm_mode. The gate requires exactly two selected markers
-    // with no label_ref anywhere in the span; any other selection is a
-    // silent no-op.
-    if (key == GuiKeys::M && !ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') return;
-        if (app.bpm_mode_enabled) {
-            // Re-press: editor and mode go down together.
-            if (text_editor::is_active(app.top_flag_editor) &&
-                app.top_flag_editor.kind ==
-                    text_editor::Kind::BpmBracket) {
-                flag_editor.exit_top_flag_edit_no_commit();
-            }
-            flag_editor.exit_bpm_mode();
-            viewport.invalidate_timestamp_area();
-            return;
-        }
-        // Two-marker span gate. Exactly two markers must be selected; the
-        // earlier owns, the later closes the span. Neither endpoint nor any
-        // span-internal marker may be a label_ref — commit rewrites every
-        // in-span tempo and a ref cannot take a manual tempo.
-        if (app.selected_markers.size() != 2) return;
-        const auto& mv = app.warpmarkers.markers();
-        auto it = app.selected_markers.begin();
-        const int owner    = *it++;       // std::set: ascending, so owner is
-        const int endpoint = *it;         // the earlier index, endpoint later
-        if (owner < 0 || endpoint >= static_cast<int>(mv.size())) return;
-        // No label_ref anywhere in [owner, endpoint] inclusive (endpoint
-        // included in the eligibility scan even though its section is not in
-        // the rendered region — a ref endpoint still cannot bound the span
-        // cleanly). Disabled markers ARE allowed and remain in-span.
-        for (int i = owner; i <= endpoint; ++i) {
-            if (!mv[i].label_ref.empty()) return;   // silent no-op
-        }
-        // Owner must still satisfy the BPM-eligibility predicate (e.g. not
-        // itself a label_ref — already covered — and any other standing
-        // condition bpm_popup_eligible_marker encodes).
-        if (!bpm_popup_eligible_marker(mv[owner])) return;
-        // enter_bpm_mode tags the owner and flips the mode flag. It no
-        // longer auto-selects a next-marker cue; the span endpoint is
-        // explicit, so record it on the owner and keep both selected
-        // markers highlighted as the span cue.
-        flag_editor.enter_bpm_mode();
-        if (!app.bpm_mode_enabled) return;   // gate inside bailed
-        {
-            auto& mvw = app.warpmarkers.markers_mut();
-            mvw[owner].bpm_endpoint = endpoint;
-        }
-        const std::set<int> span_selection = app.selected_markers;
-        flag_editor.enter_bpm_edit(owner);
-        bool restored = false;
-        for (int s : span_selection) {
-            if (app.selected_markers.insert(s).second) restored = true;
-        }
-        if (restored) viewport.invalidate_top_strip();
-        return;
-    }
+    // P / I / M letter keys (phase-reset clipboard, view toggle, iteration,
+    // bpm mode).
+    if (handle_mode_keys(key, mods)) return;
 
     // Plain `r` toggles render analysis mode (see handle_render_view_toggle).
     if (handle_render_view_toggle(key, mods)) return;
@@ -546,38 +395,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
-    // current viewport/zoom/playhead to the leaving tab, restores the
-    // target tab. Does not mark the document dirty.
-    if (ctrl && !shift && key == GuiKeys::Tab) {
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        return;
-    }
-
-    // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
-    // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
-    // march paired tabs forward in lockstep with one chord.
-    if (ctrl && shift && key == GuiKeys::Tab) {
-        cycle_marker_focus_with_recenter(true);
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus_with_recenter(true);
-        return;
-    }
-
-    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter at max
-    // zoom on the focused marker. The Ctrl+Tab branch above runs first and
-    // returns, so Ctrl+Tab is consumed before reaching here; the explicit
-    // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
-    // cycle path either.
-    if (!ctrl && key == GuiKeys::Tab && !shift) {
-        cycle_marker_focus_with_recenter(true);  return;
-    }
-    if (!ctrl && key == GuiKeys::Tab && shift)  {
-        cycle_marker_focus_with_recenter(false); return;
-    }
-    if (!ctrl && key == GuiKeys::IsoLeftTab)    {
-        cycle_marker_focus_with_recenter(false); return;
-    }
+    // Tab family: Ctrl+Tab / Ctrl+Shift+Tab switch tabs; Tab / Shift+Tab /
+    // IsoLeftTab cycle marker focus.
+    if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge. Ctrl+Up / Ctrl+Down only. Bare `=` / `-` were the
     // previous binding; they now zoom (see below) so the keyboard has
@@ -686,43 +506,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // — never fall through into a bare binding (e.g. Ctrl+Shift+Alt+E
     // must not toggle end-time via GuiKeys::E).
     if (!ctrl && !shift && !alt) {
-        switch (key) {
-        case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
-        case GuiKeys::Left:   playback_lifecycle.stop_playback_if_playing();
-                        viewport.move_playhead_pixels(-1);         break;
-        case GuiKeys::Right:  playback_lifecycle.stop_playback_if_playing();
-                        viewport.move_playhead_pixels(+1);         break;
-        case GuiKeys::Up:     viewport.zoom_in();                        break;
-        case GuiKeys::Down:   viewport.zoom_out();                       break;
-        case GuiKeys::F: {
-            const bool was_off = !app.follow_mode;
-            app.follow_mode = !app.follow_mode;
-            if (was_off && app.follow_mode &&
-                playback.is_playing()) {
-                // Explicit enable overrides a prior manual-pan suppression so
-                // follow resumes paging, not just the one initial jump.
-                app.follow_overridden_for_session = false;
-                playback.resync_predictor();
-                // Land the scanner at the page-turn position if it had drifted
-                // offscreen; no-op when it is already in view.
-                viewport.follow_scroll_if_needed();
-            }
-            break;
-        }
-        case GuiKeys::C:      viewport.apply_zoom_change(kSnapZoomLevel);
-                        viewport.center_viewport_on_playhead();    break;
-        case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
-                        viewport.move_playhead_to(viewport.trim_begin_sample()); break;
-        case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
-                        viewport.move_playhead_to(viewport.trim_end_sample() - 1); break;
-        // b / e set the settings-side trim_begin / trim_end at the
-        // current playhead position. Mode-agnostic. Re-press at the same
-        // sample frame toggles off. Auto-swaps when the candidate would
-        // invert the trim region; refuses equal-frame collisions.
-        case GuiKeys::B: handle_trim_set_begin_at_playhead(); break;
-        case GuiKeys::E: handle_trim_set_end_at_playhead();   break;
-        default: break;
-        }
+        handle_plain_bare_keys(key);
     }
 }
 
@@ -1356,6 +1140,253 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
     return false;
+}
+
+// P / I / M letter-key handlers. See the declaration for the chord list.
+bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+
+    // Ctrl+P: copy phase reset placements from a two-warp-marker
+    // selection into the session clipboard. W-mode only; phase reset
+    // mode is a silent no-op. Off-count selection in W-mode emits a
+    // one-line stderr nudge.
+    if (key == GuiKeys::P && ctrl && !shift && !alt) {
+        if (app.active_markers_view != 'W') return true;
+        if (app.selected_markers.size() != 2) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset copy: select exactly two warp "
+                "markers\n");
+            return true;
+        }
+        phase_reset_propagate.copy_from_selection();
+        return true;
+    }
+
+    // Ctrl+Alt+P: paste clipboard phase resets onto the destination
+    // anchored at the single selected warp marker. W-mode only; phase
+    // reset mode is a silent no-op. Empty clipboard is a silent no-op.
+    // Opens a confirmation prompt before any mutation.
+    if (key == GuiKeys::P && ctrl && !shift && alt) {
+        if (app.active_markers_view != 'W') return true;
+        if (app.phase_reset_clipboard.empty()) return true;
+        if (app.selected_markers.size() != 1) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset paste: select exactly one warp "
+                "marker\n");
+            return true;
+        }
+        phase_reset_propagate.open_paste_confirmation();
+        return true;
+    }
+
+    // Ctrl+Alt+Shift+P: propagate the enabled/disabled *state* of
+    // clipboard placements onto the matching destination region's
+    // phase resets, in order. Positions are not modified. W-mode only;
+    // phase reset mode is a silent no-op. Empty clipboard is a silent
+    // no-op. Unlike Ctrl+Alt+P, no confirmation prompt — applies
+    // directly. Divergence/mismatch is reported via the bottom-strip
+    // transient status message rather than a modal dialog.
+    if (key == GuiKeys::P && ctrl && shift && alt) {
+        if (app.active_markers_view != 'W') return true;
+        if (app.phase_reset_clipboard.empty()) return true;
+        if (app.selected_markers.size() != 1) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset state-paste: select exactly one "
+                "warp marker\n");
+            return true;
+        }
+        phase_reset_propagate.paste_state_apply();
+        return true;
+    }
+
+    // `p` (no modifiers) toggles phase reset view globally.
+    // Render-view shares the global active_markers_view flag, so a
+    // single handler serves both views. Render-view inherits the
+    // engine precondition check from toggle_active_markers_view.
+    if (key == GuiKeys::P && !ctrl && !shift && !alt) {
+        active_views.toggle_active_markers_view();
+        return true;
+    }
+
+    // `i` (no modifiers) toggles iteration mode in warp. Silent
+    // no-op in phase reset view (phase reset flags carry no tempo to
+    // iterate). The editor-active branch above already swallows any
+    // keystroke while a popup edit is in flight, so this code only
+    // runs with no active editor. Toggling repaints the top strip
+    // so iteration popups appear or vanish in one frame.
+    if (key == GuiKeys::I && !ctrl && !shift && !alt) {
+        if (app.active_markers_view == 'W') {
+            // Mutual exclusion. Toggling iter ON forces
+            // BPM mode off; toggling iter OFF leaves BPM untouched.
+            const bool turning_on = !app.iteration_mode_enabled;
+            if (turning_on && app.bpm_mode_enabled) {
+                app.bpm_mode_enabled = false;
+            }
+            app.iteration_mode_enabled = !app.iteration_mode_enabled;
+            viewport.clear_hover_popup();
+            viewport.invalidate_top_strip();
+        }
+        return true;
+    }
+    // Shift+I: bulk-clear every marker's iter values AND exit
+    // iteration mode in one keystroke ("stop authoring this mode").
+    // Only fires while iteration mode is on; otherwise silent no-op.
+    if (key == GuiKeys::I && !ctrl && shift && !alt) {
+        if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
+            flag_editor.bulk_clear_iter_values();
+            app.iteration_mode_enabled = false;
+            viewport.invalidate_top_strip();
+        }
+        return true;
+    }
+
+    // `m` (no modifiers): open the BPM editor on the earlier of two
+    // selected markers that define an explicit span, or — if BPM mode is
+    // already on — toggle it (and the editor) off. Warp view only; silent
+    // no-op in phase reset view. Mutual exclusion with iter mode is handled
+    // inside enter_bpm_mode. The gate requires exactly two selected markers
+    // with no label_ref anywhere in the span; any other selection is a
+    // silent no-op.
+    if (key == GuiKeys::M && !ctrl && !shift && !alt) {
+        if (app.active_markers_view != 'W') return true;
+        if (app.bpm_mode_enabled) {
+            // Re-press: editor and mode go down together.
+            if (text_editor::is_active(app.top_flag_editor) &&
+                app.top_flag_editor.kind ==
+                    text_editor::Kind::BpmBracket) {
+                flag_editor.exit_top_flag_edit_no_commit();
+            }
+            flag_editor.exit_bpm_mode();
+            viewport.invalidate_timestamp_area();
+            return true;
+        }
+        // Two-marker span gate. Exactly two markers must be selected; the
+        // earlier owns, the later closes the span. Neither endpoint nor any
+        // span-internal marker may be a label_ref — commit rewrites every
+        // in-span tempo and a ref cannot take a manual tempo.
+        if (app.selected_markers.size() != 2) return true;
+        const auto& mv = app.warpmarkers.markers();
+        auto it = app.selected_markers.begin();
+        const int owner    = *it++;       // std::set: ascending, so owner is
+        const int endpoint = *it;         // the earlier index, endpoint later
+        if (owner < 0 || endpoint >= static_cast<int>(mv.size())) return true;
+        // No label_ref anywhere in [owner, endpoint] inclusive (endpoint
+        // included in the eligibility scan even though its section is not in
+        // the rendered region — a ref endpoint still cannot bound the span
+        // cleanly). Disabled markers ARE allowed and remain in-span.
+        for (int i = owner; i <= endpoint; ++i) {
+            if (!mv[i].label_ref.empty()) return true;   // silent no-op
+        }
+        // Owner must still satisfy the BPM-eligibility predicate (e.g. not
+        // itself a label_ref — already covered — and any other standing
+        // condition bpm_popup_eligible_marker encodes).
+        if (!bpm_popup_eligible_marker(mv[owner])) return true;
+        // enter_bpm_mode tags the owner and flips the mode flag. It no
+        // longer auto-selects a next-marker cue; the span endpoint is
+        // explicit, so record it on the owner and keep both selected
+        // markers highlighted as the span cue.
+        flag_editor.enter_bpm_mode();
+        if (!app.bpm_mode_enabled) return true;   // gate inside bailed
+        {
+            auto& mvw = app.warpmarkers.markers_mut();
+            mvw[owner].bpm_endpoint = endpoint;
+        }
+        const std::set<int> span_selection = app.selected_markers;
+        flag_editor.enter_bpm_edit(owner);
+        bool restored = false;
+        for (int s : span_selection) {
+            if (app.selected_markers.insert(s).second) restored = true;
+        }
+        if (restored) viewport.invalidate_top_strip();
+        return true;
+    }
+
+    return false;
+}
+
+// Tab-key family. See the declaration for the chord list.
+bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+
+    // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
+    // current viewport/zoom/playhead to the leaving tab, restores the
+    // target tab. Does not mark the document dirty.
+    if (ctrl && !shift && key == GuiKeys::Tab) {
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        return true;
+    }
+
+    // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
+    // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
+    // march paired tabs forward in lockstep with one chord.
+    if (ctrl && shift && key == GuiKeys::Tab) {
+        cycle_marker_focus_with_recenter(true);
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        cycle_marker_focus_with_recenter(true);
+        return true;
+    }
+
+    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter at max
+    // zoom on the focused marker. The Ctrl+Tab branch above runs first and
+    // returns, so Ctrl+Tab is consumed before reaching here; the explicit
+    // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
+    // cycle path either.
+    if (!ctrl && key == GuiKeys::Tab && !shift) {
+        cycle_marker_focus_with_recenter(true);  return true;
+    }
+    if (!ctrl && key == GuiKeys::Tab && shift)  {
+        cycle_marker_focus_with_recenter(false); return true;
+    }
+    if (!ctrl && key == GuiKeys::IsoLeftTab)    {
+        cycle_marker_focus_with_recenter(false); return true;
+    }
+
+    return false;
+}
+
+// Bare-key (no-modifier) dispatch. See the declaration for the binding list;
+// the caller gates on no modifiers held.
+void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
+    switch (key) {
+    case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
+    case GuiKeys::Left:   playback_lifecycle.stop_playback_if_playing();
+                    viewport.move_playhead_pixels(-1);         break;
+    case GuiKeys::Right:  playback_lifecycle.stop_playback_if_playing();
+                    viewport.move_playhead_pixels(+1);         break;
+    case GuiKeys::Up:     viewport.zoom_in();                        break;
+    case GuiKeys::Down:   viewport.zoom_out();                       break;
+    case GuiKeys::F: {
+        const bool was_off = !app.follow_mode;
+        app.follow_mode = !app.follow_mode;
+        if (was_off && app.follow_mode &&
+            playback.is_playing()) {
+            // Explicit enable overrides a prior manual-pan suppression so
+            // follow resumes paging, not just the one initial jump.
+            app.follow_overridden_for_session = false;
+            playback.resync_predictor();
+            // Land the scanner at the page-turn position if it had drifted
+            // offscreen; no-op when it is already in view.
+            viewport.follow_scroll_if_needed();
+        }
+        break;
+    }
+    case GuiKeys::C:      viewport.apply_zoom_change(kSnapZoomLevel);
+                    viewport.center_viewport_on_playhead();    break;
+    case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
+                    viewport.move_playhead_to(viewport.trim_begin_sample()); break;
+    case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
+                    viewport.move_playhead_to(viewport.trim_end_sample() - 1); break;
+    // b / e set the settings-side trim_begin / trim_end at the
+    // current playhead position. Mode-agnostic. Re-press at the same
+    // sample frame toggles off. Auto-swaps when the candidate would
+    // invert the trim region; refuses equal-frame collisions.
+    case GuiKeys::B: handle_trim_set_begin_at_playhead(); break;
+    case GuiKeys::E: handle_trim_set_end_at_playhead();   break;
+    default: break;
+    }
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
