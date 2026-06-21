@@ -432,8 +432,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Esc cancels an in-flight render / queued batch / playhead drag /
-    // trim drag.
+    // Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key)) return;
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
@@ -1445,32 +1444,6 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
         // the rare case where queue_running is set but the worker has
         // already cleared — defensive, mirrors the prior behavior.
         app.queue_cancel_requested = true;
-        return true;
-    }
-    // Escape during a playhead drag ends the gesture at its current
-    // position (no restore — the drag already committed its visible
-    // progress per motion event, so there's nothing to revert).
-    if (key == GuiKeys::Escape && app.playhead_drag.active) {
-        app.playhead_drag = PlayheadDragState{};
-        return true;
-    }
-    // Escape during a trim-boundary drag reverts the dragged bound to its
-    // pre-drag value (the drag mutated the live store per motion event)
-    // and ends the gesture without an undo entry.
-    if (key == GuiKeys::Escape && app.trim_drag.active) {
-        double& field = app.trim_drag.is_begin ? app.trim.begin_seconds
-                                                : app.trim.end_seconds;
-        bool changed = false;
-        if (field != app.trim_drag.orig_seconds) {
-            field = app.trim_drag.orig_seconds;
-            changed = true;
-        }
-        if (changed) {
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
-        }
-        app.trim_drag = TrimDragState{};
         return true;
     }
     return false;
