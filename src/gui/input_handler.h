@@ -269,6 +269,21 @@ private:
     // first) and before the rest of the key handlers.
     bool handle_escape_cancels(GuiKey key);
 
+    // Render-trigger chords: Ctrl+E (queue-add), Ctrl+Alt+R (single render),
+    // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iteration sweep),
+    // Ctrl+Alt+C (commit displayed render). Returns true if key+mods matched
+    // one (on_key then returns), false otherwise.
+    bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
+
+    // Routes a key to the active top-flag editor. Returns true if the editor
+    // consumed it (on_key then returns); false if the key is a command, in
+    // which case the edit is cancelled here and on_key runs the command.
+    bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
+
+    // Routes a key to the active settings-prompt editor. Same consumed/command
+    // contract as handle_top_flag_editor_key.
+    bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
+
     // b / e key handlers — set the settings-side trim_begin / trim_end to
     // the playhead's current position. Mode-agnostic. Re-press at the
     // same sample frame toggles off; equal-frame collision with the
@@ -331,6 +346,12 @@ private:
     // — true when `key`+`mods` is NOT one of the chords permitted while
     // render-view is active (so the caller drops it with an early return).
     bool render_view_key_blocked(GuiKey key, GuiInputState mods);
+
+    // Source-view read-only allowlist. Returns true if key+mods is NOT on the
+    // allowlist of navigation / playback / zoom / view-switch / undo /
+    // close-prompt keys honored in a read-only source tab — i.e. should be
+    // dropped. Sibling of render_view_key_blocked.
+    bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // handle_render_view_toggle: the bare-R enter/exit handler. Returns false
     // if the chord is not bare R (caller falls through); otherwise performs
