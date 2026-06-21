@@ -263,6 +263,13 @@ private:
     // from phase_reset_markers in 'P' mode, warpmarkers otherwise.
     void cycle_marker_focus_with_recenter(bool forward);
 
+    // Esc-cancel handlers: while a render, queued batch, playhead drag, or
+    // trim drag is in flight, Esc cancels that operation. Returns true if it
+    // consumed the key (on_key then returns). Routed after the editor modal
+    // (which cancels an active edit on Esc first) and before the rest of the
+    // key handlers.
+    bool handle_escape_cancels(GuiKey key);
+
     // b / e key handlers — set the settings-side trim_begin / trim_end to
     // the playhead's current position. Mode-agnostic. Re-press at the
     // same sample frame toggles off; equal-frame collision with the
