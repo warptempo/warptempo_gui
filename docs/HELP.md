@@ -215,4 +215,4 @@ That copy is a lossy reference only — enough to follow the example and hear wh
 
 Example output, also in lossy audio format:
 
-[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
+[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT1OkUITQ4vX2l20qzGylkqI)

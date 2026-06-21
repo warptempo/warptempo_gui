@@ -8,7 +8,7 @@ The classical phase-vocoder use case — one constant stretch ratio for an entir
 
 The `examples/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer 2024 remaster for Decca Eloquence) warped toward Hummel-published metronome marks. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the reference example — it exercises every form and syntax used in the project (label cascade, phase-reset markers, two-decimal `base_tempo` with six-decimal scale fine-tune).
 
-[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT15L4IOlFjR0uYKg-Z7bQZU)
+[Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT1OkUITQ4vX2l20qzGylkqI)
 
 Linux + Wayland (JACK audio) for the GUI; the headless CLI tools build and run without Wayland or JACK, including under WSL2. Build instructions, conceptual model, hotkey reference, and file formats are in `docs/HELP.md`.
 
