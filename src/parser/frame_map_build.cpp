@@ -347,7 +347,7 @@ std::expected<MapBuildResult, std::string> build_maps(
 
         size_t sf = static_cast<size_t>(std::llrint(src_frame));
         size_t tf = static_cast<size_t>(std::llrint(target_frame));
-        out.frame_map.push_back({sf, tf});
+        out.frame_map.push_back({sf, tf, src_frame, target_frame});
 
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;

@@ -12,6 +12,17 @@
 struct FrameMapSegment {
     size_t src_frame;
     size_t tgt_frame;
+    // Unrounded breakpoint values, and the eventual single source of truth:
+    // the dense warp schedule will interpolate from this precise pair so a
+    // collinear (redundant) breakpoint lies exactly on the segment line and is
+    // idempotent. src_frame / tgt_frame are llrint(...) of these, kept only as
+    // a transitional scaffold while consumers migrate to precise; a later step
+    // drops them, leaving rounding at the engine's final per-frame position and
+    // the few user-facing sites (display, trim boundaries). Defaulted so the
+    // existing two-field aggregate inits compile and leave precise == 0 until
+    // each construction site is updated.
+    double src_precise = 0.0;
+    double tgt_precise = 0.0;
 };
 
 inline double map_source_to_target(size_t src_frame, const std::vector<FrameMapSegment>& map) {
