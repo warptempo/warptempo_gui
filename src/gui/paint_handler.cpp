@@ -527,6 +527,151 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     cairo_restore(cr);
 }
 
+// -- GuiPaintHandler::paint_bottom_strip ---------------------------------
+
+double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
+    using clock = std::chrono::steady_clock;
+
+    // Bottom strip: two text rows of equal height mirroring
+    // the top strip. The status line lives on the lower (outer) row and
+    // paints UNCONDITIONALLY — it is no longer the trailing else of a
+    // chain, so it stays visible while an editor is open on the upper
+    // (inner) row, letting the user keep their timestamp / S-T / W-P /
+    // A-B bearings while typing. The upper row carries the transient /
+    // modal chain in precedence order: prompt > queue > settings editor
+    // > BPM editor > hover readout. The prompt is a one-key-answer modal
+    // and owns the upper row; status stays visible under it (harmless
+    // context). Each row's baseline is derived from its row rect, not
+    // from the window bottom.
+    double t_ts_ms = 0.0;
+    const GuiRect lower_row = bottom_lower_row_area(app);
+    const GuiRect upper_row = bottom_upper_row_area(app);
+    const double lower_baseline =
+        lower_row.y + monospace_row_baseline_offset();
+    const double upper_baseline =
+        upper_row.y + monospace_row_baseline_offset();
+
+    // --- Lower row: status line (always on). One assembled field
+    //     drawn in a single pass; elements (timestamp, S/T, W/P,
+    //     A/B, render-view filename, dirty *, transient message) are
+    //     space-separated and paint uniformly in kText. Read-only on
+    //     the active A/B tab is the literal "(read-only)" token.
+    //
+    //     In source-view, sr is the loaded file's sample rate and the
+    //     playhead samples are source-frames. In render-view the
+    //     active `audio` is the render; its sr is what the engine
+    //     wrote and the playhead is render-frame coords. The same
+    //     arithmetic suffices. Split-playhead: track the scanner
+    //     during playback (what the user hears), the cursor otherwise
+    //     (equal by invariant when the scanner is inactive).
+    {
+        const int64_t ts_sample = app.playhead_scanner_active
+            ? app.playhead_scanner_sample
+            : app.playhead_cursor_sample;
+        double seconds = 0.0;
+        if (sr > 0) {
+            seconds = static_cast<double>(ts_sample) /
+                      static_cast<double>(sr);
+        }
+        if (seconds < 0.0) seconds = 0.0;
+        if (seconds > 5999.999) seconds = 5999.999;
+
+        std::string assembled = format_timestamp(seconds);
+        if (!app.render_view.enabled) {
+            assembled += ' ';
+            assembled += (app.active_audio_view == 'T'
+                            ? 'T' : 'S');
+            assembled += ' ';
+            assembled += app.active_markers_view;
+            assembled += ' ';
+            assembled += app.active_tab_view;
+            if (active_view_state(app).read_only) {
+                assembled += ' ';
+                assembled += "(read-only)";
+            }
+        } else if (app.render_view.index >= 0 &&
+                   app.render_view.index <
+                       static_cast<int>(
+                           app.render_view.list.size())) {
+            const auto& e =
+                app.render_view.list[app.render_view.index];
+            assembled += ' ';
+            assembled += e.batch_folder.filename().string();
+            assembled += '/';
+            assembled += e.basename;
+            assembled += ".wav";
+        }
+        if (app.dirty) {
+            assembled += ' ';
+            assembled += '*';
+        }
+        if (!app.transient_status_message.empty()) {
+            assembled += ' ';
+            assembled += app.transient_status_message;
+        }
+
+        const auto s0 = clock::now();
+        text_display::draw_line(
+            cr, static_cast<double>(kTimestampPadX), lower_baseline,
+            assembled, kText, kFlagFontSize);
+        const auto s1 = clock::now();
+        t_ts_ms =
+            std::chrono::duration<double, std::milli>(s1 - s0).count();
+    }
+
+    // --- Upper row: transient / modal chain. ---
+    if (app.prompt.active) {
+        // Plain tier: the prompt text followed by its response
+        // labels, each chained off the measured advance returned
+        // by draw_line so no separate measurement pass is needed.
+        const double label_gap = kTabLetterGapPx * 2.0;
+        double cursor_x = static_cast<double>(kTimestampPadX);
+        cursor_x += text_display::draw_line(
+            cr, cursor_x, upper_baseline, app.prompt.text,
+            kText, kFlagFontSize);
+        cursor_x += label_gap;
+        for (const auto& label : app.prompt.response_labels) {
+            cursor_x += text_display::draw_line(
+                cr, cursor_x, upper_baseline, label,
+                kText, kFlagFontSize) + label_gap;
+        }
+    } else if (!app.queue_progress_text.empty()) {
+        text_display::draw_line(
+            cr, static_cast<double>(kTimestampPadX), upper_baseline,
+            app.queue_progress_text, kText, kFlagFontSize);
+    } else if (text_editor::is_active(app.settings_editor)) {
+        // Settings prompt overlay: "setting: <pending>"
+        // through the shared bottom-strip editor helper. Fill is
+        // kBackground normally, kAccent on parse failure (handled
+        // inside the helper).
+        render_bottom_strip_editor(cr, app.settings_editor,
+                                   kSettingsEditorPrefix,
+                                   static_cast<double>(kTimestampPadX),
+                                   upper_baseline);
+    } else if (text_editor::is_active(app.top_flag_editor) &&
+               app.top_flag_editor.kind ==
+                   text_editor::Kind::BpmBracket) {
+        // BPM editor overlay, through the same bottom-strip
+        // editor helper as the settings branch above. top_flag_editor
+        // with kind==BpmBracket only ever paints here, never over the
+        // flag in the top strip.
+        render_bottom_strip_editor(cr, app.top_flag_editor,
+                                   kBpmEditorPrefix,
+                                   static_cast<double>(kTimestampPadX),
+                                   upper_baseline);
+    } else if (app.hover_popup.visible) {
+        // The floating hover popup paint was deleted but the dwell
+        // mechanism kept; it now lives as the lowest-priority
+        // upper-row branch. cached_text is the
+        // resolved-tempo string from compute_hover_popup_text.
+        text_display::draw_line(
+            cr, static_cast<double>(kTimestampPadX), upper_baseline,
+            app.hover_popup.cached_text, kText, kFlagFontSize);
+    }
+
+    return t_ts_ms;
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -631,143 +776,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_debug_hit_rects(cr, area, top_strip, sr);
         }
 
-        // Bottom strip: two text rows of equal height mirroring
-        // the top strip. The status line lives on the lower (outer) row and
-        // paints UNCONDITIONALLY — it is no longer the trailing else of a
-        // chain, so it stays visible while an editor is open on the upper
-        // (inner) row, letting the user keep their timestamp / S-T / W-P /
-        // A-B bearings while typing. The upper row carries the transient /
-        // modal chain in precedence order: prompt > queue > settings editor
-        // > BPM editor > hover readout. The prompt is a one-key-answer modal
-        // and owns the upper row; status stays visible under it (harmless
-        // context). Each row's baseline is derived from its row rect, not
-        // from the window bottom.
         const GuiRect bottom_strip = timestamp_invalidate_rect(app);
         if (rects_intersect(exposed, bottom_strip)) {
-            const GuiRect lower_row = bottom_lower_row_area(app);
-            const GuiRect upper_row = bottom_upper_row_area(app);
-            const double lower_baseline =
-                lower_row.y + monospace_row_baseline_offset();
-            const double upper_baseline =
-                upper_row.y + monospace_row_baseline_offset();
-
-            // --- Lower row: status line (always on). One assembled field
-            //     drawn in a single pass; elements (timestamp, S/T, W/P,
-            //     A/B, render-view filename, dirty *, transient message) are
-            //     space-separated and paint uniformly in kText. Read-only on
-            //     the active A/B tab is the literal "(read-only)" token.
-            //
-            //     In source-view, sr is the loaded file's sample rate and the
-            //     playhead samples are source-frames. In render-view the
-            //     active `audio` is the render; its sr is what the engine
-            //     wrote and the playhead is render-frame coords. The same
-            //     arithmetic suffices. Split-playhead: track the scanner
-            //     during playback (what the user hears), the cursor otherwise
-            //     (equal by invariant when the scanner is inactive).
-            {
-                const int64_t ts_sample = app.playhead_scanner_active
-                    ? app.playhead_scanner_sample
-                    : app.playhead_cursor_sample;
-                double seconds = 0.0;
-                if (sr > 0) {
-                    seconds = static_cast<double>(ts_sample) /
-                              static_cast<double>(sr);
-                }
-                if (seconds < 0.0) seconds = 0.0;
-                if (seconds > 5999.999) seconds = 5999.999;
-
-                std::string assembled = format_timestamp(seconds);
-                if (!app.render_view.enabled) {
-                    assembled += ' ';
-                    assembled += (app.active_audio_view == 'T'
-                                    ? 'T' : 'S');
-                    assembled += ' ';
-                    assembled += app.active_markers_view;
-                    assembled += ' ';
-                    assembled += app.active_tab_view;
-                    if (active_view_state(app).read_only) {
-                        assembled += ' ';
-                        assembled += "(read-only)";
-                    }
-                } else if (app.render_view.index >= 0 &&
-                           app.render_view.index <
-                               static_cast<int>(
-                                   app.render_view.list.size())) {
-                    const auto& e =
-                        app.render_view.list[app.render_view.index];
-                    assembled += ' ';
-                    assembled += e.batch_folder.filename().string();
-                    assembled += '/';
-                    assembled += e.basename;
-                    assembled += ".wav";
-                }
-                if (app.dirty) {
-                    assembled += ' ';
-                    assembled += '*';
-                }
-                if (!app.transient_status_message.empty()) {
-                    assembled += ' ';
-                    assembled += app.transient_status_message;
-                }
-
-                const auto s0 = clock::now();
-                text_display::draw_line(
-                    cr, static_cast<double>(kTimestampPadX), lower_baseline,
-                    assembled, kText, kFlagFontSize);
-                const auto s1 = clock::now();
-                t_ts_ms =
-                    std::chrono::duration<double, std::milli>(s1 - s0).count();
-            }
-
-            // --- Upper row: transient / modal chain. ---
-            if (app.prompt.active) {
-                // Plain tier: the prompt text followed by its response
-                // labels, each chained off the measured advance returned
-                // by draw_line so no separate measurement pass is needed.
-                const double label_gap = kTabLetterGapPx * 2.0;
-                double cursor_x = static_cast<double>(kTimestampPadX);
-                cursor_x += text_display::draw_line(
-                    cr, cursor_x, upper_baseline, app.prompt.text,
-                    kText, kFlagFontSize);
-                cursor_x += label_gap;
-                for (const auto& label : app.prompt.response_labels) {
-                    cursor_x += text_display::draw_line(
-                        cr, cursor_x, upper_baseline, label,
-                        kText, kFlagFontSize) + label_gap;
-                }
-            } else if (!app.queue_progress_text.empty()) {
-                text_display::draw_line(
-                    cr, static_cast<double>(kTimestampPadX), upper_baseline,
-                    app.queue_progress_text, kText, kFlagFontSize);
-            } else if (text_editor::is_active(app.settings_editor)) {
-                // Settings prompt overlay: "setting: <pending>"
-                // through the shared bottom-strip editor helper. Fill is
-                // kBackground normally, kAccent on parse failure (handled
-                // inside the helper).
-                render_bottom_strip_editor(cr, app.settings_editor,
-                                           kSettingsEditorPrefix,
-                                           static_cast<double>(kTimestampPadX),
-                                           upper_baseline);
-            } else if (text_editor::is_active(app.top_flag_editor) &&
-                       app.top_flag_editor.kind ==
-                           text_editor::Kind::BpmBracket) {
-                // BPM editor overlay, through the same bottom-strip
-                // editor helper as the settings branch above. top_flag_editor
-                // with kind==BpmBracket only ever paints here, never over the
-                // flag in the top strip.
-                render_bottom_strip_editor(cr, app.top_flag_editor,
-                                           kBpmEditorPrefix,
-                                           static_cast<double>(kTimestampPadX),
-                                           upper_baseline);
-            } else if (app.hover_popup.visible) {
-                // The floating hover popup paint was deleted but the dwell
-                // mechanism kept; it now lives as the lowest-priority
-                // upper-row branch. cached_text is the
-                // resolved-tempo string from compute_hover_popup_text.
-                text_display::draw_line(
-                    cr, static_cast<double>(kTimestampPadX), upper_baseline,
-                    app.hover_popup.cached_text, kText, kFlagFontSize);
-            }
+            t_ts_ms = paint_bottom_strip(cr, sr);
         }
     }
 

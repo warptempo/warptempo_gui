@@ -483,4 +483,5 @@ private:
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_debug_hit_rects(cairo_t* cr, const GuiRect& area,
                                const GuiRect& top_strip, int sr);
+    double paint_bottom_strip(cairo_t* cr, int sr);
 };
