@@ -345,9 +345,7 @@ std::expected<MapBuildResult, std::string> build_maps(
             out.tempo_map.push_back({seg_start_time, effective_multiplier});
         }
 
-        size_t sf = static_cast<size_t>(std::llrint(src_frame));
-        size_t tf = static_cast<size_t>(std::llrint(target_frame));
-        out.frame_map.push_back({sf, tf, src_frame, target_frame});
+        out.frame_map.push_back({src_frame, target_frame});
 
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;
@@ -375,54 +373,31 @@ std::expected<MapBuildResult, std::string> build_maps(
         // map_source_to_target takes std::vector<FrameMapSegment> (engine
         // struct), so build a one-shot element-wise copy.
         std::vector<FrameMapSegment> pre_shift_frame_map = out.frame_map;
-        std::vector<FrameMapSegment> pre_shift_eng;
-        pre_shift_eng.reserve(pre_shift_frame_map.size());
-        for (const auto& s : pre_shift_frame_map) {
-            pre_shift_eng.push_back({s.src_frame, s.tgt_frame});
-        }
 
-        // Boundary tgt values. Aligning to a real marker degenerates to
-        // that marker's tgt (interpolation at a node returns the node);
-        // off-alignment yields the interpolated tgt at the trim boundary
-        // so the shift offset preserves strict monotonicity when the
-        // synthetic anchor is later prepended/appended.
-        const long begin_tgt = has_begin
-            ? static_cast<long>(std::nearbyint(
-                  map_source_to_target(static_cast<size_t>(begin_frame),
-                                       pre_shift_eng)))
-            : 0;
-        const long end_tgt = has_end
-            ? static_cast<long>(std::nearbyint(
-                  map_source_to_target(static_cast<size_t>(end_frame),
-                                       pre_shift_eng)))
-            : (pre_shift_frame_map.empty()
-                  ? 0
-                  : static_cast<long>(pre_shift_frame_map.back().tgt_frame));
-
-        // Precise (unrounded) counterparts of begin_tgt / end_tgt for the
-        // precise-field translation. Source offset is the integer trim cut
-        // (begin_frame); only the target offset is fractional.
-        const double begin_tgt_precise = has_begin
-            ? map_source_to_target_precise(static_cast<double>(begin_frame),
-                                           pre_shift_frame_map)
+        // Boundary tgt values (unrounded). Aligning to a real marker
+        // degenerates to that marker's tgt (interpolation at a node returns the
+        // node); off-alignment yields the interpolated tgt at the trim boundary
+        // so the shift offset preserves strict monotonicity when the synthetic
+        // anchor is later prepended/appended. Source offset is the integer trim
+        // cut (begin_frame); only the target offset is fractional.
+        const double begin_tgt = has_begin
+            ? map_source_to_target(static_cast<double>(begin_frame),
+                                   pre_shift_frame_map)
             : 0.0;
-        const double end_tgt_precise = has_end
-            ? map_source_to_target_precise(static_cast<double>(end_frame),
-                                           pre_shift_frame_map)
+        const double end_tgt = has_end
+            ? map_source_to_target(static_cast<double>(end_frame),
+                                   pre_shift_frame_map)
             : (pre_shift_frame_map.empty()
                   ? 0.0
-                  : pre_shift_frame_map.back().tgt_precise);
+                  : pre_shift_frame_map.back().tgt_frame);
 
         std::vector<FrameMapSegment> frame_map_shifted;
         for (const auto& seg : pre_shift_frame_map) {
-            long sf = static_cast<long>(seg.src_frame);
-            long tf = static_cast<long>(seg.tgt_frame);
+            const long sf = static_cast<long>(std::llrint(seg.src_frame));
             if (sf >= begin_frame && sf <= end_frame) {
                 frame_map_shifted.push_back({
-                    static_cast<size_t>(sf - begin_frame),
-                    static_cast<size_t>(tf - begin_tgt),
-                    seg.src_precise - static_cast<double>(begin_frame),
-                    seg.tgt_precise - begin_tgt_precise
+                    seg.src_frame - static_cast<double>(begin_frame),
+                    seg.tgt_frame - begin_tgt
                 });
             }
         }
@@ -432,31 +407,31 @@ std::expected<MapBuildResult, std::string> build_maps(
         // src_frame == 0. The interpolated begin_tgt above guarantees
         // strict monotonicity against the first real entry.
         if (has_begin &&
-            (out.frame_map.empty() || out.frame_map.front().src_frame != 0)) {
-            out.frame_map.insert(out.frame_map.begin(), FrameMapSegment{0, 0});
+            (out.frame_map.empty() ||
+             std::llrint(out.frame_map.front().src_frame) != 0)) {
+            out.frame_map.insert(out.frame_map.begin(), FrameMapSegment{0.0, 0.0});
             out.has_trim_begin_anchor = true;
         }
 
         // End anchor: append (end-begin, end_tgt-begin_tgt) when no
         // surviving entry sits at the trim_end boundary.
         if (has_end) {
-            const size_t end_src_shifted =
-                static_cast<size_t>(end_frame - begin_frame);
+            const long end_src_shifted = end_frame - begin_frame;
             if (out.frame_map.empty() ||
-                out.frame_map.back().src_frame != end_src_shifted) {
+                std::llrint(out.frame_map.back().src_frame) != end_src_shifted) {
                 out.frame_map.push_back(FrameMapSegment{
-                    end_src_shifted,
-                    static_cast<size_t>(end_tgt - begin_tgt),
                     static_cast<double>(end_frame - begin_frame),
-                    end_tgt_precise - begin_tgt_precise
+                    end_tgt - begin_tgt
                 });
                 out.has_trim_end_anchor = true;
             }
         }
 
         {
-            double begin_tgt_sec = static_cast<double>(begin_tgt) / sample_rate;
-            double end_tgt_sec   = static_cast<double>(end_tgt)   / sample_rate;
+            double begin_tgt_sec =
+                static_cast<double>(std::llrint(begin_tgt)) / sample_rate;
+            double end_tgt_sec   =
+                static_cast<double>(std::llrint(end_tgt))   / sample_rate;
 
             std::vector<TempoMapEntry> tempo_map_shifted;
             double active_multiplier = 1.0;
@@ -540,11 +515,11 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // source map_target_to_source(m*R_s) - N/2, banker's-rounded to int64
     // (llrint).
     const int64_t target_total =
-        static_cast<int64_t>(std::llrint(full_map.back().tgt_precise)) + N;
+        static_cast<int64_t>(std::llrint(full_map.back().tgt_frame)) + N;
     std::vector<int64_t> dense;
     for (int64_t t_s = 0; t_s < target_total; t_s += R_s) {
         const double src =
-            map_target_to_source_precise(static_cast<double>(t_s), full_map)
+            map_target_to_source(static_cast<double>(t_s), full_map)
             - static_cast<double>(N) / 2.0;
         dense.push_back(static_cast<int64_t>(std::llrint(src)));
     }
@@ -566,33 +541,28 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     out.window_offset_samples = offset;
 
     // Edge sources/targets on the full map's exact piecewise lines.
-    const int64_t start_src = static_cast<int64_t>(std::llrint(
-        map_target_to_source(static_cast<size_t>(offset), full_map)));
     const int64_t end_tgt_full = static_cast<int64_t>(std::llrint(
-        map_source_to_target_precise(static_cast<double>(trim_end_src), full_map)));
+        map_source_to_target(static_cast<double>(trim_end_src), full_map)));
     const double start_src_precise =
-        map_target_to_source_precise(static_cast<double>(offset), full_map);
+        map_target_to_source(static_cast<double>(offset), full_map);
 
     std::vector<FrameMapSegment>& sm = out.frame_map;
     // Start anchor at output 0.
     sm.push_back(FrameMapSegment{
-        static_cast<size_t>(start_src < 0 ? 0 : start_src), 0,
         start_src_precise < 0.0 ? 0.0 : start_src_precise, 0.0});
     // Interior real segments strictly inside the window's output span, target
     // shifted by -offset (rigid integer translation -> lines preserved exactly),
     // source absolute. Skip any that would collide with the start anchor's
     // source or land at/under target 0 (strict-monotonic guard).
     for (const auto& s : full_map) {
-        const int64_t tf = static_cast<int64_t>(s.tgt_frame);
+        const int64_t tf = static_cast<int64_t>(std::llrint(s.tgt_frame));
         if (tf <= offset || tf >= end_tgt_full) continue;
-        const int64_t sf = static_cast<int64_t>(s.src_frame);
-        if (sf <= static_cast<int64_t>(sm.back().src_frame)) continue;       // src strict
+        const int64_t sf = static_cast<int64_t>(std::llrint(s.src_frame));
+        if (sf <= static_cast<int64_t>(std::llrint(sm.back().src_frame))) continue;  // src strict
         const int64_t st = tf - offset;
-        if (st <= static_cast<int64_t>(sm.back().tgt_frame)) continue;       // tgt strict
-        sm.push_back(FrameMapSegment{static_cast<size_t>(sf),
-                                     static_cast<size_t>(st),
-                                     s.src_precise,
-                                     s.tgt_precise - static_cast<double>(offset)});
+        if (st <= static_cast<int64_t>(std::llrint(sm.back().tgt_frame))) continue;  // tgt strict
+        sm.push_back(FrameMapSegment{s.src_frame,
+                                     s.tgt_frame - static_cast<double>(offset)});
     }
     // End on the first full-map anchor at or past trim_end_src (the anchor that
     // closes the segment containing trim_end_src), target-shifted by -offset.
@@ -603,15 +573,13 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // bounded by the source length, so a closing anchor always exists (at worst
     // full_map.back()).
     for (const auto& s : full_map) {
-        if (static_cast<int64_t>(s.src_frame) < trim_end_src) continue;
-        const int64_t sf = static_cast<int64_t>(s.src_frame);
-        const int64_t st = static_cast<int64_t>(s.tgt_frame) - offset;
-        if (sf > static_cast<int64_t>(sm.back().src_frame) &&
-            st > static_cast<int64_t>(sm.back().tgt_frame)) {
-            sm.push_back(FrameMapSegment{static_cast<size_t>(sf),
-                                         static_cast<size_t>(st),
-                                         s.src_precise,
-                                         s.tgt_precise - static_cast<double>(offset)});
+        if (static_cast<int64_t>(std::llrint(s.src_frame)) < trim_end_src) continue;
+        const int64_t sf = static_cast<int64_t>(std::llrint(s.src_frame));
+        const int64_t st = static_cast<int64_t>(std::llrint(s.tgt_frame)) - offset;
+        if (sf > static_cast<int64_t>(std::llrint(sm.back().src_frame)) &&
+            st > static_cast<int64_t>(std::llrint(sm.back().tgt_frame))) {
+            sm.push_back(FrameMapSegment{s.src_frame,
+                                         s.tgt_frame - static_cast<double>(offset)});
         }
         break;
     }

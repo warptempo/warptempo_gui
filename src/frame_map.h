@@ -11,103 +11,54 @@
 #include <vector>
 
 struct FrameMapSegment {
-    size_t src_frame;
-    size_t tgt_frame;
-    // Unrounded breakpoint values, and the eventual single source of truth:
-    // the dense warp schedule will interpolate from this precise pair so a
-    // collinear (redundant) breakpoint lies exactly on the segment line and is
-    // idempotent. src_frame / tgt_frame are llrint(...) of these, kept only as
-    // a transitional scaffold while consumers migrate to precise; a later step
-    // drops them, leaving rounding at the engine's final per-frame position and
-    // the few user-facing sites (display, trim boundaries). Defaulted so the
-    // existing two-field aggregate inits compile and leave precise == 0 until
-    // each construction site is updated.
-    double src_precise = 0.0;
-    double tgt_precise = 0.0;
+    // Frame-position breakpoints carried at full precision; the dense warp
+    // schedule interpolates these and rounds only at the final per-frame source
+    // position. A collinear (redundant) breakpoint lies exactly on the segment
+    // line and is idempotent. Integer frame values are produced on demand
+    // (llrint) at the few sites that need them.
+    double src_frame;
+    double tgt_frame;
 };
 
-inline double map_source_to_target(size_t src_frame, const std::vector<FrameMapSegment>& map) {
-    if (map.empty()) return static_cast<double>(src_frame);
+inline double map_source_to_target(double src_frame, const std::vector<FrameMapSegment>& map) {
+    if (map.empty()) return src_frame;
     if (src_frame <= map.front().src_frame) return map.front().tgt_frame;
-    // Strictly monotonic src_frame (engine-validated; GUI builder emits
-    // strictly increasing segments), so the owning segment is found by
-    // binary search: i is the last segment with src_frame <= query.
+    // Strictly monotonic src_frame, so the owning segment is found by binary
+    // search: i is the last segment with src_frame <= query.
     auto it = std::upper_bound(
         map.begin(), map.end(), src_frame,
-        [](size_t q, const FrameMapSegment& s) { return q < s.src_frame; });
+        [](double q, const FrameMapSegment& s) { return q < s.src_frame; });
     const size_t i = static_cast<size_t>(it - map.begin()) - 1;
     if (i < map.size() - 1) {
-        double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
-        double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
-        double offset = static_cast<double>(src_frame - map[i].src_frame);
+        double src_dur = map[i+1].src_frame - map[i].src_frame;
+        double tgt_dur = map[i+1].tgt_frame - map[i].tgt_frame;
+        double offset  = src_frame - map[i].src_frame;
         return map[i].tgt_frame + (offset * (tgt_dur / src_dur));
     }
     const auto& last = map.back();
     return last.tgt_frame + (src_frame - last.src_frame);
 }
 
-// Inverse of map_source_to_target: piecewise-linear interpolation over
-// the same segment list, mapping a target-frame query back to its
-// source-frame position. Used by the GUI's target view to translate
-// per-column target-frame ranges into source-frame ranges for the
-// shared waveform paint. Symmetric edge cases: clamp to the first
-// segment for queries before the frame_map's tgt start; identity past
-// the last segment; empty map degenerates to identity. The owning
-// segment is found by binary search over the strictly monotonic tgt axis.
-inline double map_target_to_source(size_t tgt_frame, const std::vector<FrameMapSegment>& map) {
-    if (map.empty()) return static_cast<double>(tgt_frame);
+// Inverse of map_source_to_target: piecewise-linear interpolation over the same
+// segment list, mapping a target-frame query back to its source-frame position.
+// Used by the GUI's target view to translate per-column target-frame ranges into
+// source-frame ranges for the shared waveform paint. Clamp to the first segment
+// before the tgt start; identity past the last segment; empty map is identity.
+inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapSegment>& map) {
+    if (map.empty()) return tgt_frame;
     if (tgt_frame <= map.front().tgt_frame) return map.front().src_frame;
     auto it = std::upper_bound(
         map.begin(), map.end(), tgt_frame,
-        [](size_t q, const FrameMapSegment& s) { return q < s.tgt_frame; });
+        [](double q, const FrameMapSegment& s) { return q < s.tgt_frame; });
     const size_t i = static_cast<size_t>(it - map.begin()) - 1;
     if (i < map.size() - 1) {
-        double src_dur = static_cast<double>(map[i+1].src_frame - map[i].src_frame);
-        double tgt_dur = static_cast<double>(map[i+1].tgt_frame - map[i].tgt_frame);
-        double offset = static_cast<double>(tgt_frame - map[i].tgt_frame);
+        double src_dur = map[i+1].src_frame - map[i].src_frame;
+        double tgt_dur = map[i+1].tgt_frame - map[i].tgt_frame;
+        double offset  = tgt_frame - map[i].tgt_frame;
         return map[i].src_frame + (offset * (src_dur / tgt_dur));
     }
     const auto& last = map.back();
     return last.src_frame + (tgt_frame - last.tgt_frame);
-}
-
-// Precise-domain counterparts of map_source_to_target / map_target_to_source:
-// identical piecewise-linear interpolation, but over the unrounded src_precise /
-// tgt_precise fields and with a double-valued query. Used while migrating the
-// frame map to precise breakpoints; the rounded versions above remain until the
-// flip. Segments are monotonic in precise exactly as in rounded.
-inline double map_source_to_target_precise(double src_frame, const std::vector<FrameMapSegment>& map) {
-    if (map.empty()) return src_frame;
-    if (src_frame <= map.front().src_precise) return map.front().tgt_precise;
-    auto it = std::upper_bound(
-        map.begin(), map.end(), src_frame,
-        [](double q, const FrameMapSegment& s) { return q < s.src_precise; });
-    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
-    if (i < map.size() - 1) {
-        double src_dur = map[i+1].src_precise - map[i].src_precise;
-        double tgt_dur = map[i+1].tgt_precise - map[i].tgt_precise;
-        double offset  = src_frame - map[i].src_precise;
-        return map[i].tgt_precise + (offset * (tgt_dur / src_dur));
-    }
-    const auto& last = map.back();
-    return last.tgt_precise + (src_frame - last.src_precise);
-}
-
-inline double map_target_to_source_precise(double tgt_frame, const std::vector<FrameMapSegment>& map) {
-    if (map.empty()) return tgt_frame;
-    if (tgt_frame <= map.front().tgt_precise) return map.front().src_precise;
-    auto it = std::upper_bound(
-        map.begin(), map.end(), tgt_frame,
-        [](double q, const FrameMapSegment& s) { return q < s.tgt_precise; });
-    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
-    if (i < map.size() - 1) {
-        double src_dur = map[i+1].src_precise - map[i].src_precise;
-        double tgt_dur = map[i+1].tgt_precise - map[i].tgt_precise;
-        double offset  = tgt_frame - map[i].tgt_precise;
-        return map[i].src_precise + (offset * (src_dur / tgt_dur));
-    }
-    const auto& last = map.back();
-    return last.src_precise + (tgt_frame - last.tgt_precise);
 }
 
 // --- Map-file readers (header-only, dependency-free) -----------------------
@@ -137,10 +88,7 @@ read_frame_map(const std::string& path) {
         if (!(ls >> s >> t)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
-        segs.push_back(FrameMapSegment{
-            static_cast<size_t>(std::llrint(s)),
-            static_cast<size_t>(std::llrint(t)),
-            s, t});
+        segs.push_back(FrameMapSegment{s, t});
     }
     return segs;
 }

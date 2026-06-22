@@ -209,7 +209,7 @@ struct AudioSTFT {
         // straddled advance.
         std::vector<int64_t> positions;
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
-            double src = map_target_to_source_precise(static_cast<double>(t_s), frame_map)
+            double src = map_target_to_source(static_cast<double>(t_s), frame_map)
                        - static_cast<double>(N) / 2.0;
             // Round half-to-even (llrint), the project-wide convention; do not
             // reintroduce llround (half-away-from-zero) here.
