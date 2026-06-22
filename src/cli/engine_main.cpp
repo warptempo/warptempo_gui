@@ -150,9 +150,7 @@ int main(int argc, char** argv) {
 
     // The supplied map is rendered wholesale — synthesis does no trim, so
     // emit_sample_cap stays 0 (full render to the map's last anchor).
-    ep.frame_map.reserve(fm->size());
-    for (const auto& s : *fm)
-        ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+    ep.frame_map = *fm;
     ep.emit_sample_cap = 0;
 
     ep.N            = N_fft;

@@ -98,7 +98,9 @@ read_frame_map(const std::string& path) {
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
         segs.push_back(FrameMapSegment{static_cast<size_t>(s),
-                                       static_cast<size_t>(t)});
+                                       static_cast<size_t>(t),
+                                       static_cast<double>(s),
+                                       static_cast<double>(t)});
     }
     return segs;
 }

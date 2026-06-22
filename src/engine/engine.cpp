@@ -106,12 +106,10 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // Populate frame_map from caller and validate monotonicity.
-    audio_stft.frame_map.clear();
-    audio_stft.frame_map.reserve(p.frame_map.size());
-    for (const auto& e : p.frame_map) {
-        audio_stft.frame_map.push_back({e.first, e.second});
-    }
+    // Populate frame_map from caller and validate monotonicity. Whole-segment
+    // copy carries the precise breakpoints; the dense schedule still reads the
+    // rounded fields until the interpolation flip.
+    audio_stft.frame_map = p.frame_map;
     if (!validate_frame_map_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||

@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "frame_map.h"      // FrameMapSegment
+
 // Parameter struct for the warptempo DSP pipeline. Constructed by the GUI's
 // render pipeline and passed to run_warptempo_engine().
 struct EngineParams {
@@ -31,7 +33,7 @@ struct EngineParams {
     // for clearing or reserving.
     std::vector<float>* output_buffer = nullptr;
 
-    std::vector<std::pair<size_t, size_t>> frame_map;  // src_frame, tgt_frame
+    std::vector<FrameMapSegment> frame_map;  // rounded + precise breakpoints
 
     int    N                          = 4096;
     bool   limiter                    = false;

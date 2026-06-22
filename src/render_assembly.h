@@ -28,13 +28,9 @@ inline int64_t assign_engine_frame_map(
         const WindowedFrameMap w = slice_frame_map_to_trim_window(
             full_standard, trim_begin_src, trim_end_src, N, R_s);
         ep.emit_sample_cap = w.emit_sample_cap;
-        ep.frame_map.reserve(w.frame_map.size());
-        for (const auto& s : w.frame_map)
-            ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+        ep.frame_map = w.frame_map;
         return w.window_offset_samples;
     }
-    ep.frame_map.reserve(full_standard.size());
-    for (const auto& s : full_standard)
-        ep.frame_map.emplace_back(s.src_frame, s.tgt_frame);
+    ep.frame_map = full_standard;
     return 0;
 }
