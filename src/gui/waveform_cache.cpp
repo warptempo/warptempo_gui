@@ -1,20 +1,16 @@
 #include "paint_handler.h"
 
 #include "render.h"
-#include "text_display.h"
 #include "text_editor.h"
-#include "time_format.h"
 #include "frame_map_view.h"
 #include "waveform_worker.h"
 #include "frame_map.h"
 
-#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <set>
-#include <string>
 #include <vector>
 
 // Waveform / marker / flag cache production. The off-screen surfaces
