@@ -507,7 +507,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 GuiWarpMarker w = g;
                 w.time_seconds  =
-                    (static_cast<double>(s.tgt_frame) - window_offset_samples)
+                    (s.tgt_frame - static_cast<double>(window_offset_samples))
                     / sr_d;
                 if (w.time_seconds < 0.0) w.time_seconds = 0.0;
                 warped_markers.push_back(std::move(w));
@@ -529,25 +529,21 @@ RenderOutcome do_render(const RenderRequest& req,
             // marker).
             auto src_to_tgt = [&](int64_t sf) -> double {
                 if (real.begin == real.end) return static_cast<double>(sf);
-                if (sf <= static_cast<int64_t>(real.begin->src_frame))
-                    return static_cast<double>(real.begin->tgt_frame);
+                const double sfd = static_cast<double>(sf);
+                if (sfd <= real.begin->src_frame)
+                    return real.begin->tgt_frame;
                 for (auto it = real.begin; it + 1 != real.end; ++it) {
                     const auto& a = *it;
                     const auto& b = *(it + 1);
-                    if (sf >= static_cast<int64_t>(a.src_frame) &&
-                        sf <  static_cast<int64_t>(b.src_frame)) {
-                        const double sd =
-                            static_cast<double>(b.src_frame - a.src_frame);
-                        const double td =
-                            static_cast<double>(b.tgt_frame - a.tgt_frame);
-                        const double off =
-                            static_cast<double>(sf - static_cast<int64_t>(a.src_frame));
-                        return static_cast<double>(a.tgt_frame) + off * (td / sd);
+                    if (sfd >= a.src_frame && sfd < b.src_frame) {
+                        const double sd  = b.src_frame - a.src_frame;
+                        const double td  = b.tgt_frame - a.tgt_frame;
+                        const double off = sfd - a.src_frame;
+                        return a.tgt_frame + off * (td / sd);
                     }
                 }
                 const auto& last = *(real.end - 1);
-                return static_cast<double>(last.tgt_frame) +
-                       static_cast<double>(sf - static_cast<int64_t>(last.src_frame));
+                return last.tgt_frame + (sfd - last.src_frame);
             };
 
             // Phase resets: forward-map each reset's clicked source frame

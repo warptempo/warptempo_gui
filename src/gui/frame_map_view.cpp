@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "audio.h"
 
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -58,9 +59,9 @@ const TargetMapCache& target_view_map_cached(
         app.warpmarkers.markers(), scale, sample_rate, total_frames);
     uint64_t h = 0xcbf29ce484222325ULL;
     for (const auto& s : c.frame_map) {
-        h ^= static_cast<uint64_t>(s.src_frame);
+        h ^= std::bit_cast<uint64_t>(s.src_frame);
         h *= 0x100000001b3ULL;
-        h ^= static_cast<uint64_t>(s.tgt_frame);
+        h ^= std::bit_cast<uint64_t>(s.tgt_frame);
         h *= 0x100000001b3ULL;
     }
     c.hash         = c.frame_map.empty() ? 0 : h;
