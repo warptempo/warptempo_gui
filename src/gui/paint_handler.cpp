@@ -415,6 +415,47 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
     }
 }
 
+// -- GuiPaintHandler::paint_playheads ------------------------------------
+
+void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
+    // Use the displayed viewport AND its samples-per-pixel
+    // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
+    // lockstep with the cached waveform / stem / flag layers during
+    // the 1-2 paint frames while the worker rebuilds against a
+    // viewport change. See declaration comment in app_state.h.
+    const double disp_spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    const double px_x = playhead_pixel_x(app, audio,
+                                         wf_cache.fp_vp_start, disp_spp);
+
+    // Playhead drawn last so its stem and triangle paint over any
+    // marker connector pixels they share a column with — the
+    // playhead must never be occluded by marker stems or flag
+    // annotations. The triangle indicator lives in the top
+    // strip, so render whenever either the waveform or top strip is
+    // exposed; otherwise a flag-strip-only repaint would erase the
+    // triangle.
+    //
+    // Split-playhead paint order: scanner first (line only, gated
+    // on playhead_scanner_active), then cursor (line + triangle).
+    // The cursor draws over the scanner on overlap.
+    if (app.playhead_scanner_active) {
+        const double scan_px = scanner_pixel_x(app, audio,
+                                               wf_cache.fp_vp_start,
+                                               disp_spp);
+        render_playhead(cr, area, scan_px, kPlayheadScanner,
+                        gui.playhead_triangle_surface(),
+                        /*draw_triangle=*/false,
+                        /*ink_plate=*/wf_cache.surface);
+    }
+    render_playhead(cr, area, px_x, kPlayheadCursor,
+                    gui.playhead_triangle_surface(),
+                    /*draw_triangle=*/true,
+                    /*ink_plate=*/wf_cache.surface);
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -498,18 +539,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 std::chrono::duration<double, std::milli>(m1 - m0).count();
         }
 
-        // Use the displayed viewport AND its samples-per-pixel
-        // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
-        // lockstep with the cached waveform / stem / flag layers during
-        // the 1-2 paint frames while the worker rebuilds against a
-        // viewport change. See declaration comment in app_state.h.
-        const double disp_spp = wf_cache.fp_area_w > 0
-            ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-              static_cast<double>(wf_cache.fp_area_w)
-            : current_samples_per_pixel(app, audio);
-        const double px_x = playhead_pixel_x(app, audio,
-                                             wf_cache.fp_vp_start, disp_spp);
-
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
             paint_flag_annotations(cr, top_strip, sr);
@@ -518,33 +547,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 std::chrono::duration<double, std::milli>(f1 - f0).count();
         }
 
-        // Playhead drawn last so its stem and triangle paint over any
-        // marker connector pixels they share a column with — the
-        // playhead must never be occluded by marker stems or flag
-        // annotations. The triangle indicator lives in the top
-        // strip, so render whenever either the waveform or top strip is
-        // exposed; otherwise a flag-strip-only repaint would erase the
-        // triangle.
-        //
-        // Split-playhead paint order: scanner first (line only, gated
-        // on playhead_scanner_active), then cursor (line + triangle).
-        // The cursor draws over the scanner on overlap.
         if (rects_intersect(exposed, area) ||
             rects_intersect(exposed, top_strip)) {
             const auto p0 = clock::now();
-            if (app.playhead_scanner_active) {
-                const double scan_px = scanner_pixel_x(app, audio,
-                                                       wf_cache.fp_vp_start,
-                                                       disp_spp);
-                render_playhead(cr, area, scan_px, kPlayheadScanner,
-                                gui.playhead_triangle_surface(),
-                                /*draw_triangle=*/false,
-                                /*ink_plate=*/wf_cache.surface);
-            }
-            render_playhead(cr, area, px_x, kPlayheadCursor,
-                            gui.playhead_triangle_surface(),
-                            /*draw_triangle=*/true,
-                            /*ink_plate=*/wf_cache.surface);
+            paint_playheads(cr, area);
             const auto p1 = clock::now();
             t_playhead_ms =
                 std::chrono::duration<double, std::milli>(p1 - p0).count();

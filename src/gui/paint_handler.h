@@ -480,4 +480,5 @@ private:
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
+    void paint_playheads(cairo_t* cr, const GuiRect& area);
 };
