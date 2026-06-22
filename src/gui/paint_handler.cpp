@@ -305,6 +305,86 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     }
 }
 
+// -- GuiPaintHandler::paint_waveform_plate -------------------------------
+
+void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
+    // The synchronous rebuild that used to live in this
+    // block is gone. wf_cache.surface is now produced by one of
+    // three paths, all of which leave this paint path blit-only:
+    //   1. Worker full render — maybe_enqueue_waveform_render
+    //      dispatches a full-window render on GuiWaveformWorker,
+    //      which swaps into wf_cache.surface on completion. Fires
+    //      on the on_tick backstop and on non-pan viewport changes
+    //      (zoom, center-on-playhead, follow-scroll), plus resize,
+    //      reload, and target-view frame_map changes.
+    //   2. Incremental shift-and-strip — a pure horizontal pan
+    //      (scroll_viewport) calls pan_waveform_incremental, which
+    //      shifts the existing plate pixels by the pan delta and
+    //      synchronously renders only the newly-exposed edge strip.
+    //      Pans bypass the worker entirely; this is the fast path
+    //      that keeps fast scrolling continuous.
+    //   3. Synchronous full render — force_synchronous_waveform_
+    //      rebuild renders the full window inline on the GUI thread,
+    //      as does the pan_waveform_incremental fallback when a
+    //      single pan exceeds a window width (nothing to shift).
+    // The paint path is blit-only — it draws whatever pixels the
+    // live surface currently holds. For worker-path renders that may
+    // be a one- or two-frame-old viewport during the worker-rebuild
+    // window; the incremental pan path updates the plate in the same
+    // frame, so it has no such lag. The stem and flag layers close
+    // any mismatch by layering markers and flags onto surfaces keyed
+    // off the same displayed-viewport.
+    //
+    // If wf_cache.surface is null (initial load, before the first
+    // worker completion), the blit is skipped and the background
+    // fill shows through. The user-visible difference is one
+    // extra paint frame of background between load and first
+    // waveform display, masked by the existing load-time progress
+    // bar.
+    if (wf_cache.surface) {
+        cairo_save(cr);
+        cairo_rectangle(cr, area.x, area.y, area.w, area.h);
+        cairo_clip(cr);
+        cairo_set_source_surface(cr, wf_cache.surface,
+                                 area.x, area.y);
+        cairo_paint(cr);
+        cairo_restore(cr);
+
+        // Out-of-trim dim, composited live over the just-blitted
+        // plate (which is trim-agnostic). The dim is the
+        // kWaveformDimmed color masked through the plate surface's
+        // own alpha: opaque sample pixels are recolored — at the
+        // exact tuned RGB, no blend — and the transparent gaps are
+        // left as background. ATOP would key on the WINDOW's alpha,
+        // which is already opaque post-blit, so it can't serve as the
+        // sample mask and fills the whole rect solid; the plate
+        // surface's alpha can. We clip to the LIVE out-of-trim
+        // rect(s) (trim + viewport), so a trim drag tracks the stem
+        // frame-for-frame with no plate rebuild, then mask the dim
+        // color through the plate (blitted at (area.x, area.y), so
+        // the mask uses the same origin). OVER + mask is exactly
+        // "color where the plate is opaque, within the clip" — no
+        // operator change. cairo_save/restore brackets the clip so
+        // the marker, stem, flag, and playhead passes that follow run
+        // unclipped with the default OVER.
+        const OutOfTrimRects dim = compute_out_of_trim_rects(area);
+        if (dim.has_left || dim.has_right) {
+            cairo_save(cr);
+            if (dim.has_left)
+                cairo_rectangle(cr, dim.left.x, dim.left.y,
+                                dim.left.w, dim.left.h);
+            if (dim.has_right)
+                cairo_rectangle(cr, dim.right.x, dim.right.y,
+                                dim.right.w, dim.right.h);
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kWaveformDimmed.r,
+                                 kWaveformDimmed.g, kWaveformDimmed.b);
+            cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
+            cairo_restore(cr);
+        }
+    }
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -356,83 +436,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         {
             const auto wf0 = clock::now();
-
-            // The synchronous rebuild that used to live in this
-            // block is gone. wf_cache.surface is now produced by one of
-            // three paths, all of which leave this paint path blit-only:
-            //   1. Worker full render — maybe_enqueue_waveform_render
-            //      dispatches a full-window render on GuiWaveformWorker,
-            //      which swaps into wf_cache.surface on completion. Fires
-            //      on the on_tick backstop and on non-pan viewport changes
-            //      (zoom, center-on-playhead, follow-scroll), plus resize,
-            //      reload, and target-view frame_map changes.
-            //   2. Incremental shift-and-strip — a pure horizontal pan
-            //      (scroll_viewport) calls pan_waveform_incremental, which
-            //      shifts the existing plate pixels by the pan delta and
-            //      synchronously renders only the newly-exposed edge strip.
-            //      Pans bypass the worker entirely; this is the fast path
-            //      that keeps fast scrolling continuous.
-            //   3. Synchronous full render — force_synchronous_waveform_
-            //      rebuild renders the full window inline on the GUI thread,
-            //      as does the pan_waveform_incremental fallback when a
-            //      single pan exceeds a window width (nothing to shift).
-            // The paint path is blit-only — it draws whatever pixels the
-            // live surface currently holds. For worker-path renders that may
-            // be a one- or two-frame-old viewport during the worker-rebuild
-            // window; the incremental pan path updates the plate in the same
-            // frame, so it has no such lag. The stem and flag layers close
-            // any mismatch by layering markers and flags onto surfaces keyed
-            // off the same displayed-viewport.
-            //
-            // If wf_cache.surface is null (initial load, before the first
-            // worker completion), the blit is skipped and the background
-            // fill shows through. The user-visible difference is one
-            // extra paint frame of background between load and first
-            // waveform display, masked by the existing load-time progress
-            // bar.
-            if (wf_cache.surface && rects_intersect(exposed, area)) {
-                cairo_save(cr);
-                cairo_rectangle(cr, area.x, area.y, area.w, area.h);
-                cairo_clip(cr);
-                cairo_set_source_surface(cr, wf_cache.surface,
-                                         area.x, area.y);
-                cairo_paint(cr);
-                cairo_restore(cr);
-
-                // Out-of-trim dim, composited live over the just-blitted
-                // plate (which is trim-agnostic). The dim is the
-                // kWaveformDimmed color masked through the plate surface's
-                // own alpha: opaque sample pixels are recolored — at the
-                // exact tuned RGB, no blend — and the transparent gaps are
-                // left as background. ATOP would key on the WINDOW's alpha,
-                // which is already opaque post-blit, so it can't serve as the
-                // sample mask and fills the whole rect solid; the plate
-                // surface's alpha can. We clip to the LIVE out-of-trim
-                // rect(s) (trim + viewport), so a trim drag tracks the stem
-                // frame-for-frame with no plate rebuild, then mask the dim
-                // color through the plate (blitted at (area.x, area.y), so
-                // the mask uses the same origin). OVER + mask is exactly
-                // "color where the plate is opaque, within the clip" — no
-                // operator change. cairo_save/restore brackets the clip so
-                // the marker/stem/flag/playhead passes below run unclipped
-                // with the default OVER.
-                const OutOfTrimRects dim = compute_out_of_trim_rects(area);
-                if (dim.has_left || dim.has_right) {
-                    cairo_save(cr);
-                    if (dim.has_left)
-                        cairo_rectangle(cr, dim.left.x, dim.left.y,
-                                        dim.left.w, dim.left.h);
-                    if (dim.has_right)
-                        cairo_rectangle(cr, dim.right.x, dim.right.y,
-                                        dim.right.w, dim.right.h);
-                    cairo_clip(cr);
-                    cairo_set_source_rgb(cr, kWaveformDimmed.r,
-                                         kWaveformDimmed.g, kWaveformDimmed.b);
-                    cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
-                    cairo_restore(cr);
-                }
+            if (rects_intersect(exposed, area)) {
+                paint_waveform_plate(cr, area);
             }
-
             const auto wf1 = clock::now();
             t_waveform_ms =
                 std::chrono::duration<double, std::milli>(wf1 - wf0).count();

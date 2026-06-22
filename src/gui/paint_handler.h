@@ -478,4 +478,5 @@ private:
     // the rects_intersect gates and the perf-timing wrappers and calls these
     // in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
+    void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
 };
