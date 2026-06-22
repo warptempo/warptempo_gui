@@ -711,3 +711,485 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
+
+// -- Marker stem cache dirty-detect and rebuild --------------------------
+//
+// Called from on_tick AFTER maybe_enqueue_waveform_render. Reads displayed-
+// viewport inputs from wf_cache.fp_* (the LIVE waveform fingerprint — the
+// post-swap viewport, not necessarily the current app state); reads
+// marker-driven inputs from app state directly. Diverging fingerprint
+// triggers a synchronous offscreen rebuild + region invalidation.
+
+namespace {
+
+// FNV-1a over the live drag-overlay state. Folded into the StemCache
+// fingerprint in place of the old AppState::drag_overlay_generation
+// callsite bump counter — hashing the data directly removes the
+// requirement that every future mutation site of app.drag remember to
+// bump a counter. Cost is dominated by the loop over moveable_times,
+// which at observed selection sizes (0–5) is a handful of nanoseconds.
+uint64_t hash_drag_overlay(const DragState& d) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    h ^= static_cast<uint64_t>(d.active ? 1 : 0);
+    h *= 0x100000001b3ULL;
+    h ^= static_cast<uint64_t>(d.dragging_markers.size());
+    h *= 0x100000001b3ULL;
+    for (int idx : d.dragging_markers) {
+        h ^= static_cast<uint64_t>(idx);
+        h *= 0x100000001b3ULL;
+    }
+    // moveable_times is parallel to dragging_markers; equal-length by
+    // invariant. memcpy each double's bit pattern into a uint64 so the
+    // floating-point representation is captured exactly (no equality /
+    // NaN considerations).
+    for (double t : d.moveable_times) {
+        uint64_t bits;
+        std::memcpy(&bits, &t, sizeof(bits));
+        h ^= bits;
+        h *= 0x100000001b3ULL;
+    }
+    return h;
+}
+
+// FNV-1a over the live selection set + last-selected anchor. Folded
+// into the FlagCache fingerprint to avoid distributing a
+// generation-bump across the fifteen mutation sites of selected_markers.
+uint64_t hash_selection(const std::set<int>& s,
+                        int last_selected) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    h ^= static_cast<uint64_t>(s.size());
+    h *= 0x100000001b3ULL;
+    for (int idx : s) {
+        h ^= static_cast<uint64_t>(idx);
+        h *= 0x100000001b3ULL;
+    }
+    h ^= static_cast<uint64_t>(last_selected);
+    h *= 0x100000001b3ULL;
+    return h;
+}
+
+} // namespace
+
+void GuiPaintHandler::maybe_rebuild_stem_cache() {
+    if (app.loading || audio.total_frames() <= 0) return;
+
+    // No live waveform yet → no stems. The first stem rebuild happens
+    // after the first waveform-completion swap (which sets
+    // wf_cache.fp_audio_gen >= 0); until then the displayed-viewport
+    // fields hold defaults that wouldn't agree with anything sensible
+    // on the marker side anyway.
+    if (wf_cache.fp_audio_gen < 0) return;
+
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return;
+
+    // Surface includes the stem overhang above the waveform — see the
+    // geometry note in StemCache's class comment. The overhang
+    // is the TALLER trim value (stem_cache_overhang_px = kStemAboveWaveformPx
+    // + row_h + gap) so the upper-row trim stem is not clipped at its top;
+    // marker stems land transparently lower in the same surface.
+    const int overhang = stem_cache_overhang_px();
+    const int surface_w = area.w;
+    const int surface_h = area.h + overhang;
+
+    // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
+    const int64_t  vp_start     = wf_cache.fp_vp_start;
+    const int64_t  vp_end       = wf_cache.fp_vp_end;
+    const bool     is_target    = wf_cache.fp_target;
+    const uint64_t frame_map_hash = wf_cache.fp_frame_map_hash;
+    const long long audio_gen   = wf_cache.fp_audio_gen;
+
+    // Marker-driven inputs: read live from app state.
+    const long long warp_gen   = app.warpmarkers.generation();
+    const long long phase_gen  = app.phase_reset_markers.generation();
+    const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
+    const bool     drag_active = app.drag.active;
+    const char     mv          = app.active_markers_view;
+    const bool     rve         = app.render_view.enabled;
+    const uint64_t sel_hash    = hash_selection(app.selected_markers,
+                                                app.last_selected_marker);
+
+    // Trim boundary stems. Positions ride trim_begin / trim_end
+    // (displayed domain), has-set + selected bits from the active A/B tab.
+    // Computed by the shared helper so the flag cache's b/e chips read the
+    // exact same values (chip + stem are one unit).
+    const DisplayedTrim dtrim   = compute_displayed_trim();
+    const bool trim_has_begin   = dtrim.has_begin;
+    const bool trim_has_end     = dtrim.has_end;
+    const bool trim_begin_sel   = dtrim.begin_selected;
+    const bool trim_end_sel     = dtrim.end_selected;
+    const int64_t trim_begin    = dtrim.begin;
+    const int64_t trim_end      = dtrim.end;
+
+    const bool matches =
+        stem_cache.surface &&
+        stem_cache.fp_audio_gen               == audio_gen &&
+        stem_cache.fp_vp_start                == vp_start &&
+        stem_cache.fp_vp_end                  == vp_end &&
+        stem_cache.fp_trim_begin              == trim_begin &&
+        stem_cache.fp_trim_end                == trim_end &&
+        stem_cache.fp_area_w                  == surface_w &&
+        stem_cache.fp_area_h                  == surface_h &&
+        stem_cache.fp_target                  == is_target &&
+        stem_cache.fp_frame_map_hash            == frame_map_hash &&
+        stem_cache.fp_warpmarker_generation   == warp_gen &&
+        stem_cache.fp_phase_reset_generation  == phase_gen &&
+        stem_cache.fp_drag_overlay_hash       == drag_hash &&
+        stem_cache.fp_drag_active             == drag_active &&
+        stem_cache.fp_active_markers_view     == mv &&
+        stem_cache.fp_render_view_enabled     == rve &&
+        stem_cache.fp_selection_hash          == sel_hash &&
+        stem_cache.fp_trim_has_begin          == trim_has_begin &&
+        stem_cache.fp_trim_has_end            == trim_has_end &&
+        stem_cache.fp_trim_begin_selected     == trim_begin_sel &&
+        stem_cache.fp_trim_end_selected       == trim_end_sel;
+
+    if (matches) return;
+
+    // Reuse-or-recreate the surface on dimension change.
+    if (!stem_cache.surface ||
+        stem_cache.width  != surface_w ||
+        stem_cache.height != surface_h) {
+        if (stem_cache.surface) {
+            cairo_surface_destroy(stem_cache.surface);
+            stem_cache.surface = nullptr;
+        }
+        stem_cache.surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, surface_w, surface_h);
+        stem_cache.width  = surface_w;
+        stem_cache.height = surface_h;
+    }
+
+    cairo_t* ccr = cairo_create(stem_cache.surface);
+    cairo_save(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+
+    // Local rect translates the screen-coord stem geometry into the cache
+    // surface's coordinate system. Setting local.y = overhang puts the
+    // waveform top at that offset, so the TALLEST stem (the upper-row trim
+    // stem, top = local.y - kFlagBottomLiftPx - (row_h + gap)) lands at
+    // surface y = 0, marker stems (top = local.y - kFlagBottomLiftPx) land
+    // transparently lower, and y1 = overhang + area.h = surface_h. The blit
+    // at on_redraw time positions the surface at screen y = area.y - overhang
+    // so everything lands correctly.
+    const GuiRect local_area{
+        0,
+        overhang,
+        surface_w,
+        area.h
+    };
+    const TrimRange trim_struct{trim_begin, trim_end};
+    const int sr = audio.sample_rate();
+
+    // Target-view stems consume the displayed frame_map (the one baked
+    // into the live waveform pixels), not a freshly-built one — keeps
+    // stem positions consistent with the displayed waveform during the
+    // worker's rebuild window.
+    const std::vector<FrameMapSegment>* tmap_arg =
+        (is_target && !wf_cache.fp_frame_map.empty())
+            ? &wf_cache.fp_frame_map : nullptr;
+
+    // Drag overlay: pass through only when a drag is live. During a
+    // drag the fingerprint mismatches every tick on the drag-overlay
+    // hash alone (moveable_times[k] changes on every motion event), so
+    // this rebuild reads the live moveable_times each pass.
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (drag_active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    // Trim boundary stems, painted in both 'W' and 'P' views.
+    // Positions are the displayed-domain trim frames (already translated);
+    // the has-set / selected bits decide which stems draw and in what
+    // color.
+    // Painted BEFORE the regular marker stems so that
+    // where a trim bound and a regular marker share a column the regular
+    // stem (painted last on this shared surface) sits in front; the taller
+    // trim stem reads as "underneath," reachable by its hotkey.
+    render_trim_stems(
+        ccr, local_area, vp_start, vp_end,
+        trim_struct,
+        trim_has_begin, trim_begin_sel,
+        trim_has_end, trim_end_sel,
+        wf_cache.surface);
+
+    if (mv == 'P') {
+        const auto& list = rve
+            ? app.render_view.phase_resets
+            : app.phase_reset_markers.markers();
+        render_phase_reset_markers(
+            ccr, local_area, list,
+            vp_start, vp_end, sr,
+            app.selected_markers, tmap_arg, drag_overlay,
+            wf_cache.surface);
+    } else {
+        const auto& list = rve
+            ? app.render_view.markers
+            : app.warpmarkers.markers();
+        render_markers(
+            ccr, local_area, list,
+            vp_start, vp_end, sr,
+            app.selected_markers, tmap_arg, drag_overlay,
+            wf_cache.surface);
+    }
+
+    cairo_destroy(ccr);
+
+    stem_cache.fp_audio_gen                 = audio_gen;
+    stem_cache.fp_vp_start                  = vp_start;
+    stem_cache.fp_vp_end                    = vp_end;
+    stem_cache.fp_trim_begin                = trim_begin;
+    stem_cache.fp_trim_end                  = trim_end;
+    stem_cache.fp_area_w                    = surface_w;
+    stem_cache.fp_area_h                    = surface_h;
+    stem_cache.fp_target                    = is_target;
+    stem_cache.fp_frame_map_hash              = frame_map_hash;
+    stem_cache.fp_warpmarker_generation     = warp_gen;
+    stem_cache.fp_phase_reset_generation    = phase_gen;
+    stem_cache.fp_drag_overlay_hash         = drag_hash;
+    stem_cache.fp_drag_active               = drag_active;
+    stem_cache.fp_active_markers_view       = mv;
+    stem_cache.fp_render_view_enabled       = rve;
+    stem_cache.fp_selection_hash            = sel_hash;
+    stem_cache.fp_trim_has_begin            = trim_has_begin;
+    stem_cache.fp_trim_has_end              = trim_has_end;
+    stem_cache.fp_trim_begin_selected       = trim_begin_sel;
+    stem_cache.fp_trim_end_selected         = trim_end_sel;
+    stem_cache.dirty                        = false;
+
+    // Invalidate the stem region. Viewport-driven invalidations
+    // already cover this strip, but pure marker-store edits (warp_gen /
+    // phase_gen bumps) don't pass through the viewport's invalidator —
+    // damage the strip explicitly so the next paint blits the new
+    // pixels. Idempotent against the waveform's own damage.
+    gui.invalidate_region(
+        0,
+        area.y - overhang,
+        app.width,
+        surface_h);
+}
+
+// -- Flag-rect cache dirty-detect and rebuild ----------------------------
+//
+// Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
+// displayed-viewport half of the fingerprint; same live-app-state reads
+// for the marker-driven half (with selection + editor target additions).
+// The cache holds every flag rect EXCEPT the FlagPayload-editor target
+// (skipped via the render_flags skip-guard so the live editor render in
+// on_redraw owns those pixels — keeps the cache fingerprint independent
+// of pending-text width and cursor blink).
+
+void GuiPaintHandler::maybe_rebuild_flag_cache() {
+    if (app.loading || audio.total_frames() <= 0) return;
+
+    // No live waveform yet → no flags. Same pre-first-completion guard as
+    // the stem cache uses; until wf_cache.fp_audio_gen comes up after the
+    // first worker swap, the displayed-viewport fields hold defaults that
+    // wouldn't agree with anything sensible.
+    if (wf_cache.fp_audio_gen < 0) return;
+
+    const GuiRect top_strip = top_strip_area(app);
+    if (top_strip.w <= 0 || top_strip.h <= 0) return;
+
+    const int surface_w = top_strip.w;
+    const int surface_h = top_strip.h;
+
+    // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
+    // positioned at marker times only. The b/e trim chips also ride this
+    // strip, so the displayed-domain trim positions + has/selected bits (from
+    // the shared helper, identical to the stem cache's) are now part of the
+    // flag cache's identity.
+    const int64_t  vp_start     = wf_cache.fp_vp_start;
+    const int64_t  vp_end       = wf_cache.fp_vp_end;
+    const bool     is_target    = wf_cache.fp_target;
+    const uint64_t frame_map_hash = wf_cache.fp_frame_map_hash;
+    const long long audio_gen   = wf_cache.fp_audio_gen;
+
+    // Marker-driven inputs from app state.
+    const long long warp_gen   = app.warpmarkers.generation();
+    const long long phase_gen  = app.phase_reset_markers.generation();
+    const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
+    const uint64_t  sel_hash   = hash_selection(
+                                     app.selected_markers,
+                                     app.last_selected_marker);
+    const char      mv         = app.active_markers_view;
+    const bool      rve        = app.render_view.enabled;
+    // Iteration mode only affects warp-view (non-render) flags;
+    // render view resets the toggle off, so this is false there.
+    const bool      iter_on    = app.iteration_mode_enabled &&
+                                 mv == 'W' && !rve;
+
+    // FlagPayload editor target drives the skip-guard (cache leaves a
+    // hole for the live editor render to fill). The iter/BPM
+    // popup-editor outline-suppression channel was removed along with
+    // the popup surfaces; the IterationBracket / BpmBracket kinds no
+    // longer feed the cache fingerprint.
+    // FlagPayload (W view) drives the skip-guard: the cache leaves a hole for
+    // the live editor render to fill. P view has no per-flag editor.
+    int flag_target = -1;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+        flag_target = app.top_flag_editor.target;
+    }
+
+    // Displayed-domain trim state for the b/e chips (shared helper,
+    // same values the stem cache paints its stems at).
+    const DisplayedTrim dtrim = compute_displayed_trim();
+
+    const bool matches =
+        flag_cache.surface &&
+        flag_cache.fp_audio_gen               == audio_gen &&
+        flag_cache.fp_vp_start                == vp_start &&
+        flag_cache.fp_vp_end                  == vp_end &&
+        flag_cache.fp_area_w                  == surface_w &&
+        flag_cache.fp_area_h                  == surface_h &&
+        flag_cache.fp_target                  == is_target &&
+        flag_cache.fp_frame_map_hash            == frame_map_hash &&
+        flag_cache.fp_warpmarker_generation   == warp_gen &&
+        flag_cache.fp_phase_reset_generation  == phase_gen &&
+        flag_cache.fp_drag_overlay_hash       == drag_hash &&
+        flag_cache.fp_selection_hash          == sel_hash &&
+        flag_cache.fp_active_markers_view     == mv &&
+        flag_cache.fp_render_view_enabled     == rve &&
+        flag_cache.fp_flag_editor_target      == flag_target &&
+        flag_cache.fp_iteration_mode_enabled  == iter_on &&
+        flag_cache.fp_trim_begin              == dtrim.begin &&
+        flag_cache.fp_trim_end                == dtrim.end &&
+        flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
+        flag_cache.fp_trim_has_end            == dtrim.has_end &&
+        flag_cache.fp_trim_begin_selected     == dtrim.begin_selected &&
+        flag_cache.fp_trim_end_selected       == dtrim.end_selected;
+
+    if (matches) return;
+
+    if (!flag_cache.surface ||
+        flag_cache.width  != surface_w ||
+        flag_cache.height != surface_h) {
+        if (flag_cache.surface) {
+            cairo_surface_destroy(flag_cache.surface);
+            flag_cache.surface = nullptr;
+        }
+        flag_cache.surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, surface_w, surface_h);
+        flag_cache.width  = surface_w;
+        flag_cache.height = surface_h;
+    }
+
+    cairo_t* ccr = cairo_create(flag_cache.surface);
+    cairo_save(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+
+    // top_strip_area is anchored at (0, 0), so the local rect equals the
+    // surface rect. The blit at on_redraw time positions the surface back
+    // at screen (0, 0).
+    const GuiRect local_top_strip{0, 0, surface_w, surface_h};
+    const int sr = audio.sample_rate();
+
+    const std::vector<FrameMapSegment>* tmap_arg =
+        (is_target && !wf_cache.fp_frame_map.empty())
+            ? &wf_cache.fp_frame_map : nullptr;
+
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    // Cache overlay: marker_index activates the skip-guard for the
+    // FlagPayload editor target. Other fields stay defaulted — pending
+    // text, cursor state, selection range live in the live editor
+    // render only.
+    FlagEditorOverlay cache_overlay;
+    cache_overlay.marker_index        = flag_target;
+
+    if (rve) {
+        if (mv == 'P') {
+            render_phase_reset_flags(
+                ccr, local_top_strip,
+                app.render_view.phase_resets,
+                vp_start, vp_end, sr,
+                kFlagFontSize,
+                app.selected_markers,
+                nullptr,
+                drag_overlay);
+        } else {
+            render_flags(ccr, local_top_strip,
+                         app.render_view.markers,
+                         vp_start, vp_end, sr,
+                         kFlagFontSize,
+                         app.selected_markers,
+                         cache_overlay,
+                         nullptr,
+                         drag_overlay);
+        }
+    } else if (mv == 'P') {
+        render_phase_reset_flags(
+            ccr, local_top_strip,
+            app.phase_reset_markers.markers(),
+            vp_start, vp_end, sr,
+            kFlagFontSize,
+            app.selected_markers,
+            tmap_arg,
+            drag_overlay);
+    } else {
+        render_flags(ccr, local_top_strip,
+                     app.warpmarkers.markers(),
+                     vp_start, vp_end, sr,
+                     kFlagFontSize,
+                     app.selected_markers,
+                     cache_overlay,
+                     tmap_arg,
+                     drag_overlay,
+                     iter_on);
+    }
+
+    // The b/e trim chips cap their stems in the upper top row. Painted
+    // in both 'W' and 'P' views (like the stems); the dtrim has-bits force
+    // them off in render view, so render_trim_flags early-returns there. The
+    // real waveform_area sets the upper-row chip bottom; the top strip's
+    // screen origin equals the cache surface origin (0,0), so local_top_strip
+    // and the real waveform rect need no translation.
+    render_trim_flags(
+        ccr, local_top_strip, waveform_area(app),
+        vp_start, vp_end, kFlagFontSize,
+        TrimRange{dtrim.begin, dtrim.end},
+        dtrim.has_begin, dtrim.begin_selected,
+        dtrim.has_end, dtrim.end_selected);
+
+    cairo_destroy(ccr);
+
+    flag_cache.fp_audio_gen               = audio_gen;
+    flag_cache.fp_vp_start                = vp_start;
+    flag_cache.fp_vp_end                  = vp_end;
+    flag_cache.fp_area_w                  = surface_w;
+    flag_cache.fp_area_h                  = surface_h;
+    flag_cache.fp_target                  = is_target;
+    flag_cache.fp_frame_map_hash            = frame_map_hash;
+    flag_cache.fp_warpmarker_generation   = warp_gen;
+    flag_cache.fp_phase_reset_generation  = phase_gen;
+    flag_cache.fp_drag_overlay_hash       = drag_hash;
+    flag_cache.fp_selection_hash          = sel_hash;
+    flag_cache.fp_active_markers_view     = mv;
+    flag_cache.fp_render_view_enabled     = rve;
+    flag_cache.fp_flag_editor_target      = flag_target;
+    flag_cache.fp_iteration_mode_enabled  = iter_on;
+    flag_cache.fp_trim_begin              = dtrim.begin;
+    flag_cache.fp_trim_end                = dtrim.end;
+    flag_cache.fp_trim_has_begin          = dtrim.has_begin;
+    flag_cache.fp_trim_has_end            = dtrim.has_end;
+    flag_cache.fp_trim_begin_selected     = dtrim.begin_selected;
+    flag_cache.fp_trim_end_selected       = dtrim.end_selected;
+    flag_cache.dirty                      = false;
+
+    gui.invalidate_region(top_strip.x, top_strip.y,
+                          top_strip.w, top_strip.h);
+}
