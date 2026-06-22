@@ -385,6 +385,36 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
+// -- GuiPaintHandler::paint_marker_stems ---------------------------------
+
+void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
+                                         const GuiRect& marker_paint_rect) {
+    // The marker stems live on stem_cache.surface,
+    // rebuilt synchronously from on_tick via
+    // maybe_rebuild_stem_cache. The paint path is blit-only.
+    // Like the waveform cache, this surface may be null on the
+    // very first paint after a load (before the first stem
+    // rebuild fires); the blit is skipped and the background
+    // shows through for that one frame. The surface's screen
+    // origin is `marker_paint_rect.x, marker_paint_rect.y`
+    // (i.e. area.x, area.y - kStemAboveWaveformPx), matching
+    // the local-coord choice in maybe_rebuild_stem_cache.
+    if (stem_cache.surface) {
+        cairo_save(cr);
+        cairo_rectangle(cr,
+                        marker_paint_rect.x,
+                        marker_paint_rect.y,
+                        marker_paint_rect.w,
+                        marker_paint_rect.h);
+        cairo_clip(cr);
+        cairo_set_source_surface(cr, stem_cache.surface,
+                                 marker_paint_rect.x,
+                                 marker_paint_rect.y);
+        cairo_paint(cr);
+        cairo_restore(cr);
+    }
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -462,30 +492,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
-            // The marker stems live on stem_cache.surface,
-            // rebuilt synchronously from on_tick via
-            // maybe_rebuild_stem_cache. The paint path is blit-only.
-            // Like the waveform cache, this surface may be null on the
-            // very first paint after a load (before the first stem
-            // rebuild fires); the blit is skipped and the background
-            // shows through for that one frame. The surface's screen
-            // origin is `marker_paint_rect.x, marker_paint_rect.y`
-            // (i.e. area.x, area.y - kStemAboveWaveformPx), matching
-            // the local-coord choice in maybe_rebuild_stem_cache.
-            if (stem_cache.surface) {
-                cairo_save(cr);
-                cairo_rectangle(cr,
-                                marker_paint_rect.x,
-                                marker_paint_rect.y,
-                                marker_paint_rect.w,
-                                marker_paint_rect.h);
-                cairo_clip(cr);
-                cairo_set_source_surface(cr, stem_cache.surface,
-                                         marker_paint_rect.x,
-                                         marker_paint_rect.y);
-                cairo_paint(cr);
-                cairo_restore(cr);
-            }
+            paint_marker_stems(cr, marker_paint_rect);
             const auto m1 = clock::now();
             t_markers_ms =
                 std::chrono::duration<double, std::milli>(m1 - m0).count();
