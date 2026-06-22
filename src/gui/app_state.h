@@ -54,6 +54,14 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // (in input_handler.cpp) can reach them.
 constexpr int kMarkerHitHalfPx    = 4;
 
+// The marker-hit gap as a duration: kMarkerHitHalfPx pixels at the current
+// zoom, in seconds. spp is samples-per-pixel, sr_d the sample rate as a
+// double. Single source for the pixels-to-seconds eps the marker-drop
+// dup-checks and drag clamps share across the warp and phase-reset ops.
+inline double marker_hit_eps_seconds(double spp, double sr_d) {
+    return static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;
+}
+
 // Wholesale snapshot of the authoring-class settings. Captured at undo-push
 // time and restored on undo/redo. Holds the typed EngineSettings plus the
 // project-level trim pair. Cost stays negligible per entry.

@@ -40,7 +40,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     time_seconds = snap_to_timestamp_grid(time_seconds);
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
+    const double eps = marker_hit_eps_seconds(spp, sr_d);
     // Same source-end defense as the warp drop, kept symmetric across marker
     // kinds. (An out-of-bounds phase reset is render-harmless, but placement
     // stays uniform unless a difference is required.)
@@ -144,7 +144,7 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
     if (sr <= 0) return {0.0, 0.0};
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
-    const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
+    const double eps = marker_hit_eps_seconds(spp, sr_d);
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
     auto bounds = compute_neighbor_walk_bounds(
