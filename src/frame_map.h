@@ -70,6 +70,45 @@ inline double map_target_to_source(size_t tgt_frame, const std::vector<FrameMapS
     return last.src_frame + (tgt_frame - last.tgt_frame);
 }
 
+// Precise-domain counterparts of map_source_to_target / map_target_to_source:
+// identical piecewise-linear interpolation, but over the unrounded src_precise /
+// tgt_precise fields and with a double-valued query. Used while migrating the
+// frame map to precise breakpoints; the rounded versions above remain until the
+// flip. Segments are monotonic in precise exactly as in rounded.
+inline double map_source_to_target_precise(double src_frame, const std::vector<FrameMapSegment>& map) {
+    if (map.empty()) return src_frame;
+    if (src_frame <= map.front().src_precise) return map.front().tgt_precise;
+    auto it = std::upper_bound(
+        map.begin(), map.end(), src_frame,
+        [](double q, const FrameMapSegment& s) { return q < s.src_precise; });
+    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
+    if (i < map.size() - 1) {
+        double src_dur = map[i+1].src_precise - map[i].src_precise;
+        double tgt_dur = map[i+1].tgt_precise - map[i].tgt_precise;
+        double offset  = src_frame - map[i].src_precise;
+        return map[i].tgt_precise + (offset * (tgt_dur / src_dur));
+    }
+    const auto& last = map.back();
+    return last.tgt_precise + (src_frame - last.src_precise);
+}
+
+inline double map_target_to_source_precise(double tgt_frame, const std::vector<FrameMapSegment>& map) {
+    if (map.empty()) return tgt_frame;
+    if (tgt_frame <= map.front().tgt_precise) return map.front().src_precise;
+    auto it = std::upper_bound(
+        map.begin(), map.end(), tgt_frame,
+        [](double q, const FrameMapSegment& s) { return q < s.tgt_precise; });
+    const size_t i = static_cast<size_t>(it - map.begin()) - 1;
+    if (i < map.size() - 1) {
+        double src_dur = map[i+1].src_precise - map[i].src_precise;
+        double tgt_dur = map[i+1].tgt_precise - map[i].tgt_precise;
+        double offset  = tgt_frame - map[i].tgt_precise;
+        return map[i].src_precise + (offset * (src_dur / tgt_dur));
+    }
+    const auto& last = map.back();
+    return last.src_precise + (tgt_frame - last.tgt_precise);
+}
+
 // --- Map-file readers (header-only, dependency-free) -----------------------
 // Inverses of the parser's write_frame_map / write_reset_map. They
 // live here, not in the parser's map_output.cpp, so the engine-only
