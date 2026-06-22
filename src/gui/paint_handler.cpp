@@ -209,6 +209,102 @@ static void render_bottom_strip_editor(cairo_t* cr,
     cairo_restore(cr);
 }
 
+// -- GuiPaintHandler::paint_flag_annotations -----------------------------
+
+void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
+                                             const GuiRect& top_strip,
+                                             int sr) {
+    // Flag annotations in the top strip. The steady-state flag-rect pixels
+    // live on flag_cache.surface (rebuilt from on_tick via
+    // maybe_rebuild_flag_cache); this blits the cache, then paints the
+    // per-frame live work — the FlagPayload editor's pending text + cursor.
+    // The old floating iter/BPM/hover popup surfaces are gone; their
+    // presentations re-homed — iteration ranges render into the flags
+    // themselves, and the BPM editor and hover readout render in the bottom
+    // strip — so nothing in this pass is dark. Like the other caches, the
+    // surface may be null on the very first paint after a load (before the
+    // first rebuild fires); the blit is skipped and the background shows
+    // through for that one frame.
+    if (flag_cache.surface) {
+        cairo_save(cr);
+        cairo_rectangle(cr, top_strip.x, top_strip.y,
+                        top_strip.w, top_strip.h);
+        cairo_clip(cr);
+        cairo_set_source_surface(cr, flag_cache.surface,
+                                 top_strip.x, top_strip.y);
+        cairo_paint(cr);
+        cairo_restore(cr);
+    }
+
+    // Drag-time position overlay. Active for the duration of a ctrl-drag;
+    // non-null only when app.drag.active. Threaded into render_one_editor_flag
+    // so the editor flag tracks the dragged marker's proposed (moveable_times)
+    // position.
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    // Displayed-viewport locals for live items that must align with the
+    // cached flag pixels. The cache renders against wf_cache.fp_*; the live
+    // editor flag and popup anchor math reads these *_disp locals so it
+    // agrees with the cache during the worker's 1-2 frame rebuild window
+    // (after a viewport gesture, before the worker's swap).
+    const int64_t  vp_start_disp = wf_cache.fp_vp_start;
+    const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
+    const std::vector<FrameMapSegment>* tmap_disp =
+        (wf_cache.fp_target && !wf_cache.fp_frame_map.empty())
+            ? &wf_cache.fp_frame_map : nullptr;
+
+    // Built once, threaded into the live render_one_editor_flag call below.
+    // Reads only app.top_flag_editor, which has no view-domain distinction.
+    FlagEditorOverlay overlay;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind ==
+            text_editor::Kind::FlagPayload) {
+        overlay.marker_index   = app.top_flag_editor.target;
+        overlay.pending        = app.top_flag_editor.pending;
+        overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
+        overlay.is_red         = app.top_flag_editor.red;
+        overlay.cursor_visible =
+            text_editor::cursor_visible_now(
+                app.top_flag_editor);
+        overlay.has_selection =
+            text_editor::has_selection(
+                app.top_flag_editor);
+        overlay.selection_start =
+            text_editor::selection_start(
+                app.top_flag_editor);
+        overlay.selection_end =
+            text_editor::selection_end(
+                app.top_flag_editor);
+    }
+
+    // Live editor flag: only paints in W marker-view and not render-view
+    // (FlagPayload editor isn't available in either 'P' or render-view paths).
+    // The cache leaves a hole over the editor target via the skip-guard in
+    // render_flags, so this fill is mandatory whenever overlay.marker_index
+    // >= 0 — otherwise that flag's pixels would be missing entirely.
+    if (overlay.marker_index >= 0 &&
+        !app.render_view.enabled &&
+        app.active_markers_view != 'P') {
+        render_one_editor_flag(
+            cr, top_strip,
+            app.warpmarkers.markers(),
+            vp_start_disp, vp_end_disp, sr,
+            kFlagFontSize,
+            app.selected_markers,
+            overlay,
+            tmap_disp,
+            drag_overlay,
+            app.iteration_mode_enabled &&
+                app.active_markers_view == 'W');
+    }
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -257,18 +353,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // via maybe_rebuild_flag_cache). on_redraw now reads
         // wf_cache.fp_* for displayed-viewport inputs and treats every
         // strip as a blit-then-overlay path.
-
-        // Drag-time position overlay. Active for the duration of a
-        // ctrl-drag; non-null only when app.drag.active. Threaded into
-        // render_one_editor_flag so the editor flag tracks the dragged
-        // marker's proposed (moveable_times) position.
-        DragOverlay drag_overlay_storage;
-        const DragOverlay* drag_overlay = nullptr;
-        if (app.drag.active) {
-            drag_overlay_storage.indices = &app.drag.dragging_markers;
-            drag_overlay_storage.times   = &app.drag.moveable_times;
-            drag_overlay = &drag_overlay_storage;
-        }
 
         {
             const auto wf0 = clock::now();
@@ -413,104 +497,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const double px_x = playhead_pixel_x(app, audio,
                                              wf_cache.fp_vp_start, disp_spp);
 
-        // Flag annotations in the top strip. The steady-state flag-rect
-        // pixels live on flag_cache.surface (rebuilt from on_tick via
-        // maybe_rebuild_flag_cache); on_redraw blits the cache and then
-        // paints the per-frame live work — the FlagPayload editor's
-        // pending text + cursor. The hover / iter / BPM popup paint paths
-        // and their dispatch are deleted; iter and BPM modes are
-        // presentation-dark until they re-home their surfaces.
         if (rects_intersect(exposed, top_strip)) {
             const auto f0 = clock::now();
-
-            // The steady-state flag-rect pixels are cached on
-            // flag_cache.surface, rebuilt synchronously from on_tick via
-            // maybe_rebuild_flag_cache. The paint path blits the cache
-            // first; the per-frame live work that follows is the
-            // FlagPayload editor flag (pending text + cursor) and the
-            // hover / iter / BPM popups. Like the other caches, the
-            // surface may be null on the very first paint after a load
-            // (before the first rebuild fires); the blit is skipped and
-            // the background shows through for that one frame.
-            if (flag_cache.surface) {
-                cairo_save(cr);
-                cairo_rectangle(cr, top_strip.x, top_strip.y,
-                                top_strip.w, top_strip.h);
-                cairo_clip(cr);
-                cairo_set_source_surface(cr, flag_cache.surface,
-                                         top_strip.x, top_strip.y);
-                cairo_paint(cr);
-                cairo_restore(cr);
-            }
-
-            // Displayed-viewport locals for live items that
-            // must align with the cached flag pixels. The cache renders
-            // against wf_cache.fp_*; the live editor flag and popup
-            // anchor math reads these *_disp locals so it agrees with
-            // the cache during the worker's 1-2 frame rebuild window
-            // (after a viewport gesture, before the worker's swap).
-            const int64_t  vp_start_disp = wf_cache.fp_vp_start;
-            const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
-            const std::vector<FrameMapSegment>* tmap_disp =
-                (wf_cache.fp_target && !wf_cache.fp_frame_map.empty())
-                    ? &wf_cache.fp_frame_map : nullptr;
-
-            // Built once, threaded into the live render_one_editor_flag
-            // call below. Reads only app.top_flag_editor, which has no
-            // view-domain distinction.
-            FlagEditorOverlay overlay;
-            if (text_editor::is_active(app.top_flag_editor) &&
-                app.top_flag_editor.kind ==
-                    text_editor::Kind::FlagPayload) {
-                overlay.marker_index   = app.top_flag_editor.target;
-                overlay.pending        = app.top_flag_editor.pending;
-                overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
-                overlay.is_red         = app.top_flag_editor.red;
-                overlay.cursor_visible =
-                    text_editor::cursor_visible_now(
-                        app.top_flag_editor);
-                overlay.has_selection =
-                    text_editor::has_selection(
-                        app.top_flag_editor);
-                overlay.selection_start =
-                    text_editor::selection_start(
-                        app.top_flag_editor);
-                overlay.selection_end =
-                    text_editor::selection_end(
-                        app.top_flag_editor);
-            }
-
-            // The flag-rect pass has moved into the cache rebuild above.
-            // What's left here is live work — the FlagPayload editor's
-            // pending text + cursor (which would otherwise drag the cache
-            // fingerprint on every keystroke and blink flip). The hover /
-            // iter / BPM popup surfaces are deleted; iteration and BPM
-            // modes are presentation-dark until they re-home their
-            // entries, and the hover dwell mechanism still runs but has no
-            // on-screen reader.
-            //
-            // Live editor flag: only paints in W marker-view and not
-            // render-view (FlagPayload editor isn't available in either
-            // 'P' or render-view paths). The cache leaves a hole over
-            // the editor target via the skip-guard in render_flags, so
-            // this fill is mandatory whenever overlay.marker_index >= 0
-            // — otherwise that flag's pixels would be missing entirely.
-            if (overlay.marker_index >= 0 &&
-                !app.render_view.enabled &&
-                app.active_markers_view != 'P') {
-                render_one_editor_flag(
-                    cr, top_strip,
-                    app.warpmarkers.markers(),
-                    vp_start_disp, vp_end_disp, sr,
-                    kFlagFontSize,
-                    app.selected_markers,
-                    overlay,
-                    tmap_disp,
-                    drag_overlay,
-                    app.iteration_mode_enabled &&
-                        app.active_markers_view == 'W');
-            }
-
+            paint_flag_annotations(cr, top_strip, sr);
             const auto f1 = clock::now();
             t_flags_ms =
                 std::chrono::duration<double, std::milli>(f1 - f0).count();

@@ -473,4 +473,9 @@ private:
         GuiRect right{};
     };
     OutOfTrimRects compute_out_of_trim_rects(const GuiRect& area) const;
+
+    // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
+    // the rects_intersect gates and the perf-timing wrappers and calls these
+    // in place.
+    void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
 };
