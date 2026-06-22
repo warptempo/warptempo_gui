@@ -456,6 +456,77 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                     /*ink_plate=*/wf_cache.surface);
 }
 
+// -- GuiPaintHandler::paint_debug_hit_rects ------------------------------
+
+void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
+                                            const GuiRect& area,
+                                            const GuiRect& top_strip,
+                                            int sr) {
+    // Recompute hit rects EXACTLY as hit_test_flag does — live viewport,
+    // not the displayed cache fingerprint the paint above used. If these
+    // strokes are offset from the painted chips, the divergence is the
+    // viewport/coordinate space, not the chip-rect formula.
+    const double dbg_spp = current_samples_per_pixel(app, audio);
+    const int64_t dbg_vp_start = app.viewport_start_sample;
+    const int64_t dbg_vp_end = dbg_vp_start +
+        static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
+
+    std::vector<FrameMapSegment> dbg_tmap;
+    if (!app.render_view.enabled &&
+        app.active_audio_view == 'T') {
+        if (app.drag.active) {
+            dbg_tmap = app.drag.frozen_frame_map;
+        } else {
+            dbg_tmap = build_target_view_frame_map(
+                app, sr,
+                static_cast<long>(audio.total_frames()));
+        }
+    }
+    const std::vector<FrameMapSegment>* dbg_tmap_arg =
+        dbg_tmap.empty() ? nullptr : &dbg_tmap;
+
+    DragOverlay dbg_drag_storage;
+    const DragOverlay* dbg_drag = nullptr;
+    if (app.drag.active) {
+        dbg_drag_storage.indices = &app.drag.dragging_markers;
+        dbg_drag_storage.times   = &app.drag.moveable_times;
+        dbg_drag = &dbg_drag_storage;
+    }
+
+    std::vector<FlagHitRect> dbg_rects;
+    if (app.render_view.enabled) {
+        dbg_rects = compute_flag_hit_rects(
+            top_strip, app.render_view.markers,
+            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            nullptr, dbg_drag);
+    } else if (app.active_markers_view == 'P') {
+        dbg_rects = compute_phase_reset_flag_hit_rects(
+            top_strip, app.phase_reset_markers.markers(),
+            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            dbg_tmap_arg, dbg_drag);
+    } else {
+        dbg_rects = compute_flag_hit_rects(
+            top_strip, app.warpmarkers.markers(),
+            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            dbg_tmap_arg, dbg_drag,
+            app.iteration_mode_enabled);
+    }
+
+    // Stroke each hit rect in bright magenta, 1px, half-pixel aligned so
+    // a 1px offset from the chip fill is unambiguous. The stroke sits
+    // ON the rect boundary: left edge at rect.x, right edge at
+    // rect.x+rect.w. Compare against the chip fill's painted span.
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, 1.0, 0.0, 1.0);
+    cairo_set_line_width(cr, 1.0);
+    for (const auto& r : dbg_rects) {
+        cairo_rectangle(cr, r.x + 0.5, r.y + 0.5,
+                        r.w - 1.0, r.h - 1.0);
+        cairo_stroke(cr);
+    }
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -557,69 +628,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         if constexpr (kDebugHitRects) {
-            // Recompute hit rects EXACTLY as hit_test_flag does — live viewport,
-            // not the displayed cache fingerprint the paint above used. If these
-            // strokes are offset from the painted chips, the divergence is the
-            // viewport/coordinate space, not the chip-rect formula.
-            const double dbg_spp = current_samples_per_pixel(app, audio);
-            const int64_t dbg_vp_start = app.viewport_start_sample;
-            const int64_t dbg_vp_end = dbg_vp_start +
-                static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
-
-            std::vector<FrameMapSegment> dbg_tmap;
-            if (!app.render_view.enabled &&
-                app.active_audio_view == 'T') {
-                if (app.drag.active) {
-                    dbg_tmap = app.drag.frozen_frame_map;
-                } else {
-                    dbg_tmap = build_target_view_frame_map(
-                        app, sr,
-                        static_cast<long>(audio.total_frames()));
-                }
-            }
-            const std::vector<FrameMapSegment>* dbg_tmap_arg =
-                dbg_tmap.empty() ? nullptr : &dbg_tmap;
-
-            DragOverlay dbg_drag_storage;
-            const DragOverlay* dbg_drag = nullptr;
-            if (app.drag.active) {
-                dbg_drag_storage.indices = &app.drag.dragging_markers;
-                dbg_drag_storage.times   = &app.drag.moveable_times;
-                dbg_drag = &dbg_drag_storage;
-            }
-
-            std::vector<FlagHitRect> dbg_rects;
-            if (app.render_view.enabled) {
-                dbg_rects = compute_flag_hit_rects(
-                    top_strip, app.render_view.markers,
-                    dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
-                    nullptr, dbg_drag);
-            } else if (app.active_markers_view == 'P') {
-                dbg_rects = compute_phase_reset_flag_hit_rects(
-                    top_strip, app.phase_reset_markers.markers(),
-                    dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
-                    dbg_tmap_arg, dbg_drag);
-            } else {
-                dbg_rects = compute_flag_hit_rects(
-                    top_strip, app.warpmarkers.markers(),
-                    dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
-                    dbg_tmap_arg, dbg_drag,
-                    app.iteration_mode_enabled);
-            }
-
-            // Stroke each hit rect in bright magenta, 1px, half-pixel aligned so
-            // a 1px offset from the chip fill is unambiguous. The stroke sits
-            // ON the rect boundary: left edge at rect.x, right edge at
-            // rect.x+rect.w. Compare against the chip fill's painted span.
-            cairo_save(cr);
-            cairo_set_source_rgb(cr, 1.0, 0.0, 1.0);
-            cairo_set_line_width(cr, 1.0);
-            for (const auto& r : dbg_rects) {
-                cairo_rectangle(cr, r.x + 0.5, r.y + 0.5,
-                                r.w - 1.0, r.h - 1.0);
-                cairo_stroke(cr);
-            }
-            cairo_restore(cr);
+            paint_debug_hit_rects(cr, area, top_strip, sr);
         }
 
         // Bottom strip: two text rows of equal height mirroring
