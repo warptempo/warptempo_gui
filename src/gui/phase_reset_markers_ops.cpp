@@ -41,6 +41,11 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
+    // Same source-end defense as the warp drop, kept symmetric across marker
+    // kinds. (An out-of-bounds phase reset is render-harmless, but placement
+    // stays uniform unless a difference is required.)
+    if (time_seconds > static_cast<double>(audio.total_frames()) / sr_d - eps)
+        return;
     const auto& tv = app.phase_reset_markers.markers();
     if (reject_if_marker_within_eps(tv, time_seconds, eps, "phase_reset")) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();

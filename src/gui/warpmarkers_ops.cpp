@@ -53,6 +53,13 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     const double sr_d = static_cast<double>(sr);
     const double spp  = current_samples_per_pixel(app, audio);
     const double eps  = static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;  // kMarkerHitHalfPx pixels at current zoom
+    // Defend the source end with the same zoom-based eps used for marker
+    // spacing, matching the total_duration - eps clamp drag/nudge/jump use.
+    // The eps floor (kMarkerHitHalfPx px at max zoom is 2.5 ms) exceeds the
+    // millisecond snap grid, so a near-end drop can never snap past
+    // total_frames and break the render.
+    if (time_seconds > static_cast<double>(audio.total_frames()) / sr_d - eps)
+        return;
     const auto& mv = app.warpmarkers.markers();
     if (reject_if_marker_within_eps(mv, time_seconds, eps, "warp")) return;
     // Snapshot pre-mutation state for undo. Captured after the dup
