@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -132,14 +133,14 @@ read_frame_map(const std::string& path) {
     while (std::getline(in, line)) {
         if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
         std::istringstream ls(line);
-        unsigned long long s = 0, t = 0;
+        double s = 0.0, t = 0.0;
         if (!(ls >> s >> t)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
-        segs.push_back(FrameMapSegment{static_cast<size_t>(s),
-                                       static_cast<size_t>(t),
-                                       static_cast<double>(s),
-                                       static_cast<double>(t)});
+        segs.push_back(FrameMapSegment{
+            static_cast<size_t>(std::llrint(s)),
+            static_cast<size_t>(std::llrint(t)),
+            s, t});
     }
     return segs;
 }

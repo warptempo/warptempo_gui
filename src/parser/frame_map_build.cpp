@@ -540,11 +540,11 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // source map_target_to_source(m*R_s) - N/2, banker's-rounded to int64
     // (llrint).
     const int64_t target_total =
-        static_cast<int64_t>(full_map.back().tgt_frame) + N;
+        static_cast<int64_t>(std::llrint(full_map.back().tgt_precise)) + N;
     std::vector<int64_t> dense;
     for (int64_t t_s = 0; t_s < target_total; t_s += R_s) {
         const double src =
-            map_target_to_source(static_cast<size_t>(t_s), full_map)
+            map_target_to_source_precise(static_cast<double>(t_s), full_map)
             - static_cast<double>(N) / 2.0;
         dense.push_back(static_cast<int64_t>(std::llrint(src)));
     }
@@ -569,7 +569,7 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     const int64_t start_src = static_cast<int64_t>(std::llrint(
         map_target_to_source(static_cast<size_t>(offset), full_map)));
     const int64_t end_tgt_full = static_cast<int64_t>(std::llrint(
-        map_source_to_target(static_cast<size_t>(trim_end_src), full_map)));
+        map_source_to_target_precise(static_cast<double>(trim_end_src), full_map)));
     const double start_src_precise =
         map_target_to_source_precise(static_cast<double>(offset), full_map);
 

@@ -56,16 +56,16 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
 bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
-        if (tm[i].src_frame <= tm[i - 1].src_frame) {
+        if (tm[i].src_precise <= tm[i - 1].src_precise) {
             std::cerr << "Error: frame_map entry " << i << " has non-monotonic src_frame ("
-                      << tm[i - 1].src_frame << " -> "
-                      << tm[i].src_frame << ").\n";
+                      << tm[i - 1].src_precise << " -> "
+                      << tm[i].src_precise << ").\n";
             return false;
         }
-        if (tm[i].tgt_frame <= tm[i - 1].tgt_frame) {
+        if (tm[i].tgt_precise <= tm[i - 1].tgt_precise) {
             std::cerr << "Error: frame_map entry " << i << " has non-monotonic tgt_frame ("
-                      << tm[i - 1].tgt_frame << " -> "
-                      << tm[i].tgt_frame << ").\n";
+                      << tm[i - 1].tgt_precise << " -> "
+                      << tm[i].tgt_precise << ").\n";
             return false;
         }
     }
@@ -128,7 +128,9 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.src_samples = p.source_audio_samples;
     audio_stft.channels = audio_stft.src_info.channels;
-    audio_stft.target_total_frames = audio_stft.frame_map.back().tgt_frame + audio_stft.N;
+    audio_stft.target_total_frames =
+        static_cast<size_t>(std::llrint(audio_stft.frame_map.back().tgt_precise)) +
+        audio_stft.N;
 
     audio_stft.init_fftw();
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
@@ -156,11 +158,9 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             audio_stft.synth_frame_end = static_cast<int>(need);
         } else {
             audio_stft.synth_frame_end = num_frames;
-            const int64_t end_src =
-                static_cast<int64_t>(audio_stft.frame_map.back().src_frame);
-            const double tgt_end =
-                map_source_to_target(static_cast<size_t>(end_src),
-                                     audio_stft.frame_map);
+            // Full-render cap is the last anchor's target; map_source_to_target
+            // at the final node is exactly that node's target, so read it direct.
+            const double tgt_end = audio_stft.frame_map.back().tgt_precise;
             audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
             if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
         }
