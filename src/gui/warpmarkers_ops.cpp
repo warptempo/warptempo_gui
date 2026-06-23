@@ -414,15 +414,21 @@ bool GuiWarpMarkersOps::begin_drag(int hit, int mouse_x) {
     std::set<int> drag_set;
     drag_set.insert(hit);
 
-    // First-marker protection: refuse index 0 and any effective-time-0
-    // marker. Runs before any selection mutation so a refused drag
-    // leaves selection genuinely unchanged.
-    for (int idx : drag_set) {
-        if (idx == 0 || t_of(idx) == 0.0) {
-            std::fprintf(stderr, phase_reset
-                ? "warptempo_gui: first phase_reset marker cannot be dragged\n"
-                : "warptempo_gui: first warp marker cannot be dragged\n");
-            return false;
+    // First-marker protection (warp only): the warp marker at frame 0 is
+    // the mandatory project anchor and never moves, so refuse index 0 and
+    // any effective-time-0 warp marker. Phase resets have no pinned frame-0
+    // anchor — the first phase reset marker is optional and freely
+    // repositionable — so the pin is skipped in phase reset view. The
+    // neighbor-bounds clamp below still keeps a left-edge phase reset
+    // strictly after frame 0. Runs before any selection mutation so a
+    // refused drag leaves the selection genuinely unchanged.
+    if (!phase_reset) {
+        for (int idx : drag_set) {
+            if (idx == 0 || t_of(idx) == 0.0) {
+                std::fprintf(stderr,
+                    "warptempo_gui: first warp marker cannot be dragged\n");
+                return false;
+            }
         }
     }
 
