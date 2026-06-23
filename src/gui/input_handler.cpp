@@ -495,7 +495,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (!ctrl && !alt && !shift &&
         (key == GuiKeys::PageDown || key == GuiKeys::PageUp)) {
         const int64_t step = std::max<int64_t>(
-            1, samples_visible(app, audio) / 10);
+            1, samples_visible(app, audio) / kViewportLeadDivisor);
         viewport.scroll_viewport(key == GuiKeys::PageUp ? -step : +step);
         return;
     }
@@ -621,7 +621,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     }
     if (alt && !ctrl && !shift) {
         const int64_t step = std::max<int64_t>(
-            1, samples_visible(app, audio) / 10);
+            1, samples_visible(app, audio) / kViewportLeadDivisor);
         viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
         return;
     }

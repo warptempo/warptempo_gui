@@ -5,7 +5,6 @@
 #include "text_editor.h"
 #include "time_format.h"
 #include "frame_map_view.h"
-#include "waveform_worker.h"
 #include "frame_map.h"
 
 #include <chrono>
@@ -15,17 +14,12 @@
 #include <string>
 #include <vector>
 
-// Paint cluster. Method bodies are byte-identical to the lambdas
-// they replaced in main.cpp (set_on_redraw at the original main.cpp:999
-// and set_on_resize at the original main.cpp:1892). The only changes are:
-//
-//   - Capture-by-reference of `app`, `audio`, `playback`, `wf_cache`,
-//     `gui` is now reference-member access on `this`. Identifier spelling
-//     is identical so nothing else changes inside the bodies.
-//   - `bottom_strip_wide()` (the old lambda capture) is replaced with the
-//     free-function form `bottom_strip_wide(app)` declared in app_state.h.
+// On-screen paint handler: on_redraw and its per-strip paint passes, the
+// out-of-trim geometry they use, and on_resize. The off-screen surfaces
+// these passes blit — the waveform plate and the marker-stem and flag-rect
+// caches — are produced in waveform_cache.cpp.
 
-// F2: the settings-prompt editor and the BPM editor paint the same
+// The settings-prompt editor and the BPM editor paint the same
 // bottom-strip text box through render_editor_text_box, differing only
 // in the prefix and which text_editor::State they read. This is the one
 // body both branches share. It takes the row geometry (anchor_x,
