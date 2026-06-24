@@ -6,6 +6,7 @@
 #include <cstring>
 #include <algorithm>
 #include <iomanip>
+#include <cmath>
 
 // Requires libsndfile
 #include <sndfile.hh> 
@@ -13,8 +14,8 @@
 
 // Convenience struct for our map points
 struct FrameMapPoint {
-    long long source;
-    long long target;
+    double source;
+    double target;
 };
 
 // Helper to get planar audio (Vector of Vectors) from interleaved buffer
@@ -81,7 +82,7 @@ int main(int argc, char* argv[]) {
     while (std::getline(mapFile, line)) {
         if (line.empty()) continue;
         std::stringstream ss(line);
-        long long src, tgt;
+        double src, tgt;
         if (ss >> src >> tgt) {
             mapPoints.push_back({src, tgt});
         }
@@ -138,15 +139,19 @@ int main(int argc, char* argv[]) {
     long long currentTgt = 0;
 
     for (const auto& point : mapPoints) {
-        if (point.source > currentSrc) {
-            processSegment(currentSrc, point.source, currentTgt, point.target);
-            currentSrc = point.source;
-            currentTgt = point.target;
+        // Breakpoints are double; round each cumulative position to a whole
+        // sample-frame for buffer indexing (segments slice integer frames).
+        const long long pointSrc = std::llround(point.source);
+        const long long pointTgt = std::llround(point.target);
+        if (pointSrc > currentSrc) {
+            processSegment(currentSrc, pointSrc, currentTgt, pointTgt);
+            currentSrc = pointSrc;
+            currentTgt = pointTgt;
 
             int percent = (int)((currentSrc * 100.0) / inputFrames);
             std::cout << "\rProcessing: " << percent << "%" << std::flush;
         } else {
-            currentTgt = std::max(currentTgt, point.target);
+            currentTgt = std::max(currentTgt, pointTgt);
         }
     }
 

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cmath>
 
 #include <sndfile.h>
 #include <soundtouch/SoundTouch.h>
@@ -13,11 +14,11 @@ using namespace std;
 const int BUFFER_SIZE = 2048;
 
 struct FrameMapPoint {
-    long src_frame;
-    long tgt_frame;
+    double src_frame;
+    double tgt_frame;
 };
 
-// Loader for integer-based .warpframemap (from parser)
+// Loader for .warpframemap breakpoints (read as double; parser emits precise doubles)
 vector<FrameMapPoint> loadFrameMap(const string& filename) {
     vector<FrameMapPoint> map;
     ifstream infile(filename);
@@ -25,11 +26,11 @@ vector<FrameMapPoint> loadFrameMap(const string& filename) {
         cerr << "Error: Could not open frame map: " << filename << endl;
         exit(1);
     }
-    
+
     // Note: Implicit push of {0,0} removed because parser now guarantees it in the file.
 
-    long src, tgt;
-    // Read integers directly
+    double src, tgt;
+    // Read breakpoints as double
     while (infile >> src >> tgt) {
         map.push_back({src, tgt});
     }
@@ -49,15 +50,15 @@ vector<FrameMapPoint> loadFrameMap(const string& filename) {
 }
 
 int main(int argc, char* argv[]) {
-    // Usage: adapter <in.wav> <out.wav> <map.warpframemap>
+    // Usage: adapter <input.wav> <map.warpframemap> <output.wav>
     if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <in.wav> <out.wav> <map.warpframemap>" << endl;
+        cerr << "Usage: " << argv[0] << " <input.wav> <map.warpframemap> <output.wav>" << endl;
         return 1;
     }
 
     string inputPath = argv[1];
-    string outputPath = argv[2];
-    string mapPath = argv[3];
+    string mapPath = argv[2];
+    string outputPath = argv[3];
 
     SF_INFO sfInfoInput;
     memset(&sfInfoInput, 0, sizeof(sfInfoInput)); 
@@ -94,19 +95,16 @@ int main(int argc, char* argv[]) {
     long current_src_pos = 0;
     
     for (size_t i = 1; i < frameMap.size(); ++i) {
-        long target_src = frameMap[i].src_frame;
-        long target_tgt = frameMap[i].tgt_frame;
+        const double src_delta = frameMap[i].src_frame - frameMap[i-1].src_frame;
+        double tgt_delta = frameMap[i].tgt_frame - frameMap[i-1].tgt_frame;
+        if (tgt_delta <= 0.0) tgt_delta = 1.0;
 
-        long prev_src = frameMap[i-1].src_frame;
-        long prev_tgt = frameMap[i-1].tgt_frame;
-        
-        double src_delta = (double)(target_src - prev_src);
-        double tgt_delta = (double)(target_tgt - prev_tgt);
-        
-        if (tgt_delta <= 0) tgt_delta = 1.0;
-        
         soundTouch.setTempo(src_delta / tgt_delta);
 
+        // Whole-frame pull boundary: the segment's source endpoint rounded to
+        // an integer sample. The tempo ratio above stays exact-double; only
+        // this read boundary rounds, since a frame read is whole-frame.
+        const long target_src = std::llround(frameMap[i].src_frame);
         long frames_remaining = target_src - current_src_pos;
         while (frames_remaining > 0) {
             int read_size = (frames_remaining > BUFFER_SIZE) ? BUFFER_SIZE : frames_remaining;
