@@ -484,8 +484,10 @@ int main(int argc, char** argv) {
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle, target_render);
-    GuiWarpMarkersOps warpops(app, audio, gui, viewport, selection, undo,
+    GuiWarpMarkersOps warpops(app, audio, viewport, selection, undo,
                               playback_lifecycle, target_render);
+    MarkerDragOps marker_drag(app, audio, viewport, selection, undo,
+                              target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
@@ -505,7 +507,8 @@ int main(int argc, char** argv) {
         [&waveform_worker]() { waveform_worker.on_completion_event(); });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
-                                  warpops, phase_resets, flag_editor,
+                                  warpops, phase_resets, marker_drag,
+                                  flag_editor,
                                   render_view, active_views,
                                   phase_reset_propagate,
                                   async_renderer,

@@ -138,6 +138,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/phase_reset_propagate.cpp
         src/gui/prompt.cpp
         src/gui/warpmarkers_ops.cpp
+        src/gui/marker_drag.cpp
         src/gui/file_loader.cpp
         src/gui/flag_editor.cpp
         src/gui/render_view.cpp

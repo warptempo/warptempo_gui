@@ -16,6 +16,7 @@
 #include "target_render.h"
 #include "phase_reset_propagate.h"
 #include "phase_reset_markers_ops.h"
+#include "marker_drag.h"
 #include "undo.h"
 #include "viewport.h"
 #include "warpmarkers_ops.h"
@@ -102,6 +103,7 @@ struct GuiInputHandler {
     Undo&                    undo;
     GuiWarpMarkersOps&       warpops;
     GuiPhaseResetMarkersOps& phase_resets;
+    MarkerDragOps&           marker_drag;
     GuiFlagEditor&           flag_editor;
     GuiRenderView&           render_view;
     GuiActiveViews&          active_views;
@@ -123,6 +125,7 @@ struct GuiInputHandler {
                     Undo&                    undo_,
                     GuiWarpMarkersOps&       warpops_,
                     GuiPhaseResetMarkersOps& phase_resets_,
+                    MarkerDragOps&           marker_drag_,
                     GuiFlagEditor&           flag_editor_,
                     GuiRenderView&           render_view_,
                     GuiActiveViews&          active_views_,
@@ -143,6 +146,7 @@ struct GuiInputHandler {
           undo(undo_),
           warpops(warpops_),
           phase_resets(phase_resets_),
+          marker_drag(marker_drag_),
           flag_editor(flag_editor_),
           render_view(render_view_),
           active_views(active_views_),

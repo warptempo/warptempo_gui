@@ -1,6 +1,7 @@
 #include "input_handler.h"
 
 #include "frame_map_view.h"
+#include "marker_drag.h"
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
@@ -338,7 +339,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // it, else collapses to just `hit`. Motion decides whether
             // it actually becomes a drag vs. a plain click.
             const bool was_playing_ctrl = playback.is_playing();
-            warpops.begin_drag(hit, x);
+            marker_drag.begin_drag(hit, x);
             if (was_playing_ctrl)
                 app.follow_overridden_for_session = true;
             return;
@@ -511,7 +512,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
         return;
     }
     if (!app.drag.active) return;
-    warpops.commit_drag();
+    marker_drag.commit_drag();
 }
 
 // Motion handler. Verbatim from the lambda at the original
@@ -767,7 +768,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     viewport.clear_hover_popup();
     // Left button must still be held down — otherwise release was lost.
     if (!mods.primary_button_held) {
-        warpops.commit_drag();
+        marker_drag.commit_drag();
         return;
     }
     const int sr = audio.sample_rate();
@@ -795,7 +796,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         mouse_time = vp_time +
             static_cast<double>(mouse_x - area.x) * spp / sr_d;
     }
-    warpops.apply_drag_motion(mouse_time - app.drag.anchor_mouse_time_seconds);
+    marker_drag.apply_drag_motion(mouse_time - app.drag.anchor_mouse_time_seconds);
 
     // Track the playhead with the grabbed marker. The hit marker's
     // proposed source-time lives in the drag overlay — under the

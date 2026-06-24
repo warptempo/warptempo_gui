@@ -9,26 +9,17 @@
 #include <utility>
 
 class GuiAudio;
-class GuiPlatform;
 struct GuiTargetRender;
 
-// Warp-authoring cluster. Covers the basic authoring lambdas (drop / delete / toggle /
-// adjust / clear), the drag cluster (begin / apply / commit, mode-aware
-// across warp and phase reset lists), and the selection-shift cluster
-// (nudge / jump-to-playhead and their shared bounds helper).
-// clear_hover_popup is reached through viewport; stop_playback_if_playing
-// through playback_lifecycle.
-//
-// The drag methods stay mode-aware: warp drag is the dominant case and
-// phase reset drag was bolted on later. Under the frozen-coord regime
-// motion writes to app.drag.moveable_times only — the per-list live
-// stores stay untouched until commit_drag does the write-back. The
-// GuiPlatform reference is for apply_drag_motion's gui.invalidate_region
-// calls during drag.
+// Warp-authoring cluster. Covers the basic authoring operations (drop /
+// delete / toggle / adjust) and the selection-shift cluster (nudge /
+// jump-to-playhead and their shared bounds helper). stop_playback_if_playing
+// is reached through playback_lifecycle. The reposition drag is no longer
+// here: it is the one cross-kind gesture and lives in MarkerDragOps in
+// marker_drag.{h,cpp}.
 struct GuiWarpMarkersOps {
     AppState&             app;
     const GuiAudio&       audio;
-    GuiPlatform&          gui;
     Viewport&             viewport;
     Selection&            selection;
     Undo&                 undo;
@@ -37,7 +28,6 @@ struct GuiWarpMarkersOps {
 
     GuiWarpMarkersOps(AppState&             app_,
                       const GuiAudio&       audio_,
-                      GuiPlatform&          gui_,
                       Viewport&             viewport_,
                       Selection&            selection_,
                       Undo&                 undo_,
@@ -45,7 +35,6 @@ struct GuiWarpMarkersOps {
                       GuiTargetRender&   target_render_)
         : app(app_),
           audio(audio_),
-          gui(gui_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
@@ -60,9 +49,6 @@ struct GuiWarpMarkersOps {
     void toggle_inherits();
     void toggle_disabled();
     void adjust_tempo(double delta);
-    bool begin_drag(int hit, int mouse_x);
-    void apply_drag_motion(double raw_delta);
-    void commit_drag();
     std::pair<double, double> compute_selection_delta_bounds(bool& ok);
     bool apply_selection_shift(double raw_delta);
     void nudge_selected_markers(int direction);
