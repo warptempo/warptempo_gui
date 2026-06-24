@@ -50,9 +50,9 @@ vector<FrameMapPoint> loadFrameMap(const string& filename) {
 }
 
 int main(int argc, char* argv[]) {
-    // Usage: adapter <input.wav> <map.warpframemap> <output.wav>
+    // Usage: adapter <input> <map.warpframemap> <output.wav>
     if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <input.wav> <map.warpframemap> <output.wav>" << endl;
+        cerr << "Usage: " << argv[0] << " <input> <map.warpframemap> <output.wav>" << endl;
         return 1;
     }
 

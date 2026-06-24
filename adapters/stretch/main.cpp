@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 
     // 1. Argument Validation
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <input.wav> <map.warpframemap> <output.wav>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input> <map.warpframemap> <output.wav>" << std::endl;
         std::cerr << "       " << argv[0] << " -v (to see version)" << std::endl;
         return 1;
     }

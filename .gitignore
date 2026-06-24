@@ -1,11 +1,11 @@
-# Backups
+# backups
 *~
 *.bak
 
-# Warptempo Build Artifacts
+# build
 build*/
 
-# Claude Code
+# claude
 .claude/
 CLAUDE.md
 
@@ -16,18 +16,21 @@ tmp/
 docs/references/*.pdf
 docs/welcome_back_template.md
 
-# Bungee Adapter Build Artifacts
+# bungee
 adapters/bungee/build/
 adapters/bungee/bungee/
 
-# Stretch Adapter Build Artifacts
+# rubberband
+adapters/rubberband/build/
+
+# stretch
 adapters/stretch/build/
 adapters/stretch/signalsmith-*/
 
-# SoundTouch Adapter Build Artifacts
+# soundTouch
 adapters/soundtouch/build/
 
-# MIDI Adapter Build Artifacts
+# midi
 adapters/midi/midifile
 adapters/midi/midi_adapter
 adapters/midi/build/
