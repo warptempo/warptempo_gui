@@ -215,6 +215,17 @@ void Synthesis::synthesize_full(
             // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame),
             // ph_nxt/mag_nxt = analysis(frame+1), ph_prev/mag_prev =
             // analysis(frame-1) (zero at frame 0).
+            // R_a_actual is the integer source hop this frame actually
+            // traversed: fm[frame] - fm[frame-1]. fm is the once-rounded
+            // schedule from generate_source_frame_positions (each entry
+            // map_target_to_source(m*R_s) - N/2, llrint half-to-even), so the
+            // positions are integer by the project rounding convention and
+            // the engine analyzes at exactly those source frames. The hop is
+            // therefore the faithful integer realization of R_a = R_s/alpha:
+            // phase is propagated against the distance actually read. A
+            // fractional R_a over integer-positioned reads would describe a
+            // hop the analysis never took and regress the output, so the
+            // integerness here is intentional, not a precision leak.
             const int64_t R_a_actual = (frame_idx > wbegin) ? (ta_cur - ta_prev) : 0;
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
             const bool    frame0     = (frame_idx == wbegin);
