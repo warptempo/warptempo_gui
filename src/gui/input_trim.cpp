@@ -188,11 +188,9 @@ void GuiInputHandler::select_trim_boundary(TrimHit which, bool additive) {
     viewport.invalidate_waveform_area();
 }
 
-bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
-                                                     double& out_seconds) {
-    const int sr = audio.sample_rate();
-    if (sr <= 0 || audio.total_frames() <= 0) return false;
-    const double sr_d = static_cast<double>(sr);
+bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
+                                                   int64_t& out_frame) {
+    if (audio.total_frames() <= 0) return false;
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return false;
@@ -200,8 +198,19 @@ bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
-    const int64_t domain_frame = app.viewport_start_sample +
+    out_frame = app.viewport_start_sample +
         static_cast<int64_t>(std::nearbyint(rel * spp));
+    return true;
+}
+
+bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
+                                                     double& out_seconds) {
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return false;
+    const double sr_d = static_cast<double>(sr);
+
+    int64_t domain_frame = 0;
+    if (!trim_mouse_x_to_active_frame(mouse_x, domain_frame)) return false;
 
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary, mirroring
@@ -212,17 +221,21 @@ bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
     return true;
 }
 
-void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x) {
+void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
     if (is_begin ? !app.trim.has_begin : !app.trim.has_end) {
         return;
     }
+    if (both && !(app.trim.has_begin && app.trim.has_end)) return;
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
+    app.trim_drag.both         = both;
     app.trim_drag.moved        = false;
     app.trim_drag.orig_seconds = is_begin ? app.trim.begin_seconds
                                           : app.trim.end_seconds;
+    app.trim_drag.orig_begin_seconds = app.trim.begin_seconds;
+    app.trim_drag.orig_end_seconds   = app.trim.end_seconds;
     // Grab anchor: the press position in source-domain seconds. Motion moves
     // the bound by the cursor's displacement from here, so it tracks the grab
     // point with no snap (mirrors begin_drag's anchor_mouse_time_seconds).
@@ -233,6 +246,13 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x) {
         app.trim_drag.anchor_seconds = anchor;
     app.trim_drag.pre          = capture_current_settings(app);
     app.last_sel_group         = LastSelGroup::Trim;
+    if (both) {
+        app.trim_begin_selected = true;
+        app.trim_end_selected   = true;
+        int64_t af = 0;
+        if (trim_mouse_x_to_active_frame(mouse_x, af))
+            app.trim_drag.anchor_active_frame = af;
+    }
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -252,6 +272,36 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     const double delta_seconds = cursor_seconds - app.trim_drag.anchor_seconds;
 
     const int64_t total = static_cast<int64_t>(audio.total_frames());
+
+    if (app.trim_drag.both) {
+        int64_t cur_active = 0;
+        if (!trim_mouse_x_to_active_frame(mouse_x, cur_active)) return;
+        const int64_t live_total = live_total_frames(app, audio);
+        const int64_t ob = source_frame_to_active_domain(app, audio,
+            static_cast<int64_t>(std::nearbyint(app.trim_drag.orig_begin_seconds * sr_d)));
+        const int64_t oe = source_frame_to_active_domain(app, audio,
+            static_cast<int64_t>(std::nearbyint(app.trim_drag.orig_end_seconds * sr_d)));
+        int64_t df = cur_active - app.trim_drag.anchor_active_frame;
+        // Rigid clamp in the active domain: begin >= 0, end <= live EOF; gap preserved.
+        if (ob + df < 0)          df = -ob;
+        if (oe + df > live_total) df = live_total - oe;
+        const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
+        const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
+        const double nb = snap_to_timestamp_grid(static_cast<double>(nb_src) / sr_d);
+        const double ne = snap_to_timestamp_grid(static_cast<double>(ne_src) / sr_d);
+        if (app.trim.begin_seconds != nb || app.trim.end_seconds != ne) {
+            app.trim.begin_seconds = nb;
+            app.trim.end_seconds   = ne;
+            app.trim_drag.moved    = true;
+            const int64_t grabbed_src = static_cast<int64_t>(
+                std::nearbyint((app.trim_drag.is_begin ? nb : ne) * sr_d));
+            app.playhead_cursor_sample =
+                source_frame_to_active_domain(app, audio, grabbed_src);
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+        }
+        return;
+    }
 
     // Single-bound: pre-drag frame plus the anchor-relative delta.
     const int64_t orig_f = static_cast<int64_t>(
@@ -341,7 +391,7 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
-    } else {
+    } else if (!app.trim_drag.both) {
         // Ctrl+press with no motion is a Ctrl+click: toggle the boundary's
         // selection (additive — coexists with marker selection).
         const TrimHit which = app.trim_drag.is_begin ? TrimHit::Begin
@@ -365,10 +415,18 @@ void GuiInputHandler::delete_selected_trim() {
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
                                                  bool shift, int mouse_x) {
     // The caller consumes a trim press only for recognized gestures: a
-    // Ctrl-exact reposition-drag, or a plain / Shift select+navigate. Alt and
-    // Ctrl+Shift are filtered upstream, so `ctrl` here is the exact reposition
-    // chord and the else-branch is a plain-or-Shift select.
+    // Ctrl-exact reposition-drag, a Ctrl+Shift move-both-bounds drag, or a
+    // plain / Shift select+navigate. Alt is filtered upstream, so `ctrl` /
+    // `shift` here are the exact chords and the else-branch is a
+    // plain-or-Shift select.
     if (which == TrimHit::None) return;
+    if (ctrl && shift) {
+        // Read-only refuses the drag-begin so app.trim_drag.active never
+        // enters flight; motion / release / Escape all short-circuit on it.
+        if (active_view_state(app).read_only) return;
+        begin_trim_drag(which, mouse_x, /*both=*/true);
+        return;
+    }
     if (ctrl) {
         // Read-only refuses the drag-begin so app.trim_drag.active never
         // enters flight; motion / release / Escape all short-circuit on it.

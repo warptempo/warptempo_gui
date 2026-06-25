@@ -285,6 +285,15 @@ struct TrimDragState {
     // initial snap. See DragState::anchor_mouse_time_seconds.
     double anchor_seconds     = 0.0;
     SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
+
+    // Ctrl+Shift move-both-bounds drag: both bounds translate together by
+    // the same delta in the active (on-screen) domain, preserving the gap
+    // as it appears under warp. `is_begin` still records which stem was
+    // grabbed (for cosmetic purposes only — both move regardless).
+    bool    both                 = false;
+    double  orig_begin_seconds   = 0.0;
+    double  orig_end_seconds     = 0.0;
+    int64_t anchor_active_frame  = 0;
 };
 
 // Ctrl+drag on empty waveform: continuous 1:1 grab-pan of the viewport,

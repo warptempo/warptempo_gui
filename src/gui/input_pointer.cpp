@@ -256,12 +256,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         int hit = -1;
         bool in_click_region = false;
         // A trim-boundary press is consumed only for its recognized gestures:
-        // a Ctrl-exact reposition-drag, or a plain / Shift select+navigate. Alt
-        // is reserved for panning (Alt+drag over a trim stem pans, ignoring the
-        // boundary), and Ctrl+Shift — like every other unrecognized combo —
-        // falls through to no-op at the strict guard below. So only these combos
-        // consume the boundary hit; the rest fall through to the cascade.
-        const bool trim_gesture = !alt && !(ctrl && shift);
+        // a Ctrl-exact reposition-drag, a Ctrl+Shift move-both-bounds drag, or
+        // a plain / Shift select+navigate. Alt is reserved for panning
+        // (Alt+drag over a trim stem pans, ignoring the boundary). Any other
+        // unrecognized combo falls through to no-op at the strict guard below.
+        const bool trim_gesture = !alt;
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
             // A waveform press that misses every marker but lands
