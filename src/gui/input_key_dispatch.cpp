@@ -900,12 +900,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
                     viewport.move_playhead_to(viewport.trim_begin_sample()); break;
     case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_end_sample() - 1); break;
-    // b / e set the settings-side trim_begin / trim_end at the
-    // current playhead position. Mode-agnostic. Re-press at the same
-    // sample frame toggles off. Auto-swaps when the candidate would
-    // invert the trim region; refuses equal-frame collisions.
-    case GuiKeys::B: handle_trim_set_begin_at_playhead(); break;
-    case GuiKeys::E: handle_trim_set_end_at_playhead();   break;
     default: break;
     }
 }

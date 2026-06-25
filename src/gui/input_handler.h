@@ -312,6 +312,16 @@ private:
     void handle_trim_set_begin_at_playhead();
     void handle_trim_set_end_at_playhead();
 
+    // Plain b / e: set this bound at the playhead and autoset the
+    // opposite bound 5 active-seconds away (end after begin, begin
+    // before end). Re-press while the playhead sits on the existing
+    // this-bound walks the opposite bound out another 5 active-seconds
+    // instead of re-deriving this-bound from the playhead. Clamped to
+    // [0, live EOF] in the active domain. The legacy single-bound
+    // set (no autoset) moved to Ctrl+b / Ctrl+e, above.
+    void handle_trim_set_begin_autoset();
+    void handle_trim_set_end_autoset();
+
     // Shift+b / Shift+e clear the project trim_begin / trim_end
     // unconditionally (independent of playhead position). Silent no-op
     // when the relevant trim is already unset.
@@ -324,6 +334,7 @@ private:
     // methods than as four side-parameterized invocations.
     enum class TrimSide { Begin, End };
     void handle_trim_set_at_playhead(TrimSide side);
+    void handle_trim_set_autoset(TrimSide side);
     void stop_playback_if_scanner_out_of_trim();
     void handle_trim_unset(TrimSide side);
 

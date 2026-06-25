@@ -137,6 +137,78 @@ void GuiInputHandler::handle_trim_set_end_at_playhead() {
     handle_trim_set_at_playhead(TrimSide::End);
 }
 
+namespace {
+constexpr double kTrimAutosetSeconds = 5.0;
+}
+
+// Plain b / e. Sets this bound at the playhead and autosets the opposite
+// bound kTrimAutosetSeconds away, measured in the active (on-screen) domain
+// so the on-screen gap is constant regardless of any source/active time
+// warp. dir carries the asymmetry: Begin pushes the autoset End later,
+// End pushes the autoset Begin earlier. Re-pressing the same key while the
+// playhead sits on the existing this-bound (the "repeat" branch) leaves
+// this-bound untouched and instead walks the opposite bound out another
+// kTrimAutosetSeconds, which is how a user racks the far bound out in
+// fixed steps without re-aiming the playhead.
+void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
+    const int sr = audio.sample_rate();
+    if (audio.total_frames() <= 0 || sr <= 0) return;
+    const double sr_d = static_cast<double>(sr);
+    const int64_t dir = (side == TrimSide::Begin) ? 1 : -1;
+
+    bool&   this_has      = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
+    double& this_seconds  = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
+    bool&   other_has     = (side == TrimSide::Begin) ? app.trim.has_end       : app.trim.has_begin;
+    double& other_seconds = (side == TrimSide::Begin) ? app.trim.end_seconds   : app.trim.begin_seconds;
+
+    int64_t cand_src =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    const double cand_seconds =
+        snap_to_timestamp_grid(static_cast<double>(cand_src) / sr_d);
+    cand_src = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
+
+    SettingsSnapshot pre = capture_current_settings(app);
+    const int64_t live_total = live_total_frames(app, audio);
+    const int64_t offset =
+        dir * static_cast<int64_t>(kTrimAutosetSeconds) * sr;
+
+    if (this_has &&
+        static_cast<int64_t>(std::nearbyint(this_seconds * sr_d)) == cand_src) {
+        int64_t other_active = source_frame_to_active_domain(app, audio,
+            static_cast<int64_t>(std::nearbyint(other_seconds * sr_d)));
+        other_active += offset;
+        if (other_active < 0) other_active = 0;
+        if (other_active > live_total) other_active = live_total;
+        other_seconds = snap_to_timestamp_grid(static_cast<double>(
+            active_domain_to_source_frame(app, audio, other_active)) / sr_d);
+        other_has = true;
+    } else {
+        this_seconds = cand_seconds;
+        this_has     = true;
+        const int64_t this_active =
+            source_frame_to_active_domain(app, audio, cand_src);
+        int64_t other_active = this_active + offset;
+        if (other_active < 0) other_active = 0;
+        if (other_active > live_total) other_active = live_total;
+        other_seconds = snap_to_timestamp_grid(static_cast<double>(
+            active_domain_to_source_frame(app, audio, other_active)) / sr_d);
+        other_has = true;
+    }
+
+    undo.push_settings_undo(std::move(pre));
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
+}
+
+void GuiInputHandler::handle_trim_set_begin_autoset() {
+    handle_trim_set_autoset(TrimSide::Begin);
+}
+
+void GuiInputHandler::handle_trim_set_end_autoset() {
+    handle_trim_set_autoset(TrimSide::End);
+}
+
 void GuiInputHandler::handle_trim_unset(TrimSide side) {
     bool&   this_has     = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
     double& this_seconds = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;

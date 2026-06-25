@@ -446,17 +446,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Shift+b / Shift+e clear the project trim_begin / trim_end
-    // unconditionally. Plain b / e (no shift) set the same fields at
-    // the playhead and toggle off only on equal-frame re-press; the
-    // shift form makes the unset gesture independent of playhead
-    // position. Both are silent no-ops when the relevant trim is
-    // already unset.
+    // unconditionally, independent of playhead position. Plain b / e set
+    // this bound at the playhead and autoset the opposite bound 5 seconds
+    // away; Ctrl+b / Ctrl+e are the legacy single-bound set (toggle off on
+    // re-press, no autoset). All four are silent no-ops when the relevant
+    // trim is already unset (Shift form) or otherwise handled inside each
+    // handler.
     if (shift && !ctrl && !alt && key == GuiKeys::B) {
         handle_trim_unset_begin();
         return;
     }
     if (shift && !ctrl && !alt && key == GuiKeys::E) {
         handle_trim_unset_end();
+        return;
+    }
+    if (!ctrl && !shift && !alt && key == GuiKeys::B) {
+        handle_trim_set_begin_autoset();
+        return;
+    }
+    if (!ctrl && !shift && !alt && key == GuiKeys::E) {
+        handle_trim_set_end_autoset();
+        return;
+    }
+    if (ctrl && !shift && !alt && key == GuiKeys::B) {
+        handle_trim_set_begin_at_playhead();
+        return;
+    }
+    if (ctrl && !shift && !alt && key == GuiKeys::E) {
+        handle_trim_set_end_at_playhead();
         return;
     }
 
