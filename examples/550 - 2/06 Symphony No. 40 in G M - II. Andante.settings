@@ -1,12 +1,11 @@
 title=Mozart - Symphony No. 40 in G Minor (K. 550) - II. Andante (2024 Remaster, Tempo Warp)
 scale=1.001982
 bpm=24 beats @ 115 bpm from 00:32.008 to 00:46.562
-notes=Hummel: quaver = 116 in 6/8 (116bpm); Grodd: quaver = 109 in 6/8 (109bpm); warptempo: quaver = 115 in 6/8 (115bpm)
+notes=Hummel: quaver = 116 in 6/8 (116 bpm); Grodd: quaver = 109 in 6/8 (109 bpm); warptempo: quaver = 115 in 6/8 (115 bpm)
 url=
 cover=Winged Migration (2001)
 output_format=wav
 limiter=true
-trim_end=05:10.796
 active_audio_view=S
 active_markers_view=P
 active_tab_view=A
@@ -16,7 +15,7 @@ tab_a_read_only=false
 tab_b_read_only=false
 tab_a_viewport_start=0
 tab_a_zoom=0
-tab_a_playhead_cursor=13706104
+tab_a_playhead_cursor=19636941
 tab_b_viewport_start=0
 tab_b_zoom=0
 tab_b_playhead_cursor=0

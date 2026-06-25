@@ -1,6 +1,7 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
+#include "frame_map_build.h"
 #include "target_render.h"
 #include "time_format.h"
 
@@ -33,7 +34,61 @@
 //   waveform_area, union_rect,
 //   playhead_invalidate_rect       → free functions, no qualifier change
 
-void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
+namespace {
+
+// Index of the nearest non-disabled marker strictly before `time_seconds`,
+// or -1 if none. Matches the resolver's walk (frame_map_build.cpp's
+// resolve_inherited_tempo): disabled markers are skipped. `time_seconds`
+// need not be present in `mv` — drop_marker calls this before insertion,
+// landing on the same slot insert_marker's lower_bound would place the new
+// marker at, one step back. toggle_inherits calls this with an existing
+// marker's own time, which lower_bound locates at that marker's own index,
+// so "one step back" still means "the slot before it".
+int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
+                          double time_seconds) {
+    auto it = std::lower_bound(
+        mv.begin(), mv.end(), time_seconds,
+        [](const GuiWarpMarker& a, double t) { return a.time_seconds < t; });
+    int i = static_cast<int>(it - mv.begin()) - 1;
+    while (i >= 0 && mv[i].disabled) --i;
+    return i;
+}
+
+// A pass can legitimately sit after [label_ref, owner]; deleting that
+// owner would leave the pass re-resolving to a different source (the
+// label ref, or a more distant owner), silently changing its tempo.
+// Hard-collapse every surviving pass whose nearest owner is being deleted
+// into an explicit owner carrying the exact base/scale it was inheriting,
+// freezing the value and breaking the dependency. Reads pre-delete
+// indices and copies the owner's literal fields, so processing order does
+// not matter. Called after the pre_state snapshot (so undo restores the
+// original passes intact) and before the removal loop, on the live list
+// via markers_mut() — the same bulk-mutable accessor toggle_disabled uses
+// to twiddle a flag across many markers at once.
+void collapse_dependent_passes(GuiWarpMarkers& warpmarkers,
+                                const std::set<int>& deleted) {
+    std::vector<GuiWarpMarker>& mv = warpmarkers.markers_mut();
+    for (int p = 0; p < static_cast<int>(mv.size()); ++p) {
+        if (deleted.count(p)) continue;
+        if (!mv[p].tempo_inherits || !mv[p].label_ref.empty()) continue;
+        int owner = p - 1;
+        while (owner >= 0 &&
+               (mv[owner].tempo_inherits || !mv[owner].label_ref.empty() ||
+                mv[owner].disabled)) {
+            --owner;
+        }
+        if (owner >= 0 && deleted.count(owner)) {
+            mv[p].tempo_base    = mv[owner].tempo_base;
+            mv[p].tempo_scale   = mv[owner].tempo_scale;
+            mv[p].tempo_inherits = false;
+        }
+    }
+}
+
+}  // namespace
+
+void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
+                                     double base, const std::string& scale) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     // Snap before the within-eps dup check so the check and the stored
@@ -51,6 +106,20 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
         return;
     const auto& mv = app.warpmarkers.markers();
     if (reject_if_marker_within_eps(mv, time_seconds, eps, "warp")) return;
+    // A pass placed immediately after a label_ref would skip the ref on
+    // the resolver's backward walk and silently inherit a more distant
+    // owner. Never let that arrangement exist: reject the drop instead of
+    // teaching the resolver to inherit a ref's effective tempo. Owner
+    // drops (inherit false) are unaffected — only a pass needs a real
+    // owner immediately behind it.
+    if (inherit) {
+        const int prior = find_immediate_prior(mv, time_seconds);
+        if (prior >= 0 && !mv[prior].label_ref.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: pass marker cannot follow a label ref\n");
+            return;
+        }
+    }
     // Snapshot pre-mutation state for undo. Captured after the dup
     // check so rejected drops don't leave a no-op entry on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;
@@ -58,15 +127,8 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit) {
     GuiWarpMarker nm;
     nm.time_seconds    = time_seconds;
     nm.tempo_inherits  = inherit;
-    // pass markers carry inert defaults; their effective tempo is
-    // resolved live from the marker list at every read site.
-    if (inherit) {
-        nm.tempo_base  = 1.0;
-        nm.tempo_scale = "1.0000";
-    } else {
-        nm.tempo_base = 1.0;
-        nm.tempo_scale.clear();
-    }
+    nm.tempo_base      = base;
+    nm.tempo_scale     = scale;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
     // Newly-dropped marker becomes the sole selection.
     app.selected_markers.clear();
@@ -103,7 +165,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
-    drop_marker(t, /*inherit=*/false);
+    drop_marker(t, /*inherit=*/false, /*base=*/1.0, /*scale=*/"");
 }
 
 void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
@@ -113,7 +175,34 @@ void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame) /
                      static_cast<double>(sr);
-    drop_marker(t, /*inherit=*/true);
+    drop_marker(t, /*inherit=*/true, /*base=*/1.0, /*scale=*/"1.0000");
+}
+
+// `s` (W view): drop an explicit owner that copies the immediate-prior
+// marker's effective tempo (base x scale), via the shared resolver also
+// used by the hover popup. The new marker is an owner (tempo_inherits =
+// false), so it is not subject to the pass-after-label-ref guard — a
+// label_ref's effective value is resolved and copied through normally.
+// Falls back to base 1.0 / empty scale if there is no prior marker
+// (should not happen given the mandatory time-0 first marker).
+void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+    const int64_t src_frame =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    const double t = static_cast<double>(src_frame) /
+                     static_cast<double>(sr);
+    const auto& mv = app.warpmarkers.markers();
+    const int prev_idx = find_immediate_prior(mv, t);
+    double      base  = 1.0;
+    std::string scale;
+    if (prev_idx >= 0) {
+        const MarkerEffective eff = marker_effective(
+            slice_to_warp_markers(mv), prev_idx, sr);
+        base  = eff.base;
+        scale = eff.scale;
+    }
+    drop_marker(t, /*inherit=*/false, base, scale);
 }
 
 void GuiWarpMarkersOps::delete_selected_marker() {
@@ -162,6 +251,9 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // before mutating so the undo can restore the pre-delete selection.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
+    // Freeze any surviving pass whose source owner is in this batch
+    // before the owner is actually removed (see collapse_dependent_passes).
+    collapse_dependent_passes(app.warpmarkers, app.selected_markers);
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
@@ -243,6 +335,9 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
         }
         if (def_hint >= 0) hint_last = def_hint;
     }
+    // Freeze any surviving pass whose source owner is in this batch
+    // before the owner is actually removed (see collapse_dependent_passes).
+    collapse_dependent_passes(app.warpmarkers, expanded);
     for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
@@ -255,7 +350,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     target_render.trigger();
 }
 
-// Shift+P: convert each selected marker's tempo source. Cache-free —
+// Shift+N: convert each selected marker's tempo source. Cache-free —
 // the only stored state on a pass marker is `tempo_inherits = true`
 // plus inert defaults. Three input cases per marker:
 //   - owning   → pass: inert defaults; label_def preserved.
@@ -294,6 +389,17 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m->tempo_base     = resolved_tempo;
             m->tempo_scale    = resolved_scale;
         } else {
+            // owner → pass: same guard as drop_marker's inherit path —
+            // a pass immediately after a label_ref would skip the ref on
+            // the resolver's backward walk and silently inherit a more
+            // distant owner. No-op the toggle (leave it an owner) instead.
+            const int prior = find_immediate_prior(mv_const, m->time_seconds);
+            if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
+                std::fprintf(stderr,
+                    "warptempo_gui: pass marker cannot follow a label "
+                    "ref\n");
+                continue;
+            }
             m->tempo_inherits = true;
             m->tempo_base     = 1.0;
             m->tempo_scale    = "1.0000";
@@ -331,7 +437,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
 }
 
 // Nudge every selected marker by `delta`. Label refs are silently
-// skipped (no tempo to nudge — convert via Shift+P first). Pass markers
+// skipped (no tempo to nudge — convert via Shift+N first). Pass markers
 // resolve walk-backward to get their starting tempo/scale, then freeze
 // to owning at the nudged value. Owning markers nudge in place.
 // Clamps to [0.01, 9.99]. Only dirties / invalidates on real change.
@@ -543,6 +649,10 @@ void GuiWarpMarkersOps::jump_selection_to_playhead() {
     if (sr <= 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (app.last_selected_marker >= static_cast<int>(mv.size())) return;
+    // Position op: the time-0 first warp marker is the anchor and must
+    // never move, unlike its tempo (which jump does not touch anyway).
+    if (app.last_selected_marker == 0 ||
+        mv[app.last_selected_marker].time_seconds == 0.0) return;
     const double anchor_t = mv[app.last_selected_marker].time_seconds;
     // Target view: the playhead is target-domain; the anchor marker's
     // time_seconds is source-domain. Inverse-translate playhead before

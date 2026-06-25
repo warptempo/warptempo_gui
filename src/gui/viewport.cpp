@@ -307,7 +307,7 @@ void Viewport::zoom_steps(int in_steps) {
     apply_zoom_change(target);
 }
 
-void Viewport::scroll_viewport(int64_t delta_samples) {
+void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample += delta_samples;
@@ -323,7 +323,12 @@ void Viewport::scroll_viewport(int64_t delta_samples) {
         // Rects shifted under the (possibly
         // stationary) cursor — re-evaluate hover.
         recompute_hover_at_cursor();
-        if (playback.is_playing()) playback.resync_predictor();
+        // A discrete pan (alt+wheel, PageUp/PageDown) re-anchors here -
+        // a single snap is invisible. A continuous drag pan passes
+        // continuous=true and does NOT resync per motion event: the
+        // predictor keeps extrapolating smoothly for the gesture's
+        // duration and is re-anchored once when the drag ends.
+        if (!continuous && playback.is_playing()) playback.resync_predictor();
         // Viewport actually moved (inside the changed guard). A scroll is a
         // pure horizontal pan, so drive the incremental shift-and-strip
         // fast-path rather than a full worker re-render — this is what keeps

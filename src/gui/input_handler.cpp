@@ -362,14 +362,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::S && !alt) {
         if (ctrl && !shift)              save_ops.save();
         else if (!ctrl && app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
-        else if (!ctrl && shift)         warpops.drop_inherit_marker_at_playhead();
-        else if (!ctrl && !shift)        warpops.drop_marker_at_playhead();
+        else if (!ctrl && shift)         warpops.drop_marker_at_playhead();
+        else if (!ctrl && !shift)        warpops.drop_copy_previous_at_playhead();
         return;
     }
-    // Shift+P: toggle inherit (warp only).
-    if (key == GuiKeys::P && !ctrl && !alt && shift) {
+    // n / Shift+N: warp-only authoring (pass drop / toggle inherit). No
+    // phase-reset equivalent, so this no-ops in P view (matching the
+    // !ctrl && !alt gate the S handler above uses for its W-view branches).
+    if (key == GuiKeys::N && !ctrl && !alt) {
         if (app.active_markers_view == 'P') return;
-        warpops.toggle_inherits();
+        if (shift) warpops.toggle_inherits();
+        else       warpops.drop_inherit_marker_at_playhead();
         return;
     }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
@@ -403,9 +406,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // previous binding; they now zoom (see below) so the keyboard has
     // a symbol-key alias for the bare Up/Down zoom chord.
     if (ctrl && !shift && !alt && key == GuiKeys::Up) {
+        if (app.active_markers_view == 'P') return;
         warpops.adjust_tempo(+0.01); return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::Down) {
+        if (app.active_markers_view == 'P') return;
         warpops.adjust_tempo(-0.01); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {

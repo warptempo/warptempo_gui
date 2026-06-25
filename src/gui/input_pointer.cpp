@@ -496,6 +496,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
     if (text_editor::is_active(app.settings_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.scroll_drag.active) {
+        if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
         return;
     }
@@ -571,6 +572,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // continuous.
     if (app.scroll_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
+            if (playback.is_playing()) playback.resync_predictor();
             app.scroll_drag = ScrollDragState{};
             return;
         }
@@ -584,7 +586,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.scroll_drag.accum_samples -= static_cast<double>(whole);
             // Grab-pan: drag right (dx > 0) reveals earlier content, so the
             // viewport moves left.
-            viewport.scroll_viewport(-whole);
+            viewport.scroll_viewport(-whole, /*continuous=*/true);
         }
         viewport.clear_hover_popup();
         return;

@@ -31,6 +31,14 @@ struct MarkerForRender {
     std::string label_ref;
 };
 
+// Effective tempo a marker resolves to, for display/authoring callers (not
+// fed to the render path). See marker_effective() below.
+struct MarkerEffective {
+    double      base       = 0.0;   // 0.0 means "could not resolve"
+    std::string scale;              // "" means no typed scale (treated as 1.0)
+    int         source_idx = -1;    // marker this value was taken from
+};
+
 struct MapBuildInput {
     std::vector<MarkerForRender> markers;
 
@@ -110,15 +118,38 @@ double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index
 std::string resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index);
 
+// Effective (base, scale, source) a marker resolves to, for display/authoring
+// callers (the hover popup here; warpmarkers_ops.cpp in a later brief). base
+// == 0.0 means "could not resolve" (mirrors compute_hover_popup_text's ""
+// guards). scale == "" means no typed scale (treated as 1.0 by callers).
+// source_idx names the marker the value is visibly taken from:
+//   owner     -> idx itself (its own tempo_base / tempo_scale).
+//   pass      -> the nearest non-disabled marker strictly before idx (the
+//                immediate prior marker the value is inherited from — NOT
+//                necessarily the owning marker if there's a chain of passes).
+//                base/scale are still the fully-resolved owner values via
+//                resolve_inherited_tempo(_scale).
+//   label_ref -> the label-definition marker (def_idx); base/scale are the
+//                def's effective base and the combined "~=" scale.
+// A pass immediately after a label_ref cannot occur (authoring-time no-op),
+// so that combination is not handled here.
+MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
+                                  int idx, int sample_rate);
+
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
 // parser-domain string/math — computes the same resolution the engine uses
 // when emitting the framemap, so the popup matches what will be rendered. Pass
-// markers emit "= TEMPO" or "= TEMPO*SCALE" (resolved tempo of the nearest
-// prior owning marker). Label_ref markers emit "~= BASE*COMBINED_SCALE" (BASE
-// at 2 decimals; COMBINED_SCALE = def_scale * multiplier when the def has a
-// typed scale, else multiplier, at 4 decimals). Returns "" when the marker
-// does not qualify (owning, missing def, malformed). GUI callers slice their
-// GuiWarpMarker store to WarpMarker (slice_to_warp_markers) before calling.
+// markers emit "= TEMPO (from SOURCE @ TIME)" or "= TEMPO*SCALE (from SOURCE @
+// TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
+// immediate prior marker's own displayed tempo, TIME its time_seconds).
+// Label_ref markers emit "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @
+// TIME)" (BASE at 2 decimals; COMBINED_SCALE = def_scale * multiplier when
+// the def has a typed scale, else multiplier, at 4 decimals; DEF_BASE:LABEL
+// and TIME describe the label-definition marker). TIME is formatted with
+// format_timestamp (time_format.h), the same mm:ss.mmm formatter the rest of
+// the GUI uses. Returns "" when the marker does not qualify (owning, missing
+// def, malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
+// (slice_to_warp_markers) before calling.
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate);
 

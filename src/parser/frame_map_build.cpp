@@ -1,4 +1,5 @@
 #include "frame_map_build.h"
+#include "time_format.h"  // format_timestamp
 
 #include <algorithm>
 #include <cmath>
@@ -112,9 +113,10 @@ std::string resolve_inherited_tempo_scale(
     return {};
 }
 
-std::string compute_hover_popup_text(
+MarkerEffective marker_effective(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate) {
-    if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
+    MarkerEffective r;
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return r;
     const WarpMarker& m = mv[idx];
 
     if (m.tempo_inherits) {
@@ -122,17 +124,18 @@ std::string compute_hover_popup_text(
         // idx+1 lets it return idx's resolved tempo if idx is the only
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
-        const double tval = resolve_inherited_tempo(mv, walk);
-        const std::string sc = resolve_inherited_tempo_scale(mv, walk);
-        char tbuf[32];
-        std::snprintf(tbuf, sizeof(tbuf), "%.2f", tval);
-        std::string out = "= ";
-        out += tbuf;
-        if (!sc.empty()) {
-            out += "*";
-            out += sc;
+        r.base  = resolve_inherited_tempo(mv, walk);
+        r.scale = resolve_inherited_tempo_scale(mv, walk);
+        // source_idx is the immediate prior non-disabled marker — the
+        // visible source of the inherited value, not necessarily the
+        // owning marker if there's a chain of passes.
+        for (int i = idx - 1; i >= 0; --i) {
+            if (!mv[i].disabled) {
+                r.source_idx = i;
+                break;
+            }
         }
-        return out;
+        return r;
     }
 
     if (!m.label_ref.empty()) {
@@ -143,17 +146,17 @@ std::string compute_hover_popup_text(
                 break;
             }
         }
-        if (def_idx < 0) return "";
-        if (def_idx + 1 >= static_cast<int>(mv.size())) return "";
-        if (idx     + 1 >= static_cast<int>(mv.size())) return "";
+        if (def_idx < 0) return r;
+        if (def_idx + 1 >= static_cast<int>(mv.size())) return r;
+        if (idx     + 1 >= static_cast<int>(mv.size())) return r;
         const double sr_d = static_cast<double>(sample_rate);
-        if (sr_d <= 0.0) return "";
+        if (sr_d <= 0.0) return r;
 
         const double lr_src_dist =
             (mv[idx + 1].time_seconds - mv[idx].time_seconds) * sr_d;
         const double def_src_dist =
             (mv[def_idx + 1].time_seconds - mv[def_idx].time_seconds) * sr_d;
-        if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return "";
+        if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
         double      def_base;
@@ -174,7 +177,7 @@ std::string compute_hover_popup_text(
             catch (...) { def_scale_val = 1.0; }
         }
         const double def_eff_tempo = def_base * def_scale_val;
-        if (def_base == 0.0 || def_eff_tempo == 0.0) return "";
+        if (def_base == 0.0 || def_eff_tempo == 0.0) return r;
 
         // settings.scale cancels in the engine's multiplier expression:
         //   multiplier = (lr_src_dist * def_eff_tempo)
@@ -185,14 +188,78 @@ std::string compute_hover_popup_text(
             ? (def_scale_val * multiplier)
             : multiplier;
 
-        char base_buf[32];
-        std::snprintf(base_buf, sizeof(base_buf), "%.2f", def_base);
         char scale_buf[32];
         std::snprintf(scale_buf, sizeof(scale_buf), "%.4f", combined_scale);
+        r.base       = def_base;
+        r.scale      = scale_buf;
+        r.source_idx = def_idx;
+        return r;
+    }
+
+    // Owner: resolves to its own tempo_base / tempo_scale.
+    r.base       = m.tempo_base;
+    r.scale      = m.tempo_scale;
+    r.source_idx = idx;
+    return r;
+}
+
+std::string compute_hover_popup_text(
+    const std::vector<WarpMarker>& mv, int idx, int sample_rate) {
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
+    const WarpMarker& m = mv[idx];
+
+    if (m.tempo_inherits) {
+        const MarkerEffective eff = marker_effective(mv, idx, sample_rate);
+        if (eff.base == 0.0) return "";
+
+        char tbuf[32];
+        std::snprintf(tbuf, sizeof(tbuf), "%.2f", eff.base);
+        std::string out = "= ";
+        out += tbuf;
+        if (!eff.scale.empty()) {
+            out += "*";
+            out += eff.scale;
+        }
+
+        // Provenance: the immediate prior marker's own displayed tempo
+        // (its base, or base*scale if it carries a typed scale) and its
+        // time_seconds.
+        const WarpMarker& src = mv[eff.source_idx];
+        char sbuf[32];
+        std::snprintf(sbuf, sizeof(sbuf), "%.2f", src.tempo_base);
+        std::string descriptor = sbuf;
+        if (!src.tempo_scale.empty()) {
+            descriptor += "*";
+            descriptor += src.tempo_scale;
+        }
+        out += " (from ";
+        out += descriptor;
+        out += " @ ";
+        out += format_timestamp(src.time_seconds);
+        out += ")";
+        return out;
+    }
+
+    if (!m.label_ref.empty()) {
+        const MarkerEffective eff = marker_effective(mv, idx, sample_rate);
+        if (eff.base == 0.0) return "";
+
+        char base_buf[32];
+        std::snprintf(base_buf, sizeof(base_buf), "%.2f", eff.base);
         std::string out = "~= ";
         out += base_buf;
         out += "*";
-        out += scale_buf;
+        out += eff.scale;
+
+        // Provenance: "<def_base>:<label>" and the def marker's time_seconds.
+        const WarpMarker& def = mv[eff.source_idx];
+        out += " (from ";
+        out += base_buf;
+        out += ":";
+        out += m.label_ref;
+        out += " @ ";
+        out += format_timestamp(def.time_seconds);
+        out += ")";
         return out;
     }
 

@@ -99,7 +99,7 @@ struct Viewport {
     // pointer frame instead of once per detent. in_steps == +/-1 reproduces
     // zoom_in()/zoom_out() exactly.
     void zoom_steps(int in_steps);
-    void scroll_viewport(int64_t delta_samples);
+    void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();
 
