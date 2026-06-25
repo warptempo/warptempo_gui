@@ -445,19 +445,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Shift+b / Shift+e clear the project trim_begin / trim_end
-    // unconditionally, independent of playhead position. Plain b / e set
-    // this bound at the playhead and autoset the opposite bound 5 seconds
-    // away; Ctrl+b / Ctrl+e are the legacy single-bound set (toggle off on
-    // re-press, no autoset). All four are silent no-ops when the relevant
-    // trim is already unset (Shift form) or otherwise handled inside each
-    // handler.
+    // Plain b / e set this bound at the playhead and autoset the opposite
+    // bound 5 seconds away, but only when the opposite bound is unset;
+    // re-press with the playhead on this bound walks the opposite bound
+    // outward another 5 seconds. Shift+b / Shift+e pull the opposite bound
+    // inward 5 seconds instead (gated the same way as the re-press), clamped
+    // short of this bound. Ctrl+b / Ctrl+e unconditionally clear this bound.
+    // All are silent no-ops when their gating condition isn't met (handled
+    // inside each handler).
     if (shift && !ctrl && !alt && key == GuiKeys::B) {
-        handle_trim_unset_begin();
+        handle_trim_nudge_partner_inward(TrimSide::Begin);
         return;
     }
     if (shift && !ctrl && !alt && key == GuiKeys::E) {
-        handle_trim_unset_end();
+        handle_trim_nudge_partner_inward(TrimSide::End);
         return;
     }
     if (!ctrl && !shift && !alt && key == GuiKeys::B) {
@@ -469,11 +470,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::B) {
-        handle_trim_set_begin_at_playhead();
+        handle_trim_unset_begin();
         return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::E) {
-        handle_trim_set_end_at_playhead();
+        handle_trim_unset_end();
         return;
     }
 

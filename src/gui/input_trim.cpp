@@ -5,137 +5,7 @@
 
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
-
-// b / e key handlers. Both share the same shape: the playhead's current
-// sample frame is the candidate. Re-press at the same frame as the
-// existing trim toggles it off. A candidate equal-frame to the opposite
-// trim refuses (would collapse the trim region). A candidate that lands
-// past the opposite trim places this bound and disables the opposite
-// bound (no swap). Otherwise a simple set. Project-level: reads and writes
-// the project trim fields. Each mutation pushes a settings-undo entry so
-// b/e/u are reversible.
-//
-// Side-parameterized to share the body between Begin and End. The
-// load-bearing asymmetry is the direction that counts as "past the other":
-// Begin is past when the candidate is after trim_end, End is past when the
-// candidate is before trim_begin. The past-the-other outcome keeps this
-// bound at the candidate and clears the opposite bound (has / seconds /
-// selected), rather than swapping the two.
-void GuiInputHandler::handle_trim_set_at_playhead(TrimSide side) {
-    const int sr = audio.sample_rate();
-    if (audio.total_frames() <= 0 || sr <= 0) return;
-    const double sr_d = static_cast<double>(sr);
-    // Target view: playhead is target-domain; the trim store is
-    // source-domain. Inverse-translate at the boundary so the
-    // downstream toggle / collision / swap logic compares against the
-    // source-frame domain the trim store lives in.
-    int64_t cand_frame =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-    // Snap the candidate at derivation, then recompute cand_frame from the
-    // snapped value so the toggle-off compare and the opposite-bound
-    // collision compare (both frame-based) match what will be stored.
-    const double cand_seconds =
-        snap_to_timestamp_grid(static_cast<double>(cand_frame) / sr_d);
-    cand_frame = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
-
-    bool&   this_has      = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
-    double& this_seconds  = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
-    bool&   this_sel      = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
-    bool&   other_has     = (side == TrimSide::Begin) ? app.trim.has_end       : app.trim.has_begin;
-    double& other_seconds = (side == TrimSide::Begin) ? app.trim.end_seconds   : app.trim.begin_seconds;
-    bool&   other_sel     = (side == TrimSide::Begin) ? app.trim_end_selected  : app.trim_begin_selected;
-    const char letter     = (side == TrimSide::Begin) ? 'b' : 'e';
-
-    // Toggle-off: same frame as the existing this-side trim.
-    if (this_has) {
-        const int64_t cur_frame = static_cast<int64_t>(
-            std::nearbyint(this_seconds * sr_d));
-        if (cur_frame == cand_frame) {
-            SettingsSnapshot pre = capture_current_settings(app);
-            this_has     = false;
-            this_seconds = 0.0;
-            this_sel     = false;
-            undo.push_settings_undo(std::move(pre));
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
-            return;
-        }
-    }
-
-    // Equal-frame collision with the opposite-side trim refuses (would
-    // collapse the trim region). Past-the-other places this bound at the
-    // candidate and disables the opposite bound.
-    if (other_has) {
-        const int64_t other_frame = static_cast<int64_t>(
-            std::nearbyint(other_seconds * sr_d));
-        if (other_frame == cand_frame) {
-            std::fprintf(stderr,
-                "warptempo_gui: %c refused: would collapse trim region\n",
-                letter);
-            return;
-        }
-        const bool cand_is_past_other = (side == TrimSide::Begin)
-            ? (cand_frame > other_frame)
-            : (cand_frame < other_frame);
-        if (cand_is_past_other) {
-            // Past-the-other no longer swaps. Place this bound at the
-            // candidate and disable the opposite bound: setting Begin past
-            // End drops End; setting End before Begin drops Begin. The
-            // surviving single bound leaves a half-open trim region.
-            SettingsSnapshot pre = capture_current_settings(app);
-            this_has      = true;
-            this_seconds  = cand_seconds;
-            other_has     = false;
-            other_seconds = 0.0;
-            other_sel     = false;
-            undo.push_settings_undo(std::move(pre));
-            if (side == TrimSide::Begin)
-                viewport.move_playhead_to(viewport.trim_begin_sample());
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
-            stop_playback_if_scanner_out_of_trim();
-            return;
-        }
-    }
-
-    SettingsSnapshot pre = capture_current_settings(app);
-    this_has     = true;
-    this_seconds = cand_seconds;
-    undo.push_settings_undo(std::move(pre));
-    if (side == TrimSide::Begin)
-        viewport.move_playhead_to(viewport.trim_begin_sample());
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-    stop_playback_if_scanner_out_of_trim();
-}
-
-// After a trim set has resolved the new region, stop playback if the
-// scanner has been left outside it. The cursor sits on the just-set
-// bound, so only the moving scanner can fall out; widening or removing a
-// bound can never push it out, so this is called only from the region-
-// narrowing outcomes below. No-op when the scanner is inactive (stopped)
-// or still in bounds, so the common case keeps playing like a set marker.
-void GuiInputHandler::stop_playback_if_scanner_out_of_trim() {
-    if (!app.playhead_scanner_active) return;
-    const int64_t s = app.playhead_scanner_sample;
-    if (s < viewport.trim_begin_sample() ||
-        s >= viewport.trim_end_sample()) {
-        playback_lifecycle.stop_playback_if_playing();
-    }
-}
-
-void GuiInputHandler::handle_trim_set_begin_at_playhead() {
-    handle_trim_set_at_playhead(TrimSide::Begin);
-}
-
-void GuiInputHandler::handle_trim_set_end_at_playhead() {
-    handle_trim_set_at_playhead(TrimSide::End);
-}
 
 namespace {
 constexpr double kTrimAutosetSeconds = 5.0;
@@ -144,12 +14,16 @@ constexpr double kTrimAutosetSeconds = 5.0;
 // Plain b / e. Sets this bound at the playhead and autosets the opposite
 // bound kTrimAutosetSeconds away, measured in the active (on-screen) domain
 // so the on-screen gap is constant regardless of any source/active time
-// warp. dir carries the asymmetry: Begin pushes the autoset End later,
-// End pushes the autoset Begin earlier. Re-pressing the same key while the
-// playhead sits on the existing this-bound (the "repeat" branch) leaves
-// this-bound untouched and instead walks the opposite bound out another
-// kTrimAutosetSeconds, which is how a user racks the far bound out in
-// fixed steps without re-aiming the playhead.
+// warp, but only when the opposite bound is unset — a partner that's
+// already set is left alone. Placing this bound across an already-set
+// partner clears the partner first, so the autoset re-establishes it on
+// the correct side. dir carries the asymmetry: Begin pushes the autoset
+// End later, End pushes the autoset Begin earlier. Re-pressing the same
+// key while the playhead sits on the existing this-bound (the "repeat"
+// branch) leaves this-bound untouched and instead walks the opposite
+// bound outward another kTrimAutosetSeconds (from the opposite bound if
+// set, else from this bound), which is how a user racks the far bound out
+// in fixed steps without re-aiming the playhead.
 void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -174,10 +48,11 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
 
     if (this_has &&
         static_cast<int64_t>(std::nearbyint(this_seconds * sr_d)) == cand_src) {
-        int64_t other_active = source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(other_seconds * sr_d)));
-        other_active += offset;
-        if (other_active < 0) other_active = 0;
+        const int64_t base = other_has
+            ? static_cast<int64_t>(std::nearbyint(other_seconds * sr_d))
+            : cand_src;
+        int64_t other_active = source_frame_to_active_domain(app, audio, base) + offset;
+        if (other_active < 0)          other_active = 0;
         if (other_active > live_total) other_active = live_total;
         other_seconds = snap_to_timestamp_grid(static_cast<double>(
             active_domain_to_source_frame(app, audio, other_active)) / sr_d);
@@ -185,14 +60,23 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     } else {
         this_seconds = cand_seconds;
         this_has     = true;
-        const int64_t this_active =
-            source_frame_to_active_domain(app, audio, cand_src);
-        int64_t other_active = this_active + offset;
-        if (other_active < 0) other_active = 0;
-        if (other_active > live_total) other_active = live_total;
-        other_seconds = snap_to_timestamp_grid(static_cast<double>(
-            active_domain_to_source_frame(app, audio, other_active)) / sr_d);
-        other_has = true;
+        const int64_t other_frame =
+            static_cast<int64_t>(std::nearbyint(other_seconds * sr_d));
+        const bool crosses = other_has &&
+            ((side == TrimSide::Begin && cand_src >= other_frame) ||
+             (side == TrimSide::End   && cand_src <= other_frame));
+        if (crosses) { other_has = false; other_seconds = 0.0; }
+        if (!other_has) {
+            const int64_t this_active =
+                source_frame_to_active_domain(app, audio, cand_src);
+            int64_t other_active = this_active + offset;
+            if (other_active < 0)          other_active = 0;
+            if (other_active > live_total) other_active = live_total;
+            other_seconds = snap_to_timestamp_grid(static_cast<double>(
+                active_domain_to_source_frame(app, audio, other_active)) / sr_d);
+            other_has = true;
+        }
+        // partner already set and not crossed: leave it untouched (no autoset).
     }
 
     undo.push_settings_undo(std::move(pre));
@@ -207,6 +91,59 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
 
 void GuiInputHandler::handle_trim_set_end_autoset() {
     handle_trim_set_autoset(TrimSide::End);
+}
+
+// Shift+b / Shift+e: the inverse of the re-press branch of handle_trim_set_autoset
+// above. Gated the same way (playhead must sit on this bound) since it's the
+// "opposite direction" counterpart of that walk-outward repeat; pulls the
+// partner bound kTrimAutosetSeconds toward this bound instead of away,
+// clamped to the inter-bound eps (kMarkerHitHalfPx at the current zoom) and
+// to the clip edges. No-op if this bound isn't at the playhead or the
+// partner is unset (nothing to pull).
+void GuiInputHandler::handle_trim_nudge_partner_inward(TrimSide side) {
+    const int sr = audio.sample_rate();
+    if (audio.total_frames() <= 0 || sr <= 0) return;
+    const double sr_d = static_cast<double>(sr);
+    const int64_t dir = (side == TrimSide::Begin) ? 1 : -1;
+    const int64_t offset = dir * static_cast<int64_t>(kTrimAutosetSeconds) * sr;
+
+    bool&   this_has      = (side == TrimSide::Begin) ? app.trim.has_begin     : app.trim.has_end;
+    double& this_seconds  = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
+    bool&   other_has     = (side == TrimSide::Begin) ? app.trim.has_end       : app.trim.has_begin;
+    double& other_seconds = (side == TrimSide::Begin) ? app.trim.end_seconds   : app.trim.begin_seconds;
+
+    int64_t cand_src =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    const double cand_seconds = snap_to_timestamp_grid(static_cast<double>(cand_src) / sr_d);
+    cand_src = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
+
+    // Gated on the playhead being on this bound (mirrors the re-press); needs a partner to pull.
+    if (!this_has ||
+        static_cast<int64_t>(std::nearbyint(this_seconds * sr_d)) != cand_src) return;
+    if (!other_has) return;
+
+    SettingsSnapshot pre = capture_current_settings(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    const int64_t eps = static_cast<int64_t>(std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
+    const int64_t this_active  = source_frame_to_active_domain(app, audio,
+        static_cast<int64_t>(std::nearbyint(this_seconds * sr_d)));
+    int64_t other_active = source_frame_to_active_domain(app, audio,
+        static_cast<int64_t>(std::nearbyint(other_seconds * sr_d)));
+    other_active -= offset;                 // opposite of the re-press: pull inward
+    if (side == TrimSide::Begin) {          // partner is end: keep end >= begin + eps
+        if (other_active < this_active + eps) other_active = this_active + eps;
+        if (other_active > live_total_frames(app, audio)) other_active = live_total_frames(app, audio);
+    } else {                                // partner is begin: keep begin <= end - eps
+        if (other_active > this_active - eps) other_active = this_active - eps;
+        if (other_active < 0) other_active = 0;
+    }
+    other_seconds = snap_to_timestamp_grid(static_cast<double>(
+        active_domain_to_source_frame(app, audio, other_active)) / sr_d);
+
+    undo.push_settings_undo(std::move(pre));
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
 }
 
 void GuiInputHandler::handle_trim_unset(TrimSide side) {
@@ -286,7 +223,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_seconds(int mouse_x,
 
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary, mirroring
-    // handle_trim_set_at_playhead.
+    // handle_trim_set_autoset.
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, domain_frame);
     out_seconds = static_cast<double>(src_frame) / sr_d;
@@ -354,6 +291,17 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const int64_t oe = source_frame_to_active_domain(app, audio,
             static_cast<int64_t>(std::nearbyint(app.trim_drag.orig_end_seconds * sr_d)));
         int64_t df = cur_active - app.trim_drag.anchor_active_frame;
+        // Keep the grabbed bound — and the playhead pinned to it — inside the
+        // visible pixel span, matching the playhead's own first/last-visible
+        // clamp. Applied before the clip clamp so trim validity (0 / EOF) wins
+        // in the rare case the window is wider than the viewport.
+        const GuiRect area = waveform_area(app);
+        const int64_t first_vis = app.viewport_start_sample;
+        const int64_t last_vis  = app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint((area.w - 1) * spp));
+        const int64_t grabbed = app.trim_drag.is_begin ? ob : oe;
+        if (grabbed + df < first_vis) df = first_vis - grabbed;
+        if (grabbed + df > last_vis)  df = last_vis  - grabbed;
         // Rigid clamp in the active domain: begin >= 0, end <= live EOF; gap preserved.
         if (ob + df < 0)          df = -ob;
         if (oe + df > live_total) df = live_total - oe;

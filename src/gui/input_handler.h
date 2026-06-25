@@ -302,40 +302,36 @@ private:
     // contract as handle_top_flag_editor_key.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // b / e key handlers — set the settings-side trim_begin / trim_end to
-    // the playhead's current position. Mode-agnostic. Re-press at the
-    // same sample frame toggles off; equal-frame collision with the
-    // opposite trim is refused; out-of-order candidate auto-swaps with
-    // the opposite trim. Trim is settings-class — no undo participation;
-    // no dirty signal (silently persisted on Ctrl+S, silently discarded
-    // on Ctrl+W without save); invalidates waveform + timestamp areas.
-    void handle_trim_set_begin_at_playhead();
-    void handle_trim_set_end_at_playhead();
+    // Side-parameterized helpers shared by the trim entry points below.
+    // The entry points are kept as named per-side wrappers because the
+    // on_key dispatch reads more cleanly as named methods than as
+    // side-parameterized invocations.
+    enum class TrimSide { Begin, End };
 
     // Plain b / e: set this bound at the playhead and autoset the
     // opposite bound 5 active-seconds away (end after begin, begin
-    // before end). Re-press while the playhead sits on the existing
-    // this-bound walks the opposite bound out another 5 active-seconds
-    // instead of re-deriving this-bound from the playhead. Clamped to
-    // [0, live EOF] in the active domain. The legacy single-bound
-    // set (no autoset) moved to Ctrl+b / Ctrl+e, above.
+    // before end), but only when the opposite bound is unset — placing
+    // this bound across an already-set partner clears the partner first
+    // so the autoset re-establishes it. Re-press while the playhead sits
+    // on the existing this-bound walks the opposite bound out another 5
+    // active-seconds instead of re-deriving this-bound from the playhead.
+    // Clamped to [0, live EOF] in the active domain.
     void handle_trim_set_begin_autoset();
     void handle_trim_set_end_autoset();
 
-    // Shift+b / Shift+e clear the project trim_begin / trim_end
+    // Shift+b / Shift+e: gated like the re-press above (playhead must sit
+    // on this bound), but pulls the opposite bound 5 active-seconds toward
+    // this bound instead of away, clamped to the inter-bound eps. No-op if
+    // the opposite bound is unset.
+    void handle_trim_nudge_partner_inward(TrimSide side);
+
+    // Ctrl+b / Ctrl+e clear the project trim_begin / trim_end
     // unconditionally (independent of playhead position). Silent no-op
     // when the relevant trim is already unset.
     void handle_trim_unset_begin();
     void handle_trim_unset_end();
 
-    // Side-parameterized helpers shared by the four trim entry points
-    // above. The entry points are kept as named per-side wrappers
-    // because the on_key dispatch reads more cleanly as four named
-    // methods than as four side-parameterized invocations.
-    enum class TrimSide { Begin, End };
-    void handle_trim_set_at_playhead(TrimSide side);
     void handle_trim_set_autoset(TrimSide side);
-    void stop_playback_if_scanner_out_of_trim();
     void handle_trim_unset(TrimSide side);
 
     // Mouse gestures on the trim boundary stems. on_press routes a
