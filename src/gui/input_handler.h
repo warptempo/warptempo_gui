@@ -303,33 +303,26 @@ private:
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
     // Side-parameterized helpers shared by the trim entry points below.
-    // The entry points are kept as named per-side wrappers because the
-    // on_key dispatch reads more cleanly as named methods than as
-    // side-parameterized invocations.
     enum class TrimSide { Begin, End };
 
-    // Plain b / e: set this bound at the playhead and autoset the
-    // opposite bound 5 active-seconds away (end after begin, begin
-    // before end), but only when the opposite bound is unset — placing
-    // this bound across an already-set partner clears the partner first
-    // so the autoset re-establishes it. Re-press while the playhead sits
-    // on the existing this-bound walks the opposite bound out another 5
-    // active-seconds instead of re-deriving this-bound from the playhead.
+    // Plain x: set the begin bound at the playhead and autoset the end bound
+    // 5 active-seconds away, but only when the end bound is unset — placing
+    // the begin bound across an already-set end bound clears the partner first
+    // so the autoset re-establishes it. Re-press while the playhead sits on
+    // the existing begin bound walks the end bound out another 5 active-seconds
+    // instead of re-deriving the begin bound from the playhead.
     // Clamped to [0, live EOF] in the active domain.
     void handle_trim_set_begin_autoset();
-    void handle_trim_set_end_autoset();
 
-    // Shift+b / Shift+e: gated like the re-press above (playhead must sit
-    // on this bound), but pulls the opposite bound 5 active-seconds toward
-    // this bound instead of away, clamped to the inter-bound eps. No-op if
-    // the opposite bound is unset.
+    // Shift+x: gated like the re-press above (playhead must sit on the begin
+    // bound), but pulls the end bound 5 active-seconds toward the begin bound
+    // instead of away, clamped to the inter-bound eps. No-op if the end bound
+    // is unset.
     void handle_trim_nudge_partner_inward(TrimSide side);
 
-    // Ctrl+b / Ctrl+e clear the project trim_begin / trim_end
-    // unconditionally (independent of playhead position). Silent no-op
-    // when the relevant trim is already unset.
-    void handle_trim_unset_begin();
-    void handle_trim_unset_end();
+    // Ctrl+Shift+x: clear both trim bounds unconditionally. Silent no-op when
+    // neither bound is set.
+    void handle_trim_clear_both();
 
     void handle_trim_set_autoset(TrimSide side);
     void handle_trim_unset(TrimSide side);

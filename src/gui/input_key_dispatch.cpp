@@ -751,10 +751,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         }
         return true;
     }
-    // Shift+I: bulk-clear every marker's iter values AND exit
+    // Ctrl+Shift+I: bulk-clear every marker's iter values AND exit
     // iteration mode in one keystroke ("stop authoring this mode").
     // Only fires while iteration mode is on; otherwise silent no-op.
-    if (key == GuiKeys::I && !ctrl && shift && !alt) {
+    if (key == GuiKeys::I && ctrl && shift && !alt) {
         if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
             flag_editor.bulk_clear_iter_values();
             app.iteration_mode_enabled = false;
@@ -873,10 +873,22 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
-    case GuiKeys::Left:   playback_lifecycle.stop_playback_if_playing();
-                    viewport.move_playhead_pixels(-1);         break;
-    case GuiKeys::Right:  playback_lifecycle.stop_playback_if_playing();
-                    viewport.move_playhead_pixels(+1);         break;
+    case GuiKeys::Left:
+        playback_lifecycle.stop_playback_if_playing();
+        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+            selection.clear_selection();
+            viewport.invalidate_waveform_area();
+        }
+        viewport.move_playhead_pixels(-1);
+        break;
+    case GuiKeys::Right:
+        playback_lifecycle.stop_playback_if_playing();
+        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+            selection.clear_selection();
+            viewport.invalidate_waveform_area();
+        }
+        viewport.move_playhead_pixels(+1);
+        break;
     case GuiKeys::Up:     viewport.zoom_in();                        break;
     case GuiKeys::Down:   viewport.zoom_out();                       break;
     case GuiKeys::F: {

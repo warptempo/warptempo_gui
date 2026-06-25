@@ -420,61 +420,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // `u` (no modifier) unsets the project trim bounds. `Shift+U`
-    // clears the selection set (UI-only — no dirty, no playhead move).
-    // Trim un-set is undoable as a settings entry: snapshot pre-state,
-    // mutate, push.
-    if (key == GuiKeys::U && !ctrl && !alt) {
-        if (shift) {
-            selection.clear_selection();
-        } else {
-            if (app.trim.has_begin || app.trim.has_end) {
-                SettingsSnapshot pre = capture_current_settings(app);
-                app.trim.has_begin      = false;
-                app.trim.has_end        = false;
-                app.trim.begin_seconds  = 0.0;
-                app.trim.end_seconds    = 0.0;
-                app.trim_begin_selected = false;
-                app.trim_end_selected   = false;
-                undo.push_settings_undo(std::move(pre));
-                viewport.invalidate_waveform_area();
-                viewport.invalidate_timestamp_area();
-                target_render.trigger();
-            }
-        }
-        return;
-    }
-
-    // Plain b / e set this bound at the playhead and autoset the opposite
-    // bound 5 seconds away, but only when the opposite bound is unset;
-    // re-press with the playhead on this bound walks the opposite bound
-    // outward another 5 seconds. Shift+b / Shift+e pull the opposite bound
-    // inward 5 seconds instead (gated the same way as the re-press), clamped
-    // short of this bound. Ctrl+b / Ctrl+e unconditionally clear this bound.
-    // All are silent no-ops when their gating condition isn't met (handled
-    // inside each handler).
-    if (shift && !ctrl && !alt && key == GuiKeys::B) {
-        handle_trim_nudge_partner_inward(TrimSide::Begin);
-        return;
-    }
-    if (shift && !ctrl && !alt && key == GuiKeys::E) {
-        handle_trim_nudge_partner_inward(TrimSide::End);
-        return;
-    }
-    if (!ctrl && !shift && !alt && key == GuiKeys::B) {
+    // x sets the begin trim at the playhead and autosets end 5 s away (re-press
+    // over begin grows end). Shift+x pulls end inward 5 s. Ctrl+Shift+x clears
+    // both bounds. The end bound keeps its mouse operations (Ctrl+drag single,
+    // Ctrl+Shift+drag pair, select+Delete); only the end keyboard keys are gone.
+    // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
+    if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_set_begin_autoset();
         return;
     }
-    if (!ctrl && !shift && !alt && key == GuiKeys::E) {
-        handle_trim_set_end_autoset();
+    if (shift && !ctrl && !alt && key == GuiKeys::X) {
+        handle_trim_nudge_partner_inward(TrimSide::Begin);
         return;
     }
-    if (ctrl && !shift && !alt && key == GuiKeys::B) {
-        handle_trim_unset_begin();
-        return;
-    }
-    if (ctrl && !shift && !alt && key == GuiKeys::E) {
-        handle_trim_unset_end();
+    if (ctrl && shift && !alt && key == GuiKeys::X) {
+        handle_trim_clear_both();
         return;
     }
 

@@ -11,19 +11,17 @@ namespace {
 constexpr double kTrimAutosetSeconds = 5.0;
 }
 
-// Plain b / e. Sets this bound at the playhead and autosets the opposite
-// bound kTrimAutosetSeconds away, measured in the active (on-screen) domain
-// so the on-screen gap is constant regardless of any source/active time
-// warp, but only when the opposite bound is unset — a partner that's
-// already set is left alone. Placing this bound across an already-set
-// partner clears the partner first, so the autoset re-establishes it on
-// the correct side. dir carries the asymmetry: Begin pushes the autoset
-// End later, End pushes the autoset Begin earlier. Re-pressing the same
-// key while the playhead sits on the existing this-bound (the "repeat"
-// branch) leaves this-bound untouched and instead walks the opposite
-// bound outward another kTrimAutosetSeconds (from the opposite bound if
-// set, else from this bound), which is how a user racks the far bound out
-// in fixed steps without re-aiming the playhead.
+// Plain x. Sets the begin bound at the playhead and always autosets the end
+// bound kTrimAutosetSeconds away in the active (on-screen) domain, so the
+// on-screen gap is constant regardless of source/active time warp. Placing
+// begin across an already-set end clears the partner first so the autoset
+// lands on the correct side. dir carries the asymmetry: Begin pushes the
+// autoset End later, End pushes the autoset Begin earlier. Re-pressing the
+// same key while the playhead sits on the existing this-bound (the "repeat"
+// branch) leaves this-bound untouched and instead walks the opposite bound
+// outward another kTrimAutosetSeconds (from the opposite bound if set, else
+// from this bound), which is how a user racks the far bound out in fixed
+// steps without re-aiming the playhead.
 void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -66,17 +64,14 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
             ((side == TrimSide::Begin && cand_src >= other_frame) ||
              (side == TrimSide::End   && cand_src <= other_frame));
         if (crosses) { other_has = false; other_seconds = 0.0; }
-        if (!other_has) {
-            const int64_t this_active =
-                source_frame_to_active_domain(app, audio, cand_src);
-            int64_t other_active = this_active + offset;
-            if (other_active < 0)          other_active = 0;
-            if (other_active > live_total) other_active = live_total;
-            other_seconds = snap_to_timestamp_grid(static_cast<double>(
-                active_domain_to_source_frame(app, audio, other_active)) / sr_d);
-            other_has = true;
-        }
-        // partner already set and not crossed: leave it untouched (no autoset).
+        const int64_t this_active =
+            source_frame_to_active_domain(app, audio, cand_src);
+        int64_t other_active = this_active + offset;
+        if (other_active < 0)          other_active = 0;
+        if (other_active > live_total) other_active = live_total;
+        other_seconds = snap_to_timestamp_grid(static_cast<double>(
+            active_domain_to_source_frame(app, audio, other_active)) / sr_d);
+        other_has = true;
     }
 
     undo.push_settings_undo(std::move(pre));
@@ -89,11 +84,7 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
     handle_trim_set_autoset(TrimSide::Begin);
 }
 
-void GuiInputHandler::handle_trim_set_end_autoset() {
-    handle_trim_set_autoset(TrimSide::End);
-}
-
-// Shift+b / Shift+e: the inverse of the re-press branch of handle_trim_set_autoset
+// Shift+x: the inverse of the re-press branch of handle_trim_set_autoset
 // above. Gated the same way (playhead must sit on this bound) since it's the
 // "opposite direction" counterpart of that walk-outward repeat; pulls the
 // partner bound kTrimAutosetSeconds toward this bound instead of away,
@@ -161,12 +152,22 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     target_render.trigger();
 }
 
-void GuiInputHandler::handle_trim_unset_begin() {
-    handle_trim_unset(TrimSide::Begin);
-}
-
-void GuiInputHandler::handle_trim_unset_end() {
-    handle_trim_unset(TrimSide::End);
+// Ctrl+Shift+x: clear both trim bounds unconditionally. Undoable as a
+// settings entry. Silent no-op when neither bound is set.
+void GuiInputHandler::handle_trim_clear_both() {
+    if (app.trim.has_begin || app.trim.has_end) {
+        SettingsSnapshot pre = capture_current_settings(app);
+        app.trim.has_begin      = false;
+        app.trim.has_end        = false;
+        app.trim.begin_seconds  = 0.0;
+        app.trim.end_seconds    = 0.0;
+        app.trim_begin_selected = false;
+        app.trim_end_selected   = false;
+        undo.push_settings_undo(std::move(pre));
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+    }
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------

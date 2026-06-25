@@ -1019,11 +1019,10 @@ bool sweep_select_interval(AppState& app, const MarkerVec& markers,
     bool changed = false;
     auto add = [&](int idx) {
         if (idx == press_marker_idx) return;
-        if (app.selected_markers.count(idx)) return;
-        app.selected_markers.insert(idx);
+        const bool newly = app.selected_markers.insert(idx).second;
+        if (newly || app.last_selected_marker != idx) changed = true;
         app.last_selected_marker = idx;
         app.last_sel_group = LastSelGroup::Markers;
-        changed = true;
     };
     if (forward) {
         for (int i = first; i < last; ++i) add(i);
