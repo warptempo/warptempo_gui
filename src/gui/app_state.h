@@ -49,6 +49,10 @@ constexpr int kZoomTableSize    = 11;
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
+// Ctrl+wheel end-move step as a divisor of samples_visible. Larger than
+// kViewportLeadDivisor so the per-detent step is finer than Alt+wheel pan.
+constexpr int64_t kTrimEndWheelDivisor = 50;
+
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them.
@@ -630,6 +634,11 @@ struct AppState {
     // targets is decided by last_sel_group.
     bool   trim_begin_selected = false;
     bool   trim_end_selected   = false;
+    // Which trim bound was most recently selected by a selecting gesture.
+    // 0 = none, 'B' = begin, 'E' = end. Drives Ctrl+wheel end-move: when
+    // begin is the last-selected trim bound the wheel moves the end bound
+    // rather than nudging the focused warp marker's tempo.
+    char   last_selected_trim  = 0;
 
     // Bottom-strip command prompt. Active only when a close / revert /
     // re-detect gesture fires while a confirmation is required. Originally

@@ -420,20 +420,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x sets the begin trim at the playhead and autosets end 5 s away (re-press
-    // over begin grows end). Shift+x pulls end inward 5 s. Ctrl+Shift+x clears
-    // both bounds. The end bound keeps its mouse operations (Ctrl+drag single,
-    // Ctrl+Shift+drag pair, select+Delete); only the end keyboard keys are gone.
+    // x sets the begin trim at the playhead and autosets end 5 s away.
+    // Shift+x clears both bounds. The end bound keeps its mouse operations
+    // (Ctrl+drag single, Ctrl+Shift+drag pair, select+Delete).
     // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_set_begin_autoset();
         return;
     }
     if (shift && !ctrl && !alt && key == GuiKeys::X) {
-        handle_trim_nudge_partner_inward(TrimSide::Begin);
-        return;
-    }
-    if (ctrl && shift && !alt && key == GuiKeys::X) {
         handle_trim_clear_both();
         return;
     }
@@ -587,15 +582,45 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (count < 1) count = 1;
     // Strict modifier matching: each wheel chord is an exact match.
     if (ctrl && !shift && !alt) {
-        // Ctrl+wheel: nudge the focused warp marker's base tempo by 0.01 per
-        // detent (WheelUp lowers, WheelDown raises), carrying tempo_scale
-        // through unchanged. This is the wheel alias of the Ctrl+Up/Down nudge
-        // and mutates marker data, so it is refused while render-view owns the
-        // display and while the active tab is read-only — guards on_key's
-        // prologue applies to Ctrl+Up/Down but that on_wheel does not carry.
-        // adjust_tempo is a no-op when no marker is selected.
+        // Ctrl+wheel: when the begin trim bound is last-selected, move the end
+        // bound. Otherwise nudge the focused warp marker's tempo. Refused in
+        // render-view and read-only (same guards as Ctrl+Up/Down).
         if (app.render_view.enabled) return;
         if (active_view_state(app).read_only) return;
+        if (app.last_sel_group == LastSelGroup::Trim &&
+            app.last_selected_trim == 'B' &&
+            app.trim.has_begin && app.trim.has_end) {
+            const int sr = audio.sample_rate();
+            if (audio.total_frames() <= 0 || sr <= 0) return;
+            const double sr_d = static_cast<double>(sr);
+            const int64_t step = std::max<int64_t>(
+                1, samples_visible(app, audio) / kTrimEndWheelDivisor);
+            const int64_t dlt =
+                (button == GuiMouseButton::WheelUp ? -step : +step) * count;
+            int64_t end_active = source_frame_to_active_domain(app, audio,
+                static_cast<int64_t>(std::nearbyint(app.trim.end_seconds * sr_d)));
+            end_active += dlt;
+            const int64_t begin_active = source_frame_to_active_domain(app, audio,
+                static_cast<int64_t>(std::nearbyint(app.trim.begin_seconds * sr_d)));
+            const double spp = current_samples_per_pixel(app, audio);
+            const int64_t eps = static_cast<int64_t>(
+                std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
+            if (end_active < begin_active + eps) end_active = begin_active + eps;
+            const int64_t lt = live_total_frames(app, audio);
+            if (end_active > lt) end_active = lt;
+            SettingsSnapshot pre = capture_current_settings(app);
+            app.trim.end_seconds = snap_to_timestamp_grid(static_cast<double>(
+                active_domain_to_source_frame(app, audio, end_active)) / sr_d);
+            undo.push_settings_undo(std::move(pre));
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+            target_render.trigger();
+            return;
+        }
+        // Dismiss an active flag edit so the tempo change is visible.
+        if (text_editor::is_active(app.top_flag_editor)) {
+            handle_top_flag_editor_key(GuiKeys::Escape, GuiInputState{});
+        }
         const double delta =
             (button == GuiMouseButton::WheelUp ? -0.01 : +0.01) *
             static_cast<double>(count);

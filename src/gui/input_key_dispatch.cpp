@@ -751,10 +751,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         }
         return true;
     }
-    // Ctrl+Shift+I: bulk-clear every marker's iter values AND exit
+    // Shift+I: bulk-clear every marker's iter values AND exit
     // iteration mode in one keystroke ("stop authoring this mode").
     // Only fires while iteration mode is on; otherwise silent no-op.
-    if (key == GuiKeys::I && ctrl && shift && !alt) {
+    if (key == GuiKeys::I && !ctrl && shift && !alt) {
         if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
             flag_editor.bulk_clear_iter_values();
             app.iteration_mode_enabled = false;

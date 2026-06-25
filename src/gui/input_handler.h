@@ -314,13 +314,7 @@ private:
     // Clamped to [0, live EOF] in the active domain.
     void handle_trim_set_begin_autoset();
 
-    // Shift+x: gated like the re-press above (playhead must sit on the begin
-    // bound), but pulls the end bound 5 active-seconds toward the begin bound
-    // instead of away, clamped to the inter-bound eps. No-op if the end bound
-    // is unset.
-    void handle_trim_nudge_partner_inward(TrimSide side);
-
-    // Ctrl+Shift+x: clear both trim bounds unconditionally. Silent no-op when
+    // Shift+x: clear both trim bounds unconditionally. Silent no-op when
     // neither bound is set.
     void handle_trim_clear_both();
 

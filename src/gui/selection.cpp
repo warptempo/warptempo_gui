@@ -50,6 +50,7 @@ void Selection::clear_selection() {
     app.last_selected_marker = -1;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
+    app.last_selected_trim  = 0;
     app.last_sel_group = LastSelGroup::Markers;
 
     viewport.invalidate_top_strip();
