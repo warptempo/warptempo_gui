@@ -76,13 +76,51 @@ void GuiTargetRender::maybe_dispatch_pending() {
 }
 
 void GuiTargetRender::dispatch_render_now() {
-    pending_   = false;
-    in_flight_ = true;
-
-    // The batch state machine's cancel sentinel may still be set from
-    // trigger(); the target render's on_done doesn't read it but the next
-    // archival render path needs a clean slate.
+    pending_ = false;
+    // The batch cancel sentinel may still be set from trigger(); clear it on
+    // both the cache-hit and synthesis paths so the next archival render path
+    // starts from a clean slate.
     app.queue_cancel_requested = false;
+
+    // Consult the render cache before synthesizing. The only callers
+    // (trigger()'s idle branch and maybe_dispatch_pending()) reach here only
+    // when the worker is idle, so the GUI thread exclusively owns
+    // target_buffer and can fill it from the cache without racing the worker.
+    // The fingerprint covers the same engine input build_render_request packs
+    // below; a confirmed hit is byte-identical to a re-render.
+    last_fingerprint_ = render_fingerprint(
+        app.source_audio_path, audio.sample_rate(),
+        app.warpmarkers.markers(), app.phase_reset_markers.markers(),
+        app.engine_settings,
+        app.trim.has_begin, app.trim.begin_seconds,
+        app.trim.has_end,   app.trim.end_seconds);
+
+    if (render_cache.lookup(last_fingerprint_, audio.channels(),
+                            audio.sample_rate(), app.target_buffer)) {
+        // Hit: target_buffer now holds the cached audio. Mirror
+        // on_render_done()'s Success tail with no async render; in_flight_
+        // stays false since no worker round trip is pending.
+        const int ch = audio.channels();
+        app.target_buffer_frames = (ch > 0)
+            ? static_cast<int64_t>(app.target_buffer.size() /
+                                   static_cast<size_t>(ch))
+            : 0;
+        recompute_target_buffer_start_frame();
+        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
+            app.target_buffer_frames > 0) {
+            playback.rebind_buffer(app.target_buffer.data(),
+                                   app.target_buffer_frames);
+            is_dirty_ = false;
+        }
+        // trigger() set "updating..." before calling us. Invalidate first so
+        // the wide-strip rect still covers the old text width, then clear it.
+        viewport.invalidate_timestamp_area();
+        app.queue_progress_text.clear();
+        return;
+    }
+
+    // Miss: synthesize. The remainder is the original dispatch path.
+    in_flight_ = true;
 
     // Re-stamp the progress text. A cancelled archival's on_done
     // (finalize_render_run) clears the text in its terminal branch,
@@ -135,6 +173,17 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // represents (0, or the trim-mapped anchor). SoT helper, shared with
         // ensure_ready's clean rebind so a cached re-entry matches.
         recompute_target_buffer_start_frame();
+        // Store the freshly rendered buffer under the fingerprint computed at
+        // this render's dispatch, so a later undo/redo back to this exact
+        // engine input serves it instead of re-synthesizing. Cached
+        // regardless of the current view: the audio is valid for this input
+        // even if a view flip means we skip the rebind below. insert() copies;
+        // target_buffer stays owned here.
+        if (app.target_buffer_frames > 0) {
+            render_cache.insert(last_fingerprint_, app.target_buffer,
+                                ch, audio.sample_rate(),
+                                app.target_buffer_frames);
+        }
         // Only rebind if we're actually showing target audio. A T→S toggle or
         // a render-view entry during render already cancelled this render and
         // does not want playback bound to target_buffer: rebinding here would

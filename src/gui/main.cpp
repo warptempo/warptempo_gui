@@ -35,6 +35,7 @@
 #include "selection.h"
 #include "settings_editor.h"
 #include "settings_io.h"
+#include "render_cache.h"
 #include "target_render.h"
 #include "text_display.h"
 #include "text_editor.h"
@@ -466,13 +467,21 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start waveform worker; exiting\n");
         return 1;
     }
+    // Render cache for fast undo/redo of target-view audio. init() creates the
+    // per-process cache directory under the user cache home and sweeps
+    // dead-PID orphan directories; shutdown(), after the event loop, removes
+    // this process's directory. Constructed before target_render, which holds
+    // it by reference. A failed init() leaves the cache disabled (every lookup
+    // misses), so target_render needs no special-casing.
+    RenderCache render_cache;
+    render_cache.init();
     // GuiTargetRender is the cancel-restart dispatcher for target-view
     // live audio. It must be constructed after async_renderer
     // (a dependency) and BEFORE the op clusters (which take it as a
     // ref). The trigger() method is a no-op in source view, so injecting
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
-                                  viewport);
+                                  viewport, render_cache);
     // file_loader's clear sites call target_render.cancel_for_load(),
     // so it must be constructed after target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, stem_cache,
@@ -830,5 +839,7 @@ int main(int argc, char** argv) {
     // Tear the audio device down before the sample buffer goes out of scope.
     playback.shutdown();
     gui.shutdown();
+    // Remove this process's render-cache directory and free the RAM tier.
+    render_cache.shutdown();
     return 0;
 }

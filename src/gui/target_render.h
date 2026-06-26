@@ -4,6 +4,7 @@
 #include "async_renderer.h"
 #include "audio.h"
 #include "playback.h"
+#include "render_cache.h"
 #include "render_pipeline.h"
 #include "viewport.h"
 
@@ -30,17 +31,20 @@ struct GuiTargetRender {
     GuiAsyncRenderer& async_renderer;
     GuiPlayback&      playback;
     Viewport&         viewport;
+    RenderCache&      render_cache;
 
     GuiTargetRender(AppState&         app_,
                     const GuiAudio&   audio_,
                     GuiAsyncRenderer& async_renderer_,
                     GuiPlayback&      playback_,
-                    Viewport&         viewport_)
+                    Viewport&         viewport_,
+                    RenderCache&      render_cache_)
         : app(app_),
           audio(audio_),
           async_renderer(async_renderer_),
           playback(playback_),
-          viewport(viewport_) {}
+          viewport(viewport_),
+          render_cache(render_cache_) {}
 
     // Output-affecting mutation hook. Called from every site that mutates
     // engine input (markers, phase resets, trim, output-affecting settings,
@@ -114,6 +118,14 @@ private:
     // fresh render) and from ensure_ready's clean rebind (so a cached buffer
     // re-entered without a render gets the same anchor it had at render time).
     void recompute_target_buffer_start_frame();
+
+    // Render fingerprint of the most recent dispatch. Computed at the top of
+    // dispatch_render_now() and consumed in on_render_done() to key the cache
+    // insert, so the buffer is stored under the exact engine input that
+    // produced it. Renders are serialized (one in flight; trigger() cancels
+    // before re-dispatch), so a Success in on_render_done() always pairs with
+    // the fingerprint set at its own dispatch.
+    std::vector<uint8_t> last_fingerprint_;
 
     // Set true by trigger() when a dispatch is wanted but the worker
     // wasn't idle. Cleared once dispatch_render_now is actually
