@@ -146,6 +146,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp
         src/gui/target_render.cpp
+        src/gui/render_cache.cpp
         src/gui/paint_handler.cpp
         src/gui/waveform_cache.cpp
         src/gui/input_handler.cpp
