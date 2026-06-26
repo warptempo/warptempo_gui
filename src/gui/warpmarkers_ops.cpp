@@ -442,6 +442,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // to owning at the nudged value. Owning markers nudge in place.
 // Clamps to [0.01, 9.99]. Only dirties / invalidates on real change.
 void GuiWarpMarkersOps::adjust_tempo(double delta) {
+    if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
     // Fine-tuning op: collapse the selection to the focused marker.

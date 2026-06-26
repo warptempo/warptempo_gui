@@ -617,6 +617,12 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             target_render.trigger();
             return;
         }
+        // Tempo nudge applies to warp markers only — phase-reset mode has no
+        // tempo. Mirror the Ctrl+Up / Ctrl+Down keyboard guard so Ctrl+wheel
+        // is a no-op here instead of nudging the warp marker that happens to
+        // sit at the phase-reset selection's index, which silently corrupted
+        // an unrelated warp marker and fired a spurious target render.
+        if (app.active_markers_view == 'P') return;
         // Dismiss an active flag edit so the tempo change is visible.
         if (text_editor::is_active(app.top_flag_editor)) {
             handle_top_flag_editor_key(GuiKeys::Escape, GuiInputState{});
