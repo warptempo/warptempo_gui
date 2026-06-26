@@ -47,6 +47,11 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         active_domain_to_source_frame(app, audio, other_active)) / sr_d);
     other_has = true;
 
+    app.trim_begin_selected = true;
+    app.trim_end_selected   = true;
+    app.last_selected_trim  = 'B';
+    app.last_sel_group      = LastSelGroup::Trim;
+
     undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -184,7 +189,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     if (both) {
         app.trim_begin_selected = true;
         app.trim_end_selected   = true;
-        app.last_selected_trim  = 0;
+        app.last_selected_trim  = is_begin ? 'B' : 'E';
         int64_t af = 0;
         if (trim_mouse_x_to_active_frame(mouse_x, af))
             app.trim_drag.anchor_active_frame = af;

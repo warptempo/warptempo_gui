@@ -49,9 +49,8 @@ constexpr int kZoomTableSize    = 11;
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// Ctrl+wheel end-move step as a divisor of samples_visible. Larger than
-// kViewportLeadDivisor so the per-detent step is finer than Alt+wheel pan.
-constexpr int64_t kTrimEndWheelDivisor = 50;
+// Ctrl+wheel end-move step as a divisor of samples_visible.
+constexpr int64_t kTrimEndWheelDivisor = 10;
 
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
