@@ -613,7 +613,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             m->time_seconds = t_new;
         }
         undo.push_undo(std::move(pre_state), hint_last);
-        selection.sync_playhead_to_last_selected();
+        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -628,7 +628,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     const int              hint_last = app.last_selected_marker;
     if (apply_selection_shift(delta_s)) {
         undo.push_undo(std::move(pre_state), hint_last);
-        selection.sync_playhead_to_last_selected();
+        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();

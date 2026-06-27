@@ -228,7 +228,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             m->time_seconds = t_new;
         }
         undo.push_undo_phase_reset(std::move(pre_state), hint_last);
-        selection.sync_playhead_to_last_selected();
+        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -256,7 +256,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
     undo.push_undo_phase_reset(std::move(pre_state), hint_last);
-    selection.sync_playhead_to_last_selected();
+    selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

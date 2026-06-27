@@ -36,7 +36,7 @@ struct Selection {
     void select_next_marker();
     void select_prev_marker();
     void prune_live_selection();
-    void sync_playhead_to_last_selected();
+    void sync_playhead_to_last_selected(bool edge_follow = false);
     void jump_playhead_to(int64_t target_sample);
     // Focus a project-trim bound on undo/redo of a settings entry. Compares
     // the pre-restore trim (passed in) against the now-restored app.trim to
