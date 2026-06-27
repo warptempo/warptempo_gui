@@ -48,4 +48,10 @@ struct Selection {
     // mirroring marker-removal.
     void focus_restored_trim(bool before_has_begin, double before_begin_sec,
                              bool before_has_end,   double before_end_sec);
+    // Select a project-trim bound ('B' or 'E') as the primary selection
+    // (group Trim), dropping other marker selection but additionally selecting
+    // a regular marker coincident with the bound if one exists. Used by Home /
+    // End after they move the playhead to the trim region's bounds. No-op when
+    // the bound is not set. Does not move the playhead — the caller does.
+    void select_trim_bound_with_coincident(char which);
 };

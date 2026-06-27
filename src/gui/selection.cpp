@@ -374,3 +374,54 @@ void Selection::focus_restored_trim(bool before_has_begin, double before_begin_s
     viewport.invalidate_waveform_area();
     jump_playhead_to(active_f);
 }
+
+void Selection::select_trim_bound_with_coincident(char which) {
+    const bool has = (which == 'B') ? app.trim.has_begin : app.trim.has_end;
+    if (!has) return;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+
+    const double sec = (which == 'B') ? app.trim.begin_seconds
+                                      : app.trim.end_seconds;
+    const int64_t bound_active = source_frame_to_active_domain(app, audio,
+        static_cast<int64_t>(std::nearbyint(sec * static_cast<double>(sr))));
+
+    // Search the active marker list for a non-disabled marker sharing the
+    // bound's active-domain frame.
+    const bool phase_reset = (app.active_markers_view == 'P');
+    const std::vector<GuiWarpMarker>& warp_vec =
+        app.render_view.enabled ? app.render_view.markers
+                                : app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& reset_vec =
+        app.render_view.enabled ? app.render_view.phase_resets
+                                : app.phase_reset_markers.markers();
+    const int n = phase_reset ? static_cast<int>(reset_vec.size())
+                              : static_cast<int>(warp_vec.size());
+    int coincident = -1;
+    for (int i = 0; i < n; ++i) {
+        const bool dis = phase_reset ? reset_vec[i].disabled
+                                     : effective_disabled(warp_vec, i);
+        if (dis) continue;
+        const double t = phase_reset ? reset_vec[i].time_seconds
+                                     : warp_vec[i].time_seconds;
+        const int64_t f = source_frame_to_active_domain(app, audio,
+            static_cast<int64_t>(std::nearbyint(t * static_cast<double>(sr))));
+        if (f == bound_active) { coincident = i; break; }
+    }
+
+    // The bound is the primary selection (group Trim). A coincident marker is
+    // additionally selected so both render highlighted, with Trim still primary.
+    app.trim_begin_selected = (which == 'B');
+    app.trim_end_selected   = (which == 'E');
+    app.last_selected_trim  = which;
+    app.selected_markers.clear();
+    if (coincident >= 0) {
+        app.selected_markers.insert(coincident);
+        app.last_selected_marker = coincident;
+    } else {
+        app.last_selected_marker = -1;
+    }
+    app.last_sel_group = LastSelGroup::Trim;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_waveform_area();
+}

@@ -47,6 +47,23 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         active_domain_to_source_frame(app, audio, other_active)) / sr_d);
     other_has = true;
 
+    // EOF clamp, mirroring the regular-marker total_duration - eps rule that
+    // drop_marker / drag / nudge enforce. The end bound is held eps off the
+    // source end; the begin bound is held 2*eps, so the autoset's five-second
+    // gap can compress to a single eps near EOF without the bounds crossing
+    // (begin to end is one eps, end to EOF is one eps). eps is the same
+    // zoom-based marker spacing epsilon. Clamping by role (begin / end) is
+    // correct regardless of which side seeded the gesture.
+    const double spp       = current_samples_per_pixel(app, audio);
+    const double eps       = marker_hit_eps_seconds(spp, sr_d);
+    const double total_dur = static_cast<double>(audio.total_frames()) / sr_d;
+    if (app.trim.end_seconds > total_dur - eps)
+        app.trim.end_seconds = total_dur - eps;
+    double begin_ceiling = total_dur - 2.0 * eps;
+    if (begin_ceiling < 0.0) begin_ceiling = 0.0;
+    if (app.trim.begin_seconds > begin_ceiling)
+        app.trim.begin_seconds = begin_ceiling;
+
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
     app.last_selected_trim  = 'B';
