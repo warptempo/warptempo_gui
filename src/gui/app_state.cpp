@@ -17,10 +17,19 @@
 SettingsSnapshot capture_current_settings(const AppState& app) {
     SettingsSnapshot s;
     s.engine_settings = app.engine_settings;
-    s.trim_begin      = app.trim.begin_seconds;
-    s.trim_end        = app.trim.end_seconds;
-    s.has_trim_begin  = app.trim.has_begin;
-    s.has_trim_end    = app.trim.has_end;
+    // Trim is excluded from undo/redo history. The trim fields below are left
+    // uncaptured, and the matching restores in undo.cpp (do_undo / do_redo),
+    // the focus_restored_trim calls, and the settings-editor trim push are all
+    // commented out under the same note, so undo/redo never touches the project
+    // trim. It behaves like viewport state: live in app.trim, saved to disk by
+    // settings_io, but absent from the undo stack. To roll back, grep
+    // "excluded from undo/redo history" across src/gui and uncomment every
+    // tagged line (this file, undo.cpp, settings_editor.cpp, input_trim.cpp,
+    // input_handler.cpp), and re-enable the two focus_restored_trim calls.
+    // s.trim_begin      = app.trim.begin_seconds;
+    // s.trim_end        = app.trim.end_seconds;
+    // s.has_trim_begin  = app.trim.has_begin;
+    // s.has_trim_end    = app.trim.has_end;
     return s;
 }
 

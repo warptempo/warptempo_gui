@@ -120,7 +120,9 @@ void GuiSettingsEditor::commit() {
             return;
         }
         const double secs = parse_timestamp(value);
-        SettingsSnapshot pre = capture_current_settings(app);
+        // Trim is excluded from undo/redo history — apply the typed trim but do
+        // not push an undo entry. Re-enable both lines to roll back.
+        // SettingsSnapshot pre = capture_current_settings(app);
         if (key == "trim_begin") {
             app.trim.has_begin     = true;
             app.trim.begin_seconds = secs;
@@ -128,7 +130,7 @@ void GuiSettingsEditor::commit() {
             app.trim.has_end     = true;
             app.trim.end_seconds = secs;
         }
-        undo.push_settings_undo(std::move(pre));
+        // undo.push_settings_undo(std::move(pre));
         std::fprintf(stderr,
             "warptempo_gui: setting applied: %s=%s\n",
             key.c_str(), value.c_str());

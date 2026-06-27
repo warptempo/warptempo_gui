@@ -280,12 +280,12 @@ void Undo::do_undo() {
     redo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = redo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = redo_entry.phase_reset_snapshot;
-    // Pre-restore trim, read before redo_entry is moved onto the redo stack;
-    // compared against the restored trim below to focus the touched bound.
-    const bool   before_has_begin = redo_entry.settings.has_trim_begin;
-    const bool   before_has_end   = redo_entry.settings.has_trim_end;
-    const double before_begin_sec = redo_entry.settings.trim_begin;
-    const double before_end_sec   = redo_entry.settings.trim_end;
+    // Trim is excluded from undo/redo history — this pre-restore trim read fed
+    // only focus_restored_trim, disabled below. Re-enable both to roll back.
+    // const bool   before_has_begin = redo_entry.settings.has_trim_begin;
+    // const bool   before_has_end   = redo_entry.settings.has_trim_end;
+    // const double before_begin_sec = redo_entry.settings.trim_begin;
+    // const double before_end_sec   = redo_entry.settings.trim_end;
 
     app.history.redo_stack.push_back(std::move(redo_entry));
     if (app.history.redo_stack.size() > UndoHistory::kCap) {
@@ -307,10 +307,13 @@ void Undo::do_undo() {
     // marker-only ops. Settings-only entries get the actual pre-edit
     // settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    app.trim.begin_seconds = entry.settings.trim_begin;
-    app.trim.end_seconds   = entry.settings.trim_end;
-    app.trim.has_begin     = entry.settings.has_trim_begin;
-    app.trim.has_end       = entry.settings.has_trim_end;
+    // Trim is excluded from undo/redo history — do not restore the project trim
+    // from the snapshot. This was the clobber: every entry, even a marker move,
+    // carried the trim and reset it here. Re-enable to roll back.
+    // app.trim.begin_seconds = entry.settings.trim_begin;
+    // app.trim.end_seconds   = entry.settings.trim_end;
+    // app.trim.has_begin     = entry.settings.has_trim_begin;
+    // app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
@@ -343,8 +346,10 @@ void Undo::do_undo() {
     // anchor when both move); a pure engine-settings edit changes no trim and
     // is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {
-        selection.focus_restored_trim(before_has_begin, before_begin_sec,
-                                      before_has_end,   before_end_sec);
+        // Trim is excluded from undo/redo history — trim is no longer restored,
+        // so there is no touched bound to focus. Re-enable with the restore.
+        // selection.focus_restored_trim(before_has_begin, before_begin_sec,
+        //                               before_has_end,   before_end_sec);
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
@@ -398,12 +403,12 @@ void Undo::do_redo() {
     undo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = undo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = undo_entry.phase_reset_snapshot;
-    // Pre-restore trim, read before undo_entry is moved onto the undo stack;
-    // compared against the restored trim below to focus the touched bound.
-    const bool   before_has_begin = undo_entry.settings.has_trim_begin;
-    const bool   before_has_end   = undo_entry.settings.has_trim_end;
-    const double before_begin_sec = undo_entry.settings.trim_begin;
-    const double before_end_sec   = undo_entry.settings.trim_end;
+    // Trim is excluded from undo/redo history — this pre-restore trim read fed
+    // only focus_restored_trim, disabled below. Re-enable both to roll back.
+    // const bool   before_has_begin = undo_entry.settings.has_trim_begin;
+    // const bool   before_has_end   = undo_entry.settings.has_trim_end;
+    // const double before_begin_sec = undo_entry.settings.trim_begin;
+    // const double before_end_sec   = undo_entry.settings.trim_end;
 
     app.history.undo_stack.push_back(std::move(undo_entry));
     if (app.history.undo_stack.size() > UndoHistory::kCap) {
@@ -416,10 +421,13 @@ void Undo::do_redo() {
     }
 
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    app.trim.begin_seconds = entry.settings.trim_begin;
-    app.trim.end_seconds   = entry.settings.trim_end;
-    app.trim.has_begin     = entry.settings.has_trim_begin;
-    app.trim.has_end       = entry.settings.has_trim_end;
+    // Trim is excluded from undo/redo history — do not restore the project trim
+    // from the snapshot (the clobber described in do_redo). Re-enable to roll
+    // back.
+    // app.trim.begin_seconds = entry.settings.trim_begin;
+    // app.trim.end_seconds   = entry.settings.trim_end;
+    // app.trim.has_begin     = entry.settings.has_trim_begin;
+    // app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
@@ -444,8 +452,10 @@ void Undo::do_redo() {
     // (begin as the anchor when both move); a pure engine-settings edit
     // changes no trim and is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {
-        selection.focus_restored_trim(before_has_begin, before_begin_sec,
-                                      before_has_end,   before_end_sec);
+        // Trim is excluded from undo/redo history — trim is no longer restored,
+        // so there is no touched bound to focus. Re-enable with the restore.
+        // selection.focus_restored_trim(before_has_begin, before_begin_sec,
+        //                               before_has_end,   before_end_sec);
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
