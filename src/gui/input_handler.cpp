@@ -404,13 +404,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tempo nudge. Ctrl+Up / Ctrl+Down only. Bare `=` / `-` were the
     // previous binding; they now zoom (see below) so the keyboard has
-    // a symbol-key alias for the bare Up/Down zoom chord.
+    // a symbol-key alias for the bare Up/Down zoom chord. No view guard
+    // here — adjust_tempo returns at once unless the warp view is active,
+    // so Ctrl+arrows are an inert (still consumed) no-op in phase-reset view.
     if (ctrl && !shift && !alt && key == GuiKeys::Up) {
-        if (app.active_markers_view == 'P') return;
         warpops.adjust_tempo(+0.01); return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::Down) {
-        if (app.active_markers_view == 'P') return;
         warpops.adjust_tempo(-0.01); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
