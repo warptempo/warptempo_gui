@@ -181,8 +181,13 @@ void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
 // used by the hover popup. The new marker is an owner (tempo_inherits =
-// false), so it is not subject to the pass-after-label-ref guard — a
-// label_ref's effective value is resolved and copied through normally.
+// false), so it is not subject to the pass-after-label-ref guard.
+// Exception: when the prior marker is a label ref, the copy is skipped and a
+// neutral owner (base 1.0 / empty scale) is dropped instead. Copying the
+// ref's resolved effective value would freeze a literal of the pre-drop
+// value, but inserting this marker re-deforms the ref's own segment so the
+// ref's effective value shifts — the new marker would then hold a value the
+// ref no longer carries. A 1.00 owner leaves the ref's segment unchanged.
 // Falls back to base 1.0 / empty scale if there is no prior marker
 // (should not happen given the mandatory time-0 first marker).
 void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
@@ -196,7 +201,7 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     const int prev_idx = find_immediate_prior(mv, t);
     double      base  = 1.0;
     std::string scale;
-    if (prev_idx >= 0) {
+    if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
         const MarkerEffective eff = marker_effective(
             slice_to_warp_markers(mv), prev_idx, sr);
         base  = eff.base;
