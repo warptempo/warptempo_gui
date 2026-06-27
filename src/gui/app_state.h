@@ -797,6 +797,14 @@ GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+// Active-domain sample range a marker may occupy to stay within the visible
+// strip: pixel 0 (viewport_start) through the last fully-visible pixel
+// (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
+// it can never hide offscreen, where its precise location would be lost. The
+// playhead is exempt — it alone may reach 1px past the strip, and only at EOF.
+// Returns {lo, hi} as active-domain samples.
+std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
+                                                   const GuiAudio& audio);
 
 // Drop-marker dedup pre-check shared by GuiWarpMarkersOps::drop_marker and
 // GuiPhaseResetMarkersOps::drop_phase_reset_at_position. Iterates `markers`

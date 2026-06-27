@@ -133,6 +133,29 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         }
     }
 
+    // Viewport clamp: keep the grabbed marker within the visible strip so a
+    // mouse drag can't push it offscreen, where its precise position would be
+    // hidden. Only the grabbed marker (hit) is clamped; co-dragged markers
+    // ride the same scalar delta and stay bound by data / neighbor alone — the
+    // same way Ctrl+Shift+drag clamps the grabbed bound but lets its partner
+    // run to the clip edge. viewport_marker_bounds is active-domain while the
+    // delta lives in source seconds, so inverse-translate the edges; the
+    // domain map is monotonic, so the source clamp matches the active-pixel
+    // clamp. The grabbed marker is on-screen at grab, so these bounds bracket
+    // delta = 0 and never invert [delta_min, delta_max].
+    {
+        const auto vb = viewport_marker_bounds(app, audio);
+        const double vp_lo_src = static_cast<double>(
+            active_domain_to_source_frame(app, audio, vb.first))  / sr_d;
+        const double vp_hi_src = static_cast<double>(
+            active_domain_to_source_frame(app, audio, vb.second)) / sr_d;
+        const double orig_grabbed = t_of(hit);
+        const double vp_lb = vp_lo_src - orig_grabbed;
+        const double vp_ub = vp_hi_src - orig_grabbed;
+        if (vp_lb > d.delta_min) d.delta_min = vp_lb;
+        if (vp_ub < d.delta_max) d.delta_max = vp_ub;
+    }
+
     d.moved = false;
     // Seed moveable_times from original_times. apply_drag_motion writes
     // moveable_times[k] = original_times[k] + delta on every motion event.

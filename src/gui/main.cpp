@@ -322,6 +322,17 @@ double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
         a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
 }
 
+std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
+                                                   const GuiAudio& audio) {
+    const GuiRect area = waveform_area(a);
+    const double  spp  = current_samples_per_pixel(a, audio);
+    const int64_t lo   = a.viewport_start_sample;
+    const int64_t hi   = a.viewport_start_sample +
+        static_cast<int64_t>(std::nearbyint(
+            static_cast<double>(area.w - 1) * spp));
+    return { lo, hi };
+}
+
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     const int64_t visible = samples_visible(a, audio);
     const int64_t total   = live_total_frames(a, audio);
