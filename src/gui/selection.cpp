@@ -187,13 +187,17 @@ void Selection::cycle_selection(bool forward) {
     const bool have_trim   = (trim_sel != 0);
     if (!have_marker && !have_trim) return;   // nothing ahead; leave selection
 
-    bool land_on_trim;
+    bool land_on_trim = false;
+    bool coincident   = false;
     if (have_marker && have_trim) {
-        land_on_trim = forward ? (trim_frame < marker_frame)
-                               : (trim_frame > marker_frame);
-        // A bound coincident with a marker: prefer the marker so repeated
-        // Tab still advances to the next distinct stop rather than parking.
-        if (trim_frame == marker_frame) land_on_trim = false;
+        if (trim_frame == marker_frame) {
+            // A marker and a trim bound share this frame: focus both rather
+            // than picking one.
+            coincident = true;
+        } else {
+            land_on_trim = forward ? (trim_frame < marker_frame)
+                                   : (trim_frame > marker_frame);
+        }
     } else {
         land_on_trim = have_trim;
     }
@@ -204,7 +208,20 @@ void Selection::cycle_selection(bool forward) {
     // intermediate viewport write — overridden by that centering in the same
     // keypress — and the resulting damage, accumulated against a non-final
     // viewport, is what produced the outline-blink / cursor-hop artifact.
-    if (land_on_trim) {
+    if (coincident) {
+        // Both a marker and a bound sit here. Select the marker as the primary
+        // group — it owns Delete / Ctrl+drag and the recenter, which lands on
+        // the shared frame — and additionally select the coincident bound so
+        // both render selected. set_single_selection drops trim first, so the
+        // bound is re-added after it. The playhead lands on this frame, so the
+        // next Tab — which needs a stop strictly past the playhead — advances
+        // off it.
+        set_single_selection(marker_sel);
+        app.trim_begin_selected = (trim_sel == 'B');
+        app.trim_end_selected   = (trim_sel == 'E');
+        app.last_selected_trim  = trim_sel;
+        viewport.invalidate_waveform_area();
+    } else if (land_on_trim) {
         // Single-select this trim bound, mirroring select_trim_boundary's
         // non-additive branch: this bound on, the other off, marker selection
         // dropped, group set to Trim.
@@ -325,11 +342,22 @@ void Selection::focus_restored_trim(bool before_has_begin, double before_begin_s
     const int64_t active_f = source_frame_to_active_domain(app, audio, src_f);
 
     if (exists) {
-        // Select the restored bound, mirroring a trim-group single-select:
-        // this bound on, the other off, marker selection dropped, group Trim.
-        app.trim_begin_selected  = (which == 'B');
-        app.trim_end_selected    = (which == 'E');
-        app.last_selected_trim   = which;
+        // Imitate the do-action's selection. A single-bound edit (Ctrl+wheel
+        // end nudge, a single-bound drag) selects just that bound. An edit
+        // that moved both bounds (x autoset, Ctrl+Shift+drag) selects both
+        // with begin anchored — matching what those gestures select when
+        // first performed.
+        const bool both = begin_changed && end_changed &&
+                          after_has_begin && after_has_end;
+        if (both) {
+            app.trim_begin_selected = true;
+            app.trim_end_selected   = true;
+            app.last_selected_trim  = 'B';
+        } else {
+            app.trim_begin_selected = (which == 'B');
+            app.trim_end_selected   = (which == 'E');
+            app.last_selected_trim  = which;
+        }
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         app.last_sel_group       = LastSelGroup::Trim;
