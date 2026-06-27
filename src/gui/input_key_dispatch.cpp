@@ -850,8 +850,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter at max
-    // zoom on the focused marker. The Ctrl+Tab branch above runs first and
+    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter on the
+    // focused marker at the current zoom. The Ctrl+Tab branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
     // cycle path either.

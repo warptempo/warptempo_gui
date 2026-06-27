@@ -496,8 +496,8 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     int64_t src_sample = 0;
     if (app.last_sel_group == LastSelGroup::Trim) {
         // The cycle landed on a trim bound. Recenter on its source frame; the
-        // zoom + center below is shared with the marker path, so Tab zooms
-        // onto a trim bound exactly as it does onto a marker.
+        // center below is shared with the marker path, so Tab centers onto a
+        // trim bound exactly as it does onto a marker.
         if (app.last_selected_trim == 'B') {
             if (!app.trim.has_begin) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
@@ -553,12 +553,11 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         app.playhead_scanner_sample = sample;
     }
 
-    // Zoom to the 2.4 s snap level if not already there, then center.
-    // center_viewport_on_playhead is now the SOLE viewport write in this
-    // path: it reads the cursor we just set and scrolls once to center it,
-    // emitting one coherent set of waveform + top-strip damage against the
-    // final viewport.
-    viewport.apply_zoom_change(kSnapZoomLevel);
+    // Center the viewport on the focused marker at the current zoom — Tab
+    // leaves the zoom level alone. center_viewport_on_playhead is the SOLE
+    // viewport write in this path: it reads the cursor we just set and scrolls
+    // once to center it, emitting one coherent set of waveform + top-strip
+    // damage against the final viewport.
     viewport.center_viewport_on_playhead();
 
     // center_viewport_on_playhead only invalidates when the viewport
