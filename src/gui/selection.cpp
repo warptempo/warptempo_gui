@@ -292,3 +292,57 @@ void Selection::jump_playhead_to(int64_t target_sample) {
     }
     if (playback.is_playing()) playback.resync_predictor();
 }
+
+void Selection::focus_restored_trim(bool before_has_begin, double before_begin_sec,
+                                    bool before_has_end,   double before_end_sec) {
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+
+    const bool   after_has_begin = app.trim.has_begin;
+    const bool   after_has_end   = app.trim.has_end;
+    const double after_begin_sec = app.trim.begin_seconds;
+    const double after_end_sec   = app.trim.end_seconds;
+
+    // A bound "changed" if its set-ness toggled, or it stayed set but moved.
+    const bool begin_changed =
+        (before_has_begin != after_has_begin) ||
+        (after_has_begin && before_begin_sec != after_begin_sec);
+    const bool end_changed =
+        (before_has_end != after_has_end) ||
+        (after_has_end && before_end_sec != after_end_sec);
+    if (!begin_changed && !end_changed) return;  // pure engine-settings edit
+
+    // Both (or only begin) anchors on begin; only end anchors on end.
+    const char which = (begin_changed || !end_changed) ? 'B' : 'E';
+
+    const bool   exists = (which == 'B') ? after_has_begin : after_has_end;
+    const double sec    = (which == 'B')
+        ? (exists ? after_begin_sec : before_begin_sec)
+        : (exists ? after_end_sec   : before_end_sec);
+
+    const int64_t src_f = static_cast<int64_t>(
+        std::nearbyint(sec * static_cast<double>(sr)));
+    const int64_t active_f = source_frame_to_active_domain(app, audio, src_f);
+
+    if (exists) {
+        // Select the restored bound, mirroring a trim-group single-select:
+        // this bound on, the other off, marker selection dropped, group Trim.
+        app.trim_begin_selected  = (which == 'B');
+        app.trim_end_selected    = (which == 'E');
+        app.last_selected_trim   = which;
+        app.selected_markers.clear();
+        app.last_selected_marker = -1;
+        app.last_sel_group       = LastSelGroup::Trim;
+        viewport.invalidate_top_strip();
+    } else {
+        // The focused bound was removed by this restore. Mirror marker-removal:
+        // jump to where it was, with no trim bound selected.
+        app.trim_begin_selected = false;
+        app.trim_end_selected   = false;
+        app.last_selected_trim  = 0;
+        if (app.last_sel_group == LastSelGroup::Trim)
+            app.last_sel_group = LastSelGroup::Markers;
+    }
+    viewport.invalidate_waveform_area();
+    jump_playhead_to(active_f);
+}

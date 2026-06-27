@@ -280,6 +280,12 @@ void Undo::do_undo() {
     redo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = redo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = redo_entry.phase_reset_snapshot;
+    // Pre-restore trim, read before redo_entry is moved onto the redo stack;
+    // compared against the restored trim below to focus the touched bound.
+    const bool   before_has_begin = redo_entry.settings.has_trim_begin;
+    const bool   before_has_end   = redo_entry.settings.has_trim_end;
+    const double before_begin_sec = redo_entry.settings.trim_begin;
+    const double before_end_sec   = redo_entry.settings.trim_end;
 
     app.history.redo_stack.push_back(std::move(redo_entry));
     if (app.history.redo_stack.size() > UndoHistory::kCap) {
@@ -332,11 +338,13 @@ void Undo::do_undo() {
         app.active_markers_view = entry.op_mode;
     }
 
-    // Post-restore rules apply only to marker-touching entries. Settings
-    // entries don't carry a selection-anchor and don't recompute the
-    // selection (markers were a no-op at push time).
+    // Post-restore rules apply only to marker-touching entries. A settings
+    // entry that changed project trim focuses the touched bound (begin as the
+    // anchor when both move); a pure engine-settings edit changes no trim and
+    // is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {
-        // no-op
+        selection.focus_restored_trim(before_has_begin, before_begin_sec,
+                                      before_has_end,   before_end_sec);
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
@@ -390,6 +398,12 @@ void Undo::do_redo() {
     undo_entry.hint_last_selected = entry.hint_last_selected;
     std::vector<GuiWarpMarker>    before_w = undo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = undo_entry.phase_reset_snapshot;
+    // Pre-restore trim, read before undo_entry is moved onto the undo stack;
+    // compared against the restored trim below to focus the touched bound.
+    const bool   before_has_begin = undo_entry.settings.has_trim_begin;
+    const bool   before_has_end   = undo_entry.settings.has_trim_end;
+    const double before_begin_sec = undo_entry.settings.trim_begin;
+    const double before_end_sec   = undo_entry.settings.trim_end;
 
     app.history.undo_stack.push_back(std::move(undo_entry));
     if (app.history.undo_stack.size() > UndoHistory::kCap) {
@@ -426,8 +440,12 @@ void Undo::do_redo() {
         app.active_markers_view = entry.op_mode;
     }
 
+    // A settings entry that changed project trim focuses the touched bound
+    // (begin as the anchor when both move); a pure engine-settings edit
+    // changes no trim and is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {
-        // no-op
+        selection.focus_restored_trim(before_has_begin, before_begin_sec,
+                                      before_has_end,   before_end_sec);
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(

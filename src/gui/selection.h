@@ -38,4 +38,14 @@ struct Selection {
     void prune_live_selection();
     void sync_playhead_to_last_selected();
     void jump_playhead_to(int64_t target_sample);
+    // Focus a project-trim bound on undo/redo of a settings entry. Compares
+    // the pre-restore trim (passed in) against the now-restored app.trim to
+    // find the touched bound, selects it (group Trim), and jumps the playhead
+    // to it, recentering if offscreen — no zoom, matching marker restore.
+    // Both bounds changing anchors on begin (the x creation gesture). A pure
+    // engine-settings edit changes no trim and is a no-op. When the restore
+    // removed the focused bound, jumps to where it was with nothing selected,
+    // mirroring marker-removal.
+    void focus_restored_trim(bool before_has_begin, double before_begin_sec,
+                             bool before_has_end,   double before_end_sec);
 };
