@@ -106,7 +106,9 @@ void Selection::cycle_selection(bool forward) {
     const int n = phase_reset
         ? static_cast<int>(reset_vec.size())
         : static_cast<int>(warp_vec.size());
-    if (n == 0) return;
+    // No early return on an empty marker list: trim bounds can still be cycle
+    // stops. frame_of / is_disabled below are only invoked for indices in
+    // [0, n), so n == 0 simply yields no marker candidate.
 
     // Helper to read frame-of-index in the active domain. Source view:
     // marker source-frame == active-domain frame (identity). Target view:
@@ -136,35 +138,87 @@ void Selection::cycle_selection(bool forward) {
     };
 
     // Playhead is the sole anchor for cycle direction. Strict inequality
-    // ensures a marker exactly at the playhead's frame is not a valid
-    // landing — Tab is motion, not confirmation. Disabled markers are
-    // skipped as if they were not present in the active mode's list.
-    int new_sel = -1;
+    // ensures a stop exactly at the playhead's frame is not a valid landing
+    // — Tab is motion, not confirmation. Disabled markers are skipped as if
+    // they were not present in the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
+
+    // Nearest marker candidate strictly past the playhead in the cycle
+    // direction. Markers are frame-sorted, so the first hit is the nearest.
+    int     marker_sel   = -1;
+    int64_t marker_frame = 0;
     if (forward) {
         for (int i = 0; i < n; ++i) {
             if (frame_of(i) > ph_f && !is_disabled(i)) {
-                new_sel = i; break;
+                marker_sel = i; marker_frame = frame_of(i); break;
             }
         }
     } else {
         for (int i = n - 1; i >= 0; --i) {
             if (frame_of(i) < ph_f && !is_disabled(i)) {
-                new_sel = i; break;
+                marker_sel = i; marker_frame = frame_of(i); break;
             }
         }
     }
 
-    if (new_sel < 0) return;
+    // Nearest trim-bound candidate. Trim bounds are cycle stops in both
+    // marker modes (trim is project-level, orthogonal to the marker list),
+    // but not in render view, which has no editable trim. Each set bound is
+    // evaluated independently; the nearer of the two in-direction wins.
+    char    trim_sel   = 0;   // 'B' / 'E' / 0
+    int64_t trim_frame = 0;
+    if (!app.render_view.enabled) {
+        auto consider = [&](char which, bool has, double sec) {
+            if (!has) return;
+            const int64_t f = source_frame_to_active_domain(app, audio,
+                static_cast<int64_t>(std::nearbyint(
+                    sec * static_cast<double>(sr))));
+            const bool in_dir = forward ? (f > ph_f) : (f < ph_f);
+            if (!in_dir) return;
+            const bool closer = (trim_sel == 0) ||
+                (forward ? (f < trim_frame) : (f > trim_frame));
+            if (closer) { trim_sel = which; trim_frame = f; }
+        };
+        consider('B', app.trim.has_begin, app.trim.begin_seconds);
+        consider('E', app.trim.has_end,   app.trim.end_seconds);
+    }
+
+    const bool have_marker = (marker_sel >= 0);
+    const bool have_trim   = (trim_sel != 0);
+    if (!have_marker && !have_trim) return;   // nothing ahead; leave selection
+
+    bool land_on_trim;
+    if (have_marker && have_trim) {
+        land_on_trim = forward ? (trim_frame < marker_frame)
+                               : (trim_frame > marker_frame);
+        // A bound coincident with a marker: prefer the marker so repeated
+        // Tab still advances to the next distinct stop rather than parking.
+        if (trim_frame == marker_frame) land_on_trim = false;
+    } else {
+        land_on_trim = have_trim;
+    }
 
     // Selection only. Viewport positioning is owned entirely by the sole
-    // caller (cycle_marker_focus_with_recenter), which centers the
-    // focused marker in one write. A scroll-into-view here would be a
-    // redundant intermediate viewport write — overridden by that
-    // centering in the same keypress — and the resulting damage,
-    // accumulated against a non-final viewport, is what produced the
-    // outline-blink / cursor-hop artifact.
-    set_single_selection(new_sel);
+    // caller (cycle_marker_focus_with_recenter), which centers the focused
+    // stop in one write. A scroll-into-view here would be a redundant
+    // intermediate viewport write — overridden by that centering in the same
+    // keypress — and the resulting damage, accumulated against a non-final
+    // viewport, is what produced the outline-blink / cursor-hop artifact.
+    if (land_on_trim) {
+        // Single-select this trim bound, mirroring select_trim_boundary's
+        // non-additive branch: this bound on, the other off, marker selection
+        // dropped, group set to Trim.
+        app.trim_begin_selected  = (trim_sel == 'B');
+        app.trim_end_selected    = (trim_sel == 'E');
+        app.last_selected_trim   = trim_sel;
+        app.selected_markers.clear();
+        app.last_selected_marker = -1;
+        app.last_sel_group       = LastSelGroup::Trim;
+        viewport.invalidate_top_strip();
+        viewport.invalidate_waveform_area();
+    } else {
+        set_single_selection(marker_sel);
+    }
 }
 
 void Selection::select_next_marker() { cycle_selection(true);  }

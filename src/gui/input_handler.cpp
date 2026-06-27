@@ -492,27 +492,43 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
-    const int idx = app.last_selected_marker;
-    if (idx < 0) return;
-
     const int sr = audio.sample_rate();
     int64_t src_sample = 0;
-    if (app.active_markers_view == 'P') {
-        // Render-view recenters on the displayed render-domain phase
-        // resets; authoring recenters on the live store.
-        const auto& tv = app.render_view.enabled
-            ? app.render_view.phase_resets
-            : app.phase_reset_markers.markers();
-        if (idx >= static_cast<int>(tv.size())) return;
-        src_sample = static_cast<int64_t>(std::nearbyint(
-            tv[idx].time_seconds * static_cast<double>(sr)));
+    if (app.last_sel_group == LastSelGroup::Trim) {
+        // The cycle landed on a trim bound. Recenter on its source frame; the
+        // zoom + center below is shared with the marker path, so Tab zooms
+        // onto a trim bound exactly as it does onto a marker.
+        if (app.last_selected_trim == 'B') {
+            if (!app.trim.has_begin) return;
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.trim.begin_seconds * static_cast<double>(sr)));
+        } else if (app.last_selected_trim == 'E') {
+            if (!app.trim.has_end) return;
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.trim.end_seconds * static_cast<double>(sr)));
+        } else {
+            return;
+        }
     } else {
-        const auto& mv = app.render_view.enabled
-            ? app.render_view.markers
-            : app.warpmarkers.markers();
-        if (idx >= static_cast<int>(mv.size())) return;
-        src_sample = static_cast<int64_t>(std::nearbyint(
-            mv[idx].time_seconds * static_cast<double>(sr)));
+        const int idx = app.last_selected_marker;
+        if (idx < 0) return;
+        if (app.active_markers_view == 'P') {
+            // Render-view recenters on the displayed render-domain phase
+            // resets; authoring recenters on the live store.
+            const auto& tv = app.render_view.enabled
+                ? app.render_view.phase_resets
+                : app.phase_reset_markers.markers();
+            if (idx >= static_cast<int>(tv.size())) return;
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                tv[idx].time_seconds * static_cast<double>(sr)));
+        } else {
+            const auto& mv = app.render_view.enabled
+                ? app.render_view.markers
+                : app.warpmarkers.markers();
+            if (idx >= static_cast<int>(mv.size())) return;
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                mv[idx].time_seconds * static_cast<double>(sr)));
+        }
     }
     // Target view: forward-translate marker's source-frame to active-
     // domain (target-frame) so the playhead lands on the marker's
