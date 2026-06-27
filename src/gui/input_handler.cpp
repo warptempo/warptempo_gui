@@ -622,8 +622,17 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             const int64_t eps = static_cast<int64_t>(
                 std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
             if (end_active < begin_active + eps) end_active = begin_active + eps;
+            // Viewport clamp: keep the end bound on-screen (last fully-visible
+            // pixel) so the wheel can't push it offscreen, where its precise
+            // location would be hidden. end_active and the bounds are both
+            // active-domain, so clamp directly.
+            const auto vb = viewport_marker_bounds(app, audio);
+            if (end_active > vb.second) end_active = vb.second;
+            // EOF-eps: the end stops eps short of the live EOF (was a flush
+            // clamp to lt), matching the marker and trim-drag convention.
+            // Applied after the viewport clamp so trim validity wins on-screen.
             const int64_t lt = live_total_frames(app, audio);
-            if (end_active > lt) end_active = lt;
+            if (end_active > lt - eps) end_active = lt - eps;
             SettingsSnapshot pre = capture_current_settings(app);
             app.trim.end_seconds = snap_to_timestamp_grid(static_cast<double>(
                 active_domain_to_source_frame(app, audio, end_active)) / sr_d);

@@ -251,9 +251,19 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const int64_t grabbed = app.trim_drag.is_begin ? ob : oe;
         if (grabbed + df < first_vis) df = first_vis - grabbed;
         if (grabbed + df > last_vis)  df = last_vis  - grabbed;
-        // Rigid clamp in the active domain: begin >= 0, end <= live EOF; gap preserved.
-        if (ob + df < 0)          df = -ob;
-        if (oe + df > live_total) df = live_total - oe;
+        // Rigid clamp in the active domain: begin >= 0, end <= live EOF minus
+        // the eps gap, so the end bound never lands flush against the EOF (the
+        // same margin the single-bound drag and the warp markers hold). The
+        // grabbed bound's viewport clamp above is applied first; this validity
+        // clamp wins. eps_frames is the kMarkerHitHalfPx-pixel gap at the
+        // current zoom, in active-domain frames. Only the grabbed bound is
+        // viewport-clamped; the partner rides the rigid delta to its data
+        // limit, as before.
+        const int64_t eps_frames = static_cast<int64_t>(
+            std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
+        if (ob + df < 0) df = -ob;
+        if (oe + df > live_total - eps_frames)
+            df = (live_total - eps_frames) - oe;
         const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
         const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
         const double nb = snap_to_timestamp_grid(static_cast<double>(nb_src) / sr_d);
@@ -277,18 +287,36 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         std::nearbyint(app.trim_drag.orig_seconds * sr_d));
     int64_t src_frame = orig_f +
         static_cast<int64_t>(std::nearbyint(delta_seconds * sr_d));
-    if (src_frame < 0) src_frame = 0;
-    if (src_frame > total) src_frame = total;
 
-    // Clamp against the other bound: the dragged bound
-    // stops kMarkerHitHalfPx pixels (at the current zoom) short of the other
-    // bound, the same eps the warp drag uses (warpmarkers_ops.cpp ~429), so
-    // the b/e stems never reach visual coincidence — matching the tightest
-    // gap two regular marker stems can hold. This replaces the former
-    // 1-frame clamp, which was sub-pixel at any normal zoom. This is the
-    // trim-internal eps (begin vs end only), orthogonal to warp/phase eps.
+    // eps_frames is the kMarkerHitHalfPx-pixel gap (at the current zoom) the
+    // trim drag holds off both the EOF and the other bound — the same eps the
+    // warp drag uses (warpmarkers_ops.cpp ~429), so the b/e stems never reach
+    // visual coincidence and the bound never lands flush against the EOF.
+    // Hoisted above the data clamp so the EOF clamp can use it. This is the
+    // trim-internal eps (begin vs end), orthogonal to warp/phase eps.
     const int64_t eps_frames = static_cast<int64_t>(
         std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
+
+    // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
+    // through the last fully-visible pixel) so the drag can't push it
+    // offscreen, where its precise location would be hidden. The cursor column
+    // is already viewport-bound, but a grab a few pixels off the stem can
+    // trail the bound past the edge; this makes the bound itself exact. The
+    // bounds are active-domain while src_frame is source, so inverse-translate
+    // the edges — monotonic, so the source clamp matches the active-pixel one.
+    const auto vb = viewport_marker_bounds(app, audio);
+    const int64_t vp_lo = active_domain_to_source_frame(app, audio, vb.first);
+    const int64_t vp_hi = active_domain_to_source_frame(app, audio, vb.second);
+    if (src_frame < vp_lo) src_frame = vp_lo;
+    if (src_frame > vp_hi) src_frame = vp_hi;
+
+    // Data clamp: 0 at the start, eps short of the EOF. Applied after the
+    // viewport clamp so trim validity wins when the EOF is on-screen.
+    if (src_frame < 0) src_frame = 0;
+    if (src_frame > total - eps_frames) src_frame = total - eps_frames;
+
+    // Clamp against the other bound: the dragged bound stops eps_frames short
+    // of it, the tightest gap two regular marker stems can hold.
     if (app.trim_drag.is_begin) {
         if (app.trim.has_end) {
             const int64_t end_f = static_cast<int64_t>(
@@ -301,7 +329,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             const int64_t begin_f = static_cast<int64_t>(
                 std::nearbyint(app.trim.begin_seconds * sr_d));
             if (src_frame < begin_f + eps_frames) src_frame = begin_f + eps_frames;
-            if (src_frame > total) src_frame = total;
+            if (src_frame > total - eps_frames) src_frame = total - eps_frames;
         }
     }
 
