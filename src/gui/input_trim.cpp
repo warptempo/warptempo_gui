@@ -74,6 +74,18 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     if (app.trim.begin_seconds > begin_ceiling)
         app.trim.begin_seconds = begin_ceiling;
 
+    // Snap the playhead onto the bound just set at it. The bound is grid-
+    // quantized by snap_to_timestamp_grid (millisecond resolution, required
+    // for serialization), so it can sit up to half a grid step from the live
+    // sub-grid playhead. In target view the playback gate maps the playhead
+    // against target_buffer_start_frame — this same snapped begin mapped to
+    // target frames — so an un-snapped playhead can land a sample short of the
+    // buffer start and Space reads local < 0 and no-ops.
+    const int64_t this_src =
+        static_cast<int64_t>(std::nearbyint(this_seconds * sr_d));
+    app.playhead_cursor_sample =
+        source_frame_to_active_domain(app, audio, this_src);
+
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
     app.last_selected_trim  = 'B';
