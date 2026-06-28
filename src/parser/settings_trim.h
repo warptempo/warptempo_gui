@@ -2,16 +2,10 @@
 
 #include <string>
 
-// Typed carrier for the project-level trim the .settings format defines. Trim
-// is project view-state, deliberately kept OUT of EngineSettings; this is its
-// parser-library home. Times are seconds, decoded from the on-disk MM:SS.mmm
-// form via parse_timestamp. A has_* of false means the key was absent or
-// malformed (silent-skip); the paired _sec field is then left at 0.0 and must
-// not be read.
-//
-// There is a single trim per project, keyed by the canonical trim_begin /
-// trim_end. There is no tab notion and no legacy/per-tab precedence: each
-// present, well-formed key is reported verbatim in its own slot.
+// Typed carrier for one tab's trim in the .settings format. Times are seconds,
+// decoded from the on-disk MM:SS.mmm form via parse_timestamp. A has_* of
+// false means the key was absent or malformed (silent-skip); the paired _sec
+// field is then left at 0.0 and must not be read.
 struct SettingsTrim {
     bool   has_begin = false;
     double begin_sec = 0.0;
@@ -19,11 +13,17 @@ struct SettingsTrim {
     double end_sec   = 0.0;
 };
 
-// Parse the trim keys from the .settings file at `path`. A missing or
-// unopenable file yields an all-false carrier, matching parse_settings_file's
-// "nothing to load" tolerance. One getline pass; blank lines, comment (#)
-// lines, and lines without '=' are skipped; each trim value is validated by
-// is_valid_timestamp_format and decoded by parse_timestamp. A malformed value is
-// silent-skipped, leaving that slot unset. On a duplicate key the last
-// well-formed occurrence wins.
-SettingsTrim read_settings_trim(const std::string& path);
+// Two-tab carrier for the per-tab trim keys in the .settings format.
+struct SettingsTrimTabs {
+    SettingsTrim tab_a;
+    SettingsTrim tab_b;
+};
+
+// Parse the per-tab trim keys tab_a_trim_begin / tab_a_trim_end /
+// tab_b_trim_begin / tab_b_trim_end from the .settings file at `path`.
+// Missing or unopenable file yields an all-false carrier for both tabs.
+// One getline pass; blank, comment, and non-key lines are skipped; each
+// value is validated by is_valid_timestamp_format and decoded by
+// parse_timestamp; a malformed value is silent-skipped; on a duplicate
+// key the last well-formed occurrence wins.
+SettingsTrimTabs read_settings_trim(const std::string& path);

@@ -231,16 +231,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.active_markers_view = ps.has_active_markers_view ? ps.active_markers_view : 'W';
         app.active_tab_view     = ps.has_active_tab_view     ? ps.active_tab_view     : 'A';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
-        // Trim: a single project-level value. Apply each bound when its key
-        // is present; absence leaves the load-time reset (above) in place.
-        if (ps.has_trim_begin) {
-            app.trim.has_begin     = true;
-            app.trim.begin_seconds = ps.trim_begin;
-        }
-        if (ps.has_trim_end) {
-            app.trim.has_end       = true;
-            app.trim.end_seconds   = ps.trim_end;
-        }
+        // Per-tab trim: apply each bound when its key is present;
+        // absence leaves the load-time reset (above) in place.
+        if (ps.has_tab_a_trim_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_seconds = ps.tab_a_trim_begin; }
+        if (ps.has_tab_a_trim_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_seconds   = ps.tab_a_trim_end; }
+        if (ps.has_tab_b_trim_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_seconds = ps.tab_b_trim_begin; }
+        if (ps.has_tab_b_trim_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_seconds   = ps.tab_b_trim_end; }
         if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
         if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
     }
@@ -277,6 +273,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.viewport_start_sample = parsed_tab.viewport_start_sample;
         app.zoom_level            = parsed_tab.zoom_level;
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
+        app.trim                = parsed_tab.trim;
+        app.trim_begin_selected = parsed_tab.trim_begin_selected;
+        app.trim_end_selected   = parsed_tab.trim_end_selected;
+        app.last_selected_trim  = parsed_tab.last_selected_trim;
+        app.last_sel_group      = parsed_tab.last_sel_group;
         clamp_viewport_start(app, audio);
     }
 

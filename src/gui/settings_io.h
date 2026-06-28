@@ -38,12 +38,15 @@ struct ParsedSettings {
     char    active_tab_view        = 'A';
     bool    has_playback_speed = false;
     float   playback_speed     = 1.0f;
-    // Project-level trim keys (trim_begin / trim_end). A single trim per
-    // project; absence means unset.
-    bool    has_trim_begin     = false;
-    double  trim_begin         = 0.0;   // seconds
-    bool    has_trim_end       = false;
-    double  trim_end           = 0.0;   // seconds
+    // Per-tab trim keys. Absence means unset.
+    bool    has_tab_a_trim_begin = false;
+    double  tab_a_trim_begin     = 0.0;   // seconds
+    bool    has_tab_a_trim_end   = false;
+    double  tab_a_trim_end       = 0.0;   // seconds
+    bool    has_tab_b_trim_begin = false;
+    double  tab_b_trim_begin     = 0.0;   // seconds
+    bool    has_tab_b_trim_end   = false;
+    double  tab_b_trim_end       = 0.0;   // seconds
     // Per-tab read-only flags. Absent → tab defaults to editable.
     bool    has_tab_a_read_only  = false;
     bool    tab_a_read_only      = false;
@@ -133,18 +136,14 @@ std::string format_default_settings_template(const std::string& stem);
 // Atomic write: emits keys in the canonical order defined by the shared
 // in-file descriptor list. Engine keys are formatted from the typed
 // EngineSettings parameter via per-field switch; typed scalars come from
-// the explicit parameters; the project trim lines are emitted only when the
-// corresponding has_trim_* flag is set. Matches the `.warpmarkers` write
-// pattern (tmp → fsync → rename). Best-effort: failure is logged by
-// the caller.
+// the explicit parameters; the per-tab trim lines are emitted only when the
+// corresponding trim flag is set on tab_a.trim / tab_b.trim. Matches the
+// `.warpmarkers` write pattern (tmp → fsync → rename). Best-effort: failure
+// is logged by the caller.
 bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,
     const ViewState& tab_b,
-    bool has_trim_begin,
-    double trim_begin_seconds,
-    bool has_trim_end,
-    double trim_end_seconds,
     bool follow,
     char active_audio_view,
     char active_markers_view,

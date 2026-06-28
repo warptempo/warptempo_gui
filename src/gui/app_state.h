@@ -353,6 +353,13 @@ struct PromptState {
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 
+struct TrimState {
+    double begin_seconds = 0.0;
+    double end_seconds   = 0.0;
+    bool   has_begin     = false;
+    bool   has_end       = false;
+};
+
 // Navigational bookmark. Holds a snapshot of the three fields that define
 // what the user sees and where playback would start. Not in the undo domain.
 //
@@ -381,6 +388,16 @@ struct ViewState {
     // its mouse handlers block authoring gestures (drop, drag, label
     // edit). Persisted as tab_a_read_only / tab_b_read_only in .settings.
     bool   read_only          = false;
+
+    // Per-tab backing store for app.trim / app.trim_*_selected /
+    // app.last_selected_trim / app.last_sel_group. Synced only at the
+    // tab-swap boundary in active_views.cpp (same pattern as
+    // viewport/zoom/playhead).
+    TrimState     trim;
+    bool          trim_begin_selected = false;
+    bool          trim_end_selected   = false;
+    char          last_selected_trim  = 0;
+    LastSelGroup  last_sel_group      = LastSelGroup::Markers;
 };
 
 struct AppState {
@@ -610,19 +627,12 @@ struct AppState {
     // Default-constructed before any source load.
     EngineSettings engine_settings;
 
-    // Project-level trim region. One trim per project (shared across both
-    // A/B tabs), so it lives on AppState rather than per-tab ViewState.
-    // Trim edits participate in the undo domain as part of the
-    // SettingsSnapshot. Seconds for sample-rate stability (consistent with
-    // marker times). has_begin / has_end distinguish "no trim set" from
-    // "trim set to 0.0" — both round-trip through .settings. Reset on file
-    // load / revert.
-    struct TrimState {
-        double begin_seconds = 0.0;
-        double end_seconds   = 0.0;
-        bool   has_begin     = false;
-        bool   has_end       = false;
-    };
+    // Live working copy of the active tab's trim state. The per-tab
+    // backing store lives in ViewState::trim (and the companion
+    // *_selected / last_selected_trim / last_sel_group fields there).
+    // Excluded from undo/redo. Mirrored to/from the active tab's
+    // ViewState slot at the tab-swap boundary in active_views.cpp
+    // (same pattern as viewport/zoom/playhead).
     TrimState trim;
 
     // Transient selection of the trim boundary stems. A separate

@@ -65,7 +65,11 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_b_playhead_cursor"  ||
            k == "follow"                 ||
            k == "active_markers_view"    ||
-           k == "playback_speed";
+           k == "playback_speed"         ||
+           k == "tab_a_trim_begin"       ||
+           k == "tab_a_trim_end"         ||
+           k == "tab_b_trim_begin"       ||
+           k == "tab_b_trim_end";
 }
 
 } // namespace

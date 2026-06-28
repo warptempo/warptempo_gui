@@ -813,6 +813,27 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         app.active_audio_view              = 'S';
     }
 
+    // The S/T toggle translates the active tab's live playhead across the
+    // domain flip; the inactive tab's stored playhead and viewport carry
+    // the same domain and must translate too, or a later Ctrl+Tab loads a
+    // stale-domain position that gets read in the new domain. Same tmap,
+    // same direction as the active translation. The active tab's own slot
+    // is left stale on purpose — it resyncs at the next stash boundary.
+    {
+        ViewState& other = (app.active_tab_view == 'B') ? app.tab_a : app.tab_b;
+
+        const auto xlate = [&](int64_t s) -> int64_t {
+            const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
+            const double r = going_to_target
+                ? map_source_to_target(q, tmap)
+                : map_target_to_source(q, tmap);
+            return static_cast<int64_t>(std::nearbyint(r));
+        };
+
+        other.playhead_cursor_sample = xlate(other.playhead_cursor_sample);
+        other.viewport_start_sample  = xlate(other.viewport_start_sample);
+    }
+
     // Domain is flipped — current_samples_per_pixel below reads the
     // post-flip live_total_frames against the preserved zoom_level.
     app.playhead_cursor_sample = new_playhead;

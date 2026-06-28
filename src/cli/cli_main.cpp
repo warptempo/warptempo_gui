@@ -27,12 +27,13 @@ namespace {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> -o <output.wav>\n"
+        "usage: %s <source-audio> -o <output.wav> [--tab A|B]\n"
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  warped wav the GUI would render for the same project. Runs the full\n"
         "  PGHI engine; output_format must be wav (use warptempo_parser for\n"
-        "  framemap/tempomap). -o is required; there is no default sibling.\n",
+        "  framemap/tempomap). -o is required; there is no default sibling.\n"
+        "  --tab selects which per-tab trim to apply (default A).\n",
         argv0);
 }
 
@@ -40,9 +41,15 @@ void usage(const char* argv0) {
 
 int main(int argc, char** argv) {
     std::string source_path, out_path;
+    char tab = 'A';
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         if (a == "-o" && i + 1 < argc)            out_path = argv[++i];
+        else if (a == "--tab" && i + 1 < argc) {
+            const std::string t = argv[++i];
+            if (t == "A" || t == "B") tab = t[0];
+            else { usage(argv[0]); return 2; }
+        }
         else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
     }
@@ -68,7 +75,8 @@ int main(int argc, char** argv) {
             return 1;
         }
         es = *parsed;
-        trim = read_settings_trim(set_path);
+        const SettingsTrimTabs tabs = read_settings_trim(set_path);
+        trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
     // --- engine-only: this CLI renders wav. framemap/tempomap are

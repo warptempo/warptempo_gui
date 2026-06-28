@@ -54,8 +54,6 @@ bool GuiSaveOps::save() {
     if (!app.settings_path.empty()) {
         if (!write_settings_file(app.settings_path,
                                  app.tab_a, app.tab_b,
-                                 app.trim.has_begin, app.trim.begin_seconds,
-                                 app.trim.has_end, app.trim.end_seconds,
                                  app.follow_mode,
                                  app.active_audio_view,
                                  app.active_markers_view,

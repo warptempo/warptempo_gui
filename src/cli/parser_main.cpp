@@ -20,14 +20,14 @@ namespace {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> [--format framemap|tempomap|resetmap] [-o <output>]\n"
+        "usage: %s <source-audio> [--format framemap|tempomap|resetmap] [-o <output>] [--tab A|B]\n"
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  framemap, tempomap, or resetmap. framemap/tempomap are built from the\n"
         "  warp markers; resetmap is the undisplaced source-frame phase-reset\n"
         "  list (the frame-domain companion the synthesis engine consumes).\n"
         "  resetmap must be requested via --format; it is never a settings\n"
-        "  output_format.\n",
+        "  output_format. --tab selects which per-tab trim to apply (default A).\n",
         argv0);
 }
 
@@ -35,10 +35,16 @@ void usage(const char* argv0) {
 
 int main(int argc, char** argv) {
     std::string source_path, out_path, fmt_override;
+    char tab = 'A';
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         if (a == "--format" && i + 1 < argc)      fmt_override = argv[++i];
         else if (a == "-o" && i + 1 < argc)       out_path     = argv[++i];
+        else if (a == "--tab" && i + 1 < argc) {
+            const std::string t = argv[++i];
+            if (t == "A" || t == "B") tab = t[0];
+            else { usage(argv[0]); return 2; }
+        }
         else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
     }
@@ -64,7 +70,8 @@ int main(int argc, char** argv) {
             return 1;
         }
         es = *parsed;
-        trim = read_settings_trim(set_path);
+        const SettingsTrimTabs tabs = read_settings_trim(set_path);
+        trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
     // --- emit format: --format overrides the project setting. resetmap is a

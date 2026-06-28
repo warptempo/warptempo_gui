@@ -84,8 +84,10 @@ enum class SettingKind {
     ActiveTabViewChar,
     PlaybackSpeedFloat,
     FollowFlag,
-    OptionalTrimBegin,
-    OptionalTrimEnd,
+    TrimBegin_A,
+    TrimEnd_A,
+    TrimBegin_B,
+    TrimEnd_B,
     ReadOnly_A,
     ReadOnly_B,
     ViewportStart_A,
@@ -118,11 +120,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "cover",                       SettingKind::EnginePassthrough,    EngineField::Cover,                   nullptr },
     { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     { "limiter",                     SettingKind::EnginePassthrough,    EngineField::Limiter,                 nullptr },
-    // Project render trim — a sibling project field, not an engine key and not
-    // GUI view-state. Sits between the engine block and the view-state band.
-    { "trim_begin",                  SettingKind::OptionalTrimBegin,    EngineField::Title,                   nullptr },
-    { "trim_end",                    SettingKind::OptionalTrimEnd,      EngineField::Title,                   nullptr },
     // GUI view-state band begins.
+    { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
+    { "tab_a_trim_end",             SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
+    { "tab_b_trim_begin",           SettingKind::TrimBegin_B,          EngineField::Title,                   nullptr },
+    { "tab_b_trim_end",             SettingKind::TrimEnd_B,            EngineField::Title,                   nullptr },
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
@@ -351,12 +353,13 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         // surfaces them as errors.
     }
 
-    // Trim bounds: parsed by the parser library's reader so the parser and
-    // render CLIs share one implementation with the GUI. A single
-    // project-level trim, applied flat in file_loader's apply step.
-    const SettingsTrim t = read_settings_trim(path);
-    out.has_trim_begin = t.has_begin; out.trim_begin = t.begin_sec;
-    out.has_trim_end   = t.has_end;   out.trim_end   = t.end_sec;
+    // Per-tab trim bounds: parsed by the parser library's reader so the
+    // parser and render CLIs share one implementation with the GUI.
+    const SettingsTrimTabs t = read_settings_trim(path);
+    out.has_tab_a_trim_begin = t.tab_a.has_begin; out.tab_a_trim_begin = t.tab_a.begin_sec;
+    out.has_tab_a_trim_end   = t.tab_a.has_end;   out.tab_a_trim_end   = t.tab_a.end_sec;
+    out.has_tab_b_trim_begin = t.tab_b.has_begin; out.tab_b_trim_begin = t.tab_b.begin_sec;
+    out.has_tab_b_trim_end   = t.tab_b.has_end;   out.tab_b_trim_end   = t.tab_b.end_sec;
     return true;
 }
 
@@ -474,10 +477,6 @@ bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,
     const ViewState& tab_b,
-    bool has_trim_begin,
-    double trim_begin_seconds,
-    bool has_trim_end,
-    double trim_end_seconds,
     bool follow,
     char active_audio_view,
     char active_markers_view,
@@ -525,19 +524,31 @@ bool write_settings_file(
                 data += follow ? "true" : "false";
                 data += '\n';
                 break;
-            case SettingKind::OptionalTrimBegin:
-                if (has_trim_begin) {
-                    data += desc.key;
-                    data += '=';
-                    data += format_timestamp(trim_begin_seconds);
+            case SettingKind::TrimBegin_A:
+                if (tab_a.trim.has_begin) {
+                    data += desc.key; data += '=';
+                    data += format_timestamp(tab_a.trim.begin_seconds);
                     data += '\n';
                 }
                 break;
-            case SettingKind::OptionalTrimEnd:
-                if (has_trim_end) {
-                    data += desc.key;
-                    data += '=';
-                    data += format_timestamp(trim_end_seconds);
+            case SettingKind::TrimEnd_A:
+                if (tab_a.trim.has_end) {
+                    data += desc.key; data += '=';
+                    data += format_timestamp(tab_a.trim.end_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::TrimBegin_B:
+                if (tab_b.trim.has_begin) {
+                    data += desc.key; data += '=';
+                    data += format_timestamp(tab_b.trim.begin_seconds);
+                    data += '\n';
+                }
+                break;
+            case SettingKind::TrimEnd_B:
+                if (tab_b.trim.has_end) {
+                    data += desc.key; data += '=';
+                    data += format_timestamp(tab_b.trim.end_seconds);
                     data += '\n';
                 }
                 break;

@@ -13,8 +13,8 @@ using warptempo_parse::trim_ws;
 
 }  // namespace
 
-SettingsTrim read_settings_trim(const std::string& path) {
-    SettingsTrim out;
+SettingsTrimTabs read_settings_trim(const std::string& path) {
+    SettingsTrimTabs out;
     std::ifstream f(path);
     if (!f) return out;
     std::string line;
@@ -28,15 +28,25 @@ SettingsTrim read_settings_trim(const std::string& path) {
         const std::string value = trim_ws(trimmed.substr(eq + 1));
         if (key.empty()) continue;
 
-        if (key == "trim_begin") {
+        if (key == "tab_a_trim_begin") {
             if (is_valid_timestamp_format(value)) {
-                out.has_begin = true;
-                out.begin_sec = parse_timestamp(value);
+                out.tab_a.has_begin = true;
+                out.tab_a.begin_sec = parse_timestamp(value);
             }
-        } else if (key == "trim_end") {
+        } else if (key == "tab_a_trim_end") {
             if (is_valid_timestamp_format(value)) {
-                out.has_end = true;
-                out.end_sec = parse_timestamp(value);
+                out.tab_a.has_end = true;
+                out.tab_a.end_sec = parse_timestamp(value);
+            }
+        } else if (key == "tab_b_trim_begin") {
+            if (is_valid_timestamp_format(value)) {
+                out.tab_b.has_begin = true;
+                out.tab_b.begin_sec = parse_timestamp(value);
+            }
+        } else if (key == "tab_b_trim_end") {
+            if (is_valid_timestamp_format(value)) {
+                out.tab_b.has_end = true;
+                out.tab_b.end_sec = parse_timestamp(value);
             }
         }
     }

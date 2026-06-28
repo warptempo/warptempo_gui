@@ -50,6 +50,11 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
         t.warp_selected           = app.selected_markers;
         t.warp_last_selected      = app.last_selected_marker;
     }
+    t.trim                = app.trim;
+    t.trim_begin_selected = app.trim_begin_selected;
+    t.trim_end_selected   = app.trim_end_selected;
+    t.last_selected_trim  = app.last_selected_trim;
+    t.last_sel_group      = app.last_sel_group;
 }
 
 // Indirection that returns the currently
@@ -130,6 +135,11 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
         app.selected_markers     = target.warp_selected;
         app.last_selected_marker = target.warp_last_selected;
     }
+    app.trim                = target.trim;
+    app.trim_begin_selected = target.trim_begin_selected;
+    app.trim_end_selected   = target.trim_end_selected;
+    app.last_selected_trim  = target.last_selected_trim;
+    app.last_sel_group      = target.last_sel_group;
     clamp_viewport_start(app, audio);
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
