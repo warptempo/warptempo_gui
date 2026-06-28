@@ -53,8 +53,8 @@ namespace {
 
 // Keys owned by a dedicated authoring gesture; rejected by commit() to
 // keep the settings editor as a single canonical entry point for engine
-// keys. This covers viewport/playback state, per-tab trim, and the bare
-// trim keys — all are set through their own gestures, not here.
+// keys. This covers viewport/playback state and per-tab trim — all are
+// set through their own gestures, not here.
 bool is_view_state_key(const std::string& k) {
     return k == "tab_a_viewport_start"   ||
            k == "tab_a_zoom"             ||
@@ -68,9 +68,7 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_a_trim_begin"       ||
            k == "tab_a_trim_end"         ||
            k == "tab_b_trim_begin"       ||
-           k == "tab_b_trim_end"         ||
-           k == "trim_begin"             ||
-           k == "trim_end";
+           k == "tab_b_trim_end";
 }
 
 } // namespace

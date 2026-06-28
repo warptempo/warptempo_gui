@@ -389,6 +389,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             delete_selected_trim();
             return;
         }
+        if (!app.render_view.enabled && active_view_state(app).read_only) return;
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
@@ -599,9 +600,8 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (ctrl && !shift && !alt) {
         // Ctrl+wheel: when the begin trim bound is last-selected, move the end
         // bound. Otherwise nudge the focused warp marker's tempo. Refused in
-        // render-view and read-only (same guards as Ctrl+Up/Down).
+        // render-view (both paths) and read-only (tempo path only).
         if (app.render_view.enabled) return;
-        if (active_view_state(app).read_only) return;
         if (app.last_sel_group == LastSelGroup::Trim &&
             app.last_selected_trim == 'B' &&
             app.trim.has_begin && app.trim.has_end) {
@@ -643,6 +643,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             target_render.trigger();
             return;
         }
+        if (active_view_state(app).read_only) return;
         // Tempo nudge applies to warp markers only — phase-reset mode has no
         // tempo. Mirror the Ctrl+Up / Ctrl+Down keyboard guard so Ctrl+wheel
         // is a no-op here instead of nudging the warp marker that happens to
@@ -814,11 +815,19 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     }
 
     // The S/T toggle translates the active tab's live playhead across the
-    // domain flip; the inactive tab's stored playhead and viewport carry
-    // the same domain and must translate too, or a later Ctrl+Tab loads a
-    // stale-domain position that gets read in the new domain. Same tmap,
-    // same direction as the active translation. The active tab's own slot
-    // is left stale on purpose — it resyncs at the next stash boundary.
+    // domain flip; the inactive tab's stored playhead must translate too, or
+    // a later Ctrl+Tab loads a stale-domain position that gets read in the
+    // new domain. Same tmap, same direction as the active translation.
+    // To keep the inactive tab's playhead at the same on-screen column after
+    // the toggle (matching the active-tab invariant above), the viewport is
+    // shifted by the same delta as the playhead rather than translated
+    // independently — translating both endpoints separately through the
+    // nonlinear frame_map was what caused the slide. At a fixed numeric zoom
+    // the samples-per-pixel is domain-invariant, so equal sample deltas map
+    // to equal pixel columns; at fit-file zoom the viewport is re-clamped to
+    // zero on the next tab activation anyway, so the shifted value is
+    // harmless. The active tab's own slot is left stale on purpose — it
+    // resyncs at the next stash boundary.
     {
         ViewState& other = (app.active_tab_view == 'B') ? app.tab_a : app.tab_b;
 
@@ -830,8 +839,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
             return static_cast<int64_t>(std::nearbyint(r));
         };
 
-        other.playhead_cursor_sample = xlate(other.playhead_cursor_sample);
-        other.viewport_start_sample  = xlate(other.viewport_start_sample);
+        const int64_t other_old_ph = other.playhead_cursor_sample;
+        const int64_t other_new_ph = xlate(other_old_ph);
+        other.playhead_cursor_sample = other_new_ph;
+        other.viewport_start_sample += (other_new_ph - other_old_ph);
     }
 
     // Domain is flipped — current_samples_per_pixel below reads the

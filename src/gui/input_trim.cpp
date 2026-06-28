@@ -3,17 +3,24 @@
 #include "frame_map_view.h"
 #include "time_format.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <utility>
 
 namespace {
-constexpr double kTrimAutosetSeconds = 5.0;
+// x autoset places the far bound this fraction of the visible span from the
+// near bound: samples_visible / kTrimAutosetVisibleDivisor. 10 == ten percent
+// of the on-screen width, matching the Ctrl+wheel end-nudge step
+// (kTrimEndWheelDivisor). Independent of the wheel divisor so the autoset
+// span can be tuned on its own.
+constexpr int64_t kTrimAutosetVisibleDivisor = 2.5;
 }
 
 // Plain x. Sets the begin bound at the playhead and autosets the end bound
-// kTrimAutosetSeconds away in the active (on-screen) domain. dir carries the
-// asymmetry: Begin pushes End later, End pushes Begin earlier.
+// a fraction of the visible span away (samples_visible / kTrimAutosetVisibleDivisor),
+// matching the Ctrl+wheel step. dir carries the asymmetry: Begin pushes End
+// later, End pushes Begin earlier.
 void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
@@ -36,7 +43,8 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     // SettingsSnapshot pre = capture_current_settings(app);
     const int64_t live_total = live_total_frames(app, audio);
     const int64_t offset =
-        dir * static_cast<int64_t>(kTrimAutosetSeconds) * sr;
+        dir * std::max<int64_t>(
+                  1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
 
     this_seconds = cand_seconds;
     this_has     = true;
@@ -51,9 +59,9 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
 
     // EOF clamp, mirroring the regular-marker total_duration - eps rule that
     // drop_marker / drag / nudge enforce. The end bound is held eps off the
-    // source end; the begin bound is held 2*eps, so the autoset's five-second
-    // gap can compress to a single eps near EOF without the bounds crossing
-    // (begin to end is one eps, end to EOF is one eps). eps is the same
+    // source end; the begin bound is held 2*eps, so the autoset gap can
+    // compress to a single eps near EOF without the bounds crossing (begin to
+    // end is one eps, end to EOF is one eps). eps is the same
     // zoom-based marker spacing epsilon. Clamping by role (begin / end) is
     // correct regardless of which side seeded the gesture.
     const double spp       = current_samples_per_pixel(app, audio);
@@ -426,16 +434,10 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
     // plain-or-Shift select.
     if (which == TrimHit::None) return;
     if (ctrl && shift) {
-        // Read-only refuses the drag-begin so app.trim_drag.active never
-        // enters flight; motion / release / Escape all short-circuit on it.
-        if (active_view_state(app).read_only) return;
         begin_trim_drag(which, mouse_x, /*both=*/true);
         return;
     }
     if (ctrl) {
-        // Read-only refuses the drag-begin so app.trim_drag.active never
-        // enters flight; motion / release / Escape all short-circuit on it.
-        if (active_view_state(app).read_only) return;
         begin_trim_drag(which, mouse_x);
         return;
     }

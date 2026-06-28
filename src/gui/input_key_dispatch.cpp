@@ -90,13 +90,20 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // be the other tab; only do_undo / do_redo have that entry in hand,
     // so the real read-only decision lives there, not here.
     const bool is_undo_redo = (ctrl && !alt && key == GuiKeys::Z);
+    const bool is_trim_set =
+        (key == GuiKeys::X && !ctrl && !shift && !alt);
+    const bool is_trim_clear =
+        (key == GuiKeys::X && !ctrl && shift && !alt);
+    const bool is_delete =
+        (key == GuiKeys::Delete && !ctrl && !alt);
     return !(is_o || is_play_pause || is_scrub || is_scrub_samples ||
              is_home_end || is_page_updown ||
              is_zoom || is_zoom_symbol || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q || is_ctrl_w || is_save ||
-             is_copy_phase_resets || is_undo_redo);
+             is_copy_phase_resets || is_undo_redo ||
+             is_trim_set || is_trim_clear || is_delete);
 }
 
 // Esc-cancel handlers for in-flight operations. See the declaration in
