@@ -837,6 +837,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // target tab. Does not mark the document dirty.
     if (ctrl && !shift && key == GuiKeys::Tab) {
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        target_render.trigger();
         return true;
     }
 
@@ -847,6 +848,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         cycle_marker_focus_with_recenter(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_marker_focus_with_recenter(true);
+        target_render.trigger();
         return true;
     }
 

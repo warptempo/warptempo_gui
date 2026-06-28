@@ -51,11 +51,10 @@ void GuiSettingsEditor::exit_no_commit() {
 
 namespace {
 
-// Keys with a dedicated authoring gesture; rejected by commit() to keep
-// the settings editor as a single canonical entry point for everything
-// else. Trim is handled separately below via the canonical `trim_begin` /
-// `trim_end` keys (which route to the project trim), so it is not listed
-// here.
+// Keys owned by a dedicated authoring gesture; rejected by commit() to
+// keep the settings editor as a single canonical entry point for engine
+// keys. This covers viewport/playback state, per-tab trim, and the bare
+// trim keys — all are set through their own gestures, not here.
 bool is_view_state_key(const std::string& k) {
     return k == "tab_a_viewport_start"   ||
            k == "tab_a_zoom"             ||
@@ -69,7 +68,9 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_a_trim_begin"       ||
            k == "tab_a_trim_end"         ||
            k == "tab_b_trim_begin"       ||
-           k == "tab_b_trim_end";
+           k == "tab_b_trim_end"         ||
+           k == "trim_begin"             ||
+           k == "trim_end";
 }
 
 } // namespace
@@ -108,41 +109,6 @@ void GuiSettingsEditor::commit() {
         std::fprintf(stderr,
             "warptempo_gui: settings edit rejected: %s has a dedicated "
             "gesture, not settable here\n", key.c_str());
-        return;
-    }
-
-    // 3b. Typed-field trim keys: parse MM:SS.mmm, write the project trim,
-    // push a settings-undo entry. The canonical spelling (trim_begin /
-    // trim_end) is the only trim key; there is no per-tab spelling.
-    if (key == "trim_begin" || key == "trim_end") {
-        if (!is_valid_timestamp_format(value)) {
-            app.settings_editor.red = true;
-            viewport.invalidate_timestamp_area();
-            std::fprintf(stderr,
-                "warptempo_gui: settings edit rejected: %s expects "
-                "MM:SS.mmm, got %s\n", key.c_str(), value.c_str());
-            return;
-        }
-        const double secs = parse_timestamp(value);
-        // Trim is excluded from undo/redo history — apply the typed trim but do
-        // not push an undo entry. Re-enable both lines to roll back.
-        // SettingsSnapshot pre = capture_current_settings(app);
-        if (key == "trim_begin") {
-            app.trim.has_begin     = true;
-            app.trim.begin_seconds = secs;
-        } else {
-            app.trim.has_end     = true;
-            app.trim.end_seconds = secs;
-        }
-        // undo.push_settings_undo(std::move(pre));
-        std::fprintf(stderr,
-            "warptempo_gui: setting applied: %s=%s\n",
-            key.c_str(), value.c_str());
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        text_editor::deactivate(app.settings_editor);
-        // Trim is engine input — fire the target render.
-        target_render.trigger();
         return;
     }
 
