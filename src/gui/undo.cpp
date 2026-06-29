@@ -301,13 +301,12 @@ void Undo::do_undo() {
         active_views.switch_active_tab_view_to(entry.tab);
     }
 
-    // Restore settings (engine_settings + project trim) before the marker
-    // swap. Marker entries get their settings field populated from app
-    // at push time (carry-everywhere), so the restore is a no-op for
-    // marker-only ops. Settings-only entries get the actual pre-edit
-    // settings restored here.
+    // Restore engine settings before the marker swap. Marker entries get their
+    // settings field populated from app at push time (carry-everywhere), so the
+    // restore is a no-op for marker-only ops. Settings-only entries get the
+    // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    // Trim is excluded from undo/redo history — do not restore the project trim
+    // Trim is excluded from undo/redo history — do not restore tab trim
     // from the snapshot. This was the clobber: every entry, even a marker move,
     // carried the trim and reset it here. Re-enable to roll back.
     // app.trim.begin_seconds = entry.settings.trim_begin;
@@ -342,7 +341,7 @@ void Undo::do_undo() {
     }
 
     // Post-restore rules apply only to marker-touching entries. A settings
-    // entry that changed project trim focuses the touched bound (begin as the
+    // entry that changed trim focuses the touched bound (begin as the
     // anchor when both move); a pure engine-settings edit changes no trim and
     // is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {
@@ -421,7 +420,7 @@ void Undo::do_redo() {
     }
 
     app.engine_settings    = std::move(entry.settings.engine_settings);
-    // Trim is excluded from undo/redo history — do not restore the project trim
+    // Trim is excluded from undo/redo history — do not restore tab trim
     // from the snapshot (the clobber described in do_redo). Re-enable to roll
     // back.
     // app.trim.begin_seconds = entry.settings.trim_begin;
@@ -448,7 +447,7 @@ void Undo::do_redo() {
         app.active_markers_view = entry.op_mode;
     }
 
-    // A settings entry that changed project trim focuses the touched bound
+    // A settings entry that changed trim focuses the touched bound
     // (begin as the anchor when both move); a pure engine-settings edit
     // changes no trim and is a focus no-op, decided inside focus_restored_trim.
     if (entry.op_mode == 'S') {

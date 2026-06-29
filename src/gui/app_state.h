@@ -65,9 +65,9 @@ inline double marker_hit_eps_seconds(double spp, double sr_d) {
     return static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;
 }
 
-// Wholesale snapshot of the authoring-class settings. Captured at undo-push
-// time and restored on undo/redo. Holds the typed EngineSettings plus the
-// project-level trim pair. Cost stays negligible per entry.
+// Wholesale snapshot of the undo-tracked settings. Captured at undo-push
+// time and restored on undo/redo. Holds the typed EngineSettings; the trim
+// fields remain present for the dormant trim-undo path but are not populated.
 struct SettingsSnapshot {
     EngineSettings engine_settings;
     double trim_begin     = 0.0;
@@ -272,10 +272,9 @@ struct EditorTextDragState {
 // trim boundary, Markers when it lands on a marker.
 enum class LastSelGroup { Markers, Trim };
 
-// Ctrl+drag of a trim boundary stem. Parallel to DragState but
-// writes the project trim directly (no overlay): motion mutates the
-// dragged bound's seconds live, release pushes a single SettingsSnapshot
-// undo. `pre` is captured at drag-begin so release can push the inverse.
+// Ctrl+drag of a trim boundary stem. Parallel to DragState but motion mutates
+// the active tab's live trim mirror directly (no overlay); release triggers a
+// target render when the bound moved. Trim is excluded from undo/redo.
 // Session-only.
 struct TrimDragState {
     bool active   = false;
@@ -287,7 +286,7 @@ struct TrimDragState {
     // matching warp-marker drag — so the bound tracks the grab point with no
     // initial snap. See DragState::anchor_mouse_time_seconds.
     double anchor_seconds     = 0.0;
-    SettingsSnapshot pre;    // pre-drag settings snapshot for the undo
+    SettingsSnapshot pre;    // pre-drag settings snapshot for dormant trim undo
 
     // Ctrl+Shift move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
@@ -613,9 +612,9 @@ struct AppState {
     // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
     // (tab_a or tab_b) is mirrored into the live AppState fields.
     // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
-    // each hold an independent viewport/zoom/playhead/selection
+    // each hold an independent viewport/zoom/playhead/trim/selection
     // tuple, but share the same warpmarkers, phase_reset_markers,
-    // engine_settings, and project-level trim.
+    // and engine_settings.
     ViewState tab_a;
     ViewState tab_b;
     char active_tab_view = 'A';
@@ -949,10 +948,10 @@ inline const ViewState& active_view_state(const AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
 }
 
-// Snapshot the authoring-class settings from `app` (engine_settings +
-// project-level trim pair). Called by Undo's push helpers at push time
-// so every entry carries-everywhere; also called by do_undo / do_redo
-// when constructing the inverse entry. Body in app_state.cpp.
+// Snapshot the undo-tracked settings from `app` (engine_settings; trim is
+// excluded). Called by Undo's push helpers at push time so every entry
+// carries-everywhere; also called by do_undo / do_redo when constructing the
+// inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
 
 // True iff the bottom strip is showing a modal overlay (prompt,

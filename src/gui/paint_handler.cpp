@@ -696,7 +696,7 @@ GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
     const bool rve = app.render_view.enabled;
 
-    // has-set + selected bits come live from the project trim; render view
+    // has-set + selected bits come live from the active tab's trim; render view
     // forces them off (the render waveform has no trim).
     out.has_begin      = !rve && app.trim.has_begin;
     out.has_end        = !rve && app.trim.has_end;

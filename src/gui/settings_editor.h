@@ -14,12 +14,11 @@ struct GuiTargetRender;
 // vocabulary, red on parse failure) but painted in the bottom strip
 // instead of over the flag rect.
 //
-// commit() routes the typed key through three paths:
+// commit() routes the typed key through two paths:
 // 1. View-state keys (viewport / zoom / playhead / follow / active_markers_view /
-//    playback_speed) are rejected — they have dedicated gestures.
-// 2. trim_begin / trim_end parse the value as MM:SS.mmm and write through
-//    to the project trim; push a settings-undo entry.
-// 3. Canonical engine keys go through validate_engine_setting; on success
+//    playback_speed / per-tab trim) are rejected — they have dedicated gestures.
+//    Trim is gesture-owned, not typed in the settings editor.
+// 2. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
 //    engine key") with a red-flash and no commit.

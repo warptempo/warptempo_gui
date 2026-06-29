@@ -9,17 +9,14 @@
 #include <utility>
 
 namespace {
-// x autoset places the far bound this fraction of the visible span from the
-// near bound: samples_visible / kTrimAutosetVisibleDivisor. 10 == ten percent
-// of the on-screen width, matching the Ctrl+wheel end-nudge step
-// (kTrimEndWheelDivisor). Independent of the wheel divisor so the autoset
-// span can be tuned on its own.
-constexpr int64_t kTrimAutosetVisibleDivisor = 2.5;
+// x autoset places the far bound half of the visible span from the near bound:
+// samples_visible / kTrimAutosetVisibleDivisor. Independent of the wheel
+// divisor so the autoset span can be tuned on its own.
+constexpr int64_t kTrimAutosetVisibleDivisor = 2;
 }
 
 // Plain x. Sets the begin bound at the playhead and autosets the end bound
-// a fraction of the visible span away (samples_visible / kTrimAutosetVisibleDivisor),
-// matching the Ctrl+wheel step. dir carries the asymmetry: Begin pushes End
+// half of the visible span away. dir carries the asymmetry: Begin pushes End
 // later, End pushes Begin earlier.
 void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int sr = audio.sample_rate();
@@ -119,8 +116,8 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     target_render.trigger();
 }
 
-// Shift+x: clear both trim bounds unconditionally. Undoable as a settings
-// entry. Silent no-op when neither bound is set.
+// Shift+x: clear both trim bounds unconditionally. Silent no-op when neither
+// bound is set. Trim is gesture-owned and excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
         // Trim is excluded from undo/redo history. Re-enable this capture and

@@ -221,10 +221,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+P                 → copy phase reset placements
     //                              (read-only: writes only to the
     //                              session-only phase_reset_clipboard)
-    // Every authoring chord (drop, drag, delete, label/tempo edit,
-    // trim set/unset, disabled-flag toggle, paste, iteration / BPM
-    // mode, render dispatch, queue add, undo/redo) is silently
-    // dropped at this gate.
+    // Marker, tempo, and phase-reset authoring chords are silently
+    // dropped at this gate; trim gestures are still allowed because
+    // trim is per-tab navigation state.
     if (!app.render_view.enabled && active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;
@@ -421,7 +420,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x sets the begin trim at the playhead and autosets end 5 s away.
+    // x sets the begin trim at the playhead and autosets end half of the
+    // visible span away.
     // Shift+x clears both bounds. The end bound keeps its mouse operations
     // (Ctrl+drag single, Ctrl+Shift+drag pair, select+Delete).
     // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
@@ -750,7 +750,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // translates source-frame viewport / playhead / total_frames across
     // the WHOLE song, so the frame_map must too — see the matching
     // comment in paint_handler.cpp's per-paint recompute. Passing the
-    // the project trim here would shrink the segment list to the
+    // the active tab's trim here would shrink the segment list to the
     // exposition's source-frame range and identity-extrapolate the
     // post-exposition tail from the wrong tgt_frame anchor.
     tmin.has_trim_begin = false;

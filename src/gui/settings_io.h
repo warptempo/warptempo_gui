@@ -12,9 +12,9 @@ struct ViewState;
 
 // Parsed view-state contents of .settings. Engine-key lines are handled
 // separately by read_engine_settings_from_file; this struct carries only
-// the typed view-state fields (per-tab viewport / zoom / playhead, follow,
-// active_audio_view, active_markers_view, active_tab_view, playback_speed,
-// project-level trim).
+// the typed view-state fields (per-tab viewport / zoom / playhead / trim,
+// follow, active_audio_view, active_markers_view, active_tab_view, and
+// playback_speed).
 struct ParsedSettings {
     bool    has_tab_a_vp   = false;
     int64_t tab_a_vp       = 0;

@@ -5,9 +5,10 @@
 # build
 build*/
 
-# claude
+# ai tools
 .claude/
 CLAUDE.md
+AGENTS.md
 
 # tmp
 tmp/

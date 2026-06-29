@@ -341,7 +341,7 @@ private:
     // not source. Returns false (out untouched) when audio/zoom state is
     // unusable.
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
-    void commit_trim_drag();               // release: undo push + render
+    void commit_trim_drag();               // release: trigger render if moved
     // Delete on the trim group: unset each selected bound (reuses
     // handle_trim_unset) and clears the trim-selected flags.
     void delete_selected_trim();
@@ -367,7 +367,7 @@ private:
     bool render_view_key_blocked(GuiKey key, GuiInputState mods);
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
-    // allowlist of navigation / playback / zoom / view-switch / undo /
+    // allowlist of navigation / playback / zoom / view-switch / trim / undo /
     // close-prompt keys honored in a read-only source tab — i.e. should be
     // dropped. Sibling of render_view_key_blocked.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
