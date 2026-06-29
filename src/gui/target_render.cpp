@@ -8,6 +8,10 @@
 #include <cstdio>
 #include <utility>
 
+bool GuiTargetRender::target_view_available() const {
+    return app.engine_settings.output_format == "wav";
+}
+
 void GuiTargetRender::trigger() {
     // Output-affecting mutation hook: the buffer is now stale relative
     // to engine input. Set the bit unconditionally — even in source
@@ -15,6 +19,10 @@ void GuiTargetRender::trigger() {
     // dispatches against the accumulated source-view edits rather than
     // re-binding to a buffer that no longer matches the live state.
     is_dirty_ = true;
+    if (!target_view_available()) {
+        cancel_in_flight_update();
+        return;
+    }
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
     if (app.active_audio_view != 'T') return;
@@ -65,6 +73,10 @@ void GuiTargetRender::trigger() {
 void GuiTargetRender::maybe_dispatch_pending() {
     if (!pending_)                  return;
     if (async_renderer.is_busy())   return;
+    if (!target_view_available()) {
+        pending_ = false;
+        return;
+    }
     // Re-validate target view: a target → source toggle between trigger()
     // and the pump may have moved us out of target view. In that case
     // rebind_to_source() already cleared pending_, but be defensive.
@@ -76,6 +88,15 @@ void GuiTargetRender::maybe_dispatch_pending() {
 }
 
 void GuiTargetRender::dispatch_render_now() {
+    if (!target_view_available() || app.active_audio_view != 'T' ||
+        audio.total_frames() <= 0 || app.source_audio_path.empty()) {
+        pending_ = false;
+        if (app.queue_progress_text == "updating...") {
+            viewport.invalidate_timestamp_area();
+            app.queue_progress_text.clear();
+        }
+        return;
+    }
     pending_ = false;
     // The batch cancel sentinel may still be set from trigger(); clear it on
     // both the cache-hit and synthesis paths so the next archival render path
@@ -259,6 +280,10 @@ void GuiTargetRender::ensure_ready() {
     // Source view does not use target_buffer. Match trigger()'s
     // source-view no-op invariant.
     if (app.active_audio_view != 'T') return;
+    if (!target_view_available()) {
+        leave_target_view();
+        return;
+    }
     // No audio loaded — nothing to do.
     if (audio.total_frames() <= 0)              return;
     if (app.source_audio_path.empty())          return;
@@ -295,6 +320,56 @@ void GuiTargetRender::ensure_ready() {
     // dispatch sequence. Identical body to the original S→T eager-
     // dispatch path that this method replaces.
     trigger();
+}
+
+void GuiTargetRender::leave_target_view() {
+    if (app.active_audio_view != 'T') {
+        cancel_in_flight_update();
+        return;
+    }
+
+    const double cur_spp = current_samples_per_pixel(app, audio);
+    const double ph_px =
+        (cur_spp > 0.0)
+        ? (static_cast<double>(app.playhead_cursor_sample -
+                               app.viewport_start_sample) / cur_spp)
+        : 0.0;
+
+    const auto& tmap = target_view_map_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).frame_map;
+
+    const auto to_source = [&](int64_t s) -> int64_t {
+        const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
+        return static_cast<int64_t>(
+            std::nearbyint(map_target_to_source(q, tmap)));
+    };
+
+    const int64_t new_playhead = to_source(app.playhead_cursor_sample);
+    {
+        ViewState& other = (app.active_tab_view == 'B') ? app.tab_a : app.tab_b;
+        const int64_t other_old_ph = other.playhead_cursor_sample;
+        const int64_t other_new_ph = to_source(other_old_ph);
+        other.playhead_cursor_sample = other_new_ph;
+        other.viewport_start_sample += (other_new_ph - other_old_ph);
+    }
+
+    app.active_audio_view = 'S';
+    app.playhead_cursor_sample = new_playhead;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_sample = new_playhead;
+    const double new_spp = current_samples_per_pixel(app, audio);
+    const double new_vp_d =
+        static_cast<double>(new_playhead) - ph_px * new_spp;
+    app.viewport_start_sample =
+        static_cast<int64_t>(std::nearbyint(new_vp_d));
+
+    clamp_viewport_start(app, audio);
+    viewport.clear_hover_popup();
+    rebind_to_source();
+    viewport.kick_waveform_sync();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
 }
 
 void GuiTargetRender::cancel_for_load() {

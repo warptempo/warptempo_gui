@@ -163,6 +163,9 @@ void GuiSettingsEditor::commit() {
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
+    if (key == "output_format" && !target_render.target_view_available()) {
+        target_render.leave_target_view();
+    }
 
     std::fprintf(stderr,
         "warptempo_gui: setting applied: %s=%s\n",
@@ -171,9 +174,8 @@ void GuiSettingsEditor::commit() {
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
     // Engine settings are engine input — fire target render.
-    // (title / output_format don't change rendered audio in any
-    // user-visible way, but the trigger is cheap and the target render
-    // surfaces in target view.)
+    // Non-wav output_format leaves target view above, so trigger() marks the
+    // buffer dirty but does not dispatch until target view is available again.
     target_render.trigger();
 }
 

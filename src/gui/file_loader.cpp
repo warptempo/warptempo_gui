@@ -257,6 +257,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
         app.engine_settings = std::move(*es);
     }
+    if (app.active_audio_view == 'T' &&
+        !target_render.target_view_available()) {
+        std::fprintf(stderr,
+            "warptempo_gui: source load aborted: invalid settings in '%s': "
+            "active_audio_view=T requires output_format=wav\n",
+            app.settings_path.c_str());
+        revert_to_blank();
+        return false;
+    }
 
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the
