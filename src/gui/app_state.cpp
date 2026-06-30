@@ -90,24 +90,29 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     }
     const bool use_tmap = !target_frame_map.empty();
     for (int i = 0; i < n; ++i) {
-        double ms;
+        int64_t src_sample;
         if (rv_trans) {
-            ms = app.render_view.phase_resets[i].time_seconds *
-                 static_cast<double>(sr);
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.render_view.phase_resets[i].time_seconds *
+                static_cast<double>(sr)));
         } else if (rv) {
-            ms = app.render_view.markers[i].time_seconds *
-                 static_cast<double>(sr);
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.render_view.markers[i].time_seconds *
+                static_cast<double>(sr)));
         } else if (app.active_markers_view == 'P') {
-            ms = app.phase_reset_markers.markers()[i].time_seconds *
-                 static_cast<double>(sr);
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.phase_reset_markers.markers()[i].time_seconds *
+                static_cast<double>(sr)));
         } else {
-            ms = app.warpmarkers.markers()[i].time_seconds *
-                 static_cast<double>(sr);
+            src_sample = static_cast<int64_t>(std::nearbyint(
+                app.warpmarkers.markers()[i].time_seconds *
+                static_cast<double>(sr)));
         }
+        double ms = static_cast<double>(src_sample);
         if (use_tmap) {
-            const size_t q = (ms < 0.0)
+            const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
-                : static_cast<size_t>(std::llrint(ms));
+                : static_cast<size_t>(src_sample);
             ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) continue;
@@ -150,11 +155,13 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     auto bound_dist = [&](double seconds, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
-        double ms = std::nearbyint(seconds * sr_d);
+        const int64_t src_sample = static_cast<int64_t>(
+            std::nearbyint(seconds * sr_d));
+        double ms = static_cast<double>(src_sample);
         if (use_tmap) {
-            const size_t q = (ms < 0.0)
+            const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
-                : static_cast<size_t>(std::llrint(ms));
+                : static_cast<size_t>(src_sample);
             ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) return kMarkerHitHalfPx + 1;
@@ -218,11 +225,13 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     auto chip_dist = [&](double seconds, bool present,
                          const char* /*glyph*/) -> int {
         if (!present) return kMiss;
-        double ms = std::nearbyint(seconds * sr_d);
+        const int64_t src_sample = static_cast<int64_t>(
+            std::nearbyint(seconds * sr_d));
+        double ms = static_cast<double>(src_sample);
         if (use_tmap) {
-            const size_t q = (ms < 0.0)
+            const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
-                : static_cast<size_t>(std::llrint(ms));
+                : static_cast<size_t>(src_sample);
             ms = map_source_to_target(q, target_frame_map);
         }
         if (ms < vp) return kMiss;

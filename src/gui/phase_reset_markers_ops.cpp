@@ -190,7 +190,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         for (int idx : app.selected_markers) {
             const double t_src = tv[idx].time_seconds;
             const double t_tgt = map_source_to_target(
-                static_cast<size_t>(std::llrint(t_src * sr_d)), tmap);
+                static_cast<size_t>(std::nearbyint(t_src * sr_d)), tmap);
             const double t_tgt_new = t_tgt +
                 static_cast<double>(direction) * spp;
             const size_t q = (t_tgt_new < 0.0)
@@ -308,4 +308,3 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     viewport.invalidate_timestamp_area();
     target_render.trigger();
 }
-

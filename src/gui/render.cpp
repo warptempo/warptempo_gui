@@ -1304,14 +1304,17 @@ double flag_pending_text_left_x(
     // clears the editor; the click handler exits before any drag begins),
     // so a fresh build is correct and app.drag.frozen_frame_map need not be
     // consulted.
-    double ms = mv[marker_idx].time_seconds * sr;
+    const int64_t src_sample = static_cast<int64_t>(
+        std::nearbyint(mv[marker_idx].time_seconds * sr));
+    double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {
         const auto tmap = build_target_view_frame_map(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         if (!tmap.empty()) {
-            const size_t src_frame = static_cast<size_t>(
-                std::nearbyint(mv[marker_idx].time_seconds * sr));
+            const size_t src_frame = (src_sample < 0)
+                ? static_cast<size_t>(0)
+                : static_cast<size_t>(src_sample);
             ms = map_source_to_target(src_frame, tmap);
         }
     }

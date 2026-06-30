@@ -311,7 +311,9 @@ bool GuiRenderView::load_render_view_at(int index) {
     }
     playback.stop();
     playback.shutdown();
-    app.playhead_scanner_active      = false;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
     viewport.clear_hover_popup();
 
@@ -419,7 +421,9 @@ void GuiRenderView::restore_source_audio() {
     if (source_audio_held.total_frames() == 0) return;
     playback.stop();
     playback.shutdown();
-    app.playhead_scanner_active      = false;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
     viewport.clear_hover_popup();
 

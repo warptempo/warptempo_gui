@@ -38,7 +38,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // audio thread. Order (stop → shutdown → load → init) is fixed.
     playback.stop();
     playback.shutdown();
-    app.playhead_scanner_active     = false;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
     app.hover_popup    = HoverPopupState{};
 
@@ -331,7 +333,9 @@ void GuiFileLoader::revert_to_blank() {
     // away. Same invariant as load_file.
     playback.stop();
     playback.shutdown();
-    app.playhead_scanner_active      = false;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
 
     // Drain the waveform worker before discarding the audio.
@@ -353,6 +357,9 @@ void GuiFileLoader::revert_to_blank() {
     app.viewport_start_sample   = 0;
     app.zoom_level              = 0;
     app.follow_mode             = true;
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
     app.playback_speed          = 1.0f;
 

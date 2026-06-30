@@ -39,6 +39,8 @@ void GuiTargetRender::trigger() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
+        app.playhead_scanner_restore_pending = false;
+        app.playhead_scanner_endpoint_painted = false;
         app.playhead_scanner_sample = app.playhead_cursor_sample;
     }
 
@@ -304,6 +306,8 @@ void GuiTargetRender::ensure_ready() {
         if (playback.is_playing()) {
             playback.stop();
             app.playhead_scanner_active = false;
+            app.playhead_scanner_restore_pending = false;
+            app.playhead_scanner_endpoint_painted = false;
             app.playhead_scanner_sample = app.playhead_cursor_sample;
         }
         // Restore the playback bias the cached buffer was rendered with.
@@ -362,6 +366,8 @@ void GuiTargetRender::leave_target_view() {
     app.active_audio_view = 'S';
     app.playhead_cursor_sample = new_playhead;
     app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = new_playhead;
     const double new_spp = current_samples_per_pixel(app, audio);
     const double new_vp_d =
@@ -441,6 +447,8 @@ void GuiTargetRender::rebind_to_source() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
+        app.playhead_scanner_restore_pending = false;
+        app.playhead_scanner_endpoint_painted = false;
     }
     if (audio.total_frames() > 0) {
         playback.rebind_buffer(audio.samples_ptr(), audio.total_frames());

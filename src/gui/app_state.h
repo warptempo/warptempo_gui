@@ -431,13 +431,16 @@ struct AppState {
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame; the scanner
     // is the engine's playback position. They coincide when nothing is
-    // playing — every stop path restores playhead_scanner_sample ==
-    // playhead_cursor_sample before paint returns. The cursor is
-    // per-tab; the scanner is session-only and not persisted.
+    // playing. Natural end holds the scanner on the exclusive end bound for
+    // one paint before restoring it to the cursor; manual stop paths restore
+    // immediately. The cursor is per-tab; the scanner is session-only and not
+    // persisted.
     // `playback_speed` is authoritative on the main thread and pushed
     // to the playback engine on every change.
     int64_t playhead_scanner_sample = 0;
     bool    playhead_scanner_active = false;
+    bool    playhead_scanner_restore_pending = false;
+    bool    playhead_scanner_endpoint_painted = false;
     float   playback_speed          = 1.0f;
 
     // One-shot stash of the scanner's last painted pixel-x under the

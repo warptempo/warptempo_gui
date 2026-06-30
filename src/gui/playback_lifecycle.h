@@ -32,6 +32,7 @@ struct GuiPlaybackLifecycle {
           viewport(viewport_) {}
 
     void stop_playback_if_playing();
+    void hold_natural_end_scanner(int64_t endpoint_sample);
     void restore_playhead_to_lsp();
     void toggle_playback();
     void set_playback_speed(float s);

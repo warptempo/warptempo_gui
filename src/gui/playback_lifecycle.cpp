@@ -18,11 +18,26 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     const double scanner_px = scanner_pixel_x(app, audio);
     const double cursor_px  = playhead_pixel_x(app, audio);
     playback.stop();
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
     viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
     app.follow_overridden_for_session = false;
+}
+
+void GuiPlaybackLifecycle::hold_natural_end_scanner(int64_t endpoint_sample) {
+    const double old_px = scanner_pixel_x(app, audio);
+    app.playhead_scanner_sample = endpoint_sample;
+    app.playhead_scanner_active = true;
+    app.playhead_scanner_restore_pending = true;
+    app.playhead_scanner_endpoint_painted = false;
+    const double new_px = scanner_pixel_x(app, audio);
+    viewport.invalidate_playhead_columns(old_px, new_px);
+    viewport.invalidate_timestamp_area();
+    const GuiRect ts = top_strip_area(app);
+    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
 }
 
 // End scanner motion and restore the invariant. Used by Space/Enter to
@@ -38,6 +53,8 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     viewport.invalidate_timestamp_area();
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
     app.follow_overridden_for_session = false;
@@ -71,6 +88,8 @@ void GuiPlaybackLifecycle::toggle_playback() {
     // Defensive: clear any stale override from an unhandled stop path so
     // it can't survive into the new playback session.
     app.follow_overridden_for_session = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
     int64_t start;
     int64_t end;
     // Launch position for the visible scanner, always in the active

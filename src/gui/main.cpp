@@ -572,6 +572,9 @@ int main(int argc, char** argv) {
 
     gui.set_on_redraw([&](cairo_t* cr, int x, int y, int w, int h) {
         paint_handler.on_redraw(cr, x, y, w, h);
+        if (app.playhead_scanner_restore_pending) {
+            app.playhead_scanner_endpoint_painted = true;
+        }
     });
 
     gui.set_on_resize([&](int w, int h) {
@@ -780,10 +783,26 @@ int main(int argc, char** argv) {
             return;
         }
 
-        // Playing was true last tick, now false — natural end. Return the
-        // visible playhead to the launch position (same as Space-to-stop).
-        if (app.playhead_scanner_active) {
+        if (app.playhead_scanner_restore_pending) {
+            if (!app.playhead_scanner_endpoint_painted) return;
             playback_lifecycle.restore_playhead_to_lsp();
+            if (app.follow_mode && !app.follow_overridden_for_session)
+                follow_scroll_if_needed();
+            return;
+        }
+
+        // Playing was true last tick, now false — natural end. Hold the
+        // scanner on the exclusive end bound for one paint, then restore it to
+        // the launch position on the following tick.
+        if (app.playhead_scanner_active) {
+            const int64_t endpoint =
+                (app.active_audio_view == 'T' &&
+                 !app.render_view.enabled &&
+                 app.target_buffer_frames > 0)
+                    ? (app.target_buffer_start_frame +
+                       app.target_buffer_frames)
+                    : viewport.trim_end_sample();
+            playback_lifecycle.hold_natural_end_scanner(endpoint);
             if (app.follow_mode && !app.follow_overridden_for_session)
                 follow_scroll_if_needed();
         }

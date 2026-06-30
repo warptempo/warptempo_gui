@@ -360,9 +360,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
     if (key == GuiKeys::S && !alt) {
         if (ctrl && !shift)              save_ops.save();
-        else if (!ctrl && app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
-        else if (!ctrl && shift)         warpops.drop_marker_at_playhead();
-        else if (!ctrl && !shift)        warpops.drop_copy_previous_at_playhead();
+        else if (!ctrl && !shift &&
+                 app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
+        else if (!ctrl && shift &&
+                 app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
+        else if (!ctrl && !shift &&
+                 app.active_markers_view == 'W') warpops.drop_copy_previous_at_playhead();
         return;
     }
     // n / Shift+N: warp-only authoring (pass drop / toggle inherit). No
