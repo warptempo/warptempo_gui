@@ -20,16 +20,61 @@ bool starts_with(const std::string& s, const char* pfx) {
     return s.size() >= n && s.compare(0, n, pfx) == 0;
 }
 
-// Parse a "MM:SS.mmm" timestamp token. Returns true and writes to `out` on
-// success; on failure fills `err_msg`.
-bool parse_timestamp_token(const std::string& tok, double& out,
-                           std::string& err_msg) {
-    if (!is_valid_timestamp_format(tok)) {
-        err_msg = "expected MM:SS.mmm timestamp: " + tok;
-        return false;
+double eval_legacy_offset_suffix(const std::string& in) {
+    std::string s;
+    s.reserve(in.size());
+    for (char c : in) {
+        if (!std::isspace(static_cast<unsigned char>(c))) s.push_back(c);
     }
-    out = parse_timestamp(tok);
-    return true;
+    double total = 0.0;
+    char op = '+';
+    size_t i = 0;
+    while (i < s.size()) {
+        size_t len = 0;
+        while (i + len < s.size() &&
+               (std::isdigit(static_cast<unsigned char>(s[i + len])) ||
+                s[i + len] == '.')) {
+            ++len;
+        }
+        if (len > 0) {
+            const double v = std::stod(s.substr(i, len));
+            if (op == '+') total += v;
+            else if (op == '-') total -= v;
+            i += len;
+        } else if (s[i] == '+' || s[i] == '-') {
+            op = s[i];
+            ++i;
+        } else {
+            break;
+        }
+    }
+    return total;
+}
+
+std::expected<double, std::string> parse_timestamp_with_optional_offset(
+    const std::vector<std::string>& toks) {
+    if (toks.empty()) {
+        return std::unexpected<std::string>("missing timestamp");
+    }
+    if (toks.size() > 1) {
+        return std::unexpected<std::string>("unexpected status code");
+    }
+
+    const std::string& token = toks[0];
+    if (token.find('|') != std::string::npos) {
+        return std::unexpected<std::string>("phase-reset mode tokens removed; "
+                  "strip the trailing |peak/|heap/|pass");
+    }
+    if (token.size() < 9 || !is_valid_timestamp_format(token.substr(0, 9))) {
+        return std::unexpected<std::string>(
+            "expected MM:SS.mmm timestamp: " + token);
+    }
+
+    double out = parse_timestamp(token.substr(0, 9));
+    if (token.size() > 9) {
+        out += eval_legacy_offset_suffix(token.substr(9));
+    }
+    return out;
 }
 
 // Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
@@ -65,24 +110,11 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
     if (toks.empty()) {
         return std::unexpected<std::string>("missing timestamp");
     }
-    if (toks.size() > 1) {
-        return std::unexpected<std::string>("unexpected status code");
-    }
 
-    // The phase-reset mode token (`|peak`/`|heap`/`|pass`) was removed when
-    // heap became the sole engine. A line still carrying a `|` suffix is a
-    // pre-migration file; reject it hard so the strip requirement surfaces,
-    // consistent with the parser's other strict rejections, rather than
-    // silently accepting and ignoring the suffix.
-    const std::string& token = toks[0];
-    if (token.find('|') != std::string::npos) {
-        return std::unexpected<std::string>("phase-reset mode tokens removed; "
-                  "strip the trailing |peak/|heap/|pass");
-    }
-
-    std::string err;
-    if (!parse_timestamp_token(token, out.time_seconds, err))
-        return std::unexpected(std::move(err));
+    auto parsed_time = parse_timestamp_with_optional_offset(toks);
+    if (!parsed_time)
+        return std::unexpected(std::move(parsed_time.error()));
+    out.time_seconds = *parsed_time;
     return out;
 }
 
@@ -123,7 +155,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
         const double eff = m.time_seconds;
-        if (eff == 0.0)
+        if (eff <= 0.0)
             return fail(line_number,
                 "phase reset at 00:00.000 not allowed (degenerate: the "
                 "first frame already reseeds)");

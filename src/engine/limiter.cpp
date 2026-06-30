@@ -1,4 +1,5 @@
 #include "limiter.h"
+#include "wt_profile.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -202,6 +203,8 @@ static void rescan_region(const LimGrid& g,
 }  // anonymous namespace
 
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
+    const bool prof = wtprof::enabled();
+    const auto t_total_0 = wtprof::now();
     auto& lp = stft.limiter_params;
 
     const int channels    = stft.channels;
@@ -210,6 +213,13 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     const int64_t render_frames = static_cast<int64_t>(render.size()) / channels;
     if (render_frames <= 0) {
         std::cout << "[Pass 3/3] Limiter.......................... empty render, skipped\n";
+        if (prof) {
+            const auto t_total_1 = wtprof::now();
+            std::cerr << "[profile] limiter_summary ms="
+                      << wtprof::ms(t_total_0, t_total_1)
+                      << " sample_frames=0 channels=" << channels
+                      << " peak_count=0 iteration_count=0 active=no bypass=empty\n";
+        }
         return;
     }
 
@@ -353,8 +363,17 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     if (queue.empty()) {
         std::cout << "[Pass 3/3] Limiter.......................... 0 peaks, no attenuation required\n";
         destroy();
+        if (prof) {
+            const auto t_total_1 = wtprof::now();
+            std::cerr << "[profile] limiter_summary ms="
+                      << wtprof::ms(t_total_0, t_total_1)
+                      << " sample_frames=" << render_frames
+                      << " channels=" << channels
+                      << " peak_count=0 iteration_count=0 active=no bypass=no_attenuation\n";
+        }
         return;   // render left untouched (no round-trip applied)
     }
+    const size_t initial_peak_count = queue.size();
 
     auto cmp_desc = [](const Peak& a, const Peak& b) {
         if (a.magnitude != b.magnitude) return a.magnitude > b.magnitude;
@@ -382,6 +401,16 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         if (stft.cancel_flag && stft.cancel_flag->load()) {
             stft.cancellation_observed = true;
             destroy();
+            if (prof) {
+                const auto t_total_1 = wtprof::now();
+                std::cerr << "[profile] limiter_summary ms="
+                          << wtprof::ms(t_total_0, t_total_1)
+                          << " sample_frames=" << render_frames
+                          << " channels=" << channels
+                          << " peak_count=" << initial_peak_count
+                          << " iteration_count=" << iterations
+                          << " active=yes outcome=cancelled\n";
+            }
             return;
         }
         Peak peak = queue.front();
@@ -730,4 +759,15 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     }
 
     destroy();
+    if (prof) {
+        const auto t_total_1 = wtprof::now();
+        std::cerr << "[profile] limiter_summary ms="
+                  << wtprof::ms(t_total_0, t_total_1)
+                  << " sample_frames=" << render_frames
+                  << " channels=" << channels
+                  << " peak_count=" << initial_peak_count
+                  << " resolved_peak_count=" << resolved.size()
+                  << " iteration_count=" << iterations
+                  << " active=yes bypass=no\n";
+    }
 }

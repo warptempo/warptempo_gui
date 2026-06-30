@@ -2,7 +2,6 @@
 
 #include "app_state.h"
 #include "audio.h"
-
 #include <bit>
 #include <cmath>
 #include <cstdint>
@@ -37,7 +36,9 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     tmin.trim_end_sec   = 0.0;
     std::vector<FrameMapSegment> out;
     auto r = build_maps(tmin);
-    if (!r) return out;
+    if (!r) {
+        return out;
+    }
     const MapBuildResult& tmres = *r;
     out.reserve(tmres.frame_map.size());
     for (const auto& s : tmres.frame_map) {

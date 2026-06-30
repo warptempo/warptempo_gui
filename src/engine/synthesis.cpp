@@ -1,5 +1,6 @@
 #include "synthesis.h"
 #include "peak_limiter.h"
+#include "wt_profile.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -86,12 +87,15 @@ void Synthesis::synthesize_full(
     // Bit-identical: same floats, just resident in RAM.
     std::vector<float> planar(static_cast<size_t>(channels) *
                               static_cast<size_t>(src_frames));
+    double wt_deinterleave_ms = 0.0;
     {
+        const auto _deint0 = wtprof::now();
         const float* src = stft.src_samples;
         for (int64_t f = 0; f < src_frames; ++f)
             for (int ch = 0; ch < channels; ++ch)
                 planar[static_cast<size_t>(ch) * src_frames + f] =
                     src[static_cast<size_t>(f) * channels + ch];
+        wt_deinterleave_ms = wtprof::ms(_deint0, wtprof::now());
     }
 
     // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
@@ -362,14 +366,17 @@ void Synthesis::synthesize_full(
     // (sf_writef / buffer-append / peak-limiter) is order-preserving and
     // chunk-agnostic, so one big call is identical to the old per-frame calls.
     int64_t t_write = 0;
+    double wt_interleave_ms = 0.0;
     if (out_frames > 0) {
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
+        const auto _inter0 = wtprof::now();
         for (int ch = 0; ch < channels; ++ch) {
             const std::vector<float>& m = mono[ch];
             assert(static_cast<int64_t>(m.size()) >= out_frames);
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
+        wt_interleave_ms = wtprof::ms(_inter0, wtprof::now());
         const auto _w0 = prof_clock::now();
         write_cb(inter.data(), static_cast<size_t>(out_frames));
         t_write += prof_ns(_w0, prof_clock::now());
@@ -400,6 +407,19 @@ void Synthesis::synthesize_full(
                   << " channel threads; wall = elapsed ms of the compute+write"
                   << " region. work_sum exceeds wall by about the channel count"
                   << " when threading is healthy.)\n";
+        const unsigned long long source_bytes =
+            static_cast<unsigned long long>(src_frames) *
+            static_cast<unsigned long long>(channels) *
+            static_cast<unsigned long long>(sizeof(float));
+        std::cerr << "[profile] synth_summary"
+                  << " source_frames=" << src_frames
+                  << " target_frames=" << out_frames
+                  << " channels=" << channels
+                  << " deinterleave_ms=" << wt_deinterleave_ms
+                  << " interleave_ms=" << wt_interleave_ms
+                  << " output_append_ms=" << (t_write / 1e6)
+                  << " approx_source_mb=" << wtprof::bytes_to_mb(source_bytes)
+                  << "\n";
     }
 }
 

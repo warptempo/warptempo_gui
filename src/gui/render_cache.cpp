@@ -1,4 +1,5 @@
 #include "render_cache.h"
+#include "wt_profile.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -177,7 +178,9 @@ void RenderCache::shutdown() {
 bool RenderCache::lookup(const std::vector<uint8_t>& fp,
                          int channels, int sample_rate,
                          std::vector<float>& out) {
-    if (!enabled_) return false;
+    if (!enabled_) {
+        return false;
+    }
     const uint64_t h = fnv1a64(fp);
 
     if (auto it = ram_.find(h); it != ram_.end()) {
@@ -211,15 +214,29 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
 void RenderCache::insert(const std::vector<uint8_t>& fp,
                          const std::vector<float>& samples,
                          int channels, int sample_rate, int64_t frame_count) {
-    if (!enabled_) return;
-    if (frame_count <= 0 || samples.empty() || channels <= 0 || sample_rate <= 0)
+    const bool prof = wtprof::enabled();
+    const auto t0 = wtprof::now();
+    if (!enabled_) {
         return;
+    }
+    if (frame_count <= 0 || samples.empty() || channels <= 0 || sample_rate <= 0) {
+        return;
+    }
 
     const uint64_t h = fnv1a64(fp);
     const bool to_ram =
         frame_count <= static_cast<int64_t>(sample_rate) * kRamMaxRenderSeconds;
     if (to_ram) insert_ram(h, fp, samples, channels, sample_rate);
     else        insert_disk(h, fp, samples, channels, sample_rate, frame_count);
+    if (prof) {
+        const auto t1 = wtprof::now();
+        std::fprintf(stderr,
+            "[profile] cache_insert enabled=yes inserted=yes tier=%s ms=%.3f frames=%lld bytes=%llu\n",
+            to_ram ? "ram" : "disk", wtprof::ms(t0, t1),
+            static_cast<long long>(frame_count),
+            static_cast<unsigned long long>(samples.size()) *
+                static_cast<unsigned long long>(sizeof(float)));
+    }
 }
 
 void RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
@@ -354,6 +371,7 @@ bool RenderCache::write_file(const std::string& path,
                              const std::vector<float>& samples,
                              int channels, int sample_rate,
                              int64_t frame_count, uint64_t& out_bytes) {
+    (void)frame_count;
     const std::string tmp = path + ".tmp";
     std::FILE* f = std::fopen(tmp.c_str(), "wb");
     if (!f) return false;

@@ -3,7 +3,6 @@
 #include "app_state.h"
 #include "frame_map_view.h"
 #include "frame_map.h"
-
 #include <cmath>
 #include <cstdio>
 #include <utility>
@@ -25,10 +24,13 @@ void GuiTargetRender::trigger() {
     }
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
-    if (app.active_audio_view != 'T') return;
+    if (app.active_audio_view != 'T') {
+        return;
+    }
     // No audio loaded — nothing to render.
-    if (audio.total_frames() <= 0)              return;
-    if (app.source_audio_path.empty())          return;
+    if (audio.total_frames() <= 0 || app.source_audio_path.empty()) {
+        return;
+    }
 
     // Freeze playback. Target view's playback model is "every edit halts
     // playback; the user re-presses Space after the update completes".
@@ -279,14 +281,17 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
 void GuiTargetRender::ensure_ready() {
     // Source view does not use target_buffer. Match trigger()'s
     // source-view no-op invariant.
-    if (app.active_audio_view != 'T') return;
+    if (app.active_audio_view != 'T') {
+        return;
+    }
     if (!target_view_available()) {
         leave_target_view();
         return;
     }
     // No audio loaded — nothing to do.
-    if (audio.total_frames() <= 0)              return;
-    if (app.source_audio_path.empty())          return;
+    if (audio.total_frames() <= 0 || app.source_audio_path.empty()) {
+        return;
+    }
 
     // Clean path: the buffer is current AND non-empty. Rebind playback
     // to it without dispatching a render.

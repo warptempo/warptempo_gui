@@ -10,6 +10,7 @@
 #include "settings_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
+#include "wt_profile.h"
 
 #include <algorithm>
 #include <atomic>
@@ -69,8 +70,8 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    bool has_trim_begin, double trim_begin_sec,
                                    bool has_trim_end,   double trim_end_sec,
                                    long sample_rate,
-                                   std::string batch_folder,
-                                   std::string batch_basename) {
+    std::string batch_folder,
+    std::string batch_basename) {
     RenderRequest req;
     req.source_audio_path  = std::move(source_audio_path);
     req.markers            = std::move(markers);
@@ -90,6 +91,18 @@ RenderRequest build_render_request(std::string source_audio_path,
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag) {
     if (req.source_audio_path.empty()) return RenderOutcome::Failed;
+    const bool prof = wtprof::enabled();
+    const auto t_render_0 = wtprof::now();
+    double source_read_ms = 0.0;
+    double engine_ms = 0.0;
+    int64_t profile_trim_begin_frame = 0;
+    int64_t profile_trim_end_frame = 0;
+    int64_t profile_trim_span_frames = 0;
+    int64_t profile_target_frames = 0;
+    double profile_target_seconds = 0.0;
+    size_t profile_source_frames_passed = 0;
+    int profile_source_channels = 0;
+    int profile_source_sample_rate = 0;
 
     // --- Read settings (typed; the live app.engine_settings is mutated
     // through strict-validated authoring paths, so every field is in
@@ -111,6 +124,7 @@ RenderOutcome do_render(const RenderRequest& req,
     }
     const long sample_rate  = src_info.samplerate;
     const long total_frames = static_cast<long>(src_info.frames);
+    const int source_channels_probe = src_info.channels;
     sf_close(sf);
 
     // --- Build the maps from in-memory markers. ---
@@ -230,7 +244,9 @@ RenderOutcome do_render(const RenderRequest& req,
             ? static_cast<int64_t>(std::nearbyint(
                   req.trim_end_sec * static_cast<double>(sample_rate)))
             : static_cast<int64_t>(total_frames);
-
+        profile_trim_begin_frame = trim_begin_src;
+        profile_trim_end_frame = trim_end_src;
+        profile_trim_span_frames = trim_end_src - trim_begin_src;
         // Load the source from frame 0 to the end-trim point (plus margin),
         // NOT a begin-trimmed slice. The begin MUST stay at 0: the frame map's
         // t_a accumulation runs from frame 0, and that inherited history is
@@ -252,12 +268,29 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<size_t>(std::min<int64_t>(
                       total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
+            const auto t_source_load_0 = wtprof::now();
             if (auto r = load_source_range_to_buffer(req.source_audio_path, b, e,
                                              src_samples, src_sr, src_ch); !r) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              r.error().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
+            }
+            if (prof) {
+                const auto t_source_load_1 = wtprof::now();
+                const unsigned long long bytes =
+                    static_cast<unsigned long long>(src_samples.size()) *
+                    static_cast<unsigned long long>(sizeof(float));
+                source_read_ms = wtprof::ms(t_source_load_0, t_source_load_1);
+                profile_source_frames_passed = (src_ch > 0)
+                    ? src_samples.size() / static_cast<size_t>(src_ch) : 0;
+                profile_source_channels = src_ch;
+                profile_source_sample_rate = src_sr;
+                std::fprintf(stderr,
+                    "[profile] source_read ms=%.3f source_kind=path source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
+                    source_read_ms, profile_source_frames_passed,
+                    static_cast<long long>(profile_trim_span_frames),
+                    wtprof::bytes_to_mb(bytes), src_ch, src_sr);
             }
         }
 
@@ -312,6 +345,15 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.phase_reset_frames = displace_phase_reset_frames(
             req.phase_reset_frames, phase_reset_offset_samples);
 
+        profile_target_frames = ep.emit_sample_cap > 0
+            ? ep.emit_sample_cap
+            : (ep.frame_map.empty() ? 0 :
+               static_cast<int64_t>(std::llround(ep.frame_map.back().tgt_frame)));
+        profile_target_seconds = ep.source_sample_rate > 0
+            ? static_cast<double>(profile_target_frames) /
+              static_cast<double>(ep.source_sample_rate)
+            : 0.0;
+
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;
             cleanup_all();
@@ -320,9 +362,21 @@ RenderOutcome do_render(const RenderRequest& req,
                 : RenderOutcome::Failed;
         };
 
+        const auto t_engine_0 = wtprof::now();
         const EngineResult er = run_warptempo_engine(
             ep, &engine_source_frame_positions, &engine_R_s, &engine_synth_frame_begin,
             cancel_flag);
+        if (prof) {
+            const auto t_engine_1 = wtprof::now();
+            engine_ms = wtprof::ms(t_engine_0, t_engine_1);
+            std::fprintf(stderr,
+                "[profile] stage name=engine_total ms=%.3f result=%d source_buffer_frames=%zu target_frames=%lld output_buffer=%s limiter=%s\n",
+                engine_ms, static_cast<int>(er),
+                ep.source_audio_frames,
+                static_cast<long long>(ep.emit_sample_cap),
+                req.output_buffer ? "yes" : "no",
+                ep.limiter ? "yes" : "no");
+        }
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
                 std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
@@ -375,6 +429,14 @@ RenderOutcome do_render(const RenderRequest& req,
                          map_write.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
+        }
+        if (prof) {
+            profile_trim_begin_frame = static_cast<int64_t>(tmres.trim_begin_frame);
+            profile_trim_end_frame = static_cast<int64_t>(tmres.trim_end_frame);
+            profile_trim_span_frames =
+                profile_trim_end_frame - profile_trim_begin_frame;
+            profile_source_channels = source_channels_probe;
+            profile_source_sample_rate = static_cast<int>(sample_rate);
         }
     }
 
@@ -579,8 +641,24 @@ RenderOutcome do_render(const RenderRequest& req,
     }
 
     cleanup_all();
+    if (prof) {
+        const auto t_render_1 = wtprof::now();
+        const double render_ms = wtprof::ms(t_render_0, t_render_1);
+        std::fprintf(stderr,
+            "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu output_buffer=%s limiter=%s outcome=success\n",
+            req.output_buffer ? "target" : "file", output_format.c_str(),
+            profile_source_sample_rate, profile_source_channels,
+            profile_source_frames_passed,
+            static_cast<long long>(profile_trim_begin_frame),
+            static_cast<long long>(profile_trim_end_frame),
+            static_cast<long long>(profile_trim_span_frames),
+            static_cast<long long>(profile_target_frames),
+            profile_target_seconds, source_read_ms, engine_ms, render_ms,
+            req.markers.size(), req.phase_reset_frames.size(),
+            req.output_buffer ? "yes" : "no",
+            req.engine_settings.limiter ? "yes" : "no");
+    }
     std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
                  req.output_buffer ? "<buffer>" : final_output_path.c_str());
     return RenderOutcome::Success;
 }
-

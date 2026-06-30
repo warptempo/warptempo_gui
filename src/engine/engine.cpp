@@ -33,6 +33,7 @@
 #include "stft_container.h"
 #include "limiter.h"
 #include "synthesis.h"
+#include "wt_profile.h"
 
 namespace {
 
@@ -84,6 +85,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
+    const bool wt_prof = wtprof::enabled();
     init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
@@ -134,7 +136,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.init_fftw();
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
-
     // Synthesis window and emit cap. The engine renders the supplied map but
     // emits only emit_sample_cap output samples. On the explicit-cap path (a
     // trimmed render handed a pre-sliced sub-map), synthesis is bounded to the
@@ -215,6 +216,13 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p1_1 = std::chrono::steady_clock::now();
     p1_ns = ns_between(t_p1_0, t_p1_1);
     std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
+    if (wt_prof) {
+        std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
+                  << (p1_ns / 1e6)
+                  << " phase_reset_count=" << p.phase_reset_frames.size()
+                  << " placed_count=" << audio_stft.phase_reset_markers.size()
+                  << "\n";
+    }
 
     // Pass 2: synthesis (clean render). The limiter-on disk path renders into
     // an in-memory buffer that Pass 3 limits in place; every other path streams
@@ -235,6 +243,21 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p2_1 = std::chrono::steady_clock::now();
     p2_ns = ns_between(t_p2_0, t_p2_1);
     std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
+    if (wt_prof) {
+        const std::vector<float>* out_buf = p.output_buffer ? p.output_buffer
+            : (limited ? &render_buf : nullptr);
+        const size_t out_samples = out_buf ? out_buf->size() : 0;
+        const size_t out_frames = (audio_stft.channels > 0)
+            ? out_samples / static_cast<size_t>(audio_stft.channels) : 0;
+        std::cerr << "[profile] engine_pass name=synthesis ms="
+                  << (p2_ns / 1e6)
+                  << " source_frames=" << p.source_audio_frames
+                  << " target_frames=" << audio_stft.emit_sample_cap
+                  << " channels=" << audio_stft.channels
+                  << " output_buffer=" << (p.output_buffer ? "yes" : "no")
+                  << " output_frames=" << out_frames
+                  << "\n";
+    }
     if (audio_stft.cancellation_observed) {
         std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
         audio_stft.cleanup();
@@ -247,6 +270,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     if (limited) {
         auto t_p3_0 = std::chrono::steady_clock::now();
         std::vector<float>& buf = p.output_buffer ? *p.output_buffer : render_buf;
+        const size_t limiter_input_frames = (audio_stft.channels > 0)
+            ? buf.size() / static_cast<size_t>(audio_stft.channels) : 0;
         limiter.process(audio_stft, buf);          // spectral -0.3
         if (audio_stft.cancellation_observed) {
             std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
@@ -259,6 +284,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         auto t_p3_1 = std::chrono::steady_clock::now();
         p3_ns = ns_between(t_p3_0, t_p3_1);
         std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
+        if (wt_prof) {
+            std::cerr << "[profile] engine_pass name=limiter ms="
+                      << (p3_ns / 1e6)
+                      << " sample_frames=" << limiter_input_frames
+                      << " channels=" << audio_stft.channels
+                      << " output_buffer=" << (p.output_buffer ? "yes" : "no")
+                      << "\n";
+        }
+    } else if (wt_prof) {
+        std::cerr << "[profile] engine_pass name=limiter ms=0.000 sample_frames=0 channels="
+                  << audio_stft.channels << " bypass=yes\n";
     }
 
     if (prof) {
