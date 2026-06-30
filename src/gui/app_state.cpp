@@ -33,21 +33,6 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
-// Promoted from a lambda in main(). The AppState is reached through
-// the explicit argument rather than a capture.
-bool bottom_strip_overlay_active(const AppState& app) {
-    return app.prompt.active ||
-           !app.queue_progress_text.empty() ||
-           text_editor::is_active(app.settings_editor) ||
-           // The BPM editor reuses top_flag_editor with the
-           // BpmBracket kind but paints in the bottom strip, so it widens
-           // the strip like the settings editor. A FlagPayload /
-           // IterationBracket top_flag_editor edits over the flag in the
-           // top strip and must NOT widen the bottom strip.
-           (text_editor::is_active(app.top_flag_editor) &&
-            app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
-}
-
 // hit_test_* promoted from lambdas in main(). The captured `app` and
 // `audio` references are now explicit arguments. The
 // kMarkerHitHalfPx / kFlagFontSize constants resolve through app_state.h /

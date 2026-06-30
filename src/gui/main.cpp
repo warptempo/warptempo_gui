@@ -444,9 +444,7 @@ int main(int argc, char** argv) {
     // one-line forwarders so callsites elsewhere in main() don't need to
     // change. The promoted timestamp invalidation helper now lives on
     // Viewport, so all of its former callsites now call
-    // invalidate_timestamp_area directly. `bottom_strip_overlay_active`
-    // was promoted to a free function in app_state.{h,cpp}
-    // so paint_handler.cpp can reach it without a capture.
+    // invalidate_timestamp_area directly.
     //
     // The nine std::function forward-declares previously kept here
     // (recompute_hover_at_cursor, clear_hover_popup, stop_playback_if_playing,

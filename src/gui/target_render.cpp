@@ -57,9 +57,9 @@ void GuiTargetRender::trigger() {
     // made between Ctrl+E presses.
     app.queue_cancel_requested = true;
 
-    // Surface the "updating..." status. The bottom-strip overlay/status
-    // region reads queue_progress_text; "rendering..." (archival) and
-    // "updating..." (target render) share the slot.
+    // Surface the target-render status through queue_progress_text.
+    // "rendering..." (archival) and "updating..." (target render) share
+    // the slot.
     app.queue_progress_text = "updating...";
     viewport.invalidate_timestamp_area();
 
@@ -137,9 +137,10 @@ void GuiTargetRender::dispatch_render_now() {
                                    app.target_buffer_frames);
             is_dirty_ = false;
         }
-        // trigger() set "updating..." before calling us. Invalidate first;
-        // clearing first would leave trailing pixels of the previous progress
-        // text.
+        // trigger() set "updating..." before calling us. Match
+        // finalize_render_run by invalidating the bottom strip before
+        // clearing the status text; timestamp_invalidate_rect() covers the
+        // whole bottom strip.
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
         return;
@@ -151,8 +152,7 @@ void GuiTargetRender::dispatch_render_now() {
     // Re-stamp the progress text. A cancelled archival's on_done
     // (finalize_render_run) clears the text in its terminal branch,
     // and the target render's dispatch may run in that callback's pumping
-    // path. Re-asserting "updating..." here keeps the bottom strip
-    // wide for the duration of the actual target render.
+    // path. Target-render status uses queue_progress_text.
     app.queue_progress_text = "updating...";
     viewport.invalidate_timestamp_area();
 
@@ -247,8 +247,9 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer_start_frame = 0;
     }
 
-    // Clear status. Mirrors finalize_render_run: invalidate the bottom-strip
-    // overlay/status region before clearing queue_progress_text.
+    // Clear status. Match finalize_render_run by invalidating the bottom
+    // strip before clearing queue_progress_text; timestamp_invalidate_rect()
+    // covers the whole bottom strip.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
 

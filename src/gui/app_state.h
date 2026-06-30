@@ -957,12 +957,6 @@ inline const ViewState& active_view_state(const AppState& a) {
 // inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
 
-// True iff the bottom strip is showing a modal overlay (prompt,
-// queue progress, settings editor) rather than the regular flowed
-// content. Consumed by the paint-time branch in on_redraw to pick
-// the right strip content. Pure read against AppState.
-bool bottom_strip_overlay_active(const AppState& app);
-
 // Promoted from lambdas in main(). Mode-aware hit-tests against
 // the visible marker / flag / popup geometry. Bodies live in app_state.cpp
 // and pull in cairo + paint_handler.h for the popup-rect math; the

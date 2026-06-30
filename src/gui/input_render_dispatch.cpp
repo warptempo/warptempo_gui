@@ -36,10 +36,9 @@ AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // The bottom strip must be invalidated before clearing
-    // queue_progress_text. bottom_strip_overlay_active() reads
-    // queue_progress_text; clearing first would leave trailing pixels
-    // of the previous progress text.
+    // Invalidate the bottom strip before clearing queue_progress_text.
+    // timestamp_invalidate_rect() covers the whole bottom strip; keep this
+    // ordering consistent with the other status-clear paths.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
     // A target-view edit during this archival render may have queued a
