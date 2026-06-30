@@ -4,7 +4,7 @@
 #include "target_render.h"
 #include "frame_map_view.h"
 #include "waveform_worker.h"
-#include "decoded_source_cache.h"
+#include "source_sample_cache.h"
 
 #include "frame_map.h"
 

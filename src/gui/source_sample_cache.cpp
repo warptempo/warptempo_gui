@@ -1,4 +1,4 @@
-#include "decoded_source_cache.h"
+#include "source_sample_cache.h"
 
 #include "frame_map_build.h"
 
@@ -17,7 +17,7 @@
 
 namespace {
 
-constexpr char kMagic[] = "WARPTEMPO_DECODED_SOURCE_CACHE";
+constexpr char kMagic[] = "WARPTEMPO_SOURCE_SAMPLE_CACHE";
 constexpr uint32_t kFileVersion = 1;
 constexpr uint32_t kHashAlgorithmNone = 0;
 constexpr char kPayloadType[] = "float32_interleaved";
@@ -26,7 +26,6 @@ constexpr char kSampleCacheExtension[] = ".samples";
 struct SourceMetadata {
     std::string basename;
     std::string extension;
-    std::string canonical_path;
     uint64_t source_size = 0;
     int64_t mtime_ticks = 0;
     int sample_rate = 0;
@@ -91,14 +90,6 @@ std::filesystem::path cache_path_for_source(const std::string& source_path) {
     return p;
 }
 
-std::string canonical_or_absolute(const std::filesystem::path& p) {
-    std::error_code ec;
-    auto c = std::filesystem::weakly_canonical(p, ec);
-    if (!ec) return c.string();
-    auto a = std::filesystem::absolute(p, ec);
-    return ec ? p.string() : a.string();
-}
-
 int64_t file_time_ticks(const std::filesystem::path& p) {
     std::error_code ec;
     const auto t = std::filesystem::last_write_time(p, ec);
@@ -118,7 +109,6 @@ SourceMetadata source_metadata(const std::string& source_path,
     SourceMetadata m;
     m.basename = p.stem().string();
     m.extension = p.extension().string();
-    m.canonical_path = canonical_or_absolute(p);
     std::error_code ec;
     m.source_size = std::filesystem::file_size(p, ec);
     if (ec) m.source_size = 0;
@@ -156,7 +146,6 @@ bool read_header_metadata(std::FILE* f, SourceMetadata& have,
     int32_t sr = 0, ch = 0, fmt = 0;
     if (!get_str(f, have.basename)) return false;
     if (!get_str(f, have.extension)) return false;
-    if (!get_str(f, have.canonical_path)) return false;
     if (!get_u64(f, have.source_size)) return false;
     if (!get_i64(f, have.mtime_ticks)) return false;
     if (!get_i32(f, sr)) return false;
@@ -275,7 +264,6 @@ bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes)
            put_u32(f, kFileVersion) &&
            put_str(f, m.basename) &&
            put_str(f, m.extension) &&
-           put_str(f, m.canonical_path) &&
            put_u64(f, m.source_size) &&
            put_i64(f, m.mtime_ticks) &&
            put_i32(f, m.sample_rate) &&

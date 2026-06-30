@@ -11,7 +11,7 @@
 #include "frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"
-#include "decoded_source_cache.h"
+#include "source_sample_cache.h"
 
 #include <algorithm>
 #include <atomic>
