@@ -453,9 +453,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-view list navigation: Shift+Left/Right (wraparound) and
-    // Shift+Home/End (clamp). Outside render-view these chords fall through to
-    // the source-view handlers below (see handle_render_view_nav).
+    // Render-view list navigation:
+    // Shift+Left / Shift+Right -> previous / next render, with wraparound
+    // Shift+Home / Shift+End -> first / last render, clamped, no wraparound
+    // Outside render-view these chords fall through to the source-view handlers
+    // below (see handle_render_view_nav).
     if (handle_render_view_nav(key, mods)) return;
 
     // Ctrl+Left / Ctrl+Right: nudge selected markers by one pixel.

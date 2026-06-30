@@ -14,7 +14,6 @@
 namespace perf_counters {
     int wf_cols              = 0;
     int wf_pyramid_samples   = 0;
-    int flag_measure         = 0;
     int flag_drawn           = 0;
     int flag_elided          = 0;
 }

@@ -184,11 +184,12 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
 }
 
 // Render-view list navigation. Handles both Shift+Left/Right (wraparound) and
-// Shift+Home/End (clamp to first/last, no wraparound). Each chord pre-refreshes
-// the renders/ folder, stashes the outgoing entry, exits render-view gracefully
-// if the folder is empty, then loads the target entry. Returns true from each
-// handled path; false when neither chord matches (or render-view is off) so the
-// caller falls through to the source-view playhead handlers.
+// Shift+Home / Shift+End (clamp to first/last, no wraparound). Each chord
+// pre-refreshes the renders/ folder, stashes the outgoing entry, exits
+// render-view gracefully if the folder is empty, then loads the target entry.
+// Returns true from each handled path; false when neither chord matches (or
+// render-view is off) so the caller falls through to the source-view playhead
+// handlers.
 bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;

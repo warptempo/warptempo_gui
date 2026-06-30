@@ -380,7 +380,7 @@ private:
     bool handle_render_view_toggle(GuiKey key, GuiInputState mods);
 
     // handle_render_view_nav: render-view list navigation. Handles both
-    // Shift+Left/Right (wraparound) and Shift+Home/End (clamp, no wrap).
+    // Shift+Left/Right (wraparound) and Shift+Home / Shift+End (clamp, no wrap).
     // Returns true when it handled the chord (so the caller returns); false
     // when neither chord matches (or render-view is off), so the caller falls
     // through to the source-view handlers.

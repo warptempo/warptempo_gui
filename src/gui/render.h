@@ -654,13 +654,11 @@ constexpr bool kDebugHitRects = false;
 namespace perf_counters {
     extern int wf_cols;              // pixel columns drawn by render_waveform
     extern int wf_pyramid_samples;   // peak-pyramid samples read
-    extern int flag_measure;         // cairo_text_extents calls in flag render
     extern int flag_drawn;           // flags emitted (not elided)
     extern int flag_elided;          // viewport-hit flags skipped by greedy pack
     inline void reset() {
         wf_cols = 0;
         wf_pyramid_samples = 0;
-        flag_measure = 0;
         flag_drawn = 0;
         flag_elided = 0;
     }

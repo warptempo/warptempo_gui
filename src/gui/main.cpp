@@ -111,8 +111,6 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
               == static_cast<size_t>(kZoomTableSize),
               "kZoomMsPerPixel size must match kZoomTableSize");
 
-constexpr double kDirtyGapPx              = 8.0;
-
 // kPlayheadHalfPx (half-width of the column invalidated around a playhead
 // position) now lives in render.h as a single shared inline constexpr,
 // reached here via the render.h include.

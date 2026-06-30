@@ -656,14 +656,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 "[dbg perf] total=%.2f ms waveform=%.2f markers=%.2f "
                 "flags=%.2f playhead=%.2f ts=%.2f dirty=%.2f flush=%.2f "
                 "pixel_area=%dx%d wf_cols=%d wf_pyramid_samples=%d "
-                "flag_measure=%d flag_drawn=%d flag_elided=%d "
+                "flag_drawn=%d flag_elided=%d "
                 "e2e=%.2f\n",
                 elapsed_ms, t_waveform_ms, t_markers_ms, t_flags_ms,
                 t_playhead_ms, t_ts_ms, t_dirty_ms, t_flush_ms,
                 w, h,
                 perf_counters::wf_cols, perf_counters::wf_pyramid_samples,
-                perf_counters::flag_measure, perf_counters::flag_drawn,
-                perf_counters::flag_elided,
+                perf_counters::flag_drawn, perf_counters::flag_elided,
                 e2e_ms);
         }
     }
