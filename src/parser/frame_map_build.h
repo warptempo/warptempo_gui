@@ -162,7 +162,7 @@ std::vector<int64_t> phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate);
 
 // Pure: displace absolute source-frame resets to the engine's dispatch
-// frame by subtracting the locked one-hop offset, clamped at 0. The clamp is
+// frame by subtracting the canonical offset, clamped at 0. The clamp is
 // silent here (no I/O); callers that want the per-reset "clamped before audio
 // start" notice detect it by source_frame < offset_samples. This is the full
 // displaced reset list the engine path hands over.

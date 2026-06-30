@@ -225,7 +225,7 @@ endif()
 #  Reads a prebuilt framemap [+ resetmap] + source wav and writes the warped
 #  wav by running the PGHI engine directly. Links libwarptempo_engine ALONE —
 #  no parser archive: the map readers are header-only (frame_map.h) and the
-#  one-hop phase-reset displacement is inlined. Trim is not an engine concern.
+#  canonical phase-reset displacement is inlined. Trim is not an engine concern.
 # ============================================================
 option(WARPTEMPO_BUILD_ENGINE
        "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)

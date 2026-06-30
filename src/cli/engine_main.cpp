@@ -177,6 +177,9 @@ int main(int argc, char** argv) {
     }
 
     // --- render (engine writes out_path directly) ---
+    std::fprintf(stderr,
+        "warptempo_engine: rendering N=%d R_s=%d -> %s\n",
+        N_fft, R_s, out_path.c_str());
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
         std::fprintf(stderr, "warptempo_engine: engine %s\n",

@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     // sidecar and the source sample rate. phase_reset_source_frames drops
     // disabled markers and converts time->source frame via nearbyint, the
     // same conversion the GUI and render CLI apply before displacing. The file
-    // is undisplaced by design: the one-hop lead-in is the engine's synthesis
+    // is undisplaced by design: phase_reset_offset_samples is an engine-input
     // convention, re-applied driver-side, not baked into the portable file.
     // An absent sidecar yields an empty (valid) resetmap. ---
     if (fmt == "resetmap") {
