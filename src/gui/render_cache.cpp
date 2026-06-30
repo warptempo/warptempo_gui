@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 #include <system_error>
 
 #include <csignal>
@@ -360,13 +361,22 @@ bool RenderCache::read_file(const std::string& path,
             static_cast<size_t>(frames) * static_cast<size_t>(ch);
         out.resize(n);
         if (n && std::fread(out.data(), sizeof(float), n, f) != n) {
-            out.clear();
             break;
         }
+
+        const long final_offset = std::ftell(f);
+        if (final_offset < 0) break;
+        std::error_code ec;
+        const auto actual_size = std::filesystem::file_size(path, ec);
+        if (ec || actual_size != static_cast<std::uintmax_t>(final_offset)) break;
+
         ok = true;
     } while (false);
 
     std::fclose(f);
+    if (!ok) {
+        out.clear();
+    }
     return ok;
 }
 
@@ -376,6 +386,10 @@ bool RenderCache::write_file(const std::string& path,
                              int channels, int sample_rate,
                              int64_t frame_count, uint64_t& out_bytes) {
     (void)frame_count;
+    if (fp.size() > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+
     const std::string tmp = path + ".tmp";
     std::FILE* f = std::fopen(tmp.c_str(), "wb");
     if (!f) return false;
@@ -397,8 +411,8 @@ bool RenderCache::write_file(const std::string& path,
             std::fwrite(samples.data(), sizeof(float), samples.size(), f)
                 != samples.size())
             break;
-        std::fflush(f);
-        ::fsync(::fileno(f));
+        if (std::fflush(f) != 0) break;
+        if (::fsync(::fileno(f)) != 0) break;
         ok = true;
     } while (false);
 
