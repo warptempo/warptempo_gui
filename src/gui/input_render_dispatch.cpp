@@ -36,11 +36,10 @@ AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the wide bottom-strip rect before clearing the
-    // progress text. bottom_strip_wide() reads queue_progress_text;
-    // clearing first would shrink the invalidated rect to the narrow
-    // timestamp width, leaving the trailing pixels of the final
-    // "rendering N of N..." string undamaged.
+    // The bottom strip must be invalidated before clearing
+    // queue_progress_text. bottom_strip_overlay_active() reads
+    // queue_progress_text; clearing first would leave trailing pixels
+    // of the previous progress text.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
     // A target-view edit during this archival render may have queued a

@@ -35,7 +35,7 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
 
 // Promoted from a lambda in main(). The AppState is reached through
 // the explicit argument rather than a capture.
-bool bottom_strip_wide(const AppState& app) {
+bool bottom_strip_overlay_active(const AppState& app) {
     return app.prompt.active ||
            !app.queue_progress_text.empty() ||
            text_editor::is_active(app.settings_editor) ||

@@ -169,7 +169,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom in/out symbol-key alias
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
-    //   - f (no mods)          → follow mode toggle
+    //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
     //
     // Note on the absent disk-save-shape keys: Ctrl+S (save),

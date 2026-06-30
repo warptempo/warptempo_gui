@@ -961,9 +961,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // queue progress, settings editor) rather than the regular flowed
 // content. Consumed by the paint-time branch in on_redraw to pick
 // the right strip content. Pure read against AppState.
-// (Name is mildly stale — "wide" referred to the wide-vs-narrow
-// invalidation rect, which is gone. Rename rides its own commit.)
-bool bottom_strip_wide(const AppState& app);
+bool bottom_strip_overlay_active(const AppState& app);
 
 // Promoted from lambdas in main(). Mode-aware hit-tests against
 // the visible marker / flag / popup geometry. Bodies live in app_state.cpp

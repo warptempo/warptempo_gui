@@ -45,7 +45,7 @@ std::string hex16(uint64_t h) {
 }
 
 constexpr uint32_t kFingerprintVersion = 1;
-constexpr char     kMagic[4]           = {'W', 'T', 'C', '1'};
+constexpr char     kMagic[]            = "WARPTEMPO_TARGET_VIEW_RENDER_CACHE";
 constexpr uint32_t kFileVersion        = 1;
 constexpr char     kDiskExtension[]    = ".targetviewrender";
 
@@ -336,9 +336,9 @@ bool RenderCache::read_file(const std::string& path,
 
     bool ok = false;
     do {
-        char magic[4];
-        if (std::fread(magic, 1, 4, f) != 4) break;
-        if (std::memcmp(magic, kMagic, 4) != 0) break;
+        char magic[sizeof(kMagic)]{};
+        if (std::fread(magic, 1, sizeof(kMagic), f) != sizeof(kMagic)) break;
+        if (std::memcmp(magic, kMagic, sizeof(kMagic)) != 0) break;
 
         uint32_t ver = 0, fplen = 0;
         int32_t  ch = 0, sr = 0;
@@ -352,6 +352,10 @@ bool RenderCache::read_file(const std::string& path,
 
         if (ch != channels || sr != sample_rate) break;
         if (frames < 0 || ch <= 0) break;
+        if (static_cast<uint64_t>(frames) >
+            std::numeric_limits<size_t>::max() / static_cast<uint64_t>(ch)) {
+            break;
+        }
 
         std::vector<uint8_t> fp(fplen);
         if (fplen && std::fread(fp.data(), 1, fplen, f) != fplen) break;
@@ -385,7 +389,6 @@ bool RenderCache::write_file(const std::string& path,
                              const std::vector<float>& samples,
                              int channels, int sample_rate,
                              int64_t frame_count, uint64_t& out_bytes) {
-    (void)frame_count;
     if (fp.size() > std::numeric_limits<uint32_t>::max()) {
         return false;
     }
@@ -396,7 +399,7 @@ bool RenderCache::write_file(const std::string& path,
 
     bool ok = false;
     do {
-        if (std::fwrite(kMagic, 1, 4, f) != 4) break;
+        if (std::fwrite(kMagic, 1, sizeof(kMagic), f) != sizeof(kMagic)) break;
         const uint32_t ver   = kFileVersion;
         const int32_t  ch    = channels, sr = sample_rate;
         const int64_t  fr    = frame_count;
@@ -416,7 +419,7 @@ bool RenderCache::write_file(const std::string& path,
         ok = true;
     } while (false);
 
-    std::fclose(f);
+    if (std::fclose(f) != 0) ok = false;
     if (!ok) {
         std::error_code ec;
         std::filesystem::remove(tmp, ec);
@@ -430,8 +433,8 @@ bool RenderCache::write_file(const std::string& path,
         return false;
     }
 
-    out_bytes = 4 + sizeof(uint32_t) + sizeof(int32_t) * 2 + sizeof(int64_t)
-              + sizeof(uint32_t) + fp.size()
+    out_bytes = sizeof(kMagic) + sizeof(uint32_t) + sizeof(int32_t) * 2
+              + sizeof(int64_t) + sizeof(uint32_t) + fp.size()
               + samples.size() * sizeof(float);
     return true;
 }

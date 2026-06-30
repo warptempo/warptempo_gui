@@ -57,8 +57,8 @@ void GuiTargetRender::trigger() {
     // made between Ctrl+E presses.
     app.queue_cancel_requested = true;
 
-    // Surface the "updating..." status. The bottom_strip_wide() predicate
-    // reads queue_progress_text; "rendering..." (archival) and
+    // Surface the "updating..." status. The bottom-strip overlay/status
+    // region reads queue_progress_text; "rendering..." (archival) and
     // "updating..." (target render) share the slot.
     app.queue_progress_text = "updating...";
     viewport.invalidate_timestamp_area();
@@ -137,8 +137,9 @@ void GuiTargetRender::dispatch_render_now() {
                                    app.target_buffer_frames);
             is_dirty_ = false;
         }
-        // trigger() set "updating..." before calling us. Invalidate first so
-        // the wide-strip rect still covers the old text width, then clear it.
+        // trigger() set "updating..." before calling us. Invalidate first;
+        // clearing first would leave trailing pixels of the previous progress
+        // text.
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
         return;
@@ -246,9 +247,8 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer_start_frame = 0;
     }
 
-    // Clear status. Mirrors finalize_render_run: invalidate first (so
-    // the wide-strip rect still includes "updating..."'s width), then
-    // clear the text.
+    // Clear status. Mirrors finalize_render_run: invalidate the bottom-strip
+    // overlay/status region before clearing queue_progress_text.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
 

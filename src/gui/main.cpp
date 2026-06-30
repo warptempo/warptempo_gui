@@ -442,10 +442,10 @@ int main(int argc, char** argv) {
     // The viewport-mutator and invalidation lambdas have been hoisted
     // onto the Viewport struct in viewport.{cpp,h}. The lambdas below are
     // one-line forwarders so callsites elsewhere in main() don't need to
-    // change. `invalidate_timestamp_area` is gone — its body was
-    // byte-identical to invalidate_timestamp_area, so all of its former
-    // callsites now call invalidate_timestamp_area directly. `bottom_strip
-    // _wide` was promoted to a free function in app_state.{h,cpp}
+    // change. The promoted timestamp invalidation helper now lives on
+    // Viewport, so all of its former callsites now call
+    // invalidate_timestamp_area directly. `bottom_strip_overlay_active`
+    // was promoted to a free function in app_state.{h,cpp}
     // so paint_handler.cpp can reach it without a capture.
     //
     // The nine std::function forward-declares previously kept here

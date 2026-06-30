@@ -113,7 +113,7 @@ struct GuiInputHandler {
     GuiSaveOps&              save_ops;
     GuiPrompt&               prompt;
     GuiSettingsEditor&       settings_editor;
-    GuiTargetRender&      target_render;
+    GuiTargetRender&         target_render;
     GuiPaintHandler&         paint_handler;
 
     GuiInputHandler(AppState&                app_,
@@ -135,7 +135,7 @@ struct GuiInputHandler {
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
                     GuiSettingsEditor&       settings_editor_,
-                    GuiTargetRender&      target_render_,
+                    GuiTargetRender&         target_render_,
                     GuiPaintHandler&         paint_handler_)
         : app(app_),
           audio(audio_),
@@ -346,11 +346,12 @@ private:
     void delete_selected_trim();
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
-    // Translates app.viewport_start_sample / playhead_cursor_sample / zoom_level
-    // through the current frame_map in place (forward on S→T, inverse on
-    // T→S) so the visible viewport stays the same screen-pixel extent
-    // across the toggle. Stops playback (target view has no playback)
-    // and invalidates the whole window. Silent no-op while
+    // Stops any current playback before switching domains. Source → Target
+    // translates app.viewport_start_sample / playhead_cursor_sample /
+    // zoom_level through the current frame_map in place and enters target
+    // view only when target view is available. target-view playback is
+    // allowed once the target buffer is ready; target render
+    // update-in-progress gates playback elsewhere. Silent no-op while
     // render-view is active — the render-view gate above this dispatcher
     // already drops bare `t`.
     void handle_active_audio_view_toggle();
