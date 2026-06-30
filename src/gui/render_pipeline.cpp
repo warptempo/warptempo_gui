@@ -11,6 +11,7 @@
 #include "frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"
+#include "decoded_source_cache.h"
 
 #include <algorithm>
 #include <atomic>
@@ -269,10 +270,12 @@ RenderOutcome do_render(const RenderRequest& req,
                       total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
             const auto t_source_load_0 = profile::now();
-            if (auto r = load_source_range_to_buffer(req.source_audio_path, b, e,
-                                             src_samples, src_sr, src_ch); !r) {
+            auto source_read_result = load_source_range_with_decoded_cache(
+                req.source_audio_path, src_info, b, e,
+                src_samples, src_sr, src_ch);
+            if (!source_read_result) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             r.error().c_str());
+                             source_read_result.error().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
@@ -286,9 +289,13 @@ RenderOutcome do_render(const RenderRequest& req,
                     ? src_samples.size() / static_cast<size_t>(src_ch) : 0;
                 profile_source_channels = src_ch;
                 profile_source_sample_rate = src_sr;
+                const bool used_cache = source_read_result->used_cache;
                 std::fprintf(stderr,
-                    "[profile] source_read ms=%.3f source_kind=path source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
-                    source_read_ms, profile_source_frames_passed,
+                    "[profile] source_read ms=%.3f source_kind=%s cache_status=%s source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
+                    source_read_ms,
+                    used_cache ? "decoded_cache" : "path",
+                    decoded_source_cache_status_name(source_read_result->cache_status),
+                    profile_source_frames_passed,
                     static_cast<long long>(profile_trim_span_frames),
                     profile::bytes_to_mb(bytes), src_ch, src_sr);
             }

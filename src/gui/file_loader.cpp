@@ -4,6 +4,7 @@
 #include "target_render.h"
 #include "frame_map_view.h"
 #include "waveform_worker.h"
+#include "decoded_source_cache.h"
 
 #include "frame_map.h"
 
@@ -19,6 +20,14 @@
 #include <utility>
 
 bool GuiFileLoader::load_file(const std::string& path) {
+    if (is_decoded_source_cache_path(path)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: '%s' is a private decoded source cache; "
+                     "open the original audio file instead.\n",
+                     path.c_str());
+        return false;
+    }
+
     // Preflight.
     {
         SF_INFO probe_info;
