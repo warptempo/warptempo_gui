@@ -261,10 +261,9 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback, move the playhead onto the newly focused marker, and
-    // recenter the viewport at maximum zoom. Mirrors the GuiKeys::C zoom +
-    // center sequence with the playhead-move folded in. Mode-aware: reads
-    // from phase_reset_markers in 'P' mode, warpmarkers otherwise.
+    // playback, move the playhead onto the newly focused marker, and recenter
+    // the viewport at the current zoom. Mode-aware: reads from
+    // phase_reset_markers in 'P' mode, warpmarkers otherwise.
     void cycle_marker_focus_with_recenter(bool forward);
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc

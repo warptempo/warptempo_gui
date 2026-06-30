@@ -29,14 +29,14 @@ class GuiAudio;
 // main.cpp (one sentinel slot at index 0 plus the numeric levels).
 //
 // Bare-digit keys are unbound for zoom: only `0` toggles between fit-file
-// and the snap level, and `C` is the direct max-in. Smaller numeric level
-// = less file per window = more zoomed in; level 0 = fit-file (most file
-// possible). kMinNumericLevel is the deepest level continuous manual
-// zoom-in can reach (1.2 s); kSnapZoomLevel is the level every snap/toggle
-// gesture lands on (2.4 s, one step shallower).
+// and the snap level, and `C` jumps to snap zoom centered on the playhead.
+// Smaller numeric level = less file per window = more zoomed in; level 0 =
+// fit-file (most file possible). kMinNumericLevel is the deepest level
+// continuous manual zoom-in can reach (1.2 s); kSnapZoomLevel is the level
+// every snap/toggle gesture lands on (2.4 s, one step shallower).
 constexpr int kFitFileLevel     = 0;
 constexpr int kMinNumericLevel  = 1;
-constexpr int kSnapZoomLevel    = 2;   // 2.4 s — snap/toggle target; manual
+constexpr int kSnapZoomLevel    = 2;   // 2.4 s — snap zoom; manual
                                        // zoom-in can go one step deeper to
                                        // kMinNumericLevel (1.2 s)
 constexpr int kMaxNumericLevel  = 10;

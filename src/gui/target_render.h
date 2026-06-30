@@ -15,12 +15,12 @@
 //
 //   - No-ops in source view. Source view's playback continues to read
 //     source.wav across archival renders unchanged.
-//   - In target view: stops playback, cancels any in-flight render,
-//     clears pending batch entries, sets queue_progress_text="updating...",
-//     and dispatches a fresh render to app.target_buffer with the peak
-//     limiter forced on. The dispatch is deferred until the worker is idle
-//     (the existing on_done callback paths pump pending target renders
-//     through maybe_dispatch_pending()).
+//   - In target view: stops playback, requests cancellation of an active
+//     batch/queue run when needed; queued Ctrl+E snapshots are preserved. It
+//     sets queue_progress_text="updating..." and dispatches a fresh render to
+//     app.target_buffer using the current global limiter setting. The dispatch
+//     is deferred until the worker is idle (the existing on_done callback paths
+//     pump pending target renders through maybe_dispatch_pending()).
 //
 // On completion the render on_done rebinds the playback device's
 // borrowed pointer to app.target_buffer via GuiPlayback::rebind_buffer

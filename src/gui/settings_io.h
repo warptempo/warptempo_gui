@@ -101,7 +101,7 @@ RenderViewState read_rendersettings_view_state(
 std::optional<EngineSettings> read_rendersettings_engine_block(
     const std::filesystem::path& path);
 
-// Full-write of `.rendersettings`: emits the seven canonical engine keys
+// Full-write of `.rendersettings`: emits the eight canonical engine keys
 // (in kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file), then the three view-state keys
 // (viewport_start, zoom, playhead). Atomic via tmp + fsync + rename.

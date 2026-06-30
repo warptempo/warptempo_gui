@@ -483,7 +483,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     tm_path.c_str());
             }
         }
-        // `.rendersettings` sidecar: ten canonical engine keys (engine
+        // `.rendersettings` sidecar: eight canonical engine keys (engine
         // block, byte-identical to the engine block of a Ctrl+S
         // `.settings` write) followed by the three view-state keys
         // (viewport_start, zoom, playhead) at their natural "user has

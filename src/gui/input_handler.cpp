@@ -168,9 +168,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom in/out symbol-key alias
-    //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
+    //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)          → follow mode toggle
-    //   - c (no mods)            → center+max-zoom-in on playhead
+    //   - c (no mods)            → center+snap-zoom on playhead
     //
     // Note on the absent disk-save-shape keys: Ctrl+S (save),
     // Ctrl+E (queue-add), Ctrl+Alt+R (single render to source dir),
@@ -208,9 +208,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom symbol-key alias
-    //   - 0 (no mods)            → fit ↔ max-zoom-in toggle
+    //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
-    //   - c (no mods)            → center+max-zoom on playhead
+    //   - c (no mods)            → center+snap-zoom on playhead
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
@@ -324,11 +324,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Bare 0 toggles between fit-file and max-zoom-in (kMinNumericLevel).
+    // Bare 0 toggles between fit-file and the snap zoom level.
     // From fit-file → kSnapZoomLevel (the 2.4 s snap level, centered on
     // playhead via apply_zoom_change's numeric branch). From any numeric
     // level → fit-file. So `0` toggles between fit-file and the 2.4 s snap
-    // level; C remains the always-direct max-in gesture. Digits 1..9 are
+    // level; C remains the direct snap-and-center gesture. Digits 1..9 are
     // intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         if (app.zoom_level == kFitFileLevel) {
@@ -774,11 +774,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         }
     }
 
-    // Playback is disabled in target view (Space is in the gate's
-    // blocked set). Stop on every toggle so playback never finds
-    // itself chasing a playhead in the other domain. Mirrors the
-    // viewport-mutator pattern of "stop_playback_if_playing before
-    // mutating playhead state".
+    // Target-view playback is rebound to the rendered target buffer once it is
+    // ready, and Space is gated while that buffer is unavailable or updating.
+    // Stop on every toggle so playback never chases a playhead in the other
+    // domain. Mirrors the viewport-mutator pattern of
+    // "stop_playback_if_playing before mutating playhead state".
     playback_lifecycle.stop_playback_if_playing();
 
     // Anchor the toggle on the playhead's pre-flip screen-pixel column.
