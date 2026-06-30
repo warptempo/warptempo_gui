@@ -215,7 +215,7 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
                          const std::vector<float>& samples,
                          int channels, int sample_rate, int64_t frame_count) {
     const bool prof = profile::enabled();
-    const auto t0 = profile::now();
+    const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
     if (!enabled_) {
         return;
     }
@@ -226,9 +226,10 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     const uint64_t h = fnv1a64(fp);
     const bool to_ram =
         frame_count <= static_cast<int64_t>(sample_rate) * kRamMaxRenderSeconds;
-    if (to_ram) insert_ram(h, fp, samples, channels, sample_rate);
-    else        insert_disk(h, fp, samples, channels, sample_rate, frame_count);
-    if (prof) {
+    const bool inserted = to_ram
+        ? insert_ram(h, fp, samples, channels, sample_rate)
+        : insert_disk(h, fp, samples, channels, sample_rate, frame_count);
+    if (prof && inserted) {
         const auto t1 = profile::now();
         std::fprintf(stderr,
             "[profile] cache_insert enabled=yes inserted=yes tier=%s ms=%.3f frames=%lld bytes=%llu\n",
@@ -239,7 +240,7 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     }
 }
 
-void RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
+bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
                              const std::vector<float>& samples,
                              int channels, int sample_rate) {
     const uint64_t bytes =
@@ -250,7 +251,7 @@ void RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
             static_cast<uint64_t>(it->second.samples.size()) * sizeof(float);
         ram_.erase(it);
     }
-    if (bytes > kRamBudgetBytes) return; // pathological single entry; skip
+    if (bytes > kRamBudgetBytes) return false; // pathological single entry; skip
 
     evict_ram_until(kRamBudgetBytes - bytes);
 
@@ -262,6 +263,7 @@ void RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
     e.seq         = ++lru_seq_;
     ram_[h]       = std::move(e);
     ram_bytes_   += bytes;
+    return true;
 }
 
 void RenderCache::evict_ram_until(uint64_t target_max) {
@@ -275,7 +277,7 @@ void RenderCache::evict_ram_until(uint64_t target_max) {
     }
 }
 
-void RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
+bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,
                               int64_t frame_count) {
@@ -291,12 +293,12 @@ void RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
 
     uint64_t written = 0;
     if (!write_file(path, fp, samples, channels, sample_rate, frame_count, written))
-        return; // best-effort
+        return false; // best-effort
 
     if (written > kDiskBudgetBytes) { // single entry exceeds the whole budget
         std::error_code ec;
         std::filesystem::remove(path, ec);
-        return;
+        return false;
     }
 
     evict_disk_until(kDiskBudgetBytes - written);
@@ -308,6 +310,7 @@ void RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     e.seq         = ++lru_seq_;
     disk_index_[h] = std::move(e);
     disk_bytes_   += written;
+    return true;
 }
 
 void RenderCache::evict_disk_until(uint64_t target_max) {

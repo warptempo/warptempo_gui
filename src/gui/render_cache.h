@@ -80,10 +80,10 @@ private:
         uint64_t             seq        = 0;
     };
 
-    void insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
+    bool insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
                     const std::vector<float>& samples,
                     int channels, int sample_rate);
-    void insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
+    bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                      const std::vector<float>& samples,
                      int channels, int sample_rate, int64_t frame_count);
     void evict_ram_until(uint64_t target_max);

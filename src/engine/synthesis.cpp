@@ -89,13 +89,13 @@ void Synthesis::synthesize_full(
                               static_cast<size_t>(src_frames));
     double wt_deinterleave_ms = 0.0;
     {
-        const auto _deint0 = profile::now();
+        const auto _deint0 = prof ? profile::now() : prof_clock::time_point{};
         const float* src = stft.src_samples;
         for (int64_t f = 0; f < src_frames; ++f)
             for (int ch = 0; ch < channels; ++ch)
                 planar[static_cast<size_t>(ch) * src_frames + f] =
                     src[static_cast<size_t>(f) * channels + ch];
-        wt_deinterleave_ms = profile::ms(_deint0, profile::now());
+        if (prof) wt_deinterleave_ms = profile::ms(_deint0, profile::now());
     }
 
     // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
@@ -171,9 +171,13 @@ void Synthesis::synthesize_full(
         // per-frame in-loop call — all analysis goes through this lambda.
         auto analyze1 = [&](int aidx, std::vector<double>& md,
                                       std::vector<double>& pd) {
-            const auto _a0 = prof_clock::now();
-            stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
-            chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
+            if (prof) {
+                const auto _a0 = prof_clock::now();
+                stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
+                chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
+            } else {
+                stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
+            }
         };
 
         // Prime: analysis frames wbegin and wbegin+1 (wbegin+1 is the
@@ -235,41 +239,67 @@ void Synthesis::synthesize_full(
             const bool    frame0     = (frame_idx == wbegin);
             const bool    seed_heap  = frame0 || prev_reset;
 
-            const auto _h0 = prof_clock::now();
-            stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                            mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
-                            th_prev, dt_prev, theta, dt_scratch,
-                            df_scratch, done_scratch, heap_scratch, rng);
-            chprof[ch].heap += prof_ns(_h0, prof_clock::now());
+            if (prof) {
+                const auto _h0 = prof_clock::now();
+                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
+                                mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
+                                th_prev, dt_prev, theta, dt_scratch,
+                                df_scratch, done_scratch, heap_scratch, rng);
+                chprof[ch].heap += prof_ns(_h0, prof_clock::now());
+            } else {
+                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
+                                mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
+                                th_prev, dt_prev, theta, dt_scratch,
+                                df_scratch, done_scratch, heap_scratch, rng);
+            }
             // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
             dt_prev.swap(dt_scratch);
 
-            const auto _s0 = prof_clock::now();
-            stft.populate_synth_spectrum(ch, mag_cur, theta);
-            chprof[ch].synthspec += prof_ns(_s0, prof_clock::now());
+            if (prof) {
+                const auto _s0 = prof_clock::now();
+                stft.populate_synth_spectrum(ch, mag_cur, theta);
+                chprof[ch].synthspec += prof_ns(_s0, prof_clock::now());
+            } else {
+                stft.populate_synth_spectrum(ch, mag_cur, theta);
+            }
 
             // IFFT length M; un-shift the centered frame back into the [0, N)
             // OLA window (the inverse of analyze_frame's placement). With n in
             // [0, N) and Mfft = 2N the index resolves to two contiguous ranges,
             // so the split below replaces the per-sample modulo with no change to
             // the loads, multiplies, or accumulation order.
-            const auto _i0 = prof_clock::now();
-            fftw_execute(stft.fft_ws[ch].plan_inv);
-            chprof[ch].ifft += prof_ns(_i0, prof_clock::now());
+            if (prof) {
+                const auto _i0 = prof_clock::now();
+                fftw_execute(stft.fft_ws[ch].plan_inv);
+                chprof[ch].ifft += prof_ns(_i0, prof_clock::now());
+            } else {
+                fftw_execute(stft.fft_ws[ch].plan_inv);
+            }
 
-            const auto _o0 = prof_clock::now();
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             const double* io = stft.fft_ws[ch].ifft_out;
-            for (int n = 0; n < half; ++n) {
-                const double v = io[n + Mfft - half];
-                ola[n] += (v * inv_M) * stft.synth_window[n];
+            if (prof) {
+                const auto _o0 = prof_clock::now();
+                for (int n = 0; n < half; ++n) {
+                    const double v = io[n + Mfft - half];
+                    ola[n] += (v * inv_M) * stft.synth_window[n];
+                }
+                for (int n = half; n < N; ++n) {
+                    const double v = io[n - half];
+                    ola[n] += (v * inv_M) * stft.synth_window[n];
+                }
+                chprof[ch].ola += prof_ns(_o0, prof_clock::now());
+            } else {
+                for (int n = 0; n < half; ++n) {
+                    const double v = io[n + Mfft - half];
+                    ola[n] += (v * inv_M) * stft.synth_window[n];
+                }
+                for (int n = half; n < N; ++n) {
+                    const double v = io[n - half];
+                    ola[n] += (v * inv_M) * stft.synth_window[n];
+                }
             }
-            for (int n = half; n < N; ++n) {
-                const double v = io[n - half];
-                ola[n] += (v * inv_M) * stft.synth_window[n];
-            }
-            chprof[ch].ola += prof_ns(_o0, prof_clock::now());
 
             // End-of-frame per-channel state shift. theta -> th_prev (a swap:
             // heap_phase fully overwrites theta before reading it next frame, so
@@ -343,7 +373,7 @@ void Synthesis::synthesize_full(
     // All per-channel state is private to run_channel and fft_ws[ch] is
     // per-channel, so the passes are independent. Join before the interleave
     // below.
-    const auto _wall0 = prof_clock::now();
+    const auto _wall0 = prof ? prof_clock::now() : prof_clock::time_point{};
     {
         std::vector<std::thread> workers;
         workers.reserve(static_cast<size_t>(std::max(0, channels - 1)));
@@ -369,21 +399,25 @@ void Synthesis::synthesize_full(
     double wt_interleave_ms = 0.0;
     if (out_frames > 0) {
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
-        const auto _inter0 = profile::now();
+        const auto _inter0 = prof ? profile::now() : prof_clock::time_point{};
         for (int ch = 0; ch < channels; ++ch) {
             const std::vector<float>& m = mono[ch];
             assert(static_cast<int64_t>(m.size()) >= out_frames);
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
-        wt_interleave_ms = profile::ms(_inter0, profile::now());
-        const auto _w0 = prof_clock::now();
-        write_cb(inter.data(), static_cast<size_t>(out_frames));
-        t_write += prof_ns(_w0, prof_clock::now());
+        if (prof) wt_interleave_ms = profile::ms(_inter0, profile::now());
+        if (prof) {
+            const auto _w0 = prof_clock::now();
+            write_cb(inter.data(), static_cast<size_t>(out_frames));
+            t_write += prof_ns(_w0, prof_clock::now());
+        } else {
+            write_cb(inter.data(), static_cast<size_t>(out_frames));
+        }
     }
 
-    const int64_t t_wall = prof_ns(_wall0, prof_clock::now());
     if (prof) {
+        const int64_t t_wall = prof_ns(_wall0, prof_clock::now());
         int64_t t_analysis=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
         for (int ch = 0; ch < channels; ++ch) {
             t_analysis += chprof[ch].analysis; t_heap += chprof[ch].heap;
