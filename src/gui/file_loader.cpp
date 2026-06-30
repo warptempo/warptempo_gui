@@ -20,19 +20,43 @@
 #include <utility>
 
 bool GuiFileLoader::load_file(const std::string& path) {
-    if (is_decoded_source_cache_path(path)) {
+    if (is_source_sample_cache_path(path)) {
+        auto owner = source_path_for_source_sample_cache(path);
+        if (!owner || is_source_sample_cache_path(*owner) ||
+            is_peaks_cache_path(*owner)) {
+            std::fprintf(stderr,
+                "warptempo_gui: '%s' is a private source sample cache; "
+                "open the original source audio file instead.\n",
+                path.c_str());
+            return false;
+        }
         std::fprintf(stderr,
-                     "warptempo_gui: '%s' is a private decoded source cache; "
-                     "open the original audio file instead.\n",
-                     path.c_str());
-        return false;
+            "[warptempo_gui] redirecting private source sample cache %s to %s\n",
+            path.c_str(), owner->c_str());
+        return load_file(*owner);
     }
+    if (is_peaks_cache_path(path)) {
+        auto owner = source_path_for_peaks_cache(path);
+        if (!owner || is_source_sample_cache_path(*owner) ||
+            is_peaks_cache_path(*owner)) {
+            std::fprintf(stderr,
+                "warptempo_gui: '%s' is a waveform peaks cache; "
+                "open the original source audio file instead.\n",
+                path.c_str());
+            return false;
+        }
+        std::fprintf(stderr,
+            "[warptempo_gui] redirecting waveform peaks cache %s to %s\n",
+            path.c_str(), owner->c_str());
+        return load_file(*owner);
+    }
+
+    SF_INFO source_info;
+    std::memset(&source_info, 0, sizeof(source_info));
 
     // Preflight.
     {
-        SF_INFO probe_info;
-        std::memset(&probe_info, 0, sizeof(probe_info));
-        SNDFILE* probe = sf_open(path.c_str(), SFM_READ, &probe_info);
+        SNDFILE* probe = sf_open(path.c_str(), SFM_READ, &source_info);
         if (!probe) {
             std::fprintf(stderr,
                          "warptempo_gui: '%s': %s\n",
@@ -92,6 +116,14 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.audio_generation++;
     app.loading       = false;
     app.load_progress = 0.0f;
+
+    if (!ensure_source_sample_cache_from_buffer(
+            path, source_info, audio.samples_ptr(), audio.total_frames(),
+            audio.channels())) {
+        std::fprintf(stderr,
+            "[warptempo_gui] source sample cache write skipped for %s\n",
+            path.c_str());
+    }
 
     // The just-loaded audio sets a fresh source-frame baseline; the
     // target-frame cache from any prior session is stale. The target

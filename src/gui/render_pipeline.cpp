@@ -270,7 +270,7 @@ RenderOutcome do_render(const RenderRequest& req,
                       total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
             const auto t_source_load_0 = profile::now();
-            auto source_read_result = load_source_range_with_decoded_cache(
+            auto source_read_result = load_source_range_with_source_sample_cache(
                 req.source_audio_path, src_info, b, e,
                 src_samples, src_sr, src_ch);
             if (!source_read_result) {
@@ -293,8 +293,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::fprintf(stderr,
                     "[profile] source_read ms=%.3f source_kind=%s cache_status=%s source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
                     source_read_ms,
-                    used_cache ? "decoded_cache" : "path",
-                    decoded_source_cache_status_name(source_read_result->cache_status),
+                    used_cache ? "source_sample_cache" : "path",
+                    source_sample_cache_status_name(source_read_result->cache_status),
                     profile_source_frames_passed,
                     static_cast<long long>(profile_trim_span_frames),
                     profile::bytes_to_mb(bytes), src_ch, src_sr);

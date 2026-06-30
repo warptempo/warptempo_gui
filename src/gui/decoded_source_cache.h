@@ -7,30 +7,39 @@
 
 #include <sndfile.h>
 
-enum class DecodedSourceCacheStatus {
+enum class SourceSampleCacheStatus {
     Bypassed,
     Hit,
     Miss,
     Rebuilt,
 };
 
-struct DecodedSourceReadResult {
-    DecodedSourceCacheStatus cache_status = DecodedSourceCacheStatus::Bypassed;
+struct SourceSampleReadResult {
+    SourceSampleCacheStatus cache_status = SourceSampleCacheStatus::Bypassed;
     bool used_cache = false;
 };
 
-bool is_decoded_source_cache_path(const std::string& path);
+bool is_source_sample_cache_path(const std::string& path);
 
-// Private warptempo decoded-source cache container. It is not a user audio
-// format: metadata identifies the owning source and the payload is interleaved
+// Private source sample cache container. It is not a user audio format:
+// metadata identifies the owning sibling source and the payload is interleaved
 // float32 for direct render-engine input.
-std::expected<DecodedSourceReadResult, std::string>
-load_source_range_with_decoded_cache(const std::string& source_path,
-                                     const SF_INFO& source_info,
-                                     size_t begin_frame,
-                                     size_t end_frame,
-                                     std::vector<float>& out_samples,
-                                     int& out_sample_rate,
-                                     int& out_channels);
+std::expected<SourceSampleReadResult, std::string>
+load_source_range_with_source_sample_cache(const std::string& source_path,
+                                           const SF_INFO& source_info,
+                                           size_t begin_frame,
+                                           size_t end_frame,
+                                           std::vector<float>& out_samples,
+                                           int& out_sample_rate,
+                                           int& out_channels);
 
-const char* decoded_source_cache_status_name(DecodedSourceCacheStatus status);
+bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
+                                            const SF_INFO& source_info,
+                                            const float* samples,
+                                            int64_t frames,
+                                            int channels);
+
+std::expected<std::string, std::string>
+source_path_for_source_sample_cache(const std::string& cache_path);
+
+const char* source_sample_cache_status_name(SourceSampleCacheStatus status);

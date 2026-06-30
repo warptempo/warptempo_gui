@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <expected>
 #include <functional>
 #include <string>
 #include <utility>
@@ -80,3 +81,8 @@ private:
 // single stderr line and returns false; the caller should ignore the return
 // value.
 bool write_peaks_cache_for_wav(const std::string& wav_path);
+
+bool is_peaks_cache_path(const std::string& path);
+
+std::expected<std::string, std::string>
+source_path_for_peaks_cache(const std::string& peaks_path);

@@ -21,7 +21,7 @@ constexpr char kMagic[] = "WARPTEMPO_DECODED_SOURCE_CACHE";
 constexpr uint32_t kFileVersion = 1;
 constexpr uint32_t kHashAlgorithmNone = 0;
 constexpr char kPayloadType[] = "float32_interleaved";
-constexpr char kDecodedExtension[] = ".decoded";
+constexpr char kSampleCacheExtension[] = ".samples";
 
 struct SourceMetadata {
     std::string basename;
@@ -87,7 +87,7 @@ bool is_cacheable_source(const std::string& source_path, int format) {
 
 std::filesystem::path cache_path_for_source(const std::string& source_path) {
     std::filesystem::path p(source_path);
-    p.replace_extension(kDecodedExtension);
+    p.replace_extension(kSampleCacheExtension);
     return p;
 }
 
@@ -133,7 +133,6 @@ SourceMetadata source_metadata(const std::string& source_path,
 bool metadata_matches(const SourceMetadata& have, const SourceMetadata& want) {
     return have.basename == want.basename &&
            have.extension == want.extension &&
-           have.canonical_path == want.canonical_path &&
            have.source_size == want.source_size &&
            have.mtime_ticks == want.mtime_ticks &&
            have.sample_rate == want.sample_rate &&
@@ -142,9 +141,11 @@ bool metadata_matches(const SourceMetadata& have, const SourceMetadata& want) {
            have.format == want.format;
 }
 
-bool read_header(std::FILE* f, const SourceMetadata& want,
-                 int64_t& payload_frames, uint64_t& payload_bytes,
-                 long& payload_offset) {
+bool read_header_metadata(std::FILE* f, SourceMetadata& have,
+                          std::string& payload_type,
+                          int64_t& payload_frames,
+                          uint64_t& payload_bytes,
+                          long& payload_offset) {
     char magic[sizeof(kMagic)]{};
     if (!get_bytes(f, magic, sizeof(kMagic))) return false;
     if (std::memcmp(magic, kMagic, sizeof(kMagic)) != 0) return false;
@@ -152,7 +153,6 @@ bool read_header(std::FILE* f, const SourceMetadata& want,
     uint32_t version = 0;
     if (!get_u32(f, version) || version != kFileVersion) return false;
 
-    SourceMetadata have;
     int32_t sr = 0, ch = 0, fmt = 0;
     if (!get_str(f, have.basename)) return false;
     if (!get_str(f, have.extension)) return false;
@@ -167,7 +167,6 @@ bool read_header(std::FILE* f, const SourceMetadata& want,
     have.channels = ch;
     have.format = fmt;
 
-    std::string payload_type;
     if (!get_str(f, payload_type) || payload_type != kPayloadType) return false;
     if (!get_i64(f, payload_frames)) return false;
     if (!get_u64(f, payload_bytes)) return false;
@@ -177,6 +176,19 @@ bool read_header(std::FILE* f, const SourceMetadata& want,
     if (!get_u32(f, hash_len)) return false;
     if (hash_algorithm != kHashAlgorithmNone || hash_len != 0) return false;
 
+    payload_offset = std::ftell(f);
+    return payload_offset >= 0;
+}
+
+bool read_header(std::FILE* f, const SourceMetadata& want,
+                 int64_t& payload_frames, uint64_t& payload_bytes,
+                 long& payload_offset) {
+    SourceMetadata have;
+    std::string payload_type;
+    if (!read_header_metadata(f, have, payload_type, payload_frames,
+                              payload_bytes, payload_offset)) {
+        return false;
+    }
     if (!metadata_matches(have, want)) return false;
     if (payload_frames != want.frame_count) return false;
     if (payload_frames < 0 || want.channels <= 0) return false;
@@ -186,9 +198,7 @@ bool read_header(std::FILE* f, const SourceMetadata& want,
         static_cast<uint64_t>(want.channels) *
         static_cast<uint64_t>(sizeof(float));
     if (payload_bytes != want_bytes) return false;
-
-    payload_offset = std::ftell(f);
-    return payload_offset >= 0;
+    return true;
 }
 
 bool read_cache_range(const std::filesystem::path& cache_path,
@@ -241,6 +251,25 @@ bool read_cache_range(const std::filesystem::path& cache_path,
     return ok;
 }
 
+bool cache_file_matches(const std::filesystem::path& cache_path,
+                        const SourceMetadata& want) {
+    std::FILE* f = std::fopen(cache_path.c_str(), "rb");
+    if (!f) return false;
+
+    bool ok = false;
+    int64_t payload_frames = 0;
+    uint64_t payload_bytes = 0;
+    long payload_offset = 0;
+    if (read_header(f, want, payload_frames, payload_bytes, payload_offset)) {
+        std::error_code ec;
+        const auto actual_size = std::filesystem::file_size(cache_path, ec);
+        ok = !ec &&
+             actual_size == static_cast<uint64_t>(payload_offset) + payload_bytes;
+    }
+    std::fclose(f);
+    return ok;
+}
+
 bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes) {
     return put_bytes(f, kMagic, sizeof(kMagic)) &&
            put_u32(f, kFileVersion) &&
@@ -260,25 +289,13 @@ bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes)
            put_u32(f, 0);
 }
 
-bool rebuild_cache(const std::string& source_path,
-                   const std::filesystem::path& cache_path,
-                   const SourceMetadata& meta) {
-    SF_INFO info{};
-    info.format = 0;
-    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!snd) return false;
-    if (info.samplerate != meta.sample_rate || info.channels != meta.channels ||
-        info.frames != meta.frame_count || info.format != meta.format) {
-        sf_close(snd);
-        return false;
-    }
-
+bool write_cache_samples(const std::filesystem::path& cache_path,
+                         const SourceMetadata& meta,
+                         const float* samples,
+                         uint64_t sample_count) {
     const std::filesystem::path tmp_path = cache_path.string() + ".tmp";
     std::FILE* f = std::fopen(tmp_path.c_str(), "wb");
-    if (!f) {
-        sf_close(snd);
-        return false;
-    }
+    if (!f) return false;
 
     bool ok = false;
     do {
@@ -287,33 +304,18 @@ bool rebuild_cache(const std::string& source_path,
             static_cast<uint64_t>(meta.channels) *
             static_cast<uint64_t>(sizeof(float));
         if (!write_header(f, meta, payload_bytes)) break;
-
-        constexpr sf_count_t kChunkFrames = 65536;
-        std::vector<float> buffer(static_cast<size_t>(kChunkFrames) *
-                                  static_cast<size_t>(meta.channels));
-        int64_t remaining = meta.frame_count;
-        while (remaining > 0) {
-            const sf_count_t want = static_cast<sf_count_t>(
-                std::min<int64_t>(remaining, kChunkFrames));
-            const sf_count_t got = sf_readf_float(snd, buffer.data(), want);
-            if (got != want) break;
-            const size_t sample_count =
-                static_cast<size_t>(got) * static_cast<size_t>(meta.channels);
-            if (sample_count > 0 &&
-                std::fwrite(buffer.data(), sizeof(float), sample_count, f) !=
-                    sample_count) {
-                break;
-            }
-            remaining -= static_cast<int64_t>(got);
+        if (sample_count > std::numeric_limits<size_t>::max()) break;
+        if (sample_count > 0 &&
+            std::fwrite(samples, sizeof(float), static_cast<size_t>(sample_count), f) !=
+                static_cast<size_t>(sample_count)) {
+            break;
         }
-        if (remaining != 0) break;
 
         if (std::fflush(f) != 0) break;
         if (::fsync(::fileno(f)) != 0) break;
         ok = true;
     } while (false);
 
-    sf_close(snd);
     if (std::fclose(f) != 0) ok = false;
 
     if (!ok) {
@@ -331,45 +333,82 @@ bool rebuild_cache(const std::string& source_path,
     return true;
 }
 
-} // namespace
+bool rebuild_cache(const std::string& source_path,
+                   const std::filesystem::path& cache_path,
+                   const SourceMetadata& meta) {
+    SF_INFO info{};
+    info.format = 0;
+    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
+    if (!snd) return false;
+    if (info.samplerate != meta.sample_rate || info.channels != meta.channels ||
+        info.frames != meta.frame_count || info.format != meta.format) {
+        sf_close(snd);
+        return false;
+    }
 
-bool is_decoded_source_cache_path(const std::string& path) {
-    return lowercase(std::filesystem::path(path).extension().string()) ==
-           kDecodedExtension;
+    constexpr sf_count_t kChunkFrames = 65536;
+    std::vector<float> all_samples;
+    all_samples.assign(static_cast<size_t>(meta.frame_count) *
+                       static_cast<size_t>(meta.channels), 0.0f);
+    int64_t remaining = meta.frame_count;
+    float* dst = all_samples.data();
+    while (remaining > 0) {
+        const sf_count_t want = static_cast<sf_count_t>(
+            std::min<int64_t>(remaining, kChunkFrames));
+        const sf_count_t got = sf_readf_float(snd, dst, want);
+        if (got != want) {
+            sf_close(snd);
+            return false;
+        }
+        dst += static_cast<size_t>(got) * static_cast<size_t>(meta.channels);
+        remaining -= static_cast<int64_t>(got);
+    }
+    sf_close(snd);
+
+    return write_cache_samples(
+        cache_path, meta, all_samples.data(),
+        static_cast<uint64_t>(all_samples.size()));
 }
 
-std::expected<DecodedSourceReadResult, std::string>
-load_source_range_with_decoded_cache(const std::string& source_path,
-                                     const SF_INFO& source_info,
-                                     size_t begin_frame,
-                                     size_t end_frame,
-                                     std::vector<float>& out_samples,
-                                     int& out_sample_rate,
-                                     int& out_channels) {
+} // namespace
+
+bool is_source_sample_cache_path(const std::string& path) {
+    return lowercase(std::filesystem::path(path).extension().string()) ==
+           kSampleCacheExtension;
+}
+
+std::expected<SourceSampleReadResult, std::string>
+load_source_range_with_source_sample_cache(const std::string& source_path,
+                                           const SF_INFO& source_info,
+                                           size_t begin_frame,
+                                           size_t end_frame,
+                                           std::vector<float>& out_samples,
+                                           int& out_sample_rate,
+                                           int& out_channels) {
     if (!is_cacheable_source(source_path, source_info.format)) {
         if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
                                                 out_samples, out_sample_rate,
                                                 out_channels); !r) {
             return std::unexpected(r.error());
         }
-        return DecodedSourceReadResult{DecodedSourceCacheStatus::Bypassed, false};
+        return SourceSampleReadResult{SourceSampleCacheStatus::Bypassed, false};
     }
 
     const SourceMetadata meta = source_metadata(source_path, source_info);
     const std::filesystem::path cache_path = cache_path_for_source(source_path);
 
-    DecodedSourceReadResult result;
+    SourceSampleReadResult result;
     if (read_cache_range(cache_path, meta, begin_frame, end_frame, out_samples)) {
         out_sample_rate = meta.sample_rate;
         out_channels = meta.channels;
-        result.cache_status = DecodedSourceCacheStatus::Hit;
+        result.cache_status = SourceSampleCacheStatus::Hit;
         result.used_cache = true;
         return result;
     }
 
     result.cache_status = std::filesystem::exists(cache_path)
-        ? DecodedSourceCacheStatus::Rebuilt
-        : DecodedSourceCacheStatus::Miss;
+        ? SourceSampleCacheStatus::Rebuilt
+        : SourceSampleCacheStatus::Miss;
 
     if (!rebuild_cache(source_path, cache_path, meta)) {
         if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
@@ -394,17 +433,97 @@ load_source_range_with_decoded_cache(const std::string& source_path,
     out_sample_rate = meta.sample_rate;
     out_channels = meta.channels;
     result.used_cache = true;
-    if (result.cache_status == DecodedSourceCacheStatus::Miss)
-        result.cache_status = DecodedSourceCacheStatus::Rebuilt;
+    if (result.cache_status == SourceSampleCacheStatus::Miss)
+        result.cache_status = SourceSampleCacheStatus::Rebuilt;
     return result;
 }
 
-const char* decoded_source_cache_status_name(DecodedSourceCacheStatus status) {
+bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
+                                            const SF_INFO& source_info,
+                                            const float* samples,
+                                            int64_t frames,
+                                            int channels) {
+    if (!samples || frames <= 0 || channels <= 0 ||
+        !is_cacheable_source(source_path, source_info.format)) {
+        return true;
+    }
+    if (source_info.samplerate <= 0 || source_info.channels != channels ||
+        source_info.frames != frames) {
+        return false;
+    }
+
+    const SourceMetadata meta = source_metadata(source_path, source_info);
+    const std::filesystem::path cache_path = cache_path_for_source(source_path);
+
+    if (cache_file_matches(cache_path, meta)) return true;
+
+    const uint64_t sample_count =
+        static_cast<uint64_t>(frames) * static_cast<uint64_t>(channels);
+    return write_cache_samples(cache_path, meta, samples, sample_count);
+}
+
+std::expected<std::string, std::string>
+source_path_for_source_sample_cache(const std::string& cache_path_string) {
+    const std::filesystem::path cache_path(cache_path_string);
+    if (!is_source_sample_cache_path(cache_path_string)) {
+        return std::unexpected("not a private source sample cache");
+    }
+
+    std::FILE* f = std::fopen(cache_path.c_str(), "rb");
+    if (!f) {
+        return std::unexpected("could not read private source sample cache metadata");
+    }
+
+    SourceMetadata have;
+    std::string payload_type;
+    int64_t payload_frames = 0;
+    uint64_t payload_bytes = 0;
+    long payload_offset = 0;
+    const bool header_ok = read_header_metadata(
+        f, have, payload_type, payload_frames, payload_bytes, payload_offset);
+    std::fclose(f);
+    if (!header_ok || payload_frames < 0 || have.basename.empty() ||
+        have.extension.empty() || have.extension.front() != '.') {
+        return std::unexpected("invalid private source sample cache metadata");
+    }
+
+    std::filesystem::path parent = cache_path.parent_path();
+    if (parent.empty()) parent = std::filesystem::path(".");
+    const std::filesystem::path source_path =
+        parent / (have.basename + have.extension);
+
+    SF_INFO info{};
+    info.format = 0;
+    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
+    if (!snd) {
+        return std::unexpected("private source sample cache owner is missing");
+    }
+    sf_close(snd);
+
+    const SourceMetadata want = source_metadata(source_path.string(), info);
+    if (!metadata_matches(have, want) ||
+        payload_frames != want.frame_count ||
+        payload_bytes != static_cast<uint64_t>(want.frame_count) *
+                         static_cast<uint64_t>(want.channels) *
+                         static_cast<uint64_t>(sizeof(float))) {
+        return std::unexpected("private source sample cache metadata does not match its owner");
+    }
+
+    std::error_code ec;
+    const auto actual_size = std::filesystem::file_size(cache_path, ec);
+    if (ec || actual_size != static_cast<uint64_t>(payload_offset) + payload_bytes) {
+        return std::unexpected("private source sample cache payload is invalid");
+    }
+
+    return source_path.string();
+}
+
+const char* source_sample_cache_status_name(SourceSampleCacheStatus status) {
     switch (status) {
-        case DecodedSourceCacheStatus::Bypassed: return "bypassed";
-        case DecodedSourceCacheStatus::Hit:      return "hit";
-        case DecodedSourceCacheStatus::Miss:     return "miss";
-        case DecodedSourceCacheStatus::Rebuilt:  return "rebuilt";
+        case SourceSampleCacheStatus::Bypassed: return "bypassed";
+        case SourceSampleCacheStatus::Hit:      return "hit";
+        case SourceSampleCacheStatus::Miss:     return "miss";
+        case SourceSampleCacheStatus::Rebuilt:  return "rebuilt";
     }
     return "bypassed";
 }
