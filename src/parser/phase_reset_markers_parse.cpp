@@ -3,7 +3,6 @@
 #include "parse_text_util.h"
 #include "time_format.h"
 
-#include <cctype>
 #include <cstring>
 #include <expected>
 #include <fstream>
@@ -20,35 +19,26 @@ bool starts_with(const std::string& s, const char* pfx) {
     return s.size() >= n && s.compare(0, n, pfx) == 0;
 }
 
-double eval_legacy_offset_suffix(const std::string& in) {
-    std::string s;
-    s.reserve(in.size());
-    for (char c : in) {
-        if (!std::isspace(static_cast<unsigned char>(c))) s.push_back(c);
+bool is_valid_seconds_offset_body(const std::string& s) {
+    static const std::regex re("^[0-9]+\\.[0-9]{3}$");
+    return std::regex_match(s, re);
+}
+
+std::expected<double, std::string> parse_legacy_offset_suffix(const std::string& s) {
+    if (s.empty()) return 0.0;
+    if (s[0] != '+' && s[0] != '-') {
+        return std::unexpected<std::string>(
+            "malformed phase reset offset suffix: " + s);
     }
-    double total = 0.0;
-    char op = '+';
-    size_t i = 0;
-    while (i < s.size()) {
-        size_t len = 0;
-        while (i + len < s.size() &&
-               (std::isdigit(static_cast<unsigned char>(s[i + len])) ||
-                s[i + len] == '.')) {
-            ++len;
-        }
-        if (len > 0) {
-            const double v = std::stod(s.substr(i, len));
-            if (op == '+') total += v;
-            else if (op == '-') total -= v;
-            i += len;
-        } else if (s[i] == '+' || s[i] == '-') {
-            op = s[i];
-            ++i;
-        } else {
-            break;
-        }
+
+    const std::string body = s.substr(1);
+    if (!is_valid_seconds_offset_body(body)) {
+        return std::unexpected<std::string>(
+            "phase reset offset must be signed S.mmm: " + s);
     }
-    return total;
+
+    const double v = std::stod(body);
+    return (s[0] == '-') ? -v : v;
 }
 
 std::expected<double, std::string> parse_timestamp_with_optional_offset(
@@ -72,7 +62,10 @@ std::expected<double, std::string> parse_timestamp_with_optional_offset(
 
     double out = parse_timestamp(token.substr(0, 9));
     if (token.size() > 9) {
-        out += eval_legacy_offset_suffix(token.substr(9));
+        auto offset = parse_legacy_offset_suffix(token.substr(9));
+        if (!offset)
+            return std::unexpected(std::move(offset.error()));
+        out += *offset;
     }
     return out;
 }
