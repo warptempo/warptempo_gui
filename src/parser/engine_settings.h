@@ -11,7 +11,7 @@
 // empty and is overwritten at source load from the stem). N and the
 // phase-reset lead-in are no longer fields here — both are locked to
 // the locked geometry constants in engine/engine_geometry.h (kN = 4096;
-// lead-in = one synthesis hop). bpm, notes, url, and cover are inert
+// lead-in = two synthesis hops). bpm, notes, url, and cover are inert
 // provenance: free text,
 // unvalidated, never read by the engine or acted on by the GUI.
 struct EngineSettings {

@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
     // render_pipeline / cli_main.
 
     // Phase resets: the resetmap holds undisplaced source frames. Displace each
-    // by one synthesis hop (-R_s), clamped at 0 — the inlined equivalent of the
+    // by the canonical offset, clamped at 0 -- the inlined equivalent of the
     // parser's displace_phase_reset_frames (not linked here). The engine then
     // resolves each to its synthesis frame by binary search over the map.
     ep.phase_reset_frames.reserve(reset_src.size());

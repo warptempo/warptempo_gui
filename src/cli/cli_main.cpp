@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
     // sets only limiter + limiter_diag and inherits the rest.
 
     // Phase resets: drop disabled + time->source frame via
-    // phase_reset_source_frames, then displace by one hop, clamped at 0 via
+    // phase_reset_source_frames, then displace by the canonical offset, clamped at 0 via
     // displace_phase_reset_frames. Absolute source-frame domain throughout —
     // the engine resolves resets by binary search over the full frame map, so
     // there is no trim re-basing. The per-reset clamp notice mirrors do_render
