@@ -47,10 +47,12 @@ public:
 
     // Confirmed lookup. Returns true only on hash match AND exact
     // fingerprint-blob compare AND matching channels/sample_rate, filling
-    // out_samples with interleaved float data and bumping the entry's LRU
-    // recency. Any miss or mismatch returns false and leaves out_samples
-    // untouched. A disk entry whose file is missing or fails validation is
-    // dropped from the index and reported as a miss.
+    // out_samples with interleaved float32 audio and bumping the entry's LRU
+    // recency. Disk hits are private target-view render cache containers:
+    // magic/header, fingerprint confirmation, metadata, then interleaved
+    // float32 audio payload. Any miss or mismatch returns false and leaves
+    // out_samples untouched. A disk entry whose file is missing or fails
+    // validation is dropped from the index and reported as a miss.
     bool lookup(const std::vector<uint8_t>& fingerprint,
                 int channels, int sample_rate,
                 std::vector<float>& out_samples);

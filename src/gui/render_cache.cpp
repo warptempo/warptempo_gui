@@ -46,6 +46,7 @@ std::string hex16(uint64_t h) {
 constexpr uint32_t kFingerprintVersion = 1;
 constexpr char     kMagic[4]           = {'W', 'T', 'C', '1'};
 constexpr uint32_t kFileVersion        = 1;
+constexpr char     kDiskExtension[]    = ".targetviewrender";
 
 } // namespace
 
@@ -281,7 +282,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,
                               int64_t frame_count) {
-    const std::string fname = hex16(h) + ".f32";
+    const std::string fname = hex16(h) + kDiskExtension;
     const std::string path  = dir_ + "/" + fname;
 
     if (auto it = disk_index_.find(h); it != disk_index_.end()) {

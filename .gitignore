@@ -6,10 +6,11 @@
 build*/
 
 # ai tools
+.agents/
 .claude/
 .codex/
-CLAUDE.md
 AGENTS.md
+CLAUDE.md
 
 # tmp
 tmp/
