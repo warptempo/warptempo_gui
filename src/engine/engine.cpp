@@ -33,7 +33,7 @@
 #include "stft_container.h"
 #include "limiter.h"
 #include "synthesis.h"
-#include "wt_profile.h"
+#include "profile_util.h"
 
 namespace {
 
@@ -85,7 +85,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
-    const bool wt_prof = wtprof::enabled();
+    const bool pass_prof = profile::enabled();
     init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
@@ -186,7 +186,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // now() overhead is negligible against a full render); the [profile] line
     // is emitted to std::cerr only when WARPTEMPO_PROFILE is set. Runtime env
     // gating only — no compile-time macro — so it toggles without a rebuild.
-    const bool prof = (std::getenv("WARPTEMPO_PROFILE") != nullptr);
+    const bool prof = profile::enabled();
     int64_t p1_ns = 0, p2_ns = 0, p3_ns = 0;
     auto ns_between = [](std::chrono::steady_clock::time_point a,
                          std::chrono::steady_clock::time_point b) {
@@ -216,7 +216,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p1_1 = std::chrono::steady_clock::now();
     p1_ns = ns_between(t_p1_0, t_p1_1);
     std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
-    if (wt_prof) {
+    if (pass_prof) {
         std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
                   << (p1_ns / 1e6)
                   << " phase_reset_count=" << p.phase_reset_frames.size()
@@ -243,7 +243,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto t_p2_1 = std::chrono::steady_clock::now();
     p2_ns = ns_between(t_p2_0, t_p2_1);
     std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
-    if (wt_prof) {
+    if (pass_prof) {
         const std::vector<float>* out_buf = p.output_buffer ? p.output_buffer
             : (limited ? &render_buf : nullptr);
         const size_t out_samples = out_buf ? out_buf->size() : 0;
@@ -284,7 +284,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         auto t_p3_1 = std::chrono::steady_clock::now();
         p3_ns = ns_between(t_p3_0, t_p3_1);
         std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
-        if (wt_prof) {
+        if (pass_prof) {
             std::cerr << "[profile] engine_pass name=limiter ms="
                       << (p3_ns / 1e6)
                       << " sample_frames=" << limiter_input_frames
@@ -292,7 +292,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                       << " output_buffer=" << (p.output_buffer ? "yes" : "no")
                       << "\n";
         }
-    } else if (wt_prof) {
+    } else if (pass_prof) {
         std::cerr << "[profile] engine_pass name=limiter ms=0.000 sample_frames=0 channels="
                   << audio_stft.channels << " bypass=yes\n";
     }

@@ -10,7 +10,7 @@
 #include "settings_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
-#include "wt_profile.h"
+#include "profile_util.h"
 
 #include <algorithm>
 #include <atomic>
@@ -91,8 +91,8 @@ RenderRequest build_render_request(std::string source_audio_path,
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag) {
     if (req.source_audio_path.empty()) return RenderOutcome::Failed;
-    const bool prof = wtprof::enabled();
-    const auto t_render_0 = wtprof::now();
+    const bool prof = profile::enabled();
+    const auto t_render_0 = profile::now();
     double source_read_ms = 0.0;
     double engine_ms = 0.0;
     int64_t profile_trim_begin_frame = 0;
@@ -268,7 +268,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<size_t>(std::min<int64_t>(
                       total_frames, trim_end_src + end_margin))
                 : static_cast<size_t>(total_frames);
-            const auto t_source_load_0 = wtprof::now();
+            const auto t_source_load_0 = profile::now();
             if (auto r = load_source_range_to_buffer(req.source_audio_path, b, e,
                                              src_samples, src_sr, src_ch); !r) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
@@ -277,11 +277,11 @@ RenderOutcome do_render(const RenderRequest& req,
                 return RenderOutcome::Failed;
             }
             if (prof) {
-                const auto t_source_load_1 = wtprof::now();
+                const auto t_source_load_1 = profile::now();
                 const unsigned long long bytes =
                     static_cast<unsigned long long>(src_samples.size()) *
                     static_cast<unsigned long long>(sizeof(float));
-                source_read_ms = wtprof::ms(t_source_load_0, t_source_load_1);
+                source_read_ms = profile::ms(t_source_load_0, t_source_load_1);
                 profile_source_frames_passed = (src_ch > 0)
                     ? src_samples.size() / static_cast<size_t>(src_ch) : 0;
                 profile_source_channels = src_ch;
@@ -290,7 +290,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     "[profile] source_read ms=%.3f source_kind=path source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
                     source_read_ms, profile_source_frames_passed,
                     static_cast<long long>(profile_trim_span_frames),
-                    wtprof::bytes_to_mb(bytes), src_ch, src_sr);
+                    profile::bytes_to_mb(bytes), src_ch, src_sr);
             }
         }
 
@@ -362,13 +362,13 @@ RenderOutcome do_render(const RenderRequest& req,
                 : RenderOutcome::Failed;
         };
 
-        const auto t_engine_0 = wtprof::now();
+        const auto t_engine_0 = profile::now();
         const EngineResult er = run_warptempo_engine(
             ep, &engine_source_frame_positions, &engine_R_s, &engine_synth_frame_begin,
             cancel_flag);
         if (prof) {
-            const auto t_engine_1 = wtprof::now();
-            engine_ms = wtprof::ms(t_engine_0, t_engine_1);
+            const auto t_engine_1 = profile::now();
+            engine_ms = profile::ms(t_engine_0, t_engine_1);
             std::fprintf(stderr,
                 "[profile] stage name=engine_total ms=%.3f result=%d source_buffer_frames=%zu target_frames=%lld output_buffer=%s limiter=%s\n",
                 engine_ms, static_cast<int>(er),
@@ -642,8 +642,8 @@ RenderOutcome do_render(const RenderRequest& req,
 
     cleanup_all();
     if (prof) {
-        const auto t_render_1 = wtprof::now();
-        const double render_ms = wtprof::ms(t_render_0, t_render_1);
+        const auto t_render_1 = profile::now();
+        const double render_ms = profile::ms(t_render_0, t_render_1);
         std::fprintf(stderr,
             "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu offset_samples=%lld output_buffer=%s limiter=%s outcome=success\n",
             req.output_buffer ? "target" : "file", output_format.c_str(),

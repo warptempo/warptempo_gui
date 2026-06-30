@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace wtprof {
+namespace profile {
 
 using Clock = std::chrono::steady_clock;
 
@@ -24,4 +24,4 @@ inline double bytes_to_mb(unsigned long long bytes) {
     return static_cast<double>(bytes) / (1024.0 * 1024.0);
 }
 
-}  // namespace wtprof
+}  // namespace profile
