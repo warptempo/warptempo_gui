@@ -19,13 +19,10 @@
 #include "engine.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <fftw3.h>
@@ -85,7 +82,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
-    const bool pass_prof = profile::enabled();
+    // Env-gated pass-level profiling. Timers accumulate unconditionally (the
+    // now() overhead is negligible against a full render); the [profile] line
+    // is emitted to std::cerr only when WARPTEMPO_PROFILE is set. Runtime env
+    // gating only — no compile-time macro — so it toggles without a rebuild.
+    const bool prof = profile::enabled();
     init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
@@ -177,24 +178,10 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     Limiter        limiter;
     Synthesis      synthesis;
 
-    auto pass_ms = [](std::chrono::steady_clock::time_point t0,
-                      std::chrono::steady_clock::time_point t1) {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    };
-
-    // Env-gated pass-level profiling. Timers accumulate unconditionally (the
-    // now() overhead is negligible against a full render); the [profile] line
-    // is emitted to std::cerr only when WARPTEMPO_PROFILE is set. Runtime env
-    // gating only — no compile-time macro — so it toggles without a rebuild.
-    const bool prof = profile::enabled();
-    int64_t p1_ns = 0, p2_ns = 0, p3_ns = 0;
-    auto ns_between = [](std::chrono::steady_clock::time_point a,
-                         std::chrono::steady_clock::time_point b) {
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
-    };
+    double p1_ms = 0.0, p2_ms = 0.0, p3_ms = 0.0;
 
     // Pass 1: phase reset placement.
-    auto t_p1_0 = std::chrono::steady_clock::now();
+    auto t_p1_0 = profile::now();
     audio_stft.phase_reset_markers.clear();
     audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
     const auto& fm = audio_stft.source_frame_positions;
@@ -213,12 +200,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
               << "] Phase reset placement............. "
               << audio_stft.phase_reset_markers.size()
               << " phase resets\n";
-    auto t_p1_1 = std::chrono::steady_clock::now();
-    p1_ns = ns_between(t_p1_0, t_p1_1);
-    std::cout << "  (" << pass_ms(t_p1_0, t_p1_1) << " ms)\n";
-    if (pass_prof) {
+    auto t_p1_1 = profile::now();
+    p1_ms = profile::ms(t_p1_0, t_p1_1);
+    std::cout << "  (" << static_cast<long long>(profile::ms(t_p1_0, t_p1_1)) << " ms)\n";
+    if (prof) {
         std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
-                  << (p1_ns / 1e6)
+                  << p1_ms
                   << " phase_reset_count=" << p.phase_reset_frames.size()
                   << " placed_count=" << audio_stft.phase_reset_markers.size()
                   << "\n";
@@ -232,7 +219,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // float straight to file.
     const bool limited = audio_stft.limiter;
     std::vector<float> render_buf;
-    auto t_p2_0 = std::chrono::steady_clock::now();
+    auto t_p2_0 = profile::now();
     if (p.output_buffer) {
         synthesis.process_to_buffer(audio_stft, p.output_buffer);
     } else if (limited) {
@@ -240,17 +227,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     } else {
         synthesis.process(audio_stft);            // None -> 32-bit float, clean
     }
-    auto t_p2_1 = std::chrono::steady_clock::now();
-    p2_ns = ns_between(t_p2_0, t_p2_1);
-    std::cout << "  (" << pass_ms(t_p2_0, t_p2_1) << " ms)\n";
-    if (pass_prof) {
+    auto t_p2_1 = profile::now();
+    p2_ms = profile::ms(t_p2_0, t_p2_1);
+    std::cout << "  (" << static_cast<long long>(profile::ms(t_p2_0, t_p2_1)) << " ms)\n";
+    if (prof) {
         const std::vector<float>* out_buf = p.output_buffer ? p.output_buffer
             : (limited ? &render_buf : nullptr);
         const size_t out_samples = out_buf ? out_buf->size() : 0;
         const size_t out_frames = (audio_stft.channels > 0)
             ? out_samples / static_cast<size_t>(audio_stft.channels) : 0;
         std::cerr << "[profile] engine_pass name=synthesis ms="
-                  << (p2_ns / 1e6)
+                  << p2_ms
                   << " source_frames=" << p.source_audio_frames
                   << " target_frames=" << audio_stft.emit_sample_cap
                   << " channels=" << audio_stft.channels
@@ -268,7 +255,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // in place on whichever buffer Pass 2 filled (disk render or target view).
     // The None disk path has no Pass 3. The disk render is then written out.
     if (limited) {
-        auto t_p3_0 = std::chrono::steady_clock::now();
+        auto t_p3_0 = profile::now();
         std::vector<float>& buf = p.output_buffer ? *p.output_buffer : render_buf;
         const size_t limiter_input_frames = (audio_stft.channels > 0)
             ? buf.size() / static_cast<size_t>(audio_stft.channels) : 0;
@@ -281,27 +268,27 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         apply_peak_backstop(audio_stft, buf);      // peak 0 net
         if (!p.output_buffer)
             synthesis.write_render_to_file(audio_stft, render_buf);  // plain write
-        auto t_p3_1 = std::chrono::steady_clock::now();
-        p3_ns = ns_between(t_p3_0, t_p3_1);
-        std::cout << "  (" << pass_ms(t_p3_0, t_p3_1) << " ms)\n";
-        if (pass_prof) {
+        auto t_p3_1 = profile::now();
+        p3_ms = profile::ms(t_p3_0, t_p3_1);
+        std::cout << "  (" << static_cast<long long>(profile::ms(t_p3_0, t_p3_1)) << " ms)\n";
+        if (prof) {
             std::cerr << "[profile] engine_pass name=limiter ms="
-                      << (p3_ns / 1e6)
+                      << p3_ms
                       << " sample_frames=" << limiter_input_frames
                       << " channels=" << audio_stft.channels
                       << " output_buffer=" << (p.output_buffer ? "yes" : "no")
                       << "\n";
         }
-    } else if (pass_prof) {
+    } else if (prof) {
         std::cerr << "[profile] engine_pass name=limiter ms=0.000 sample_frames=0 channels="
                   << audio_stft.channels << " bypass=yes\n";
     }
 
     if (prof) {
         std::cerr << "[profile] passes:"
-                  << " P1=" << (p1_ns / 1e6)
-                  << " P2=" << (p2_ns / 1e6)
-                  << " P3=" << (p3_ns / 1e6) << "\n";
+                  << " P1=" << p1_ms
+                  << " P2=" << p2_ms
+                  << " P3=" << p3_ms << "\n";
     }
 
     std::cout << "[Success] " << audio_stft.output_audio_file << "\n";
