@@ -19,6 +19,16 @@
 #include <string>
 #include <utility>
 
+GuiFileLoader::~GuiFileLoader() {
+    join_source_sample_cache_writer();
+}
+
+void GuiFileLoader::join_source_sample_cache_writer() {
+    if (source_sample_cache_writer_.joinable()) {
+        source_sample_cache_writer_.join();
+    }
+}
+
 bool GuiFileLoader::load_file(const std::string& path) {
     if (is_source_sample_cache_path(path)) {
         auto owner = source_path_for_source_sample_cache(path);
@@ -112,18 +122,24 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // reading them mid-move is UB.
     waveform_worker.wait_until_idle();
 
+    // Same buffer-invalidation reason: the cache writer borrows audio.samples_ptr().
+    join_source_sample_cache_writer();
+
     audio = std::move(next);
     app.audio_generation++;
     app.loading       = false;
     app.load_progress = 0.0f;
 
-    if (!ensure_source_sample_cache_from_buffer(
-            path, source_info, audio.samples_ptr(), audio.total_frames(),
-            audio.channels())) {
-        std::fprintf(stderr,
-            "[warptempo_gui] source sample cache write skipped for %s\n",
-            path.c_str());
-    }
+    source_sample_cache_writer_ = std::thread(
+        [path, source_info, samples = audio.samples_ptr(),
+         frames = audio.total_frames(), channels = audio.channels()] {
+            if (!ensure_source_sample_cache_from_buffer(
+                    path, source_info, samples, frames, channels)) {
+                std::fprintf(stderr,
+                    "[warptempo_gui] source sample cache write skipped for %s\n",
+                    path.c_str());
+            }
+        });
 
     // The just-loaded audio sets a fresh source-frame baseline; the
     // target-frame cache from any prior session is stale. The target
@@ -383,6 +399,9 @@ void GuiFileLoader::revert_to_blank() {
     // Same invariant as load_file — the worker holds a pointer into
     // `audio`, and `audio = GuiAudio{}` will replace its internals.
     waveform_worker.wait_until_idle();
+
+    // Same buffer-invalidation reason: the cache writer borrows audio.samples_ptr().
+    join_source_sample_cache_writer();
 
     audio = GuiAudio{};
     app.audio_generation++;

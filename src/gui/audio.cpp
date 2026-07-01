@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "source_sample_cache.h"
 
 #include <sndfile.h>
 
@@ -555,27 +556,34 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     }
 
     const int64_t claimed = info.frames;
-    samples_.assign(static_cast<size_t>(claimed) * channels_, 0.0f);
-
-    const sf_count_t got = sf_readf_float(snd, samples_.data(), claimed);
-    sf_close(snd);
-
-    if (got <= 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: no audio frames read from '%s'\n",
+    if (read_full_source_from_source_sample_cache(path, info, samples_)) {
+        sf_close(snd);
+        total_frames_ = claimed;
+        std::fprintf(stderr, "[warptempo_gui] source sample cache hit for %s\n",
                      path.c_str());
-        return false;
+    } else {
+        samples_.assign(static_cast<size_t>(claimed) * channels_, 0.0f);
+
+        const sf_count_t got = sf_readf_float(snd, samples_.data(), claimed);
+        sf_close(snd);
+
+        if (got <= 0) {
+            std::fprintf(stderr,
+                         "warptempo_gui: no audio frames read from '%s'\n",
+                         path.c_str());
+            return false;
+        }
+        if (got != claimed) {
+            samples_.resize(static_cast<size_t>(got) * channels_);
+        }
+        total_frames_ = got;
     }
-    if (got != claimed) {
-        samples_.resize(static_cast<size_t>(got) * channels_);
-    }
-    total_frames_ = got;
 
     reset_levels(levels_);
 
     // Try the on-disk peaks cache first. Cache hit skips the build entirely
-    // and short-circuits progress reporting to 1.0; the dominant load cost
-    // (PCM decode) has already been paid above.
+    // and short-circuits progress reporting to 1.0; source samples have
+    // already been loaded above.
     if (try_load_cache(path, total_frames_, render_channels_, sample_rate_, levels_)) {
         if (on_progress) on_progress(1.0f);
         return true;

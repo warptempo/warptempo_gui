@@ -10,7 +10,6 @@
 #include "settings_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
-#include "phase_reset_dispatch.h"
 #include "profile_util.h"
 #include "source_sample_cache.h"
 
@@ -232,47 +231,24 @@ RenderOutcome do_render(const RenderRequest& req,
     int64_t window_offset_samples = 0;
 
     if (output_format == "wav") {
-        // Absolute source-frame trim bounds. Full-frame-map path: the engine
-        // resolves the synthesis window by binary search over the full frame
-        // map, so these are absolute source frames (nearbyint per the
-        // architecture rounding rule — matches frame_map_build.cpp's own trim cut).
-        // When a bound is unset it defaults to the full extent (0 / total),
-        // which leaves the engine rendering the whole map.
-        const int64_t trim_begin_src = req.has_trim_begin
-            ? static_cast<int64_t>(std::nearbyint(
-                  req.trim_begin_sec * static_cast<double>(sample_rate)))
-            : 0;
-        const int64_t trim_end_src = req.has_trim_end
-            ? static_cast<int64_t>(std::nearbyint(
-                  req.trim_end_sec * static_cast<double>(sample_rate)))
-            : static_cast<int64_t>(total_frames);
+        const TrimSourceWindow trim_window = resolve_trim_source_window(
+            req.has_trim_begin, req.trim_begin_sec,
+            req.has_trim_end, req.trim_end_sec,
+            sample_rate, total_frames, N_fft);
+        const int64_t trim_begin_src = trim_window.trim_begin_src;
+        const int64_t trim_end_src = trim_window.trim_end_src;
         profile_trim_begin_frame = trim_begin_src;
         profile_trim_end_frame = trim_end_src;
         profile_trim_span_frames = trim_end_src - trim_begin_src;
-        // Load the source from frame 0 to the end-trim point (plus margin),
-        // NOT a begin-trimmed slice. The begin MUST stay at 0: the frame map's
-        // t_a accumulation runs from frame 0, and that inherited history is
-        // what keeps the windowed render's source reads sample-aligned with the
-        // full render (the window head itself is a phase seed, so it converges
-        // toward the full render rather than nulling at the first frames). The
-        // end is end-capped because no frame in the window reads source past
-        // trim_end except the last analysis window's small reach — covered by
-        // end_margin (one analysis hop, which grows with the stretch, plus the
-        // N-sample window; 2*N covers realistic stretches). An undersized
-        // margin only zero-pads the trailing edge — never a crash.
+        // See resolve_trim_source_window for the frame-0 load invariant.
         std::vector<float> src_samples;
         int src_sr = 0;
         int src_ch = 0;
         {
-            const int64_t end_margin = 2LL * static_cast<int64_t>(N_fft);
-            const size_t b = 0;
-            const size_t e = req.has_trim_end
-                ? static_cast<size_t>(std::min<int64_t>(
-                      total_frames, trim_end_src + end_margin))
-                : static_cast<size_t>(total_frames);
             const auto t_source_load_0 = profile::now();
             auto source_read_result = load_source_range_with_source_sample_cache(
-                req.source_audio_path, src_info, b, e,
+                req.source_audio_path, src_info,
+                trim_window.load_begin_frame, trim_window.load_end_frame,
                 src_samples, src_sr, src_ch);
             if (!source_read_result) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
@@ -331,36 +307,10 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;
-        const int64_t render_target_frames =
-            ep.emit_sample_cap > 0
-                ? ep.emit_sample_cap
-                : (ep.frame_map.empty() ? 0 :
-                   static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
-        std::vector<PhaseResetDispatchFrame> reset_placements;
-        ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
-            req.phase_reset_frames,
-            tmfull.frame_map,
-            ep.frame_map,
-            window_offset_samples,
-            render_target_frames,
-            phase_reset_offset_samples,
-            N_fft / 2,
-            &reset_placements);
-        for (const PhaseResetDispatchFrame& p : reset_placements) {
-            if (p.clamped_to_start) {
-                std::fprintf(stderr,
-                    "warptempo_gui: phase reset at %.3f s clamped to "
-                    "target frame 0 (target-domain offset would place it "
-                    "before rendered audio start)\n",
-                    static_cast<double>(p.authored_source_frame) /
-                        static_cast<double>(sample_rate));
-            }
-        }
-
-        profile_target_frames = ep.emit_sample_cap > 0
-            ? ep.emit_sample_cap
-            : (ep.frame_map.empty() ? 0 :
-               static_cast<int64_t>(std::llround(ep.frame_map.back().tgt_frame)));
+        const int64_t render_target_frames = assign_engine_phase_resets(
+            ep, req.phase_reset_frames, tmfull.frame_map, window_offset_samples,
+            N_fft, sample_rate, "warptempo_gui");
+        profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
             ? static_cast<double>(profile_target_frames) /
               static_cast<double>(ep.source_sample_rate)
@@ -594,34 +544,11 @@ RenderOutcome do_render(const RenderRequest& req,
                     wmd_path.c_str());
             }
 
-            // Forward-map a source frame to its target frame via the same
-            // piecewise-linear frame map the warp markers use, so a phase-reset
-            // marker displays at the clicked musical position -- identical
-            // convention to source and target views. The engine dispatch offset
-            // is applied later in target/output domain and is deliberately NOT
-            // applied to the displayed marker.
-            auto src_to_tgt = [&](int64_t sf) -> double {
-                if (real.begin == real.end) return static_cast<double>(sf);
-                const double sfd = static_cast<double>(sf);
-                if (sfd <= real.begin->src_frame)
-                    return real.begin->tgt_frame;
-                for (auto it = real.begin; it + 1 != real.end; ++it) {
-                    const auto& a = *it;
-                    const auto& b = *(it + 1);
-                    if (sfd >= a.src_frame && sfd < b.src_frame) {
-                        const double sd  = b.src_frame - a.src_frame;
-                        const double td  = b.tgt_frame - a.tgt_frame;
-                        const double off = sfd - a.src_frame;
-                        return a.tgt_frame + off * (td / sd);
-                    }
-                }
-                const auto& last = *(real.end - 1);
-                return last.tgt_frame + (sfd - last.src_frame);
-            };
+            std::vector<FrameMapSegment> real_map(real.begin, real.end);
 
             // Phase resets: forward-map each reset's clicked source frame
-            // through src_to_tgt and place it at tgt(F) - window_offset, so a
-            // reset sits on the same musical position in render-view as in
+            // through the same map and place it at tgt(F) - window_offset, so
+            // a reset sits on the same musical position in render-view as in
             // source and target views. Drop out-of-trim and disabled.
             if (!req.phase_resets.empty()) {
                 std::vector<GuiPhaseResetMarker> warped_phase_resets;
@@ -632,7 +559,8 @@ RenderOutcome do_render(const RenderRequest& req,
                         std::nearbyint(t.time_seconds * sr_d));
                     if (sf_abs < trim_begin || sf_abs > trim_end) continue;
                     const int64_t render_frame =
-                        static_cast<int64_t>(std::llround(src_to_tgt(sf_abs))) -
+                        static_cast<int64_t>(std::llrint(map_source_to_target(
+                            static_cast<double>(sf_abs), real_map))) -
                         window_offset_samples;
                     GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;

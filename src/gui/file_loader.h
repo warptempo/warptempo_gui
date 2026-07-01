@@ -8,6 +8,7 @@
 #include "viewport.h"
 
 #include <string>
+#include <thread>
 
 class GuiWaveformWorker;
 struct GuiTargetRender;
@@ -53,7 +54,15 @@ struct GuiFileLoader {
           viewport(viewport_),
           target_render(target_render_) {}
 
+    ~GuiFileLoader();
+
     bool load_file(const std::string& path);
     void revert_to_blank();
     void load_then_drain(std::string path);
+    void join_source_sample_cache_writer();
+
+    // The writer reads GuiAudio's sample buffer through a raw pointer.
+    // Callers join before replacing the buffer in load_file/revert_to_blank,
+    // and the destructor joins before GuiAudio is destroyed.
+    std::thread source_sample_cache_writer_;
 };

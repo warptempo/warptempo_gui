@@ -33,6 +33,13 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
                                            int& out_sample_rate,
                                            int& out_channels);
 
+// Hit-only full-source read from the private sample cache. A validated hit
+// fills out_samples with the full interleaved float32 payload at
+// source_info.channels channels and source_info.frames frames.
+bool read_full_source_from_source_sample_cache(const std::string& source_path,
+                                               const SF_INFO& source_info,
+                                               std::vector<float>& out_samples);
+
 bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
                                             const SF_INFO& source_info,
                                             const float* samples,

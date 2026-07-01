@@ -8,9 +8,8 @@
                                         // slice_frame_map_to_trim_window,
                                         // load_source_range_to_buffer
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
-#include "engine/engine_geometry.h"     // kN, kRs, phase_reset_offset_samples
-#include "render_assembly.h"            // assign_engine_frame_map
-#include "phase_reset_dispatch.h"
+#include "engine/engine_geometry.h"     // kN, kRs
+#include "render_assembly.h"            // render parameter assembly helpers
 
 #include <sndfile.h>
 
@@ -168,32 +167,19 @@ int main(int argc, char** argv) {
     }
     MapBuildResult tmfull = std::move(*r);
 
-    // --- absolute source-frame trim bounds (nearbyint per the rounding rule;
-    // defaults span the full extent). ---
-    const int64_t trim_begin_src = trim.has_begin
-        ? static_cast<int64_t>(std::nearbyint(
-              trim.begin_sec * static_cast<double>(sample_rate)))
-        : 0;
-    const int64_t trim_end_src = trim.has_end
-        ? static_cast<int64_t>(std::nearbyint(
-              trim.end_sec * static_cast<double>(sample_rate)))
-        : static_cast<int64_t>(total_frames);
+    const TrimSourceWindow trim_window = resolve_trim_source_window(
+        trim.has_begin, trim.begin_sec, trim.has_end, trim.end_sec,
+        sample_rate, total_frames, N_fft);
+    const int64_t trim_begin_src = trim_window.trim_begin_src;
+    const int64_t trim_end_src = trim_window.trim_end_src;
 
-    // --- load source from frame 0 to the end-trim point (+margin). The begin
-    // MUST stay 0 (the frame map's t_a accumulation runs from frame 0). The end
-    // margin (2*N) covers the final analysis window's reach past trim_end; an
-    // undersized margin only zero-pads the trailing edge, never crashes. ---
+    // --- load source; see resolve_trim_source_window for the frame-0 invariant. ---
     std::vector<float> src_samples;
     int src_sr = 0, src_ch = 0;
     {
-        const int64_t end_margin = 2LL * static_cast<int64_t>(N_fft);
-        const size_t b = 0;
-        const size_t e = trim.has_end
-            ? static_cast<size_t>(std::min<int64_t>(
-                  total_frames, trim_end_src + end_margin))
-            : static_cast<size_t>(total_frames);
-        if (auto r = load_source_range_to_buffer(source_path, b, e,
-                                         src_samples, src_sr, src_ch); !r) {
+        if (auto r = load_source_range_to_buffer(
+                source_path, trim_window.load_begin_frame,
+                trim_window.load_end_frame, src_samples, src_sr, src_ch); !r) {
             std::fprintf(stderr, "warptempo_cli: %s\n", r.error().c_str());
             return 1;
         }
@@ -224,31 +210,9 @@ int main(int argc, char** argv) {
 
     const std::vector<int64_t> reset_src_frames =
         phase_reset_source_frames(resets, sample_rate);
-    const int64_t render_target_frames =
-        ep.emit_sample_cap > 0
-            ? ep.emit_sample_cap
-            : (ep.frame_map.empty() ? 0 :
-               static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
-    std::vector<PhaseResetDispatchFrame> reset_placements;
-    ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
-        reset_src_frames,
-        tmfull.frame_map,
-        ep.frame_map,
-        window_offset_samples,
-        render_target_frames,
-        phase_reset_offset_samples,
-        N_fft / 2,
-        &reset_placements);
-    for (const PhaseResetDispatchFrame& p : reset_placements) {
-        if (p.clamped_to_start) {
-            std::fprintf(stderr,
-                "warptempo_cli: phase reset at %.3f s clamped to target "
-                "frame 0 (target-domain offset would place it before "
-                "rendered audio start)\n",
-                static_cast<double>(p.authored_source_frame) /
-                    static_cast<double>(sample_rate));
-        }
-    }
+    assign_engine_phase_resets(
+        ep, reset_src_frames, tmfull.frame_map, window_offset_samples,
+        N_fft, sample_rate, "warptempo_cli");
 
     // --- render. The engine writes out_path directly (no staging/rename). ---
     const EngineResult er = run_warptempo_engine(ep);

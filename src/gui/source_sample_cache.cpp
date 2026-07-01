@@ -3,6 +3,7 @@
 #include "frame_map_build.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cstdio>
 #include <cctype>
@@ -22,6 +23,7 @@ constexpr uint32_t kFileVersion = 1;
 constexpr uint32_t kHashAlgorithmNone = 0;
 constexpr char kPayloadType[] = "float32_interleaved";
 constexpr char kSampleCacheExtension[] = ".samples";
+std::atomic<uint64_t> g_cache_tmp_counter{0};
 
 struct SourceMetadata {
     std::string basename;
@@ -281,7 +283,13 @@ bool write_cache_samples(const std::filesystem::path& cache_path,
                          const SourceMetadata& meta,
                          const float* samples,
                          uint64_t sample_count) {
-    const std::filesystem::path tmp_path = cache_path.string() + ".tmp";
+    // Unique staging names let the GUI-load background writer overlap the
+    // render worker's rebuild path. Both writers produce identical bytes for
+    // the same source metadata, and atomic rename makes concurrent publishes
+    // benign.
+    const std::filesystem::path tmp_path =
+        cache_path.string() + ".tmp" +
+        std::to_string(g_cache_tmp_counter.fetch_add(1));
     std::FILE* f = std::fopen(tmp_path.c_str(), "wb");
     if (!f) return false;
 
@@ -424,6 +432,18 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
     if (result.cache_status == SourceSampleCacheStatus::Miss)
         result.cache_status = SourceSampleCacheStatus::Rebuilt;
     return result;
+}
+
+bool read_full_source_from_source_sample_cache(const std::string& source_path,
+                                               const SF_INFO& source_info,
+                                               std::vector<float>& out_samples) {
+    if (!is_cacheable_source(source_path, source_info.format)) return false;
+
+    const SourceMetadata meta = source_metadata(source_path, source_info);
+    if (meta.frame_count <= 0) return false;
+
+    return read_cache_range(cache_path_for_source(source_path), meta, 0,
+                            static_cast<size_t>(meta.frame_count), out_samples);
 }
 
 bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
