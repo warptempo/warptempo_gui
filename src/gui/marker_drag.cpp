@@ -3,7 +3,7 @@
 #include "audio.h"
 #include "frame_map.h"
 #include "frame_map_view.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 #include "render.h"
 #include "target_render.h"
 #include "time_format.h"
@@ -23,14 +23,14 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     if (sr <= 0) return false;
     const bool phase_reset = (app.active_markers_view == 'P');
     const int n = phase_reset
-        ? static_cast<int>(app.phase_reset_markers.markers().size())
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());
     if (hit >= n) return false;
 
     const double sr_d = static_cast<double>(sr);
     auto t_of = [&](int idx) -> double {
         if (phase_reset) {
-            return app.phase_reset_markers.markers()[idx].time_seconds;
+            return app.phaseresetmarkers.markers()[idx].time_seconds;
         }
         return app.warpmarkers.markers()[idx].time_seconds;
     };
@@ -175,7 +175,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // active-mode snapshot only when the drag produced a net position
     // change; a drag that returns to its origin is discarded.
     if (phase_reset) {
-        d.pre_drag_phase_reset_snapshot = app.phase_reset_markers.markers();
+        d.pre_drag_phase_reset_snapshot = app.phaseresetmarkers.markers();
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
@@ -321,7 +321,7 @@ void MarkerDragOps::commit_drag() {
             const double new_t = app.drag.moveable_times[k];
             if (phase_reset) {
                 GuiPhaseResetMarker* m =
-                    app.phase_reset_markers.marker_mut(idx);
+                    app.phaseresetmarkers.marker_mut(idx);
                 if (!m) continue;
                 m->time_seconds = new_t;
             } else {

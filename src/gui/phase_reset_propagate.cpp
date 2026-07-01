@@ -3,7 +3,7 @@
 #include "active_views.h"
 #include "audio.h"
 #include "phase_reset_clipboard.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 #include "target_render.h"
 #include "time_format.h"
 #include "frame_map_view.h"
@@ -98,7 +98,7 @@ std::string format_domain_timestamp(double source_seconds,
 
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
-    const auto& tv = app.phase_reset_markers.markers();
+    const auto& tv = app.phaseresetmarkers.markers();
     if (app.selected_markers.size() != 2) return;
 
     auto it = app.selected_markers.begin();
@@ -220,10 +220,10 @@ void PhaseResetPropagate::paste_apply() {
     }
 
     std::vector<GuiPhaseResetMarker> pre_state =
-        app.phase_reset_markers.markers();
+        app.phaseresetmarkers.markers();
     const int hint_last = app.last_selected_marker;
 
-    auto& out = app.phase_reset_markers.markers_mut();
+    auto& out = app.phaseresetmarkers.markers_mut();
 
     // Per-block clear of destination phase resets inside the shifted
     // membership window [start - guard, end - guard). Adjacent matched
@@ -253,7 +253,7 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_seconds = snap_to_timestamp_grid(
                 std::max(0.0, dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
-            app.phase_reset_markers.insert_marker(std::move(nm));
+            app.phaseresetmarkers.insert_marker(std::move(nm));
         }
     }
 
@@ -311,10 +311,10 @@ void PhaseResetPropagate::paste_state_apply() {
     // Snapshot pre-state up front; we commit a single undo entry only
     // if at least one flag actually changes.
     std::vector<GuiPhaseResetMarker> pre_state =
-        app.phase_reset_markers.markers();
+        app.phaseresetmarkers.markers();
     const int hint_last = app.last_selected_marker;
 
-    auto& out = app.phase_reset_markers.markers_mut();
+    auto& out = app.phaseresetmarkers.markers_mut();
 
     bool any_change = false;
     std::string stop_message;

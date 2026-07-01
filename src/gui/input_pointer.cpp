@@ -383,7 +383,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phase_reset_markers.markers()[hit].time_seconds *
+                        app.phaseresetmarkers.markers()[hit].time_seconds *
                         static_cast<double>(sr)));
                 } else {
                     src_sample = static_cast<int64_t>(std::nearbyint(
@@ -413,7 +413,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phase_reset_markers.markers()[hit].time_seconds *
+                        app.phaseresetmarkers.markers()[hit].time_seconds *
                         static_cast<double>(sr)));
                 } else {
                     src_sample = static_cast<int64_t>(std::nearbyint(
@@ -640,7 +640,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             int64_t src_sample;
             if (app.active_markers_view == 'P') {
                 src_sample = static_cast<int64_t>(std::nearbyint(
-                    app.phase_reset_markers.markers()[hit].time_seconds *
+                    app.phaseresetmarkers.markers()[hit].time_seconds *
                     static_cast<double>(sr)));
             } else {
                 src_sample = static_cast<int64_t>(std::nearbyint(
@@ -714,7 +714,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 const double hi_t = static_cast<double>(hi) / sr_d;
                 const bool swept = (app.active_markers_view == 'P')
                     ? sweep_select_interval(
-                          app, app.phase_reset_markers.markers(),
+                          app, app.phaseresetmarkers.markers(),
                           lo_t, hi_t, forward,
                           app.playhead_drag.press_marker_idx)
                     : sweep_select_interval(

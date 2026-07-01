@@ -2,7 +2,7 @@
 
 #include "engine_settings.h"
 #include "warpmarkers.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 
 #include <atomic>
 #include <cstdint>
@@ -110,7 +110,7 @@ std::filesystem::path compose_sibling_output_path(
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,
 // iteration batch, and the target-view buffer render). Derives
-// phase_reset_frames internally via slice_to_phase_reset_markers +
+// phase_reset_frames internally via slice_to_phaseresetmarkers +
 // phase_reset_source_frames so all callers stay in lockstep on that
 // filter-disabled + banker's-round derivation. output_buffer is left at its
 // nullptr default; the target-view caller sets it after the call.

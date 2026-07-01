@@ -56,7 +56,7 @@ void Undo::recompute_dirty() {
 void Undo::push_undo(std::vector<GuiWarpMarker> pre_state, int hint_last) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
-    e.phase_reset_snapshot = app.phase_reset_markers.markers();
+    e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
@@ -95,7 +95,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
 void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
-    e.phase_reset_snapshot = app.phase_reset_markers.markers();
+    e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
@@ -237,7 +237,7 @@ void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
-        app, selection, entry, before, app.phase_reset_markers.markers(),
+        app, selection, entry, before, app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b, double kEps) {
             return std::abs(a.time_seconds - b.time_seconds) > kEps
                 || a.disabled != b.disabled;
@@ -273,7 +273,7 @@ void Undo::do_undo() {
 
     UndoEntry redo_entry;
     redo_entry.snapshot           = app.warpmarkers.markers();
-    redo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
+    redo_entry.phase_reset_snapshot = app.phaseresetmarkers.markers();
     redo_entry.settings           = capture_current_settings(app);
     redo_entry.op_mode            = entry.op_mode;
     redo_entry.tab                = entry.tab;
@@ -315,7 +315,7 @@ void Undo::do_undo() {
     // app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
-    app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
+    app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
     // Switch active mode to match the op being undone before applying
     // post-restore rules — selection state is mode-bound, so the rules
@@ -352,7 +352,7 @@ void Undo::do_undo() {
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
-            static_cast<int>(app.phase_reset_markers.markers().size()));
+            static_cast<int>(app.phaseresetmarkers.markers().size()));
     } else {
         apply_post_restore_rules_warp(entry, before_w);
         selection.sanitize_selection_after_restore(
@@ -398,7 +398,7 @@ void Undo::do_redo() {
 
     UndoEntry undo_entry;
     undo_entry.snapshot           = app.warpmarkers.markers();
-    undo_entry.phase_reset_snapshot = app.phase_reset_markers.markers();
+    undo_entry.phase_reset_snapshot = app.phaseresetmarkers.markers();
     undo_entry.settings           = capture_current_settings(app);
     undo_entry.op_mode            = entry.op_mode;
     undo_entry.tab                = entry.tab;
@@ -432,7 +432,7 @@ void Undo::do_redo() {
     // app.trim.has_end       = entry.settings.has_trim_end;
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
-    app.phase_reset_markers.markers_mut() = std::move(entry.phase_reset_snapshot);
+    app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
@@ -461,7 +461,7 @@ void Undo::do_redo() {
     } else if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
-            static_cast<int>(app.phase_reset_markers.markers().size()));
+            static_cast<int>(app.phaseresetmarkers.markers().size()));
     } else {
         apply_post_restore_rules_warp(entry, before_w);
         selection.sanitize_selection_after_restore(

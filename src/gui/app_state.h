@@ -4,7 +4,7 @@
 #include "render.h"
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 #include "frame_map_view.h"
 #include "warpmarkers.h"
 
@@ -451,7 +451,7 @@ struct AppState {
     std::string settings_path;
     // Sibling `.phaseresetmarkers` path. Computed at file load. Empty when
     // no audio is loaded.
-    std::string phase_reset_markers_path;
+    std::string phaseresetmarkers_path;
 
     // Absolute or relative path of the currently loaded audio file. Used by
     // the render hotkeys (Ctrl+Alt+R / Ctrl+E / Ctrl+Alt+E / Ctrl+Alt+I) and
@@ -459,13 +459,17 @@ struct AppState {
     // loaded (blank state).
     std::string source_audio_path;
 
+    // Sidecar artifact identifiers use the sidecar's exact spelling
+    // (warpmarkers, phaseresetmarkers, no underscores): files, path fields,
+    // stores, and parse machinery. Musical concepts keep word separators
+    // (phase_reset_dirty, phase_reset_frames).
     // Parsed warp markers for the currently loaded audio. Empty on load
     // failure or before the first audio load.
     GuiWarpMarkers  warpmarkers;
 
     // Parsed phase reset markers. Authored by the GUI but not
     // yet consumed by the render pipeline.
-    GuiPhaseResetMarkers phase_reset_markers;
+    GuiPhaseResetMarkers phaseresetmarkers;
 
     // Multi-selection set + focus. `last_selected_marker` is either -1 or
     // a member of `selected_markers`; keyed operations (Tab cycling, `j`)
@@ -612,7 +616,7 @@ struct AppState {
     // (tab_a or tab_b) is mirrored into the live AppState fields.
     // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
     // each hold an independent viewport/zoom/playhead/trim/selection
-    // tuple, but share the same warpmarkers, phase_reset_markers,
+    // tuple, but share the same warpmarkers, phaseresetmarkers,
     // and engine_settings.
     ViewState tab_a;
     ViewState tab_b;

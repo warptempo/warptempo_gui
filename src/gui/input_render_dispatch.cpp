@@ -24,7 +24,7 @@ AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
     AppState::QueuedRender q;
     q.source_audio_path = app.source_audio_path;
     q.markers            = app.warpmarkers.markers();
-    q.phase_resets       = app.phase_reset_markers.markers();
+    q.phase_resets       = app.phaseresetmarkers.markers();
     q.engine_settings    = app.engine_settings;
     q.has_trim_begin     = app.trim.has_begin;
     q.trim_begin_sec     = app.trim.begin_seconds;
@@ -244,7 +244,7 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (pad_width > 9) pad_width = 9;
 
     const std::vector<GuiPhaseResetMarker> base_phase_resets =
-        app.phase_reset_markers.markers();
+        app.phaseresetmarkers.markers();
 
     std::vector<RenderRequest> reqs;
     reqs.reserve(bpm_values.size());

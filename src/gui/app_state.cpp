@@ -61,7 +61,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
             : rv
                 ? static_cast<int>(app.render_view.markers.size())
                 : (app.active_markers_view == 'P')
-                    ? static_cast<int>(app.phase_reset_markers.markers().size())
+                    ? static_cast<int>(app.phaseresetmarkers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
     // Target view paints marker stems at map_source_to_target
     // translated positions; the hit test must walk the same frame_map so
@@ -90,7 +90,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 static_cast<double>(sr)));
         } else if (app.active_markers_view == 'P') {
             src_sample = static_cast<int64_t>(std::nearbyint(
-                app.phase_reset_markers.markers()[i].time_seconds *
+                app.phaseresetmarkers.markers()[i].time_seconds *
                 static_cast<double>(sr)));
         } else {
             src_sample = static_cast<int64_t>(std::nearbyint(
@@ -307,7 +307,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             nullptr, drag_overlay);
     } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
-            top, app.phase_reset_markers.markers(),
+            top, app.phaseresetmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             tmap_arg, drag_overlay);
     } else {

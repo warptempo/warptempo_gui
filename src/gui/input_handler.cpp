@@ -523,7 +523,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
             // resets; authoring recenters on the live store.
             const auto& tv = app.render_view.enabled
                 ? app.render_view.phase_resets
-                : app.phase_reset_markers.markers();
+                : app.phaseresetmarkers.markers();
             if (idx >= static_cast<int>(tv.size())) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
                 tv[idx].time_seconds * static_cast<double>(sr)));

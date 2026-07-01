@@ -5,7 +5,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "render.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 #include "map_output.h"
 #include "settings_io.h"
 #include "source_audio_io.h"
@@ -79,7 +79,7 @@ RenderRequest build_render_request(std::string source_audio_path,
     req.markers            = std::move(markers);
     req.engine_settings    = std::move(engine_settings);
     req.phase_reset_frames = phase_reset_source_frames(
-        slice_to_phase_reset_markers(phase_resets), sample_rate);
+        slice_to_phaseresetmarkers(phase_resets), sample_rate);
     req.phase_resets       = std::move(phase_resets);
     req.has_trim_begin     = has_trim_begin;
     req.trim_begin_sec     = trim_begin_sec;

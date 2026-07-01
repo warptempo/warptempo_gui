@@ -176,7 +176,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
-            app.phase_reset_markers.markers(), app.engine_settings,
+            app.phaseresetmarkers.markers(), app.engine_settings,
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate());
@@ -428,7 +428,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // phase reset configuration, only marker tempo_base values
         // differ across cells.
         const std::vector<GuiPhaseResetMarker> base_phase_resets =
-            app.phase_reset_markers.markers();
+            app.phaseresetmarkers.markers();
 
         // Cartesian product enumeration. `indices[k]` holds the
         // current cell coordinate along the k-th eligible marker
@@ -554,11 +554,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
-        std::vector<GuiPhaseResetMarker> trans_pre = app.phase_reset_markers.markers();
+        std::vector<GuiPhaseResetMarker> trans_pre = app.phaseresetmarkers.markers();
         const int                 hint_last = app.last_selected_marker;
 
         app.warpmarkers.markers_mut()    = std::move(src_warp);
-        app.phase_reset_markers.markers_mut() = std::move(src_trans);
+        app.phaseresetmarkers.markers_mut() = std::move(src_trans);
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         // The active tab's per-mode slots

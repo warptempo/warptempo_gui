@@ -101,7 +101,7 @@ void Selection::cycle_selection(bool forward) {
                                 : app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets
-                                : app.phase_reset_markers.markers();
+                                : app.phaseresetmarkers.markers();
 
     const int n = phase_reset
         ? static_cast<int>(reset_vec.size())
@@ -249,7 +249,7 @@ void Selection::prune_live_selection() {
             : static_cast<int>(app.render_view.markers.size());
     } else {
         n = (app.active_markers_view == 'P')
-            ? static_cast<int>(app.phase_reset_markers.markers().size())
+            ? static_cast<int>(app.phaseresetmarkers.markers().size())
             : static_cast<int>(app.warpmarkers.markers().size());
     }
     for (auto it = app.selected_markers.begin();
@@ -278,7 +278,7 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
 
     int64_t src_sample = 0;
     if (app.active_markers_view == 'P') {
-        const auto& tv = app.phase_reset_markers.markers();
+        const auto& tv = app.phaseresetmarkers.markers();
         if (last >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
             tv[last].time_seconds * static_cast<double>(sr)));
@@ -404,7 +404,7 @@ void Selection::select_trim_bound_with_coincident(char which) {
                                 : app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets
-                                : app.phase_reset_markers.markers();
+                                : app.phaseresetmarkers.markers();
     const int n = phase_reset ? static_cast<int>(reset_vec.size())
                               : static_cast<int>(warp_vec.size());
     int coincident = -1;

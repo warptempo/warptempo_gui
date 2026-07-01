@@ -1,4 +1,4 @@
-#include "phase_reset_markers_ops.h"
+#include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
 #include "target_render.h"
@@ -46,13 +46,13 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) 
     // stays uniform unless a difference is required.)
     if (time_seconds > static_cast<double>(audio.total_frames()) / sr_d - eps)
         return;
-    const auto& tv = app.phase_reset_markers.markers();
+    const auto& tv = app.phaseresetmarkers.markers();
     if (reject_if_marker_within_eps(tv, time_seconds, eps, "phase_reset")) return;
-    std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     GuiPhaseResetMarker nm;
     nm.time_seconds = time_seconds;
-    const int new_idx = app.phase_reset_markers.insert_marker(std::move(nm));
+    const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
     app.last_selected_marker = new_idx;
@@ -85,7 +85,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
 // and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     if (app.selected_markers.empty()) return;
-    const auto& tv = app.phase_reset_markers.markers();
+    const auto& tv = app.phaseresetmarkers.markers();
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) {
             std::fprintf(stderr,
@@ -93,11 +93,11 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
             return;
         }
     }
-    std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
-        app.phase_reset_markers.remove_marker(*it);
+        app.phaseresetmarkers.remove_marker(*it);
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
@@ -112,11 +112,11 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 // phase resets have no label-def gating like warp markers do.
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     if (app.selected_markers.empty()) return;
-    std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     bool changed = false;
     for (int idx : app.selected_markers) {
-        GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
         if (!m) continue;
         m->disabled = !m->disabled;
         changed = true;
@@ -138,7 +138,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // imately movable, in contrast to warp marker 0.
 std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bounds(bool& ok) {
     ok = false;
-    const auto& tv = app.phase_reset_markers.markers();
+    const auto& tv = app.phaseresetmarkers.markers();
     if (app.selected_markers.empty()) return {0.0, 0.0};
     const int sr = audio.sample_rate();
     if (sr <= 0) return {0.0, 0.0};
@@ -175,7 +175,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const double spp = current_samples_per_pixel(app, audio);
 
     if (app.active_audio_view == 'T') {
-        const auto& tv = app.phase_reset_markers.markers();
+        const auto& tv = app.phaseresetmarkers.markers();
         for (int idx : app.selected_markers) {
             if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
         }
@@ -219,11 +219,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         }
         if (!any_changed) return;
         std::vector<GuiPhaseResetMarker> pre_state =
-            app.phase_reset_markers.markers();
+            app.phaseresetmarkers.markers();
         const int                 hint_last = app.last_selected_marker;
         for (const auto& [idx, t_new] : proposals) {
             GuiPhaseResetMarker* m =
-                app.phase_reset_markers.marker_mut(idx);
+                app.phaseresetmarkers.marker_mut(idx);
             if (!m) continue;
             m->time_seconds = t_new;
         }
@@ -248,10 +248,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (delta > d_max) delta = d_max;
     if (delta == 0.0) return;
 
-    std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     for (int idx : app.selected_markers) {
-        GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
         if (!m) continue;
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }
@@ -275,7 +275,7 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
     app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const auto& tv = app.phase_reset_markers.markers();
+    const auto& tv = app.phaseresetmarkers.markers();
     if (app.last_selected_marker >= static_cast<int>(tv.size())) return;
     const double anchor_t = tv[app.last_selected_marker].time_seconds;
     // Target view: inverse-translate playhead so the delta lives in
@@ -295,10 +295,10 @@ void GuiPhaseResetMarkersOps::jump_phase_reset_selection_to_playhead() {
             "marker ordering\n");
         return;
     }
-    std::vector<GuiPhaseResetMarker> pre_state = app.phase_reset_markers.markers();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     for (int idx : app.selected_markers) {
-        GuiPhaseResetMarker* m = app.phase_reset_markers.marker_mut(idx);
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
         if (!m) continue;
         m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
     }

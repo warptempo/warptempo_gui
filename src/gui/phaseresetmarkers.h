@@ -1,6 +1,6 @@
 #pragma once
 
-#include "phase_reset_markers_parse.h"
+#include "phaseresetmarkers_parse.h"
 
 #include <expected>
 #include <string>
@@ -15,7 +15,7 @@ struct GuiPhaseResetMarker : PhaseResetMarker {};
 // Slice a GUI phase-reset vector down to the serialized base, mirroring
 // slice_to_warp_markers. Used at the render boundary so the parser-domain
 // phase-reset assembly (phase_reset_source_frames) never sees the GUI type.
-inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
+inline std::vector<PhaseResetMarker> slice_to_phaseresetmarkers(
     const std::vector<GuiPhaseResetMarker>& src) {
     return std::vector<PhaseResetMarker>(src.begin(), src.end());
 }

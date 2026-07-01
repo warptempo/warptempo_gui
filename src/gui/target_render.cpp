@@ -115,7 +115,7 @@ void GuiTargetRender::dispatch_render_now() {
     // below; a confirmed hit is byte-identical to a re-render.
     last_fingerprint_ = render_fingerprint(
         app.source_audio_path, audio.sample_rate(),
-        app.warpmarkers.markers(), app.phase_reset_markers.markers(),
+        app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
         app.engine_settings,
         app.trim.has_begin, app.trim.begin_seconds,
         app.trim.has_end,   app.trim.end_seconds);
@@ -165,7 +165,7 @@ void GuiTargetRender::dispatch_render_now() {
 
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
-        app.phase_reset_markers.markers(), app.engine_settings,
+        app.phaseresetmarkers.markers(), app.engine_settings,
         app.trim.has_begin, app.trim.begin_seconds,
         app.trim.has_end,   app.trim.end_seconds,
         audio.sample_rate());

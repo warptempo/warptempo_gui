@@ -15,7 +15,7 @@
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
-#include "phase_reset_markers_ops.h"
+#include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
 #include "undo.h"
 #include "viewport.h"
@@ -263,7 +263,7 @@ private:
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
     // playback, move the playhead onto the newly focused marker, and recenter
     // the viewport at the current zoom. Mode-aware: reads from
-    // phase_reset_markers in 'P' mode, warpmarkers otherwise.
+    // phaseresetmarkers in 'P' mode, warpmarkers otherwise.
     void cycle_marker_focus_with_recenter(bool forward);
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc

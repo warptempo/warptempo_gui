@@ -1,6 +1,6 @@
 #pragma once
 #include "warpmarkers.h"
-#include "phase_reset_markers.h"
+#include "phaseresetmarkers.h"
 #include "frame_map.h"   // FrameMapSegment for target-view waveform
 
 #include <cairo/cairo.h>
@@ -548,7 +548,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 // versions; the visual differences are which list is drawn (phase resets
 // instead of warp markers) and the supplied color set. `disabled` is taken
 // directly from each phase reset (no label-cascade like warp markers).
-void render_phase_reset_markers(cairo_t* cr,
+void render_phaseresetmarkers(cairo_t* cr,
                               GuiRect waveform_area,
                               const std::vector<GuiPhaseResetMarker>& phase_resets,
                               long long viewport_start_sample,

@@ -797,7 +797,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 
     // Marker-driven inputs: read live from app state.
     const long long warp_gen   = app.warpmarkers.generation();
-    const long long phase_gen  = app.phase_reset_markers.generation();
+    const long long phase_gen  = app.phaseresetmarkers.generation();
     const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const bool     drag_active = app.drag.active;
     const char     mv          = app.active_markers_view;
@@ -917,8 +917,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     if (mv == 'P') {
         const auto& list = rve
             ? app.render_view.phase_resets
-            : app.phase_reset_markers.markers();
-        render_phase_reset_markers(
+            : app.phaseresetmarkers.markers();
+        render_phaseresetmarkers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
             app.selected_markers, tmap_arg, drag_overlay,
@@ -1008,7 +1008,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // Marker-driven inputs from app state.
     const long long warp_gen   = app.warpmarkers.generation();
-    const long long phase_gen  = app.phase_reset_markers.generation();
+    const long long phase_gen  = app.phaseresetmarkers.generation();
     const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const uint64_t  sel_hash   = hash_selection(
                                      app.selected_markers,
@@ -1130,7 +1130,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else if (mv == 'P') {
         render_phase_reset_flags(
             ccr, local_top_strip,
-            app.phase_reset_markers.markers(),
+            app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
             kFlagFontSize,
             app.selected_markers,

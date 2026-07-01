@@ -346,7 +346,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
             nullptr, dbg_drag);
     } else if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
-            top_strip, app.phase_reset_markers.markers(),
+            top_strip, app.phaseresetmarkers.markers(),
             dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
             dbg_tmap_arg, dbg_drag);
     } else {

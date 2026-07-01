@@ -167,7 +167,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
     const std::filesystem::path set_path = parent / (stem + ".settings");
     app.warpmarkers_path      = wm_path.string();
-    app.phase_reset_markers_path = tm_path.string();
+    app.phaseresetmarkers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
     gui.set_title(path + " - warptempo_gui");
@@ -179,7 +179,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // error to stderr and leave app.warpmarkers empty. The GUI still works
     // as a waveform viewer.
     app.warpmarkers.clear();
-    app.phase_reset_markers.clear();
+    app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     app.active_markers_view    = 'W';
@@ -219,12 +219,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // phase reset list is just empty. Parse errors are logged to stderr;
     // the warp side stays usable regardless.
     if (std::filesystem::exists(tm_path)) {
-        if (auto r = app.phase_reset_markers.load(tm_path.string()); !r) {
+        if (auto r = app.phaseresetmarkers.load(tm_path.string()); !r) {
             std::fprintf(stderr, "warptempo_gui: %s: %s\n",
                          tm_path.string().c_str(), r.error().c_str());
         } else {
             std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
-                         app.phase_reset_markers.markers().size(),
+                         app.phaseresetmarkers.markers().size(),
                          tm_path.string().c_str());
         }
     }
@@ -416,7 +416,7 @@ void GuiFileLoader::revert_to_blank() {
     app.playback_speed          = 1.0f;
 
     app.warpmarkers.clear();
-    app.phase_reset_markers.clear();
+    app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     app.drag          = DragState{};
@@ -433,7 +433,7 @@ void GuiFileLoader::revert_to_blank() {
     app.first_save_pending = true;
 
     app.warpmarkers_path.clear();
-    app.phase_reset_markers_path.clear();
+    app.phaseresetmarkers_path.clear();
     app.settings_path.clear();
     app.source_audio_path.clear();
     gui.set_title("warptempo_gui");

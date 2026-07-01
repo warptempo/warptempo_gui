@@ -35,18 +35,18 @@ bool GuiSaveOps::save() {
 
     // Phase resets sibling write. Empty list deletes the on-disk file so
     // a project never carries a stale empty .phaseresetmarkers.
-    if (!app.phase_reset_markers_path.empty()) {
-        if (app.phase_reset_markers.markers().empty()) {
-            if (!app.phase_reset_markers.delete_file(app.phase_reset_markers_path)) {
+    if (!app.phaseresetmarkers_path.empty()) {
+        if (app.phaseresetmarkers.markers().empty()) {
+            if (!app.phaseresetmarkers.delete_file(app.phaseresetmarkers_path)) {
                 std::fprintf(stderr,
                     "warptempo_gui: failed to delete: %s\n",
-                    app.phase_reset_markers_path.c_str());
+                    app.phaseresetmarkers_path.c_str());
             }
         } else {
-            if (!app.phase_reset_markers.save(app.phase_reset_markers_path)) {
+            if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
                 std::fprintf(stderr,
                     "warptempo_gui: phase_reset save failed: %s\n",
-                    app.phase_reset_markers_path.c_str());
+                    app.phaseresetmarkers_path.c_str());
                 return false;
             }
         }

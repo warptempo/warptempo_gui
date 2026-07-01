@@ -130,7 +130,7 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
 }
 
 // Shared stem-painting loop used by render_markers and
-// render_phase_reset_markers. The only meaningful difference between the
+// render_phaseresetmarkers. The only meaningful difference between the
 // two callers is how visual-disability is computed: warp markers walk
 // the label_ref cascade via `effective_disabled`, phase resets read
 // `disabled` directly. That asymmetry is exposed here as a predicate
@@ -1112,7 +1112,7 @@ void paint_one_phase_reset_flag(
 
 } // namespace
 
-void render_phase_reset_markers(cairo_t* cr,
+void render_phaseresetmarkers(cairo_t* cr,
                               GuiRect waveform_area,
                               const std::vector<GuiPhaseResetMarker>& phase_resets,
                               long long viewport_start_sample,

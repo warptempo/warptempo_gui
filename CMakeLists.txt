@@ -26,7 +26,7 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 # ============================================================
 add_library(warptempo_parser_lib STATIC
     src/parser/warpmarkers_parse.cpp
-    src/parser/phase_reset_markers_parse.cpp
+    src/parser/phaseresetmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/settings_trim.cpp
     src/parser/frame_map_build.cpp
@@ -126,7 +126,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/warpmarkers.cpp
         src/gui/text_editor.cpp
         src/gui/text_display.cpp
-        src/gui/phase_reset_markers.cpp
+        src/gui/phaseresetmarkers.cpp
         src/gui/playback.cpp
         src/gui/playback_lifecycle.cpp
         src/gui/render_pipeline.cpp
@@ -135,7 +135,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/selection.cpp
         src/gui/settings_io.cpp
         src/gui/undo.cpp
-        src/gui/phase_reset_markers_ops.cpp
+        src/gui/phaseresetmarkers_ops.cpp
         src/gui/phase_reset_propagate.cpp
         src/gui/prompt.cpp
         src/gui/warpmarkers_ops.cpp
