@@ -171,7 +171,8 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.frozen_frame_map = build_target_view_frame_map(
         app, sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
-    // active-mode snapshot if motion landed; otherwise it's discarded.
+    // active-mode snapshot only when the drag produced a net position
+    // change; a drag that returns to its origin is discarded.
     if (phase_reset) {
         d.pre_drag_phase_reset_snapshot = app.phase_reset_markers.markers();
     } else {
@@ -246,8 +247,25 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // phase reset: identical statement shape on each side.
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
-    const bool moved = app.drag.moved;
     const bool phase_reset = (app.drag.drag_mode == 'P');
+    // Commit gates on NET change, not on whether motion occurred.
+    // app.drag.moved latches true on the first snapped-position change
+    // during motion and never clears, so a drag that wanders to a new
+    // grid cell and returns to its original snapped position arrives here
+    // with moved == true but zero net change. Pushing an undo entry then
+    // records a snapshot byte-equal to the live store: a no-op history
+    // entry that both undo and redo restore invisibly. original_times and
+    // moveable_times are parallel grid-aligned doubles, so an exact
+    // compare across the dragged markers is the true "did anything move"
+    // test — the same test begin_drag's "if motion landed" note intends.
+    bool net_changed = false;
+    for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
+        if (k >= app.drag.moveable_times.size()) continue;
+        if (app.drag.moveable_times[k] != app.drag.original_times[k]) {
+            net_changed = true;
+            break;
+        }
+    }
     // Bug fix: the playhead is stored in active-domain frames, so a warp
     // drag that changes the frame_map would silently re-point it at
     // different music. Capture its source-domain anchor against the
@@ -258,7 +276,7 @@ void MarkerDragOps::commit_drag() {
     // source-domain — both skip.
     bool    reanchor_playhead   = false;
     int64_t playhead_src_anchor = 0;
-    if (moved && !phase_reset && app.active_audio_view == 'T') {
+    if (net_changed && !phase_reset && app.active_audio_view == 'T') {
         playhead_src_anchor = to_source_frame(
             app, app.playhead_cursor_sample, app.drag.frozen_frame_map);
         reanchor_playhead = true;
@@ -272,7 +290,7 @@ void MarkerDragOps::commit_drag() {
     // proposed post-write warp marker vector, run build_target_view_frame_map
     // against it, and reject the drag on empty result. Phase-reset markers
     // don't participate in label cascade, so this branch is warp-only.
-    if (moved && !phase_reset) {
+    if (net_changed && !phase_reset) {
         std::vector<GuiWarpMarker> proposed = app.warpmarkers.markers();
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
@@ -295,7 +313,7 @@ void MarkerDragOps::commit_drag() {
             return;
         }
     }
-    if (moved) {
+    if (net_changed) {
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
             if (k >= app.drag.moveable_times.size()) continue;
@@ -318,7 +336,7 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_phase_reset_snapshot);
     const int                 hint_last = app.drag.pre_drag_last_selected;
     app.drag = DragState{};
-    if (moved) {
+    if (net_changed) {
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t), hint_last);
         } else {
@@ -335,7 +353,7 @@ void MarkerDragOps::commit_drag() {
     // Same discrete-frame_map-change class as drop_marker (see comment
     // there): the commit re-warps the plate, so render it synchronously
     // — re-warped waveform and re-anchored playhead land in one frame.
-    if (moved && !phase_reset && app.active_audio_view == 'T')
+    if (net_changed && !phase_reset && app.active_audio_view == 'T')
         viewport.kick_waveform_sync();
-    if (moved) target_render.trigger();
+    if (net_changed) target_render.trigger();
 }
