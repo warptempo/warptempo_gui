@@ -626,15 +626,10 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             const int64_t eps = static_cast<int64_t>(
                 std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
             if (end_active < begin_active + eps) end_active = begin_active + eps;
-            // Viewport clamp: keep the end bound on-screen (last fully-visible
-            // pixel) so the wheel can't push it offscreen, where its precise
-            // location would be hidden. end_active and the bounds are both
-            // active-domain, so clamp directly.
-            const auto vb = viewport_marker_bounds(app, audio);
-            if (end_active > vb.second) end_active = vb.second;
-            // EOF-eps: the end stops eps short of the live EOF (was a flush
-            // clamp to lt), matching the marker and trim-drag convention.
-            // Applied after the viewport clamp so trim validity wins on-screen.
+            // EOF-eps: the end stops eps short of the live EOF, matching the
+            // marker and trim-drag convention. Unlike regular marker drag,
+            // this Ctrl+wheel begin-trim gesture is allowed to move the paired
+            // end bound offscreen.
             const int64_t lt = live_total_frames(app, audio);
             if (end_active > lt - eps) end_active = lt - eps;
             // Trim is excluded from undo/redo history. Re-enable this capture
