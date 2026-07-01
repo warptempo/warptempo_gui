@@ -201,6 +201,10 @@ void Synthesis::synthesize_full(
         // latency only, so source frame 0 maps to output frame 0. The OLA
         // ramp-up is intentionally NOT trimmed; it is kept as a brief head
         // fade-in (see the timing-convention block in stft_container.h).
+        // That head is the absolute time-sync anchor: output sample 0 is
+        // musical time 0 for uses such as video sync. The tail past emit cap is
+        // expendable by contrast. Real sources' mastering fades cover both
+        // ends; future synthesis replacements must preserve the head timing.
         int  frames_to_skip = N / 2;
         int  progress_stride = std::max(100, wcount / 100);
         int  last_pct = -1;

@@ -2,11 +2,24 @@
 
 #include "settings_io.h"
 
+#include <clocale>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 
 bool GuiSaveOps::save() {
+    // Startup's locale_check.h tripwire covers launch; this catches a
+    // dynamically loaded module changing numeric locale mid-session so refusal
+    // preserves authored sidecars instead of writing corrupted numbers.
+    const char* lc = std::setlocale(LC_NUMERIC, nullptr);
+    if (!lc || std::strcmp(lc, "C") != 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: numeric locale is '%s', not 'C'; refusing to save "
+            "(sidecar numbers would be written corrupted)\n",
+            lc ? lc : "(null)");
+        return false;
+    }
+
     if (app.warpmarkers_path.empty()) return false;
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.

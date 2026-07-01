@@ -51,10 +51,15 @@ inline TrimSourceWindow resolve_trim_source_window(
     // accumulation runs from frame 0, and that inherited history is what keeps
     // the windowed render's source reads sample-aligned with the full render
     // (the window head itself is a phase seed, so it converges toward the full
-    // render rather than nulling at the first frames). The end is end-capped
-    // because no frame in the window reads source past trim_end except the
-    // last analysis window's small reach, covered by the 2*N margin. An
-    // undersized margin only zero-pads the trailing edge, never crashes.
+    // render rather than nulling at the first frames). A begin-windowed source
+    // load rebased by source_frame_base was evaluated and rejected: the source
+    // sample cache removed the load-time payoff, the memory saving is
+    // immaterial, and rebasing origin-centered reads, including negative
+    // clamps at the window head, risks audition-audio corruption the full-render
+    // cmp baseline cannot detect. The end is end-capped because no frame in the
+    // window reads source past trim_end except the last analysis window's small
+    // reach, covered by the 2*N margin. An undersized margin only zero-pads the
+    // trailing edge, never crashes.
     const int64_t end_margin = 2LL * static_cast<int64_t>(N);
     w.load_begin_frame = 0;
     w.load_end_frame = has_trim_end

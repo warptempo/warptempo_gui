@@ -163,7 +163,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         }
     }
 
-    double duration_sec = static_cast<double>(audio_stft.target_total_frames) /
+    double duration_sec = static_cast<double>(audio_stft.emit_sample_cap) /
                           audio_stft.src_info.samplerate;
     std::cout << "[warptempo] Source: <in-memory buffer, "
               << p.source_audio_frames << " frames>"

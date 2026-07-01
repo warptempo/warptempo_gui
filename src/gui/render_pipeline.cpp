@@ -239,6 +239,11 @@ RenderOutcome do_render(const RenderRequest& req,
         int src_sr = 0;
         int src_ch = 0;
         {
+            // Reusing GuiAudio's in-memory samples was evaluated and rejected:
+            // it saves only cache-read milliseconds per dispatch while creating
+            // cross-thread lifetime coupling between the GUI audio object and
+            // render worker. This self-contained read stays independent of file
+            // load and revert timing.
             const auto t_source_load_0 = profile::now();
             auto source_read_result = load_source_range_with_source_sample_cache(
                 req.source_audio_path, src_info,
