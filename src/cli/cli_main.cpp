@@ -24,6 +24,12 @@
 
 namespace {
 
+void unlink_silent(const std::string& path) {
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::remove(path, ec);
+}
+
 void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio> -o <output.wav> [--tab A|B]\n"
@@ -194,7 +200,8 @@ int main(int argc, char** argv) {
         src_samples.size() / static_cast<size_t>(src_ch);
     ep.source_sample_rate   = src_sr;
     ep.source_channels      = src_ch;
-    ep.output_audio_path    = out_path;
+    const std::string staging_output_path = out_path + ".tmp";
+    ep.output_audio_path    = staging_output_path;
 
     // Trim is a parser-side slice of the full untrimmed map, not an engine
     // window. With a bound set, hand the engine the re-anchored sub-map and its
@@ -216,12 +223,27 @@ int main(int argc, char** argv) {
         ep, reset_src_frames, tmfull.frame_map, window_offset_samples,
         N_fft, sample_rate, "warptempo_cli");
 
-    // --- render. The engine writes out_path directly (no staging/rename). ---
+    // --- render. The engine writes a sibling staging file and success
+    // publishes it atomically via rename.
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
+        unlink_silent(staging_output_path);
         std::fprintf(stderr, "warptempo_cli: engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
+    }
+
+    {
+        std::error_code ec;
+        std::filesystem::rename(staging_output_path, out_path, ec);
+        if (ec) {
+            unlink_silent(staging_output_path);
+            std::fprintf(stderr,
+                "warptempo_cli: could not publish '%s' to '%s': %s\n",
+                staging_output_path.c_str(), out_path.c_str(),
+                ec.message().c_str());
+            return 1;
+        }
     }
 
     std::fprintf(stderr, "warptempo_cli: wrote %s\n", out_path.c_str());
