@@ -39,9 +39,6 @@ struct EngineParams {
     bool   limiter                    = false;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
-    // Dormant by default: every driver passes false, but the gated path stays
-    // available for limiter ear-tuning diagnostics.
-    bool   limiter_diag               = false;
     double peak_limiter_ceiling_dbfs  = 0.0;
     double peak_limiter_attack_ms     = 0.25;
     double peak_limiter_release_ms    = 0.5;

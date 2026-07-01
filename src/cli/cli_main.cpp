@@ -213,9 +213,8 @@ int main(int argc, char** argv) {
 
     ep.N            = N_fft;
     ep.limiter      = es.limiter;
-    ep.limiter_diag = false;
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
-    // sets only limiter + limiter_diag and inherits the rest.
+    // sets only limiter and inherits the rest.
 
     const std::vector<int64_t> reset_src_frames =
         phase_reset_source_frames(resets, sample_rate);

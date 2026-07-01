@@ -300,7 +300,6 @@ RenderOutcome do_render(const RenderRequest& req,
             trim_begin_src, trim_end_src, N_fft, R_s);
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
-        ep.limiter_diag         = false;
         const int64_t render_target_frames = assign_engine_phase_resets(
             ep, req.phase_reset_frames, tmfull.frame_map, window_offset_samples,
             N_fft, sample_rate, "warptempo_gui");

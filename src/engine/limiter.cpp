@@ -33,7 +33,6 @@ constexpr int    PEAK_DEDUP_RADIUS        = 4;    // per-channel minimum sample 
 constexpr int    MAX_REFINEMENT_TRIES     = 3;    // extra attempts past the first (inner predictive aim)
 constexpr int    MAX_CLAMP_REDIST_TRIES   = 8;    // safety cap on apply_update inner loop
 constexpr int    MAX_PEAK_RESOLVE_PASSES  = 4;    // per-lineage outer re-queue cap (architect sweeps)
-constexpr double DIAG_FLOOR_DB            = 12.0; // reduction (dB) that fills diag floor
 constexpr bool   kCidSelfCheck            = false; // cross-check direct c_id against band_ifft
 
 struct Peak {
@@ -41,7 +40,6 @@ struct Peak {
     int     ch;
     int     sign;           // +1 or -1
     double  magnitude;      // |measured value|
-    double  original_mag;   // magnitude at first measurement (for diag amplitude)
     int     passes = 0;     // re-queue count for this lineage (see MAX_PEAK_RESOLVE_PASSES)
 };
 
@@ -129,7 +127,6 @@ static void find_peaks_in_range(const float* ola, int64_t n_start, int64_t n_end
             p.ch = ch;
             p.sign = best_sign;
             p.magnitude = best_mag;
-            p.original_mag = best_mag;
             p.passes = 0;
             out_peaks.push_back(p);
             best_idx = -1;
@@ -382,10 +379,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::sort(queue.begin(), queue.end(), cmp_desc);
 
     std::vector<Peak>   resolved;
-    std::vector<double> reduction_db_list;
     std::vector<double> residual_db_list;
     resolved.reserve(queue.size());
-    reduction_db_list.reserve(queue.size());
     residual_db_list.reserve(queue.size());
 
     std::vector<float>  rescan_slice;
@@ -476,14 +471,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         double ref_val = eval_map(snapshot);
         if (std::abs(ref_val) <= ceiling) {
             // Already conforming under the current map (neighbor attenuations
-            // resolved this peak indirectly). Credit the full reduction from
-            // original_mag to |ref_val|.
-            double reduction_db = 0.0;
-            if (std::abs(ref_val) > 1e-30 && peak.original_mag > 1e-30)
-                reduction_db = 20.0 * std::log10(peak.original_mag / std::abs(ref_val));
-            if (reduction_db < 0.0) reduction_db = 0.0;
+            // resolved this peak indirectly).
             resolved.push_back(peak);
-            reduction_db_list.push_back(reduction_db);
             residual_db_list.push_back(20.0 * std::log10(std::abs(ref_val) / ceiling));
             continue;
         }
@@ -588,10 +577,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                 gain_map[m][b] = best_map[i][b];
         }
 
-        double reduction_db = 0.0;
-        if (std::abs(best_val) > 1e-30 && peak.original_mag > 1e-30)
-            reduction_db = 20.0 * std::log10(peak.original_mag / std::abs(best_val));
-        if (reduction_db < 0.0) reduction_db = 0.0;
         double residual_db = 20.0 * std::log10(std::abs(best_val) / ceiling);
 
         // -- Rescan region (pre coords) --
@@ -645,15 +630,14 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                                 ceiling, region_peaks);
 
         for (auto& np : region_peaks) {
-            // Lineage carry: a re-detected survivor inherits original_mag and a
-            // bumped pass count from whichever peak it continues — a displaced
-            // queued neighbor (carried) or the just-resolved popped peak itself.
-            // Unmatched survivors are genuinely new and keep passes = 0.
+            // Lineage carry: a re-detected survivor inherits a bumped pass count
+            // from whichever peak it continues — a displaced queued neighbor
+            // (carried) or the just-resolved popped peak itself. Unmatched
+            // survivors are genuinely new and keep passes = 0.
             bool carried_lineage = false;
             for (const auto& op : carried) {
                 if (op.ch == np.ch &&
                     std::llabs(op.sample_idx - np.sample_idx) <= PEAK_DEDUP_RADIUS) {
-                    np.original_mag = op.original_mag;
                     np.passes       = op.passes + 1;
                     carried_lineage = true;
                     break;
@@ -661,7 +645,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             }
             if (!carried_lineage && peak.ch == np.ch &&
                 std::llabs(peak.sample_idx - np.sample_idx) <= PEAK_DEDUP_RADIUS) {
-                np.original_mag = peak.original_mag;
                 np.passes       = peak.passes + 1;
             }
 
@@ -670,19 +653,13 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             } else {
                 // Cap-retired: permanently dropped, its post-spectral residual
                 // (still over ceiling) is handed to the peak limiter backstop.
-                double rd = 0.0;
-                if (np.magnitude > 1e-30 && np.original_mag > 1e-30)
-                    rd = 20.0 * std::log10(np.original_mag / np.magnitude);
-                if (rd < 0.0) rd = 0.0;
                 resolved.push_back(np);
-                reduction_db_list.push_back(rd);
                 residual_db_list.push_back(20.0 * std::log10(np.magnitude / ceiling));
             }
         }
         std::sort(queue.begin(), queue.end(), cmp_desc);
 
         resolved.push_back(peak);
-        reduction_db_list.push_back(reduction_db);
         residual_db_list.push_back(residual_db);
     }
 
@@ -720,41 +697,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                           "  peak @ %.3f s (sample %lld)  residual %+.2f dB\n",
                           sec, static_cast<long long>(post), residual_db_list[i]);
             std::cout << ln;
-        }
-    }
-
-    // -- Optional diagnostic WAV (gated on lp.diag) --
-    if (lp.diag) {
-        std::string diag_path = stft.output_audio_file;
-        auto dot = diag_path.find_last_of('.');
-        if (dot != std::string::npos) diag_path.insert(dot, "-limiter-diag");
-        else                          diag_path += "-limiter-diag";
-
-        SF_INFO dinfo = stft.src_info;
-        dinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-        dinfo.channels = 1;
-        SNDFILE* dsnd = sf_open(diag_path.c_str(), SFM_WRITE, &dinfo);
-        if (!dsnd) {
-            std::cerr << "  ! could not create limiter diag file '" << diag_path << "'\n";
-        } else {
-            std::vector<float> dbuf(static_cast<size_t>(render_frames), 0.0f);
-            auto poke = [&](int64_t post, float amp) {
-                if (post < 0 || post >= render_frames) return;
-                dbuf[static_cast<size_t>(post)] = amp;
-            };
-            for (size_t i = 0; i < resolved.size(); ++i) {
-                double red = reduction_db_list[i];
-                double scale = red / DIAG_FLOOR_DB;
-                if (scale > 1.0) scale = 1.0;
-                if (scale < 0.0) scale = 0.0;
-                float s = static_cast<float>(scale);
-                int64_t post = resolved[i].sample_idx - N_lim;
-                poke(post - 1, -0.5f * s);
-                poke(post,     -1.0f * s);
-                poke(post + 1, -0.5f * s);
-            }
-            sf_writef_float(dsnd, dbuf.data(), static_cast<sf_count_t>(render_frames));
-            sf_close(dsnd);
         }
     }
 

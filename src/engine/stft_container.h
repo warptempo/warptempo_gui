@@ -22,7 +22,6 @@ struct PhaseResetMarker {
 struct LimiterParams {
     double ceiling_dbfs          = -0.3;
     double tolerance_db          = 0.01;
-    bool   diag                  = false;
 };
 
 // --- DSP Helpers ---
@@ -66,15 +65,15 @@ struct PghiHeapNode {
 //   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N/2,
 //     so a feature at source S lands at output sample tgt(S) (== map_source_to_
 //     target(S)) -- frame-exact with an ideal time-stretch from frame 0 onward.
-//   - The +N/2 head trim is uniform, so phase resets and diag spikes keep their
-//     relative alignment to the audio (diag spikes must NOT add the offset).
+//   - The +N/2 head trim is uniform, so phase resets keep their relative
+//     alignment to the audio.
 //   - Total output length is AudioSTFT::emit_sample_cap: the target-frame
 //     position of the window's last source sample (full render: last_tgt =
 //     frame_map.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
 //     longer the output length, and target_total_frames describes the *input*
 //     plan, not the emitted sample count. Any auxiliary buffer sized to match the
-//     output (limiter meas_ola, diag WAVs) must use the actually emitted length
-//     (synthesis out_frames), not a recomputed frame-count formula.
+//     output (limiter meas_ola) must use the actually emitted length (synthesis
+//     out_frames), not a recomputed frame-count formula.
 //
 // --- Central Pipeline Container ---
 // Peak memory dominated by the per-channel FFTW workspaces and, during

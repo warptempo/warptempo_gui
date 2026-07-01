@@ -161,7 +161,6 @@ int main(int argc, char** argv) {
 
     ep.N            = N_fft;
     ep.limiter      = !no_limiter;   // on by default; --no-limiter clears it
-    ep.limiter_diag = false;
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults, matching
     // render_pipeline / cli_main.
 
