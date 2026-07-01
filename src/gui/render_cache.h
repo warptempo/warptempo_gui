@@ -27,12 +27,15 @@ std::vector<uint8_t> render_fingerprint(
     bool has_trim_end,   double trim_end_sec);
 
 // Two-tier store for rendered target-view audio, keyed by render_fingerprint.
-// Small renders (<= kRamMaxRenderSeconds) live in a RAM tier; larger renders
-// live as files in a per-process directory under the user cache home. Both
-// tiers are LRU-bounded. The store is process-local: the disk directory is
-// removed at shutdown and dead-PID orphan directories are swept at init.
-// Every public method is a no-op / miss when the store could not initialize
-// (no cache home, unmakeable directory), so callers need no special-casing.
+// Target-view render cache entries are capped at 60 seconds so repeated live
+// target-view renders stay fast without turning the cache into whole-track
+// archival storage. Cache-eligible renders that fit the RAM budget live in a
+// RAM tier; larger eligible renders live as files in a per-process directory
+// under the user cache home. Both tiers are LRU-bounded. The store is
+// process-local: the disk directory is removed at shutdown and dead-PID orphan
+// directories are swept at init. Every public method is a no-op / miss when
+// the store could not initialize (no cache home, unmakeable directory), so
+// callers need no special-casing.
 class RenderCache {
 public:
     // Create the per-process directory under <cache home>/warptempo_gui/<pid>/
@@ -57,12 +60,13 @@ public:
                 int channels, int sample_rate,
                 std::vector<float>& out_samples);
 
-    // Insert a freshly rendered buffer. Routes to RAM when frame_count is at
-    // most kRamMaxRenderSeconds * sample_rate, else to disk, evicting LRU
-    // entries in the chosen tier until within budget. Overwrites any existing
-    // entry with the same hash. Empty/degenerate buffers are dropped. Disk
-    // write failures are swallowed (the render already played from the live
-    // buffer; the cache simply will not hold it).
+    // Insert a freshly rendered buffer. Drops renders over
+    // kTargetViewRenderCacheMaxSeconds, routes cache-eligible buffers that fit
+    // the RAM budget to RAM, and routes larger eligible buffers to disk,
+    // evicting LRU entries in the chosen tier until within budget. Overwrites
+    // any existing entry with the same hash. Empty/degenerate buffers are
+    // dropped. Disk write failures are swallowed (the render already played
+    // from the live buffer; the cache simply will not hold it).
     void insert(const std::vector<uint8_t>& fingerprint,
                 const std::vector<float>& samples,
                 int channels, int sample_rate, int64_t frame_count);
@@ -101,7 +105,7 @@ private:
                     int channels, int sample_rate, int64_t frame_count,
                     uint64_t& out_bytes);
 
-    static constexpr int      kRamMaxRenderSeconds = 30;
+    static constexpr int      kTargetViewRenderCacheMaxSeconds = 60;
     static constexpr uint64_t kRamBudgetBytes  = 1ull << 30;          // 1 GiB
     static constexpr uint64_t kDiskBudgetBytes = 10ull * (1ull << 30); // 10 GiB
 

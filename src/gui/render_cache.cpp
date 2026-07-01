@@ -224,10 +224,17 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     if (frame_count <= 0 || samples.empty() || channels <= 0 || sample_rate <= 0) {
         return;
     }
+    const int64_t max_cache_frames =
+        static_cast<int64_t>(sample_rate) * kTargetViewRenderCacheMaxSeconds;
+    if (frame_count > max_cache_frames) {
+        return;
+    }
 
     const uint64_t h = fnv1a64(fp);
+    const uint64_t bytes =
+        static_cast<uint64_t>(samples.size()) * sizeof(float);
     const bool to_ram =
-        frame_count <= static_cast<int64_t>(sample_rate) * kRamMaxRenderSeconds;
+        bytes <= kRamBudgetBytes;
     const bool inserted = to_ram
         ? insert_ram(h, fp, samples, channels, sample_rate)
         : insert_disk(h, fp, samples, channels, sample_rate, frame_count);
