@@ -1,6 +1,7 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
 #include "engine/engine_geometry.h"   // kN, kRs, phase_reset_offset_samples
 #include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
+#include "locale_check.h"
 #include "phase_reset_dispatch.h"
 
 #include <sndfile.h>
@@ -32,6 +33,8 @@ void usage(const char* argv0) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (!verify_c_numeric_locale("warptempo_engine")) return 1;
+
     std::string source_path, out_path, framemap_path, resetmap_path;
     bool no_limiter = false;
     bool resetmap_explicit = false;

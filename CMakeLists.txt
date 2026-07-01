@@ -30,6 +30,7 @@ add_library(warptempo_parser_lib STATIC
     src/parser/engine_settings_io.cpp
     src/parser/settings_trim.cpp
     src/parser/frame_map_build.cpp
+    src/parser/source_audio_io.cpp
     src/parser/map_output.cpp
 )
 target_include_directories(warptempo_parser_lib

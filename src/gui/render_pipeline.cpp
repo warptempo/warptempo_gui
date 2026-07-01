@@ -8,6 +8,7 @@
 #include "phase_reset_markers.h"
 #include "map_output.h"
 #include "settings_io.h"
+#include "source_audio_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"

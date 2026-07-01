@@ -47,6 +47,7 @@
 #include "viewport.h"
 #include "warpmarkers_ops.h"
 #include "platform_wayland.h"
+#include "locale_check.h"
 
 #include <cairo/cairo.h>
 #include <sndfile.h>
@@ -407,6 +408,8 @@ GuiRect timestamp_invalidate_rect(const AppState& a) {
 
 
 int main(int argc, char** argv) {
+    if (!verify_c_numeric_locale("warptempo_gui")) return 1;
+
     const char* cli_path = nullptr;
     if (argc == 1) {
         // Empty window; wait for a drag-and-drop.

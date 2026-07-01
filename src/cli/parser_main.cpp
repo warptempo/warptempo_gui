@@ -4,6 +4,7 @@
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
 #include "frame_map_build.h"               // MapBuildInput/Result, resolve,
                                         // build_maps, phase_reset_source_frames
+#include "locale_check.h"
 #include "map_output.h"                 // write_frame_map /
                                         // write_tempo_map / write_reset_map
 
@@ -34,6 +35,8 @@ void usage(const char* argv0) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (!verify_c_numeric_locale("warptempo_parser")) return 1;
+
     std::string source_path, out_path, fmt_override;
     char tab = 'A';
     for (int i = 1; i < argc; ++i) {
