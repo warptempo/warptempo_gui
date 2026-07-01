@@ -39,6 +39,8 @@ struct EngineParams {
     bool   limiter                    = false;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
+    // Dormant by default: every driver passes false, but the gated path stays
+    // available for limiter ear-tuning diagnostics.
     bool   limiter_diag               = false;
     double peak_limiter_ceiling_dbfs  = 0.0;
     double peak_limiter_attack_ms     = 0.25;
@@ -74,7 +76,4 @@ enum class EngineResult { Success, Failed, Cancelled };
 // at the top of each frame iteration; if set, the engine returns
 // EngineResult::Cancelled without writing the output wav.
 EngineResult run_warptempo_engine(const EngineParams& p,
-                                  std::vector<int64_t>* out_source_frame_positions = nullptr,
-                                  int* out_R_s = nullptr,
-                                  int* out_synth_frame_begin = nullptr,
                                   const std::atomic<bool>* cancel_flag = nullptr);

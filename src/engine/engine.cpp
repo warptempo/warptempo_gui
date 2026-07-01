@@ -34,7 +34,7 @@
 
 namespace {
 
-// Shared FFTW thread init for full-render and detection-only paths. Sets
+// Initialize FFTW's thread support for deterministic single-thread plans. Sets
 // audio_stft.fftw_threads_inited if init succeeded.
 void init_fftw_threads(AudioSTFT& audio_stft) {
     // Per-transform threading intentionally off: channel-level threads
@@ -73,9 +73,6 @@ bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
 } // namespace
 
 EngineResult run_warptempo_engine(const EngineParams& p,
-                                  std::vector<int64_t>* out_source_frame_positions,
-                                  int* out_R_s,
-                                  int* out_synth_frame_begin,
                                   const std::atomic<bool>* cancel_flag) {
     AudioSTFT audio_stft;
 
@@ -148,7 +145,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     {
         const int num_frames =
             static_cast<int>(audio_stft.source_frame_positions.size());
-        audio_stft.synth_frame_begin = 0;
         if (p.emit_sample_cap > 0) {
             audio_stft.emit_sample_cap = p.emit_sample_cap;
             // Frames whose output start (m*R_s) is >= emit_sample_cap contribute
@@ -292,10 +288,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     }
 
     std::cout << "[Success] " << audio_stft.output_audio_file << "\n";
-
-    if (out_source_frame_positions) *out_source_frame_positions = audio_stft.source_frame_positions;
-    if (out_R_s)       *out_R_s       = audio_stft.R_s;
-    if (out_synth_frame_begin) *out_synth_frame_begin = audio_stft.synth_frame_begin;
 
     audio_stft.cleanup();
     return EngineResult::Success;

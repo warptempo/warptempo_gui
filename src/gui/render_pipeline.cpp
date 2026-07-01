@@ -219,15 +219,8 @@ RenderOutcome do_render(const RenderRequest& req,
     std::fprintf(stderr, "warptempo_gui: rendering %s -> %s\n",
                  output_format.c_str(), final_output_path.c_str());
 
-    // Populated by the wav (warptempo engine) path for render-domain phase
-    // reset sidecar generation. frame-map/tempo-map paths leave these empty.
-    std::vector<int64_t> engine_source_frame_positions;
-    int engine_R_s = 0;
-    // The engine no longer windows (it renders the supplied map wholesale), so
-    // it returns synth_frame_begin == 0. The window origin is now computed at
-    // slice time (wbegin*R_s) and stored here for the render-domain marker
-    // sidecar; 0 when untrimmed.
-    int engine_synth_frame_begin = 0;
+    // The engine no longer windows; render-domain sidecars subtract the slice
+    // origin captured in window_offset_samples. 0 when untrimmed.
     int64_t window_offset_samples = 0;
 
     if (output_format == "wav") {
@@ -325,9 +318,7 @@ RenderOutcome do_render(const RenderRequest& req,
         };
 
         const auto t_engine_0 = profile::now();
-        const EngineResult er = run_warptempo_engine(
-            ep, &engine_source_frame_positions, &engine_R_s, &engine_synth_frame_begin,
-            cancel_flag);
+        const EngineResult er = run_warptempo_engine(ep, cancel_flag);
         if (prof) {
             const auto t_engine_1 = profile::now();
             engine_ms = profile::ms(t_engine_0, t_engine_1);
@@ -465,13 +456,13 @@ RenderOutcome do_render(const RenderRequest& req,
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
         // Only wav renders produce these — frame-map/tempo-map formats skip
-        // the engine, so engine_source_frame_positions and engine_R_s are unset.
+        // the engine.
         if (output_format == "wav" && !tmres.frame_map.empty() &&
             sample_rate > 0) {
             // Walk the FULL frame map (no synthetic trim anchors); each emitted
             // render-domain time is the full-render output sample minus the
-            // window origin. When untrimmed, engine_synth_frame_begin is 0 so
-            // window_offset_samples is 0 and this reduces to old behavior.
+            // slice origin. When untrimmed, window_offset_samples is 0 and this
+            // reduces to old behavior.
             const FrameMapRealRange real = real_segments(tmfull);
             const int64_t trim_begin =
                 static_cast<int64_t>(tmres.trim_begin_frame);
@@ -479,9 +470,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<int64_t>(tmres.trim_end_frame)
                 : static_cast<int64_t>(total_frames);
             const double sr_d = static_cast<double>(sample_rate);
-            // window_offset_samples was computed at slice time (wbegin*R_s);
-            // the engine no longer windows, so engine_synth_frame_begin is 0.
-            // (no recomputation here — reuse the slice's offset)
+            // window_offset_samples was computed at slice time. The engine no
+            // longer windows, so there is no engine-side offset to recompute.
 
             // After head alignment, markers sit on the aligned
             // feature: a marker at source F displays at tgt(F) - window_offset

@@ -81,6 +81,13 @@ struct PghiHeapNode {
 // synthesis, the channel-contiguous planar source copy and per-channel output
 // streams.
 struct AudioSTFT {
+    AudioSTFT() = default;
+    // Explicit cleanup calls remain on normal returns; the destructor covers
+    // exception unwinds.
+    ~AudioSTFT() { cleanup(); }
+    AudioSTFT(const AudioSTFT&) = delete;
+    AudioSTFT& operator=(const AudioSTFT&) = delete;
+
     // Source metadata
     SF_INFO src_info{};
     // Caller-owned interleaved float source (EngineParams::source_audio_samples).
@@ -155,18 +162,16 @@ struct AudioSTFT {
     //     sample in the source), the same unit as the phase-reset frames.
     // The sequence is monotonically non-decreasing, so engine.cpp can
     // std::upper_bound it to invert a source position back to a synthesis
-    // frame (trim-window resolution, phase-reset placement); synthesis.cpp
-    // reads it forward as source_frame_positions[m].
+    // frame for phase-reset placement; synthesis.cpp reads it forward as
+    // source_frame_positions[m].
     std::vector<int64_t> source_frame_positions;
 
-    // Synthesis frame window, resolved from EngineParams::emit_sample_cap in
-    // engine.cpp after the frame map is built. [synth_frame_begin,
-    // synth_frame_end) is the half-open range of frames synthesize_full emits.
-    // synth_frame_begin is always 0 (a trimmed render is a pre-sliced sub-map
-    // anchored at output 0, not an internal window); engine.cpp narrows
-    // synth_frame_end to the frames covering [0, emit_sample_cap) when an
-    // explicit cap is set, and leaves it at the full map otherwise.
-    int synth_frame_begin = 0;
+    // Synthesis frame end, resolved from EngineParams::emit_sample_cap in
+    // engine.cpp after the frame map is built. Synthesis always begins at
+    // frame 0 because a trimmed render is a pre-sliced sub-map anchored at
+    // output 0, not an internal window. engine.cpp narrows synth_frame_end to
+    // the frames covering [0, emit_sample_cap) when an explicit cap is set,
+    // and leaves it at the full map otherwise.
     int synth_frame_end   = 0;   // 0 means "use full map" until engine sets it
 
     // Emit cap: output length in samples. The synthesizer truncates its emitted
@@ -208,6 +213,8 @@ struct AudioSTFT {
         // (caller derives); near a boundary that difference is now the exact
         // straddled advance.
         std::vector<int64_t> positions;
+        if (R_s > 0)
+            positions.reserve(target_total_frames / static_cast<size_t>(R_s) + 1);
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
             double src = map_target_to_source(static_cast<double>(t_s), frame_map)
                        - static_cast<double>(N) / 2.0;
@@ -492,6 +499,9 @@ struct AudioSTFT {
             fftw_free(w.ifft_in); fftw_free(w.ifft_out);
         }
         fft_ws.clear();
-        if (fftw_threads_inited) fftw_cleanup_threads();
+        if (fftw_threads_inited) {
+            fftw_cleanup_threads();
+            fftw_threads_inited = false;
+        }
     }
 };
