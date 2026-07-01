@@ -156,18 +156,11 @@ std::string compute_hover_popup_text(
 // Pure parser-domain assembly: phase-reset markers -> absolute source frames.
 // Drops disabled markers; converts time_seconds to a source frame via
 // nearbyint(time * sample_rate), matching the warp-marker time->frame
-// convention. The result is the undisplaced list used both for render-view
-// display and as the input to displace_phase_reset_frames.
+// convention. The result is the undisplaced authored source-frame list used
+// for render-view display, resetmap output, and target-domain dispatch
+// placement.
 std::vector<int64_t> phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate);
-
-// Pure: displace absolute source-frame resets to the engine's dispatch
-// frame by subtracting the canonical offset, clamped at 0. The clamp is
-// silent here (no I/O); callers that want the per-reset "clamped before audio
-// start" notice detect it by source_frame < offset_samples. This is the full
-// displaced reset list the engine path hands over.
-std::vector<int64_t> displace_phase_reset_frames(
-    const std::vector<int64_t>& source_frames, int64_t offset_samples);
 
 // Result of slicing the full untrimmed frame map to a trim window: the
 // re-anchored sub-map the engine renders, the output offset of the window

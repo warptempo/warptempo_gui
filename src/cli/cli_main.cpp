@@ -5,12 +5,12 @@
 #include "frame_map_build.h"               // MapBuildInput/Result, build_maps,
                                         // resolve_markers_for_render,
                                         // phase_reset_source_frames,
-                                        // displace_phase_reset_frames,
                                         // slice_frame_map_to_trim_window,
                                         // load_source_range_to_buffer
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs, phase_reset_offset_samples
 #include "render_assembly.h"            // assign_engine_frame_map
+#include "phase_reset_dispatch.h"
 
 #include <sndfile.h>
 
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
     // window. With a bound set, hand the engine the re-anchored sub-map and its
     // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
     // do_render's wav branch. ---
-    assign_engine_frame_map(
+    const int64_t window_offset_samples = assign_engine_frame_map(
         ep, tmfull.frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
 
@@ -222,24 +222,33 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter + limiter_diag and inherits the rest.
 
-    // Phase resets: drop disabled + time->source frame via
-    // phase_reset_source_frames, then displace by the canonical offset, clamped at 0 via
-    // displace_phase_reset_frames. Absolute source-frame domain throughout —
-    // the engine resolves resets by binary search over the full frame map, so
-    // there is no trim re-basing. The per-reset clamp notice mirrors do_render
-    // (informational; displace clamps identically with or without it). ---
     const std::vector<int64_t> reset_src_frames =
         phase_reset_source_frames(resets, sample_rate);
-    for (const int64_t F : reset_src_frames) {
-        if (F - phase_reset_offset_samples < 0) {
+    const int64_t render_target_frames =
+        ep.emit_sample_cap > 0
+            ? ep.emit_sample_cap
+            : (ep.frame_map.empty() ? 0 :
+               static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
+    std::vector<PhaseResetDispatchFrame> reset_placements;
+    ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
+        reset_src_frames,
+        tmfull.frame_map,
+        ep.frame_map,
+        window_offset_samples,
+        render_target_frames,
+        phase_reset_offset_samples,
+        N_fft / 2,
+        &reset_placements);
+    for (const PhaseResetDispatchFrame& p : reset_placements) {
+        if (p.clamped_to_start) {
             std::fprintf(stderr,
-                "warptempo_cli: phase reset at %.3f s clamped to engine "
-                "frame 0 (offset shift would place it before audio start)\n",
-                static_cast<double>(F) / static_cast<double>(sample_rate));
+                "warptempo_cli: phase reset at %.3f s clamped to target "
+                "frame 0 (target-domain offset would place it before "
+                "rendered audio start)\n",
+                static_cast<double>(p.authored_source_frame) /
+                    static_cast<double>(sample_rate));
         }
     }
-    ep.phase_reset_frames =
-        displace_phase_reset_frames(reset_src_frames, phase_reset_offset_samples);
 
     // --- render. The engine writes out_path directly (no staging/rename). ---
     const EngineResult er = run_warptempo_engine(ep);

@@ -10,6 +10,7 @@
 #include "settings_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
+#include "phase_reset_dispatch.h"
 #include "profile_util.h"
 #include "source_sample_cache.h"
 
@@ -330,27 +331,31 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         ep.limiter_diag         = false;
-        // Absolute source-frame domain. On the full-frame-map path the engine
-        // resolves resets by binary search over the full frame map, so the
-        // reset list is in absolute source frames regardless of trim — exactly
-        // like the untrimmed branch always did. No trim re-basing.
-        // Per-reset clamp notice: a reset within one offset of the start
-        // would displace before frame 0. Emit it here, ahead of the silent
-        // displacement assembly, so the user still sees which reset was
-        // affected (the lifted displace_phase_reset_frames clamps without
-        // logging). Condition, message and time match the prior loop exactly.
-        for (const int64_t F : req.phase_reset_frames) {
-            if (F - phase_reset_offset_samples < 0) {
+        const int64_t render_target_frames =
+            ep.emit_sample_cap > 0
+                ? ep.emit_sample_cap
+                : (ep.frame_map.empty() ? 0 :
+                   static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
+        std::vector<PhaseResetDispatchFrame> reset_placements;
+        ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
+            req.phase_reset_frames,
+            tmfull.frame_map,
+            ep.frame_map,
+            window_offset_samples,
+            render_target_frames,
+            phase_reset_offset_samples,
+            N_fft / 2,
+            &reset_placements);
+        for (const PhaseResetDispatchFrame& p : reset_placements) {
+            if (p.clamped_to_start) {
                 std::fprintf(stderr,
                     "warptempo_gui: phase reset at %.3f s clamped to "
-                    "engine frame 0 (offset shift would place it "
-                    "before audio start)\n",
-                    static_cast<double>(F) /
+                    "target frame 0 (target-domain offset would place it "
+                    "before rendered audio start)\n",
+                    static_cast<double>(p.authored_source_frame) /
                         static_cast<double>(sample_rate));
             }
         }
-        ep.phase_reset_frames = displace_phase_reset_frames(
-            req.phase_reset_frames, phase_reset_offset_samples);
 
         profile_target_frames = ep.emit_sample_cap > 0
             ? ep.emit_sample_cap
@@ -592,10 +597,9 @@ RenderOutcome do_render(const RenderRequest& req,
             // Forward-map a source frame to its target frame via the same
             // piecewise-linear frame map the warp markers use, so a phase-reset
             // marker displays at the clicked musical position -- identical
-            // convention to source and target views. The engine still fires the
-            // reset at F - phase_reset_offset_samples (the dispatch offset is an
-            // engine mechanic and is deliberately NOT applied to the displayed
-            // marker).
+            // convention to source and target views. The engine dispatch offset
+            // is applied later in target/output domain and is deliberately NOT
+            // applied to the displayed marker.
             auto src_to_tgt = [&](int64_t sf) -> double {
                 if (real.begin == real.end) return static_cast<double>(sf);
                 const double sfd = static_cast<double>(sf);

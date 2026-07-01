@@ -558,18 +558,6 @@ std::vector<int64_t> phase_reset_source_frames(
     return out;
 }
 
-std::vector<int64_t> displace_phase_reset_frames(
-    const std::vector<int64_t>& source_frames, int64_t offset_samples) {
-    std::vector<int64_t> out;
-    out.reserve(source_frames.size());
-    for (const int64_t F : source_frames) {
-        int64_t engine_frame = F - offset_samples;
-        if (engine_frame < 0) engine_frame = 0;
-        out.push_back(engine_frame);
-    }
-    return out;
-}
-
 WindowedFrameMap slice_frame_map_to_trim_window(
     const std::vector<FrameMapSegment>& full_map,
     int64_t trim_begin_src, int64_t trim_end_src,

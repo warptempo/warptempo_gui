@@ -67,11 +67,11 @@ Four executables can be built from those two libraries, each a different slice o
 
 `warptempo_gui` (default, `-DWARPTEMPO_BUILD_GUI=ON`) is the interactive authoring application — parser plus engine plus the Cairo/Wayland GUI. This is the normal build.
 
-`warptempo_parser` (`-DWARPTEMPO_BUILD_PARSER=ON`) is parser-only. It reads a project's `.warpmarkers` and `.settings` beside the source audio and writes the framemap, tempomap, or resetmap — the portable map artifacts — without the engine or the GUI.
+`warptempo_parser` (`-DWARPTEMPO_BUILD_PARSER=ON`) is parser-only. It reads a project's `.warpmarkers` and `.settings` beside the source audio and writes the framemap, tempomap, or resetmap — the portable map artifacts — without the engine or the GUI. Resetmap files contain undisplaced source-frame phase-reset onsets.
 
 `warptempo_cli` (`-DWARPTEMPO_BUILD_CLI=ON`) is parser plus engine. It reads a full project and writes the warped wav the GUI would render for it, headless — no display, no GUI toolchain.
 
-`warptempo_engine` (`-DWARPTEMPO_BUILD_ENGINE=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files.
+`warptempo_engine` (`-DWARPTEMPO_BUILD_ENGINE=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files. Phase-reset anticipation is applied during render dispatch in target/output frames after temporal warping, then the anticipated target frame is inverse-mapped through the engine map and corrected by `N/2` into the engine's origin-centered source-query domain; marker files, GUI display positions, resetmaps, and render-view sidecars remain at the authored onset positions.
 
 To build the libraries and any CLI tools on a headless host that has none of the GUI's Wayland / Cairo / JACK packages, add `-DWARPTEMPO_BUILD_GUI=OFF`; the two archives and the enabled CLI tools build without touching the GUI dependency discovery.
 

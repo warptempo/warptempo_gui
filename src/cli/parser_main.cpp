@@ -103,9 +103,10 @@ int main(int argc, char** argv) {
     // the warp markers and the map build — reads only the phase-reset
     // sidecar and the source sample rate. phase_reset_source_frames drops
     // disabled markers and converts time->source frame via nearbyint, the
-    // same conversion the GUI and render CLI apply before displacing. The file
-    // is undisplaced by design: phase_reset_offset_samples is an engine-input
-    // convention, re-applied driver-side, not baked into the portable file.
+    // same conversion the GUI and render CLIs use before target-domain
+    // dispatch placement. The file is undisplaced by design:
+    // phase_reset_offset_samples is an engine-input convention, applied
+    // driver-side after temporal warping, not baked into the portable file.
     // An absent sidecar yields an empty (valid) resetmap. ---
     if (fmt == "resetmap") {
         std::vector<PhaseResetMarker> resets;

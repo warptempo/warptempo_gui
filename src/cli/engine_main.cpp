@@ -1,9 +1,12 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
 #include "engine/engine_geometry.h"   // kN, kRs, phase_reset_offset_samples
 #include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
+#include "phase_reset_dispatch.h"
 
 #include <sndfile.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -159,21 +162,28 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults, matching
     // render_pipeline / cli_main.
 
-    // Phase resets: the resetmap holds undisplaced source frames. Displace each
-    // by the canonical offset, clamped at 0 -- the inlined equivalent of the
-    // parser's displace_phase_reset_frames (not linked here). The engine then
-    // resolves each to its synthesis frame by binary search over the map.
-    ep.phase_reset_frames.reserve(reset_src.size());
-    for (const int64_t F : reset_src) {
-        if (F - phase_reset_offset_samples < 0) {
+    const int64_t render_target_frames = fm->empty()
+        ? 0
+        : std::max<int64_t>(
+            0, static_cast<int64_t>(std::llrint(fm->back().tgt_frame)));
+    std::vector<PhaseResetDispatchFrame> reset_placements;
+    ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
+        reset_src,
+        *fm,
+        *fm,
+        0,
+        render_target_frames,
+        phase_reset_offset_samples,
+        N_fft / 2,
+        &reset_placements);
+    for (const PhaseResetDispatchFrame& p : reset_placements) {
+        if (p.clamped_to_start) {
             std::fprintf(stderr,
                 "warptempo_engine: phase reset at source frame %lld clamped "
-                "to engine frame 0 (offset shift would place it before audio "
-                "start)\n", static_cast<long long>(F));
+                "to target frame 0 (target-domain offset would place it "
+                "before rendered audio start)\n",
+                static_cast<long long>(p.authored_source_frame));
         }
-        int64_t engine_frame = F - phase_reset_offset_samples;
-        if (engine_frame < 0) engine_frame = 0;
-        ep.phase_reset_frames.push_back(engine_frame);
     }
 
     // --- render (engine writes out_path directly) ---
