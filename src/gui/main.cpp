@@ -780,7 +780,24 @@ int main(int argc, char** argv) {
         }
 
         if (app.playhead_scanner_restore_pending) {
-            if (!app.playhead_scanner_endpoint_painted) return;
+            if (!app.playhead_scanner_endpoint_painted) {
+                // Self-arm: the endpoint paint has not been acknowledged yet.
+                // Re-schedule the hold's damage (scanner column, timestamp,
+                // top strip) so a paint is guaranteed to run on_redraw, which
+                // sets endpoint_painted; the following tick then restores. The
+                // timer tick is free-running but this branch otherwise schedules
+                // nothing, so without re-arming, any future path that dropped
+                // the hold's damage or reset endpoint_painted mid-handshake would
+                // wedge the scanner on the endpoint permanently. Same damage set
+                // as hold_natural_end_scanner; the top-strip rect is always
+                // onscreen, so a paint is always produced.
+                const double px = scanner_pixel_x(app, audio);
+                invalidate_playhead_columns(px, px);
+                invalidate_timestamp_area();
+                const GuiRect ts = top_strip_area(app);
+                gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+                return;
+            }
             playback_lifecycle.restore_playhead_to_lsp();
             if (app.follow_mode && !app.follow_overridden_for_session)
                 follow_scroll_if_needed();
