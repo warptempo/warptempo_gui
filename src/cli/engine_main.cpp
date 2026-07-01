@@ -17,6 +17,12 @@
 
 namespace {
 
+void unlink_silent(const std::string& path) {
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::remove(path, ec);
+}
+
 void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio> -o <output.wav> [--framemap <f>] "
@@ -152,7 +158,8 @@ int main(int argc, char** argv) {
         src_samples.size() / static_cast<size_t>(src_ch);
     ep.source_sample_rate   = src_sr;
     ep.source_channels      = src_ch;
-    ep.output_audio_path    = out_path;
+    const std::string staging_output_path = out_path + ".tmp";
+    ep.output_audio_path    = staging_output_path;
 
     // The supplied map is rendered wholesale — synthesis does no trim, so
     // emit_sample_cap stays 0 (full render to the map's last anchor).
@@ -188,15 +195,30 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- render (engine writes out_path directly) ---
+    // --- render: engine writes a sibling staging file and success publishes it
+    // atomically via rename. ---
     std::fprintf(stderr,
         "warptempo_engine: rendering N=%d R_s=%d -> %s\n",
         N_fft, R_s, out_path.c_str());
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
+        unlink_silent(staging_output_path);
         std::fprintf(stderr, "warptempo_engine: engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
+    }
+
+    {
+        std::error_code ec;
+        std::filesystem::rename(staging_output_path, out_path, ec);
+        if (ec) {
+            unlink_silent(staging_output_path);
+            std::fprintf(stderr,
+                "warptempo_engine: could not publish '%s' to '%s': %s\n",
+                staging_output_path.c_str(), out_path.c_str(),
+                ec.message().c_str());
+            return 1;
+        }
     }
 
     std::fprintf(stderr, "warptempo_engine: wrote %s\n", out_path.c_str());

@@ -50,6 +50,8 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
         t.warp_selected           = app.selected_markers;
         t.warp_last_selected      = app.last_selected_marker;
     }
+    // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
+    // live-mirror field means updating this push, that pull, and ViewState.
     t.trim                = app.trim;
     t.trim_begin_selected = app.trim_begin_selected;
     t.trim_end_selected   = app.trim_end_selected;
@@ -135,6 +137,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
         app.selected_markers     = target.warp_selected;
         app.last_selected_marker = target.warp_last_selected;
     }
+    // Lockstep with refresh_active_tab_view_from_app's push block: adding a
+    // per-tab live-mirror field means updating that push, this pull, and
+    // ViewState.
     app.trim                = target.trim;
     app.trim_begin_selected = target.trim_begin_selected;
     app.trim_end_selected   = target.trim_end_selected;
