@@ -566,8 +566,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             if (idx == 0 || mv[idx].time_seconds == 0.0) return;
         }
         const double sr_d = static_cast<double>(sr);
-        const auto tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
+        const auto& tmap = target_view_map_cached(
+            app, sr, static_cast<long>(audio.total_frames())).frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
         // Compute proposed new source-times per selected marker, then

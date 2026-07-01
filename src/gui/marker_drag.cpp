@@ -169,7 +169,8 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // — in that case paint walks the identity fallback for the duration
     // of the drag, which is the correct degradation.
     d.frozen_frame_map = build_target_view_frame_map(
-        app, sr, static_cast<long>(audio.total_frames()));
+        app.warpmarkers.markers(), app.engine_settings.scale,
+        sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
     // active-mode snapshot only when the drag produced a net position
     // change; a drag that returns to its origin is discarded.

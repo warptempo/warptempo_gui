@@ -21,15 +21,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     int sample_rate,
     long total_frames);
 
-// AppState-driven overload of build_target_view_frame_map. Pulls the live
-// warp marker store and engine_settings.scale from `app`; otherwise
-// identical to the markers-and-scale overload above. Both input and
-// paint paths in target view route through this helper so the segment
-// list they walk is byte-identical. Defined in frame_map_view.cpp; an
-// AppState forward declaration suffices here.
 struct AppState;
-std::vector<FrameMapSegment> build_target_view_frame_map(
-    const AppState& app, int sample_rate, long total_frames);
 
 // Memoized target-view frame_map. One entry, keyed on the inputs that
 // determine the map: the warp-marker store generation, the scale
@@ -88,7 +80,7 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // no map built. Target view: routes through the memoized
 // target_view_map_cached, so even repeated calls (e.g. inside a loop) cost
 // only a cache-key comparison after the first build. Use these at every input /
-// playhead boundary that currently hand-builds build_target_view_frame_map
+// playhead boundary that currently reads target_view_map_cached
 // solely to feed one to_domain_frame / to_source_frame.
 //
 // NOT for sites translating against a non-live map — a drag's

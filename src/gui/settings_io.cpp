@@ -1,10 +1,10 @@
 #include "settings_io.h"
 
 #include "app_state.h"
+#include "parser/parse_text_util.h"
 #include "settings_trim.h"
 #include "time_format.h"
 
-#include <cctype>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
@@ -19,16 +19,6 @@
 #include <unistd.h>
 
 namespace {
-
-std::string trim_ws(const std::string& s) {
-    size_t a = 0;
-    while (a < s.size() &&
-           std::isspace(static_cast<unsigned char>(s[a]))) ++a;
-    size_t b = s.size();
-    while (b > a &&
-           std::isspace(static_cast<unsigned char>(s[b - 1]))) --b;
-    return s.substr(a, b - a);
-}
 
 bool parse_int64_full(const std::string& s, int64_t& out) {
     if (s.empty()) return false;
@@ -282,13 +272,13 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
     if (!f) return false;
     std::string line;
     while (std::getline(f, line)) {
-        const std::string trimmed = trim_ws(line);
+        const std::string trimmed = warptempo_parse::trim_ws(line);
         if (trimmed.empty()) continue;
         if (trimmed[0] == '#') continue;
         const size_t eq = trimmed.find('=');
         if (eq == std::string::npos) continue;
-        const std::string key   = trim_ws(trimmed.substr(0, eq));
-        const std::string value = trim_ws(trimmed.substr(eq + 1));
+        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
+        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
         if (key.empty()) continue;
 
         if (key == "tab_a_viewport_start") {
@@ -372,13 +362,13 @@ RenderViewState read_rendersettings_view_state(
     if (!f) return out;
     std::string line;
     while (std::getline(f, line)) {
-        const std::string trimmed = trim_ws(line);
+        const std::string trimmed = warptempo_parse::trim_ws(line);
         if (trimmed.empty()) continue;
         if (trimmed[0] == '#') continue;
         const size_t eq = trimmed.find('=');
         if (eq == std::string::npos) continue;
-        const std::string key   = trim_ws(trimmed.substr(0, eq));
-        const std::string value = trim_ws(trimmed.substr(eq + 1));
+        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
+        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
         if (key == "viewport_start") {
             int64_t v;
             if (parse_int64_full(value, v)) out.viewport_start = v;
@@ -429,11 +419,11 @@ bool update_rendersettings_view_state(const std::filesystem::path& path,
     if (f) {
         std::string line;
         while (std::getline(f, line)) {
-            const std::string trimmed = trim_ws(line);
+            const std::string trimmed = warptempo_parse::trim_ws(line);
             std::string key;
             const size_t eq = trimmed.find('=');
             if (eq != std::string::npos) {
-                key = trim_ws(trimmed.substr(0, eq));
+                key = warptempo_parse::trim_ws(trimmed.substr(0, eq));
             }
             if (key == "viewport_start" || key == "zoom" ||
                 key == "playhead") {

@@ -180,8 +180,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
         }
         const double sr_d = static_cast<double>(sr);
-        const auto tmap = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
+        const auto& tmap = target_view_map_cached(
+            app, sr, static_cast<long>(audio.total_frames())).frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
         const double eps = 1.0 / sr_d;

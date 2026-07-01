@@ -90,50 +90,39 @@ static inline double sec_to_paint_sample(
     return std::nearbyint(eff_time * sr);
 }
 
-// Two-tone overdraw for a single stem column. Mirrors the per-pixel notch
-// render_playhead cuts: wherever this column crosses opaque waveform ink in
-// the displayed plate, recolor the stem to kBackground so it reads as a dark
-// notch through the light fill; elsewhere the stem keeps its own color. icol
-// is the integer plate column the stem was snapped to (round(x_raw)). The
-// plate's row 0 is the waveform body top, which sits at waveform_area.y in
-// these coordinates, so plate row pr maps to fill-y waveform_area.y + pr.
-// Rows above the waveform body (the flag-to-waveform gap) have no plate
-// coverage and are never scanned, so that segment stays the stem color with
-// no special-casing. A null or non-ARGB32 plate, or an out-of-range column,
-// leaves the plain stem untouched.
-void overdraw_stem_ink_notch(cairo_t* cr,
-                             GuiRect waveform_area,
-                             cairo_surface_t* ink_plate,
-                             int icol) {
+// Caller must cairo_surface_flush(ink_plate) before calling. Collect
+// contiguous opaque ink runs down one plate column and overdraw them as
+// kBackground 1px rectangles at dest_x + icol, dest_y + run start.
+void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
+                          cairo_surface_t* ink_plate, int icol) {
     if (!ink_plate) return;
-    cairo_surface_flush(ink_plate);
     if (cairo_image_surface_get_format(ink_plate) != CAIRO_FORMAT_ARGB32) return;
     const int plate_w = cairo_image_surface_get_width(ink_plate);
     const int plate_h = cairo_image_surface_get_height(ink_plate);
     if (icol < 0 || icol >= plate_w) return;
     const unsigned char* data = cairo_image_surface_get_data(ink_plate);
     const int stride  = cairo_image_surface_get_stride(ink_plate);
-    const int y_max   = std::min(waveform_area.h, plate_h);
+    const int y_max   = std::min(area_h, plate_h);
 
     cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
     int run_start = -1;
-    for (int pr = 0; pr < y_max; ++pr) {
-        const bool ink = data[pr * stride + icol * 4 + 3] > 127;
+    for (int y = 0; y < y_max; ++y) {
+        const bool ink = data[y * stride + icol * 4 + 3] > 127;
         if (ink && run_start < 0) {
-            run_start = pr;
+            run_start = y;
         } else if (!ink && run_start >= 0) {
             cairo_rectangle(cr,
-                            static_cast<double>(waveform_area.x + icol),
-                            static_cast<double>(waveform_area.y + run_start),
+                            static_cast<double>(dest_x + icol),
+                            static_cast<double>(dest_y + run_start),
                             1.0,
-                            static_cast<double>(pr - run_start));
+                            static_cast<double>(y - run_start));
             run_start = -1;
         }
     }
     if (run_start >= 0) {
         cairo_rectangle(cr,
-                        static_cast<double>(waveform_area.x + icol),
-                        static_cast<double>(waveform_area.y + run_start),
+                        static_cast<double>(dest_x + icol),
+                        static_cast<double>(dest_y + run_start),
                         1.0,
                         static_cast<double>(y_max - run_start));
     }
@@ -180,6 +169,9 @@ void render_marker_stems_impl(
 
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
+    // The waveform plate is stable during this loop; flush once before all
+    // per-column ink-run scans.
+    if (ink_plate) cairo_surface_flush(ink_plate);
 
     // Per-marker color picks {kMarker, kSelected} from selected_set.
     // Disabled markers are skipped entirely (no stem). The out-of-trim
@@ -214,7 +206,8 @@ void render_marker_stems_impl(
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
-        overdraw_stem_ink_notch(cr, waveform_area, ink_plate, icol);
+        fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
+                             waveform_area.h, ink_plate, icol);
     }
 
     cairo_restore(cr);
@@ -422,53 +415,8 @@ void render_playhead(cairo_t* cr,
         // new geometry and is correct across all views and the shifted plate.
         if (ink_plate) {
             cairo_surface_flush(ink_plate);
-            const int plate_w = cairo_image_surface_get_width(ink_plate);
-            const int plate_h = cairo_image_surface_get_height(ink_plate);
             const int icol    = static_cast<int>(col);
-            // Silent, safe fallback: a non-ARGB32 plate or an out-of-range
-            // column leaves the plain green line untouched.
-            if (cairo_image_surface_get_format(ink_plate) == CAIRO_FORMAT_ARGB32
-                && icol >= 0 && icol < plate_w) {
-                const unsigned char* data =
-                    cairo_image_surface_get_data(ink_plate);
-                const int stride = cairo_image_surface_get_stride(ink_plate);
-                const int y_max =
-                    std::min(area.h, plate_h);  // exclusive upper bound
-
-                // Collect contiguous ink runs down the column, then fill them
-                // all in one batch. The plate is hard-aliased (alpha 0 or 255);
-                // the >127 threshold is just a guard. Runs are emitted raw —
-                // no smoothing, merging, or padding — so sparse line-art
-                // material speckles green/background pixel by pixel, the
-                // accepted behavior of the per-pixel variant. The union of the
-                // green line above and these runs covers exactly the same
-                // pixels the single stroke covered.
-                cairo_set_source_rgb(cr, kBackground.r, kBackground.g,
-                                     kBackground.b);
-                int run_start = -1;
-                for (int y = 0; y < y_max; ++y) {
-                    const bool ink =
-                        data[y * stride + icol * 4 + 3] > 127;
-                    if (ink && run_start < 0) {
-                        run_start = y;
-                    } else if (!ink && run_start >= 0) {
-                        cairo_rectangle(cr,
-                                        static_cast<double>(area.x) + col,
-                                        static_cast<double>(area.y + run_start),
-                                        1.0,
-                                        static_cast<double>(y - run_start));
-                        run_start = -1;
-                    }
-                }
-                if (run_start >= 0) {
-                    cairo_rectangle(cr,
-                                    static_cast<double>(area.x) + col,
-                                    static_cast<double>(area.y + run_start),
-                                    1.0,
-                                    static_cast<double>(y_max - run_start));
-                }
-                cairo_fill(cr);
-            }
+            fill_column_ink_runs(cr, area.x, area.y, area.h, ink_plate, icol);
         }
     }
 
@@ -552,6 +500,7 @@ void render_trim_stems(cairo_t* cr,
 
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
+    if (ink_plate) cairo_surface_flush(ink_plate);
 
     auto paint_bound = [&](int64_t frame, bool selected) {
         const double ms = static_cast<double>(frame);
@@ -567,7 +516,8 @@ void render_trim_stems(cairo_t* cr,
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
-        overdraw_stem_ink_notch(cr, waveform_area, ink_plate, icol);
+        fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
+                             waveform_area.h, ink_plate, icol);
     };
 
     if (has_begin) paint_bound(trim.begin, begin_selected);
@@ -1307,9 +1257,9 @@ double flag_pending_text_left_x(
         std::nearbyint(mv[marker_idx].time_seconds * sr));
     double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {
-        const auto tmap = build_target_view_frame_map(
+        const auto& tmap = target_view_map_cached(
             app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
+            static_cast<long>(audio.total_frames())).frame_map;
         if (!tmap.empty()) {
             const size_t src_frame = (src_sample < 0)
                 ? static_cast<size_t>(0)

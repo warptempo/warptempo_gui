@@ -16,6 +16,10 @@ std::expected<void, std::string> write_frame_map(
         if (drop_zero_zero && s.src_frame == 0.0 && s.tgt_frame == 0.0) continue;
         of << s.src_frame << " " << s.tgt_frame << "\n";
     }
+    of.flush();
+    if (!of) {
+        return std::unexpected("could not write frame map '" + path + "' (I/O error)");
+    }
     return {};
 }
 
@@ -29,6 +33,10 @@ std::expected<void, std::string> write_tempo_map(
     for (const auto& e : entries) {
         of << e.target_time_sec << " " << e.multiplier << "\n";
     }
+    of.flush();
+    if (!of) {
+        return std::unexpected("could not write tempo map '" + path + "' (I/O error)");
+    }
     return {};
 }
 
@@ -40,6 +48,10 @@ std::expected<void, std::string> write_reset_map(
     }
     for (const int64_t f : source_frames) {
         of << f << "\n";
+    }
+    of.flush();
+    if (!of) {
+        return std::unexpected("could not write resetmap '" + path + "' (I/O error)");
     }
     return {};
 }

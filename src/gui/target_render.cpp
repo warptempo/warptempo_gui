@@ -267,9 +267,9 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     app.target_buffer_start_frame = 0;
     if (app.trim.has_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
-        const auto tmap = build_target_view_frame_map(
+        const auto& tmap = target_view_map_cached(
             app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
+            static_cast<long>(audio.total_frames())).frame_map;
         const int64_t trim_begin_frame = static_cast<int64_t>(
             std::nearbyint(app.trim.begin_seconds *
                            static_cast<double>(audio.sample_rate())));

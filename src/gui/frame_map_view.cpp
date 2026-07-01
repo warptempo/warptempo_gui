@@ -29,7 +29,7 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     // so hit-test math and waveform paint walk the same segment list.
     // This overload always builds directly and is the entry point for
     // hypothetical (non-live) marker lists; live-state consumers go
-    // through the cache via the AppState overload.
+    // through target_view_map_cached.
     tmin.has_trim_begin = false;
     tmin.trim_begin_sec = 0.0;
     tmin.has_trim_end   = false;
@@ -82,11 +82,6 @@ const TargetMapCache& target_view_map_cached(
     c.total_frames = total_frames;
     c.valid        = true;
     return c;
-}
-
-std::vector<FrameMapSegment> build_target_view_frame_map(
-    const AppState& app, int sample_rate, long total_frames) {
-    return target_view_map_cached(app, sample_rate, total_frames).frame_map;
 }
 
 int64_t to_source_frame(const AppState& app, int64_t domain_frame,

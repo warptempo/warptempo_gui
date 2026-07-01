@@ -66,13 +66,14 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // live here, not in the parser's map_output.cpp, so the engine-only
 // warptempo_engine driver can read both artifacts while linking
 // libwarptempo_engine alone (no parser archive). The formats are trivial
-// integer text, specified at each writer in map_output.cpp; keep these in
-// lockstep with those writers.
+// whitespace-separated numeric text, specified at each writer in
+// map_output.cpp; keep these in lockstep with those writers.
 //
 // .warpframemap: one "src_frame tgt_frame" line per segment (space-separated,
-// non-negative integers; a leading 0 0 anchor is present unless dropped at
-// write). Blank / whitespace-only lines are skipped. Any malformed line
-// (non-integer, missing field, or trailing garbage) fails the whole read
+// non-negative numeric values; the writer emits precise double breakpoints at
+// up to 17 significant digits; a leading 0 0 anchor is present unless dropped
+// at write). Blank / whitespace-only lines are skipped. Any malformed line
+// (non-numeric, missing field, or trailing garbage) fails the whole read
 // (std::nullopt), so a truncated or corrupt file never feeds the engine a
 // partial map. A missing/unopenable file is also std::nullopt.
 inline std::optional<std::vector<FrameMapSegment>>

@@ -317,19 +317,18 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     const int64_t dbg_vp_end = dbg_vp_start +
         static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
-    std::vector<FrameMapSegment> dbg_tmap;
+    const std::vector<FrameMapSegment>* dbg_tmap_arg = nullptr;
     if (!app.render_view.enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
-            dbg_tmap = app.drag.frozen_frame_map;
+            if (!app.drag.frozen_frame_map.empty())
+                dbg_tmap_arg = &app.drag.frozen_frame_map;
         } else {
-            dbg_tmap = build_target_view_frame_map(
-                app, sr,
-                static_cast<long>(audio.total_frames()));
+            const auto& m = target_view_map_cached(
+                app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            if (!m.empty()) dbg_tmap_arg = &m;
         }
     }
-    const std::vector<FrameMapSegment>* dbg_tmap_arg =
-        dbg_tmap.empty() ? nullptr : &dbg_tmap;
 
     DragOverlay dbg_drag_storage;
     const DragOverlay* dbg_drag = nullptr;

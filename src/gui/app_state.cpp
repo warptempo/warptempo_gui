@@ -68,12 +68,16 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    std::vector<FrameMapSegment> target_frame_map;
+    const std::vector<FrameMapSegment>* tmap = nullptr;
     if (!rv && app.active_audio_view == 'T') {
-        target_frame_map = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
+        // target_view_map_cached stores segments in app.target_map_cache.frame_map,
+        // which outlives this call. The reference remains valid until a
+        // changed-key rebuild, and this function does not mutate markers,
+        // scale, or audio identity while holding it.
+        const auto& m = target_view_map_cached(
+            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+        if (!m.empty()) tmap = &m;
     }
-    const bool use_tmap = !target_frame_map.empty();
     for (int i = 0; i < n; ++i) {
         int64_t src_sample;
         if (rv_trans) {
@@ -94,11 +98,11 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 static_cast<double>(sr)));
         }
         double ms = static_cast<double>(src_sample);
-        if (use_tmap) {
+        if (tmap) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, target_frame_map);
+            ms = map_source_to_target(q, *tmap);
         }
         if (ms < vp) continue;
         if (ms >= vp + static_cast<double>(visible)) continue;
@@ -131,23 +135,23 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    std::vector<FrameMapSegment> target_frame_map;
+    const std::vector<FrameMapSegment>* tmap = nullptr;
     if (app.active_audio_view == 'T') {
-        target_frame_map = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
+        const auto& m = target_view_map_cached(
+            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+        if (!m.empty()) tmap = &m;
     }
-    const bool use_tmap = !target_frame_map.empty();
 
     auto bound_dist = [&](double seconds, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(seconds * sr_d));
         double ms = static_cast<double>(src_sample);
-        if (use_tmap) {
+        if (tmap) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, target_frame_map);
+            ms = map_source_to_target(q, *tmap);
         }
         if (ms < vp) return kMarkerHitHalfPx + 1;
         if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
@@ -189,12 +193,12 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    std::vector<FrameMapSegment> target_frame_map;
+    const std::vector<FrameMapSegment>* tmap = nullptr;
     if (app.active_audio_view == 'T') {
-        target_frame_map = build_target_view_frame_map(
-            app, sr, static_cast<long>(audio.total_frames()));
+        const auto& m = target_view_map_cached(
+            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+        if (!m.empty()) tmap = &m;
     }
-    const bool use_tmap = !target_frame_map.empty();
 
     const int kMiss = std::numeric_limits<int>::max();
 
@@ -213,11 +217,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(seconds * sr_d));
         double ms = static_cast<double>(src_sample);
-        if (use_tmap) {
+        if (tmap) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, target_frame_map);
+            ms = map_source_to_target(q, *tmap);
         }
         if (ms < vp) return kMiss;
         if (ms >= vp + static_cast<double>(visible)) return kMiss;
@@ -275,19 +279,19 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     //
     // During a drag, route through the frozen frame_map captured at
     // begin_drag so hit-rect positions match the frozen-coord paint.
-    std::vector<FrameMapSegment> target_frame_map;
+    const std::vector<FrameMapSegment>* tmap_arg = nullptr;
     if (!app.render_view.enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
-            target_frame_map = app.drag.frozen_frame_map;
+            if (!app.drag.frozen_frame_map.empty())
+                tmap_arg = &app.drag.frozen_frame_map;
         } else {
-            target_frame_map = build_target_view_frame_map(
+            const auto& m = target_view_map_cached(
                 app, audio.sample_rate(),
-                static_cast<long>(audio.total_frames()));
+                static_cast<long>(audio.total_frames())).frame_map;
+            if (!m.empty()) tmap_arg = &m;
         }
     }
-    const std::vector<FrameMapSegment>* tmap_arg =
-        target_frame_map.empty() ? nullptr : &target_frame_map;
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (app.drag.active) {

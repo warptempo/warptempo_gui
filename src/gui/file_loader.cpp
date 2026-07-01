@@ -88,28 +88,21 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.hover_popup    = HoverPopupState{};
 
     app.loading       = true;
-    app.load_progress = 0.0f;
     app.queue_progress_text = "loading...";
     gui.invalidate_region(0, 0, app.width, app.height);
     gui.paint_now();
 
     GuiAudio next;
     const auto t0 = std::chrono::steady_clock::now();
-    const bool ok = next.load(path, [&](float p) {
-        // load_progress is no longer read anywhere (the determinate bar was
-        // replaced by a static "loading..." status painted once at load
-        // entry); the write is kept harmlessly. With a static message there
-        // is no per-tick repaint, so this callback no longer invalidates a
-        // bar strip — it only pumps the event loop so the compositor stays
-        // responsive across a multi-frame load.
-        app.load_progress = p;
+    const bool ok = next.load(path, [&](float) {
+        // Pump the event loop so the compositor stays responsive across a
+        // multi-frame load.
         gui.drain_events();
     });
     const auto t1 = std::chrono::steady_clock::now();
 
     if (!ok) {
         app.loading       = false;
-        app.load_progress = 0.0f;
         app.queue_progress_text.clear();
         gui.invalidate_region(0, 0, app.width, app.height);
         return false;
@@ -128,7 +121,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     audio = std::move(next);
     app.audio_generation++;
     app.loading       = false;
-    app.load_progress = 0.0f;
 
     source_sample_cache_writer_ = std::thread(
         [path, source_info, samples = audio.samples_ptr(),

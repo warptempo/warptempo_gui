@@ -403,10 +403,6 @@ struct AppState {
     int     width                 = 1400;
     int     height                = 800;
     bool    loading               = false;
-    // Still written by the file-loader progress callback, but no longer read:
-    // the determinate load bar it fed was replaced by a static status message.
-    // Left in place rather than chased across its several write sites.
-    float   load_progress         = 0.0f;
 
     // Live working copy of the active view's state (viewport / zoom /
     // playhead here, plus selected_markers / last_selected_marker below).
@@ -665,7 +661,7 @@ struct AppState {
     // invalidate the top strip without redundant repaints.
     bool top_flag_editor_blink_last = false;
 
-    // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
+    // Settings-prompt editor. Opens on `:`, accepts a single `key=value`
     // line, writes to engine_settings on commit. Lives in the bottom
     // strip; separate from top_flag_editor so the two paint regions stay
     // independent (the in-practice mutual exclusion comes from the flag
@@ -677,10 +673,11 @@ struct AppState {
     // on_tick clamp (see main.cpp). 0 = not yet observed.
     int64_t last_tick_live_total = 0;
 
-    // Render-queue state. `queue_running` is true only inside the
-    // Ctrl+Alt+R queue walker. The Esc handler checks it to scope the
-    // cancel binding away from normal interaction. `queue_cancel_requested`
-    // is set by Esc during a queue run and read between entries.
+    // Render-queue state. `queue_running` is true while any archival render
+    // dispatch is in flight (the Ctrl+Alt+R one-shot and all batch runs). The
+    // Esc handler checks it to scope the cancel binding away from normal
+    // interaction. `queue_cancel_requested` is set by Esc during a queue run
+    // and read between entries.
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
