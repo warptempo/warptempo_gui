@@ -121,7 +121,7 @@ void Synthesis::synthesize_full(
     std::vector<char> ch_cancelled(channels, 0);
 
     // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
-    // fm, stft.phase_reset_markers, stft.fft_ws[ch],
+    // fm, stft.phase_reset_placements, stft.fft_ws[ch],
     // stft.window/synth_window) and writes only mono[ch], chprof[ch],
     // ch_cancelled[ch]. Every buffer that was shared across channels in the old
     // frame-major loop (theta/dt/df/done scratch, the heap scratch, the OLA
@@ -191,8 +191,8 @@ void Synthesis::synthesize_full(
             ta_nxt = ta_for(1);
         }
 
-        // Phase reset cursor: markers at or after wend never match a frame_idx
-        // in range and so never fire.
+        // Phase reset cursor: placements at or after wend never match a
+        // frame_idx in range and so never fire.
         int  phase_reset_cursor = 0;
         // `prev_reset` carries "the previous frame fired a reset" into the next
         // iteration so heap_phase reseeds theta = phi on the post-reset frame.
@@ -334,12 +334,12 @@ void Synthesis::synthesize_full(
             }
 
             // Phase reset. The post-reset frame re-grounds via seed_heap
-            // (theta = phi). The loop only advances the marker cursor and
+            // (theta = phi). The loop only advances the placement cursor and
             // records that a reset fired so `prev_reset` seeds the next frame.
             // Channel-independent: each channel walks its own cursor.
             bool reset_fired = false;
-            while (phase_reset_cursor < static_cast<int>(stft.phase_reset_markers.size()) &&
-                   stft.phase_reset_markers[phase_reset_cursor].synth_frame == frame_idx) {
+            while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
+                   stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {
                 ++phase_reset_cursor;
                 reset_fired = true;
             }

@@ -177,8 +177,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     // Pass 1: phase reset placement.
     auto t_p1_0 = profile::now();
-    audio_stft.phase_reset_markers.clear();
-    audio_stft.phase_reset_markers.reserve(p.phase_reset_frames.size());
+    audio_stft.phase_reset_placements.clear();
+    audio_stft.phase_reset_placements.reserve(p.phase_reset_frames.size());
     const auto& fm = audio_stft.source_frame_positions;
     // The src-frame -> synth-frame upper_bound filter drops entries before
     // the first frame.
@@ -189,11 +189,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         --it;
         size_t s = static_cast<size_t>(it - fm.begin());
         if (s >= fm.size()) continue;
-        audio_stft.phase_reset_markers.push_back({static_cast<int>(s), F});
+        audio_stft.phase_reset_placements.push_back({static_cast<int>(s), F});
     }
     std::cout << "[Pass 1/" << (audio_stft.limiter ? 3 : 2)
               << "] Phase reset placement............. "
-              << audio_stft.phase_reset_markers.size()
+              << audio_stft.phase_reset_placements.size()
               << " phase resets\n";
     auto t_p1_1 = profile::now();
     p1_ms = profile::ms(t_p1_0, t_p1_1);
@@ -202,7 +202,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
                   << p1_ms
                   << " phase_reset_count=" << p.phase_reset_frames.size()
-                  << " placed_count=" << audio_stft.phase_reset_markers.size()
+                  << " placed_count=" << audio_stft.phase_reset_placements.size()
                   << "\n";
     }
 

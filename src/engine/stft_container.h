@@ -14,7 +14,7 @@
 #include "frame_map.h"
 
 // --- Data Structures ---
-struct PhaseResetMarker {
+struct PhaseResetPlacement {
     int synth_frame;
     int64_t src_frame;
 };
@@ -131,8 +131,9 @@ struct AudioSTFT {
     std::vector<FftWorkspace> fft_ws;       // size == channels
     bool fftw_threads_inited = false;
 
-    // Phase reset markers
-    std::vector<PhaseResetMarker> phase_reset_markers;
+    // Phase reset placements: synthesis frame to re-ground plus authored
+    // source frame for diagnostics.
+    std::vector<PhaseResetPlacement> phase_reset_placements;
 
     // Spectral limiter
     LimiterParams limiter_params;
