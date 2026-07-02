@@ -12,6 +12,7 @@
 #include "frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"
+#include "render_cache.h"
 #include "source_sample_cache.h"
 
 #include <algorithm>
@@ -128,50 +129,8 @@ RenderOutcome do_render(const RenderRequest& req,
     const long total_frames = static_cast<long>(src_info.frames);
     const int source_channels_probe = src_info.channels;
     sf_close(sf);
-
-    // --- Build the maps from in-memory markers. ---
-    MapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
-    tmin.scale          = scale;
-    tmin.sample_rate    = sample_rate;
-    tmin.total_frames   = total_frames;
-    tmin.has_trim_begin = req.has_trim_begin;
-    tmin.trim_begin_sec = req.trim_begin_sec;
-    tmin.has_trim_end   = req.has_trim_end;
-    tmin.trim_end_sec   = req.trim_end_sec;
-
-    auto r = build_maps(tmin);
-    if (!r) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: map build failed: %s\n",
-            r.error().c_str());
-        return RenderOutcome::Failed;
-    }
-    MapBuildResult tmres = std::move(*r);
-
-    // Full (untrimmed) frame map for the wav engine path. A trimmed wav render
-    // hands the engine the canonical untrimmed frame map and windows it,
-    // rather than rebuilding a local trimmed map; that inherited t_a history
-    // from frame 0 is what makes the windowed render null against the full
-    // render. build_maps already produces the untrimmed segment list when
-    // trim is forced off, so reuse it instead of duplicating the map math.
-    // tmres stays the source for the frame-map/tempo-map else-branch (which keeps
-    // its trimmed frame map + -trimmed.wav sibling); tmfull feeds the engine and
-    // the render-domain sidecar block. Declared here (not inside the wav
-    // branch) so the sidecar block outside the branch can read it.
-    MapBuildInput tmin_full = tmin;
-    tmin_full.has_trim_begin = false;
-    tmin_full.trim_begin_sec = 0.0;
-    tmin_full.has_trim_end   = false;
-    tmin_full.trim_end_sec   = 0.0;
-    auto rfull = build_maps(tmin_full);
-    if (!rfull) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: full map build failed: %s\n",
-            rfull.error().c_str());
-        return RenderOutcome::Failed;
-    }
-    MapBuildResult tmfull = std::move(*rfull);
+    profile_source_channels = source_channels_probe;
+    profile_source_sample_rate = static_cast<int>(sample_rate);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
@@ -216,6 +175,95 @@ RenderOutcome do_render(const RenderRequest& req,
     auto cleanup_all = [&]() {
         unlink_silent(staging_output_path);
     };
+
+    auto finish_success = [&](const char* outcome) -> RenderOutcome {
+        if (prof) {
+            const auto t_render_1 = profile::now();
+            const double render_ms = profile::ms(t_render_0, t_render_1);
+            std::fprintf(stderr,
+                "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu offset_samples=%lld output_buffer=%s limiter=%s outcome=%s\n",
+                req.output_buffer ? "target" : "file", output_format.c_str(),
+                profile_source_sample_rate, profile_source_channels,
+                profile_source_frames_passed,
+                static_cast<long long>(profile_trim_begin_frame),
+                static_cast<long long>(profile_trim_end_frame),
+                static_cast<long long>(profile_trim_span_frames),
+                static_cast<long long>(profile_target_frames),
+                profile_target_seconds, source_read_ms, engine_ms, render_ms,
+                req.markers.size(), req.phase_reset_frames.size(),
+                static_cast<long long>(phase_reset_offset_samples),
+                req.output_buffer ? "yes" : "no",
+                req.engine_settings.limiter ? "yes" : "no",
+                outcome);
+        }
+        std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
+                     req.output_buffer ? "<buffer>" : final_output_path.c_str());
+        return RenderOutcome::Success;
+    };
+
+    std::vector<uint8_t> fingerprint;
+    if (output_format == "wav" && !req.output_buffer) {
+        RenderFileIdentity source_identity;
+        if (stat_file_identity(req.source_audio_path, source_identity)) {
+            fingerprint = render_fingerprint(
+                req.source_audio_path, source_identity,
+                static_cast<int>(sample_rate), req.markers, req.phase_resets,
+                req.engine_settings,
+                req.has_trim_begin, req.trim_begin_sec,
+                req.has_trim_end, req.trim_end_sec);
+        }
+    }
+    if (!fingerprint.empty() &&
+        fingerprint_sidecar_matches(final_output_path, fingerprint)) {
+        std::fprintf(stderr,
+            "[warptempo_gui] render up to date (fingerprint match): %s\n",
+            final_output_path.c_str());
+        return finish_success("reused_up_to_date");
+    }
+
+    // --- Build the maps from in-memory markers. ---
+    MapBuildInput tmin;
+    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
+    tmin.scale          = scale;
+    tmin.sample_rate    = sample_rate;
+    tmin.total_frames   = total_frames;
+    tmin.has_trim_begin = req.has_trim_begin;
+    tmin.trim_begin_sec = req.trim_begin_sec;
+    tmin.has_trim_end   = req.has_trim_end;
+    tmin.trim_end_sec   = req.trim_end_sec;
+
+    auto r = build_maps(tmin);
+    if (!r) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: map build failed: %s\n",
+            r.error().c_str());
+        return RenderOutcome::Failed;
+    }
+    MapBuildResult tmres = std::move(*r);
+
+    // Full (untrimmed) frame map for the wav engine path. A trimmed wav render
+    // hands the engine the canonical untrimmed frame map and windows it,
+    // rather than rebuilding a local trimmed map; that inherited t_a history
+    // from frame 0 is what makes the windowed render null against the full
+    // render. build_maps already produces the untrimmed segment list when
+    // trim is forced off, so reuse it instead of duplicating the map math.
+    // tmres stays the source for the frame-map/tempo-map else-branch (which keeps
+    // its trimmed frame map + -trimmed.wav sibling); tmfull feeds the engine and
+    // the render-domain sidecar block. Declared here (not inside the wav
+    // branch) so the sidecar block outside the branch can read it.
+    MapBuildInput tmin_full = tmin;
+    tmin_full.has_trim_begin = false;
+    tmin_full.trim_begin_sec = 0.0;
+    tmin_full.has_trim_end   = false;
+    tmin_full.trim_end_sec   = 0.0;
+    auto rfull = build_maps(tmin_full);
+    if (!rfull) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: full map build failed: %s\n",
+            rfull.error().c_str());
+        return RenderOutcome::Failed;
+    }
+    MapBuildResult tmfull = std::move(*rfull);
 
     std::fprintf(stderr, "warptempo_gui: rendering %s -> %s\n",
                  output_format.c_str(), final_output_path.c_str());
@@ -354,6 +402,12 @@ RenderOutcome do_render(const RenderRequest& req,
                     ec.message().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
+            }
+            if (!fingerprint.empty() &&
+                !write_fingerprint_sidecar(final_output_path, fingerprint)) {
+                std::fprintf(stderr,
+                    "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                    final_output_path.c_str());
             }
         }
     } else {
@@ -575,25 +629,5 @@ RenderOutcome do_render(const RenderRequest& req,
     }
 
     cleanup_all();
-    if (prof) {
-        const auto t_render_1 = profile::now();
-        const double render_ms = profile::ms(t_render_0, t_render_1);
-        std::fprintf(stderr,
-            "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu offset_samples=%lld output_buffer=%s limiter=%s outcome=success\n",
-            req.output_buffer ? "target" : "file", output_format.c_str(),
-            profile_source_sample_rate, profile_source_channels,
-            profile_source_frames_passed,
-            static_cast<long long>(profile_trim_begin_frame),
-            static_cast<long long>(profile_trim_end_frame),
-            static_cast<long long>(profile_trim_span_frames),
-            static_cast<long long>(profile_target_frames),
-            profile_target_seconds, source_read_ms, engine_ms, render_ms,
-            req.markers.size(), req.phase_reset_frames.size(),
-            static_cast<long long>(phase_reset_offset_samples),
-            req.output_buffer ? "yes" : "no",
-            req.engine_settings.limiter ? "yes" : "no");
-    }
-    std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
-                 req.output_buffer ? "<buffer>" : final_output_path.c_str());
-    return RenderOutcome::Success;
+    return finish_success("success");
 }

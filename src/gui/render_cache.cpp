@@ -2,15 +2,20 @@
 #include "profile_util.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <limits>
 #include <system_error>
 
+#include <sndfile.h>
+
 #include <csignal>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -44,15 +49,103 @@ std::string hex16(uint64_t h) {
     return std::string(buf);
 }
 
+char hex_digit(uint8_t x) {
+    return static_cast<char>(x < 10 ? ('0' + x) : ('a' + (x - 10)));
+}
+
+std::string hex_encode(const std::vector<uint8_t>& bytes) {
+    std::string out;
+    out.reserve(bytes.size() * 2);
+    for (uint8_t b : bytes) {
+        out.push_back(hex_digit(static_cast<uint8_t>(b >> 4)));
+        out.push_back(hex_digit(static_cast<uint8_t>(b & 0x0f)));
+    }
+    return out;
+}
+
+int hex_value(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+bool hex_decode(const std::string& text, std::vector<uint8_t>& out) {
+    if ((text.size() & 1u) != 0) return false;
+    std::vector<uint8_t> decoded;
+    decoded.reserve(text.size() / 2);
+    for (size_t i = 0; i < text.size(); i += 2) {
+        const int hi = hex_value(text[i]);
+        const int lo = hex_value(text[i + 1]);
+        if (hi < 0 || lo < 0) return false;
+        decoded.push_back(static_cast<uint8_t>((hi << 4) | lo));
+    }
+    out = std::move(decoded);
+    return true;
+}
+
+bool parse_u64_exact(const std::string& text, uint64_t& out) {
+    if (text.empty()) return false;
+    uint64_t value = 0;
+    const char* first = text.data();
+    const char* last = first + text.size();
+    const auto r = std::from_chars(first, last, value);
+    if (r.ec != std::errc{} || r.ptr != last) return false;
+    out = value;
+    return true;
+}
+
+bool parse_i64_exact(const std::string& text, int64_t& out) {
+    if (text.empty()) return false;
+    int64_t value = 0;
+    const char* first = text.data();
+    const char* last = first + text.size();
+    const auto r = std::from_chars(first, last, value);
+    if (r.ec != std::errc{} || r.ptr != last) return false;
+    out = value;
+    return true;
+}
+
+bool parse_prefixed_u64(const std::string& line, const char* prefix,
+                        uint64_t& out) {
+    const std::string_view p(prefix);
+    if (!line.starts_with(p)) return false;
+    return parse_u64_exact(line.substr(p.size()), out);
+}
+
+bool parse_prefixed_i64(const std::string& line, const char* prefix,
+                        int64_t& out) {
+    const std::string_view p(prefix);
+    if (!line.starts_with(p)) return false;
+    return parse_i64_exact(line.substr(p.size()), out);
+}
+
 constexpr uint32_t kFingerprintVersion = 1;
-constexpr char     kMagic[]            = "WARPTEMPO_TARGET_VIEW_RENDER_CACHE";
-constexpr uint32_t kFileVersion        = 1;
-constexpr char     kDiskExtension[]    = ".targetviewrender";
+constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
+constexpr uint32_t kSidecarVersion     = 1;
+constexpr char     kSidecarExtension[] = ".fingerprint";
 
 } // namespace
 
+bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
+    struct stat st{};
+    if (::stat(path.c_str(), &st) != 0) return false;
+    if (st.st_size < 0) return false;
+    constexpr int64_t kNsecPerSec = 1000000000ll;
+    const int64_t sec = static_cast<int64_t>(st.st_mtim.tv_sec);
+    if (sec > std::numeric_limits<int64_t>::max() / kNsecPerSec ||
+        sec < std::numeric_limits<int64_t>::min() / kNsecPerSec) {
+        return false;
+    }
+    out.size = static_cast<uint64_t>(st.st_size);
+    out.mtime = sec * kNsecPerSec + static_cast<int64_t>(st.st_mtim.tv_nsec);
+    return true;
+}
+
 std::vector<uint8_t> render_fingerprint(
-        const std::string& source_audio_path, int sample_rate,
+        const std::string& source_audio_path,
+        const RenderFileIdentity& source_identity,
+        int sample_rate,
         const std::vector<GuiWarpMarker>& markers,
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         const EngineSettings& s,
@@ -63,6 +156,8 @@ std::vector<uint8_t> render_fingerprint(
 
     put_u32(fp, kFingerprintVersion);
     put_str(fp, source_audio_path);
+    put_bytes(fp, &source_identity.size, sizeof source_identity.size);
+    put_bytes(fp, &source_identity.mtime, sizeof source_identity.mtime);
     put_i32(fp, static_cast<int32_t>(sample_rate));
 
     // Engine settings: every field, so any settings edit the undo stack can
@@ -108,6 +203,102 @@ std::vector<uint8_t> render_fingerprint(
     }
 
     return fp;
+}
+
+std::string fingerprint_sidecar_path(const std::string& wav_path) {
+    std::filesystem::path p(wav_path);
+    p.replace_extension(kSidecarExtension);
+    return p.string();
+}
+
+bool write_fingerprint_sidecar(const std::string& wav_path,
+                               const std::vector<uint8_t>& fingerprint) {
+    RenderFileIdentity wav_identity;
+    if (!stat_file_identity(wav_path, wav_identity)) return false;
+
+    const std::string sidecar_path = fingerprint_sidecar_path(wav_path);
+    const std::string tmp_path = sidecar_path + ".tmp";
+    std::string data;
+    data.reserve(128 + fingerprint.size() * 2);
+    data += kSidecarMagic;
+    data += '\n';
+    data += "version=";
+    data += std::to_string(kSidecarVersion);
+    data += '\n';
+    data += "size=";
+    data += std::to_string(wav_identity.size);
+    data += '\n';
+    data += "mtime=";
+    data += std::to_string(wav_identity.mtime);
+    data += '\n';
+    data += "fingerprint=";
+    data += hex_encode(fingerprint);
+    data += '\n';
+
+    std::FILE* f = std::fopen(tmp_path.c_str(), "wb");
+    if (!f) return false;
+
+    bool ok = false;
+    do {
+        if (!data.empty() &&
+            std::fwrite(data.data(), 1, data.size(), f) != data.size())
+            break;
+        if (std::fflush(f) != 0) break;
+        if (::fsync(::fileno(f)) != 0) break;
+        ok = true;
+    } while (false);
+
+    if (std::fclose(f) != 0) ok = false;
+    if (!ok) {
+        std::error_code ec;
+        std::filesystem::remove(tmp_path, ec);
+        return false;
+    }
+
+    std::error_code ec;
+    std::filesystem::rename(tmp_path, sidecar_path, ec);
+    if (ec) {
+        std::filesystem::remove(tmp_path, ec);
+        return false;
+    }
+    return true;
+}
+
+bool fingerprint_sidecar_matches(const std::string& wav_path,
+                                 const std::vector<uint8_t>& fingerprint) {
+    RenderFileIdentity wav_identity;
+    if (!stat_file_identity(wav_path, wav_identity)) return false;
+
+    std::ifstream in(fingerprint_sidecar_path(wav_path), std::ios::binary);
+    if (!in) return false;
+
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(in, line)) {
+        lines.push_back(std::move(line));
+    }
+    if (!in.eof()) return false;
+    if (lines.size() != 5) return false;
+    if (lines[0] != kSidecarMagic) return false;
+    if (lines[1] != "version=1") return false;
+
+    uint64_t recorded_size = 0;
+    int64_t recorded_mtime = 0;
+    if (!parse_prefixed_u64(lines[2], "size=", recorded_size)) return false;
+    if (!parse_prefixed_i64(lines[3], "mtime=", recorded_mtime)) return false;
+    if (recorded_size != wav_identity.size ||
+        recorded_mtime != wav_identity.mtime) {
+        return false;
+    }
+
+    constexpr std::string_view fp_prefix = "fingerprint=";
+    if (!lines[4].starts_with(fp_prefix)) return false;
+    std::vector<uint8_t> recorded_fingerprint;
+    if (!hex_decode(lines[4].substr(fp_prefix.size()),
+                    recorded_fingerprint)) {
+        return false;
+    }
+    return recorded_fingerprint == fingerprint;
 }
 
 void RenderCache::init() {
@@ -166,15 +357,23 @@ void RenderCache::sweep_orphans() {
 }
 
 void RenderCache::shutdown() {
+    join_writer();
     ram_.clear();
     ram_bytes_ = 0;
-    disk_index_.clear();
-    disk_bytes_ = 0;
+    {
+        std::lock_guard<std::mutex> lock(disk_mutex_);
+        disk_index_.clear();
+        disk_bytes_ = 0;
+    }
     if (!dir_.empty()) {
         std::error_code ec;
         std::filesystem::remove_all(dir_, ec);
     }
     enabled_ = false;
+}
+
+void RenderCache::join_writer() {
+    if (writer_.joinable()) writer_.join();
 }
 
 bool RenderCache::lookup(const std::vector<uint8_t>& fp,
@@ -195,19 +394,43 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
         }
     }
 
-    if (auto it = disk_index_.find(h); it != disk_index_.end()) {
-        DiskEntry& e = it->second;
-        if (e.fingerprint == fp) {
-            if (read_file(dir_ + "/" + e.filename, fp, channels, sample_rate, out)) {
-                e.seq = ++lru_seq_;
-                return true;
-            }
-            // Missing or invalid file: drop the entry and report a miss.
-            std::error_code ec;
-            std::filesystem::remove(dir_ + "/" + e.filename, ec);
-            disk_bytes_ -= e.size_bytes;
-            disk_index_.erase(it);
+    DiskEntry candidate;
+    bool have_candidate = false;
+    {
+        std::lock_guard<std::mutex> lock(disk_mutex_);
+        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+            it->second.fingerprint == fp) {
+            candidate = it->second;
+            have_candidate = true;
         }
+    }
+
+    if (have_candidate) {
+        const std::string path = dir_ + "/" + candidate.filename;
+        // The potentially large wav read happens outside disk_mutex_. If
+        // eviction or failed validation removes the pair mid-read, libsndfile
+        // reports a miss and the caller re-renders.
+        if (read_file(path, fp, channels, sample_rate, out)) {
+            std::lock_guard<std::mutex> lock(disk_mutex_);
+            if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+                it->second.filename == candidate.filename &&
+                it->second.fingerprint == fp) {
+                it->second.seq = ++lru_seq_;
+            }
+            return true;
+        }
+
+        bool drop_pair = false;
+        {
+            std::lock_guard<std::mutex> lock(disk_mutex_);
+            if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+                it->second.filename == candidate.filename) {
+                disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
+                disk_index_.erase(it);
+                drop_pair = true;
+            }
+        }
+        if (drop_pair) remove_disk_pair(path);
     }
 
     return false;
@@ -224,29 +447,29 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     if (frame_count <= 0 || samples.empty() || channels <= 0 || sample_rate <= 0) {
         return;
     }
-    const int64_t max_cache_frames =
-        static_cast<int64_t>(sample_rate) * kTargetViewRenderCacheMaxSeconds;
-    if (frame_count > max_cache_frames) {
-        return;
-    }
 
     const uint64_t h = fnv1a64(fp);
     const uint64_t bytes =
         static_cast<uint64_t>(samples.size()) * sizeof(float);
+    const int64_t ram_tier_frames =
+        static_cast<int64_t>(sample_rate) * kRamTierMaxSeconds;
     const bool to_ram =
-        bytes <= kRamBudgetBytes;
-    const bool inserted = to_ram
-        ? insert_ram(h, fp, samples, channels, sample_rate)
-        : insert_disk(h, fp, samples, channels, sample_rate, frame_count);
-    if (prof && inserted) {
-        const auto t1 = profile::now();
-        std::fprintf(stderr,
-            "[profile] cache_insert enabled=yes inserted=yes tier=%s ms=%.3f frames=%lld bytes=%llu\n",
-            to_ram ? "ram" : "disk", profile::ms(t0, t1),
-            static_cast<long long>(frame_count),
-            static_cast<unsigned long long>(samples.size()) *
-                static_cast<unsigned long long>(sizeof(float)));
+        frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
+    if (to_ram) {
+        const bool inserted = insert_ram(h, fp, samples, channels, sample_rate);
+        if (prof && inserted) {
+            const auto t1 = profile::now();
+            std::fprintf(stderr,
+                "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",
+                profile::ms(t0, t1),
+                static_cast<long long>(frame_count),
+                static_cast<unsigned long long>(samples.size()) *
+                    static_cast<unsigned long long>(sizeof(float)));
+        }
+        return;
     }
+
+    insert_disk(h, fp, samples, channels, sample_rate, frame_count);
 }
 
 bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
@@ -290,104 +513,105 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,
                               int64_t frame_count) {
-    const std::string fname = hex16(h) + kDiskExtension;
+    const bool prof = profile::enabled();
+    const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
+    const uint64_t sample_bytes =
+        static_cast<uint64_t>(samples.size()) * sizeof(float);
+    join_writer();
+
+    const std::string fname = hex16(h) + ".wav";
     const std::string path  = dir_ + "/" + fname;
-
-    if (auto it = disk_index_.find(h); it != disk_index_.end()) {
-        disk_bytes_ -= it->second.size_bytes;
-        disk_index_.erase(it);
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
+    {
+        std::lock_guard<std::mutex> lock(disk_mutex_);
+        if (auto it = disk_index_.find(h); it != disk_index_.end()) {
+            disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
+            disk_index_.erase(it);
+        }
     }
+    remove_disk_pair(path);
 
-    uint64_t written = 0;
-    if (!write_file(path, fp, samples, channels, sample_rate, frame_count, written))
-        return false; // best-effort
+    std::vector<uint8_t> fp_copy = fp;
+    std::vector<float> samples_copy = samples;
+    writer_ = std::thread(
+        [this, h, fname, path, fp = std::move(fp_copy),
+         samples = std::move(samples_copy), channels, sample_rate,
+         frame_count, prof, t0, sample_bytes]() mutable {
+            uint64_t written = 0;
+            if (!write_file(path, fp, samples, channels, sample_rate,
+                            frame_count, written)) {
+                return;
+            }
 
-    if (written > kDiskBudgetBytes) { // single entry exceeds the whole budget
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
-        return false;
-    }
+            {
+                std::lock_guard<std::mutex> lock(disk_mutex_);
+                DiskEntry e;
+                e.fingerprint = fp;
+                e.filename    = fname;
+                e.size_bytes  = written;
+                e.seq         = ++lru_seq_;
+                disk_index_[h] = std::move(e);
+                disk_bytes_   += written;
+                evict_disk_until(kDiskBudgetBytes);
+            }
 
-    evict_disk_until(kDiskBudgetBytes - written);
-
-    DiskEntry e;
-    e.fingerprint = fp;
-    e.filename    = fname;
-    e.size_bytes  = written;
-    e.seq         = ++lru_seq_;
-    disk_index_[h] = std::move(e);
-    disk_bytes_   += written;
+            if (prof) {
+                const auto t1 = profile::now();
+                std::fprintf(stderr,
+                    "[profile] cache_insert enabled=yes inserted=yes tier=disk ms=%.3f frames=%lld bytes=%llu\n",
+                    profile::ms(t0, t1),
+                    static_cast<long long>(frame_count),
+                    static_cast<unsigned long long>(sample_bytes));
+            }
+        });
     return true;
 }
 
 void RenderCache::evict_disk_until(uint64_t target_max) {
-    while (disk_bytes_ > target_max && !disk_index_.empty()) {
+    while (disk_bytes_ > target_max && disk_index_.size() > 1) {
         auto victim = disk_index_.begin();
         for (auto it = disk_index_.begin(); it != disk_index_.end(); ++it)
             if (it->second.seq < victim->second.seq) victim = it;
-        std::error_code ec;
-        std::filesystem::remove(dir_ + "/" + victim->second.filename, ec);
+        remove_disk_pair(dir_ + "/" + victim->second.filename);
         disk_bytes_ -= victim->second.size_bytes;
         disk_index_.erase(victim);
     }
+}
+
+void RenderCache::remove_disk_pair(const std::string& wav_path) {
+    std::error_code ec;
+    std::filesystem::remove(wav_path, ec);
+    std::filesystem::remove(wav_path + ".tmp", ec);
+    const std::string sidecar = fingerprint_sidecar_path(wav_path);
+    std::filesystem::remove(sidecar, ec);
+    std::filesystem::remove(sidecar + ".tmp", ec);
 }
 
 bool RenderCache::read_file(const std::string& path,
                             const std::vector<uint8_t>& want_fp,
                             int channels, int sample_rate,
                             std::vector<float>& out) {
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return false;
+    if (!fingerprint_sidecar_matches(path, want_fp)) return false;
 
+    SF_INFO info{};
+    SNDFILE* snd = sf_open(path.c_str(), SFM_READ, &info);
+    if (!snd) return false;
     bool ok = false;
     do {
-        char magic[sizeof(kMagic)]{};
-        if (std::fread(magic, 1, sizeof(kMagic), f) != sizeof(kMagic)) break;
-        if (std::memcmp(magic, kMagic, sizeof(kMagic)) != 0) break;
-
-        uint32_t ver = 0, fplen = 0;
-        int32_t  ch = 0, sr = 0;
-        int64_t  frames = 0;
-        if (std::fread(&ver,    sizeof ver,    1, f) != 1) break;
-        if (ver != kFileVersion) break;
-        if (std::fread(&ch,     sizeof ch,     1, f) != 1) break;
-        if (std::fread(&sr,     sizeof sr,     1, f) != 1) break;
-        if (std::fread(&frames, sizeof frames, 1, f) != 1) break;
-        if (std::fread(&fplen,  sizeof fplen,  1, f) != 1) break;
-
-        if (ch != channels || sr != sample_rate) break;
-        if (frames < 0 || ch <= 0) break;
-        if (static_cast<uint64_t>(frames) >
-            std::numeric_limits<size_t>::max() / static_cast<uint64_t>(ch)) {
-            break;
-        }
-
-        std::vector<uint8_t> fp(fplen);
-        if (fplen && std::fread(fp.data(), 1, fplen, f) != fplen) break;
-        if (fp != want_fp) break; // exact confirm: a hash collision lands here
-
-        const size_t n =
+        if (info.channels != channels || info.samplerate != sample_rate) break;
+        if (info.frames < 0 || info.channels <= 0) break;
+        const uint64_t frames = static_cast<uint64_t>(info.frames);
+        const uint64_t ch = static_cast<uint64_t>(info.channels);
+        if (frames > std::numeric_limits<size_t>::max() / ch) break;
+        const size_t sample_count =
             static_cast<size_t>(frames) * static_cast<size_t>(ch);
-        out.resize(n);
-        if (n && std::fread(out.data(), sizeof(float), n, f) != n) {
-            break;
-        }
-
-        const long final_offset = std::ftell(f);
-        if (final_offset < 0) break;
-        std::error_code ec;
-        const auto actual_size = std::filesystem::file_size(path, ec);
-        if (ec || actual_size != static_cast<std::uintmax_t>(final_offset)) break;
-
+        std::vector<float> tmp(sample_count);
+        const sf_count_t got = sf_readf_float(snd, tmp.data(), info.frames);
+        if (got != info.frames) break;
+        out = std::move(tmp);
         ok = true;
     } while (false);
-
-    std::fclose(f);
-    if (!ok) {
-        out.clear();
-    }
+    sf_close(snd);
+    if (!ok) out.clear();
     return ok;
 }
 
@@ -396,52 +620,58 @@ bool RenderCache::write_file(const std::string& path,
                              const std::vector<float>& samples,
                              int channels, int sample_rate,
                              int64_t frame_count, uint64_t& out_bytes) {
-    if (fp.size() > std::numeric_limits<uint32_t>::max()) {
+    if (channels <= 0 || sample_rate <= 0 || frame_count <= 0) return false;
+    if (static_cast<uint64_t>(frame_count) >
+        std::numeric_limits<size_t>::max() / static_cast<uint64_t>(channels)) {
+        return false;
+    }
+    const size_t expected_samples =
+        static_cast<size_t>(frame_count) * static_cast<size_t>(channels);
+    if (samples.size() != expected_samples) {
         return false;
     }
 
     const std::string tmp = path + ".tmp";
-    std::FILE* f = std::fopen(tmp.c_str(), "wb");
-    if (!f) return false;
+    remove_disk_pair(path);
 
-    bool ok = false;
-    do {
-        if (std::fwrite(kMagic, 1, sizeof(kMagic), f) != sizeof(kMagic)) break;
-        const uint32_t ver   = kFileVersion;
-        const int32_t  ch    = channels, sr = sample_rate;
-        const int64_t  fr    = frame_count;
-        const uint32_t fplen = static_cast<uint32_t>(fp.size());
-        if (std::fwrite(&ver,   sizeof ver,   1, f) != 1) break;
-        if (std::fwrite(&ch,    sizeof ch,    1, f) != 1) break;
-        if (std::fwrite(&sr,    sizeof sr,    1, f) != 1) break;
-        if (std::fwrite(&fr,    sizeof fr,    1, f) != 1) break;
-        if (std::fwrite(&fplen, sizeof fplen, 1, f) != 1) break;
-        if (fplen && std::fwrite(fp.data(), 1, fplen, f) != fplen) break;
-        if (!samples.empty() &&
-            std::fwrite(samples.data(), sizeof(float), samples.size(), f)
-                != samples.size())
-            break;
-        if (std::fflush(f) != 0) break;
-        if (::fsync(::fileno(f)) != 0) break;
-        ok = true;
-    } while (false);
-
-    if (std::fclose(f) != 0) ok = false;
+    SF_INFO info{};
+    info.samplerate = sample_rate;
+    info.channels = channels;
+    info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+    SNDFILE* snd = sf_open(tmp.c_str(), SFM_WRITE, &info);
+    if (!snd) return false;
+    sf_command(snd, SFC_SET_ADD_PEAK_CHUNK, nullptr, SF_FALSE);
+    const sf_count_t wrote =
+        sf_writef_float(snd, samples.data(), static_cast<sf_count_t>(frame_count));
+    bool ok = (wrote == static_cast<sf_count_t>(frame_count));
+    if (sf_close(snd) != 0) ok = false;
     if (!ok) {
-        std::error_code ec;
-        std::filesystem::remove(tmp, ec);
+        remove_disk_pair(path);
         return false;
     }
 
     std::error_code ec;
     std::filesystem::rename(tmp, path, ec);
     if (ec) {
-        std::filesystem::remove(tmp, ec);
+        remove_disk_pair(path);
+        return false;
+    }
+    if (!write_fingerprint_sidecar(path, fp)) {
+        remove_disk_pair(path);
         return false;
     }
 
-    out_bytes = sizeof(kMagic) + sizeof(uint32_t) + sizeof(int32_t) * 2
-              + sizeof(int64_t) + sizeof(uint32_t) + fp.size()
-              + samples.size() * sizeof(float);
+    const uint64_t wav_size = std::filesystem::file_size(path, ec);
+    if (ec) {
+        remove_disk_pair(path);
+        return false;
+    }
+    const uint64_t sidecar_size =
+        std::filesystem::file_size(fingerprint_sidecar_path(path), ec);
+    if (ec) {
+        remove_disk_pair(path);
+        return false;
+    }
+    out_bytes = wav_size + sidecar_size;
     return true;
 }

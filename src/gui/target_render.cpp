@@ -113,14 +113,20 @@ void GuiTargetRender::dispatch_render_now() {
     // target_buffer and can fill it from the cache without racing the worker.
     // The fingerprint covers the same engine input build_render_request packs
     // below; a confirmed hit is byte-identical to a re-render.
-    last_fingerprint_ = render_fingerprint(
-        app.source_audio_path, audio.sample_rate(),
-        app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
-        app.engine_settings,
-        app.trim.has_begin, app.trim.begin_seconds,
-        app.trim.has_end,   app.trim.end_seconds);
+    RenderFileIdentity source_identity;
+    if (stat_file_identity(app.source_audio_path, source_identity)) {
+        last_fingerprint_ = render_fingerprint(
+            app.source_audio_path, source_identity, audio.sample_rate(),
+            app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+            app.engine_settings,
+            app.trim.has_begin, app.trim.begin_seconds,
+            app.trim.has_end,   app.trim.end_seconds);
+    } else {
+        last_fingerprint_.clear();
+    }
 
-    if (render_cache.lookup(last_fingerprint_, audio.channels(),
+    if (!last_fingerprint_.empty() &&
+        render_cache.lookup(last_fingerprint_, audio.channels(),
                             audio.sample_rate(), app.target_buffer)) {
         // Hit: target_buffer now holds the cached audio. Mirror
         // on_render_done()'s Success tail with no async render; in_flight_
@@ -205,7 +211,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // regardless of the current view: the audio is valid for this input
         // even if a view flip means we skip the rebind below. insert() copies;
         // target_buffer stays owned here.
-        if (app.target_buffer_frames > 0) {
+        if (app.target_buffer_frames > 0 && !last_fingerprint_.empty()) {
             render_cache.insert(last_fingerprint_, app.target_buffer,
                                 ch, audio.sample_rate(),
                                 app.target_buffer_frames);
