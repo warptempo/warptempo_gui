@@ -1,18 +1,21 @@
 #include "playback.h"
 
-#include "miniaudio.h"
+#include <jack/jack.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
+#include <type_traits>
 
 // Implementation notes
 // --------------------
-// The audio callback runs on miniaudio's internal thread. Its contract with
+// The audio callback runs on JACK's process thread. Its contract with
 // the main thread is through a small set of atomics. Most are relaxed scalar
 // reads whose value we want to see "eventually" (cursor, speed). The exception
 // is the `playing` flag: play() stores it with release ordering as the last
@@ -26,15 +29,16 @@
 // between callback invocations is picked up on the next fill; the speed
 // stays constant within one fill, avoiding mid-buffer rate artefacts.
 
+constexpr int kMaxJackOutputPorts = 64;
+
+static_assert(std::is_same_v<jack_default_audio_sample_t, float>,
+              "JACK default audio sample type must be float");
+
 struct GuiPlayback::Impl {
-    // Explicit JACK context. miniaudio's backend selection lives at the
-    // context level — `ma_device_config` has no backend field — so we
-    // initialize a context with a single-entry backend list before
-    // creating the device. No auto-fallback to ALSA.
-    ma_context context{};
-    bool      context_inited = false;
-    ma_device device{};
-    bool      device_inited = false;
+    jack_client_t* client = nullptr;
+    bool           client_active = false;
+    std::atomic<uint32_t> jack_rate{0};
+    std::array<jack_port_t*, kMaxJackOutputPorts> ports{};
 
     // Borrowed source buffer.
     const float* samples       = nullptr;
@@ -74,22 +78,33 @@ struct GuiPlayback::Impl {
     std::atomic<int64_t> pending_start{-1};
 };
 
-namespace {
-
 // Copy N output frames at the current speed, advancing the cursor. Stops
 // early and fills the remainder with silence if the cursor would pass
 // end_sample. Writes the final source-cursor back to impl->cursor before
 // returning; on natural end, also clears impl->playing.
 void fill_output(GuiPlayback::Impl& impl,
-                 float* out_interleaved,
-                 ma_uint32 frame_count,
-                 int out_channels) {
+                 float* const* channel_buffers,
+                 jack_nframes_t frame_count,
+                 int channel_count) {
     const int    src_channels = impl.channels;
     const double speed        = static_cast<double>(
                                     impl.speed_x1000.load(std::memory_order_relaxed))
                                 / 1000.0;
+    const uint32_t graph_rate = impl.jack_rate.load(std::memory_order_relaxed);
+    // JACK asks for graph-rate frames; fold the graph-to-source rate ratio
+    // into the existing fractional source read increment.
+    const double increment = graph_rate == 0
+        ? 0.0
+        : speed * static_cast<double>(impl.source_rate) / static_cast<double>(graph_rate);
     const int64_t end         = impl.end_sample.load(std::memory_order_relaxed);
     const int64_t total       = impl.total_frames;
+
+    if (increment == 0.0) {
+        for (int c = 0; c < channel_count; ++c) {
+            std::memset(channel_buffers[c], 0, sizeof(float) * frame_count);
+        }
+        return;
+    }
 
     // Pick up any pending restart position published by play(). Clearing it
     // atomically lets us idempotently absorb the latest restart without a
@@ -100,22 +115,22 @@ void fill_output(GuiPlayback::Impl& impl,
         impl.fractional_cursor = static_cast<double>(pending);
     }
 
-    const int copy_channels = std::min(src_channels, out_channels);
     bool natural_end = false;
     const double base = impl.fractional_cursor;
 
-    for (ma_uint32 n = 0; n < frame_count; ++n) {
-        const double  frac_src_pos = base + static_cast<double>(n) * speed;
+    for (jack_nframes_t n = 0; n < frame_count; ++n) {
+        const double  frac_src_pos = base + static_cast<double>(n) * increment;
         const double  floor_pos    = std::floor(frac_src_pos);
         const int64_t src_floor    = static_cast<int64_t>(floor_pos);
         const int64_t src_ceil     = src_floor + 1;
         const double  frac         = frac_src_pos - floor_pos;
 
         if (src_floor >= end || src_floor >= total) {
-            // Fill remainder with silence.
-            std::memset(out_interleaved + static_cast<size_t>(n) * out_channels,
-                        0,
-                        sizeof(float) * (frame_count - n) * out_channels);
+            for (int c = 0; c < channel_count; ++c) {
+                std::memset(channel_buffers[c] + n,
+                            0,
+                            sizeof(float) * (frame_count - n));
+            }
             natural_end = true;
             break;
         }
@@ -126,20 +141,11 @@ void fill_output(GuiPlayback::Impl& impl,
         const float* sp_ceil = ceil_ok
             ? impl.samples + static_cast<size_t>(src_ceil) * src_channels
             : sp_floor;  // last-sample fallback
-        float* op = out_interleaved + static_cast<size_t>(n) * out_channels;
 
-        for (int c = 0; c < copy_channels; ++c) {
+        for (int c = 0; c < channel_count; ++c) {
             const double a = sp_floor[c];
             const double b = sp_ceil[c];
-            op[c] = static_cast<float>((1.0 - frac) * a + frac * b);
-        }
-        // If the device has more output channels than the source (e.g. mono
-        // source on a stereo device) duplicate channel 0 across the rest;
-        // miniaudio's default data converter otherwise handles fewer output
-        // channels for us.
-        if (out_channels > copy_channels) {
-            const float mono = op[0];
-            for (int c = copy_channels; c < out_channels; ++c) op[c] = mono;
+            channel_buffers[c][n] = static_cast<float>((1.0 - frac) * a + frac * b);
         }
     }
 
@@ -148,7 +154,7 @@ void fill_output(GuiPlayback::Impl& impl,
     // main-thread snapshot, used for end-of-file detection and as the
     // resync-truth source — the predictor itself does not extrapolate
     // from buffer-boundary timestamps.
-    impl.fractional_cursor += static_cast<double>(frame_count) * speed;
+    impl.fractional_cursor += static_cast<double>(frame_count) * increment;
     int64_t new_cur = static_cast<int64_t>(std::floor(impl.fractional_cursor));
     if (new_cur > end)   new_cur = end;
     if (new_cur > total) new_cur = total;
@@ -158,28 +164,50 @@ void fill_output(GuiPlayback::Impl& impl,
     }
 }
 
-void data_callback(ma_device* pDevice, void* pOutput, const void* /*pInput*/,
-                   ma_uint32 frameCount) {
-    auto* impl = static_cast<GuiPlayback::Impl*>(pDevice->pUserData);
+int sample_rate_callback(jack_nframes_t nframes, void* arg) {
+    auto* impl = static_cast<GuiPlayback::Impl*>(arg);
+    if (impl) {
+        impl->jack_rate.store(static_cast<uint32_t>(nframes),
+                              std::memory_order_relaxed);
+    }
+    return 0;
+}
+
+int process_callback(jack_nframes_t nframes, void* arg) {
+    auto* impl = static_cast<GuiPlayback::Impl*>(arg);
     if (!impl) {
-        std::memset(pOutput, 0,
-                    sizeof(float) * frameCount * pDevice->playback.channels);
-        return;
+        return 0;
+    }
+
+    std::array<float*, kMaxJackOutputPorts> channel_buffers{};
+    const int channel_count = std::min(impl->channels, kMaxJackOutputPorts);
+    for (int c = 0; c < channel_count; ++c) {
+        channel_buffers[c] = static_cast<float*>(
+            jack_port_get_buffer(impl->ports[c], nframes));
     }
 
     if (!impl->playing.load(std::memory_order_acquire)) {
-        std::memset(pOutput, 0,
-                    sizeof(float) * frameCount * pDevice->playback.channels);
-        return;
+        for (int c = 0; c < channel_count; ++c) {
+            std::memset(channel_buffers[c], 0, sizeof(float) * nframes);
+        }
+        return 0;
     }
 
-    fill_output(*impl,
-                static_cast<float*>(pOutput),
-                frameCount,
-                static_cast<int>(pDevice->playback.channels));
+    fill_output(*impl, channel_buffers.data(), nframes, channel_count);
+    return 0;
 }
 
-} // namespace
+void clear_after_failed_init(GuiPlayback::Impl& impl) {
+    if (impl.client) {
+        jack_client_close(impl.client);
+        impl.client = nullptr;
+    }
+    impl.client_active = false;
+    impl.jack_rate.store(0, std::memory_order_relaxed);
+    impl.ports.fill(nullptr);
+    impl.samples      = nullptr;
+    impl.total_frames = 0;
+}
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
 GuiPlayback::~GuiPlayback() { shutdown(); }
@@ -200,69 +228,127 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     impl_->playing.store(false, std::memory_order_relaxed);
     impl_->pending_start.store(-1, std::memory_order_relaxed);
     impl_->fractional_cursor = 0.0;
+    impl_->jack_rate.store(0, std::memory_order_relaxed);
+    impl_->ports.fill(nullptr);
 
-    // Force JACK explicitly: the user runs PipeWire with pipewire-jack and
-    // wants warptempo_gui's latency profile to match REAPER's JACK path. A
-    // silent fallback to ALSA would defeat the purpose, so we pass a
-    // single-element backends array — if JACK is unavailable, init fails
-    // here rather than landing on the ALSA shim.
-    ma_backend backends[] = { ma_backend_jack };
-    const ma_result ctx_r = ma_context_init(backends, 1, nullptr,
-                                            &impl_->context);
-    if (ctx_r != MA_SUCCESS) {
+    if (channels <= 0 || channels > kMaxJackOutputPorts) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK audio context init failed (ma_result=%d); "
-            "playback disabled. Verify pipewire-jack is running.\n",
-            static_cast<int>(ctx_r));
+            "warptempo_gui: unsupported channel count for JACK playback "
+            "(channels=%d, max=%d); playback disabled.\n",
+            channels, kMaxJackOutputPorts);
         impl_->samples      = nullptr;
         impl_->total_frames = 0;
         return false;
     }
-    impl_->context_inited = true;
 
-    ma_device_config cfg = ma_device_config_init(ma_device_type_playback);
-    cfg.playback.format  = ma_format_f32;
-    cfg.playback.channels = static_cast<ma_uint32>(channels);
-    cfg.sampleRate        = static_cast<ma_uint32>(sample_rate);
-    cfg.dataCallback      = data_callback;
-    cfg.pUserData         = impl_.get();
-
-    const ma_result r = ma_device_init(&impl_->context, &cfg, &impl_->device);
-    if (r != MA_SUCCESS) {
+    jack_status_t status = static_cast<jack_status_t>(0);
+    impl_->client = jack_client_open("warptempo_gui",
+                                     JackNoStartServer,
+                                     &status);
+    if (!impl_->client) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK audio device init failed (ma_result=%d); "
+            "warptempo_gui: JACK client init failed (status=0x%x); "
             "playback disabled. Verify pipewire-jack is running.\n",
-            static_cast<int>(r));
-        ma_context_uninit(&impl_->context);
-        impl_->context_inited = false;
-        impl_->samples      = nullptr;
-        impl_->total_frames = 0;
+            static_cast<unsigned>(status));
+        clear_after_failed_init(*impl_);
         return false;
     }
-    impl_->device_inited = true;
 
-    const ma_result s = ma_device_start(&impl_->device);
-    if (s != MA_SUCCESS) {
+    impl_->jack_rate.store(static_cast<uint32_t>(jack_get_sample_rate(impl_->client)),
+                           std::memory_order_relaxed);
+
+    if (jack_set_sample_rate_callback(impl_->client,
+                                      sample_rate_callback,
+                                      impl_.get()) != 0) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK audio device start failed (ma_result=%d); "
-            "playback disabled. Verify pipewire-jack is running.\n",
-            static_cast<int>(s));
-        ma_device_uninit(&impl_->device);
-        impl_->device_inited = false;
-        ma_context_uninit(&impl_->context);
-        impl_->context_inited = false;
-        impl_->samples      = nullptr;
-        impl_->total_frames = 0;
+            "warptempo_gui: JACK sample-rate callback setup failed; "
+            "playback disabled. Verify pipewire-jack is running.\n");
+        clear_after_failed_init(*impl_);
         return false;
     }
+
+    if (jack_set_process_callback(impl_->client,
+                                  process_callback,
+                                  impl_.get()) != 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK process callback setup failed; "
+            "playback disabled. Verify pipewire-jack is running.\n");
+        clear_after_failed_init(*impl_);
+        return false;
+    }
+
+    for (int c = 0; c < channels; ++c) {
+        char name[32];
+        std::snprintf(name, sizeof(name), "out_%d", c + 1);
+        impl_->ports[c] = jack_port_register(impl_->client,
+                                             name,
+                                             JACK_DEFAULT_AUDIO_TYPE,
+                                             JackPortIsOutput,
+                                             0);
+        if (!impl_->ports[c]) {
+            std::fprintf(stderr,
+                "warptempo_gui: JACK output port registration failed "
+                "(port=%s); playback disabled. Verify pipewire-jack is running.\n",
+                name);
+            clear_after_failed_init(*impl_);
+            return false;
+        }
+    }
+
+    if (jack_activate(impl_->client) != 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK client activation failed; playback disabled. "
+            "Verify pipewire-jack is running.\n");
+        clear_after_failed_init(*impl_);
+        return false;
+    }
+    impl_->client_active = true;
+
+    const char** physical_ports = jack_get_ports(impl_->client,
+                                                 nullptr,
+                                                 nullptr,
+                                                 JackPortIsPhysical | JackPortIsInput);
+    if (!physical_ports) {
+        std::fprintf(stderr,
+            "warptempo_gui: no physical JACK playback ports found; "
+            "client is active and can be patched manually.\n");
+    } else if (channels == 1) {
+        for (int i = 0; i < 2 && physical_ports[i]; ++i) {
+            const int r = jack_connect(impl_->client,
+                                       jack_port_name(impl_->ports[0]),
+                                       physical_ports[i]);
+            if (r != 0 && r != EEXIST) {
+                std::fprintf(stderr,
+                    "warptempo_gui: JACK auto-connect failed (%s -> %s, code=%d); "
+                    "patch manually if needed.\n",
+                    jack_port_name(impl_->ports[0]), physical_ports[i], r);
+            }
+        }
+        jack_free(physical_ports);
+    } else {
+        for (int c = 0; c < channels && physical_ports[c]; ++c) {
+            const int r = jack_connect(impl_->client,
+                                       jack_port_name(impl_->ports[c]),
+                                       physical_ports[c]);
+            if (r != 0 && r != EEXIST) {
+                std::fprintf(stderr,
+                    "warptempo_gui: JACK auto-connect failed (%s -> %s, code=%d); "
+                    "patch manually if needed.\n",
+                    jack_port_name(impl_->ports[c]), physical_ports[c], r);
+            }
+        }
+        jack_free(physical_ports);
+    }
+
     std::fprintf(stderr,
-        "warptempo_gui: audio backend = JACK (via pipewire-jack), "
-        "sample_rate=%d, channels=%d\n", sample_rate, channels);
+        "warptempo_gui: audio backend = JACK direct, graph_sample_rate=%u, "
+        "source_sample_rate=%d, channels=%d\n",
+        impl_->jack_rate.load(std::memory_order_relaxed), sample_rate, channels);
     return true;
 }
 
 void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
-    if (!impl_->device_inited) return;
+    if (!impl_->client_active) return;
     if (!impl_->samples || impl_->total_frames <= 0) return;
     if (start_sample < 0) start_sample = 0;
     if (start_sample >= impl_->total_frames) return;
@@ -308,7 +394,7 @@ void GuiPlayback::resync_predictor() {
 }
 
 void GuiPlayback::stop() {
-    if (!impl_->device_inited) return;
+    if (!impl_->client_active) return;
     impl_->playing.store(false, std::memory_order_relaxed);
 }
 
@@ -349,8 +435,8 @@ int64_t GuiPlayback::cursor() const {
 
 void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
     if (!impl_) return;
-    if (!impl_->device_inited) {
-        // No live device — just stash so a future init() against the same
+    if (!impl_->client_active) {
+        // No live client — just stash so a future init() against the same
         // sample rate / channel count would see the new buffer. In
         // practice the target render path runs only after a successful init,
         // so this branch is defensive.
@@ -379,18 +465,19 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
 
 void GuiPlayback::shutdown() {
     if (!impl_) return;
-    if (impl_->device_inited) {
+    if (impl_->client) {
         impl_->playing.store(false, std::memory_order_relaxed);
-        // ma_device_uninit stops the device and waits for the last callback
-        // invocation to drain, so it is safe for the sample buffer to die
-        // immediately after this returns.
-        ma_device_uninit(&impl_->device);
-        impl_->device_inited = false;
+        if (impl_->client_active) {
+            // jack_deactivate returns after the client leaves the graph, so
+            // the process callback no longer borrows the sample buffer.
+            jack_deactivate(impl_->client);
+            impl_->client_active = false;
+        }
+        jack_client_close(impl_->client);
+        impl_->client = nullptr;
     }
-    if (impl_->context_inited) {
-        ma_context_uninit(&impl_->context);
-        impl_->context_inited = false;
-    }
+    impl_->jack_rate.store(0, std::memory_order_relaxed);
+    impl_->ports.fill(nullptr);
     impl_->samples      = nullptr;
     impl_->total_frames = 0;
 }

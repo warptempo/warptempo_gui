@@ -141,8 +141,8 @@ if(WARPTEMPO_BUILD_GUI)
     endforeach()
 
     pkg_check_modules(CAIRO REQUIRED cairo)
-    # JACK is required: miniaudio is initialized with the JACK backend explicitly
-    # (no auto-fallback). On Arch this is satisfied by pipewire-jack.
+    # Playback is a direct libjack client. JACK is required by policy; under
+    # PipeWire this is satisfied by pipewire-jack.
     pkg_check_modules(JACK REQUIRED jack)
 
     add_executable(warptempo_gui

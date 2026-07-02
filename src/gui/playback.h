@@ -3,14 +3,15 @@
 #include <cstdint>
 #include <memory>
 
-// Audio playback engine. Owns a miniaudio device and drives it from an
-// internal audio callback thread. The sample buffer is borrowed, not owned:
+// Audio playback engine. Owns a JACK client and drives it from JACK's process
+// thread. The sample buffer is borrowed, not owned:
 // the caller must keep the pointer passed to init() valid until shutdown()
 // returns, and must call stop()+shutdown() before tearing down the source.
 //
 // Thread model:
-//   - Audio thread (miniaudio-owned): reads cursor_/speed_, writes cursor_
-//     and is_playing_ via relaxed atomics. No allocation, no I/O, no locks.
+//   - Audio thread (JACK process thread): reads cursor_/speed_, writes
+//     cursor_ and is_playing_ via relaxed atomics. No allocation, no I/O,
+//     no locks.
 //   - Main thread: calls init/play/stop/set_speed/shutdown; snapshots
 //     cursor() and is_playing() per redraw.
 //
