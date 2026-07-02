@@ -43,5 +43,4 @@ struct GuiPhaseResetMarkersOps {
     void toggle_phase_reset_disabled();
     std::pair<double, double> compute_phase_reset_delta_bounds(bool& ok);
     void nudge_selected_phase_resets(int direction);
-    void jump_phase_reset_selection_to_playhead();
 };

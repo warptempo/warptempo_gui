@@ -445,14 +445,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // `j` jumps the selected set to the playhead, anchored on
-    // last_selected_marker. All-or-nothing clamp check.
-    if (key == GuiKeys::J && !shift && !ctrl && !alt) {
-        if (app.active_markers_view == 'P') phase_resets.jump_phase_reset_selection_to_playhead();
-        else                        warpops.jump_selection_to_playhead();
-        return;
-    }
-
     // Render-view list navigation:
     // Shift+Left / Shift+Right -> previous / next render, with wraparound
     // Shift+Home / Shift+End -> first / last render, clamped, no wraparound

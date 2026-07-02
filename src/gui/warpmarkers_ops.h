@@ -55,5 +55,4 @@ struct GuiWarpMarkersOps {
     std::pair<double, double> compute_selection_delta_bounds(bool& ok);
     bool apply_selection_shift(double raw_delta);
     void nudge_selected_markers(int direction);
-    void jump_selection_to_playhead();
 };
