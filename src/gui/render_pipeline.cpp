@@ -221,6 +221,129 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
+    // Batch sidecars derivable from req fields alone: .warpmarkers,
+    // .phaseresetmarkers, .rendersettings. None of these depend on the
+    // frame map, so every publish path — a fresh render, a rung 3 artifact
+    // copy, or a rung 4 cache publish — can call this before or after
+    // map-build. The render-domain pair (.renderwarpmarkers /
+    // .renderphaseresetmarkers) is map-derived and stays in the fresh-render
+    // tail further down.
+    auto publish_batch_marker_sidecars = [&]() {
+        if (!batch_render || req.output_buffer) return;
+        const std::filesystem::path bf(req.batch_folder);
+        const std::string wm_path =
+            (bf / (req.batch_basename + ".warpmarkers")).string();
+        if (!GuiWarpMarkers::save(wm_path, req.markers)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: failed to write '%s'\n",
+                wm_path.c_str());
+        }
+        if (!req.phase_resets.empty()) {
+            const std::string tm_path =
+                (bf / (req.batch_basename + ".phaseresetmarkers")).string();
+            if (!GuiPhaseResetMarkers::save(tm_path, req.phase_resets)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: failed to write '%s'\n",
+                    tm_path.c_str());
+            }
+        }
+        // `.rendersettings` sidecar: eight canonical engine keys (engine
+        // block, byte-identical to the engine block of a Ctrl+S
+        // `.settings` write) followed by the three view-state keys
+        // (viewport_start, zoom, playhead) at their natural "user has
+        // not yet viewed this render" defaults — render-view rewrites
+        // the view-state block on first nav. Only Ctrl+Alt+C inside
+        // a BPM batch folder reads the engine block back into
+        // app.engine_settings (and even then, only scale); the other
+        // batch modes write it as archival documentation.
+        const std::filesystem::path rs_path =
+            bf / (req.batch_basename + ".rendersettings");
+        if (!write_rendersettings(rs_path, req.engine_settings,
+                                  /*viewport_start=*/0,
+                                  /*zoom_level=*/kFitFileLevel,
+                                  /*playhead=*/0)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: failed to write '%s'\n",
+                rs_path.string().c_str());
+        }
+    };
+
+    // Reuse rungs, in trust order, above the engine: a project artifact
+    // byte-copy, then a render-cache buffer publish. Both run before any
+    // trim, source-load, map-build, or engine work; an empty fingerprint
+    // (source stat failure) skips both exactly as it already skips the
+    // up-to-date check above.
+    if (!fingerprint.empty()) {
+        // Rung: project artifact candidate. A batch entry whose fixed
+        // archival sibling already holds a validated artifact for this
+        // exact fingerprint is published by byte copy — the highest-
+        // integrity reuse there is. When final_output_path already equals
+        // the candidate, this rung is the up-to-date check above and has
+        // already run.
+        const std::string artifact_candidate =
+            compose_sibling_output_path(req.source_audio_path,
+                                        req.engine_settings).string();
+        if (artifact_candidate != final_output_path &&
+            fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
+            std::error_code ec;
+            std::filesystem::copy_file(
+                artifact_candidate, staging_output_path,
+                std::filesystem::copy_options::overwrite_existing, ec);
+            if (!ec) {
+                std::filesystem::rename(staging_output_path, final_output_path, ec);
+            }
+            if (!ec) {
+                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
+                    std::fprintf(stderr,
+                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                        final_output_path.c_str());
+                }
+                write_peaks_cache_for_wav(final_output_path);
+                publish_batch_marker_sidecars();
+                cleanup_all();
+                return finish_success("reused_artifact");
+            }
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: project artifact reuse of "
+                "'%s' failed (%s); falling back to a full render\n",
+                artifact_candidate.c_str(), ec.message().c_str());
+            cleanup_all();
+        }
+
+        // Rung: render cache. A buffer-born hit; its byte-identity to an
+        // engine publish rests on write_float_wav's parameter identity,
+        // the same writer used for cache-tier disk entries.
+        std::vector<float> cached_samples;
+        if (shared_render_cache().lookup(fingerprint, source_channels_probe,
+                                         static_cast<int>(sample_rate),
+                                         cached_samples)) {
+            bool published = write_float_wav(staging_output_path, cached_samples,
+                                             source_channels_probe,
+                                             static_cast<int>(sample_rate));
+            std::error_code ec;
+            if (published) {
+                std::filesystem::rename(staging_output_path, final_output_path, ec);
+                published = !ec;
+            }
+            if (published) {
+                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
+                    std::fprintf(stderr,
+                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                        final_output_path.c_str());
+                }
+                write_peaks_cache_for_wav(final_output_path);
+                publish_batch_marker_sidecars();
+                cleanup_all();
+                return finish_success("reused_cache");
+            }
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: render cache publish to "
+                "'%s' failed; falling back to a full render\n",
+                final_output_path.c_str());
+            cleanup_all();
+        }
+    }
+
     // --- Build the maps from in-memory markers. ---
     MapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
@@ -338,10 +461,16 @@ RenderOutcome do_render(const RenderRequest& req,
         // Output sink: when a caller-owned buffer was supplied, route
         // synthesis to it (no on-disk staging, no rename, no sidecars).
         // Otherwise the existing wav-on-disk path with atomic rename runs.
+        // render_buf stays empty unless the limited chain runs on the disk
+        // path (limiter on, no output_buffer); that is the only case the
+        // engine's internal publish buffer is available to hand to the
+        // render cache below.
+        std::vector<float> render_buf;
         if (req.output_buffer) {
             ep.output_buffer = req.output_buffer;
         } else {
-            ep.output_audio_path = staging_output_path;
+            ep.output_audio_path      = staging_output_path;
+            ep.disk_publish_buffer_out = &render_buf;
         }
         // Trim is a parser-side slice of the full untrimmed map, not an engine
         // window. When a bound is set, hand the engine the re-anchored
@@ -409,6 +538,23 @@ RenderOutcome do_render(const RenderRequest& req,
                     "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
                     final_output_path.c_str());
             }
+            // Populate the render cache from the buffer the limited chain
+            // just published, so a later Ctrl+Alt+R / batch entry / bare t
+            // with the same fingerprint can reuse it via the rungs above.
+            // The insert races nothing: the rename above already landed,
+            // the cache's writer thread copies its own job data, and a
+            // concurrent lookup that misses because the write hasn't landed
+            // yet simply re-renders.
+            if (!fingerprint.empty() && !render_buf.empty()) {
+                const int64_t inserted_frames = src_ch > 0
+                    ? static_cast<int64_t>(render_buf.size() /
+                                           static_cast<size_t>(src_ch))
+                    : 0;
+                shared_render_cache().insert(fingerprint, render_buf, src_ch,
+                                             src_sr, inserted_frames);
+            }
+            // else: limiter off, the engine streamed straight to disk and
+            // no publish buffer exists to cache.
         }
     } else {
         // output_format == "framemap" or "tempomap". No engine, no limiter.
@@ -471,42 +617,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // rendered wav. The buffer-output path has no such artifact, so skip
     // sidecar emission entirely on that path.
     if (batch_render && !req.output_buffer) {
+        publish_batch_marker_sidecars();
+
         const std::filesystem::path bf(req.batch_folder);
-        const std::string wm_path =
-            (bf / (req.batch_basename + ".warpmarkers")).string();
-        if (!GuiWarpMarkers::save(wm_path, req.markers)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to write '%s'\n",
-                wm_path.c_str());
-        }
-        if (!req.phase_resets.empty()) {
-            const std::string tm_path =
-                (bf / (req.batch_basename + ".phaseresetmarkers")).string();
-            if (!GuiPhaseResetMarkers::save(tm_path, req.phase_resets)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to write '%s'\n",
-                    tm_path.c_str());
-            }
-        }
-        // `.rendersettings` sidecar: eight canonical engine keys (engine
-        // block, byte-identical to the engine block of a Ctrl+S
-        // `.settings` write) followed by the three view-state keys
-        // (viewport_start, zoom, playhead) at their natural "user has
-        // not yet viewed this render" defaults — render-view rewrites
-        // the view-state block on first nav. Only Ctrl+Alt+C inside
-        // a BPM batch folder reads the engine block back into
-        // app.engine_settings (and even then, only scale); the other
-        // batch modes write it as archival documentation.
-        const std::filesystem::path rs_path =
-            bf / (req.batch_basename + ".rendersettings");
-        if (!write_rendersettings(rs_path, req.engine_settings,
-                                  /*viewport_start=*/0,
-                                  /*zoom_level=*/kFitFileLevel,
-                                  /*playhead=*/0)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to write '%s'\n",
-                rs_path.string().c_str());
-        }
 
         // Render-domain sidecars (.renderwarpmarkers / .renderphaseresetmarkers).
         // Render-view loads these instead of the source-domain pair so

@@ -4,7 +4,6 @@
 #include "phaseresetmarkers.h"
 #include "warpmarkers.h"
 
-#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -41,6 +40,14 @@ std::vector<uint8_t> render_fingerprint(
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 
+// Writes interleaved float32 samples as a wav with the engine's exact
+// writer parameters (SF_FORMAT_WAV | SF_FORMAT_FLOAT, one
+// sf_writef_float pass). Single writer for cache entries and cache-hit
+// archival publishes, so parameter identity holds by construction.
+bool write_float_wav(const std::string& path,
+                     const std::vector<float>& samples,
+                     int channels, int sample_rate);
+
 // Stats wav_path and writes its identity plus the hex-encoded fingerprint
 // blob to the sidecar via a .tmp staging write and atomic rename. Failure is
 // logged by the caller and non-fatal.
@@ -54,14 +61,25 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint);
 
-// Two-tier store for rendered target-view audio, keyed by render_fingerprint.
-// The RAM tier serves short live target-view renders. The disk tier is
-// uncapped per entry and LRU-bounded at 10 GiB, so full-movement renders can
-// be reused without monopolizing RAM. The store is process-local: the disk
-// directory is removed at shutdown and dead-PID orphan directories are swept
-// at init. Every public method is a no-op / miss when the store could not
-// initialize (no cache home, unmakeable directory), so callers need no
-// special-casing.
+// Two-tier store for rendered target-view and archival audio, keyed by
+// render_fingerprint. The RAM tier serves short live target-view renders.
+// The disk tier is uncapped per entry and LRU-bounded at 10 GiB, so
+// full-movement renders can be reused without monopolizing RAM. The store is
+// process-local: the disk directory is removed at shutdown and dead-PID
+// orphan directories are swept at init. Every public method is a no-op /
+// miss when the store could not initialize (no cache home, unmakeable
+// directory), so callers need no special-casing.
+//
+// Every public method is thread-safe; callers need no external locking. A
+// single mutex_ guards both tiers' indexes, the byte counters, lru_seq_, and
+// the writer thread handoff. Large file I/O (disk-tier reads, the disk
+// writer's wav encode) happens outside the lock: a disk lookup copies the
+// entry's filename out under the lock, reads the wav unlocked, and re-takes
+// the lock only for the LRU bump or a drop-on-failure. The writer thread
+// lifecycle is swap-join-outside — join_writer() swaps writer_ into a local
+// under the lock, unlocks, then joins the local, so no lock is ever held
+// across a join; the writer body itself takes the lock only for its
+// registration/eviction step at the end.
 class RenderCache {
 public:
     // Create the per-process directory under <cache home>/warptempo_gui/<pid>/
@@ -138,12 +156,20 @@ private:
     bool        enabled_ = false;
     std::string parent_;   // <cache home>/warptempo_gui
     std::string dir_;      // parent_/<pid>
-    std::atomic<uint64_t> lru_seq_{0};
 
+    std::mutex                              mutex_;
+    uint64_t                                lru_seq_    = 0;
     std::unordered_map<uint64_t, RamEntry>  ram_;
     uint64_t                                ram_bytes_  = 0;
     std::thread                             writer_;
-    std::mutex                              disk_mutex_;
     std::unordered_map<uint64_t, DiskEntry> disk_index_;
     uint64_t                                disk_bytes_ = 0;
 };
+
+// Process-wide, self-initializing RenderCache used by do_render's archival
+// wav path (render_pipeline.cpp), which has no injected RenderCache
+// reference of its own. Lazily calls init() on first access. This is
+// intentionally a separate instance from the RenderCache main.cpp
+// constructs and hands to GuiTargetRender by reference — unifying the two
+// so archival and target-view renders share one cache is follow-up work.
+RenderCache& shared_render_cache();

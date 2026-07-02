@@ -33,6 +33,17 @@ struct EngineParams {
     // for clearing or reserving.
     std::vector<float>* output_buffer = nullptr;
 
+    // Optional out-sink for the disk archival path's internal limiter
+    // buffer. output_audio_path and output_buffer's routing are otherwise
+    // unaffected by this field: when output_buffer is null and limiter is
+    // true, Pass 2/3 already render into an internal buffer before writing
+    // it to output_audio_path; when this pointer is non-null, that exact
+    // buffer is additionally moved out here after the write succeeds, so a
+    // caller that needs the published floats (e.g. to populate a render
+    // cache) doesn't have to re-read the file it just wrote. Left untouched
+    // when output_buffer is set or limiter is false.
+    std::vector<float>* disk_publish_buffer_out = nullptr;
+
     std::vector<FrameMapSegment> frame_map;  // rounded + precise breakpoints
 
     int    N                          = 4096;

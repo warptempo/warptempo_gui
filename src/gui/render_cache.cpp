@@ -358,10 +358,10 @@ void RenderCache::sweep_orphans() {
 
 void RenderCache::shutdown() {
     join_writer();
-    ram_.clear();
-    ram_bytes_ = 0;
     {
-        std::lock_guard<std::mutex> lock(disk_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
+        ram_.clear();
+        ram_bytes_ = 0;
         disk_index_.clear();
         disk_bytes_ = 0;
     }
@@ -373,7 +373,12 @@ void RenderCache::shutdown() {
 }
 
 void RenderCache::join_writer() {
-    if (writer_.joinable()) writer_.join();
+    std::thread local;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        local = std::move(writer_);
+    }
+    if (local.joinable()) local.join();
 }
 
 bool RenderCache::lookup(const std::vector<uint8_t>& fp,
@@ -384,20 +389,23 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
     }
     const uint64_t h = fnv1a64(fp);
 
-    if (auto it = ram_.find(h); it != ram_.end()) {
-        RamEntry& e = it->second;
-        if (e.fingerprint == fp && e.channels == channels &&
-            e.sample_rate == sample_rate) {
-            e.seq = ++lru_seq_;
-            out = e.samples;
-            return true;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto it = ram_.find(h); it != ram_.end()) {
+            RamEntry& e = it->second;
+            if (e.fingerprint == fp && e.channels == channels &&
+                e.sample_rate == sample_rate) {
+                e.seq = ++lru_seq_;
+                out = e.samples;
+                return true;
+            }
         }
     }
 
     DiskEntry candidate;
     bool have_candidate = false;
     {
-        std::lock_guard<std::mutex> lock(disk_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         if (auto it = disk_index_.find(h); it != disk_index_.end() &&
             it->second.fingerprint == fp) {
             candidate = it->second;
@@ -407,11 +415,11 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
 
     if (have_candidate) {
         const std::string path = dir_ + "/" + candidate.filename;
-        // The potentially large wav read happens outside disk_mutex_. If
+        // The potentially large wav read happens outside mutex_. If
         // eviction or failed validation removes the pair mid-read, libsndfile
         // reports a miss and the caller re-renders.
         if (read_file(path, fp, channels, sample_rate, out)) {
-            std::lock_guard<std::mutex> lock(disk_mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             if (auto it = disk_index_.find(h); it != disk_index_.end() &&
                 it->second.filename == candidate.filename &&
                 it->second.fingerprint == fp) {
@@ -422,7 +430,7 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
 
         bool drop_pair = false;
         {
-            std::lock_guard<std::mutex> lock(disk_mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             if (auto it = disk_index_.find(h); it != disk_index_.end() &&
                 it->second.filename == candidate.filename) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
@@ -478,6 +486,7 @@ bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
     const uint64_t bytes =
         static_cast<uint64_t>(samples.size()) * sizeof(float);
 
+    std::lock_guard<std::mutex> lock(mutex_);
     if (auto it = ram_.find(h); it != ram_.end()) {
         ram_bytes_ -=
             static_cast<uint64_t>(it->second.samples.size()) * sizeof(float);
@@ -522,7 +531,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     const std::string fname = hex16(h) + ".wav";
     const std::string path  = dir_ + "/" + fname;
     {
-        std::lock_guard<std::mutex> lock(disk_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         if (auto it = disk_index_.find(h); it != disk_index_.end()) {
             disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
             disk_index_.erase(it);
@@ -532,7 +541,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
 
     std::vector<uint8_t> fp_copy = fp;
     std::vector<float> samples_copy = samples;
-    writer_ = std::thread(
+    std::thread new_writer(
         [this, h, fname, path, fp = std::move(fp_copy),
          samples = std::move(samples_copy), channels, sample_rate,
          frame_count, prof, t0, sample_bytes]() mutable {
@@ -543,7 +552,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
             }
 
             {
-                std::lock_guard<std::mutex> lock(disk_mutex_);
+                std::lock_guard<std::mutex> lock(mutex_);
                 DiskEntry e;
                 e.fingerprint = fp;
                 e.filename    = fname;
@@ -563,6 +572,10 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                     static_cast<unsigned long long>(sample_bytes));
             }
         });
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        writer_ = std::move(new_writer);
+    }
     return true;
 }
 
@@ -615,6 +628,29 @@ bool RenderCache::read_file(const std::string& path,
     return ok;
 }
 
+bool write_float_wav(const std::string& path,
+                     const std::vector<float>& samples,
+                     int channels, int sample_rate) {
+    if (channels <= 0 || sample_rate <= 0) return false;
+    const size_t ch = static_cast<size_t>(channels);
+    if (samples.size() % ch != 0) return false;
+    const sf_count_t frame_count =
+        static_cast<sf_count_t>(samples.size() / ch);
+
+    SF_INFO info{};
+    info.samplerate = sample_rate;
+    info.channels = channels;
+    info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+    SNDFILE* snd = sf_open(path.c_str(), SFM_WRITE, &info);
+    if (!snd) return false;
+    sf_command(snd, SFC_SET_ADD_PEAK_CHUNK, nullptr, SF_FALSE);
+    const sf_count_t wrote =
+        sf_writef_float(snd, samples.data(), frame_count);
+    bool ok = (wrote == frame_count);
+    if (sf_close(snd) != 0) ok = false;
+    return ok;
+}
+
 bool RenderCache::write_file(const std::string& path,
                              const std::vector<uint8_t>& fp,
                              const std::vector<float>& samples,
@@ -634,18 +670,7 @@ bool RenderCache::write_file(const std::string& path,
     const std::string tmp = path + ".tmp";
     remove_disk_pair(path);
 
-    SF_INFO info{};
-    info.samplerate = sample_rate;
-    info.channels = channels;
-    info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-    SNDFILE* snd = sf_open(tmp.c_str(), SFM_WRITE, &info);
-    if (!snd) return false;
-    sf_command(snd, SFC_SET_ADD_PEAK_CHUNK, nullptr, SF_FALSE);
-    const sf_count_t wrote =
-        sf_writef_float(snd, samples.data(), static_cast<sf_count_t>(frame_count));
-    bool ok = (wrote == static_cast<sf_count_t>(frame_count));
-    if (sf_close(snd) != 0) ok = false;
-    if (!ok) {
+    if (!write_float_wav(tmp, samples, channels, sample_rate)) {
         remove_disk_pair(path);
         return false;
     }
@@ -674,4 +699,15 @@ bool RenderCache::write_file(const std::string& path,
     }
     out_bytes = wav_size + sidecar_size;
     return true;
+}
+
+RenderCache& shared_render_cache() {
+    static RenderCache instance;
+    // Magic-statics initialization is thread-safe and runs exactly once;
+    // sequencing after `instance` (declared above) guarantees init() sees a
+    // fully constructed object before any concurrent caller observes
+    // `initialized` as true.
+    static const bool initialized = (instance.init(), true);
+    (void)initialized;
+    return instance;
 }
