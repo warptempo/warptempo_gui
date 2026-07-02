@@ -131,7 +131,7 @@ void GuiTargetRender::dispatch_render_now() {
         // Hit: target_buffer now holds the cached audio. Mirror
         // on_render_done()'s Success tail with no async render; in_flight_
         // stays false since no worker round trip is pending.
-        complete_successful_buffer(false);
+        complete_successful_buffer();
         return;
     }
 
@@ -141,14 +141,14 @@ void GuiTargetRender::dispatch_render_now() {
                                         app.engine_settings).string();
         // This rung auditions the actual archival deliverable. Artifact-born,
         // cache-born, and render-born target audio are the same signal: the
-        // limited path carries PCM_24 lattice values in float32, and limiter-
-        // off uses a separate clean-float fingerprint. The artifact is already
-        // the persistent copy for this render, so inserting it into RenderCache
-        // would only duplicate storage.
+        // limited path decodes from canonical PCM_24 wav bytes, and limiter-
+        // off uses a separate clean-float fingerprint. target_render never
+        // inserts into RenderCache; fresh target-route insertion happens on the
+        // worker after its one canonical encode.
         if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
             read_wav_to_float(artifact_candidate, audio.channels(),
                               audio.sample_rate(), app.target_buffer)) {
-            complete_successful_buffer(false);
+            complete_successful_buffer();
             std::fprintf(stderr,
                 "[warptempo_gui] target view loaded from archival render: %s\n",
                 artifact_candidate.c_str());
@@ -185,10 +185,9 @@ void GuiTargetRender::dispatch_render_now() {
     // runs in place on the buffer whenever the global `limiter` toggle is
     // on — the target-view preview gets the same limiting as the disk path.
     req.output_buffer = &app.target_buffer;
-    // The process's single RenderCache (this struct's own member, wired
-    // from main.cpp). do_render's archival cache rungs are gated on
-    // output_buffer being null, so this is unused on this path; populated
-    // for uniformity with the archival dispatch builders.
+    // The process's single RenderCache (this struct's own member, wired from
+    // main.cpp). do_render uses it on this path only to insert the canonical
+    // wav blob after a successful limited target render.
     req.render_cache = &render_cache;
 
     async_renderer.dispatch(std::move(req),
@@ -199,7 +198,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     in_flight_ = false;
 
     if (outcome == RenderOutcome::Success) {
-        complete_successful_buffer(true);
+        complete_successful_buffer();
     } else if (outcome == RenderOutcome::Cancelled) {
         std::fprintf(stderr, "warptempo_gui: target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
@@ -227,8 +226,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     maybe_dispatch_pending();
 }
 
-void GuiTargetRender::complete_successful_buffer(
-        bool insert_fresh_render_into_cache) {
+void GuiTargetRender::complete_successful_buffer() {
     // Cache the buffer's frame count and rebind playback. The buffer is
     // interleaved float; total_frames = size / channels. Use the source's
     // channel count (engine preserves channel count).
@@ -244,17 +242,6 @@ void GuiTargetRender::complete_successful_buffer(
     // (0, or the trim-mapped anchor). SoT helper, shared with ensure_ready's
     // clean rebind so a cached re-entry matches.
     recompute_target_buffer_start_frame();
-    // Store freshly rendered deliverable-domain audio under the fingerprint
-    // computed at dispatch, so a later undo/redo back to this exact engine
-    // input serves it instead of re-synthesizing. Cached regardless of the
-    // current view: the audio is valid for this input even if a view flip means
-    // we skip the rebind below. insert() copies; target_buffer stays owned here.
-    if (insert_fresh_render_into_cache &&
-        app.target_buffer_frames > 0 && !last_fingerprint_.empty()) {
-        render_cache.insert(last_fingerprint_, app.target_buffer,
-                            ch, audio.sample_rate(),
-                            app.target_buffer_frames);
-    }
     // Only rebind if we're actually showing target audio. A T->S toggle or a
     // render-view entry during render already cancelled this render and does
     // not want playback bound to target_buffer: rebinding here would clobber

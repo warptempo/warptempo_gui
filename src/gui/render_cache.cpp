@@ -200,6 +200,29 @@ SF_VIRTUAL_IO kMemoryVirtualIo = {
     vio_tell,
 };
 
+bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes) {
+    std::FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) return false;
+
+    bool ok = false;
+    do {
+        if (!bytes.empty() &&
+            std::fwrite(bytes.data(), 1, bytes.size(), f) != bytes.size()) {
+            break;
+        }
+        if (std::fflush(f) != 0) break;
+        if (::fsync(::fileno(f)) != 0) break;
+        ok = true;
+    } while (false);
+
+    if (std::fclose(f) != 0) ok = false;
+    if (!ok) {
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+    return ok;
+}
+
 } // namespace
 
 bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
@@ -464,6 +487,7 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
     }
     const uint64_t h = fnv1a64(fp);
 
+    std::vector<char> ram_blob;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (auto it = ram_.find(h); it != ram_.end()) {
@@ -471,10 +495,12 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
             if (e.fingerprint == fp && e.channels == channels &&
                 e.sample_rate == sample_rate) {
                 e.seq = ++lru_seq_;
-                out = e.samples;
-                return true;
+                ram_blob = e.blob;
             }
         }
+    }
+    if (!ram_blob.empty()) {
+        return decode_wav_blob_to_float(ram_blob, channels, sample_rate, out);
     }
 
     DiskEntry candidate;
@@ -519,52 +545,117 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
     return false;
 }
 
+bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
+                              int channels, int sample_rate,
+                              const std::string& staging_path) {
+    if (!enabled_) return false;
+    const uint64_t h = fnv1a64(fp);
+
+    std::vector<char> ram_blob;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto it = ram_.find(h); it != ram_.end()) {
+            RamEntry& e = it->second;
+            if (e.fingerprint == fp && e.channels == channels &&
+                e.sample_rate == sample_rate) {
+                e.seq = ++lru_seq_;
+                ram_blob = e.blob;
+            }
+        }
+    }
+    if (!ram_blob.empty()) {
+        return write_bytes_to_path(staging_path, ram_blob);
+    }
+
+    DiskEntry candidate;
+    bool have_candidate = false;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+            it->second.fingerprint == fp) {
+            candidate = it->second;
+            have_candidate = true;
+        }
+    }
+    if (!have_candidate) return false;
+
+    const std::string path = dir_ + "/" + candidate.filename;
+    bool copied = false;
+    if (fingerprint_sidecar_matches(path, fp)) {
+        std::error_code ec;
+        std::filesystem::copy_file(
+            path, staging_path,
+            std::filesystem::copy_options::overwrite_existing, ec);
+        copied = !ec;
+    }
+    if (copied) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+            it->second.filename == candidate.filename &&
+            it->second.fingerprint == fp) {
+            it->second.seq = ++lru_seq_;
+        }
+        return true;
+    }
+
+    bool drop_pair = false;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
+            it->second.filename == candidate.filename) {
+            disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
+            disk_index_.erase(it);
+            drop_pair = true;
+        }
+    }
+    if (drop_pair) remove_disk_pair(path);
+    std::error_code ec;
+    std::filesystem::remove(staging_path, ec);
+    return false;
+}
+
 void RenderCache::insert(const std::vector<uint8_t>& fp,
-                         const std::vector<float>& samples,
+                         const std::vector<char>& blob,
                          int channels, int sample_rate, int64_t frame_count) {
     const bool prof = profile::enabled();
     const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
     if (!enabled_) {
         return;
     }
-    if (frame_count <= 0 || samples.empty() || channels <= 0 || sample_rate <= 0) {
+    if (frame_count <= 0 || blob.empty() || channels <= 0 || sample_rate <= 0) {
         return;
     }
 
     const uint64_t h = fnv1a64(fp);
-    const uint64_t bytes =
-        static_cast<uint64_t>(samples.size()) * sizeof(float);
+    const uint64_t bytes = static_cast<uint64_t>(blob.size());
     const int64_t ram_tier_frames =
         static_cast<int64_t>(sample_rate) * kRamTierMaxSeconds;
     const bool to_ram =
         frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
     if (to_ram) {
-        const bool inserted = insert_ram(h, fp, samples, channels, sample_rate);
+        const bool inserted = insert_ram(h, fp, blob, channels, sample_rate);
         if (prof && inserted) {
             const auto t1 = profile::now();
             std::fprintf(stderr,
                 "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",
                 profile::ms(t0, t1),
                 static_cast<long long>(frame_count),
-                static_cast<unsigned long long>(samples.size()) *
-                    static_cast<unsigned long long>(sizeof(float)));
+                static_cast<unsigned long long>(bytes));
         }
         return;
     }
 
-    insert_disk(h, fp, samples, channels, sample_rate, frame_count);
+    insert_disk(h, fp, blob, frame_count);
 }
 
 bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
-                             const std::vector<float>& samples,
+                             const std::vector<char>& blob,
                              int channels, int sample_rate) {
-    const uint64_t bytes =
-        static_cast<uint64_t>(samples.size()) * sizeof(float);
+    const uint64_t bytes = static_cast<uint64_t>(blob.size());
 
     std::lock_guard<std::mutex> lock(mutex_);
     if (auto it = ram_.find(h); it != ram_.end()) {
-        ram_bytes_ -=
-            static_cast<uint64_t>(it->second.samples.size()) * sizeof(float);
+        ram_bytes_ -= static_cast<uint64_t>(it->second.blob.size());
         ram_.erase(it);
     }
     if (bytes > kRamBudgetBytes) return false; // pathological single entry; skip
@@ -573,7 +664,7 @@ bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
 
     RamEntry e;
     e.fingerprint = fp;
-    e.samples     = samples;
+    e.blob        = blob;
     e.channels    = channels;
     e.sample_rate = sample_rate;
     e.seq         = ++lru_seq_;
@@ -587,20 +678,17 @@ void RenderCache::evict_ram_until(uint64_t target_max) {
         auto victim = ram_.begin();
         for (auto it = ram_.begin(); it != ram_.end(); ++it)
             if (it->second.seq < victim->second.seq) victim = it;
-        ram_bytes_ -=
-            static_cast<uint64_t>(victim->second.samples.size()) * sizeof(float);
+        ram_bytes_ -= static_cast<uint64_t>(victim->second.blob.size());
         ram_.erase(victim);
     }
 }
 
 bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
-                              const std::vector<float>& samples,
-                              int channels, int sample_rate,
+                              const std::vector<char>& blob,
                               int64_t frame_count) {
     const bool prof = profile::enabled();
     const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
-    const uint64_t sample_bytes =
-        static_cast<uint64_t>(samples.size()) * sizeof(float);
+    const uint64_t blob_bytes = static_cast<uint64_t>(blob.size());
     join_writer();
 
     const std::string fname = hex16(h) + ".wav";
@@ -615,14 +703,12 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     remove_disk_pair(path);
 
     std::vector<uint8_t> fp_copy = fp;
-    std::vector<float> samples_copy = samples;
+    std::vector<char> blob_copy = blob;
     std::thread new_writer(
         [this, h, fname, path, fp = std::move(fp_copy),
-         samples = std::move(samples_copy), channels, sample_rate,
-         frame_count, prof, t0, sample_bytes]() mutable {
+         blob = std::move(blob_copy), frame_count, prof, t0, blob_bytes]() mutable {
             uint64_t written = 0;
-            if (!write_file(path, fp, samples, channels, sample_rate,
-                            frame_count, written)) {
+            if (!write_file(path, fp, blob, frame_count, written)) {
                 return;
             }
 
@@ -644,7 +730,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                     "[profile] cache_insert enabled=yes inserted=yes tier=disk ms=%.3f frames=%lld bytes=%llu\n",
                     profile::ms(t0, t1),
                     static_cast<long long>(frame_count),
-                    static_cast<unsigned long long>(sample_bytes));
+                    static_cast<unsigned long long>(blob_bytes));
             }
         });
     {
@@ -716,8 +802,26 @@ bool read_wav_to_float(const std::string& path,
     return ok;
 }
 
-bool quantize_to_pcm24_domain(std::vector<float>& samples,
-                              int channels, int sample_rate) {
+bool read_file_bytes(const std::string& path, std::vector<char>& out) {
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in) return false;
+    const std::streamoff end = in.tellg();
+    if (end < 0) return false;
+    if (static_cast<uint64_t>(end) > std::numeric_limits<size_t>::max()) {
+        return false;
+    }
+    std::vector<char> tmp(static_cast<size_t>(end));
+    in.seekg(0, std::ios::beg);
+    if (!tmp.empty() && !in.read(tmp.data(), static_cast<std::streamsize>(tmp.size()))) {
+        return false;
+    }
+    out = std::move(tmp);
+    return true;
+}
+
+bool encode_pcm24_wav_blob(const std::vector<float>& samples,
+                           int channels, int sample_rate,
+                           std::vector<char>& out_blob) {
     if (channels <= 0 || sample_rate <= 0) return false;
     const size_t ch = static_cast<size_t>(channels);
     if (samples.size() % ch != 0) return false;
@@ -735,73 +839,59 @@ bool quantize_to_pcm24_domain(std::vector<float>& samples,
         sf_writef_float(snd, samples.data(), frame_count);
     bool ok = (wrote == frame_count);
     if (sf_close(snd) != 0) ok = false;
-    if (!ok) return false;
-
-    io.pos = 0;
-    SF_INFO read_info{};
-    SNDFILE* read_snd =
-        sf_open_virtual(&kMemoryVirtualIo, SFM_READ, &read_info, &io);
-    if (!read_snd) return false;
-    std::vector<float> quantized;
-    do {
-        if (read_info.channels != channels ||
-            read_info.samplerate != sample_rate ||
-            read_info.frames != frame_count) {
-            ok = false;
-            break;
-        }
-        quantized.resize(samples.size());
-        const sf_count_t got =
-            frame_count > 0 ? sf_readf_float(read_snd, quantized.data(), frame_count) : 0;
-        ok = (got == frame_count);
-    } while (false);
-    if (sf_close(read_snd) != 0) ok = false;
-    if (ok) samples = std::move(quantized);
+    if (ok) out_blob = std::move(io.data);
     return ok;
 }
 
-bool write_archival_wav_pcm24(const std::string& path,
-                              const std::vector<float>& samples,
-                              int channels, int sample_rate) {
-    if (channels <= 0 || sample_rate <= 0) return false;
-    const size_t ch = static_cast<size_t>(channels);
-    if (samples.size() % ch != 0) return false;
-    const sf_count_t frame_count =
-        static_cast<sf_count_t>(samples.size() / ch);
+bool decode_wav_blob_to_float(const std::vector<char>& blob,
+                              int expected_channels,
+                              int expected_sample_rate,
+                              std::vector<float>& out_samples) {
+    if (blob.empty() || expected_channels <= 0 || expected_sample_rate <= 0) {
+        return false;
+    }
 
+    MemorySndfile io;
+    io.data = blob;
     SF_INFO info{};
-    info.samplerate = sample_rate;
-    info.channels = channels;
-    info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-    SNDFILE* snd = sf_open(path.c_str(), SFM_WRITE, &info);
+    SNDFILE* snd = sf_open_virtual(&kMemoryVirtualIo, SFM_READ, &info, &io);
     if (!snd) return false;
-    const sf_count_t wrote =
-        sf_writef_float(snd, samples.data(), frame_count);
-    bool ok = (wrote == frame_count);
+
+    bool ok = false;
+    std::vector<float> tmp;
+    do {
+        if (info.channels != expected_channels ||
+            info.samplerate != expected_sample_rate) {
+            break;
+        }
+        if (info.frames < 0 || info.channels <= 0) break;
+        const uint64_t frames = static_cast<uint64_t>(info.frames);
+        const uint64_t ch = static_cast<uint64_t>(info.channels);
+        if (frames > std::numeric_limits<size_t>::max() / ch) break;
+        const size_t sample_count =
+            static_cast<size_t>(frames) * static_cast<size_t>(ch);
+        tmp.resize(sample_count);
+        const sf_count_t got = (info.frames > 0)
+            ? sf_readf_float(snd, tmp.data(), info.frames)
+            : 0;
+        if (got != info.frames) break;
+        ok = true;
+    } while (false);
     if (sf_close(snd) != 0) ok = false;
+    if (ok) out_samples = std::move(tmp);
     return ok;
 }
 
 bool RenderCache::write_file(const std::string& path,
                              const std::vector<uint8_t>& fp,
-                             const std::vector<float>& samples,
-                             int channels, int sample_rate,
+                             const std::vector<char>& blob,
                              int64_t frame_count, uint64_t& out_bytes) {
-    if (channels <= 0 || sample_rate <= 0 || frame_count <= 0) return false;
-    if (static_cast<uint64_t>(frame_count) >
-        std::numeric_limits<size_t>::max() / static_cast<uint64_t>(channels)) {
-        return false;
-    }
-    const size_t expected_samples =
-        static_cast<size_t>(frame_count) * static_cast<size_t>(channels);
-    if (samples.size() != expected_samples) {
-        return false;
-    }
+    if (frame_count <= 0 || blob.empty()) return false;
 
     const std::string tmp = path + ".tmp";
     remove_disk_pair(path);
 
-    if (!write_archival_wav_pcm24(tmp, samples, channels, sample_rate)) {
+    if (!write_bytes_to_path(tmp, blob)) {
         remove_disk_pair(path);
         return false;
     }

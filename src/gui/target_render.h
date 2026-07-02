@@ -120,9 +120,9 @@ private:
     void on_render_done(RenderOutcome outcome);
 
     // Shared Success tail for cache hits, archival artifact loads, and worker
-    // completions. The caller decides whether this buffer is a fresh float
-    // master that belongs in RenderCache.
-    void complete_successful_buffer(bool insert_fresh_render_into_cache);
+    // completions. Cache insertion is owned by the render worker; target_render
+    // only consumes lookup/artifact results and binds the completed buffer.
+    void complete_successful_buffer();
 
     // Single source of truth for app.target_buffer_start_frame: the
     // full-target-frame coordinate that target_buffer[0] represents. 0 for a
@@ -135,11 +135,8 @@ private:
     void recompute_target_buffer_start_frame();
 
     // Render fingerprint of the most recent dispatch. Computed at the top of
-    // dispatch_render_now() and consumed in on_render_done() to key the cache
-    // insert, so the buffer is stored under the exact engine input that
-    // produced it. Renders are serialized (one in flight; trigger() cancels
-    // before re-dispatch), so a Success in on_render_done() always pairs with
-    // the fingerprint set at its own dispatch.
+    // dispatch_render_now() and used for target-view cache/artifact lookups.
+    // The worker computes the same fingerprint for fresh target-route inserts.
     std::vector<uint8_t> last_fingerprint_;
 
     // Set true by trigger() when a dispatch is wanted but the worker

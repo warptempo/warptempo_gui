@@ -202,7 +202,7 @@ RenderOutcome do_render(const RenderRequest& req,
     };
 
     std::vector<uint8_t> fingerprint;
-    if (output_format == "wav" && !req.output_buffer) {
+    if (output_format == "wav") {
         RenderFileIdentity source_identity;
         if (stat_file_identity(req.source_audio_path, source_identity)) {
             fingerprint = render_fingerprint(
@@ -213,7 +213,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 req.has_trim_end, req.trim_end_sec);
         }
     }
-    if (!fingerprint.empty() &&
+    if (!req.output_buffer && !fingerprint.empty() &&
         fingerprint_sidecar_matches(final_output_path, fingerprint)) {
         std::fprintf(stderr,
             "[warptempo_gui] render up to date (fingerprint match): %s\n",
@@ -269,11 +269,11 @@ RenderOutcome do_render(const RenderRequest& req,
     };
 
     // Reuse rungs, in trust order, above the engine: a project artifact
-    // byte-copy, then a render-cache buffer publish. Both run before any
+    // byte-copy, then a render-cache wav-byte publish. Both run before any
     // trim, source-load, map-build, or engine work; an empty fingerprint
     // (source stat failure) skips both exactly as it already skips the
     // up-to-date check above.
-    if (!fingerprint.empty()) {
+    if (!req.output_buffer && !fingerprint.empty()) {
         // Rung: project artifact candidate. A batch entry whose fixed
         // archival sibling already holds a validated artifact for this
         // exact fingerprint is published by byte copy — the highest-
@@ -310,27 +310,18 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
         }
 
-        // Rung: render cache. A deliverable-domain hit re-encodes through the
-        // same PCM24 writer used for disk cache entries. Limited-cache floats
-        // are already exact PCM_24 lattice values, so the encode is the
-        // deterministic inverse of the decode. Copying disk-entry files
-        // directly would save only a marginal encode while widening the cache
-        // API surface. req.render_cache is null only defensively (the GUI
-        // always populates it); a null cache simply skips this rung.
-        std::vector<float> cached_samples;
+        // Rung: render cache. A confirmed hit publishes the canonical wav
+        // bytes by direct byte I/O: RAM dumps the blob, disk copies the entry
+        // file after sidecar confirmation. No sample conversion occurs.
+        // req.render_cache is null only defensively (the GUI always populates
+        // it); a null cache simply skips this rung.
         if (req.render_cache &&
-            req.render_cache->lookup(fingerprint, source_channels_probe,
-                                     static_cast<int>(sample_rate),
-                                     cached_samples)) {
-            bool published = write_archival_wav_pcm24(staging_output_path, cached_samples,
-                                             source_channels_probe,
-                                             static_cast<int>(sample_rate));
+            req.render_cache->publish_wav(fingerprint, source_channels_probe,
+                                          static_cast<int>(sample_rate),
+                                          staging_output_path)) {
             std::error_code ec;
-            if (published) {
-                std::filesystem::rename(staging_output_path, final_output_path, ec);
-                published = !ec;
-            }
-            if (published) {
+            std::filesystem::rename(staging_output_path, final_output_path, ec);
+            if (!ec) {
                 if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
                     std::fprintf(stderr,
                         "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
@@ -517,12 +508,31 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return handle_eng(er);
         }
-        if (req.output_buffer && ep.limiter &&
-            !quantize_to_pcm24_domain(*req.output_buffer, src_ch, src_sr)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to quantize target "
-                "buffer to PCM24 deliverable domain; cache reuse may not be "
-                "byte-identical for this render\n");
+        if (req.output_buffer && ep.limiter) {
+            std::vector<char> wav_blob;
+            std::vector<float> decoded;
+            const bool encoded =
+                encode_pcm24_wav_blob(*req.output_buffer, src_ch, src_sr,
+                                      wav_blob);
+            const bool decoded_ok = encoded &&
+                decode_wav_blob_to_float(wav_blob, src_ch, src_sr, decoded);
+            if (decoded_ok) {
+                *req.output_buffer = std::move(decoded);
+                const int64_t inserted_frames = src_ch > 0
+                    ? static_cast<int64_t>(req.output_buffer->size() /
+                                           static_cast<size_t>(src_ch))
+                    : 0;
+                if (req.render_cache && !fingerprint.empty() &&
+                    inserted_frames > 0) {
+                    req.render_cache->insert(fingerprint, wav_blob, src_ch,
+                                             src_sr, inserted_frames);
+                }
+            } else {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: failed to encode/decode "
+                    "target buffer as canonical PCM24 wav blob; skipping "
+                    "render-cache insert for this render\n");
+            }
         }
 
         // Atomic publish: staging → final. Buffer path skips this — the
@@ -544,32 +554,23 @@ RenderOutcome do_render(const RenderRequest& req,
                     "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
                     final_output_path.c_str());
             }
-            // Populate the render cache by reading the just-published wav back
-            // into the same float container used by cache hits and target view.
-            // The read is page-cache-hot and captures the deliverable domain:
-            // PCM_24 lattice values when limited, clean floats when limiter-off.
-            // The insert races nothing: the rename above already landed, the
-            // cache's writer thread copies its own job data, and a concurrent
-            // lookup that misses because the write hasn't landed yet simply
-            // re-renders. req.render_cache is null only defensively (the GUI
-            // always populates it); skip the insert then.
+            // Populate the render cache with the canonical bytes that were
+            // just published. The insert races nothing: the rename above
+            // already landed, the cache's writer thread copies its own job
+            // data, and a concurrent lookup that misses because the write
+            // hasn't landed yet simply re-renders. req.render_cache is null
+            // only defensively (the GUI always populates it); skip the insert
+            // then.
             if (req.render_cache && !fingerprint.empty()) {
-                std::vector<float> render_buf;
-                if (!read_wav_to_float(final_output_path, src_ch, src_sr,
-                                       render_buf)) {
+                std::vector<char> wav_blob;
+                if (!read_file_bytes(final_output_path, wav_blob)) {
                     std::fprintf(stderr,
                         "warptempo_gui: render warning: failed to read "
-                        "published wav back into render cache from '%s'\n",
+                        "published wav bytes into render cache from '%s'\n",
                         final_output_path.c_str());
-                    render_buf.clear();
-                }
-                const int64_t inserted_frames = src_ch > 0
-                    ? static_cast<int64_t>(render_buf.size() /
-                                           static_cast<size_t>(src_ch))
-                    : 0;
-                if (inserted_frames > 0) {
-                    req.render_cache->insert(fingerprint, render_buf, src_ch,
-                                             src_sr, inserted_frames);
+                } else if (profile_target_frames > 0) {
+                    req.render_cache->insert(fingerprint, wav_blob, src_ch,
+                                             src_sr, profile_target_frames);
                 }
             }
         }

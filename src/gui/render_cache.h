@@ -40,25 +40,25 @@ std::vector<uint8_t> render_fingerprint(
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 
-// Quantizes interleaved float32 samples to the 24-bit deliverable
-// domain in place, via an in-memory libsndfile round trip (virtual-IO
-// write as SF_FORMAT_WAV | SF_FORMAT_PCM_24, then read back with
-// sf_readf_float). Using libsndfile's own conversion pair makes the
-// result exact-by-construction against the engine's archival writer
-// with no internals to keep in lockstep. Deterministic; returns false
-// and leaves samples untouched on any libsndfile failure.
-bool quantize_to_pcm24_domain(std::vector<float>& samples,
-                              int channels, int sample_rate);
+// Encodes interleaved float32 samples as a complete PCM_24 wav
+// (SF_FORMAT_WAV | SF_FORMAT_PCM_24, one sf_writef_float pass, no
+// sf_command calls) into an in-memory byte blob via libsndfile virtual IO.
+// The blob is byte-identical to what the engine's archival writer produces
+// from the same samples: same library, same format flags, same single-pass
+// write. Encoding happens exactly once per render; every reuse consumes the
+// bytes.
+bool encode_pcm24_wav_blob(const std::vector<float>& samples,
+                           int channels, int sample_rate,
+                           std::vector<char>& out_blob);
 
-// Writes deliverable-domain interleaved float32 samples as a 24-bit archival
-// wav (SF_FORMAT_WAV | SF_FORMAT_PCM_24, one sf_writef_float pass, no
-// sf_command calls). This is the single wav writer for disk cache entries and
-// cache-hit archival publishes. Limited-chain callers pass PCM_24 lattice
-// values already decoded to float32; limiter-off callers use a separate
-// fingerprint and pass clean floats for the fallback 32-bit-float domain.
-bool write_archival_wav_pcm24(const std::string& path,
-                              const std::vector<float>& samples,
-                              int channels, int sample_rate);
+// Decodes a wav blob's full payload to interleaved float32, verifying header
+// channels and sample rate. Deterministic: the same blob always yields the
+// same floats, which keeps target view's audio identical across fresh-render,
+// cache-hit, and artifact-load provenances.
+bool decode_wav_blob_to_float(const std::vector<char>& blob,
+                              int expected_channels,
+                              int expected_sample_rate,
+                              std::vector<float>& out_samples);
 
 // Reads a wav's full payload as interleaved float32, verifying the
 // header's channels and sample rate against the expected values first.
@@ -67,6 +67,10 @@ bool write_archival_wav_pcm24(const std::string& path,
 bool read_wav_to_float(const std::string& path,
                        int expected_channels, int expected_sample_rate,
                        std::vector<float>& out);
+
+// Reads a file's raw bytes verbatim. Used to capture the just-published
+// archival wav as a canonical cache blob without decoding it.
+bool read_file_bytes(const std::string& path, std::vector<char>& out);
 
 // Stats wav_path and writes its identity plus the hex-encoded fingerprint
 // blob to the sidecar via a .tmp staging write and atomic rename. Failure is
@@ -82,20 +86,21 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint);
 
 // Two-tier store for rendered target-view and archival audio, keyed by
-// render_fingerprint. Entries store the deliverable-domain signal: with the
-// limiter on, PCM_24 lattice values carried in float32; with the limiter off,
-// clean floats under a separate fingerprint. The RAM tier serves short live
-// target-view renders. The disk tier is uncapped per entry and LRU-bounded at
-// 10 GiB, so full-movement renders can be reused without monopolizing RAM. The
-// store is process-local: the disk directory is removed at shutdown and
-// dead-PID orphan directories are swept at init. Every public method is a
-// no-op / miss when the store could not initialize (no cache home, unmakeable
-// directory), so callers need no special-casing.
+// render_fingerprint. Entries are canonical deliverable wav bytes: PCM_24 when
+// the limiter produced them, or float wav on the limiter-off fallback path.
+// Those routes have separate fingerprints. Float samples are derived only on
+// lookup by decoding the bytes; publishes never re-encode. The RAM tier serves
+// short live target-view renders. The disk tier is uncapped per entry and
+// LRU-bounded at 10 GiB, so full-movement renders can be reused without
+// monopolizing RAM. The store is process-local: the disk directory is removed
+// at shutdown and dead-PID orphan directories are swept at init. Every public
+// method is a no-op / miss when the store could not initialize (no cache home,
+// unmakeable directory), so callers need no special-casing.
 //
 // Every public method is thread-safe; callers need no external locking. A
 // single mutex_ guards both tiers' indexes, the byte counters, lru_seq_, and
-// the writer thread handoff. Large file I/O (disk-tier reads, the disk
-// writer's wav encode) happens outside the lock: a disk lookup copies the
+// the writer thread handoff. Large file I/O (disk-tier reads/copies, the disk
+// writer's blob write) happens outside the lock: a disk lookup copies the
 // entry's filename out under the lock, reads the wav unlocked, and re-takes
 // the lock only for the LRU bump or a drop-on-failure. The writer thread
 // lifecycle is swap-join-outside — join_writer() swaps writer_ into a local
@@ -125,20 +130,28 @@ public:
                 int channels, int sample_rate,
                 std::vector<float>& out_samples);
 
-    // Insert a freshly rendered buffer. Routes short buffers that fit the RAM
+    // Confirmed-hit publish. Writes the entry's canonical wav bytes to
+    // staging_path (RAM: dump the blob; disk: byte-copy the entry file). Same
+    // confirmation rules as lookup. Byte-identical to an engine publish by
+    // construction; no sample conversion occurs.
+    bool publish_wav(const std::vector<uint8_t>& fingerprint,
+                     int channels, int sample_rate,
+                     const std::string& staging_path);
+
+    // Insert a freshly rendered wav blob. Routes short buffers that fit the RAM
     // budget to RAM and everything else to the disk tier, evicting LRU entries
     // in the chosen tier until within budget. Overwrites any existing entry
-    // with the same hash. Empty/degenerate buffers are dropped. Disk write
+    // with the same hash. Empty/degenerate blobs are dropped. Disk write
     // failures are swallowed (the render already played from the live buffer;
     // the cache simply will not hold it).
     void insert(const std::vector<uint8_t>& fingerprint,
-                const std::vector<float>& samples,
+                const std::vector<char>& wav_blob,
                 int channels, int sample_rate, int64_t frame_count);
 
 private:
     struct RamEntry {
         std::vector<uint8_t> fingerprint;
-        std::vector<float>   samples;
+        std::vector<char>    blob;
         int      channels    = 0;
         int      sample_rate = 0;
         uint64_t seq         = 0;
@@ -151,11 +164,10 @@ private:
     };
 
     bool insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
-                    const std::vector<float>& samples,
+                    const std::vector<char>& blob,
                     int channels, int sample_rate);
     bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
-                     const std::vector<float>& samples,
-                     int channels, int sample_rate, int64_t frame_count);
+                     const std::vector<char>& blob, int64_t frame_count);
     void evict_ram_until(uint64_t target_max);
     void evict_disk_until(uint64_t target_max);
     void sweep_orphans();
@@ -165,8 +177,7 @@ private:
                    std::vector<float>& out);
     bool write_file(const std::string& path,
                     const std::vector<uint8_t>& fp,
-                    const std::vector<float>& samples,
-                    int channels, int sample_rate, int64_t frame_count,
+                    const std::vector<char>& blob, int64_t frame_count,
                     uint64_t& out_bytes);
     void join_writer();
     void remove_disk_pair(const std::string& wav_path);
