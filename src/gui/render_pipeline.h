@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "render_cache.h"
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 
@@ -83,6 +84,12 @@ struct RenderRequest {
     // immediate Ctrl+Alt+R path) and no sidecars are written.
     std::string batch_folder;
     std::string batch_basename;
+
+    // The process's single RenderCache, populated at request-build time
+    // from the same instance main.cpp constructs and hands to
+    // GuiTargetRender by reference. do_render's cache lookup/insert rung is
+    // skipped (defensively; the GUI always populates this) when null.
+    RenderCache* render_cache = nullptr;
 };
 
 // Synchronous render. Blocks the caller until the pipeline finishes (or

@@ -40,13 +40,26 @@ std::vector<uint8_t> render_fingerprint(
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 
-// Writes interleaved float32 samples as a wav with the engine's exact
-// writer parameters (SF_FORMAT_WAV | SF_FORMAT_FLOAT, one
-// sf_writef_float pass). Single writer for cache entries and cache-hit
-// archival publishes, so parameter identity holds by construction.
+// Writes interleaved float32 samples as a wav (SF_FORMAT_WAV |
+// SF_FORMAT_FLOAT, one sf_writef_float pass). This is the cache-ENTRY
+// writer only: entries deliberately store the unquantized float master so
+// target-view reuse round-trips exactly. It is not a mirror of the engine's
+// archival writer — see write_archival_wav_pcm24 for that.
 bool write_float_wav(const std::string& path,
                      const std::vector<float>& samples,
                      int channels, int sample_rate);
+
+// Mirror of the engine's archival writer (synthesis.cpp
+// write_render_to_file): SF_FORMAT_WAV | SF_FORMAT_PCM_24, one
+// sf_writef_float pass, no sf_command calls, letting libsndfile perform
+// the deterministic float-to-24-bit conversion. Used ONLY for cache-hit
+// archival publishes so a reused render is byte-identical to an engine
+// publish. Must stay in lockstep with the frozen engine writer; if that
+// writer ever changes under an architect-approved unfreeze, this changes
+// with it.
+bool write_archival_wav_pcm24(const std::string& path,
+                              const std::vector<float>& samples,
+                              int channels, int sample_rate);
 
 // Stats wav_path and writes its identity plus the hex-encoded fingerprint
 // blob to the sidecar via a .tmp staging write and atomic rename. Failure is
@@ -165,11 +178,3 @@ private:
     std::unordered_map<uint64_t, DiskEntry> disk_index_;
     uint64_t                                disk_bytes_ = 0;
 };
-
-// Process-wide, self-initializing RenderCache used by do_render's archival
-// wav path (render_pipeline.cpp), which has no injected RenderCache
-// reference of its own. Lazily calls init() on first access. This is
-// intentionally a separate instance from the RenderCache main.cpp
-// constructs and hands to GuiTargetRender by reference — unifying the two
-// so archival and target-view renders share one cache is follow-up work.
-RenderCache& shared_render_cache();

@@ -299,13 +299,15 @@ bool GuiInputHandler::render_bpm_sweep() {
         std::string basename = num_buf;
         basename += rest_buf;
 
-        reqs.push_back(build_render_request(
+        RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_markers), base_phase_resets,
             std::move(cell_settings),
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate(),
-            batch_folder.string(), std::move(basename)));
+            batch_folder.string(), std::move(basename));
+        req.render_cache = &target_render.render_cache;
+        reqs.push_back(std::move(req));
         ++seq;
     }
 

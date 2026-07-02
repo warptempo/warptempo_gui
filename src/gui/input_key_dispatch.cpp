@@ -180,6 +180,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate());
+        req.render_cache = &target_render.render_cache;
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render. The dispatch hands the request to
         // the worker thread; on_done fires on the GUI thread when the
@@ -295,11 +296,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 i + 1, total,
                 batch_folder.filename().string().c_str(), num_buf);
 
-            reqs.push_back(build_render_request(
+            RenderRequest req = build_render_request(
                 q.source_audio_path, q.markers, q.phase_resets, q.engine_settings,
                 q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
                 audio.sample_rate(),
-                batch_folder.string(), num_buf));
+                batch_folder.string(), num_buf);
+            req.render_cache = &target_render.render_cache;
+            reqs.push_back(std::move(req));
         }
 
         if (async_renderer.is_busy()) return true;
@@ -471,13 +474,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                     std::numeric_limits<double>::quiet_NaN();
             }
 
-            reqs.push_back(build_render_request(
+            RenderRequest req = build_render_request(
                 app.source_audio_path, std::move(cell_markers), base_phase_resets,
                 app.engine_settings,
                 app.trim.has_begin, app.trim.begin_seconds,
                 app.trim.has_end,   app.trim.end_seconds,
                 audio.sample_rate(),
-                batch_folder.string(), std::move(basename)));
+                batch_folder.string(), std::move(basename));
+            req.render_cache = &target_render.render_cache;
+            reqs.push_back(std::move(req));
 
             // Increment rightmost dimension; carry left on overflow.
             // The last cell leaves indices in an overflowed state but

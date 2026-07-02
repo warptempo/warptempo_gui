@@ -181,6 +181,11 @@ void GuiTargetRender::dispatch_render_now() {
     // runs in place on the buffer whenever the global `limiter` toggle is
     // on — the target-view preview gets the same limiting as the disk path.
     req.output_buffer = &app.target_buffer;
+    // The process's single RenderCache (this struct's own member, wired
+    // from main.cpp). do_render's archival cache rungs are gated on
+    // output_buffer being null, so this is unused on this path; populated
+    // for uniformity with the archival dispatch builders.
+    req.render_cache = &render_cache;
 
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) { on_render_done(o); });

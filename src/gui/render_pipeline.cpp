@@ -311,13 +311,16 @@ RenderOutcome do_render(const RenderRequest& req,
         }
 
         // Rung: render cache. A buffer-born hit; its byte-identity to an
-        // engine publish rests on write_float_wav's parameter identity,
-        // the same writer used for cache-tier disk entries.
+        // engine publish rests on write_archival_wav_pcm24 mirroring the
+        // engine's own archival writer exactly. req.render_cache is null
+        // only defensively (the GUI always populates it); a null cache
+        // simply skips this rung.
         std::vector<float> cached_samples;
-        if (shared_render_cache().lookup(fingerprint, source_channels_probe,
-                                         static_cast<int>(sample_rate),
-                                         cached_samples)) {
-            bool published = write_float_wav(staging_output_path, cached_samples,
+        if (req.render_cache &&
+            req.render_cache->lookup(fingerprint, source_channels_probe,
+                                     static_cast<int>(sample_rate),
+                                     cached_samples)) {
+            bool published = write_archival_wav_pcm24(staging_output_path, cached_samples,
                                              source_channels_probe,
                                              static_cast<int>(sample_rate));
             std::error_code ec;
@@ -544,14 +547,15 @@ RenderOutcome do_render(const RenderRequest& req,
             // The insert races nothing: the rename above already landed,
             // the cache's writer thread copies its own job data, and a
             // concurrent lookup that misses because the write hasn't landed
-            // yet simply re-renders.
-            if (!fingerprint.empty() && !render_buf.empty()) {
+            // yet simply re-renders. req.render_cache is null only
+            // defensively (the GUI always populates it); skip the insert then.
+            if (req.render_cache && !fingerprint.empty() && !render_buf.empty()) {
                 const int64_t inserted_frames = src_ch > 0
                     ? static_cast<int64_t>(render_buf.size() /
                                            static_cast<size_t>(src_ch))
                     : 0;
-                shared_render_cache().insert(fingerprint, render_buf, src_ch,
-                                             src_sr, inserted_frames);
+                req.render_cache->insert(fingerprint, render_buf, src_ch,
+                                         src_sr, inserted_frames);
             }
             // else: limiter off, the engine streamed straight to disk and
             // no publish buffer exists to cache.

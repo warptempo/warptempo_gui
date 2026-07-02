@@ -651,6 +651,28 @@ bool write_float_wav(const std::string& path,
     return ok;
 }
 
+bool write_archival_wav_pcm24(const std::string& path,
+                              const std::vector<float>& samples,
+                              int channels, int sample_rate) {
+    if (channels <= 0 || sample_rate <= 0) return false;
+    const size_t ch = static_cast<size_t>(channels);
+    if (samples.size() % ch != 0) return false;
+    const sf_count_t frame_count =
+        static_cast<sf_count_t>(samples.size() / ch);
+
+    SF_INFO info{};
+    info.samplerate = sample_rate;
+    info.channels = channels;
+    info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+    SNDFILE* snd = sf_open(path.c_str(), SFM_WRITE, &info);
+    if (!snd) return false;
+    const sf_count_t wrote =
+        sf_writef_float(snd, samples.data(), frame_count);
+    bool ok = (wrote == frame_count);
+    if (sf_close(snd) != 0) ok = false;
+    return ok;
+}
+
 bool RenderCache::write_file(const std::string& path,
                              const std::vector<uint8_t>& fp,
                              const std::vector<float>& samples,
@@ -699,15 +721,4 @@ bool RenderCache::write_file(const std::string& path,
     }
     out_bytes = wav_size + sidecar_size;
     return true;
-}
-
-RenderCache& shared_render_cache() {
-    static RenderCache instance;
-    // Magic-statics initialization is thread-safe and runs exactly once;
-    // sequencing after `instance` (declared above) guarantees init() sees a
-    // fully constructed object before any concurrent caller observes
-    // `initialized` as true.
-    static const bool initialized = (instance.init(), true);
-    (void)initialized;
-    return instance;
 }
