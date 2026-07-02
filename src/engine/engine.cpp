@@ -91,8 +91,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     lp.tolerance_db         = p.limiter_tolerance_db;
 
     // "<buffer>" is a log-only sentinel — never pass it to filesystem APIs.
-    // synthesis.cpp's sf_open is gated off on the buffer-output path; the
-    // limiter reads this field only as a string comparison for its verbose gate.
+    // The output writer is gated off on the buffer-output path; the limiter
+    // reads this field only as a string comparison for its verbose gate.
     audio_stft.output_audio_file       =
         p.output_buffer ? std::string("<buffer>") : p.output_audio_path;
     audio_stft.limiter                 = p.limiter;
@@ -123,7 +123,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     audio_stft.src_info.samplerate = p.source_sample_rate;
     audio_stft.src_info.channels   = p.source_channels;
-    audio_stft.src_info.frames     = static_cast<sf_count_t>(p.source_audio_frames);
+    audio_stft.src_info.frames     = static_cast<int64_t>(p.source_audio_frames);
 
     audio_stft.src_samples = p.source_audio_samples;
     audio_stft.channels = audio_stft.src_info.channels;

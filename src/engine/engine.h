@@ -13,9 +13,8 @@
 // render pipeline and passed to run_warptempo_engine().
 struct EngineParams {
     // Source audio as interleaved float, sample rate, and channel count. The
-    // engine wraps this in a libsndfile virtual-IO SNDFILE and reads from
-    // memory rather than disk. The buffer must remain valid for the
-    // duration of run_warptempo_engine().
+    // engine reads this caller-owned interleaved float buffer directly. The
+    // buffer must remain valid for the duration of run_warptempo_engine().
     const float* source_audio_samples = nullptr;
     size_t       source_audio_frames  = 0;
     int          source_sample_rate   = 0;

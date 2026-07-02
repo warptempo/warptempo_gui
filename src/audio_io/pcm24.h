@@ -2,11 +2,10 @@
 
 #include <cstdint>
 
-// The project's rendered PCM_24 bytes currently come from system libsndfile,
-// so a package upgrade can silently move the bit-identity baseline. This
-// in-tree policy freezes the float-to-code boundary explicitly: NaN maps to
-// zero; finite values are scaled by 8388608.0, rounded by llrint under the
-// default round-half-to-even FP environment, then clipped to signed 24-bit.
+// The in-tree writer's PCM_24 policy freezes the float-to-code boundary:
+// NaN maps to zero; finite values are scaled by 8388608.0, rounded by llrint
+// under the default round-half-to-even FP environment, then clipped to signed
+// 24-bit.
 int32_t pcm24_code_from_float(float x);
 
 // Every signed 24-bit code divided by 8388608.0f is exactly representable in

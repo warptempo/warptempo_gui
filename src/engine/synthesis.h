@@ -10,7 +10,7 @@ public:
 
     // Sibling of process() that routes OLA output to a caller-owned
     // interleaved-float vector instead of an on-disk wav. Same OLA driver
-    // (synthesize_full); no sf_open, no PeakLimiter. The write_cb appends to
+    // (synthesize_full); no file writer, no PeakLimiter. The write_cb appends to
     // *output_buffer. The vector ends up with exactly emit-cap-bounded
     // out_frames * channels floats, channel-interleaved within each frame
     // (same layout the file path emits).

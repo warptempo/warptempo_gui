@@ -14,8 +14,6 @@
 #include <limits>
 #include <system_error>
 
-#include <sndfile.h>
-
 #include <csignal>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -122,85 +120,14 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
     return parse_i64_exact(line.substr(p.size()), out);
 }
 
-constexpr uint32_t kFingerprintVersion = 1;
+// The fingerprint includes the bytes the current writer would produce for the
+// same inputs. The writer's PCM_24 lattice policy changed, so pre-change
+// sidecars and cache entries must stop matching and re-render under this
+// writer before cmp baselines are refreshed.
+constexpr uint32_t kFingerprintVersion = 2;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 constexpr uint32_t kSidecarVersion     = 1;
 constexpr char     kSidecarExtension[] = ".fingerprint";
-
-struct MemorySndfile {
-    std::vector<char> data;
-    sf_count_t pos = 0;
-};
-
-sf_count_t vio_get_filelen(void* user_data) {
-    const auto* io = static_cast<const MemorySndfile*>(user_data);
-    return static_cast<sf_count_t>(io->data.size());
-}
-
-sf_count_t vio_seek(sf_count_t offset, int whence, void* user_data) {
-    auto* io = static_cast<MemorySndfile*>(user_data);
-    sf_count_t base = 0;
-    if (whence == SEEK_SET) {
-        base = 0;
-    } else if (whence == SEEK_CUR) {
-        base = io->pos;
-    } else if (whence == SEEK_END) {
-        base = static_cast<sf_count_t>(io->data.size());
-    } else {
-        return -1;
-    }
-    if ((offset > 0 && base > std::numeric_limits<sf_count_t>::max() - offset) ||
-        (offset < 0 && base < std::numeric_limits<sf_count_t>::min() - offset)) {
-        return -1;
-    }
-    const sf_count_t next = base + offset;
-    if (next < 0) return -1;
-    io->pos = next;
-    return io->pos;
-}
-
-sf_count_t vio_read(void* ptr, sf_count_t count, void* user_data) {
-    auto* io = static_cast<MemorySndfile*>(user_data);
-    if (count <= 0 || io->pos < 0) return 0;
-    const size_t pos = static_cast<size_t>(io->pos);
-    if (pos >= io->data.size()) return 0;
-    const size_t available = io->data.size() - pos;
-    const size_t wanted = static_cast<size_t>(count);
-    const size_t n = std::min(available, wanted);
-    std::memcpy(ptr, io->data.data() + pos, n);
-    io->pos += static_cast<sf_count_t>(n);
-    return static_cast<sf_count_t>(n);
-}
-
-sf_count_t vio_write(const void* ptr, sf_count_t count, void* user_data) {
-    auto* io = static_cast<MemorySndfile*>(user_data);
-    if (count <= 0 || io->pos < 0) return 0;
-    const uint64_t pos = static_cast<uint64_t>(io->pos);
-    const uint64_t n = static_cast<uint64_t>(count);
-    if (pos > std::numeric_limits<size_t>::max() ||
-        n > std::numeric_limits<size_t>::max() - pos) {
-        return 0;
-    }
-    const size_t begin = static_cast<size_t>(pos);
-    const size_t end = begin + static_cast<size_t>(n);
-    if (end > io->data.size()) io->data.resize(end);
-    std::memcpy(io->data.data() + begin, ptr, static_cast<size_t>(n));
-    io->pos += count;
-    return count;
-}
-
-sf_count_t vio_tell(void* user_data) {
-    const auto* io = static_cast<const MemorySndfile*>(user_data);
-    return io->pos;
-}
-
-SF_VIRTUAL_IO kMemoryVirtualIo = {
-    vio_get_filelen,
-    vio_seek,
-    vio_read,
-    vio_write,
-    vio_tell,
-};
 
 bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes) {
     std::FILE* f = std::fopen(path.c_str(), "wb");
@@ -927,22 +854,18 @@ bool encode_pcm24_wav_blob(const std::vector<float>& samples,
     if (channels <= 0 || sample_rate <= 0) return false;
     const size_t ch = static_cast<size_t>(channels);
     if (samples.size() % ch != 0) return false;
-    const sf_count_t frame_count =
-        static_cast<sf_count_t>(samples.size() / ch);
+    const int64_t frame_count = static_cast<int64_t>(samples.size() / ch);
 
-    SF_INFO info{};
-    info.samplerate = sample_rate;
-    info.channels = channels;
-    info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-    MemorySndfile io;
-    SNDFILE* snd = sf_open_virtual(&kMemoryVirtualIo, SFM_WRITE, &info, &io);
-    if (!snd) return false;
-    const sf_count_t wrote =
-        sf_writef_float(snd, samples.data(), frame_count);
-    bool ok = (wrote == frame_count);
-    if (sf_close(snd) != 0) ok = false;
-    if (ok) out_blob = std::move(io.data);
-    return ok;
+    std::vector<char> blob;
+    auto writer = WavWriter::open_memory(blob, WavSampleFormat::Pcm24,
+                                         channels, sample_rate);
+    if (!writer) return false;
+    auto ok = writer->write_frames(samples.data(), frame_count);
+    if (!ok) return false;
+    ok = writer->close();
+    if (!ok) return false;
+    out_blob = std::move(blob);
+    return true;
 }
 
 bool decode_wav_blob_to_float(const std::vector<char>& blob,

@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstdint>
 #include <fftw3.h>
-#include <sndfile.h>
 
 #include "engine.h"
 #include "frame_map.h"
@@ -22,6 +21,12 @@ struct PhaseResetPlacement {
 struct LimiterParams {
     double ceiling_dbfs          = -0.3;
     double tolerance_db          = 0.01;
+};
+
+struct SourceInfo {
+    int     samplerate = 0;
+    int     channels   = 0;
+    int64_t frames     = 0;
 };
 
 // --- DSP Helpers ---
@@ -88,7 +93,7 @@ struct AudioSTFT {
     AudioSTFT& operator=(const AudioSTFT&) = delete;
 
     // Source metadata
-    SF_INFO src_info{};
+    SourceInfo src_info{};
     // Caller-owned interleaved float source (EngineParams::source_audio_samples).
     // Valid for the duration of run_warptempo_engine. src_info carries the
     // frame count, channel count, and sample rate that describe it.
@@ -288,9 +293,9 @@ struct AudioSTFT {
         // full clear of every sample any frame can have written.
         std::fill(w.fft_in, w.fft_in + half, 0.0);
         std::fill(w.fft_in + M - half, w.fft_in + M, 0.0);
-        // Whole-frame guard (matches the old sf_seek/sf_readf behavior): a
-        // frame whose start is out of [0, src_frames) is entirely zero; a valid
-        // frame reads min(N, src_frames - ta) samples and zero-pads the tail.
+        // Whole-frame guard: a frame whose start is out of [0, src_frames) is
+        // entirely zero; a valid frame reads min(N, src_frames - ta) samples
+        // and zero-pads the tail.
         if (ta >= 0 && ta < src_frames) {
             const int navail =
                 static_cast<int>(std::min<int64_t>(N, src_frames - ta));

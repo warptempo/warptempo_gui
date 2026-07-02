@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build configuration. The two static archives (warptempo_parser,
-# warptempo_engine) always build and need only sndfile / fftw3. The GUI and
+# warptempo_engine) always build and need only fftw3. The GUI and
 # its Wayland/Cairo/JACK toolchain are optional, so the libraries can be built
 # on a headless host that has none of the GUI platform packages installed.
 # Turning this OFF skips all GUI dependency discovery and the warptempo_gui
@@ -15,15 +15,14 @@ option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 
 # --- Dependencies shared by the libraries (always required) ---
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(SNDFILE REQUIRED sndfile)
 pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
 
 # ============================================================
 #  warptempo_parser — map / file-parse core.
-#  Depends on sndfile for the trimmed-WAV writer and warptempo_audio_io for
-#  source reads. No fftw, no GUI, no engine. frame_map.h / time_format.h are
-#  shared headers in src/.
+#  Depends on warptempo_audio_io for source reads and trimmed-WAV writes. No
+#  fftw, no GUI, no engine. frame_map.h / time_format.h are shared headers in
+#  src/.
 # ============================================================
 add_library(warptempo_parser_lib STATIC
     src/parser/warpmarkers_parse.cpp
@@ -38,15 +37,12 @@ target_include_directories(warptempo_parser_lib
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/parser
-    PRIVATE
-        ${SNDFILE_INCLUDE_DIRS}
 )
 set_target_properties(warptempo_parser_lib PROPERTIES OUTPUT_NAME warptempo_parser)
-target_link_libraries(warptempo_parser_lib PUBLIC ${SNDFILE_LIBRARIES})
 
 # ============================================================
 #  warptempo_engine — PGHI DSP core.
-#  Depends on sndfile + fftw3. Reads frame_map.h (header-only) from
+#  Depends on warptempo_audio_io + fftw3. Reads frame_map.h (header-only) from
 #  src/; no link edge to the parser archive.
 # ============================================================
 add_library(warptempo_engine_lib STATIC
@@ -60,12 +56,10 @@ target_include_directories(warptempo_engine_lib
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/engine
     PRIVATE
-        ${SNDFILE_INCLUDE_DIRS}
         ${FFTW3_INCLUDE_DIRS}
 )
 set_target_properties(warptempo_engine_lib PROPERTIES OUTPUT_NAME warptempo_engine)
 target_link_libraries(warptempo_engine_lib PUBLIC
-    ${SNDFILE_LIBRARIES}
     ${FFTW3_THREADS_LIB}
     ${FFTW3_LIBRARIES}
     pthread
@@ -99,17 +93,12 @@ set_source_files_properties(src/audio_io/miniaudio_impl.cpp PROPERTIES
 add_executable(warptempo_audio_io_test
     src/audio_io/test_main.cpp
 )
-target_include_directories(warptempo_audio_io_test PRIVATE
-    ${SNDFILE_INCLUDE_DIRS}
-)
-# Temporary libsndfile linkage: the comparison modes measure the in-tree codec
-# against the incumbent reader/writer while both are still available.
 target_link_libraries(warptempo_audio_io_test PRIVATE
     warptempo_audio_io_lib
-    ${SNDFILE_LIBRARIES}
 )
 
 target_link_libraries(warptempo_parser_lib PUBLIC warptempo_audio_io_lib)
+target_link_libraries(warptempo_engine_lib PUBLIC warptempo_audio_io_lib)
 
 # ============================================================
 #  warptempo_gui — Cairo/Wayland front end (optional).
@@ -211,7 +200,6 @@ if(WARPTEMPO_BUILD_GUI)
         ${WAYLAND_CURSOR_INCLUDE_DIRS}
         ${XKBCOMMON_INCLUDE_DIRS}
         ${CAIRO_INCLUDE_DIRS}
-        ${SNDFILE_INCLUDE_DIRS}
         ${JACK_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
@@ -223,7 +211,6 @@ if(WARPTEMPO_BUILD_GUI)
         ${XKBCOMMON_LIBRARIES}
         rt
         ${CAIRO_LIBRARIES}
-        ${SNDFILE_LIBRARIES}
         ${JACK_LIBRARIES}
         pthread
         dl

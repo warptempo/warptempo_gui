@@ -7,7 +7,8 @@
 
 // Writes src_path samples [begin_frame, end_frame) to out_path as 32-bit
 // float WAV preserving channel count and sample rate. Returns {} on success;
-// returns the error to the caller on any sndfile error. No sox dependency.
+// returns the error to the caller on any read or write error. No sox
+// dependency.
 std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
                        const std::string& out_path,
                        size_t begin_frame,

@@ -140,16 +140,29 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         }
         const uint32_t chunk_size = read_u32(u32buf);
         const uint64_t payload = src.tell();
-        if (payload + chunk_size > file_size) {
-            return std::unexpected("WAV chunk overruns file");
+        uint64_t chunk_payload_size = chunk_size;
+        bool stop_after_chunk = false;
+        if (chunk_payload_size > file_size - payload) {
+            if (fourcc_eq(id, "data")) {
+                // Streamed encoders may leave the data size unpatched; trust
+                // the bytes present, clamped to whole frames.
+                chunk_payload_size = file_size - payload;
+                if (layout.block_align != 0) {
+                    chunk_payload_size -= chunk_payload_size % layout.block_align;
+                }
+                stop_after_chunk = true;
+            } else {
+                break;
+            }
         }
 
         if (fourcc_eq(id, "fmt ")) {
-            if (chunk_size < 16) {
+            if (chunk_payload_size < 16) {
                 return std::unexpected("WAV fmt chunk is too short");
             }
             std::array<unsigned char, 40> fmt{};
-            const size_t to_read = std::min<size_t>(fmt.size(), chunk_size);
+            const size_t to_read =
+                std::min<size_t>(fmt.size(), chunk_payload_size);
             if (!src.read(fmt.data(), to_read)) {
                 return std::unexpected("truncated WAV fmt chunk");
             }
@@ -161,7 +174,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             valid_bits = bits;
 
             if (tag == 0xfffe) {
-                if (chunk_size < 40) {
+                if (chunk_payload_size < 40) {
                     return std::unexpected("WAVE_FORMAT_EXTENSIBLE fmt chunk is too short");
                 }
                 const uint16_t cb_size = read_u16(fmt, 16);
@@ -200,11 +213,14 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             fmt_seen = true;
         } else if (fourcc_eq(id, "data")) {
             layout.data_offset = payload;
-            layout.data_size = chunk_size;
+            layout.data_size = chunk_payload_size;
             data_seen = true;
         }
 
-        const uint64_t next = payload + chunk_size + (chunk_size & 1u);
+        if (stop_after_chunk) break;
+
+        const uint64_t next =
+            payload + chunk_payload_size + (chunk_payload_size & 1u);
         if (!src.seek(next)) {
             return std::unexpected("failed to skip WAV chunk");
         }

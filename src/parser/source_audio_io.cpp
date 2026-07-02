@@ -1,12 +1,12 @@
 #include "source_audio_io.h"
 
 #include "audio_reader.h"
+#include "wav_io.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <vector>
-
-#include <sndfile.h>
 
 std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
                        const std::string& out_path,
@@ -16,26 +16,21 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
         return std::unexpected("end_frame <= begin_frame");
     }
 
-    SF_INFO src_info{};
-    src_info.format = 0;
-    SNDFILE* src = sf_open(src_path.c_str(), SFM_READ, &src_info);
-    if (!src) {
+    auto reader = AudioReader::open(src_path);
+    if (!reader) {
         return std::unexpected("could not open source '" + src_path + "'");
     }
-    if (static_cast<sf_count_t>(end_frame) > src_info.frames) {
-        sf_close(src);
+    const AudioFileInfo& src_info = reader->info();
+    if (static_cast<int64_t>(end_frame) > src_info.frames) {
         return std::unexpected("end_frame exceeds source length");
     }
-    if (sf_seek(src, static_cast<sf_count_t>(begin_frame), SEEK_SET) < 0) {
-        sf_close(src);
-        return std::unexpected("sf_seek failed");
-    }
+    auto seeked = reader->seek_to_frame(static_cast<int64_t>(begin_frame));
+    if (!seeked) return std::unexpected(seeked.error());
 
-    SF_INFO out_info = src_info;
-    out_info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-    SNDFILE* dst = sf_open(out_path.c_str(), SFM_WRITE, &out_info);
-    if (!dst) {
-        sf_close(src);
+    auto writer = WavWriter::open_file(out_path, WavSampleFormat::Float32,
+                                       src_info.channels,
+                                       src_info.sample_rate);
+    if (!writer) {
         return std::unexpected("could not create output '" + out_path + "'");
     }
 
@@ -43,19 +38,18 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
     std::vector<float> buf(kChunk * static_cast<size_t>(src_info.channels));
     size_t remaining = end_frame - begin_frame;
     while (remaining > 0) {
-        sf_count_t want = static_cast<sf_count_t>(std::min(kChunk, remaining));
-        sf_count_t got  = sf_readf_float(src, buf.data(), want);
-        if (got <= 0) break;
-        if (sf_writef_float(dst, buf.data(), got) != got) {
-            sf_close(src);
-            sf_close(dst);
-            return std::unexpected("short write");
-        }
+        const int64_t want = static_cast<int64_t>(std::min(kChunk, remaining));
+        auto got_read = reader->read_frames(buf.data(), want);
+        if (!got_read) return std::unexpected(got_read.error());
+        const int64_t got = *got_read;
+        if (got != want) return std::unexpected("short read");
+        auto wrote = writer->write_frames(buf.data(), got);
+        if (!wrote) return std::unexpected("short write");
         remaining -= static_cast<size_t>(got);
     }
 
-    sf_close(src);
-    sf_close(dst);
+    auto closed = writer->close();
+    if (!closed) return std::unexpected("short write");
     return {};
 }
 

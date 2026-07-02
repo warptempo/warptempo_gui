@@ -431,9 +431,9 @@ void GuiTargetRender::cancel_for_load() {
     }
 
     // Worker is idle or running an archival render (whose RenderRequest
-    // has output_buffer == nullptr — archivals write to disk via
-    // libsndfile, not into a vector). Either way, no one is touching
-    // target_buffer; the synchronous clear is race-free.
+    // has output_buffer == nullptr, so archivals write to disk instead of a
+    // vector). Either way, no one is touching target_buffer; the synchronous
+    // clear is race-free.
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
     app.target_buffer_start_frame = 0;

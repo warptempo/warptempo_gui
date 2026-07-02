@@ -394,9 +394,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 // Trim-range filter (inclusive both ends — matches the
                 // post-pass at frame_map_build.cpp). Gates emission only; the segment
                 // above is already consumed.
-                const int64_t sf_abs = static_cast<int64_t>(
+                const int64_t source_frame_abs = static_cast<int64_t>(
                     std::nearbyint(g.time_seconds * sr_d));
-                if (sf_abs < trim_begin || sf_abs > trim_end) continue;
+                if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
 
                 GuiWarpMarker w = g;
                 w.time_seconds  =
@@ -424,12 +424,12 @@ RenderOutcome do_render(const RenderRequest& req,
                 warped_phase_resets.reserve(req.phase_resets.size());
                 for (const auto& t : req.phase_resets) {
                     if (t.disabled) continue;
-                    const int64_t sf_abs = static_cast<int64_t>(
+                    const int64_t source_frame_abs = static_cast<int64_t>(
                         std::nearbyint(t.time_seconds * sr_d));
-                    if (sf_abs < trim_begin || sf_abs > trim_end) continue;
+                    if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
                     const int64_t render_frame =
                         static_cast<int64_t>(std::llrint(map_source_to_target(
-                            static_cast<double>(sf_abs), real_map))) -
+                            static_cast<double>(source_frame_abs), real_map))) -
                         window_offset_samples;
                     GuiPhaseResetMarker w = t;
                     w.time_seconds = static_cast<double>(render_frame) / sr_d;

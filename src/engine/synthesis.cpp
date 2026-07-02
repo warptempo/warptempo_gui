@@ -1,6 +1,7 @@
 #include "synthesis.h"
 #include "peak_limiter.h"
 #include "profile_util.h"
+#include "wav_io.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -389,9 +390,9 @@ void Synthesis::synthesize_full(
     if (show_progress) std::cout << "\r" << pass_label << "100%\n";
 
     // Interleave the per-channel mono streams and emit in one write_cb call.
-    // All channels emit out_frames samples; the downstream write_cb
-    // (sf_writef / buffer-append / peak-limiter) is order-preserving and
-    // chunk-agnostic, so one big call is identical to the old per-frame calls.
+    // All channels emit out_frames samples; the downstream write_cb is
+    // order-preserving and chunk-agnostic, so one big call is identical to the
+    // old per-frame calls.
     int64_t t_write = 0;
     double wt_interleave_ms = 0.0;
     if (out_frames > 0) {
@@ -455,25 +456,21 @@ void Synthesis::synthesize_full(
 }
 
 void Synthesis::process(AudioSTFT& stft) {
-    SF_INFO tgt_info = stft.src_info;
-    tgt_info.format = SF_FORMAT_WAV |
-        (stft.limiter ? SF_FORMAT_PCM_24 : SF_FORMAT_FLOAT);
-
-    SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
-    if (!output_snd) {
+    const WavSampleFormat format =
+        stft.limiter ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
+    auto writer = WavWriter::open_file(stft.output_audio_file, format,
+                                       stft.src_info.channels,
+                                       stft.src_info.samplerate);
+    if (!writer) {
         std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
         return;
     }
 
-    // Byte-reproducible output: libsndfile stamps the float WAV PEAK chunk
-    // with wall-clock time(NULL), so two otherwise-identical float renders
-    // differ by that timestamp under literal cmp while the data chunk is
-    // bit-identical. Suppress the chunk. This is a no-op on the PCM_24 paths
-    // (integer WAV carries no PEAK chunk) and must precede any frame write.
-    sf_command(output_snd, SFC_SET_ADD_PEAK_CHUNK, NULL, SF_FALSE);
-
-    auto write_to_file = [output_snd](const float* buf, size_t n_frames) {
-        sf_writef_float(output_snd, buf, static_cast<sf_count_t>(n_frames));
+    bool write_ok = true;
+    auto write_to_file = [&writer, &write_ok](const float* buf, size_t n_frames) {
+        if (!write_ok) return;
+        auto ok = writer->write_frames(buf, static_cast<int64_t>(n_frames));
+        if (!ok) write_ok = false;
     };
 
     const std::string pass_label = stft.limiter
@@ -482,7 +479,17 @@ void Synthesis::process(AudioSTFT& stft) {
     synthesize_full(stft, write_to_file,
                     /*show_progress=*/true,
                     /*pass_label=*/pass_label.c_str());
-    sf_close(output_snd);
+    if (!write_ok) {
+        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        return;
+    }
+    // The in-tree writer emits no PEAK chunk, so float renders are
+    // byte-reproducible by construction.
+    auto closed = writer->close();
+    if (!closed) {
+        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        return;
+    }
 }
 
 void Synthesis::process_to_buffer(AudioSTFT& stft,
@@ -507,16 +514,25 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
 
 void Synthesis::write_render_to_file(AudioSTFT& stft,
                                      const std::vector<float>& render) {
-    SF_INFO tgt_info = stft.src_info;
-    tgt_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-    SNDFILE* output_snd = sf_open(stft.output_audio_file.c_str(), SFM_WRITE, &tgt_info);
-    if (!output_snd) {
+    auto writer = WavWriter::open_file(stft.output_audio_file,
+                                       WavSampleFormat::Pcm24,
+                                       stft.src_info.channels,
+                                       stft.src_info.samplerate);
+    if (!writer) {
         std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
         return;
     }
     const size_t total_frames = stft.channels > 0
         ? render.size() / static_cast<size_t>(stft.channels) : 0;
-    sf_writef_float(output_snd, render.data(),
-                    static_cast<sf_count_t>(total_frames));
-    sf_close(output_snd);
+    auto ok = writer->write_frames(render.data(),
+                                   static_cast<int64_t>(total_frames));
+    if (!ok) {
+        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        return;
+    }
+    ok = writer->close();
+    if (!ok) {
+        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        return;
+    }
 }

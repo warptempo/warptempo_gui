@@ -7,12 +7,11 @@
 #include <string>
 #include <vector>
 
-// The WAV boundary is kept in-tree so package-level libsndfile changes cannot
+// The WAV boundary is kept in-tree so package-level codec changes cannot
 // silently redefine source decode or deliverable bytes. Decode exposes
 // interleaved float32; PCM_24 uses the exact lattice in pcm24.h, while Float32
 // preserves source bits. Encode owns the same PCM_24 clip-and-round policy.
-// The writer emits a minimal spec-conformant layout; layout parity with the
-// incumbent libsndfile recipe is measured by the compare-encode test mode.
+// The writer emits a minimal spec-conformant layout.
 
 enum class WavSampleFormat { Pcm16, Pcm24, Float32 };
 
