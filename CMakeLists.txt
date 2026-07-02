@@ -71,6 +71,43 @@ target_link_libraries(warptempo_engine_lib PUBLIC
 )
 
 # ============================================================
+#  warptempo_audio_io — in-tree audio container/codec boundary.
+#  No external link dependencies; miniaudio is vendored here and used by the
+#  FLAC reader plus the GUI playback TU that includes its public header.
+# ============================================================
+add_library(warptempo_audio_io_lib STATIC
+    src/audio_io/miniaudio_impl.cpp
+    src/audio_io/pcm24.cpp
+    src/audio_io/wav_io.cpp
+    src/audio_io/flac_io.cpp
+    src/audio_io/audio_probe.cpp
+)
+target_include_directories(warptempo_audio_io_lib
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src/audio_io
+)
+set_target_properties(warptempo_audio_io_lib PROPERTIES OUTPUT_NAME warptempo_audio_io)
+
+# miniaudio is vendored third-party C. Suppress the warnings that its macro
+# soup trips — only on its dedicated implementation TU, so our own code stays
+# under -Wall -Wextra.
+set_source_files_properties(src/audio_io/miniaudio_impl.cpp PROPERTIES
+    COMPILE_FLAGS "-w")
+
+add_executable(warptempo_audio_io_test
+    src/audio_io/test_main.cpp
+)
+target_include_directories(warptempo_audio_io_test PRIVATE
+    ${SNDFILE_INCLUDE_DIRS}
+)
+# Temporary libsndfile linkage: the comparison modes measure the in-tree codec
+# against the incumbent reader/writer while both are still available.
+target_link_libraries(warptempo_audio_io_test PRIVATE
+    warptempo_audio_io_lib
+    ${SNDFILE_LIBRARIES}
+)
+
+# ============================================================
 #  warptempo_gui — Cairo/Wayland front end (optional).
 #  All GUI platform dependency discovery lives inside this guard so a
 #  libraries-only build needs none of these packages present.
@@ -157,13 +194,13 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/input_render_dispatch.cpp
         src/gui/input_pointer.cpp
         src/gui/input_key_dispatch.cpp
-        src/gui/miniaudio_impl.cpp
         ${WAYLAND_GENERATED_SOURCES}
     )
     target_include_directories(warptempo_gui PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/src/engine
+        ${CMAKE_SOURCE_DIR}/src/audio_io
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
@@ -176,6 +213,7 @@ if(WARPTEMPO_BUILD_GUI)
     target_link_libraries(warptempo_gui PRIVATE
         warptempo_parser_lib
         warptempo_engine_lib
+        warptempo_audio_io_lib
         ${WAYLAND_CLIENT_LIBRARIES}
         ${WAYLAND_CURSOR_LIBRARIES}
         ${XKBCOMMON_LIBRARIES}
@@ -187,12 +225,6 @@ if(WARPTEMPO_BUILD_GUI)
         dl
         m
     )
-
-    # miniaudio is vendored third-party C. Suppress the warnings that its macro
-    # soup trips — only on its dedicated implementation TU, so our own code stays
-    # under -Wall -Wextra.
-    set_source_files_properties(src/gui/miniaudio_impl.cpp PROPERTIES
-        COMPILE_FLAGS "-w")
 endif()
 
 # ============================================================
@@ -241,7 +273,12 @@ endif()
 # engine's PGHI hot path and the parser's frame-map math must compile under the
 # same -O3 -march=native the monolith used. warptempo_gui is appended only when
 # the GUI is being built.
-set(WARPTEMPO_OPT_TARGETS warptempo_parser_lib warptempo_engine_lib)
+set(WARPTEMPO_OPT_TARGETS
+    warptempo_parser_lib
+    warptempo_engine_lib
+    warptempo_audio_io_lib
+    warptempo_audio_io_test
+)
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
 endif()
