@@ -67,11 +67,11 @@ target_link_libraries(warptempo_engine_lib PUBLIC
 
 # ============================================================
 #  warptempo_audio_io — in-tree audio container/codec boundary.
-#  No external link dependencies; miniaudio is vendored here and used by the
-#  FLAC reader plus the GUI playback TU that includes its public header.
+#  No external link dependencies; dr_flac is vendored here for FLAC bitstream
+#  decode only. Container probing and WAV handling are in-tree.
 # ============================================================
 add_library(warptempo_audio_io_lib STATIC
-    src/audio_io/miniaudio_impl.cpp
+    src/audio_io/dr_flac_impl.cpp
     src/audio_io/pcm24.cpp
     src/audio_io/wav_io.cpp
     src/audio_io/flac_io.cpp
@@ -84,10 +84,9 @@ target_include_directories(warptempo_audio_io_lib
 )
 set_target_properties(warptempo_audio_io_lib PROPERTIES OUTPUT_NAME warptempo_audio_io)
 
-# miniaudio is vendored third-party C. Suppress the warnings that its macro
-# soup trips — only on its dedicated implementation TU, so our own code stays
-# under -Wall -Wextra.
-set_source_files_properties(src/audio_io/miniaudio_impl.cpp PROPERTIES
+# dr_flac is vendored third-party C. Suppress warnings only on its dedicated
+# implementation TU, so our own code stays under -Wall -Wextra.
+set_source_files_properties(src/audio_io/dr_flac_impl.cpp PROPERTIES
     COMPILE_FLAGS "-w")
 
 add_executable(warptempo_audio_io_test

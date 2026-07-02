@@ -1,6 +1,6 @@
 #include "audio_reader.h"
 
-#include "miniaudio.h"
+#include "dr_flac.h"
 #include "wav_io.h"
 
 #include <algorithm>
@@ -16,7 +16,7 @@ namespace {
 // flac_probe admits at most 24 significant bits.
 constexpr float kFlacS32Scale = 1.0f / 2147483648.0f;
 
-void flac_s32_to_float(const ma_int32* in, float* out, size_t samples)
+void flac_s32_to_float(const drflac_int32* in, float* out, size_t samples)
 {
     for (size_t i = 0; i < samples; ++i) {
         out[i] = static_cast<float>(in[i]) * kFlacS32Scale;
@@ -24,33 +24,28 @@ void flac_s32_to_float(const ma_int32* in, float* out, size_t samples)
 }
 
 struct FlacDecoder {
-    ma_decoder decoder{};
-    bool initialized = false;
+    drflac* handle = nullptr;
 
     FlacDecoder() = default;
     FlacDecoder(const FlacDecoder&) = delete;
     FlacDecoder& operator=(const FlacDecoder&) = delete;
     FlacDecoder(FlacDecoder&& other) noexcept
+        : handle(other.handle)
     {
-        decoder = other.decoder;
-        initialized = other.initialized;
-        other.decoder = {};
-        other.initialized = false;
+        other.handle = nullptr;
     }
     FlacDecoder& operator=(FlacDecoder&& other) noexcept
     {
         if (this == &other) return *this;
-        if (initialized) ma_decoder_uninit(&decoder);
-        decoder = other.decoder;
-        initialized = other.initialized;
-        other.decoder = {};
-        other.initialized = false;
+        if (handle) drflac_close(handle);
+        handle = other.handle;
+        other.handle = nullptr;
         return *this;
     }
 
     ~FlacDecoder()
     {
-        if (initialized) ma_decoder_uninit(&decoder);
+        if (handle) drflac_close(handle);
     }
 };
 
@@ -103,8 +98,8 @@ public:
         if (frame < 0 || frame > info_.frames) {
             return std::unexpected("invalid FLAC frame range");
         }
-        if (ma_decoder_seek_to_pcm_frame(
-                &decoder_.decoder, static_cast<ma_uint64>(frame)) != MA_SUCCESS) {
+        if (!drflac_seek_to_pcm_frame(
+                decoder_.handle, static_cast<drflac_uint64>(frame))) {
             return std::unexpected("failed to seek FLAC file");
         }
         return {};
@@ -124,13 +119,11 @@ public:
             return std::unexpected("FLAC read is too large");
         }
 
-        std::vector<ma_int32> s32(static_cast<size_t>(samples));
-        ma_uint64 got = 0;
-        const ma_result rc = ma_decoder_read_pcm_frames(
-            &decoder_.decoder, s32.data(), static_cast<ma_uint64>(frames), &got);
-        if (rc != MA_SUCCESS && rc != MA_AT_END) {
-            return std::unexpected("failed to read FLAC data");
-        }
+        std::vector<drflac_int32> s32(static_cast<size_t>(samples));
+        // dr_flac returns the frames decoded. A short read is end-of-stream or
+        // decode failure; full-file callers verify the count they requested.
+        const drflac_uint64 got = drflac_read_pcm_frames_s32(
+            decoder_.handle, static_cast<drflac_uint64>(frames), s32.data());
         const size_t got_samples =
             static_cast<size_t>(got) * static_cast<size_t>(info_.channels);
         flac_s32_to_float(s32.data(), out, got_samples);
@@ -157,14 +150,9 @@ AudioReader::open(const std::string& path)
 
     AudioReader out;
     if (probed->kind == AudioFileKind::Flac) {
-        ma_decoder_config config = ma_decoder_config_init(ma_format_s32, 0, 0);
-        config.encodingFormat = ma_encoding_format_flac;
-
         FlacDecoder decoder;
-        const ma_result rc =
-            ma_decoder_init_file(path.c_str(), &config, &decoder.decoder);
-        if (rc != MA_SUCCESS) return std::unexpected("failed to open FLAC file");
-        decoder.initialized = true;
+        decoder.handle = drflac_open_file(path.c_str(), nullptr);
+        if (!decoder.handle) return std::unexpected("failed to open FLAC file");
         out.impl_ = std::make_unique<FlacAudioReader>(std::move(decoder), *probed);
     } else {
         auto reader = WavReader::open(path);
