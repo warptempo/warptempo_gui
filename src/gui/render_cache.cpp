@@ -718,7 +718,7 @@ void RenderCache::start_writer_job(WriterJob job) {
 
             if (job.prof) {
                 const auto t1 = profile::now();
-                // For float-master jobs, this elapsed time includes the
+                // For target-sample jobs, this elapsed time includes the
                 // writer-thread PCM_24 encode before the disk write.
                 std::fprintf(stderr,
                     "[profile] cache_insert enabled=yes inserted=yes tier=disk ms=%.3f frames=%lld bytes=%llu\n",
@@ -734,7 +734,7 @@ void RenderCache::start_writer_job(WriterJob job) {
                                        job.sample_rate, encoded)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render-cache insert dropped: failed to "
-                    "encode target float master as canonical PCM_24 wav\n");
+                    "encode target samples as canonical PCM_24 wav\n");
                 return;
             }
             job.samples.clear();
@@ -752,7 +752,7 @@ void RenderCache::start_writer_job(WriterJob job) {
                                                  job.sample_rate);
                 if (job.prof && inserted) {
                     const auto t1 = profile::now();
-                    // For float-master jobs, this elapsed time includes the
+                    // For target-sample jobs, this elapsed time includes the
                     // writer-thread PCM_24 encode before tier registration.
                     std::fprintf(stderr,
                         "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",

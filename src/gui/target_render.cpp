@@ -112,10 +112,10 @@ void GuiTargetRender::dispatch_render_now() {
     // when the worker is idle, so the GUI thread exclusively owns
     // target_buffer and can fill it from the cache without racing the worker.
     // The fingerprint covers the same engine input build_render_request packs
-    // below. Target view is intentionally dual-provenance: a fresh render
-    // plays the limiter's float master, while cache and artifact hits play
-    // deliverable-lattice values. That difference is below -134 dBFS; avoiding
-    // completion-path encode latency keeps trim-edit target refreshes fast.
+    // below. Every target-view source carries identical deliverable-lattice
+    // samples: fresh limited renders quantize in place at publication, cache
+    // hits decode the exact codec roundtrip of those samples, and archival
+    // artifact loads decode the same deliverable.
     RenderFileIdentity source_identity;
     if (stat_file_identity(app.source_audio_path, source_identity)) {
         last_fingerprint_ = render_fingerprint(
@@ -142,11 +142,10 @@ void GuiTargetRender::dispatch_render_now() {
         const std::string artifact_candidate =
             compose_sibling_output_path(app.source_audio_path,
                                         app.engine_settings).string();
-        // This rung auditions the actual archival deliverable. Target view is
-        // intentionally dual-provenance: fresh limited renders play the float
-        // master, while artifact-born and cache-born target audio are decoded
-        // from deliverable bytes. The delta is below -134 dBFS, and this keeps
-        // the trim-edit fast lane from waiting on PCM_24 encode work.
+        // This rung auditions the actual archival deliverable. Fresh renders,
+        // cache hits, and archival artifact loads all expose identical
+        // deliverable-lattice samples because fresh limited renders quantize
+        // in place before cache publication and the codec roundtrip is exact.
         if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
             read_wav_to_float(artifact_candidate, audio.channels(),
                               audio.sample_rate(), app.target_buffer)) {

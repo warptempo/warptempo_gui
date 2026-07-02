@@ -86,8 +86,9 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded
 // exactly once: PCM_24 when the limiter produced them, or float wav on the
 // limiter-off fallback path. Those routes have separate fingerprints. For
-// target-route float masters, that single PCM_24 encode runs on the writer
-// thread so render completion never waits for it. The in-tree encode/decode
+// target-route buffers, limited masters arrive pre-quantized, so that single
+// PCM_24 writer-thread encode is an exact re-expression rather than a lossy
+// step and render completion never waits for it. The in-tree encode/decode
 // pair is roundtrip-exact over the full 24-bit lattice; byte-canonical entries
 // are still retained because byte copies are conversion-free by construction,
 // publishes stay zero-work, and PCM_24 blobs are smaller than float buffers.
@@ -151,13 +152,14 @@ public:
                 const std::vector<char>& wav_blob,
                 int channels, int sample_rate, int64_t frame_count);
 
-    // Insert a freshly rendered float master. The samples are copied into
-    // a writer-thread job and encoded to the canonical PCM_24 wav blob
-    // there, so the caller (the render worker's completion path) never
-    // waits on the encode; routing to the RAM or disk tier happens after
-    // the encode under the usual mutex. A lookup that lands before the
-    // encode finishes misses benignly and re-renders. Encode failure
-    // drops the entry with one stderr line.
+    // Insert freshly rendered target-route samples. On the limited route they
+    // are already on the PCM_24 deliverable lattice. The samples are copied
+    // into a writer-thread job and encoded to the canonical PCM_24 wav blob
+    // there, so the caller (the render worker's completion path) never waits
+    // on the encode; routing to the RAM or disk tier happens after the encode
+    // under the usual mutex. A lookup that lands before the encode finishes
+    // misses benignly and re-renders. Encode failure drops the entry with one
+    // stderr line.
     void insert_master_floats(const std::vector<uint8_t>& fingerprint,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,

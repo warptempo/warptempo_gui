@@ -99,10 +99,12 @@ struct RenderRequest {
     // write (.warpmarkers / .phaseresetmarkers / .rendersettings /
     // .renderwarpmarkers / .renderphaseresetmarkers). The limited chain
     // (spectral + peak backstop) runs in place on this buffer whenever the
-    // global `limiter` toggle is on, exactly as on the disk path. Defaults
-    // to nullptr; the existing wav-to-disk path is taken when null. Reserved
-    // for target-view target rendering; not authoring-facing. Non-wav
-    // output_format branches silently ignore this field.
+    // global `limiter` toggle is on, exactly as on the disk path; on that
+    // limited route, the buffer is quantized to the deliverable PCM_24 lattice
+    // in place after the limited chain. Defaults to nullptr; the existing
+    // wav-to-disk path is taken when null. Reserved for target-view target
+    // rendering; not authoring-facing. Non-wav output_format branches
+    // silently ignore this field.
     std::vector<float>* output_buffer = nullptr;
 
     // Batch render output. When `batch_folder` is non-empty, do_render

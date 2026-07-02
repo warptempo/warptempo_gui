@@ -16,6 +16,7 @@
 #include "source_sample_cache.h"
 
 #include "audio_probe.h"
+#include "pcm24.h"
 
 #include <algorithm>
 #include <atomic>
@@ -664,10 +665,18 @@ RenderOutcome do_render(const RenderRequest& req,
             return handle_eng(er);
         }
         if (req.output_buffer && ep.limiter) {
-            // Target playback keeps the limiter's float master. The
-            // deliverable-domain cache copy is encoded exactly once,
-            // asynchronously inside RenderCache, so the completion path does
-            // not round-trip the buffer through PCM_24.
+            // Target playback auditions the deliverable lattice. A fresh
+            // limited master is snapped to PCM_24 in place before publication,
+            // so fresh renders, cache hits, and archival-artifact loads carry
+            // sample-identical target-view audio. This is one linear scan on
+            // the render worker thread, negligible next to synthesis; the
+            // writer thread then encodes the already-quantized buffer exactly
+            // by the codec's roundtrip identity, so the cache blob decodes
+            // back to these floats. Limiter-off target renders skip this
+            // branch because their float wav deliverable needs no PCM_24 snap.
+            for (float& sample : *req.output_buffer) {
+                sample = pcm24_quantize(sample);
+            }
             const int64_t inserted_frames = src_ch > 0
                 ? static_cast<int64_t>(req.output_buffer->size() /
                                        static_cast<size_t>(src_ch))
