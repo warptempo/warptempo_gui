@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
+#include <thread>
 #include <type_traits>
 
 // Implementation notes
@@ -76,6 +77,13 @@ struct GuiPlayback::Impl {
     // thread picks it up at the top of its next fill to reseat
     // fractional_cursor without a lock. -1 sentinel means "no pending".
     std::atomic<int64_t> pending_start{-1};
+
+    // Incremented once at the end of every process callback invocation,
+    // playing or silent. stop() uses it as a quiescence fence: after the
+    // playing flag is lowered, observing two further increments proves any
+    // callback that could have seen playing == true has exited, so the
+    // borrowed sample buffer is no longer being read by the audio thread.
+    std::atomic<uint64_t> process_cycles{0};
 };
 
 // Copy N output frames at the current speed, advancing the cursor. Stops
@@ -160,7 +168,7 @@ void fill_output(GuiPlayback::Impl& impl,
     if (new_cur > total) new_cur = total;
     impl.cursor.store(new_cur, std::memory_order_relaxed);
     if (natural_end) {
-        impl.playing.store(false, std::memory_order_relaxed);
+        impl.playing.store(false, std::memory_order_release);
     }
 }
 
@@ -190,10 +198,12 @@ int process_callback(jack_nframes_t nframes, void* arg) {
         for (int c = 0; c < channel_count; ++c) {
             std::memset(channel_buffers[c], 0, sizeof(float) * nframes);
         }
+        impl->process_cycles.fetch_add(1, std::memory_order_release);
         return 0;
     }
 
     fill_output(*impl, channel_buffers.data(), nframes, channel_count);
+    impl->process_cycles.fetch_add(1, std::memory_order_release);
     return 0;
 }
 
@@ -207,6 +217,7 @@ void clear_after_failed_init(GuiPlayback::Impl& impl) {
     impl.ports.fill(nullptr);
     impl.samples      = nullptr;
     impl.total_frames = 0;
+    impl.process_cycles.store(0, std::memory_order_relaxed);
 }
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
@@ -227,6 +238,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     impl_->speed_x1000.store(1000, std::memory_order_relaxed);
     impl_->playing.store(false, std::memory_order_relaxed);
     impl_->pending_start.store(-1, std::memory_order_relaxed);
+    impl_->process_cycles.store(0, std::memory_order_relaxed);
     impl_->fractional_cursor = 0.0;
     impl_->jack_rate.store(0, std::memory_order_relaxed);
     impl_->ports.fill(nullptr);
@@ -395,7 +407,30 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->client_active) return;
-    impl_->playing.store(false, std::memory_order_relaxed);
+    impl_->playing.store(false, std::memory_order_seq_cst);
+    // Quiescence fence. At most one process callback is in flight at a
+    // time. One increment after the store retires the callback that may
+    // have loaded playing before the store became visible; a second
+    // increment proves a full callback ran start-to-finish after that
+    // straggler exited, and its release increment paired with our
+    // acquire loads orders all of its buffer reads before anything the
+    // caller mutates after stop() returns. Bounded by ~2 JACK periods.
+    // The timeout covers a stalled or dead server (callbacks stop
+    // arriving); proceeding after a warning beats hanging the GUI.
+    const uint64_t c0 =
+        impl_->process_cycles.load(std::memory_order_acquire);
+    const auto deadline = std::chrono::steady_clock::now()
+                          + std::chrono::milliseconds(250);
+    while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
+        if (std::chrono::steady_clock::now() >= deadline) {
+            std::fprintf(stderr,
+                "warptempo_gui: JACK process callback did not quiesce "
+                "within 250 ms; proceeding. Buffer operations after this "
+                "stop may race a stalled callback.\n");
+            return;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }
 
 void GuiPlayback::set_speed(float speed) {
@@ -444,9 +479,9 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
         impl_->total_frames = total_frames;
         return;
     }
-    // Caller invariant: the device must be stopped before rebind. Crashing
-    // the audio callback on a mid-flight pointer swap would be silent
-    // corruption; assert loudly so the broken caller is found.
+    // Caller invariant: the device must be fenced by stop() before rebind.
+    // This flag check is defense in depth for skipped stops; a mid-flight
+    // pointer swap would be silent corruption.
     if (impl_->playing.load(std::memory_order_relaxed)) {
         std::fprintf(stderr,
             "warptempo_gui: rebind_buffer called while playing — refusing "

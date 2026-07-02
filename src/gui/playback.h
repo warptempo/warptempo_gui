@@ -70,8 +70,12 @@ public:
     // already playing — the previous run is torn down cleanly first.
     void play(int64_t start_sample, int64_t end_sample);
 
-    // Stop playback immediately. The cursor retains its last value so the
-    // main thread can snapshot where it stopped.
+    // Stop playback and block until any in-flight audio callback has exited,
+    // normally within about two JACK periods. If callbacks stop arriving
+    // because the server is stalled or dead, warns to stderr and returns after
+    // 250 ms. Safe to call when not playing; it still fences. Main thread only.
+    // The cursor retains its last value so the main thread can snapshot where
+    // it stopped.
     void stop();
 
     // Clamp to [0.10, 1.00] and publish to the audio thread. The change
@@ -91,12 +95,12 @@ public:
     int64_t cursor()     const;
 
     // Swap the borrowed sample buffer pointer without tearing down the
-    // device. Asserts the device is currently stopped (callers must call
-    // stop() first and verify is_playing() is false). The new buffer must
-    // match the sample rate and channel count the device was init()'d with
-    // — only `samples` and `total_frames` change. The cursor is reset to
-    // 0; the end_sample is reset to 0 so the next play() supplies a fresh
-    // range. Used by the target render to rebind playback to the
+    // device. Caller must call stop() first; stop() returns only after the
+    // audio callback has quiesced, so the swap cannot race the callback. The
+    // new buffer must match the sample rate and channel count the device was
+    // init()'d with — only `samples` and `total_frames` change. The cursor is
+    // reset to 0; the end_sample is reset to 0 so the next play() supplies a
+    // fresh range. Used by the target render to rebind playback to the
     // freshly-rendered target_buffer, and to swap back to source.wav
     // when leaving target view.
     void rebind_buffer(const float* samples, int64_t total_frames);
