@@ -263,8 +263,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         apply_peak_backstop(audio_stft, buf);      // peak 0 net
         if (!p.output_buffer) {
             synthesis.write_render_to_file(audio_stft, render_buf);  // plain write
-            if (p.disk_publish_buffer_out)
-                *p.disk_publish_buffer_out = std::move(render_buf);
         }
         auto t_p3_1 = profile::now();
         p3_ms = profile::ms(t_p3_0, t_p3_1);

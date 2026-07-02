@@ -40,23 +40,22 @@ std::vector<uint8_t> render_fingerprint(
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 
-// Writes interleaved float32 samples as a wav (SF_FORMAT_WAV |
-// SF_FORMAT_FLOAT, one sf_writef_float pass). This is the cache-ENTRY
-// writer only: entries deliberately store the unquantized float master so
-// target-view reuse round-trips exactly. It is not a mirror of the engine's
-// archival writer — see write_archival_wav_pcm24 for that.
-bool write_float_wav(const std::string& path,
-                     const std::vector<float>& samples,
-                     int channels, int sample_rate);
+// Quantizes interleaved float32 samples to the 24-bit deliverable
+// domain in place, via an in-memory libsndfile round trip (virtual-IO
+// write as SF_FORMAT_WAV | SF_FORMAT_PCM_24, then read back with
+// sf_readf_float). Using libsndfile's own conversion pair makes the
+// result exact-by-construction against the engine's archival writer
+// with no internals to keep in lockstep. Deterministic; returns false
+// and leaves samples untouched on any libsndfile failure.
+bool quantize_to_pcm24_domain(std::vector<float>& samples,
+                              int channels, int sample_rate);
 
-// Mirror of the engine's archival writer (synthesis.cpp
-// write_render_to_file): SF_FORMAT_WAV | SF_FORMAT_PCM_24, one
-// sf_writef_float pass, no sf_command calls, letting libsndfile perform
-// the deterministic float-to-24-bit conversion. Used ONLY for cache-hit
-// archival publishes so a reused render is byte-identical to an engine
-// publish. Must stay in lockstep with the frozen engine writer; if that
-// writer ever changes under an architect-approved unfreeze, this changes
-// with it.
+// Writes deliverable-domain interleaved float32 samples as a 24-bit archival
+// wav (SF_FORMAT_WAV | SF_FORMAT_PCM_24, one sf_writef_float pass, no
+// sf_command calls). This is the single wav writer for disk cache entries and
+// cache-hit archival publishes. Limited-chain callers pass PCM_24 lattice
+// values already decoded to float32; limiter-off callers use a separate
+// fingerprint and pass clean floats for the fallback 32-bit-float domain.
 bool write_archival_wav_pcm24(const std::string& path,
                               const std::vector<float>& samples,
                               int channels, int sample_rate);
@@ -83,12 +82,14 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint);
 
 // Two-tier store for rendered target-view and archival audio, keyed by
-// render_fingerprint. The RAM tier serves short live target-view renders.
-// The disk tier is uncapped per entry and LRU-bounded at 10 GiB, so
-// full-movement renders can be reused without monopolizing RAM. The store is
-// process-local: the disk directory is removed at shutdown and dead-PID
-// orphan directories are swept at init. Every public method is a no-op /
-// miss when the store could not initialize (no cache home, unmakeable
+// render_fingerprint. Entries store the deliverable-domain signal: with the
+// limiter on, PCM_24 lattice values carried in float32; with the limiter off,
+// clean floats under a separate fingerprint. The RAM tier serves short live
+// target-view renders. The disk tier is uncapped per entry and LRU-bounded at
+// 10 GiB, so full-movement renders can be reused without monopolizing RAM. The
+// store is process-local: the disk directory is removed at shutdown and
+// dead-PID orphan directories are swept at init. Every public method is a
+// no-op / miss when the store could not initialize (no cache home, unmakeable
 // directory), so callers need no special-casing.
 //
 // Every public method is thread-safe; callers need no external locking. A

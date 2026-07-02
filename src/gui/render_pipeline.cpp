@@ -310,11 +310,13 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
         }
 
-        // Rung: render cache. A buffer-born hit; its byte-identity to an
-        // engine publish rests on write_archival_wav_pcm24 mirroring the
-        // engine's own archival writer exactly. req.render_cache is null
-        // only defensively (the GUI always populates it); a null cache
-        // simply skips this rung.
+        // Rung: render cache. A deliverable-domain hit re-encodes through the
+        // same PCM24 writer used for disk cache entries. Limited-cache floats
+        // are already exact PCM_24 lattice values, so the encode is the
+        // deterministic inverse of the decode. Copying disk-entry files
+        // directly would save only a marginal encode while widening the cache
+        // API surface. req.render_cache is null only defensively (the GUI
+        // always populates it); a null cache simply skips this rung.
         std::vector<float> cached_samples;
         if (req.render_cache &&
             req.render_cache->lookup(fingerprint, source_channels_probe,
@@ -464,16 +466,10 @@ RenderOutcome do_render(const RenderRequest& req,
         // Output sink: when a caller-owned buffer was supplied, route
         // synthesis to it (no on-disk staging, no rename, no sidecars).
         // Otherwise the existing wav-on-disk path with atomic rename runs.
-        // render_buf stays empty unless the limited chain runs on the disk
-        // path (limiter on, no output_buffer); that is the only case the
-        // engine's internal publish buffer is available to hand to the
-        // render cache below.
-        std::vector<float> render_buf;
         if (req.output_buffer) {
             ep.output_buffer = req.output_buffer;
         } else {
-            ep.output_audio_path      = staging_output_path;
-            ep.disk_publish_buffer_out = &render_buf;
+            ep.output_audio_path = staging_output_path;
         }
         // Trim is a parser-side slice of the full untrimmed map, not an engine
         // window. When a bound is set, hand the engine the re-anchored
@@ -521,6 +517,13 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return handle_eng(er);
         }
+        if (req.output_buffer && ep.limiter &&
+            !quantize_to_pcm24_domain(*req.output_buffer, src_ch, src_sr)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: failed to quantize target "
+                "buffer to PCM24 deliverable domain; cache reuse may not be "
+                "byte-identical for this render\n");
+        }
 
         // Atomic publish: staging → final. Buffer path skips this — the
         // synthesised audio already landed in *req.output_buffer.
@@ -541,24 +544,34 @@ RenderOutcome do_render(const RenderRequest& req,
                     "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
                     final_output_path.c_str());
             }
-            // Populate the render cache from the buffer the limited chain
-            // just published, so a later Ctrl+Alt+R / batch entry / bare t
-            // with the same fingerprint can reuse it via the rungs above.
-            // The insert races nothing: the rename above already landed,
-            // the cache's writer thread copies its own job data, and a
-            // concurrent lookup that misses because the write hasn't landed
-            // yet simply re-renders. req.render_cache is null only
-            // defensively (the GUI always populates it); skip the insert then.
-            if (req.render_cache && !fingerprint.empty() && !render_buf.empty()) {
+            // Populate the render cache by reading the just-published wav back
+            // into the same float container used by cache hits and target view.
+            // The read is page-cache-hot and captures the deliverable domain:
+            // PCM_24 lattice values when limited, clean floats when limiter-off.
+            // The insert races nothing: the rename above already landed, the
+            // cache's writer thread copies its own job data, and a concurrent
+            // lookup that misses because the write hasn't landed yet simply
+            // re-renders. req.render_cache is null only defensively (the GUI
+            // always populates it); skip the insert then.
+            if (req.render_cache && !fingerprint.empty()) {
+                std::vector<float> render_buf;
+                if (!read_wav_to_float(final_output_path, src_ch, src_sr,
+                                       render_buf)) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: render warning: failed to read "
+                        "published wav back into render cache from '%s'\n",
+                        final_output_path.c_str());
+                    render_buf.clear();
+                }
                 const int64_t inserted_frames = src_ch > 0
                     ? static_cast<int64_t>(render_buf.size() /
                                            static_cast<size_t>(src_ch))
                     : 0;
-                req.render_cache->insert(fingerprint, render_buf, src_ch,
-                                         src_sr, inserted_frames);
+                if (inserted_frames > 0) {
+                    req.render_cache->insert(fingerprint, render_buf, src_ch,
+                                             src_sr, inserted_frames);
+                }
             }
-            // else: limiter off, the engine streamed straight to disk and
-            // no publish buffer exists to cache.
         }
     } else {
         // output_format == "framemap" or "tempomap". No engine, no limiter.

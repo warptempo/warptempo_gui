@@ -139,12 +139,12 @@ void GuiTargetRender::dispatch_render_now() {
         const std::string artifact_candidate =
             compose_sibling_output_path(app.source_audio_path,
                                         app.engine_settings).string();
-        // This rung auditions the actual 24-bit archival deliverable. It
-        // differs from the float-master render only below -134 dBFS, and
-        // hearing the release artifact is the intent, not an approximation of
-        // it. The artifact-born buffer must never enter RenderCache: cache
-        // entries store the unquantized float master by contract, and this
-        // branch returns before worker completion, where all insert sites live.
+        // This rung auditions the actual archival deliverable. Artifact-born,
+        // cache-born, and render-born target audio are the same signal: the
+        // limited path carries PCM_24 lattice values in float32, and limiter-
+        // off uses a separate clean-float fingerprint. The artifact is already
+        // the persistent copy for this render, so inserting it into RenderCache
+        // would only duplicate storage.
         if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
             read_wav_to_float(artifact_candidate, audio.channels(),
                               audio.sample_rate(), app.target_buffer)) {
@@ -244,11 +244,11 @@ void GuiTargetRender::complete_successful_buffer(
     // (0, or the trim-mapped anchor). SoT helper, shared with ensure_ready's
     // clean rebind so a cached re-entry matches.
     recompute_target_buffer_start_frame();
-    // Store freshly rendered float masters under the fingerprint computed at
-    // dispatch, so a later undo/redo back to this exact engine input serves it
-    // instead of re-synthesizing. Cached regardless of the current view: the
-    // audio is valid for this input even if a view flip means we skip the
-    // rebind below. insert() copies; target_buffer stays owned here.
+    // Store freshly rendered deliverable-domain audio under the fingerprint
+    // computed at dispatch, so a later undo/redo back to this exact engine
+    // input serves it instead of re-synthesizing. Cached regardless of the
+    // current view: the audio is valid for this input even if a view flip means
+    // we skip the rebind below. insert() copies; target_buffer stays owned here.
     if (insert_fresh_render_into_cache &&
         app.target_buffer_frames > 0 && !last_fingerprint_.empty()) {
         render_cache.insert(last_fingerprint_, app.target_buffer,
