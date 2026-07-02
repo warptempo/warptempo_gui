@@ -126,6 +126,9 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // writer before cmp baselines are refreshed.
 constexpr uint32_t kFingerprintVersion = 2;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
+// The sidecar_layout line versions the on-disk text container of the sidecar
+// file itself. The fingerprint content version is serialized inside the
+// fingerprint payload by render_fingerprint.
 constexpr uint32_t kSidecarVersion     = 1;
 constexpr char     kSidecarExtension[] = ".fingerprint";
 
@@ -249,7 +252,7 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
     data.reserve(128 + fingerprint.size() * 2);
     data += kSidecarMagic;
     data += '\n';
-    data += "version=";
+    data += "sidecar_layout=";
     data += std::to_string(kSidecarVersion);
     data += '\n';
     data += "size=";
@@ -307,7 +310,7 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
     if (!in.eof()) return false;
     if (lines.size() != 5) return false;
     if (lines[0] != kSidecarMagic) return false;
-    if (lines[1] != "version=1") return false;
+    if (lines[1] != "sidecar_layout=1") return false;
 
     uint64_t recorded_size = 0;
     int64_t recorded_mtime = 0;
