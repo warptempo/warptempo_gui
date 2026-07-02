@@ -6,7 +6,10 @@
 
 class Synthesis {
 public:
-    void process(AudioSTFT& stft);
+    // Returns true only when the output wav was opened, fully written, and
+    // successfully closed; false means the on-disk file must not be trusted or
+    // published.
+    bool process(AudioSTFT& stft);
 
     // Sibling of process() that routes OLA output to a caller-owned
     // interleaved-float vector instead of an on-disk wav. Same OLA driver
@@ -21,7 +24,10 @@ public:
     // where Pass 2 rendered into memory and Pass 3 ran the limited chain on that
     // buffer. Plain buffer-to-file write — no limiter here. Output format is
     // 24-bit PCM (matches the limiter-on format decision in process()).
-    void write_render_to_file(AudioSTFT& stft, const std::vector<float>& render);
+    // Returns true only when the output wav was opened, fully written, and
+    // successfully closed; false means the on-disk file must not be trusted or
+    // published.
+    bool write_render_to_file(AudioSTFT& stft, const std::vector<float>& render);
 
     // Shared synthesis helper. Runs full OLA synthesis from frame 0. The
     // per-channel mono streams are interleaved after the channel threads join

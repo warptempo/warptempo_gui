@@ -220,7 +220,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     } else if (limited) {
         synthesis.process_to_buffer(audio_stft, &render_buf);
     } else {
-        synthesis.process(audio_stft);            // None -> 32-bit float, clean
+        if (!synthesis.process(audio_stft)) {     // None -> 32-bit float, clean
+            std::cerr << "  ! render failed: output write error '"
+                      << audio_stft.output_audio_file << "'\n";
+            audio_stft.cleanup();
+            return EngineResult::Failed;
+        }
     }
     auto t_p2_1 = profile::now();
     p2_ms = profile::ms(t_p2_0, t_p2_1);
@@ -262,7 +267,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         }
         apply_peak_backstop(audio_stft, buf);      // peak 0 net
         if (!p.output_buffer) {
-            synthesis.write_render_to_file(audio_stft, render_buf);  // plain write
+            if (!synthesis.write_render_to_file(audio_stft, render_buf)) {  // plain write
+                std::cerr << "  ! render failed: output write error '"
+                          << audio_stft.output_audio_file << "'\n";
+                audio_stft.cleanup();
+                return EngineResult::Failed;
+            }
         }
         auto t_p3_1 = profile::now();
         p3_ms = profile::ms(t_p3_0, t_p3_1);
