@@ -131,25 +131,29 @@ void GuiTargetRender::dispatch_render_now() {
         // Hit: target_buffer now holds the cached audio. Mirror
         // on_render_done()'s Success tail with no async render; in_flight_
         // stays false since no worker round trip is pending.
-        const int ch = audio.channels();
-        app.target_buffer_frames = (ch > 0)
-            ? static_cast<int64_t>(app.target_buffer.size() /
-                                   static_cast<size_t>(ch))
-            : 0;
-        recompute_target_buffer_start_frame();
-        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
-            app.target_buffer_frames > 0) {
-            playback.rebind_buffer(app.target_buffer.data(),
-                                   app.target_buffer_frames);
-            is_dirty_ = false;
-        }
-        // trigger() set "updating..." before calling us. Match
-        // finalize_render_run by invalidating the bottom strip before
-        // clearing the status text; timestamp_invalidate_rect() covers the
-        // whole bottom strip.
-        viewport.invalidate_timestamp_area();
-        app.queue_progress_text.clear();
+        complete_successful_buffer(false);
         return;
+    }
+
+    if (!last_fingerprint_.empty()) {
+        const std::string artifact_candidate =
+            compose_sibling_output_path(app.source_audio_path,
+                                        app.engine_settings).string();
+        // This rung auditions the actual 24-bit archival deliverable. It
+        // differs from the float-master render only below -134 dBFS, and
+        // hearing the release artifact is the intent, not an approximation of
+        // it. The artifact-born buffer must never enter RenderCache: cache
+        // entries store the unquantized float master by contract, and this
+        // branch returns before worker completion, where all insert sites live.
+        if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
+            read_wav_to_float(artifact_candidate, audio.channels(),
+                              audio.sample_rate(), app.target_buffer)) {
+            complete_successful_buffer(false);
+            std::fprintf(stderr,
+                "[warptempo_gui] target view loaded from archival render: %s\n",
+                artifact_candidate.c_str());
+            return;
+        }
     }
 
     // Miss: synthesize. The remainder is the original dispatch path.
@@ -195,55 +199,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     in_flight_ = false;
 
     if (outcome == RenderOutcome::Success) {
-        // Cache the buffer's frame count and rebind playback. The buffer
-        // is interleaved float; total_frames = size / channels. Use the
-        // source's channel count (engine preserves channel count).
-        const int ch = audio.channels();
-        if (ch > 0) {
-            app.target_buffer_frames =
-                static_cast<int64_t>(app.target_buffer.size() /
-                                     static_cast<size_t>(ch));
-        } else {
-            app.target_buffer_frames = 0;
-        }
-        // Capture the full-target-frame coordinate target_buffer[0]
-        // represents (0, or the trim-mapped anchor). SoT helper, shared with
-        // ensure_ready's clean rebind so a cached re-entry matches.
-        recompute_target_buffer_start_frame();
-        // Store the freshly rendered buffer under the fingerprint computed at
-        // this render's dispatch, so a later undo/redo back to this exact
-        // engine input serves it instead of re-synthesizing. Cached
-        // regardless of the current view: the audio is valid for this input
-        // even if a view flip means we skip the rebind below. insert() copies;
-        // target_buffer stays owned here.
-        if (app.target_buffer_frames > 0 && !last_fingerprint_.empty()) {
-            render_cache.insert(last_fingerprint_, app.target_buffer,
-                                ch, audio.sample_rate(),
-                                app.target_buffer_frames);
-        }
-        // Only rebind if we're actually showing target audio. A T→S toggle or
-        // a render-view entry during render already cancelled this render and
-        // does not want playback bound to target_buffer: rebinding here would
-        // clobber source.wav / the render-view buffer. Gate it out by both
-        // active_audio_view and render_view.enabled, matching the "actually in
-        // target view" idiom. is_dirty_ therefore stays set through a render-
-        // view visit, so the next true target-view entry re-renders — correct,
-        // never stale, and consistent with the source-toggle case.
-        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
-            app.target_buffer_frames > 0) {
-            // The trigger always freezes playback before dispatch, so
-            // the device should still be stopped here. The rebind helper
-            // refuses if the device is somehow playing.
-            playback.rebind_buffer(app.target_buffer.data(),
-                                   app.target_buffer_frames);
-            // Buffer now matches the engine input that produced it.
-            // Gate the clear behind the rebind path: a render that
-            // completed while active_audio_view flipped to Source must not
-            // clear the bit, since a later S→T may follow source-view
-            // edits whose trigger() set the bit while the render was
-            // already in flight.
-            is_dirty_ = false;
-        }
+        complete_successful_buffer(true);
     } else if (outcome == RenderOutcome::Cancelled) {
         std::fprintf(stderr, "warptempo_gui: target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
@@ -258,15 +214,74 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer_start_frame = 0;
     }
 
-    // Clear status. Match finalize_render_run by invalidating the bottom
-    // strip before clearing queue_progress_text; timestamp_invalidate_rect()
-    // covers the whole bottom strip.
-    viewport.invalidate_timestamp_area();
-    app.queue_progress_text.clear();
+    if (outcome != RenderOutcome::Success) {
+        // Clear status. Match finalize_render_run by invalidating the bottom
+        // strip before clearing queue_progress_text; timestamp_invalidate_rect()
+        // covers the whole bottom strip.
+        viewport.invalidate_timestamp_area();
+        app.queue_progress_text.clear();
+    }
 
     // A new trigger() may have fired during render. Pump the pending
     // dispatch now that the worker is idle.
     maybe_dispatch_pending();
+}
+
+void GuiTargetRender::complete_successful_buffer(
+        bool insert_fresh_render_into_cache) {
+    // Cache the buffer's frame count and rebind playback. The buffer is
+    // interleaved float; total_frames = size / channels. Use the source's
+    // channel count (engine preserves channel count).
+    const int ch = audio.channels();
+    if (ch > 0) {
+        app.target_buffer_frames =
+            static_cast<int64_t>(app.target_buffer.size() /
+                                 static_cast<size_t>(ch));
+    } else {
+        app.target_buffer_frames = 0;
+    }
+    // Capture the full-target-frame coordinate target_buffer[0] represents
+    // (0, or the trim-mapped anchor). SoT helper, shared with ensure_ready's
+    // clean rebind so a cached re-entry matches.
+    recompute_target_buffer_start_frame();
+    // Store freshly rendered float masters under the fingerprint computed at
+    // dispatch, so a later undo/redo back to this exact engine input serves it
+    // instead of re-synthesizing. Cached regardless of the current view: the
+    // audio is valid for this input even if a view flip means we skip the
+    // rebind below. insert() copies; target_buffer stays owned here.
+    if (insert_fresh_render_into_cache &&
+        app.target_buffer_frames > 0 && !last_fingerprint_.empty()) {
+        render_cache.insert(last_fingerprint_, app.target_buffer,
+                            ch, audio.sample_rate(),
+                            app.target_buffer_frames);
+    }
+    // Only rebind if we're actually showing target audio. A T->S toggle or a
+    // render-view entry during render already cancelled this render and does
+    // not want playback bound to target_buffer: rebinding here would clobber
+    // source.wav / the render-view buffer. Gate it out by both active_audio_view
+    // and render_view.enabled, matching the "actually in target view" idiom.
+    // is_dirty_ therefore stays set through a render-view visit, so the next
+    // true target-view entry re-renders.
+    if (app.active_audio_view == 'T' && !app.render_view.enabled &&
+        app.target_buffer_frames > 0) {
+        // The trigger always freezes playback before dispatch, so the device
+        // should still be stopped here. The rebind helper refuses if the device
+        // is somehow playing.
+        playback.rebind_buffer(app.target_buffer.data(),
+                               app.target_buffer_frames);
+        // Buffer now matches the engine input that produced it. Gate the clear
+        // behind the rebind path: a render that completed while
+        // active_audio_view flipped to Source must not clear the bit, since a
+        // later S->T may follow source-view edits whose trigger() set the bit
+        // while the render was already in flight.
+        is_dirty_ = false;
+    }
+
+    // Clear status. Match finalize_render_run by invalidating the bottom strip
+    // before clearing queue_progress_text; timestamp_invalidate_rect() covers
+    // the whole bottom strip.
+    viewport.invalidate_timestamp_area();
+    app.queue_progress_text.clear();
 }
 
 void GuiTargetRender::recompute_target_buffer_start_frame() {

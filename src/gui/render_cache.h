@@ -61,6 +61,14 @@ bool write_archival_wav_pcm24(const std::string& path,
                               const std::vector<float>& samples,
                               int channels, int sample_rate);
 
+// Reads a wav's full payload as interleaved float32, verifying the
+// header's channels and sample rate against the expected values first.
+// Used by the cache's disk-tier read and by target view's archival
+// artifact rung. Any anomaly returns false with out untouched.
+bool read_wav_to_float(const std::string& path,
+                       int expected_channels, int expected_sample_rate,
+                       std::vector<float>& out);
+
 // Stats wav_path and writes its identity plus the hex-encoded fingerprint
 // blob to the sidecar via a .tmp staging write and atomic rename. Failure is
 // logged by the caller and non-fatal.

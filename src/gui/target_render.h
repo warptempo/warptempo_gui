@@ -119,6 +119,11 @@ private:
     // have arrived during render).
     void on_render_done(RenderOutcome outcome);
 
+    // Shared Success tail for cache hits, archival artifact loads, and worker
+    // completions. The caller decides whether this buffer is a fresh float
+    // master that belongs in RenderCache.
+    void complete_successful_buffer(bool insert_fresh_render_into_cache);
+
     // Single source of truth for app.target_buffer_start_frame: the
     // full-target-frame coordinate that target_buffer[0] represents. 0 for a
     // full-song (no-trim) render; with trim set, the trim-begin source frame

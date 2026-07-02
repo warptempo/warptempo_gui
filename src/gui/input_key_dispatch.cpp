@@ -192,10 +192,20 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         viewport.invalidate_timestamp_area();
         async_renderer.dispatch(std::move(req),
             [this](RenderOutcome o) {
+                const bool success = (o == RenderOutcome::Success);
                 if (o == RenderOutcome::Cancelled) {
                     std::fprintf(stderr, "warptempo_gui: render cancelled\n");
                 }
                 finalize_render_run();
+                if (success && app.active_audio_view == 'T' &&
+                    !target_render.is_updating()) {
+                    // do_render has already inserted the request's float
+                    // master into the shared cache, so ensure_ready() either
+                    // cache-fills the still-current target view or renders the
+                    // newer edited state; if finalize_render_run just launched
+                    // a pending target render, leave that render alone.
+                    target_render.ensure_ready();
+                }
             });
         return true;
     }

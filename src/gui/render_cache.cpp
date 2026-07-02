@@ -604,27 +604,40 @@ bool RenderCache::read_file(const std::string& path,
                             int channels, int sample_rate,
                             std::vector<float>& out) {
     if (!fingerprint_sidecar_matches(path, want_fp)) return false;
+    if (read_wav_to_float(path, channels, sample_rate, out)) return true;
+    out.clear();
+    return false;
+}
 
+bool read_wav_to_float(const std::string& path,
+                       int expected_channels, int expected_sample_rate,
+                       std::vector<float>& out) {
+    if (expected_channels <= 0 || expected_sample_rate <= 0) return false;
     SF_INFO info{};
     SNDFILE* snd = sf_open(path.c_str(), SFM_READ, &info);
     if (!snd) return false;
     bool ok = false;
+    std::vector<float> tmp;
     do {
-        if (info.channels != channels || info.samplerate != sample_rate) break;
+        if (info.channels != expected_channels ||
+            info.samplerate != expected_sample_rate) {
+            break;
+        }
         if (info.frames < 0 || info.channels <= 0) break;
         const uint64_t frames = static_cast<uint64_t>(info.frames);
         const uint64_t ch = static_cast<uint64_t>(info.channels);
         if (frames > std::numeric_limits<size_t>::max() / ch) break;
         const size_t sample_count =
             static_cast<size_t>(frames) * static_cast<size_t>(ch);
-        std::vector<float> tmp(sample_count);
-        const sf_count_t got = sf_readf_float(snd, tmp.data(), info.frames);
+        tmp.resize(sample_count);
+        const sf_count_t got = (info.frames > 0)
+            ? sf_readf_float(snd, tmp.data(), info.frames)
+            : 0;
         if (got != info.frames) break;
-        out = std::move(tmp);
         ok = true;
     } while (false);
-    sf_close(snd);
-    if (!ok) out.clear();
+    if (sf_close(snd) != 0) ok = false;
+    if (ok) out = std::move(tmp);
     return ok;
 }
 
