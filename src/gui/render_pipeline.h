@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,15 @@ struct RenderRequest {
     // entries filtered out and time_seconds converted to source frames at
     // the GUI-to-engine boundary via banker's rounding.
     std::vector<int64_t>   phase_reset_frames;
+
+    // Borrowed source audio: the GUI's resident sample buffer plus its
+    // frame count, captured at dispatch. When set and sufficient, do_render
+    // skips the source-sample-cache read entirely. Null means fall back to
+    // the self-contained cache read (defensive; the GUI always populates
+    // it). Shared ownership makes this safe across file loads mid-render;
+    // the transient cost of two live buffers during such a swap is accepted.
+    std::shared_ptr<const std::vector<float>> source_samples;
+    int64_t source_total_frames = 0;
 
     // Full phase reset store snapshot. Batch sidecar payload only: when
     // batch_folder is set and this list is non-empty, written verbatim as

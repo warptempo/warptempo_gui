@@ -112,7 +112,10 @@ void GuiTargetRender::dispatch_render_now() {
     // when the worker is idle, so the GUI thread exclusively owns
     // target_buffer and can fill it from the cache without racing the worker.
     // The fingerprint covers the same engine input build_render_request packs
-    // below; a confirmed hit is byte-identical to a re-render.
+    // below. Target view is intentionally dual-provenance: a fresh render
+    // plays the limiter's float master, while cache and artifact hits play
+    // deliverable-lattice values. That difference is below -134 dBFS; avoiding
+    // completion-path encode latency keeps trim-edit target refreshes fast.
     RenderFileIdentity source_identity;
     if (stat_file_identity(app.source_audio_path, source_identity)) {
         last_fingerprint_ = render_fingerprint(
@@ -139,12 +142,11 @@ void GuiTargetRender::dispatch_render_now() {
         const std::string artifact_candidate =
             compose_sibling_output_path(app.source_audio_path,
                                         app.engine_settings).string();
-        // This rung auditions the actual archival deliverable. Artifact-born,
-        // cache-born, and render-born target audio are the same signal: the
-        // limited path decodes from canonical PCM_24 wav bytes, and limiter-
-        // off uses a separate clean-float fingerprint. target_render never
-        // inserts into RenderCache; fresh target-route insertion happens on the
-        // worker after its one canonical encode.
+        // This rung auditions the actual archival deliverable. Target view is
+        // intentionally dual-provenance: fresh limited renders play the float
+        // master, while artifact-born and cache-born target audio are decoded
+        // from deliverable bytes. The delta is below -134 dBFS, and this keeps
+        // the trim-edit fast lane from waiting on PCM_24 encode work.
         if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
             read_wav_to_float(artifact_candidate, audio.channels(),
                               audio.sample_rate(), app.target_buffer)) {
@@ -186,9 +188,11 @@ void GuiTargetRender::dispatch_render_now() {
     // on — the target-view preview gets the same limiting as the disk path.
     req.output_buffer = &app.target_buffer;
     // The process's single RenderCache (this struct's own member, wired from
-    // main.cpp). do_render uses it on this path only to insert the canonical
-    // wav blob after a successful limited target render.
+    // main.cpp). do_render uses it on this path only to queue the writer-thread
+    // canonical encode after a successful limited target render.
     req.render_cache = &render_cache;
+    req.source_samples = audio.samples_shared();
+    req.source_total_frames = audio.total_frames();
 
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) { on_render_done(o); });

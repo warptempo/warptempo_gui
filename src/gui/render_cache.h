@@ -53,8 +53,7 @@ bool encode_pcm24_wav_blob(const std::vector<float>& samples,
 
 // Decodes a wav blob's full payload to interleaved float32, verifying header
 // channels and sample rate. Deterministic: the same blob always yields the
-// same floats, which keeps target view's audio identical across fresh-render,
-// cache-hit, and artifact-load provenances.
+// same floats.
 bool decode_wav_blob_to_float(const std::vector<char>& blob,
                               int expected_channels,
                               int expected_sample_rate,
@@ -86,16 +85,19 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint);
 
 // Two-tier store for rendered target-view and archival audio, keyed by
-// render_fingerprint. Entries are canonical deliverable wav bytes: PCM_24 when
-// the limiter produced them, or float wav on the limiter-off fallback path.
-// Those routes have separate fingerprints. Float samples are derived only on
-// lookup by decoding the bytes; publishes never re-encode. The RAM tier serves
-// short live target-view renders. The disk tier is uncapped per entry and
-// LRU-bounded at 10 GiB, so full-movement renders can be reused without
-// monopolizing RAM. The store is process-local: the disk directory is removed
-// at shutdown and dead-PID orphan directories are swept at init. Every public
-// method is a no-op / miss when the store could not initialize (no cache home,
-// unmakeable directory), so callers need no special-casing.
+// render_fingerprint. Entries are canonical deliverable wav bytes encoded
+// exactly once: PCM_24 when the limiter produced them, or float wav on the
+// limiter-off fallback path. Those routes have separate fingerprints. For
+// target-route float masters, that single PCM_24 encode runs on the writer
+// thread so render completion never waits for it. Float samples are derived
+// only on lookup by decoding the bytes; publishes are byte copies and never
+// re-encode. The RAM tier serves short live target-view renders. The disk tier
+// is uncapped per entry and LRU-bounded at 10 GiB, so full-movement renders can
+// be reused without monopolizing RAM. The store is process-local: the disk
+// directory is removed at shutdown and dead-PID orphan directories are swept at
+// init. Every public method is a no-op / miss when the store could not
+// initialize (no cache home, unmakeable directory), so callers need no
+// special-casing.
 //
 // Every public method is thread-safe; callers need no external locking. A
 // single mutex_ guards both tiers' indexes, the byte counters, lru_seq_, and
@@ -106,7 +108,8 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 // lifecycle is swap-join-outside — join_writer() swaps writer_ into a local
 // under the lock, unlocks, then joins the local, so no lock is ever held
 // across a join; the writer body itself takes the lock only for its
-// registration/eviction step at the end.
+// registration/eviction step at the end, plus the post-encode replacement drop
+// when a target-master job routes to disk.
 class RenderCache {
 public:
     // Create the per-process directory under <cache home>/warptempo_gui/<pid>/
@@ -148,7 +151,20 @@ public:
                 const std::vector<char>& wav_blob,
                 int channels, int sample_rate, int64_t frame_count);
 
+    // Insert a freshly rendered float master. The samples are copied into
+    // a writer-thread job and encoded to the canonical PCM_24 wav blob
+    // there, so the caller (the render worker's completion path) never
+    // waits on the encode; routing to the RAM or disk tier happens after
+    // the encode under the usual mutex. A lookup that lands before the
+    // encode finishes misses benignly and re-renders. Encode failure
+    // drops the entry with one stderr line.
+    void insert_master_floats(const std::vector<uint8_t>& fingerprint,
+                              const std::vector<float>& samples,
+                              int channels, int sample_rate,
+                              int64_t frame_count);
+
 private:
+    struct WriterJob;
     struct RamEntry {
         std::vector<uint8_t> fingerprint;
         std::vector<char>    blob;
@@ -168,6 +184,7 @@ private:
                     int channels, int sample_rate);
     bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                      const std::vector<char>& blob, int64_t frame_count);
+    void start_writer_job(WriterJob job);
     void evict_ram_until(uint64_t target_max);
     void evict_disk_until(uint64_t target_max);
     void sweep_orphans();

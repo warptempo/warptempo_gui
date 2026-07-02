@@ -325,6 +325,8 @@ bool GuiInputHandler::render_bpm_sweep() {
             batch_folder.string(), std::move(basename));
         req.authoring = snapshot_current_authoring_state();
         req.render_cache = &target_render.render_cache;
+        req.source_samples = audio.samples_shared();
+        req.source_total_frames = audio.total_frames();
         reqs.push_back(std::move(req));
         ++seq;
     }

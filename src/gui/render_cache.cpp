@@ -614,6 +614,26 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
     return false;
 }
 
+struct RenderCache::WriterJob {
+    enum class Kind {
+        WriteBlobToDisk,
+        EncodeMasterThenRoute,
+    };
+
+    Kind kind = Kind::WriteBlobToDisk;
+    uint64_t h = 0;
+    std::vector<uint8_t> fp;
+    std::string fname;
+    std::string path;
+    std::vector<char> blob;
+    std::vector<float> samples;
+    int channels = 0;
+    int sample_rate = 0;
+    int64_t frame_count = 0;
+    bool prof = false;
+    profile::Clock::time_point t0{};
+};
+
 void RenderCache::insert(const std::vector<uint8_t>& fp,
                          const std::vector<char>& blob,
                          int channels, int sample_rate, int64_t frame_count) {
@@ -646,6 +666,36 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     }
 
     insert_disk(h, fp, blob, frame_count);
+}
+
+void RenderCache::insert_master_floats(const std::vector<uint8_t>& fp,
+                                       const std::vector<float>& samples,
+                                       int channels, int sample_rate,
+                                       int64_t frame_count) {
+    if (!enabled_) {
+        return;
+    }
+    if (frame_count <= 0 || samples.empty() ||
+        channels <= 0 || sample_rate <= 0) {
+        return;
+    }
+    const size_t ch = static_cast<size_t>(channels);
+    if (samples.size() % ch != 0) return;
+
+    const uint64_t h = fnv1a64(fp);
+    WriterJob job;
+    job.kind = WriterJob::Kind::EncodeMasterThenRoute;
+    job.h = h;
+    job.fp = fp;
+    job.fname = hex16(h) + ".wav";
+    job.path = dir_ + "/" + job.fname;
+    job.samples = samples;
+    job.channels = channels;
+    job.sample_rate = sample_rate;
+    job.frame_count = frame_count;
+    job.prof = profile::enabled();
+    job.t0 = job.prof ? profile::now() : profile::Clock::time_point{};
+    start_writer_job(std::move(job));
 }
 
 bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
@@ -688,56 +738,122 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               int64_t frame_count) {
     const bool prof = profile::enabled();
     const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
-    const uint64_t blob_bytes = static_cast<uint64_t>(blob.size());
+
+    WriterJob job;
+    job.kind = WriterJob::Kind::WriteBlobToDisk;
+    job.h = h;
+    job.fp = fp;
+    job.fname = hex16(h) + ".wav";
+    job.path = dir_ + "/" + job.fname;
+    job.blob = blob;
+    job.frame_count = frame_count;
+    job.prof = prof;
+    job.t0 = t0;
+    start_writer_job(std::move(job));
+    return true;
+}
+
+void RenderCache::start_writer_job(WriterJob job) {
     join_writer();
 
-    const std::string fname = hex16(h) + ".wav";
-    const std::string path  = dir_ + "/" + fname;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = disk_index_.find(h); it != disk_index_.end()) {
-            disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
-            disk_index_.erase(it);
+    if (job.kind == WriterJob::Kind::WriteBlobToDisk) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (auto it = disk_index_.find(job.h); it != disk_index_.end()) {
+                disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
+                disk_index_.erase(it);
+            }
         }
+        remove_disk_pair(job.path);
     }
-    remove_disk_pair(path);
 
-    std::vector<uint8_t> fp_copy = fp;
-    std::vector<char> blob_copy = blob;
-    std::thread new_writer(
-        [this, h, fname, path, fp = std::move(fp_copy),
-         blob = std::move(blob_copy), frame_count, prof, t0, blob_bytes]() mutable {
+    std::thread new_writer([this, job = std::move(job)]() mutable {
+        auto write_disk_blob = [this, &job](uint64_t blob_bytes) {
             uint64_t written = 0;
-            if (!write_file(path, fp, blob, frame_count, written)) {
+            if (!write_file(job.path, job.fp, job.blob,
+                            job.frame_count, written)) {
                 return;
             }
 
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 DiskEntry e;
-                e.fingerprint = fp;
-                e.filename    = fname;
+                e.fingerprint = job.fp;
+                e.filename    = job.fname;
                 e.size_bytes  = written;
                 e.seq         = ++lru_seq_;
-                disk_index_[h] = std::move(e);
+                disk_index_[job.h] = std::move(e);
                 disk_bytes_   += written;
                 evict_disk_until(kDiskBudgetBytes);
             }
 
-            if (prof) {
+            if (job.prof) {
                 const auto t1 = profile::now();
+                // For float-master jobs, this elapsed time includes the
+                // writer-thread PCM_24 encode before the disk write.
                 std::fprintf(stderr,
                     "[profile] cache_insert enabled=yes inserted=yes tier=disk ms=%.3f frames=%lld bytes=%llu\n",
-                    profile::ms(t0, t1),
-                    static_cast<long long>(frame_count),
+                    profile::ms(job.t0, t1),
+                    static_cast<long long>(job.frame_count),
                     static_cast<unsigned long long>(blob_bytes));
             }
-        });
+        };
+
+        if (job.kind == WriterJob::Kind::EncodeMasterThenRoute) {
+            std::vector<char> encoded;
+            if (!encode_pcm24_wav_blob(job.samples, job.channels,
+                                       job.sample_rate, encoded)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-cache insert dropped: failed to "
+                    "encode target float master as canonical PCM_24 wav\n");
+                return;
+            }
+            job.samples.clear();
+            job.samples.shrink_to_fit();
+            job.blob = std::move(encoded);
+
+            const uint64_t bytes = static_cast<uint64_t>(job.blob.size());
+            const int64_t ram_tier_frames =
+                static_cast<int64_t>(job.sample_rate) * kRamTierMaxSeconds;
+            const bool to_ram =
+                job.frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
+            if (to_ram) {
+                const bool inserted = insert_ram(job.h, job.fp, job.blob,
+                                                 job.channels,
+                                                 job.sample_rate);
+                if (job.prof && inserted) {
+                    const auto t1 = profile::now();
+                    // For float-master jobs, this elapsed time includes the
+                    // writer-thread PCM_24 encode before tier registration.
+                    std::fprintf(stderr,
+                        "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",
+                        profile::ms(job.t0, t1),
+                        static_cast<long long>(job.frame_count),
+                        static_cast<unsigned long long>(bytes));
+                }
+                return;
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                if (auto it = disk_index_.find(job.h);
+                    it != disk_index_.end()) {
+                    disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
+                    disk_index_.erase(it);
+                }
+            }
+            remove_disk_pair(job.path);
+            write_disk_blob(bytes);
+            return;
+        }
+
+        const uint64_t blob_bytes = static_cast<uint64_t>(job.blob.size());
+        write_disk_blob(blob_bytes);
+    });
     {
         std::lock_guard<std::mutex> lock(mutex_);
         writer_ = std::move(new_writer);
     }
-    return true;
 }
 
 void RenderCache::evict_disk_until(uint64_t target_max) {

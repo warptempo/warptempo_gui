@@ -71,6 +71,13 @@ inline float dequantize_i16(int16_t q) {
     return static_cast<float>(q) / kQuantScale;
 }
 
+std::shared_ptr<const std::vector<float>>
+make_immutable_samples(std::vector<float>&& samples) {
+    std::shared_ptr<std::vector<float>> owned =
+        std::make_shared<std::vector<float>>(std::move(samples));
+    return owned;
+}
+
 std::string cache_path_for(const std::string& source) {
     // Sibling of the audio file with the source's extension swapped to
     // `.peaks`. For `song.wav` this is `song.peaks`; legacy double-extension
@@ -544,27 +551,29 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         return false;
     }
 
-    channels_        = info.channels;
-    sample_rate_     = info.samplerate;
-    render_channels_ = std::min(channels_, 2);
+    const int next_channels        = info.channels;
+    const int next_sample_rate     = info.samplerate;
+    const int next_render_channels = std::min(next_channels, 2);
 
-    if (channels_ > 2) {
+    if (next_channels > 2) {
         std::fprintf(stderr,
                      "warptempo_gui: %d-channel file '%s'; only the first 2 "
                      "channels will be displayed\n",
-                     channels_, path.c_str());
+                     next_channels, path.c_str());
     }
 
     const int64_t claimed = info.frames;
-    if (read_full_source_from_source_sample_cache(path, info, samples_)) {
+    std::vector<float> next_samples;
+    int64_t next_total_frames = 0;
+    if (read_full_source_from_source_sample_cache(path, info, next_samples)) {
         sf_close(snd);
-        total_frames_ = claimed;
+        next_total_frames = claimed;
         std::fprintf(stderr, "[warptempo_gui] source sample cache hit for %s\n",
                      path.c_str());
     } else {
-        samples_.assign(static_cast<size_t>(claimed) * channels_, 0.0f);
+        next_samples.assign(static_cast<size_t>(claimed) * next_channels, 0.0f);
 
-        const sf_count_t got = sf_readf_float(snd, samples_.data(), claimed);
+        const sf_count_t got = sf_readf_float(snd, next_samples.data(), claimed);
         sf_close(snd);
 
         if (got <= 0) {
@@ -574,42 +583,60 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
             return false;
         }
         if (got != claimed) {
-            samples_.resize(static_cast<size_t>(got) * channels_);
+            next_samples.resize(static_cast<size_t>(got) * next_channels);
         }
-        total_frames_ = got;
+        next_total_frames = got;
     }
 
-    reset_levels(levels_);
+    std::array<PyramidLevel, 3> next_levels;
+    reset_levels(next_levels);
+
+    auto publish = [&]() {
+        samples_         = make_immutable_samples(std::move(next_samples));
+        total_frames_    = next_total_frames;
+        sample_rate_     = next_sample_rate;
+        channels_        = next_channels;
+        render_channels_ = next_render_channels;
+        levels_          = std::move(next_levels);
+    };
 
     // Try the on-disk peaks cache first. Cache hit skips the build entirely
     // and short-circuits progress reporting to 1.0; source samples have
     // already been loaded above.
-    if (try_load_cache(path, total_frames_, render_channels_, sample_rate_, levels_)) {
+    if (try_load_cache(path, next_total_frames, next_render_channels,
+                       next_sample_rate, next_levels)) {
+        publish();
         if (on_progress) on_progress(1.0f);
         return true;
     }
 
     if (on_progress) on_progress(0.0f);
 
-    // Cache miss: stream samples_ through the shared pyramid builder.
+    // Cache miss: stream the fresh sample buffer through the shared pyramid builder.
     int64_t pos = 0;
     auto in_memory_iter = [&](float* out, int64_t want) -> int64_t {
-        const int64_t avail = total_frames_ - pos;
+        const int64_t avail = next_total_frames - pos;
         const int64_t n     = std::min<int64_t>(want, avail);
         if (n <= 0) return 0;
         std::memcpy(out,
-                    samples_.data() + pos * channels_,
-                    static_cast<size_t>(n) * channels_ * sizeof(float));
+                    next_samples.data() + pos * next_channels,
+                    static_cast<size_t>(n) * next_channels * sizeof(float));
         pos += n;
         return n;
     };
-    build_pyramid_streaming(in_memory_iter, total_frames_, channels_,
-                            render_channels_, on_progress, levels_);
+    build_pyramid_streaming(in_memory_iter, next_total_frames, next_channels,
+                            next_render_channels, on_progress, next_levels);
 
     // Persist the pyramid for next time. Failure is non-fatal — `levels_` is
     // populated either way so the current load() still succeeds.
-    write_cache_to_disk(path, total_frames_, render_channels_, sample_rate_, levels_);
+    write_cache_to_disk(path, next_total_frames, next_render_channels,
+                        next_sample_rate, next_levels);
+    publish();
     return true;
+}
+
+std::shared_ptr<const std::vector<float>> GuiAudio::samples_shared() const {
+    return samples_;
 }
 
 int GuiAudio::num_levels() const {
@@ -635,10 +662,11 @@ std::pair<float,float> GuiAudio::get_peak_range(int channel,
     if (end_sample <= start_sample) return empty;
 
     if (level <= 0) {
+        if (!samples_) return empty;
         float lo =  std::numeric_limits<float>::infinity();
         float hi = -std::numeric_limits<float>::infinity();
         for (int64_t s = start_sample; s < end_sample; s++) {
-            const float v = samples_[s * channels_ + channel];
+            const float v = (*samples_)[s * channels_ + channel];
             if (v < lo) lo = v;
             if (v > hi) hi = v;
         }

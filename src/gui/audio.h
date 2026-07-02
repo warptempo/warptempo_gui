@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <expected>
 #include <functional>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,11 +39,19 @@ public:
     int     render_channels() const { return render_channels_; }
 
     // Raw interleaved float32 sample buffer. The pointer is valid as long as
-    // this GuiAudio instance is alive and no new load() has been called. The
+    // this GuiAudio instance is alive and no new buffer has been installed. The
     // playback engine reads samples off the audio callback thread; the caller
     // must orchestrate lifetime so the device is stopped before the buffer
     // goes away (see GuiPlayback::shutdown).
-    const float* samples_ptr() const { return samples_.data(); }
+    const float* samples_ptr() const { return samples_ ? samples_->data() : nullptr; }
+
+    // Shared handle to the immutable sample buffer. A render dispatch copies
+    // this handle into its RenderRequest, so a file load or render-view swap
+    // that installs a NEW buffer cannot invalidate a worker mid-render — the
+    // worker's handle keeps the old buffer alive until the request dies.
+    // Contract: the pointed-to vector is never mutated after publish; every
+    // refill builds a fresh vector and swaps the handle.
+    std::shared_ptr<const std::vector<float>> samples_shared() const;
 
     // Total number of pyramid levels, counting level 0 (raw samples).
     int num_levels() const;
@@ -61,7 +70,7 @@ public:
                                           int64_t end_sample) const;
 
 private:
-    std::vector<float> samples_;
+    std::shared_ptr<const std::vector<float>> samples_;
     int64_t            total_frames_    = 0;
     int                sample_rate_     = 0;
     int                channels_        = 0;
@@ -69,7 +78,7 @@ private:
 
     // Three fixed-stride cache levels (strides 32, 1024, 32768). Populated
     // either from the on-disk `<basename>.peaks` v2 sidecar or by streaming
-    // over samples_ on cache miss.
+    // over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, 3> levels_;
 };
 

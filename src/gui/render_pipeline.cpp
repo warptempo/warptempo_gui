@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <set>
 #include <string>
 #include <unistd.h>
@@ -400,43 +401,69 @@ RenderOutcome do_render(const RenderRequest& req,
         profile_trim_begin_frame = trim_begin_src;
         profile_trim_end_frame = trim_end_src;
         profile_trim_span_frames = trim_end_src - trim_begin_src;
-        // See resolve_trim_source_window for the frame-0 load invariant.
         std::vector<float> src_samples;
+        const float* src_sample_data = nullptr;
+        size_t src_sample_frames = 0;
         int src_sr = 0;
         int src_ch = 0;
         {
-            // Reusing GuiAudio's in-memory samples was evaluated and rejected:
-            // it saves only cache-read milliseconds per dispatch while creating
-            // cross-thread lifetime coupling between the GUI audio object and
-            // render worker. This self-contained read stays independent of file
-            // load and revert timing.
+            // Borrow the GUI's shared source buffer when it covers the required
+            // prefix; shared ownership keeps mid-render file swaps safe.
+            // Null or mismatched requests fall back to the self-contained cache read.
             const auto t_source_load_0 = profile::now();
-            auto source_read_result = load_source_range_with_source_sample_cache(
-                req.source_audio_path, src_info,
-                trim_window.load_begin_frame, trim_window.load_end_frame,
-                src_samples, src_sr, src_ch);
-            if (!source_read_result) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             source_read_result.error().c_str());
-                cleanup_all();
-                return RenderOutcome::Failed;
+            bool used_gui_buffer = false;
+            SourceSampleCacheStatus cache_status = SourceSampleCacheStatus::Bypassed;
+            bool used_cache = false;
+            if (req.source_samples && source_channels_probe > 0 &&
+                trim_window.load_begin_frame == 0 &&
+                trim_window.load_end_frame <=
+                    static_cast<size_t>(std::numeric_limits<int64_t>::max()) &&
+                req.source_total_frames >=
+                    static_cast<int64_t>(trim_window.load_end_frame)) {
+                const uint64_t expected_samples =
+                    static_cast<uint64_t>(req.source_total_frames) *
+                    static_cast<uint64_t>(source_channels_probe);
+                if (expected_samples == req.source_samples->size()) {
+                    src_sample_data = req.source_samples->data();
+                    src_sample_frames = trim_window.load_end_frame;
+                    src_sr = static_cast<int>(sample_rate);
+                    src_ch = source_channels_probe;
+                    used_gui_buffer = true;
+                }
+            }
+            if (!used_gui_buffer) {
+                auto source_read_result = load_source_range_with_source_sample_cache(
+                    req.source_audio_path, src_info,
+                    trim_window.load_begin_frame, trim_window.load_end_frame,
+                    src_samples, src_sr, src_ch);
+                if (!source_read_result) {
+                    std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                                 source_read_result.error().c_str());
+                    cleanup_all();
+                    return RenderOutcome::Failed;
+                }
+                cache_status = source_read_result->cache_status;
+                used_cache = source_read_result->used_cache;
+                src_sample_data = src_samples.data();
+                src_sample_frames = (src_ch > 0)
+                    ? src_samples.size() / static_cast<size_t>(src_ch) : 0;
             }
             if (prof) {
                 const auto t_source_load_1 = profile::now();
                 const unsigned long long bytes =
-                    static_cast<unsigned long long>(src_samples.size()) *
+                    static_cast<unsigned long long>(src_sample_frames) *
+                    static_cast<unsigned long long>(src_ch > 0 ? src_ch : 0) *
                     static_cast<unsigned long long>(sizeof(float));
                 source_read_ms = profile::ms(t_source_load_0, t_source_load_1);
-                profile_source_frames_passed = (src_ch > 0)
-                    ? src_samples.size() / static_cast<size_t>(src_ch) : 0;
+                profile_source_frames_passed = src_sample_frames;
                 profile_source_channels = src_ch;
                 profile_source_sample_rate = src_sr;
-                const bool used_cache = source_read_result->used_cache;
                 std::fprintf(stderr,
                     "[profile] source_read ms=%.3f source_kind=%s cache_status=%s source_frames_passed=%zu trim_span_frames=%lld approx_mb=%.1f channels=%d sample_rate=%d\n",
                     source_read_ms,
-                    used_cache ? "source_sample_cache" : "path",
-                    source_sample_cache_status_name(source_read_result->cache_status),
+                    used_gui_buffer ? "gui_buffer" :
+                        (used_cache ? "source_sample_cache" : "path"),
+                    source_sample_cache_status_name(cache_status),
                     profile_source_frames_passed,
                     static_cast<long long>(profile_trim_span_frames),
                     profile::bytes_to_mb(bytes), src_ch, src_sr);
@@ -448,9 +475,8 @@ RenderOutcome do_render(const RenderRequest& req,
         // off, no limiter anywhere and disk output is clean 32-bit float.
 
         EngineParams ep;
-        ep.source_audio_samples = src_samples.data();
-        ep.source_audio_frames  =
-            src_samples.size() / static_cast<size_t>(src_ch);
+        ep.source_audio_samples = src_sample_data;
+        ep.source_audio_frames  = src_sample_frames;
         ep.source_sample_rate   = src_sr;
         ep.source_channels      = src_ch;
         // Output sink: when a caller-owned buffer was supplied, route
@@ -508,29 +534,19 @@ RenderOutcome do_render(const RenderRequest& req,
             return handle_eng(er);
         }
         if (req.output_buffer && ep.limiter) {
-            std::vector<char> wav_blob;
-            std::vector<float> decoded;
-            const bool encoded =
-                encode_pcm24_wav_blob(*req.output_buffer, src_ch, src_sr,
-                                      wav_blob);
-            const bool decoded_ok = encoded &&
-                decode_wav_blob_to_float(wav_blob, src_ch, src_sr, decoded);
-            if (decoded_ok) {
-                *req.output_buffer = std::move(decoded);
-                const int64_t inserted_frames = src_ch > 0
-                    ? static_cast<int64_t>(req.output_buffer->size() /
-                                           static_cast<size_t>(src_ch))
-                    : 0;
-                if (req.render_cache && !fingerprint.empty() &&
-                    inserted_frames > 0) {
-                    req.render_cache->insert(fingerprint, wav_blob, src_ch,
-                                             src_sr, inserted_frames);
-                }
-            } else {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to encode/decode "
-                    "target buffer as canonical PCM24 wav blob; skipping "
-                    "render-cache insert for this render\n");
+            // Target playback keeps the limiter's float master. The
+            // deliverable-domain cache copy is encoded exactly once,
+            // asynchronously inside RenderCache, so the completion path does
+            // not round-trip the buffer through PCM_24.
+            const int64_t inserted_frames = src_ch > 0
+                ? static_cast<int64_t>(req.output_buffer->size() /
+                                       static_cast<size_t>(src_ch))
+                : 0;
+            if (req.render_cache && !fingerprint.empty() &&
+                inserted_frames > 0) {
+                req.render_cache->insert_master_floats(
+                    fingerprint, *req.output_buffer, src_ch, src_sr,
+                    inserted_frames);
             }
         }
 

@@ -115,7 +115,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // reading them mid-move is UB.
     waveform_worker.wait_until_idle();
 
-    // Same buffer-invalidation reason: the cache writer borrows audio.samples_ptr().
+    // Keep the source-sample-cache writer serialized with audio swaps.
     join_source_sample_cache_writer();
 
     audio = std::move(next);
@@ -123,10 +123,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.loading       = false;
 
     source_sample_cache_writer_ = std::thread(
-        [path, source_info, samples = audio.samples_ptr(),
+        [path, source_info, samples = audio.samples_shared(),
          frames = audio.total_frames(), channels = audio.channels()] {
             if (!ensure_source_sample_cache_from_buffer(
-                    path, source_info, samples, frames, channels)) {
+                    path, source_info, samples ? samples->data() : nullptr,
+                    frames, channels)) {
                 std::fprintf(stderr,
                     "[warptempo_gui] source sample cache write skipped for %s\n",
                     path.c_str());
@@ -392,7 +393,7 @@ void GuiFileLoader::revert_to_blank() {
     // `audio`, and `audio = GuiAudio{}` will replace its internals.
     waveform_worker.wait_until_idle();
 
-    // Same buffer-invalidation reason: the cache writer borrows audio.samples_ptr().
+    // Keep the source-sample-cache writer serialized with audio clears.
     join_source_sample_cache_writer();
 
     audio = GuiAudio{};
