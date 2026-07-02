@@ -1,12 +1,8 @@
 #include "flac_io.h"
 
-#include "audio_reader.h"
-
-#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
-#include <limits>
 
 namespace {
 
@@ -55,46 +51,12 @@ std::expected<FlacInfo, std::string> flac_probe(const std::string& path)
         info.bits_per_sample <= 0 || info.frames < 0) {
         return std::unexpected("invalid FLAC STREAMINFO values");
     }
+    if (info.frames == 0) {
+        return std::unexpected(
+            "FLAC STREAMINFO reports unknown stream length; re-encode the file once at acquisition");
+    }
+    if (info.bits_per_sample > 24) {
+        return std::unexpected("unsupported FLAC bit depth (16- or 24-bit expected)");
+    }
     return info;
-}
-
-std::expected<std::vector<float>, std::string>
-flac_read_full(const std::string& path, FlacInfo* info_out)
-{
-    auto info = flac_probe(path);
-    if (!info) return std::unexpected(info.error());
-    return flac_read_range(path, 0, info->frames, info_out);
-}
-
-std::expected<std::vector<float>, std::string>
-flac_read_range(const std::string& path, int64_t begin_frame,
-                int64_t end_frame, FlacInfo* info_out)
-{
-    auto info_probe = flac_probe(path);
-    if (!info_probe) return std::unexpected(info_probe.error());
-    FlacInfo info = *info_probe;
-    if (begin_frame < 0 || end_frame < begin_frame || end_frame > info.frames) {
-        return std::unexpected("invalid FLAC frame range");
-    }
-    if (info.channels <= 0 || info.sample_rate <= 0 || info.bits_per_sample <= 0 ||
-        info.bits_per_sample > 32) {
-        return std::unexpected("invalid FLAC stream info");
-    }
-    if (info_out) *info_out = info;
-
-    const int64_t frames = end_frame - begin_frame;
-    const int64_t samples = frames * info.channels;
-    std::vector<float> out(static_cast<size_t>(samples));
-    if (samples == 0) return out;
-
-    auto reader = AudioReader::open(path);
-    if (!reader) return std::unexpected(reader.error());
-    auto seeked = reader->seek_to_frame(begin_frame);
-    if (!seeked) return std::unexpected(seeked.error());
-    auto got = reader->read_frames(out.data(), frames);
-    if (!got) return std::unexpected(got.error());
-    if (*got != frames) {
-        return std::unexpected("truncated FLAC data");
-    }
-    return out;
 }

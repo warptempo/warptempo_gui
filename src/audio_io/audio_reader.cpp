@@ -11,6 +11,9 @@
 
 namespace {
 
+// dr_flac emits sample codes shifted into the top of s32; scaling by 2^-31
+// reduces that to code / 2^(bits - 1). The float cast is exact because
+// flac_probe admits at most 24 significant bits.
 constexpr float kFlacS32Scale = 1.0f / 2147483648.0f;
 
 void flac_s32_to_float(const ma_int32* in, float* out, size_t samples)

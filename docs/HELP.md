@@ -4,7 +4,7 @@
 
 ## Dependencies
 
-Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3 and libsndfile. These are the complete dependency set for the two libraries and the headless binaries — the two standalone module binaries (`warptempo_parser`, `warptempo_engine`) plus the headless render interface (`warptempo_cli`); none of the GUI packages below are needed for them.
+Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3. These are the complete dependency set for the static archives and the headless binaries — the two standalone module binaries (`warptempo_parser`, `warptempo_engine`) plus the headless render interface (`warptempo_cli`); none of the GUI packages below are needed for them.
 
 The default GUI build additionally requires the wayland-scanner tool and the development headers for cairo, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
 
@@ -14,7 +14,7 @@ Arch Linux:
 
 ```bash
 sudo pacman -S base-devel cmake pkgconf \
-    cairo fftw libsndfile \
+    cairo fftw \
     wayland wayland-protocols libxkbcommon \
     pipewire-jack
 ```
@@ -23,7 +23,7 @@ Debian / Ubuntu:
 
 ```bash
 sudo apt install build-essential cmake pkg-config \
-    libcairo2-dev libfftw3-dev libsndfile1-dev \
+    libcairo2-dev libfftw3-dev \
     libwayland-dev wayland-protocols libxkbcommon-dev \
     libjack-jackd2-dev
 ```
@@ -34,23 +34,23 @@ Fedora:
 
 ```bash
 sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config \
-    cairo-devel fftw-devel libsndfile-devel \
+    cairo-devel fftw-devel \
     wayland-devel wayland-protocols-devel libxkbcommon-devel \
     pipewire-jack-audio-connection-kit-devel
 ```
 
-For a headless build — the two libraries plus any of the CLI tools, with no GUI — only the core dependencies are needed. Omit the cairo / wayland / wayland-protocols / libxkbcommon / JACK packages from the lists above and configure with `-DWARPTEMPO_BUILD_GUI=OFF` (see the Build section). On Debian / Ubuntu the dependency set reduces to:
+For a headless build — the three libraries plus any of the CLI tools, with no GUI — only the core dependencies are needed. Omit the cairo / wayland / wayland-protocols / libxkbcommon / JACK packages from the lists above and configure with `-DWARPTEMPO_BUILD_GUI=OFF` (see the Build section). On Debian / Ubuntu the dependency set reduces to:
 
 ```bash
 sudo apt install build-essential cmake pkg-config \
-    libfftw3-dev libsndfile1-dev
+    libfftw3-dev
 ```
 
 A Wayland compositor is required at runtime — there is no X11 backend. Tested compositors include labwc, sway, and Hyprland; GNOME and KDE Wayland sessions should work but are not regularly exercised. The headless CLI tools need no compositor and no audio server; they read and write files only.
 
 Windows (WSL2): the project builds and runs under WSL2 with a Debian or Ubuntu userland — install the Debian / Ubuntu dependencies above inside the WSL distribution and build normally. The headless CLI tools behave as on any Linux host. The GUI is not supported under WSL: WSLg provides a Wayland compositor but routes audio through PulseAudio, not JACK, and the application has no non-JACK audio path.
 
-macOS: the GUI is not supported — it is a Wayland-native client and macOS has no Wayland. The headless CLI tools are portable C++ and should build with Homebrew dependencies (`brew install cmake pkg-config fftw libsndfile`) and `-DWARPTEMPO_BUILD_GUI=OFF`, though this path is not regularly tested.
+macOS: the GUI is not supported — it is a Wayland-native client and macOS has no Wayland. The headless CLI tools are portable C++ and should build with Homebrew dependencies (`brew install cmake pkg-config fftw`) and `-DWARPTEMPO_BUILD_GUI=OFF`, though this path is not regularly tested.
 
 ## Build
 
@@ -61,9 +61,9 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-The build always produces two static archives — `libwarptempo_parser` (the `.warpmarkers` / `.phaseresetmarkers` / `.settings` readers and the frame-map / tempomap build; depends on sndfile and the standard library only) and `libwarptempo_engine` (the PGHI synthesis core; depends on sndfile and fftw3) — and, by default, the `warptempo_gui` application that links both behind the Cairo/Wayland front end. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+The build always produces three static archives — `libwarptempo_audio_io` (the in-tree audio container and codec boundary; has no external dependencies), `libwarptempo_parser` (the `.warpmarkers` / `.phaseresetmarkers` / `.settings` readers and the frame-map / tempomap build; depends on `libwarptempo_audio_io` and the standard library only), and `libwarptempo_engine` (the PGHI synthesis core; depends on `libwarptempo_audio_io` and fftw3) — and, by default, the `warptempo_gui` application that links them behind the Cairo/Wayland front end. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
 
-Four executables can be built from those two libraries, each a different slice of the pipeline, selected by CMake options:
+Four executables can be built from those three libraries, each a different slice of the pipeline, selected by CMake options:
 
 `warptempo_gui` (default, `-DWARPTEMPO_BUILD_GUI=ON`) is the interactive authoring application — parser plus engine plus the Cairo/Wayland GUI. This is the normal build.
 
@@ -73,7 +73,7 @@ Four executables can be built from those two libraries, each a different slice o
 
 `warptempo_engine` (`-DWARPTEMPO_BUILD_ENGINE=ON`) is engine-only. It reads a prebuilt framemap (plus an optional resetmap) and the source wav and runs the PGHI engine directly, with no parser involvement — the entry point for driving the engine from maps produced by any source, not just this project's authoring files. Phase-reset anticipation is applied during render dispatch in target/output frames after temporal warping, then the anticipated target frame is inverse-mapped through the engine map and corrected by `N/2` into the engine's origin-centered source-query domain; marker files, GUI display positions, resetmaps, and render-view sidecars remain at the authored onset positions.
 
-To build the libraries and any CLI tools on a headless host that has none of the GUI's Wayland / Cairo / JACK packages, add `-DWARPTEMPO_BUILD_GUI=OFF`; the two archives and the enabled CLI tools build without touching the GUI dependency discovery.
+To build the libraries and any CLI tools on a headless host that has none of the GUI's Wayland / Cairo / JACK packages, add `-DWARPTEMPO_BUILD_GUI=OFF`; the three archives and the enabled CLI tools build without touching the GUI dependency discovery.
 
 There is no `make install` target. The binary is self-contained: copy it to anywhere on `$PATH` (typically `~/.local/bin/` or `/usr/local/bin/`) to make it available system-wide.
 
