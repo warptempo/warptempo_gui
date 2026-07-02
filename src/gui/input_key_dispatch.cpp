@@ -592,22 +592,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.phaseresetmarkers.markers_mut() = std::move(src_trans);
         app.selected_markers.clear();
         app.last_selected_marker = -1;
-        // The active tab's per-mode slots
-        // referenced the OLD app.warpmarkers/phase resets we just
-        // replaced. Clear them so restore_source_audio loads
-        // empty into the live pair (and so a later mode flip
-        // doesn't surface stale indices).
+        // Commit is a wholesale authoring reset. Every per-tab per-mode slot
+        // referencing the replaced marker stores is stale.
         {
-            ViewState& t = (app.active_tab_view == 'B') ? app.tab_b
-                                                   : app.tab_a;
-            t.warp_selected.clear();
-            t.warp_last_selected      = -1;
-            t.phase_reset_selected.clear();
-            t.phase_reset_last_selected = -1;
+            auto clear_marker_slots = [](ViewState& t) {
+                t.warp_selected.clear();
+                t.warp_last_selected        = -1;
+                t.phase_reset_selected.clear();
+                t.phase_reset_last_selected = -1;
+            };
+            clear_marker_slots(app.tab_a);
+            clear_marker_slots(app.tab_b);
         }
 
+        const char commit_tab =
+            authoring.has_active_tab ? authoring.active_tab : app.active_tab_view;
+        // Attribute the entry to the mode the commit was performed in so undo/redo restore the user's context and interpret post-restore hints against that marker store.
+        const char commit_marker_mode = app.active_markers_view;
         undo.push_undo_both(std::move(warp_pre), std::move(trans_pre),
-                       'W', hint_last);
+                       commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
 
         // Full engine-settings commit. Every batch entry's

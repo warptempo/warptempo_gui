@@ -80,13 +80,13 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> trans_pre,
-                          char op_mode, int hint_last) {
+                          char op_mode, int hint_last, char tab_override) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(trans_pre);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
-    e.tab                = app.active_tab_view;
+    e.tab                = tab_override ? tab_override : app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
