@@ -110,10 +110,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // input_handler.h for routing order.
 bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
     // Esc during a render-in-flight requests cancellation. Two effects:
-    //   1. async_renderer.request_cancel() sets the worker's cancel flag.
-    //      The engine observes it at the next frame boundary (warptempo)
-    //      or at the next 10 ms waitpid tick (subprocess engines) and
-    //      returns Cancelled.
+    //   1. async_renderer.request_cancel() sets the worker's cancel flag,
+    //      which do_render passes through to the engine.
     //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
     //      finalizes the batch instead of dispatching the next entry.
     // Both are needed: (1) interrupts the current render mid-stream;
@@ -202,11 +200,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 finalize_render_run();
                 if (success && app.active_audio_view == 'T' &&
                     !target_render.is_updating()) {
-                    // do_render has already inserted the request's float
-                    // master into the shared cache, so ensure_ready() either
-                    // cache-fills the still-current target view or renders the
-                    // newer edited state; if finalize_render_run just launched
-                    // a pending target render, leave that render alone.
+                    // ensure_ready() may fill from the shared cache when the
+                    // just-rendered fingerprint is already registered, or
+                    // render the current target state if the state changed or
+                    // a longer-than-RAM-tier entry is still registering on the
+                    // writer thread. That miss is benign; if finalize_render_run
+                    // just launched a pending target render, leave it alone.
                     target_render.ensure_ready();
                 }
             });
@@ -515,7 +514,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         if (async_renderer.is_busy()) return true;
         start_render_batch(std::move(reqs), "render iterations");
-        app.iteration_mode_enabled = false;   // behavior 2: mode off after fire
+        app.iteration_mode_enabled = false;   // iteration sweep turns off after fire
         viewport.invalidate_top_strip();
         return true;
     }
@@ -644,10 +643,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const std::filesystem::path renders_root =
             src_parent / "renders";
 
-        // Behavior 4: committing a render is a wholesale authoring reset.
-        // Clear every marker's session-only iteration values and turn off
-        // both sweep modes' visibility. (BPM values were already consumed
-        // when the sweep that produced this render fired — behavior 1.)
+        // Committing a render is a wholesale authoring reset. Clear every
+        // marker's session-only iteration values and turn off both sweep
+        // modes' visibility. BPM values were already consumed when the sweep
+        // that produced this render fired.
         // No separate undo entry: the commit pushes its own cross-file undo
         // and wipes renders/; iter values are session-only, never serialized.
         {

@@ -95,8 +95,9 @@ RenderViewState read_rendersettings_view_state(
     const std::filesystem::path& path);
 
 // Tolerant authoring-block reader for .rendersettings. Every field is
-// has_-flagged; missing keys leave their flag false (pre-brief sidecars
-// have no authoring block and commit simply skips those restorations).
+// has_-flagged; missing keys leave their flag false. Older or minimal
+// .rendersettings sidecars may omit the authoring block, and commit skips
+// fields whose has_ flag is false.
 // Malformed values are silent-skipped like the view-state reader.
 struct RendersettingsAuthoring {
     bool    has_active_tab        = false;

@@ -15,8 +15,9 @@
 // Tristate result of do_render. Returned from the synchronous entry point
 // and propagated through GuiAsyncRenderer to on_done callbacks.
 //   - Success:   pipeline ran to completion; final output exists on disk.
-//   - Failed:    early-return error path (frame_map build, engine, subprocess,
-//                rename); diagnostics already on stderr.
+//   - Failed:    early-return error path (frame-map build, engine/render,
+//                output write/publish, or rename); diagnostics already on
+//                stderr.
 //   - Cancelled: cancel_flag was observed mid-pipeline; partial output
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
@@ -41,7 +42,7 @@ struct AuthoringSnapshot {
 };
 
 // Self-contained view of the AppState fields do_render reads. Constructed by
-// the Ctrl+Alt+R handler in main.cpp so do_render stays decoupled from
+// GUI dispatch code at request-build time so do_render stays decoupled from
 // AppState's (anonymous-namespace) shape.
 struct RenderRequest {
     std::string            source_audio_path;
@@ -105,12 +106,14 @@ struct RenderRequest {
     std::vector<float>* output_buffer = nullptr;
 
     // Batch render output. When `batch_folder` is non-empty, do_render
-    // writes its final output to `<batch_folder>/<batch_basename>.wav` (or
-    // `.mid` for midi) and, on success, deposits the per-render
+    // writes its final output to `<batch_folder>/<batch_basename>` with the
+    // selected output-format extension (.wav, .warpframemap, or .tempomap)
+    // and, on success, deposits the per-render
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`
-    // (when phase resets is non-empty), and `<batch_basename>.peaks` sidecars
-    // in the same folder. The folder must already exist; do_render does
-    // not create it. When `batch_folder` is empty, the source-directory
+    // (when phase resets is non-empty), and `.rendersettings` sidecars in
+    // the same folder. Wav renders also emit `.peaks` and render-domain
+    // marker sidecars. The folder must already exist; do_render does not
+    // create it. When `batch_folder` is empty, the source-directory
     // title/engine/limiter-prefix naming is used (unchanged from the
     // immediate Ctrl+Alt+R path) and no sidecars are written.
     std::string batch_folder;
@@ -128,9 +131,8 @@ struct RenderRequest {
 // stderr. Returns RenderOutcome — Success on a complete render (including
 // the rename-into-place of the staged output); Failed on every early-return
 // failure path; Cancelled if `cancel_flag` (when non-null) was observed set
-// at a frame boundary inside the warptempo synthesis loop or at the 10 ms
-// subprocess-poll cadence for adapter engines. The queue walker uses the
-// outcome to count successes and to detect mid-render cancellation.
+// inside the engine. The queue walker uses the outcome to count successes and
+// to detect mid-render cancellation.
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag = nullptr);
 

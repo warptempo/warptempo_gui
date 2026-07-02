@@ -48,9 +48,8 @@ public:
     void dispatch(RenderRequest req, DoneCallback on_done);
 
     // Request cancellation of the in-flight job. Sets cancel_flag; the
-    // worker observes it at frame boundaries inside do_render (and at the
-    // 10 ms subprocess-poll cadence for adapter engines). No-op if no job
-    // is in flight.
+    // worker passes it through do_render, where the engine observes it during
+    // synthesis. No-op if no job is in flight.
     void request_cancel();
 
     // Called by the platform layer when the completion eventfd fires.

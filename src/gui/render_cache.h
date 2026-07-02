@@ -46,7 +46,8 @@ std::string fingerprint_sidecar_path(const std::string& wav_path);
 // The blob is byte-identical to what the engine's archival writer produces
 // from the same samples: same library, same format flags, same single-pass
 // write. Encoding happens exactly once per render; every reuse consumes the
-// bytes.
+// bytes because libsndfile PCM24-to-float and float-to-PCM24 conversion is
+// not a bit-perfect round trip at the 1-LSB level on loud samples.
 bool encode_pcm24_wav_blob(const std::vector<float>& samples,
                            int channels, int sample_rate,
                            std::vector<char>& out_blob);
@@ -89,11 +90,14 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 // exactly once: PCM_24 when the limiter produced them, or float wav on the
 // limiter-off fallback path. Those routes have separate fingerprints. For
 // target-route float masters, that single PCM_24 encode runs on the writer
-// thread so render completion never waits for it. Float samples are derived
-// only on lookup by decoding the bytes; publishes are byte copies and never
-// re-encode. The RAM tier serves short live target-view renders. The disk tier
-// is uncapped per entry and LRU-bounded at 10 GiB, so full-movement renders can
-// be reused without monopolizing RAM. The store is process-local: the disk
+// thread so render completion never waits for it. libsndfile's PCM24-to-float
+// and float-to-PCM24 conversions are not a bit-perfect round trip at the
+// 1-LSB level on loud samples, so decoded floats are only a playback/view
+// derivative; reuse and publish paths copy the original encoded bytes rather
+// than re-encode decoded floats. The RAM tier serves short live target-view
+// renders. The disk tier is uncapped per entry and LRU-bounded at 10 GiB, so
+// full-movement renders can be reused without monopolizing RAM. The store is
+// process-local: the disk
 // directory is removed at shutdown and dead-PID orphan directories are swept at
 // init. Every public method is a no-op / miss when the store could not
 // initialize (no cache home, unmakeable directory), so callers need no

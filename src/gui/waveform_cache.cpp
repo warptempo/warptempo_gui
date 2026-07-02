@@ -470,9 +470,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // This is NOT "make everything synchronous." Async earns its keep for the
 // touchpad torrent and for undriven / playback-adjacent changes; the rule is
 // only that a one-shot jump must not paint its overlays against a stale plate.
-//
-// Parts 2 and 3 of this arc wire the remaining call sites above; this commit
-// realizes zoom and the mechanism.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;

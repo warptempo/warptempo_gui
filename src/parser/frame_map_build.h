@@ -119,7 +119,7 @@ std::string resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index);
 
 // Effective (base, scale, source) a marker resolves to, for display/authoring
-// callers (the hover popup here; warpmarkers_ops.cpp in a later brief). base
+// callers in hover/popup and marker operation paths. base
 // == 0.0 means "could not resolve" (mirrors compute_hover_popup_text's ""
 // guards). scale == "" means no typed scale (treated as 1.0 by callers).
 // source_idx names the marker the value is visibly taken from:

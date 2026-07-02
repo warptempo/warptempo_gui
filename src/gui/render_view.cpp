@@ -606,8 +606,8 @@ void GuiRenderView::auto_open_batch_at_first_file(
     app.render_view.src_sr    = audio.sample_rate();
     app.render_view.src_total = audio.total_frames();
     app.render_view.list      = std::move(list);
-    // E.4 behavior 3: iter/BPM modes persist across render-view enter/leave.
-    // The flags are inert inside render view (input gate drops i/M; paint
+    // Iter/BPM modes persist across render-view enter/leave. The flags are
+    // inert inside render view (input gate drops i/M; paint
     // gates on !render_view.enabled), so they're simply restored on exit.
     app.render_view.enabled    = true;
     if (!this->load_render_view_at(target)) {

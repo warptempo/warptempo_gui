@@ -143,8 +143,8 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         app.render_view.src_sr    = audio.sample_rate();
         app.render_view.src_total = audio.total_frames();
         app.render_view.list      = std::move(list);
-        // E.4 behavior 3: iter/BPM modes persist across render-view
-        // enter/leave. The flags are inert inside render view (input
+        // Iter/BPM modes persist across render-view enter/leave. The flags
+        // are inert inside render view (input
         // gate drops i/M; paint gates on !render_view.enabled) and are
         // restored on exit. Ctrl+Alt+C is now the only forced reset.
         app.render_view.enabled    = true;

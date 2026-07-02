@@ -478,12 +478,14 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start waveform worker; exiting\n");
         return 1;
     }
-    // Render cache for fast undo/redo of target-view audio. init() creates the
-    // per-process cache directory under the user cache home and sweeps
-    // dead-PID orphan directories; shutdown(), after the event loop, removes
-    // this process's directory. Constructed before target_render, which holds
-    // it by reference. A failed init() leaves the cache disabled (every lookup
-    // misses), so target_render needs no special-casing.
+    // Shared process-local render cache for target-view reuse, archival
+    // reuse/publish rungs, and committed-render survival after the renders
+    // folder is wiped. init() creates the per-process cache directory under
+    // the user cache home and sweeps dead-PID orphan directories; shutdown(),
+    // after the event loop, removes this process's directory. Constructed
+    // before target_render, which holds it by reference. A failed init() leaves
+    // the cache disabled (every lookup misses), so target_render needs no
+    // special-casing.
     RenderCache render_cache;
     render_cache.init();
     // GuiTargetRender is the cancel-restart dispatcher for target-view
