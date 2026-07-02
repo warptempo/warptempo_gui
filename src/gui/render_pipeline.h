@@ -113,9 +113,11 @@ struct RenderRequest {
     // (when phase resets is non-empty), and `.rendersettings` sidecars in
     // the same folder. Wav renders also emit `.peaks` and render-domain
     // marker sidecars. The folder must already exist; do_render does not
-    // create it. When `batch_folder` is empty, the source-directory
-    // title/engine/limiter-prefix naming is used (unchanged from the
-    // immediate Ctrl+Alt+R path) and no sidecars are written.
+    // create it. When `batch_folder` is empty, do_render uses the
+    // source-directory title/engine/limiter-prefix naming used by the
+    // immediate Ctrl+Alt+R path. Sibling wav publishes still emit `.peaks`
+    // and `.fingerprint` sidecars; batch-only render-view sidecars are not
+    // written on the sibling path.
     std::string batch_folder;
     std::string batch_basename;
 

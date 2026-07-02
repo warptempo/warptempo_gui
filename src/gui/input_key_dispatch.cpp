@@ -157,12 +157,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     }
 
     // Ctrl+Alt+R: single render into the source directory using `title`
-    // from settings. Mirrors the non-batch path inside
-    // do_render: empty batch_folder/batch_basename triggers the
-    // engine/limiter-prefix naming. Title-not-set is a hard error
-    // surfaced from do_render. Does not consult the in-memory queue and
-    // does not write any sidecars beyond the .peaks pyramid that
-    // do_render already deposits.
+    // from settings. Does not consult the in-memory queue; empty
+    // batch_folder/batch_basename selects the source-directory naming
+    // convention inside do_render. A successful sibling wav publish emits
+    // the .peaks pyramid and .fingerprint sidecar, but not batch-only
+    // render-view sidecars (.warpmarkers / .phaseresetmarkers /
+    // .rendersettings / .renderwarpmarkers / .renderphaseresetmarkers).
+    // Title-not-set is a hard error surfaced from do_render.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
