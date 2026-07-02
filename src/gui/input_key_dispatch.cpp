@@ -180,9 +180,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate());
         req.authoring = snapshot_current_authoring_state();
-        req.render_cache = &target_render.render_cache;
-        req.source_samples = audio.samples_shared();
-        req.source_total_frames = audio.total_frames();
+        attach_shared_render_resources(req);
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render. The dispatch hands the request to
         // the worker thread; on_done fires on the GUI thread when the
@@ -315,9 +313,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 audio.sample_rate(),
                 batch_folder.string(), num_buf);
             req.authoring = q.authoring;
-            req.render_cache = &target_render.render_cache;
-            req.source_samples = audio.samples_shared();
-            req.source_total_frames = audio.total_frames();
+            attach_shared_render_resources(req);
             reqs.push_back(std::move(req));
         }
 
@@ -498,9 +494,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 audio.sample_rate(),
                 batch_folder.string(), std::move(basename));
             req.authoring = snapshot_current_authoring_state();
-            req.render_cache = &target_render.render_cache;
-            req.source_samples = audio.samples_shared();
-            req.source_total_frames = audio.total_frames();
+            attach_shared_render_resources(req);
             reqs.push_back(std::move(req));
 
             // Increment rightmost dimension; carry left on overflow.
@@ -1028,7 +1022,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 // and repaint the bottom strip without the editor.
                 render_bpm_sweep();
                 flag_editor.exit_bpm_mode();
-                // Behavior 1: the fired sweep consumes its values. The
+                // The fired sweep consumes its values. The
                 // render already snapshotted the owner into its
                 // RenderRequest, so clearing here doesn't disturb it.
                 // Next M on this marker seeds [].

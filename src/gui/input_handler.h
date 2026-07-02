@@ -223,6 +223,14 @@ private:
     // switch_active_tab_view_to.
     AuthoringSnapshot snapshot_current_authoring_state() const;
 
+    // Attach the process-wide render resources to an assembled request:
+    // the single RenderCache (constructed in main, reached through
+    // target_render's reference) and the GUI's shared source buffer so
+    // do_render can skip the source-sample-cache read. Every archival
+    // dispatch site must call this after build_render_request; forgetting
+    // it silently disables reuse and the fast source path.
+    void attach_shared_render_resources(RenderRequest& req);
+
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The

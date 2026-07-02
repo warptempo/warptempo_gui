@@ -114,7 +114,7 @@ struct RenderRequest {
     // the same folder. Wav renders also emit `.peaks` and render-domain
     // marker sidecars. The folder must already exist; do_render does not
     // create it. When `batch_folder` is empty, do_render uses the
-    // source-directory title/engine/limiter-prefix naming used by the
+    // source-directory title/limiter-prefix naming used by the
     // immediate Ctrl+Alt+R path. Sibling wav publishes still emit `.peaks`
     // and `.fingerprint` sidecars; batch-only render-view sidecars are not
     // written on the sibling path.

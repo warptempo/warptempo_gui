@@ -451,6 +451,24 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     };
 
+    // Complete artifact set for every on-disk wav publish, fresh or reused:
+    // .fingerprint sidecar, .peaks pyramid, and the batch sidecar family
+    // (self-gated inside the two publish lambdas). Every wav publish site
+    // must finish through here so no path can emit a partial set.
+    auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
+        if (!fingerprint.empty() &&
+            !write_fingerprint_sidecar(final_output_path, fingerprint)) {
+            std::fprintf(stderr,
+                "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                final_output_path.c_str());
+        }
+        write_peaks_cache_for_wav(final_output_path);
+        publish_batch_marker_sidecars();
+        publish_render_domain_sidecars();
+        cleanup_all();
+        return finish_success(outcome);
+    };
+
     // Reuse rungs, in trust order, above the engine: a project artifact
     // byte-copy, then a render-cache wav-byte publish. Both run before any
     // source-load or engine work; an empty fingerprint
@@ -476,16 +494,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::filesystem::rename(staging_output_path, final_output_path, ec);
             }
             if (!ec) {
-                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
-                    std::fprintf(stderr,
-                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
-                        final_output_path.c_str());
-                }
-                write_peaks_cache_for_wav(final_output_path);
-                publish_batch_marker_sidecars();
-                publish_render_domain_sidecars();
-                cleanup_all();
-                return finish_success("reused_artifact");
+                return finalize_published_wav("reused_artifact");
             }
             std::fprintf(stderr,
                 "warptempo_gui: render warning: project artifact reuse of "
@@ -506,16 +515,7 @@ RenderOutcome do_render(const RenderRequest& req,
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (!ec) {
-                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
-                    std::fprintf(stderr,
-                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
-                        final_output_path.c_str());
-                }
-                write_peaks_cache_for_wav(final_output_path);
-                publish_batch_marker_sidecars();
-                publish_render_domain_sidecars();
-                cleanup_all();
-                return finish_success("reused_cache");
+                return finalize_published_wav("reused_cache");
             }
             std::fprintf(stderr,
                 "warptempo_gui: render warning: render cache publish to "
@@ -696,12 +696,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
-            if (!fingerprint.empty() &&
-                !write_fingerprint_sidecar(final_output_path, fingerprint)) {
-                std::fprintf(stderr,
-                    "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
-                    final_output_path.c_str());
-            }
             // Populate the render cache with the canonical bytes that were
             // just published. The insert races nothing: the rename above
             // already landed, the cache's writer thread copies its own job
@@ -721,6 +715,7 @@ RenderOutcome do_render(const RenderRequest& req,
                                              src_sr, profile_target_frames);
                 }
             }
+            return finalize_published_wav("success");
         }
     } else {
         // output_format == "framemap" or "tempomap". No engine, no limiter.
@@ -764,28 +759,17 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    // Deposit a peak-pyramid sidecar next to the rendered wav. Fire-and-forget;
-    // the function logs its own errors and never affects render success.
-    // Only meaningful when there's a rendered wav on disk — buffer-output
-    // renders have no on-disk artifact to pyramid against.
-    if (output_format == "wav" && !req.output_buffer) {
-        write_peaks_cache_for_wav(final_output_path);
-    }
-
     // Batch render: capture the per-render marker + phase reset sidecars now
-    // that the wav rename has succeeded. These are the markers and
+    // that the publish has succeeded. These are the markers and
     // phase resets THIS render was produced from, not snapshots of the
     // current source authoring state — render-view loads them later to
     // display alongside the rendered audio. Sidecar write failures are
     // logged but never abort: the wav itself is the primary artifact.
     // Batch sidecars (.warpmarkers / .phaseresetmarkers / .rendersettings /
-    // .renderwarpmarkers / .renderphaseresetmarkers) are tied to an on-disk
-    // rendered wav. The buffer-output path has no such artifact, so skip
-    // sidecar emission entirely on that path.
-    if (batch_render && !req.output_buffer) {
-        publish_batch_marker_sidecars();
-        publish_render_domain_sidecars();
-    }
+    // .renderwarpmarkers / .renderphaseresetmarkers) are self-gated inside
+    // the publish lambdas.
+    publish_batch_marker_sidecars();
+    publish_render_domain_sidecars();
 
     cleanup_all();
     return finish_success("success");
