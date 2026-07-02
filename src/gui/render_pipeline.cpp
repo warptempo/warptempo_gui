@@ -222,13 +222,11 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
-    // Batch sidecars derivable from req fields alone: .warpmarkers,
-    // .phaseresetmarkers, .rendersettings. None of these depend on the
-    // frame map, so every publish path — a fresh render, a rung 3 artifact
-    // copy, or a rung 4 cache publish — can call this before or after
-    // map-build. The render-domain pair (.renderwarpmarkers /
-    // .renderphaseresetmarkers) is map-derived and stays in the fresh-render
-    // tail further down.
+    // Batch publishes emit the complete sidecar set at every publish site:
+    // source-domain markers/resets, .rendersettings, render-domain
+    // markers/resets, peaks, and fingerprint. This lambda covers the
+    // req-derived source-domain pair plus .rendersettings; the map-derived
+    // render-domain pair is published by publish_render_domain_sidecars below.
     auto publish_batch_marker_sidecars = [&]() {
         if (!batch_render || req.output_buffer) return;
         const std::filesystem::path bf(req.batch_folder);
@@ -267,78 +265,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 rs_path.string().c_str());
         }
     };
-
-    // Reuse rungs, in trust order, above the engine: a project artifact
-    // byte-copy, then a render-cache wav-byte publish. Both run before any
-    // trim, source-load, map-build, or engine work; an empty fingerprint
-    // (source stat failure) skips both exactly as it already skips the
-    // up-to-date check above.
-    if (!req.output_buffer && !fingerprint.empty()) {
-        // Rung: project artifact candidate. A batch entry whose fixed
-        // archival sibling already holds a validated artifact for this
-        // exact fingerprint is published by byte copy — the highest-
-        // integrity reuse there is. When final_output_path already equals
-        // the candidate, this rung is the up-to-date check above and has
-        // already run.
-        const std::string artifact_candidate =
-            compose_sibling_output_path(req.source_audio_path,
-                                        req.engine_settings).string();
-        if (artifact_candidate != final_output_path &&
-            fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
-            std::error_code ec;
-            std::filesystem::copy_file(
-                artifact_candidate, staging_output_path,
-                std::filesystem::copy_options::overwrite_existing, ec);
-            if (!ec) {
-                std::filesystem::rename(staging_output_path, final_output_path, ec);
-            }
-            if (!ec) {
-                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
-                    std::fprintf(stderr,
-                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
-                        final_output_path.c_str());
-                }
-                write_peaks_cache_for_wav(final_output_path);
-                publish_batch_marker_sidecars();
-                cleanup_all();
-                return finish_success("reused_artifact");
-            }
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: project artifact reuse of "
-                "'%s' failed (%s); falling back to a full render\n",
-                artifact_candidate.c_str(), ec.message().c_str());
-            cleanup_all();
-        }
-
-        // Rung: render cache. A confirmed hit publishes the canonical wav
-        // bytes by direct byte I/O: RAM dumps the blob, disk copies the entry
-        // file after sidecar confirmation. No sample conversion occurs.
-        // req.render_cache is null only defensively (the GUI always populates
-        // it); a null cache simply skips this rung.
-        if (req.render_cache &&
-            req.render_cache->publish_wav(fingerprint, source_channels_probe,
-                                          static_cast<int>(sample_rate),
-                                          staging_output_path)) {
-            std::error_code ec;
-            std::filesystem::rename(staging_output_path, final_output_path, ec);
-            if (!ec) {
-                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
-                    std::fprintf(stderr,
-                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
-                        final_output_path.c_str());
-                }
-                write_peaks_cache_for_wav(final_output_path);
-                publish_batch_marker_sidecars();
-                cleanup_all();
-                return finish_success("reused_cache");
-            }
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: render cache publish to "
-                "'%s' failed; falling back to a full render\n",
-                final_output_path.c_str());
-            cleanup_all();
-        }
-    }
 
     // --- Build the maps from in-memory markers. ---
     MapBuildInput tmin;
@@ -384,18 +310,225 @@ RenderOutcome do_render(const RenderRequest& req,
     }
     MapBuildResult tmfull = std::move(*rfull);
 
+    const TrimSourceWindow trim_window = resolve_trim_source_window(
+        req.has_trim_begin, req.trim_begin_sec,
+        req.has_trim_end, req.trim_end_sec,
+        sample_rate, total_frames, N_fft);
+
+    // The engine no longer windows; render-domain sidecars subtract the slice
+    // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
+    // need the same value before the engine assembly path runs.
+    int64_t window_offset_samples = 0;
+    if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
+        const WindowedFrameMap w = slice_frame_map_to_trim_window(
+            tmfull.frame_map, trim_window.trim_begin_src,
+            trim_window.trim_end_src, N_fft, R_s);
+        window_offset_samples = w.window_offset_samples;
+    }
+
+    auto publish_render_domain_sidecars = [&]() {
+        if (!batch_render || req.output_buffer) return;
+
+        const std::filesystem::path bf(req.batch_folder);
+
+        // Render-domain sidecars (.renderwarpmarkers / .renderphaseresetmarkers).
+        // Render-view loads these instead of the source-domain pair so
+        // visible marker positions match the rendered audio's time axis.
+        // The source-domain pair above stays authoritative for
+        // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
+        // pair is display-only and never read back into authoring memory.
+        // Only wav renders produce these — frame-map/tempo-map formats skip
+        // the engine.
+        if (output_format == "wav" && !tmres.frame_map.empty() &&
+            sample_rate > 0) {
+            // Walk the FULL frame map (no synthetic trim anchors); each emitted
+            // render-domain time is the full-render output sample minus the
+            // slice origin. When untrimmed, window_offset_samples is 0 and this
+            // reduces to old behavior.
+            const FrameMapRealRange real = real_segments(tmfull);
+            const int64_t trim_begin =
+                static_cast<int64_t>(tmres.trim_begin_frame);
+            const int64_t trim_end = tmres.trimmed
+                ? static_cast<int64_t>(tmres.trim_end_frame)
+                : static_cast<int64_t>(total_frames);
+            const double sr_d = static_cast<double>(sample_rate);
+            // window_offset_samples was computed at slice time. The engine no
+            // longer windows, so there is no engine-side offset to recompute.
+
+            // After head alignment, markers sit on the aligned
+            // feature: a marker at source F displays at tgt(F) - window_offset
+            // with no start-trim term.
+
+            // Markers: lockstep walk between req.markers and the real-segment
+            // range of tmfull.frame_map (built trim-off, so no synthetic trim
+            // anchors). Each non-disabled marker consumes the next-in-order
+            // segment; the trim range gates only emission, not consumption, so
+            // the lockstep stays in step with tmfull's all-segments vector.
+            // s.tgt_frame is the full-render target sample; subtracting
+            // window_offset_samples places it on the trimmed wav axis.
+            std::set<std::string> disabled_label_defs;
+            for (const auto& m : req.markers) {
+                if (!m.label_def.empty() && m.disabled) {
+                    disabled_label_defs.insert(m.label_def);
+                }
+            }
+            auto is_cascade_disabled_ref = [&](const GuiWarpMarker& m) {
+                return !m.disabled && !m.label_ref.empty() &&
+                       disabled_label_defs.count(m.label_ref) > 0;
+            };
+
+            auto seg_it = real.begin;
+            std::vector<GuiWarpMarker> warped_markers;
+            warped_markers.reserve(req.markers.size());
+            for (const auto& g : req.markers) {
+                const bool eff_disabled =
+                    g.disabled || is_cascade_disabled_ref(g);
+
+                // resolve_markers_for_render filter.
+                if (eff_disabled) continue;
+
+                // Consume this marker's segment first (tmfull holds every
+                // segment, so the lockstep advances for every non-disabled
+                // marker regardless of trim).
+                if (seg_it == real.end) break;
+                const auto& s = *seg_it;
+                ++seg_it;
+
+                // Trim-range filter (inclusive both ends — matches the
+                // post-pass at frame_map_build.cpp). Gates emission only; the segment
+                // above is already consumed.
+                const int64_t sf_abs = static_cast<int64_t>(
+                    std::nearbyint(g.time_seconds * sr_d));
+                if (sf_abs < trim_begin || sf_abs > trim_end) continue;
+
+                GuiWarpMarker w = g;
+                w.time_seconds  =
+                    (s.tgt_frame - static_cast<double>(window_offset_samples))
+                    / sr_d;
+                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
+                warped_markers.push_back(std::move(w));
+            }
+            const std::string wmd_path =
+                (bf / (req.batch_basename + ".renderwarpmarkers")).string();
+            if (!GuiWarpMarkers::save(wmd_path, warped_markers)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: failed to write '%s'\n",
+                    wmd_path.c_str());
+            }
+
+            std::vector<FrameMapSegment> real_map(real.begin, real.end);
+
+            // Phase resets: forward-map each reset's clicked source frame
+            // through the same map and place it at tgt(F) - window_offset, so
+            // a reset sits on the same musical position in render-view as in
+            // source and target views. Drop out-of-trim and disabled.
+            if (!req.phase_resets.empty()) {
+                std::vector<GuiPhaseResetMarker> warped_phase_resets;
+                warped_phase_resets.reserve(req.phase_resets.size());
+                for (const auto& t : req.phase_resets) {
+                    if (t.disabled) continue;
+                    const int64_t sf_abs = static_cast<int64_t>(
+                        std::nearbyint(t.time_seconds * sr_d));
+                    if (sf_abs < trim_begin || sf_abs > trim_end) continue;
+                    const int64_t render_frame =
+                        static_cast<int64_t>(std::llrint(map_source_to_target(
+                            static_cast<double>(sf_abs), real_map))) -
+                        window_offset_samples;
+                    GuiPhaseResetMarker w = t;
+                    w.time_seconds = static_cast<double>(render_frame) / sr_d;
+                    if (w.time_seconds < 0.0) w.time_seconds = 0.0;
+                    warped_phase_resets.push_back(std::move(w));
+                }
+                const std::string tmd_path =
+                    (bf / (req.batch_basename + ".renderphaseresetmarkers"))
+                    .string();
+                if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: render warning: failed to write '%s'\n",
+                        tmd_path.c_str());
+                }
+            }
+        }
+    };
+
+    // Reuse rungs, in trust order, above the engine: a project artifact
+    // byte-copy, then a render-cache wav-byte publish. Both run before any
+    // source-load or engine work; an empty fingerprint
+    // (source stat failure) skips both exactly as it already skips the
+    // up-to-date check above.
+    if (!req.output_buffer && !fingerprint.empty()) {
+        // Rung: project artifact candidate. A batch entry whose fixed
+        // archival sibling already holds a validated artifact for this
+        // exact fingerprint is published by byte copy — the highest-
+        // integrity reuse there is. When final_output_path already equals
+        // the candidate, this rung is the up-to-date check above and has
+        // already run.
+        const std::string artifact_candidate =
+            compose_sibling_output_path(req.source_audio_path,
+                                        req.engine_settings).string();
+        if (artifact_candidate != final_output_path &&
+            fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
+            std::error_code ec;
+            std::filesystem::copy_file(
+                artifact_candidate, staging_output_path,
+                std::filesystem::copy_options::overwrite_existing, ec);
+            if (!ec) {
+                std::filesystem::rename(staging_output_path, final_output_path, ec);
+            }
+            if (!ec) {
+                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
+                    std::fprintf(stderr,
+                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                        final_output_path.c_str());
+                }
+                write_peaks_cache_for_wav(final_output_path);
+                publish_batch_marker_sidecars();
+                publish_render_domain_sidecars();
+                cleanup_all();
+                return finish_success("reused_artifact");
+            }
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: project artifact reuse of "
+                "'%s' failed (%s); falling back to a full render\n",
+                artifact_candidate.c_str(), ec.message().c_str());
+            cleanup_all();
+        }
+
+        // Rung: render cache. A confirmed hit publishes the canonical wav
+        // bytes by direct byte I/O: RAM dumps the blob, disk copies the entry
+        // file after sidecar confirmation. No sample conversion occurs.
+        // req.render_cache is null only defensively (the GUI always populates
+        // it); a null cache simply skips this rung.
+        if (req.render_cache &&
+            req.render_cache->publish_wav(fingerprint, source_channels_probe,
+                                          static_cast<int>(sample_rate),
+                                          staging_output_path)) {
+            std::error_code ec;
+            std::filesystem::rename(staging_output_path, final_output_path, ec);
+            if (!ec) {
+                if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
+                    std::fprintf(stderr,
+                        "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                        final_output_path.c_str());
+                }
+                write_peaks_cache_for_wav(final_output_path);
+                publish_batch_marker_sidecars();
+                publish_render_domain_sidecars();
+                cleanup_all();
+                return finish_success("reused_cache");
+            }
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: render cache publish to "
+                "'%s' failed; falling back to a full render\n",
+                final_output_path.c_str());
+            cleanup_all();
+        }
+    }
+
     std::fprintf(stderr, "warptempo_gui: rendering %s -> %s\n",
                  output_format.c_str(), final_output_path.c_str());
 
-    // The engine no longer windows; render-domain sidecars subtract the slice
-    // origin captured in window_offset_samples. 0 when untrimmed.
-    int64_t window_offset_samples = 0;
-
     if (output_format == "wav") {
-        const TrimSourceWindow trim_window = resolve_trim_source_window(
-            req.has_trim_begin, req.trim_begin_sec,
-            req.has_trim_end, req.trim_end_sec,
-            sample_rate, total_frames, N_fft);
         const int64_t trim_begin_src = trim_window.trim_begin_src;
         const int64_t trim_end_src = trim_window.trim_end_src;
         profile_trim_begin_frame = trim_begin_src;
@@ -651,127 +784,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // sidecar emission entirely on that path.
     if (batch_render && !req.output_buffer) {
         publish_batch_marker_sidecars();
-
-        const std::filesystem::path bf(req.batch_folder);
-
-        // Render-domain sidecars (.renderwarpmarkers / .renderphaseresetmarkers).
-        // Render-view loads these instead of the source-domain pair so
-        // visible marker positions match the rendered audio's time axis.
-        // The source-domain pair above stays authoritative for
-        // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
-        // pair is display-only and never read back into authoring memory.
-        // Only wav renders produce these — frame-map/tempo-map formats skip
-        // the engine.
-        if (output_format == "wav" && !tmres.frame_map.empty() &&
-            sample_rate > 0) {
-            // Walk the FULL frame map (no synthetic trim anchors); each emitted
-            // render-domain time is the full-render output sample minus the
-            // slice origin. When untrimmed, window_offset_samples is 0 and this
-            // reduces to old behavior.
-            const FrameMapRealRange real = real_segments(tmfull);
-            const int64_t trim_begin =
-                static_cast<int64_t>(tmres.trim_begin_frame);
-            const int64_t trim_end = tmres.trimmed
-                ? static_cast<int64_t>(tmres.trim_end_frame)
-                : static_cast<int64_t>(total_frames);
-            const double sr_d = static_cast<double>(sample_rate);
-            // window_offset_samples was computed at slice time. The engine no
-            // longer windows, so there is no engine-side offset to recompute.
-
-            // After head alignment, markers sit on the aligned
-            // feature: a marker at source F displays at tgt(F) - window_offset
-            // with no start-trim term.
-
-            // Markers: lockstep walk between req.markers and the real-segment
-            // range of tmfull.frame_map (built trim-off, so no synthetic trim
-            // anchors). Each non-disabled marker consumes the next-in-order
-            // segment; the trim range gates only emission, not consumption, so
-            // the lockstep stays in step with tmfull's all-segments vector.
-            // s.tgt_frame is the full-render target sample; subtracting
-            // window_offset_samples places it on the trimmed wav axis.
-            std::set<std::string> disabled_label_defs;
-            for (const auto& m : req.markers) {
-                if (!m.label_def.empty() && m.disabled) {
-                    disabled_label_defs.insert(m.label_def);
-                }
-            }
-            auto is_cascade_disabled_ref = [&](const GuiWarpMarker& m) {
-                return !m.disabled && !m.label_ref.empty() &&
-                       disabled_label_defs.count(m.label_ref) > 0;
-            };
-
-            auto seg_it = real.begin;
-            std::vector<GuiWarpMarker> warped_markers;
-            warped_markers.reserve(req.markers.size());
-            for (const auto& g : req.markers) {
-                const bool eff_disabled =
-                    g.disabled || is_cascade_disabled_ref(g);
-
-                // resolve_markers_for_render filter.
-                if (eff_disabled) continue;
-
-                // Consume this marker's segment first (tmfull holds every
-                // segment, so the lockstep advances for every non-disabled
-                // marker regardless of trim).
-                if (seg_it == real.end) break;
-                const auto& s = *seg_it;
-                ++seg_it;
-
-                // Trim-range filter (inclusive both ends — matches the
-                // post-pass at frame_map_build.cpp). Gates emission only; the segment
-                // above is already consumed.
-                const int64_t sf_abs = static_cast<int64_t>(
-                    std::nearbyint(g.time_seconds * sr_d));
-                if (sf_abs < trim_begin || sf_abs > trim_end) continue;
-
-                GuiWarpMarker w = g;
-                w.time_seconds  =
-                    (s.tgt_frame - static_cast<double>(window_offset_samples))
-                    / sr_d;
-                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
-                warped_markers.push_back(std::move(w));
-            }
-            const std::string wmd_path =
-                (bf / (req.batch_basename + ".renderwarpmarkers")).string();
-            if (!GuiWarpMarkers::save(wmd_path, warped_markers)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to write '%s'\n",
-                    wmd_path.c_str());
-            }
-
-            std::vector<FrameMapSegment> real_map(real.begin, real.end);
-
-            // Phase resets: forward-map each reset's clicked source frame
-            // through the same map and place it at tgt(F) - window_offset, so
-            // a reset sits on the same musical position in render-view as in
-            // source and target views. Drop out-of-trim and disabled.
-            if (!req.phase_resets.empty()) {
-                std::vector<GuiPhaseResetMarker> warped_phase_resets;
-                warped_phase_resets.reserve(req.phase_resets.size());
-                for (const auto& t : req.phase_resets) {
-                    if (t.disabled) continue;
-                    const int64_t sf_abs = static_cast<int64_t>(
-                        std::nearbyint(t.time_seconds * sr_d));
-                    if (sf_abs < trim_begin || sf_abs > trim_end) continue;
-                    const int64_t render_frame =
-                        static_cast<int64_t>(std::llrint(map_source_to_target(
-                            static_cast<double>(sf_abs), real_map))) -
-                        window_offset_samples;
-                    GuiPhaseResetMarker w = t;
-                    w.time_seconds = static_cast<double>(render_frame) / sr_d;
-                    if (w.time_seconds < 0.0) w.time_seconds = 0.0;
-                    warped_phase_resets.push_back(std::move(w));
-                }
-                const std::string tmd_path =
-                    (bf / (req.batch_basename + ".renderphaseresetmarkers"))
-                    .string();
-                if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: render warning: failed to write '%s'\n",
-                        tmd_path.c_str());
-                }
-            }
-        }
+        publish_render_domain_sidecars();
     }
 
     cleanup_all();
