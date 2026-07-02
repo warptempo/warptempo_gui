@@ -180,6 +180,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate());
+        req.authoring = snapshot_current_authoring_state();
         req.render_cache = &target_render.render_cache;
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render. The dispatch hands the request to
@@ -311,6 +312,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
                 audio.sample_rate(),
                 batch_folder.string(), num_buf);
+            req.authoring = q.authoring;
             req.render_cache = &target_render.render_cache;
             reqs.push_back(std::move(req));
         }
@@ -491,6 +493,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 app.trim.has_end,   app.trim.end_seconds,
                 audio.sample_rate(),
                 batch_folder.string(), std::move(basename));
+            req.authoring = snapshot_current_authoring_state();
             req.render_cache = &target_render.render_cache;
             reqs.push_back(std::move(req));
 
@@ -515,15 +518,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // in render_bpm_sweep(), fired by Enter in the bottom-strip BPM editor
     // after a successful commit. The keystroke is retired here.
 
-    // Ctrl+Alt+C commits the displayed render's markers
-    // and phase resets into authoring memory. Single cross-file undo
-    // entry; both warp_dirty and phase_reset_dirty are recomputed.
-    // After the commit succeeds: render-view exits, the parked
-    // source audio is restored, and <source_parent>/renders/ is
-    // recursively wiped — by definition the user has chosen one
-    // render's parameters as the new baseline, so the prior batch
-    // outputs are stale and shouldn't accumulate. Silent no-op
-    // outside render-view.
+    // Ctrl+Alt+C commits the displayed render's full authoring snapshot:
+    // source-domain warp markers and phase resets, the complete engine
+    // settings block, and any authoring view state carried by the
+    // .rendersettings sidecar. Marker/reset promotion remains one
+    // cross-file undo entry; settings and trim stay outside undo by
+    // standing convention. After the commit succeeds: render-view exits,
+    // the parked source audio is restored, and <source_parent>/renders/
+    // is recursively wiped. The committed render survives through the
+    // render cache, not as a folder artifact. Silent no-op outside
+    // render-view.
     if (ctrl && alt && !shift &&
         key == GuiKeys::C) {
         if (!app.render_view.enabled) return true;
@@ -540,6 +544,18 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // the source coordinate system.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
+        const std::filesystem::path sidecar =
+            cur_e.batch_folder / (cur_e.basename + ".rendersettings");
+        const RendersettingsAuthoring authoring =
+            read_rendersettings_authoring(sidecar);
+        const bool has_authoring_block =
+            authoring.has_active_tab ||
+            authoring.has_active_audio_view ||
+            authoring.has_trim_begin ||
+            authoring.has_trim_end ||
+            authoring.has_zoom_level ||
+            authoring.has_viewport_start ||
+            authoring.has_playhead;
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_trans;
         {
@@ -594,42 +610,22 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                        'W', hint_last);
         undo.recompute_dirty();
 
-        // Folder-gated engine-settings commit. BPM batch folders are
-        // named `<N>_render_bpm_iterations/` — the `_bpm_` substring
-        // appears in BPM folder names and in no other batch folder
-        // name (queue is `_render_all_in_queue`, iter is
-        // `_render_iterations`). On a BPM cell, read the per-cell
-        // `.rendersettings` sidecar's engine block and assign the
-        // per-cell `scale` and its originating `bpm` into
-        // app.engine_settings — the BPM sweep varies these two
-        // together per cell; every other engine setting in the
-        // sidecar matches the user's dispatch-time engine state,
-        // and the user may have changed engine settings mid-batch.
-        // On any other batch type, no engine commit happens — same
-        // as today's iter / queue behavior. Settings has no undo by
-        // convention; this mutation is permanent until the next
-        // Ctrl+S overwrites or the user manually edits the .settings
-        // file.
+        // Full engine-settings commit. Every batch entry's
+        // .rendersettings carries the recipe that produced it, and commit
+        // adopts that whole typed recipe so the live render fingerprint can
+        // match the render already inserted into the cache. Settings has no
+        // undo by convention; this mutation is permanent until the next
+        // Ctrl+S overwrites or the user edits the settings again.
         {
-            const std::string folder_name =
-                cur_e.batch_folder.filename().string();
-            const bool is_bpm_cell =
-                folder_name.find("_bpm_") != std::string::npos;
-            if (is_bpm_cell) {
-                const std::filesystem::path sidecar =
-                    cur_e.batch_folder /
-                    (cur_e.basename + ".rendersettings");
-                auto es = read_rendersettings_engine_block(sidecar);
-                if (!es) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: render-view: commit: "
-                        "rendersettings engine block invalid or absent "
-                        "at '%s'; engine settings unchanged\n",
-                        sidecar.string().c_str());
-                } else {
-                    app.engine_settings.scale = es->scale;
-                    app.engine_settings.bpm   = es->bpm;
-                }
+            auto es = read_rendersettings_engine_block(sidecar);
+            if (!es) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-view: commit: "
+                    "rendersettings engine block invalid or absent "
+                    "at '%s'; engine settings unchanged\n",
+                    sidecar.string().c_str());
+            } else {
+                app.engine_settings = *es;
             }
         }
 
@@ -656,6 +652,60 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.bpm_mode_enabled       = false;
 
         render_view.restore_source_audio();
+
+        if (authoring.has_active_tab &&
+            authoring.active_tab != app.active_tab_view) {
+            active_views.switch_active_tab_view_to(authoring.active_tab);
+        }
+
+        if (has_authoring_block) {
+            app.trim.has_begin = authoring.has_trim_begin;
+            app.trim.begin_seconds = authoring.has_trim_begin
+                ? authoring.trim_begin_sec
+                : 0.0;
+            app.trim.has_end = authoring.has_trim_end;
+            app.trim.end_seconds = authoring.has_trim_end
+                ? authoring.trim_end_sec
+                : 0.0;
+            if (!app.trim.has_begin) app.trim_begin_selected = false;
+            if (!app.trim.has_end)   app.trim_end_selected   = false;
+            if (!app.trim.has_begin && !app.trim.has_end) {
+                app.last_selected_trim = 0;
+            }
+        }
+
+        if (authoring.has_active_audio_view &&
+            authoring.active_audio_view == 'S' &&
+            app.active_audio_view == 'T') {
+            app.active_audio_view = 'S';
+            target_render.rebind_to_source();
+        } else if (authoring.has_active_audio_view &&
+                   authoring.active_audio_view == 'T') {
+            app.active_audio_view = 'T';
+        }
+
+        if (authoring.has_zoom_level &&
+            authoring.zoom_level >= kFitFileLevel &&
+            authoring.zoom_level <= kMaxNumericLevel) {
+            app.zoom_level = authoring.zoom_level;
+        }
+        if (authoring.has_viewport_start) {
+            app.viewport_start_sample = authoring.viewport_start;
+        }
+        if (authoring.has_playhead) {
+            app.playhead_cursor_sample = authoring.playhead;
+            if (!app.playhead_scanner_active) {
+                app.playhead_scanner_sample = authoring.playhead;
+            }
+        }
+        clamp_viewport_start(app, audio);
+        viewport.clear_hover_popup();
+        viewport.kick_waveform_sync();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+
+        target_render.trigger();
+
         app.render_view.list.clear();
         app.render_view.markers.clear();
         app.render_view.phase_resets.clear();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "render_pipeline.h"
 #include "render.h"
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
@@ -707,9 +708,9 @@ struct AppState {
     // with one rendered output per queued entry. The list is session-only:
     // discarded on app close, never written to disk between sessions.
     // Each entry is a complete render snapshot — markers, phase resets,
-    // engine settings, and trim are all captured at enqueue time, so two
-    // queued states that differ only in trim or settings still render
-    // distinctly.
+    // engine settings, trim, and authoring view state are all captured at
+    // enqueue time, so two queued states that differ only in trim, settings,
+    // or UI state still render distinctly.
     struct QueuedRender {
         std::string                source_audio_path;
         std::vector<GuiWarpMarker>     markers;
@@ -719,6 +720,7 @@ struct AppState {
         double                      trim_begin_sec = 0.0;
         bool                        has_trim_end   = false;
         double                      trim_end_sec   = 0.0;
+        AuthoringSnapshot           authoring;
     };
     std::vector<QueuedRender> queued_renders;
 

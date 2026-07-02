@@ -20,6 +20,25 @@
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
 
+// Authoring-state snapshot captured at dispatch time, written into the
+// batch entry's .rendersettings so Ctrl+Alt+C can restore the exact
+// state that produced the render. The trim fields duplicate the
+// request's own trim on purpose: the request trim feeds the engine,
+// this block feeds the sidecar, and keeping the sidecar block
+// self-contained keeps the reader trivial.
+struct AuthoringSnapshot {
+    bool    valid             = false;  // false: write no authoring block
+    char    active_tab        = 'A';
+    char    active_audio_view = 'S';
+    bool    has_trim_begin    = false;
+    double  trim_begin_sec    = 0.0;
+    bool    has_trim_end      = false;
+    double  trim_end_sec      = 0.0;
+    int     zoom_level        = 0;
+    int64_t viewport_start    = 0;
+    int64_t playhead          = 0;
+};
+
 // Self-contained view of the AppState fields do_render reads. Constructed by
 // the Ctrl+Alt+R handler in main.cpp so do_render stays decoupled from
 // AppState's (anonymous-namespace) shape.
@@ -60,6 +79,8 @@ struct RenderRequest {
     double trim_begin_sec = 0.0;
     bool   has_trim_end   = false;
     double trim_end_sec   = 0.0;
+
+    AuthoringSnapshot authoring;
 
     // Nullable. When non-null and output_format is "wav", do_render routes
     // the engine to this buffer instead of a staged .wav file. Skips the

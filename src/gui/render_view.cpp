@@ -116,18 +116,18 @@ GuiRenderView::enumerate_render_view_list() {
 //
 // Per-render zoom/viewport/playhead persistence. Captures the live
 // render-view state at navigation/exit boundaries; applied on entry
-// / arrival. The on-disk file is shared with the engine-block written
-// by render_pipeline (see write_rendersettings in settings_io); these
-// helpers only touch the view-state block.
+// / arrival. The on-disk file is shared with the engine and authoring
+// blocks written by render_pipeline (see write_rendersettings in
+// settings_io); these helpers only touch the render-view scratch block.
 
 std::filesystem::path GuiRenderView::rendersettings_path(
         const AppState::RenderViewEntry& e) {
     return e.batch_folder / (e.basename + ".rendersettings");
 }
 
-// Atomic update of the view-state block (engine block, if present on
-// disk, is left untouched). Failures are non-fatal — logged once by
-// the underlying writer and otherwise discarded.
+// Atomic update of the view-state block (engine and authoring blocks, if
+// present on disk, are left untouched). Failures are non-fatal — logged
+// once by the underlying writer and otherwise discarded.
 void GuiRenderView::write_rendersettings_for(
         const AppState::RenderViewEntry& e) {
     update_rendersettings_view_state(

@@ -218,6 +218,11 @@ private:
     // drift apart in which fields they snapshot.
     AppState::QueuedRender snapshot_current_queued_render() const;
 
+    // Authoring-state sidecar snapshot: active tab/audio view, active-tab
+    // trim, and the live viewport/zoom/playhead fields managed by
+    // switch_active_tab_view_to.
+    AuthoringSnapshot snapshot_current_authoring_state() const;
+
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The

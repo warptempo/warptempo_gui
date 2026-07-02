@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 
+struct AuthoringSnapshot;
 struct ViewState;
 
 // Parsed view-state contents of .settings. Engine-key lines are handled
@@ -93,6 +94,30 @@ struct RenderViewState {
 RenderViewState read_rendersettings_view_state(
     const std::filesystem::path& path);
 
+// Tolerant authoring-block reader for .rendersettings. Every field is
+// has_-flagged; missing keys leave their flag false (pre-brief sidecars
+// have no authoring block and commit simply skips those restorations).
+// Malformed values are silent-skipped like the view-state reader.
+struct RendersettingsAuthoring {
+    bool    has_active_tab        = false;
+    char    active_tab            = 'A';
+    bool    has_active_audio_view = false;
+    char    active_audio_view     = 'S';
+    bool    has_trim_begin        = false;
+    double  trim_begin_sec        = 0.0;
+    bool    has_trim_end          = false;
+    double  trim_end_sec          = 0.0;
+    bool    has_zoom_level        = false;
+    int     zoom_level            = 0;
+    bool    has_viewport_start    = false;
+    int64_t viewport_start        = 0;
+    bool    has_playhead          = false;
+    int64_t playhead              = 0;
+};
+
+RendersettingsAuthoring read_rendersettings_authoring(
+    const std::filesystem::path& path);
+
 // Strict engine-block reader for `.rendersettings`. Same per-field
 // validator and same stderr line shape as read_engine_settings_from_file.
 // Non-engine lines (the view-state keys and any unknown key) are ignored.
@@ -103,14 +128,16 @@ std::optional<EngineSettings> read_rendersettings_engine_block(
 
 // Full-write of `.rendersettings`: emits the eight canonical engine keys
 // (in kSettingsOrder order, byte-identical to the engine block of
-// write_settings_file), then the three view-state keys
-// (viewport_start, zoom, playhead). Atomic via tmp + fsync + rename.
-// Called by the render pipeline at render time.
+// write_settings_file), then the three render-view scratch keys
+// (viewport_start, zoom, playhead), then the authoring block when
+// authoring.valid. Atomic via tmp + fsync + rename. Called by the render
+// pipeline at render time.
 bool write_rendersettings(const std::filesystem::path& path,
                           const EngineSettings& engine,
                           int64_t viewport_start,
                           int     zoom_level,
-                          int64_t playhead);
+                          int64_t playhead,
+                          const AuthoringSnapshot& authoring);
 
 // View-state-only update of `.rendersettings`: read-modify-write.
 // Preserves every non-view-state line in its existing order (the

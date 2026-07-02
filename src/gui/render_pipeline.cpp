@@ -249,19 +249,18 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         // `.rendersettings` sidecar: eight canonical engine keys (engine
         // block, byte-identical to the engine block of a Ctrl+S
-        // `.settings` write) followed by the three view-state keys
+        // `.settings` write), the three render-view scratch keys
         // (viewport_start, zoom, playhead) at their natural "user has
-        // not yet viewed this render" defaults — render-view rewrites
-        // the view-state block on first nav. Only Ctrl+Alt+C inside
-        // a BPM batch folder reads the engine block back into
-        // app.engine_settings (and even then, only scale); the other
-        // batch modes write it as archival documentation.
+        // not yet viewed this render" defaults, and the optional
+        // dispatch-time authoring snapshot used by Ctrl+Alt+C.
+        // Render-view rewrites only the scratch keys on first nav.
         const std::filesystem::path rs_path =
             bf / (req.batch_basename + ".rendersettings");
         if (!write_rendersettings(rs_path, req.engine_settings,
                                   /*viewport_start=*/0,
                                   /*zoom_level=*/kFitFileLevel,
-                                  /*playhead=*/0)) {
+                                  /*playhead=*/0,
+                                  req.authoring)) {
             std::fprintf(stderr,
                 "warptempo_gui: render warning: failed to write '%s'\n",
                 rs_path.string().c_str());

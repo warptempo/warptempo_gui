@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "parser/parse_text_util.h"
+#include "render_pipeline.h"
 #include "settings_trim.h"
 #include "time_format.h"
 
@@ -47,6 +48,17 @@ bool parse_float_full(const std::string& s, float& out) {
     errno = 0;
     char* end = nullptr;
     const float v = std::strtof(s.c_str(), &end);
+    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
+    if (!std::isfinite(v)) return false;
+    out = v;
+    return true;
+}
+
+bool parse_double_full(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    errno = 0;
+    char* end = nullptr;
+    const double v = std::strtod(s.c_str(), &end);
     if (errno != 0 || end == s.c_str() || *end != '\0') return false;
     if (!std::isfinite(v)) return false;
     out = v;
@@ -200,6 +212,48 @@ void append_view_state_block(std::string& out,
     std::snprintf(buf, sizeof(buf), "%lld",
                   static_cast<long long>(playhead));
     out += "playhead=";
+    out += buf;
+    out += '\n';
+}
+
+void append_double_value(std::string& out, double value) {
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%.17g", value);
+    out += buf;
+}
+
+void append_authoring_block(std::string& out,
+                            const AuthoringSnapshot& authoring) {
+    if (!authoring.valid) return;
+    char buf[64];
+    out += "active_tab=";
+    out += authoring.active_tab;
+    out += '\n';
+    out += "active_audio_view=";
+    out += authoring.active_audio_view;
+    out += '\n';
+    if (authoring.has_trim_begin) {
+        out += "trim_begin=";
+        append_double_value(out, authoring.trim_begin_sec);
+        out += '\n';
+    }
+    if (authoring.has_trim_end) {
+        out += "trim_end=";
+        append_double_value(out, authoring.trim_end_sec);
+        out += '\n';
+    }
+    std::snprintf(buf, sizeof(buf), "%d", authoring.zoom_level);
+    out += "authoring_zoom=";
+    out += buf;
+    out += '\n';
+    std::snprintf(buf, sizeof(buf), "%lld",
+                  static_cast<long long>(authoring.viewport_start));
+    out += "authoring_viewport_start=";
+    out += buf;
+    out += '\n';
+    std::snprintf(buf, sizeof(buf), "%lld",
+                  static_cast<long long>(authoring.playhead));
+    out += "authoring_playhead=";
     out += buf;
     out += '\n';
 }
@@ -384,6 +438,72 @@ RenderViewState read_rendersettings_view_state(
     return out;
 }
 
+RendersettingsAuthoring read_rendersettings_authoring(
+        const std::filesystem::path& path) {
+    RendersettingsAuthoring out;
+    std::ifstream f(path);
+    if (!f) return out;
+    std::string line;
+    while (std::getline(f, line)) {
+        const std::string trimmed = warptempo_parse::trim_ws(line);
+        if (trimmed.empty()) continue;
+        if (trimmed[0] == '#') continue;
+        const size_t eq = trimmed.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
+        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
+        if (key == "active_tab") {
+            if (value == "A") {
+                out.has_active_tab = true;
+                out.active_tab = 'A';
+            } else if (value == "B") {
+                out.has_active_tab = true;
+                out.active_tab = 'B';
+            }
+        } else if (key == "active_audio_view") {
+            if (value == "S") {
+                out.has_active_audio_view = true;
+                out.active_audio_view = 'S';
+            } else if (value == "T") {
+                out.has_active_audio_view = true;
+                out.active_audio_view = 'T';
+            }
+        } else if (key == "trim_begin") {
+            double v;
+            if (parse_double_full(value, v)) {
+                out.has_trim_begin = true;
+                out.trim_begin_sec = v;
+            }
+        } else if (key == "trim_end") {
+            double v;
+            if (parse_double_full(value, v)) {
+                out.has_trim_end = true;
+                out.trim_end_sec = v;
+            }
+        } else if (key == "authoring_zoom") {
+            int v;
+            if (parse_int_full(value, v)) {
+                out.has_zoom_level = true;
+                out.zoom_level = v;
+            }
+        } else if (key == "authoring_viewport_start") {
+            int64_t v;
+            if (parse_int64_full(value, v)) {
+                out.has_viewport_start = true;
+                out.viewport_start = v;
+            }
+        } else if (key == "authoring_playhead") {
+            int64_t v;
+            if (parse_int64_full(value, v)) {
+                out.has_playhead = true;
+                out.playhead = v;
+            }
+        }
+        // Engine-block, render-view, and unknown lines: silent-skip.
+    }
+    return out;
+}
+
 std::optional<EngineSettings> read_rendersettings_engine_block(
         const std::filesystem::path& path) {
     // Identical semantics to read_engine_settings_from_file: canonical
@@ -399,10 +519,12 @@ bool write_rendersettings(const std::filesystem::path& path,
                            const EngineSettings& engine,
                            int64_t viewport_start,
                            int     zoom_level,
-                           int64_t playhead) {
+                           int64_t playhead,
+                           const AuthoringSnapshot& authoring) {
     std::string data;
     append_engine_block(data, engine);
     append_view_state_block(data, viewport_start, zoom_level, playhead);
+    append_authoring_block(data, authoring);
     return atomic_write_string_to_path(path.string(), data);
 }
 

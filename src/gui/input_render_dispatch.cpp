@@ -16,9 +16,25 @@
 #include <vector>
 
 // GuiInputHandler render-dispatch / batch-lifecycle methods, lifted verbatim
-// from input_handler.cpp (snapshot_current_queued_render, finalize_render_run,
+// from input_handler.cpp (snapshot_current_authoring_state,
+// snapshot_current_queued_render, finalize_render_run,
 // start_render_batch, dispatch_next_batch_entry, on_batch_entry_complete,
 // render_bpm_sweep). Pure definition move; no body changes.
+
+AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
+    AuthoringSnapshot s;
+    s.valid             = true;
+    s.active_tab        = app.active_tab_view;
+    s.active_audio_view = app.active_audio_view;
+    s.has_trim_begin    = app.trim.has_begin;
+    s.trim_begin_sec    = app.trim.begin_seconds;
+    s.has_trim_end      = app.trim.has_end;
+    s.trim_end_sec      = app.trim.end_seconds;
+    s.zoom_level        = app.zoom_level;
+    s.viewport_start    = app.viewport_start_sample;
+    s.playhead          = app.playhead_cursor_sample;
+    return s;
+}
 
 AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
     AppState::QueuedRender q;
@@ -30,6 +46,7 @@ AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
     q.trim_begin_sec     = app.trim.begin_seconds;
     q.has_trim_end       = app.trim.has_end;
     q.trim_end_sec       = app.trim.end_seconds;
+    q.authoring          = snapshot_current_authoring_state();
     return q;
 }
 
@@ -306,6 +323,7 @@ bool GuiInputHandler::render_bpm_sweep() {
             app.trim.has_end,   app.trim.end_seconds,
             audio.sample_rate(),
             batch_folder.string(), std::move(basename));
+        req.authoring = snapshot_current_authoring_state();
         req.render_cache = &target_render.render_cache;
         reqs.push_back(std::move(req));
         ++seq;
