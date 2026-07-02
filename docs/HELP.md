@@ -61,7 +61,7 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-The build always produces three static archives — `libwarptempo_audio_io` (the in-tree audio container and codec boundary; has no external dependencies), `libwarptempo_parser` (the `.warpmarkers` / `.phaseresetmarkers` / `.settings` readers and the frame-map / tempomap build; depends on `libwarptempo_audio_io` and the standard library only), and `libwarptempo_engine` (the PGHI synthesis core; depends on `libwarptempo_audio_io` and fftw3) — and, by default, the `warptempo_gui` application that links them behind the Cairo/Wayland front end. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+The build always produces three static archives — `libwarptempo_audio_io` (the in-tree audio container and codec boundary; FLAC bitstream decode is handled by the vendored single-file `dr_flac` decoder compiled into the archive, so it has no external link dependencies, and container probing and all WAV handling remain fully in-tree), `libwarptempo_parser` (the `.warpmarkers` / `.phaseresetmarkers` / `.settings` readers and the frame-map / tempomap build; depends on `libwarptempo_audio_io` and the standard library only), and `libwarptempo_engine` (the PGHI synthesis core; depends on `libwarptempo_audio_io` and fftw3) — and, by default, the `warptempo_gui` application that links them behind the Cairo/Wayland front end. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
 
 Four executables can be built from those three libraries, each a different slice of the pipeline, selected by CMake options:
 
