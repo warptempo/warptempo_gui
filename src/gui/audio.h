@@ -27,7 +27,7 @@ public:
         std::vector<std::vector<int16_t>> pairs;  // pairs[ch][2*p..2*p+1]
     };
 
-    // Opens `path` via libsndfile, reads all frames, and builds the pyramid.
+    // Opens `path` via the in-tree codec library, reads all frames, and builds the pyramid.
     // Returns true on success. On failure, writes a diagnostic to stderr and
     // returns false. `on_progress` is invoked with a value in [0.0, 1.0]
     // periodically during pyramid construction; it may be empty.
@@ -82,7 +82,7 @@ private:
     std::array<PyramidLevel, 3> levels_;
 };
 
-// Build a peak pyramid by streaming `wav_path` through libsndfile and write
+// Build a peak pyramid by streaming `wav_path` through the in-tree reader and write
 // the resulting `<basename>.peaks` v2 sidecar atomically (the audio file's
 // extension is replaced — for `song.wav` the sidecar is `song.peaks`).
 // Allocates only a single 65536-frame chunk plus the int16 pyramid itself —

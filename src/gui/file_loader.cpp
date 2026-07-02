@@ -8,12 +8,11 @@
 
 #include "frame_map.h"
 
-#include <sndfile.h>
+#include "audio_probe.h"
 
 #include <chrono>
 #include <cmath>
 #include <cstdio>
-#include <cstring>
 #include <expected>
 #include <filesystem>
 #include <string>
@@ -61,19 +60,14 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return load_file(*owner);
     }
 
-    SF_INFO source_info;
-    std::memset(&source_info, 0, sizeof(source_info));
-
     // Preflight.
-    {
-        SNDFILE* probe = sf_open(path.c_str(), SFM_READ, &source_info);
-        if (!probe) {
-            std::fprintf(stderr,
-                         "warptempo_gui: '%s': %s\n",
-                         path.c_str(), sf_strerror(nullptr));
-            return false;
-        }
-        sf_close(probe);
+    auto source_info = audio_probe(path);
+    if (!source_info) {
+        std::fprintf(stderr,
+            "warptempo_gui: unsupported source format for '%s': inputs are FLAC or WAV "
+            "(convert once at acquisition, e.g. with ffmpeg or opusdec, and load the converted file)\n",
+            path.c_str());
+        return false;
     }
 
     // Stop and tear down the audio device before the sample buffer it
@@ -126,7 +120,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         [path, source_info, samples = audio.samples_shared(),
          frames = audio.total_frames(), channels = audio.channels()] {
             if (!ensure_source_sample_cache_from_buffer(
-                    path, source_info, samples ? samples->data() : nullptr,
+                    path, *source_info, samples ? samples->data() : nullptr,
                     frames, channels)) {
                 std::fprintf(stderr,
                     "[warptempo_gui] source sample cache write skipped for %s\n",

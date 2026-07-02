@@ -93,7 +93,7 @@ The shipped `.desktop` file uses the freedesktop `audio-x-generic` icon name, wh
 
 ## First run
 
-`warptempo_gui` takes a single argument: the path to a source audio file (typically `.wav` or `.flac`, though anything libsndfile reads will load). Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename.
+`warptempo_gui` takes a single argument: the path to a source audio file. Source inputs are FLAC or WAV (16-bit, 24-bit, or 32-bit float); anything else — including Opus or MP3 downloads — is converted once at acquisition with an external tool and the converted file becomes the project source. Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename.
 
 ```bash
 warptempo_gui "path/to/source.wav"

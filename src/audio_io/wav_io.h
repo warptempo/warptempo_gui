@@ -79,3 +79,30 @@ private:
     std::expected<void, std::string> patch_u32(uint64_t offset, uint32_t value);
     void reset();
 };
+
+class WavReader {
+public:
+    WavReader() = default;
+    WavReader(const WavReader&) = delete;
+    WavReader& operator=(const WavReader&) = delete;
+    WavReader(WavReader&& other) noexcept;
+    WavReader& operator=(WavReader&& other) noexcept;
+    ~WavReader();
+
+    static std::expected<WavReader, std::string>
+    open(const std::string& path);
+
+    const WavInfo& info() const { return info_; }
+    std::expected<void, std::string> seek_to_frame(int64_t frame);
+    std::expected<int64_t, std::string> read_frames(float* out,
+                                                    int64_t frames);
+
+private:
+    FILE* file_ = nullptr;
+    WavInfo info_;
+    uint64_t data_offset_ = 0;
+    uint16_t block_align_ = 0;
+    int64_t cursor_frame_ = 0;
+
+    void reset();
+};

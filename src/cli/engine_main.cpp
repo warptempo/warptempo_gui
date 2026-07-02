@@ -4,7 +4,7 @@
 #include "locale_check.h"
 #include "phase_reset_dispatch.h"
 
-#include <sndfile.h>
+#include "audio_reader.h"
 
 #include <algorithm>
 #include <cmath>
@@ -116,35 +116,21 @@ int main(int argc, char** argv) {
     }
     (void)resetmap_explicit;  // explicit-missing already fails via read_reset_map
 
-    // --- source wav, full file, interleaved float (mirrors
-    // load_source_range_to_buffer for the whole-file case; bare sndfile so the
-    // parser archive is not linked). ---
+    // --- source audio, full file, interleaved float. ---
     std::vector<float> src_samples;
     int src_sr = 0, src_ch = 0;
     {
-        SF_INFO info{};
-        info.format = 0;
-        SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
-        if (!sf) {
+        AudioFileInfo info;
+        auto full = audio_read_full(source_path, &info);
+        if (!full) {
             std::fprintf(stderr,
-                "warptempo_engine: could not open source '%s'\n",
-                source_path.c_str());
+                "warptempo_engine: could not read source '%s': %s\n",
+                source_path.c_str(), full.error().c_str());
             return 1;
         }
-        src_sr = info.samplerate;
+        src_samples = std::move(*full);
+        src_sr = info.sample_rate;
         src_ch = info.channels;
-        const sf_count_t frames = info.frames;
-        src_samples.assign(
-            static_cast<size_t>(frames) * static_cast<size_t>(src_ch), 0.0f);
-        const sf_count_t got = sf_readf_float(sf, src_samples.data(), frames);
-        sf_close(sf);
-        if (got != frames) {
-            std::fprintf(stderr,
-                "warptempo_engine: short read on source '%s' (%lld/%lld)\n",
-                source_path.c_str(),
-                static_cast<long long>(got), static_cast<long long>(frames));
-            return 1;
-        }
     }
 
     // --- locked engine geometry ---

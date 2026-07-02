@@ -8,7 +8,7 @@
 #include "map_output.h"                 // write_frame_map /
                                         // write_tempo_map / write_reset_map
 
-#include <sndfile.h>
+#include "audio_probe.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -90,17 +90,14 @@ int main(int argc, char** argv) {
     }
 
     // --- source sample rate / total frames (every format needs the rate) ---
-    SF_INFO info{};
-    info.format = 0;
-    SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!sf) {
+    auto info = audio_probe(source_path);
+    if (!info) {
         std::fprintf(stderr,
             "warptempo_parser: could not open source '%s'\n", source_path.c_str());
         return 1;
     }
-    const long sample_rate  = info.samplerate;
-    const long total_frames = static_cast<long>(info.frames);
-    sf_close(sf);
+    const long sample_rate  = info->sample_rate;
+    const long total_frames = static_cast<long>(info->frames);
 
     // --- resetmap: undisplaced source-frame phase-reset list. Independent of
     // the warp markers and the map build — reads only the phase-reset

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <utility>
 
 static_assert(std::endian::native == std::endian::little);
 
@@ -219,6 +220,9 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     return layout;
 }
 
+void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+                        int64_t samples, float* out);
+
 std::expected<std::vector<float>, std::string>
 read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
                        WavInfo* info_out)
@@ -247,14 +251,21 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
         return std::unexpected("truncated WAV data");
     }
 
+    decode_wav_samples(raw.data(), layout.info.format, samples, out.data());
+    return out;
+}
+
+void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+                        int64_t samples, float* out)
+{
     size_t rp = 0;
     for (int64_t i = 0; i < samples; ++i) {
-        if (layout.info.format == WavSampleFormat::Pcm16) {
+        if (format == WavSampleFormat::Pcm16) {
             const int16_t v =
                 static_cast<int16_t>(raw[rp] | (raw[rp + 1] << 8));
             out[static_cast<size_t>(i)] = static_cast<float>(v) / 32768.0f;
             rp += 2;
-        } else if (layout.info.format == WavSampleFormat::Pcm24) {
+        } else if (format == WavSampleFormat::Pcm24) {
             int32_t v = static_cast<int32_t>(raw[rp]) |
                         (static_cast<int32_t>(raw[rp + 1]) << 8) |
                         (static_cast<int32_t>(raw[rp + 2]) << 16);
@@ -272,7 +283,6 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
             rp += 4;
         }
     }
-    return out;
 }
 
 std::expected<ByteSource, std::string> memory_source(std::span<const char> bytes)
@@ -353,6 +363,108 @@ wav_read_range(std::span<const char> bytes, int64_t begin_frame,
 {
     auto src = memory_source(bytes);
     return read_range_from_source(*src, begin_frame, end_frame, info_out);
+}
+
+WavReader::WavReader(WavReader&& other) noexcept
+{
+    *this = std::move(other);
+}
+
+WavReader& WavReader::operator=(WavReader&& other) noexcept
+{
+    if (this == &other) return *this;
+    reset();
+    file_ = other.file_;
+    info_ = other.info_;
+    data_offset_ = other.data_offset_;
+    block_align_ = other.block_align_;
+    cursor_frame_ = other.cursor_frame_;
+    other.file_ = nullptr;
+    other.info_ = {};
+    other.data_offset_ = 0;
+    other.block_align_ = 0;
+    other.cursor_frame_ = 0;
+    return *this;
+}
+
+WavReader::~WavReader()
+{
+    reset();
+}
+
+std::expected<WavReader, std::string>
+WavReader::open(const std::string& path)
+{
+    FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return std::unexpected("failed to open WAV file");
+
+    ByteSource src;
+    src.kind = SourceKind::File;
+    src.file = f;
+    auto parsed = parse_wav_layout(src);
+    if (!parsed) {
+        std::fclose(f);
+        return std::unexpected(parsed.error());
+    }
+
+    WavReader out;
+    out.file_ = f;
+    out.info_ = parsed->info;
+    out.data_offset_ = parsed->data_offset;
+    out.block_align_ = parsed->block_align;
+    auto seeked = out.seek_to_frame(0);
+    if (!seeked) return std::unexpected(seeked.error());
+    return out;
+}
+
+std::expected<void, std::string> WavReader::seek_to_frame(int64_t frame)
+{
+    if (!file_) return std::unexpected("WAV reader is not open");
+    if (frame < 0 || frame > info_.frames) {
+        return std::unexpected("invalid WAV frame range");
+    }
+    const uint64_t byte_offset =
+        data_offset_ + static_cast<uint64_t>(frame) * block_align_;
+    if (std::fseek(file_, static_cast<long>(byte_offset), SEEK_SET) != 0) {
+        return std::unexpected("failed to seek WAV file");
+    }
+    cursor_frame_ = frame;
+    return {};
+}
+
+std::expected<int64_t, std::string> WavReader::read_frames(float* out,
+                                                           int64_t frames)
+{
+    if (!file_) return std::unexpected("WAV reader is not open");
+    if (frames < 0 || (frames > 0 && out == nullptr)) {
+        return std::unexpected("invalid WAV frame read");
+    }
+    const int64_t available = info_.frames - cursor_frame_;
+    const int64_t to_read = std::min(frames, available);
+    if (to_read <= 0) return int64_t{0};
+
+    const uint64_t bytes =
+        static_cast<uint64_t>(to_read) * static_cast<uint64_t>(block_align_);
+    if (bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        return std::unexpected("WAV read is too large");
+    }
+    std::vector<unsigned char> raw(static_cast<size_t>(bytes));
+    if (std::fread(raw.data(), 1, raw.size(), file_) != raw.size()) {
+        return std::unexpected("truncated WAV data");
+    }
+    decode_wav_samples(raw.data(), info_.format, to_read * info_.channels, out);
+    cursor_frame_ += to_read;
+    return to_read;
+}
+
+void WavReader::reset()
+{
+    if (file_) std::fclose(file_);
+    file_ = nullptr;
+    info_ = {};
+    data_offset_ = 0;
+    block_align_ = 0;
+    cursor_frame_ = 0;
 }
 
 WavWriter::WavWriter(WavWriter&& other) noexcept

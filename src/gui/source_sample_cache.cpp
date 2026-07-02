@@ -1,5 +1,6 @@
 #include "source_sample_cache.h"
 
+#include "audio_reader.h"
 #include "source_audio_io.h"
 
 #include <algorithm>
@@ -19,7 +20,7 @@
 namespace {
 
 constexpr char kMagic[] = "WARPTEMPO_SOURCE_SAMPLE_CACHE";
-constexpr uint32_t kFileVersion = 1;
+constexpr uint32_t kFileVersion = 2;
 constexpr uint32_t kHashAlgorithmNone = 0;
 constexpr char kPayloadType[] = "float32_interleaved";
 constexpr char kSampleCacheExtension[] = ".samples";
@@ -33,7 +34,7 @@ struct SourceMetadata {
     int sample_rate = 0;
     int channels = 0;
     int64_t frame_count = 0;
-    int format = 0;
+    int kind_code = 0;
 };
 
 bool put_bytes(std::FILE* f, const void* p, size_t n) {
@@ -74,16 +75,18 @@ std::string lowercase(std::string s) {
     return s;
 }
 
-bool is_cacheable_source(const std::string& source_path, int format) {
-    const std::filesystem::path p(source_path);
-    const std::string ext = lowercase(p.extension().string());
-    if (ext == ".wav" || ext == ".wave") return false;
+int audio_kind_code(AudioFileKind kind) {
+    switch (kind) {
+        case AudioFileKind::WavPcm16:   return 1;
+        case AudioFileKind::WavPcm24:   return 2;
+        case AudioFileKind::WavFloat32: return 3;
+        case AudioFileKind::Flac:       return 4;
+    }
+    return 0;
+}
 
-    const int type = format & SF_FORMAT_TYPEMASK;
-    if (type == SF_FORMAT_WAV) return false;
-
-    return ext == ".flac" || ext == ".ogg" || ext == ".opus" ||
-           ext == ".mp3" || ext == ".oga";
+bool is_cacheable_source(const AudioFileInfo& source_info) {
+    return source_info.kind == AudioFileKind::Flac;
 }
 
 std::filesystem::path cache_path_for_source(const std::string& source_path) {
@@ -106,7 +109,7 @@ int64_t file_time_ticks(const std::filesystem::path& p) {
 }
 
 SourceMetadata source_metadata(const std::string& source_path,
-                               const SF_INFO& source_info) {
+                               const AudioFileInfo& source_info) {
     const std::filesystem::path p(source_path);
     SourceMetadata m;
     m.basename = p.stem().string();
@@ -115,10 +118,10 @@ SourceMetadata source_metadata(const std::string& source_path,
     m.source_size = std::filesystem::file_size(p, ec);
     if (ec) m.source_size = 0;
     m.mtime_ticks = file_time_ticks(p);
-    m.sample_rate = source_info.samplerate;
+    m.sample_rate = source_info.sample_rate;
     m.channels = source_info.channels;
     m.frame_count = static_cast<int64_t>(source_info.frames);
-    m.format = source_info.format;
+    m.kind_code = audio_kind_code(source_info.kind);
     return m;
 }
 
@@ -130,7 +133,7 @@ bool metadata_matches(const SourceMetadata& have, const SourceMetadata& want) {
            have.sample_rate == want.sample_rate &&
            have.channels == want.channels &&
            have.frame_count == want.frame_count &&
-           have.format == want.format;
+           have.kind_code == want.kind_code;
 }
 
 bool read_header_metadata(std::FILE* f, SourceMetadata& have,
@@ -145,7 +148,7 @@ bool read_header_metadata(std::FILE* f, SourceMetadata& have,
     uint32_t version = 0;
     if (!get_u32(f, version) || version != kFileVersion) return false;
 
-    int32_t sr = 0, ch = 0, fmt = 0;
+    int32_t sr = 0, ch = 0, kind = 0;
     if (!get_str(f, have.basename)) return false;
     if (!get_str(f, have.extension)) return false;
     if (!get_u64(f, have.source_size)) return false;
@@ -153,10 +156,10 @@ bool read_header_metadata(std::FILE* f, SourceMetadata& have,
     if (!get_i32(f, sr)) return false;
     if (!get_i32(f, ch)) return false;
     if (!get_i64(f, have.frame_count)) return false;
-    if (!get_i32(f, fmt)) return false;
+    if (!get_i32(f, kind)) return false;
     have.sample_rate = sr;
     have.channels = ch;
-    have.format = fmt;
+    have.kind_code = kind;
 
     if (!get_str(f, payload_type) || payload_type != kPayloadType) return false;
     if (!get_i64(f, payload_frames)) return false;
@@ -271,7 +274,7 @@ bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes)
            put_i32(f, m.sample_rate) &&
            put_i32(f, m.channels) &&
            put_i64(f, m.frame_count) &&
-           put_i32(f, m.format) &&
+           put_i32(f, m.kind_code) &&
            put_str(f, kPayloadType) &&
            put_i64(f, m.frame_count) &&
            put_u64(f, payload_bytes) &&
@@ -332,34 +335,32 @@ bool write_cache_samples(const std::filesystem::path& cache_path,
 bool rebuild_cache(const std::string& source_path,
                    const std::filesystem::path& cache_path,
                    const SourceMetadata& meta) {
-    SF_INFO info{};
-    info.format = 0;
-    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!snd) return false;
-    if (info.samplerate != meta.sample_rate || info.channels != meta.channels ||
-        info.frames != meta.frame_count || info.format != meta.format) {
-        sf_close(snd);
+    auto reader = AudioReader::open(source_path);
+    if (!reader) return false;
+    const AudioFileInfo& info = reader->info();
+    if (info.sample_rate != meta.sample_rate || info.channels != meta.channels ||
+        info.frames != meta.frame_count ||
+        audio_kind_code(info.kind) != meta.kind_code) {
         return false;
     }
 
-    constexpr sf_count_t kChunkFrames = 65536;
+    constexpr int64_t kChunkFrames = 65536;
     std::vector<float> all_samples;
     all_samples.assign(static_cast<size_t>(meta.frame_count) *
                        static_cast<size_t>(meta.channels), 0.0f);
     int64_t remaining = meta.frame_count;
     float* dst = all_samples.data();
     while (remaining > 0) {
-        const sf_count_t want = static_cast<sf_count_t>(
-            std::min<int64_t>(remaining, kChunkFrames));
-        const sf_count_t got = sf_readf_float(snd, dst, want);
+        const int64_t want = std::min<int64_t>(remaining, kChunkFrames);
+        auto got_read = reader->read_frames(dst, want);
+        if (!got_read) return false;
+        const int64_t got = *got_read;
         if (got != want) {
-            sf_close(snd);
             return false;
         }
         dst += static_cast<size_t>(got) * static_cast<size_t>(meta.channels);
         remaining -= static_cast<int64_t>(got);
     }
-    sf_close(snd);
 
     return write_cache_samples(
         cache_path, meta, all_samples.data(),
@@ -375,13 +376,13 @@ bool is_source_sample_cache_path(const std::string& path) {
 
 std::expected<SourceSampleReadResult, std::string>
 load_source_range_with_source_sample_cache(const std::string& source_path,
-                                           const SF_INFO& source_info,
+                                           const AudioFileInfo& source_info,
                                            size_t begin_frame,
                                            size_t end_frame,
                                            std::vector<float>& out_samples,
                                            int& out_sample_rate,
                                            int& out_channels) {
-    if (!is_cacheable_source(source_path, source_info.format)) {
+    if (!is_cacheable_source(source_info)) {
         if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
                                                 out_samples, out_sample_rate,
                                                 out_channels); !r) {
@@ -435,9 +436,9 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
 }
 
 bool read_full_source_from_source_sample_cache(const std::string& source_path,
-                                               const SF_INFO& source_info,
+                                               const AudioFileInfo& source_info,
                                                std::vector<float>& out_samples) {
-    if (!is_cacheable_source(source_path, source_info.format)) return false;
+    if (!is_cacheable_source(source_info)) return false;
 
     const SourceMetadata meta = source_metadata(source_path, source_info);
     if (meta.frame_count <= 0) return false;
@@ -447,15 +448,15 @@ bool read_full_source_from_source_sample_cache(const std::string& source_path,
 }
 
 bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
-                                            const SF_INFO& source_info,
+                                            const AudioFileInfo& source_info,
                                             const float* samples,
                                             int64_t frames,
                                             int channels) {
     if (!samples || frames <= 0 || channels <= 0 ||
-        !is_cacheable_source(source_path, source_info.format)) {
+        !is_cacheable_source(source_info)) {
         return true;
     }
-    if (source_info.samplerate <= 0 || source_info.channels != channels ||
+    if (source_info.sample_rate <= 0 || source_info.channels != channels ||
         source_info.frames != frames) {
         return false;
     }
@@ -500,15 +501,12 @@ source_path_for_source_sample_cache(const std::string& cache_path_string) {
     const std::filesystem::path source_path =
         parent / (have.basename + have.extension);
 
-    SF_INFO info{};
-    info.format = 0;
-    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!snd) {
+    auto info = audio_probe(source_path.string());
+    if (!info) {
         return std::unexpected("private source sample cache owner is missing");
     }
-    sf_close(snd);
 
-    const SourceMetadata want = source_metadata(source_path.string(), info);
+    const SourceMetadata want = source_metadata(source_path.string(), *info);
     if (!metadata_matches(have, want) ||
         payload_frames != want.frame_count ||
         payload_bytes != static_cast<uint64_t>(want.frame_count) *

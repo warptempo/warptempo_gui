@@ -50,7 +50,6 @@
 #include "locale_check.h"
 
 #include <cairo/cairo.h>
-#include <sndfile.h>
 
 #include <algorithm>
 #include <cassert>

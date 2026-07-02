@@ -15,6 +15,8 @@
 #include "render_cache.h"
 #include "source_sample_cache.h"
 
+#include "audio_probe.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -28,8 +30,6 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-
-#include <sndfile.h>
 
 namespace {
 
@@ -117,19 +117,16 @@ RenderOutcome do_render(const RenderRequest& req,
     const int    R_s                 = kRs;
 
     // --- Probe source audio for sample rate / total frames. ---
-    SF_INFO src_info{};
-    src_info.format = 0;
-    SNDFILE* sf = sf_open(req.source_audio_path.c_str(), SFM_READ, &src_info);
-    if (!sf) {
+    auto src_info = audio_probe(req.source_audio_path);
+    if (!src_info) {
         std::fprintf(stderr,
             "warptempo_gui: render error: could not open source '%s'\n",
             req.source_audio_path.c_str());
         return RenderOutcome::Failed;
     }
-    const long sample_rate  = src_info.samplerate;
-    const long total_frames = static_cast<long>(src_info.frames);
-    const int source_channels_probe = src_info.channels;
-    sf_close(sf);
+    const long sample_rate  = src_info->sample_rate;
+    const long total_frames = static_cast<long>(src_info->frames);
+    const int source_channels_probe = src_info->channels;
     profile_source_channels = source_channels_probe;
     profile_source_sample_rate = static_cast<int>(sample_rate);
 
@@ -566,7 +563,7 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             if (!used_gui_buffer) {
                 auto source_read_result = load_source_range_with_source_sample_cache(
-                    req.source_audio_path, src_info,
+                    req.source_audio_path, *src_info,
                     trim_window.load_begin_frame, trim_window.load_end_frame,
                     src_samples, src_sr, src_ch);
                 if (!source_read_result) {

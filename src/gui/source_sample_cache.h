@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <sndfile.h>
+#include "audio_probe.h"
 
 enum class SourceSampleCacheStatus {
     Bypassed,
@@ -26,7 +26,7 @@ bool is_source_sample_cache_path(const std::string& path);
 // float32 for direct render-engine input.
 std::expected<SourceSampleReadResult, std::string>
 load_source_range_with_source_sample_cache(const std::string& source_path,
-                                           const SF_INFO& source_info,
+                                           const AudioFileInfo& source_info,
                                            size_t begin_frame,
                                            size_t end_frame,
                                            std::vector<float>& out_samples,
@@ -37,11 +37,11 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
 // fills out_samples with the full interleaved float32 payload at
 // source_info.channels channels and source_info.frames frames.
 bool read_full_source_from_source_sample_cache(const std::string& source_path,
-                                               const SF_INFO& source_info,
+                                               const AudioFileInfo& source_info,
                                                std::vector<float>& out_samples);
 
 bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
-                                            const SF_INFO& source_info,
+                                            const AudioFileInfo& source_info,
                                             const float* samples,
                                             int64_t frames,
                                             int channels);

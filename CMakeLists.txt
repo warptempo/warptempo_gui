@@ -21,8 +21,9 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 
 # ============================================================
 #  warptempo_parser — map / file-parse core.
-#  Depends on sndfile + the standard library only. No fftw, no GUI,
-#  no engine. frame_map.h / time_format.h are shared headers in src/.
+#  Depends on sndfile for the trimmed-WAV writer and warptempo_audio_io for
+#  source reads. No fftw, no GUI, no engine. frame_map.h / time_format.h are
+#  shared headers in src/.
 # ============================================================
 add_library(warptempo_parser_lib STATIC
     src/parser/warpmarkers_parse.cpp
@@ -81,6 +82,7 @@ add_library(warptempo_audio_io_lib STATIC
     src/audio_io/wav_io.cpp
     src/audio_io/flac_io.cpp
     src/audio_io/audio_probe.cpp
+    src/audio_io/audio_reader.cpp
 )
 target_include_directories(warptempo_audio_io_lib
     PUBLIC
@@ -106,6 +108,8 @@ target_link_libraries(warptempo_audio_io_test PRIVATE
     warptempo_audio_io_lib
     ${SNDFILE_LIBRARIES}
 )
+
+target_link_libraries(warptempo_parser_lib PUBLIC warptempo_audio_io_lib)
 
 # ============================================================
 #  warptempo_gui — Cairo/Wayland front end (optional).
@@ -236,8 +240,10 @@ option(WARPTEMPO_BUILD_PARSER
        "Build the standalone warptempo_parser binary (the parser library always builds)" OFF)
 if(WARPTEMPO_BUILD_PARSER)
     add_executable(warptempo_parser src/cli/parser_main.cpp)
-    target_include_directories(warptempo_parser PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_parser PRIVATE warptempo_parser_lib)
+    target_link_libraries(warptempo_parser PRIVATE
+        warptempo_parser_lib
+        warptempo_audio_io_lib
+    )
 endif()
 
 # ============================================================
@@ -249,8 +255,11 @@ endif()
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
 if(WARPTEMPO_BUILD_CLI)
     add_executable(warptempo_cli src/cli/cli_main.cpp)
-    target_include_directories(warptempo_cli PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_cli PRIVATE warptempo_parser_lib warptempo_engine_lib)
+    target_link_libraries(warptempo_cli PRIVATE
+        warptempo_parser_lib
+        warptempo_engine_lib
+        warptempo_audio_io_lib
+    )
 endif()
 
 # ============================================================
@@ -264,8 +273,10 @@ option(WARPTEMPO_BUILD_ENGINE
        "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)
 if(WARPTEMPO_BUILD_ENGINE)
     add_executable(warptempo_engine src/cli/engine_main.cpp)
-    target_include_directories(warptempo_engine PRIVATE ${SNDFILE_INCLUDE_DIRS})
-    target_link_libraries(warptempo_engine PRIVATE warptempo_engine_lib)
+    target_link_libraries(warptempo_engine PRIVATE
+        warptempo_engine_lib
+        warptempo_audio_io_lib
+    )
 endif()
 
 # --- Compiler Optimizations ---

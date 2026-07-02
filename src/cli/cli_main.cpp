@@ -11,7 +11,7 @@
 #include "render_assembly.h"            // render parameter assembly helpers
 #include "source_audio_io.h"            // load_source_range_to_buffer
 
-#include <sndfile.h>
+#include "audio_probe.h"
 
 #include <algorithm>
 #include <cmath>
@@ -136,17 +136,14 @@ int main(int argc, char** argv) {
     }
 
     // --- source sample rate / total frames ---
-    SF_INFO info{};
-    info.format = 0;
-    SNDFILE* sf = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!sf) {
+    auto info = audio_probe(source_path);
+    if (!info) {
         std::fprintf(stderr,
             "warptempo_cli: could not open source '%s'\n", source_path.c_str());
         return 1;
     }
-    const long sample_rate  = info.samplerate;
-    const long total_frames = static_cast<long>(info.frames);
-    sf_close(sf);
+    const long sample_rate  = info->sample_rate;
+    const long total_frames = static_cast<long>(info->frames);
 
     // --- locked engine geometry (shared with render_pipeline.cpp and
     // engine_main.cpp via engine_geometry.h) ---

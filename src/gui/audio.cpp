@@ -1,7 +1,7 @@
 #include "audio.h"
 #include "source_sample_cache.h"
 
-#include <sndfile.h>
+#include "audio_reader.h"
 
 #include <algorithm>
 #include <array>
@@ -55,7 +55,7 @@ constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
 constexpr int      kReductionFactor       = 32;  // 1024/32 = 32; 32768/1024 = 32.
 constexpr float    kQuantScale            = 32767.0f;
 constexpr const char* kSupportedSourceExtensions[] = {
-    ".wav", ".wave", ".flac", ".ogg", ".opus", ".mp3", ".oga"
+    ".wav", ".wave", ".flac"
 };
 
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;
@@ -104,14 +104,11 @@ bool stat_size_mtime(const std::string& path, int64_t& size, int64_t& mtime) {
 
 bool peaks_cache_header_matches_source(const std::string& peaks_path,
                                        const std::string& source_path) {
-    SF_INFO info;
-    std::memset(&info, 0, sizeof(info));
-    SNDFILE* snd = sf_open(source_path.c_str(), SFM_READ, &info);
-    if (!snd) return false;
-    sf_close(snd);
+    auto info = audio_probe(source_path);
+    if (!info) return false;
 
-    const int render_channels = std::min(info.channels, 2);
-    if (info.frames <= 0 || render_channels <= 0) return false;
+    const int render_channels = std::min(info->channels, 2);
+    if (info->frames <= 0 || render_channels <= 0) return false;
 
     int64_t src_size = 0, src_mtime = 0;
     if (!stat_size_mtime(source_path, src_size, src_mtime)) return false;
@@ -143,7 +140,7 @@ bool peaks_cache_header_matches_source(const std::string& peaks_path,
         }
         int32_t hdr_sr = 0;
         if (std::fread(&hdr_sr, sizeof(hdr_sr), 1, f) != 1 ||
-            hdr_sr != info.samplerate) {
+            hdr_sr != info->sample_rate) {
             break;
         }
 
@@ -151,7 +148,7 @@ bool peaks_cache_header_matches_source(const std::string& peaks_path,
         uint8_t hdr_rc = 0, hdr_nl = 0;
         char reserved[6];
         if (std::fread(&hdr_total_frames, sizeof(hdr_total_frames), 1, f) != 1 ||
-            hdr_total_frames != info.frames) {
+            hdr_total_frames != info->frames) {
             break;
         }
         if (std::fread(&hdr_rc, sizeof(hdr_rc), 1, f) != 1 ||
@@ -165,7 +162,7 @@ bool peaks_cache_header_matches_source(const std::string& peaks_path,
         if (std::fread(reserved, 1, 6, f) != 6) break;
 
         int64_t expected_pc[kNumLevels];
-        expected_pc[0] = (info.frames + kStrides[0] - 1) / kStrides[0];
+        expected_pc[0] = (info->frames + kStrides[0] - 1) / kStrides[0];
         for (int L = 1; L < kNumLevels; L++) {
             expected_pc[L] =
                 (expected_pc[L - 1] + kReductionFactor - 1) / kReductionFactor;
@@ -540,19 +537,16 @@ bool write_cache_to_disk(const std::string& source_path,
 } // namespace
 
 bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress) {
-    SF_INFO info;
-    std::memset(&info, 0, sizeof(info));
-
-    SNDFILE* snd = sf_open(path.c_str(), SFM_READ, &info);
-    if (!snd) {
+    auto info = audio_probe(path);
+    if (!info) {
         std::fprintf(stderr,
                      "warptempo_gui: could not open '%s': %s\n",
-                     path.c_str(), sf_strerror(nullptr));
+                     path.c_str(), info.error().c_str());
         return false;
     }
 
-    const int next_channels        = info.channels;
-    const int next_sample_rate     = info.samplerate;
+    const int next_channels        = info->channels;
+    const int next_sample_rate     = info->sample_rate;
     const int next_render_channels = std::min(next_channels, 2);
 
     if (next_channels > 2) {
@@ -562,30 +556,25 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
                      next_channels, path.c_str());
     }
 
-    const int64_t claimed = info.frames;
+    const int64_t claimed = info->frames;
     std::vector<float> next_samples;
     int64_t next_total_frames = 0;
-    if (read_full_source_from_source_sample_cache(path, info, next_samples)) {
-        sf_close(snd);
+    if (read_full_source_from_source_sample_cache(path, *info, next_samples)) {
         next_total_frames = claimed;
         std::fprintf(stderr, "[warptempo_gui] source sample cache hit for %s\n",
                      path.c_str());
     } else {
-        next_samples.assign(static_cast<size_t>(claimed) * next_channels, 0.0f);
-
-        const sf_count_t got = sf_readf_float(snd, next_samples.data(), claimed);
-        sf_close(snd);
-
-        if (got <= 0) {
+        auto full = audio_read_full(path);
+        if (!full) {
             std::fprintf(stderr,
-                         "warptempo_gui: no audio frames read from '%s'\n",
-                         path.c_str());
+                         "warptempo_gui: could not read '%s': %s\n",
+                         path.c_str(), full.error().c_str());
             return false;
         }
-        if (got != claimed) {
-            next_samples.resize(static_cast<size_t>(got) * next_channels);
-        }
-        next_total_frames = got;
+        next_samples = std::move(*full);
+        next_total_frames =
+            static_cast<int64_t>(next_samples.size() /
+                                 static_cast<size_t>(next_channels));
     }
 
     std::array<PyramidLevel, 3> next_levels;
@@ -700,22 +689,20 @@ std::pair<float,float> GuiAudio::get_peak_range(int channel,
 }
 
 bool write_peaks_cache_for_wav(const std::string& wav_path) {
-    SF_INFO info;
-    std::memset(&info, 0, sizeof(info));
-    SNDFILE* snd = sf_open(wav_path.c_str(), SFM_READ, &info);
-    if (!snd) {
+    auto reader = AudioReader::open(wav_path);
+    if (!reader) {
         std::fprintf(stderr,
             "[warptempo_gui] peaks cache write failed for %s: %s\n",
-            wav_path.c_str(), sf_strerror(nullptr));
+            wav_path.c_str(), reader.error().c_str());
         return false;
     }
+    const AudioFileInfo& info = reader->info();
     const int     channels        = info.channels;
-    const int     sample_rate     = info.samplerate;
+    const int     sample_rate     = info.sample_rate;
     const int64_t claimed_frames  = info.frames;
     const int     render_channels = std::min(channels, 2);
 
     if (claimed_frames <= 0 || render_channels <= 0) {
-        sf_close(snd);
         std::fprintf(stderr,
             "[warptempo_gui] peaks cache write failed for %s: empty audio\n",
             wav_path.c_str());
@@ -723,16 +710,16 @@ bool write_peaks_cache_for_wav(const std::string& wav_path) {
     }
 
     int64_t actual_frames = 0;
-    auto sndfile_iter = [&](float* out, int64_t want) -> int64_t {
-        const sf_count_t n = sf_readf_float(snd, out, static_cast<sf_count_t>(want));
-        if (n > 0) actual_frames += n;
-        return n > 0 ? static_cast<int64_t>(n) : 0;
+    auto audio_reader_iter = [&](float* out, int64_t want) -> int64_t {
+        auto n = reader->read_frames(out, want);
+        if (!n || *n <= 0) return 0;
+        actual_frames += *n;
+        return *n;
     };
 
     std::array<GuiAudio::PyramidLevel, 3> levels;
-    build_pyramid_streaming(sndfile_iter, claimed_frames, channels,
+    build_pyramid_streaming(audio_reader_iter, claimed_frames, channels,
                             render_channels, /*on_progress=*/{}, levels);
-    sf_close(snd);
 
     if (actual_frames <= 0) {
         std::fprintf(stderr,
