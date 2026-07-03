@@ -464,8 +464,10 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
         bool drop_pair = false;
         {
             std::lock_guard<std::mutex> lock(mutex_);
+            // Match the success-path re-check before mutating the disk index.
             if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-                it->second.filename == candidate.filename) {
+                it->second.filename == candidate.filename &&
+                it->second.fingerprint == fp) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                 disk_index_.erase(it);
                 drop_pair = true;
@@ -533,8 +535,10 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
     bool drop_pair = false;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        // Match the success-path re-check before mutating the disk index.
         if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-            it->second.filename == candidate.filename) {
+            it->second.filename == candidate.filename &&
+            it->second.fingerprint == fp) {
             disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
             disk_index_.erase(it);
             drop_pair = true;

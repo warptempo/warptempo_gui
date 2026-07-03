@@ -271,6 +271,10 @@ void Selection::prune_live_selection() {
 }
 
 void Selection::sync_playhead_to_last_selected(bool edge_follow) {
+    // Callers are authoring mutations and never run in render view; this guard
+    // keeps the authoring-store choice locally safe.
+    if (app.render_view.enabled) return;
+
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const int last = app.last_selected_marker;

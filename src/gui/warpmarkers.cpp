@@ -29,6 +29,16 @@ bool GuiWarpMarkers::save(const std::string& path) const {
 
 bool GuiWarpMarkers::save(const std::string& path,
                       const std::vector<GuiWarpMarker>& markers_) {
+    for (size_t i = 1; i < markers_.size(); ++i) {
+        if (!(markers_[i].time_seconds > markers_[i - 1].time_seconds)) {
+            std::fprintf(stderr,
+                "warptempo_gui: save aborted: markers not strictly "
+                "increasing at %.3fs\n",
+                markers_[i].time_seconds);
+            return false;
+        }
+    }
+
     std::ostringstream out;
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:

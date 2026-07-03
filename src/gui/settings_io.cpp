@@ -65,8 +65,8 @@ bool parse_double_full(const std::string& s, double& out) {
     return true;
 }
 
-// Lenient bool parser shared by parse_settings_file (the tab_*_read_only
-// branches). Accepts the canonical truthy/falsy token set.
+// Strict whole-token bool parser shared by parse_settings_file (the
+// tab_*_read_only branches). Accepts the canonical truthy/falsy token set.
 
 bool parse_bool_strict(const std::string& s, bool& out) {
     if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
@@ -307,15 +307,15 @@ bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
     std::error_code ec;
     if (std::filesystem::exists(p, ec)) return true;
-    std::ofstream f(p);
-    if (!f) {
+    // First-open templates are written atomically so a crash cannot leave a
+    // torn file that blocks future strict loads.
+    if (!atomic_write_string_to_path(p.string(), contents)) {
         std::fprintf(stderr,
                      "warptempo_gui: could not create '%s'\n",
                      p.string().c_str());
         return false;
     }
-    f << contents;
-    return static_cast<bool>(f);
+    return true;
 }
 
 bool parse_settings_file(const std::string& path, ParsedSettings& out) {
@@ -519,9 +519,8 @@ RendersettingsAuthoring read_rendersettings_authoring(
 std::optional<EngineSettings> read_rendersettings_engine_block(
         const std::filesystem::path& path) {
     // Identical semantics to read_engine_settings_from_file: canonical
-    // engine keys are read, every non-engine line (the three view-state
-    // keys and anything else) is ignored. read_rendersettings_view_state
-    // is the reader for the view-state side.
+    // engine keys are read, while non-canonical keys are silently skipped.
+    // read_rendersettings_view_state is the reader for the view-state side.
     auto r = read_engine_settings_from_file(path.string());
     if (!r) return std::nullopt;
     return *r;

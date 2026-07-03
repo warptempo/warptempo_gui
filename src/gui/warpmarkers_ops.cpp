@@ -352,6 +352,9 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Same discrete-frame_map-change class as drop_marker (see comment
+    // there): re-warp synchronously in target view.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
