@@ -549,8 +549,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             read_rendersettings_engine_block(sidecar);
         if (!commit_engine_settings) {
             std::fprintf(stderr,
-                "warptempo_gui: render-view: commit aborted, "
-                "rendersettings engine block invalid or absent at '%s'\n",
+                "warptempo_gui: commit aborted: rendersettings engine "
+                "block invalid or absent at '%s'\n",
                 sidecar.string().c_str());
             return true;
         }
@@ -571,8 +571,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             auto r = m.load(wm.string());
             if (!r) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render-view: commit aborted, failed "
-                    "to load %s: %s\n",
+                    "warptempo_gui: commit aborted: load failed for '%s': "
+                    "%s\n",
                     wm.string().c_str(), r.error().c_str());
                 return true;
             }
@@ -585,8 +585,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             auto r = t.load(tm.string());
             if (!r) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render-view: commit aborted, failed "
-                    "to load %s: %s\n",
+                    "warptempo_gui: commit aborted: load failed for '%s': "
+                    "%s\n",
                     tm.string().c_str(), r.error().c_str());
                 return true;
             }
@@ -717,8 +717,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             std::filesystem::remove_all(renders_root, ec);
             if (ec) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render-view: failed to wipe "
-                    "%s: %s\n",
+                    "warptempo_gui: render-view: wipe failed for '%s': "
+                    "%s\n",
                     renders_root.string().c_str(),
                     ec.message().c_str());
             }

@@ -126,7 +126,7 @@ RenderOutcome do_render(const RenderRequest& req,
     auto src_info = audio_probe(req.source_audio_path);
     if (!src_info) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: could not open source '%s'\n",
+            "warptempo_gui: render error: open failed for '%s'\n",
             req.source_audio_path.c_str());
         return RenderOutcome::Failed;
     }
@@ -187,8 +187,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::filesystem::remove(path, ec);
                 if (ec) {
                     std::fprintf(stderr,
-                        "warptempo_gui: render warning: failed to remove "
-                        "partial sidecar '%s': %s\n",
+                        "warptempo_gui: render warning: remove failed for "
+                        "'%s': %s\n",
                         path.c_str(), ec.message().c_str());
                 }
             }
@@ -199,8 +199,8 @@ RenderOutcome do_render(const RenderRequest& req,
         std::filesystem::remove(final_output_path, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to remove "
-                "uncommittable wav '%s': %s\n",
+                "warptempo_gui: render warning: remove failed for '%s': "
+                "%s\n",
                 final_output_path.c_str(), ec.message().c_str());
         }
     };
@@ -219,8 +219,8 @@ RenderOutcome do_render(const RenderRequest& req,
             auto note_failure = [&](const std::filesystem::path& path) {
                 std::fprintf(stderr,
                     hard_fail
-                        ? "warptempo_gui: render error: failed to write '%s'\n"
-                        : "warptempo_gui: render warning: failed to write '%s'\n",
+                        ? "warptempo_gui: render error: write failed for '%s'\n"
+                        : "warptempo_gui: render warning: write failed for '%s'\n",
                     path.string().c_str());
                 result.ok = false;
             };
@@ -466,7 +466,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 (bf / (req.batch_basename + ".renderwarpmarkers")).string();
             if (!GuiWarpMarkers::save(wmd_path, warped_markers)) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to write '%s'\n",
+                    "warptempo_gui: render warning: write failed for '%s'\n",
                     wmd_path.c_str());
             }
 
@@ -499,7 +499,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 .string();
             if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to write '%s'\n",
+                    "warptempo_gui: render warning: write failed for '%s'\n",
                     tmd_path.c_str());
             }
         }
@@ -564,8 +564,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 return finalize_published_wav("reused_artifact");
             }
             std::fprintf(stderr,
-                "warptempo_gui: render warning: project artifact reuse of "
-                "'%s' failed (%s); falling back to a full render\n",
+                "warptempo_gui: render warning: project artifact reuse "
+                "failed for '%s': %s; falling back to a full render\n",
                 artifact_candidate.c_str(), ec.message().c_str());
             cleanup_all();
         }
@@ -585,8 +585,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 return finalize_published_wav("reused_cache");
             }
             std::fprintf(stderr,
-                "warptempo_gui: render warning: render cache publish to "
-                "'%s' failed; falling back to a full render\n",
+                "warptempo_gui: render warning: render cache publish "
+                "failed for '%s'; falling back to a full render\n",
                 final_output_path.c_str());
             cleanup_all();
         }
@@ -805,7 +805,8 @@ RenderOutcome do_render(const RenderRequest& req,
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (ec) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render error: rename '%s' -> '%s' failed: %s\n",
+                    "warptempo_gui: render error: rename failed for '%s' -> "
+                    "'%s': %s\n",
                     staging_output_path.c_str(), final_output_path.c_str(),
                     ec.message().c_str());
                 cleanup_all();
@@ -822,8 +823,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::vector<char> wav_blob;
                 if (!read_file_bytes(final_output_path, wav_blob)) {
                     std::fprintf(stderr,
-                        "warptempo_gui: render warning: failed to read "
-                        "published wav bytes into render cache from '%s'\n",
+                        "warptempo_gui: render warning: read failed for "
+                        "'%s'\n",
                         final_output_path.c_str());
                 } else if (profile_target_frames > 0) {
                     req.render_cache->insert(fingerprint, wav_blob, src_ch,

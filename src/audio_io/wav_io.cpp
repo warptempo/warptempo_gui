@@ -418,7 +418,11 @@ bool wav_projected_exceeds_riff_limits(WavSampleFormat format,
 std::expected<WavInfo, std::string> wav_probe(const std::string& path)
 {
     FilePtr f(std::fopen(path.c_str(), "rb"));
-    if (!f) return std::unexpected("failed to open WAV file");
+    if (!f) {
+        const int err = errno;
+        return std::unexpected(
+            append_errno_detail("failed to open WAV file", err));
+    }
     ByteSource src;
     src.kind = SourceKind::File;
     src.file = f.get();
@@ -456,7 +460,11 @@ wav_read_range(const std::string& path, int64_t begin_frame, int64_t end_frame,
                WavInfo* info_out)
 {
     FilePtr f(std::fopen(path.c_str(), "rb"));
-    if (!f) return std::unexpected("failed to open WAV file");
+    if (!f) {
+        const int err = errno;
+        return std::unexpected(
+            append_errno_detail("failed to open WAV file", err));
+    }
     ByteSource src;
     src.kind = SourceKind::File;
     src.file = f.get();
