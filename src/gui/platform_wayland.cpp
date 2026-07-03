@@ -1061,7 +1061,15 @@ void GuiPlatform::run() {
         while (wl_display_prepare_read(wl_display_) != 0) {
             wl_display_dispatch_pending(wl_display_);
         }
-        wl_display_flush(wl_display_);
+        if (wl_display_flush(wl_display_) < 0 && errno != EAGAIN) {
+            std::fprintf(stderr,
+                         "warptempo_gui: connection to the compositor lost; "
+                         "wl_display_flush failed: %s\n",
+                         std::strerror(errno));
+            should_exit_ = true;
+            wl_display_cancel_read(wl_display_);
+            break;
+        }
 
         // pfds[2] is the async-render completion eventfd; pfds[3] is the
         // waveform-worker completion eventfd. When no fd is
@@ -1105,6 +1113,19 @@ void GuiPlatform::run() {
             wl_display_dispatch_pending(wl_display_);
         } else {
             wl_display_cancel_read(wl_display_);
+        }
+
+        if (pfds[0].revents & (POLLHUP | POLLERR)) {
+            const bool hup = (pfds[0].revents & POLLHUP) != 0;
+            const bool err = (pfds[0].revents & POLLERR) != 0;
+            std::fprintf(stderr,
+                         "warptempo_gui: connection to the compositor lost; "
+                         "display fd reported %s%s%s\n",
+                         hup ? "POLLHUP" : "",
+                         (hup && err) ? " and " : "",
+                         err ? "POLLERR" : "");
+            should_exit_ = true;
+            break;
         }
 
         if (pfds[1].revents & POLLIN) {

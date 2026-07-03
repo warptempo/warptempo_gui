@@ -75,7 +75,11 @@ bool GuiWaveformWorker::is_busy() const {
 
 void GuiWaveformWorker::wait_until_idle() {
     using clock = std::chrono::steady_clock;
-    const auto deadline = clock::now() + std::chrono::milliseconds(100);
+    // The expiry path is unsafe by design: the caller swaps the audio out
+    // from under any live job. This bound exists only as a last-resort hang
+    // guard, and is sized far above the two-render worst case so it does not
+    // fire in practice.
+    const auto deadline = clock::now() + std::chrono::milliseconds(1000);
     while (true) {
         const int s = state_.load();
         if (s == static_cast<int>(State::Idle)) return;
@@ -92,7 +96,7 @@ void GuiWaveformWorker::wait_until_idle() {
         if (clock::now() >= deadline) {
             std::fprintf(stderr,
                 "warptempo_gui: waveform worker did not become idle within "
-                "100ms; proceeding anyway\n");
+                "1000ms; proceeding anyway\n");
             return;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
