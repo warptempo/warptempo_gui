@@ -643,7 +643,15 @@ WavWriter::open_file(const std::string& path, WavSampleFormat format,
     w.sample_rate_ = sample_rate;
     w.closed_ = false;
     auto ok = w.write_header();
-    if (!ok) return std::unexpected(ok.error());
+    if (!ok) {
+        // The header never landed; close and remove the just-created file so
+        // a failed open leaves no stray artifact for the caller to clean up.
+        std::fclose(w.file_);
+        w.file_ = nullptr;
+        w.closed_ = true;
+        std::remove(path.c_str());
+        return std::unexpected(ok.error());
+    }
     return w;
 }
 
@@ -758,6 +766,8 @@ std::expected<void, std::string> WavWriter::close()
         errno = 0;
         if (std::fflush(file_) != 0) {
             const int err = errno;
+            // fclose releases the stream even on failure; report the flush errno.
+            std::fclose(file_);
             file_ = nullptr;
             closed_ = true;
             return std::unexpected(
