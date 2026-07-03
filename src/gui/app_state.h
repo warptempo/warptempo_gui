@@ -66,15 +66,10 @@ inline double marker_hit_eps_seconds(double spp, double sr_d) {
     return static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;
 }
 
-// Wholesale snapshot of the undo-tracked settings. Captured at undo-push
-// time and restored on undo/redo. Holds the typed EngineSettings; the trim
-// fields remain present for the dormant trim-undo path but are not populated.
+// Wholesale snapshot of the undo-tracked settings. Holds the typed
+// EngineSettings captured at undo-push time and restored on undo/redo.
 struct SettingsSnapshot {
     EngineSettings engine_settings;
-    double trim_begin     = 0.0;
-    double trim_end       = 0.0;
-    bool   has_trim_begin = false;
-    bool   has_trim_end   = false;
 };
 
 // One entry on either stack. Carries the pre-mutation marker snapshot plus
@@ -287,7 +282,6 @@ struct TrimDragState {
     // matching warp-marker drag — so the bound tracks the grab point with no
     // initial snap. See DragState::anchor_mouse_time_seconds.
     double anchor_seconds     = 0.0;
-    SettingsSnapshot pre;    // pre-drag settings snapshot for dormant trim undo
 
     // Ctrl+Shift move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
@@ -548,13 +542,15 @@ struct AppState {
     // against each entry's op_mode. Drives both the unsaved-work dialog
     // and the dirty-dot.
     //
-    // Authoring-class settings (trim, engine, scale, N, limiter, title,
-    // audio_input, plus any free-form key typed
-    // into the settings editor that isn't a view-state key) participate
-    // in dirty via settings_dirty. View-state keys (viewport, zoom,
-    // playhead, follow_mode, active_markers_view, playback_speed) do NOT
+    // Authoring-class settings (engine, scale, N, limiter, title,
+    // audio_input, plus any free-form non-view key typed into the settings
+    // editor) participate in dirty via settings_dirty. View-state keys
+    // (viewport, zoom, playhead, follow_mode, active_markers_view,
+    // playback_speed, trim, and the per-tab read_only flags) do NOT
     // participate: they are silently persisted on Ctrl+S and silently
-    // discarded on Ctrl+W without save.
+    // discarded on Ctrl+W without save. Trim is gesture-owned, excluded from
+    // undo/redo history, and render-affecting but deliberately treated as
+    // transient view state.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;

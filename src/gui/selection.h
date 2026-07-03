@@ -38,12 +38,6 @@ struct Selection {
     void prune_live_selection();
     void sync_playhead_to_last_selected(bool edge_follow = false);
     void jump_playhead_to(int64_t target_sample);
-    // Dormant trim-undo helper. Compares the pre-restore trim (passed in)
-    // against the now-restored app.trim to find the touched bound, selects it
-    // (group Trim), and jumps the playhead to it, recentering if offscreen.
-    // Trim is currently excluded from undo/redo, so callers are disabled.
-    void focus_restored_trim(bool before_has_begin, double before_begin_sec,
-                             bool before_has_end,   double before_end_sec);
     // Select the active tab's trim bound ('B' or 'E') as the primary selection
     // (group Trim), dropping other marker selection but additionally selecting
     // a regular marker coincident with the bound if one exists. Used by Home /

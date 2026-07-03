@@ -624,12 +624,8 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // end bound offscreen.
             const int64_t lt = live_total_frames(app, audio);
             if (end_active > lt - eps) end_active = lt - eps;
-            // Trim is excluded from undo/redo history. Re-enable this capture
-            // and the push below to restore trim undo.
-            // SettingsSnapshot pre = capture_current_settings(app);
             app.trim.end_seconds = snap_to_timestamp_grid(static_cast<double>(
                 active_domain_to_source_frame(app, audio, end_active)) / sr_d);
-            // undo.push_settings_undo(std::move(pre));
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();

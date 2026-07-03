@@ -35,9 +35,6 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         snap_to_timestamp_grid(static_cast<double>(cand_src) / sr_d);
     cand_src = static_cast<int64_t>(std::nearbyint(cand_seconds * sr_d));
 
-    // Trim is excluded from undo/redo history. Re-enable this capture and the
-    // matching push below to restore trim undo.
-    // SettingsSnapshot pre = capture_current_settings(app);
     const int64_t live_total = live_total_frames(app, audio);
     const int64_t offset =
         dir * std::max<int64_t>(
@@ -88,7 +85,6 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     app.last_selected_trim  = 'B';
     app.last_sel_group      = LastSelGroup::Trim;
 
-    // undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
@@ -104,13 +100,9 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     double& this_seconds = (side == TrimSide::Begin) ? app.trim.begin_seconds : app.trim.end_seconds;
     bool&   this_sel     = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
     if (!this_has) return;
-    // Trim is excluded from undo/redo history. Re-enable this capture and the
-    // push below to restore trim undo.
-    // SettingsSnapshot pre = capture_current_settings(app);
     this_has     = false;
     this_seconds = 0.0;
     this_sel     = false;  // an unset bound can't stay selected
-    // undo.push_settings_undo(std::move(pre));
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
@@ -120,9 +112,6 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
 // bound is set. Trim is gesture-owned and excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
-        // Trim is excluded from undo/redo history. Re-enable this capture and
-        // the push below to restore trim undo.
-        // SettingsSnapshot pre = capture_current_settings(app);
         app.trim.has_begin      = false;
         app.trim.has_end        = false;
         app.trim.begin_seconds  = 0.0;
@@ -130,7 +119,6 @@ void GuiInputHandler::handle_trim_clear_both() {
         app.trim_begin_selected = false;
         app.trim_end_selected   = false;
         app.last_selected_trim  = 0;
-        // undo.push_settings_undo(std::move(pre));
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
@@ -224,9 +212,6 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     double anchor = 0.0;
     if (trim_mouse_x_to_source_seconds(mouse_x, anchor))
         app.trim_drag.anchor_seconds = anchor;
-    // Trim is excluded from undo/redo history. Re-enable this capture and the
-    // commit push to restore trim undo.
-    // app.trim_drag.pre          = capture_current_settings(app);
     app.last_sel_group         = LastSelGroup::Trim;
     if (both) {
         app.trim_begin_selected = true;
@@ -409,7 +394,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
 void GuiInputHandler::commit_trim_drag() {
     if (!app.trim_drag.active) return;
     if (app.trim_drag.moved) {
-        // undo.push_settings_undo(std::move(app.trim_drag.pre));
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
