@@ -69,6 +69,13 @@ struct RenderRequest {
     std::shared_ptr<const std::vector<float>> source_samples;
     int64_t source_total_frames = 0;
 
+    // Load-time identity of the file backing source_samples, captured by
+    // GuiAudio at decode. do_render compares it against the dispatch-time
+    // identity before associating a borrowed-buffer render with a fingerprint.
+    bool     has_source_load_identity = false;
+    uint64_t source_load_size = 0;
+    int64_t  source_load_mtime = 0;
+
     // Full phase reset store snapshot. Batch sidecar payload only: when
     // batch_folder is set and this list is non-empty, written verbatim as
     // `<batch_folder>/<batch_basename>.phaseresetmarkers` so render-view

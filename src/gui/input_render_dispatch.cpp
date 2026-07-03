@@ -40,6 +40,9 @@ void GuiInputHandler::attach_shared_render_resources(RenderRequest& req) {
     req.render_cache        = &target_render.render_cache;
     req.source_samples      = audio.samples_shared();
     req.source_total_frames = audio.total_frames();
+    req.has_source_load_identity = audio.has_source_load_identity();
+    req.source_load_size  = audio.source_load_size();
+    req.source_load_mtime = audio.source_load_mtime();
 }
 
 AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {

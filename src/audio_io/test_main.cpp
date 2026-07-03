@@ -9,12 +9,15 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <random>
 #include <span>
 #include <string>
 #include <vector>
+
+bool run_source_sample_cache_selftest();
 
 namespace {
 
@@ -325,6 +328,96 @@ bool test_unknown_magic_probe_rejection()
     return true;
 }
 
+bool test_allocation_and_riff_projection_boundaries()
+{
+    auto count = checked_audio_sample_count(0, 2);
+    if (!count || *count != 0) {
+        std::cout << "selftest: zero-frame allocation boundary failed\n";
+        return false;
+    }
+    if (checked_audio_sample_count(-1, 2) ||
+        checked_audio_sample_count(1, 0) ||
+        checked_audio_sample_count(1, -1)) {
+        std::cout << "selftest: invalid audio shape boundary failed\n";
+        return false;
+    }
+    if (checked_audio_sample_count(std::numeric_limits<int64_t>::max(), 2)) {
+        std::cout << "selftest: allocation multiplication guard failed\n";
+        return false;
+    }
+
+    constexpr int64_t byte_cap_frames = 1ll << 30;
+    count = checked_audio_sample_count(byte_cap_frames, 2);
+    if (!count || *count != static_cast<size_t>(byte_cap_frames * 2)) {
+        std::cout << "selftest: allocation byte-cap boundary failed\n";
+        return false;
+    }
+    auto over_cap = checked_audio_sample_count(byte_cap_frames + 1, 2);
+    if (over_cap ||
+        over_cap.error().find("implausibly large audio allocation") ==
+            std::string::npos) {
+        std::cout << "selftest: implausible allocation boundary failed\n";
+        return false;
+    }
+
+    if (wav_projected_exceeds_riff_limits(WavSampleFormat::Pcm24, 2, 16) ||
+        wav_projected_exceeds_riff_limits(WavSampleFormat::Float32, 2, 16)) {
+        std::cout << "selftest: small RIFF projection boundary failed\n";
+        return false;
+    }
+    constexpr uint64_t u32max = std::numeric_limits<uint32_t>::max();
+    if (!wav_projected_exceeds_riff_limits(WavSampleFormat::Pcm24, 2, u32max) ||
+        !wav_projected_exceeds_riff_limits(WavSampleFormat::Float32, 2, u32max) ||
+        !wav_projected_exceeds_riff_limits(
+            WavSampleFormat::Float32, 2,
+            std::numeric_limits<uint64_t>::max())) {
+        std::cout << "selftest: large RIFF projection boundary failed\n";
+        return false;
+    }
+
+    const std::vector<float> samples = {
+        -0.25f, 0.125f, 0.5f, -0.5f, 0.75f, -0.75f};
+    for (WavSampleFormat fmt : {WavSampleFormat::Float32,
+                                WavSampleFormat::Pcm24}) {
+        const char* stem = fmt == WavSampleFormat::Float32
+                               ? "projection_float32"
+                               : "projection_pcm24";
+        const std::string path = temp_path(stem);
+        auto writer = WavWriter::open_file(path, fmt, 2, 48000);
+        if (!writer) {
+            std::cout << "selftest: projection writer open failed: "
+                      << writer.error() << "\n";
+            return false;
+        }
+        auto ok = writer->write_frames(samples.data(), 3);
+        if (!ok) {
+            std::cout << "selftest: projection write failed: " << ok.error()
+                      << "\n";
+            std::remove(path.c_str());
+            return false;
+        }
+        ok = writer->close();
+        if (!ok) {
+            std::cout << "selftest: projection close failed: " << ok.error()
+                      << "\n";
+            std::remove(path.c_str());
+            return false;
+        }
+        const uint64_t size = std::filesystem::file_size(path);
+        std::remove(path.c_str());
+        const uint64_t header_span =
+            fmt == WavSampleFormat::Float32 ? 56 : 44;
+        const uint64_t bytes_per_sample =
+            fmt == WavSampleFormat::Float32 ? 4 : 3;
+        const uint64_t want = header_span + 3 * 2 * bytes_per_sample;
+        if (size != want) {
+            std::cout << "selftest: RIFF projection span mismatch\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 int run_selftest()
 {
     if (!test_riff_limit_predicate() || !test_data_before_fmt_parses() ||
@@ -392,6 +485,17 @@ int run_selftest()
         return 1;
     }
     std::cout << "selftest: WAV memory/file roundtrips passed\n";
+
+    if (!test_allocation_and_riff_projection_boundaries()) {
+        return 1;
+    }
+    std::cout << "selftest: allocation and RIFF projection boundaries passed\n";
+
+    if (!run_source_sample_cache_selftest()) {
+        return 1;
+    }
+    std::cout << "selftest: .samples container and identity fixtures passed\n";
+
     std::cout << "selftest: all passed\n";
     return 0;
 }

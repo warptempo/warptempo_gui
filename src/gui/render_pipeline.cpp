@@ -560,6 +560,21 @@ RenderOutcome do_render(const RenderRequest& req,
                     src_sr = static_cast<int>(sample_rate);
                     src_ch = source_channels_probe;
                     used_gui_buffer = true;
+                    // Borrowed samples are the audio the user authored
+                    // against, so they render as-is; only the claim that this
+                    // render is reproducible from the source file as it now
+                    // stands is dropped when the identities diverge.
+                    if (!fingerprint.empty() &&
+                        (!req.has_source_load_identity ||
+                         req.source_load_size != source_identity.size ||
+                         req.source_load_mtime != source_identity.mtime)) {
+                        std::fprintf(stderr,
+                            "warptempo_gui: render warning: source changed on disk since it "
+                            "was loaded; rendering the loaded audio and skipping fingerprint "
+                            "and cache publication for '%s'\n",
+                            final_output_path.c_str());
+                        fingerprint.clear();
+                    }
                 }
             }
             if (!used_gui_buffer) {
@@ -603,7 +618,8 @@ RenderOutcome do_render(const RenderRequest& req,
 
         // The fingerprint names the source identity statted at dispatch. The
         // samples just loaded were validated against the file as it stood at
-        // read time, either directly or through the .samples cache identity. If
+        // read time, either directly, through the .samples cache identity, or
+        // through the borrow path's load-time identity check above. If
         // the identity moved between those points, the association can no
         // longer be proven, so publish the render without one. A rename-replace
         // that lands mid-read can skip the fingerprint of a still-consistent

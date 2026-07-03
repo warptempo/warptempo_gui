@@ -91,9 +91,19 @@ set_source_files_properties(src/audio_io/dr_flac_impl.cpp PROPERTIES
 
 add_executable(warptempo_audio_io_test
     src/audio_io/test_main.cpp
+    src/gui/source_sample_cache_selftest.cpp
+    src/gui/source_sample_cache.cpp
 )
+target_include_directories(warptempo_audio_io_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/gui
+)
+# This is the project's single test binary. It covers the audio_io codec surface
+# and the GUI-side .samples container and identity logic, compiling
+# source_sample_cache.cpp directly into the target to keep the executable count
+# flat.
 target_link_libraries(warptempo_audio_io_test PRIVATE
     warptempo_audio_io_lib
+    warptempo_parser_lib
 )
 
 target_link_libraries(warptempo_parser_lib PUBLIC warptempo_audio_io_lib)

@@ -192,6 +192,9 @@ void GuiTargetRender::dispatch_render_now() {
     req.render_cache = &render_cache;
     req.source_samples = audio.samples_shared();
     req.source_total_frames = audio.total_frames();
+    req.has_source_load_identity = audio.has_source_load_identity();
+    req.source_load_size = audio.source_load_size();
+    req.source_load_mtime = audio.source_load_mtime();
 
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) { on_render_done(o); });
