@@ -112,6 +112,27 @@ bool translate_pointer_button(uint32_t button, GuiMouseButton& out) {
     }
 }
 
+template <typename Rect>
+bool contains_rect(const Rect& outer, const Rect& inner) {
+    return outer.x <= inner.x &&
+           outer.y <= inner.y &&
+           outer.x + outer.w >= inner.x + inner.w &&
+           outer.y + outer.h >= inner.y + inner.h;
+}
+
+template <typename Rect>
+bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
+    for (const Rect& e : rects) {
+        if (contains_rect(e, nr)) return false;
+    }
+    rects.push_back(nr);
+    rects.erase(
+        std::remove_if(rects.begin(), rects.end() - 1,
+                       [&](const Rect& e) { return contains_rect(nr, e); }),
+        rects.end() - 1);
+    return true;
+}
+
 // URL-decode in-place: %XX becomes one byte. Stops at the first
 // malformed escape (preserved literally).
 std::string url_decode(const std::string& s) {
@@ -845,6 +866,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
         shm_buffers_[i].pixels     = static_cast<char*>(shm_pool_map_) + offset;
         shm_buffers_[i].size_bytes = buffer_bytes;
         shm_buffers_[i].busy       = false;
+        shm_buffers_[i].pending.clear();
 
         shm_buffers_[i].buffer = wl_shm_pool_create_buffer(
             shm_pool_,
@@ -859,6 +881,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
             static_cast<unsigned char*>(shm_buffers_[i].pixels),
             CAIRO_FORMAT_ARGB32,
             w, h, stride);
+        shm_buffers_[i].pending.push_back(DamageRect{0, 0, w, h});
     }
 }
 
@@ -875,6 +898,7 @@ void GuiPlatform::destroy_shm_pool() {
         shm_buffers_[i].pixels     = nullptr;
         shm_buffers_[i].size_bytes = 0;
         shm_buffers_[i].busy       = false;
+        shm_buffers_[i].pending.clear();
     }
     if (shm_pool_) {
         wl_shm_pool_destroy(shm_pool_);
@@ -965,6 +989,11 @@ void GuiPlatform::schedule_frame_callback() {
     wl_surface_commit(wl_surface_);
 }
 
+/*
+ * Each buffer's pending list is the damage accumulated since that buffer was
+ * last attached. Painting and surface-damaging exactly that list makes an
+ * attach correct regardless of which buffer the compositor was holding.
+ */
 void GuiPlatform::paint_one_frame() {
     if (!has_initial_configure_) return;
 
@@ -994,7 +1023,7 @@ void GuiPlatform::paint_one_frame() {
     }
 
     cairo_t* cr = cairo_create(buf->surface);
-    for (const DamageRect& d : damage_) {
+    for (const DamageRect& d : buf->pending) {
         cairo_save(cr);
         cairo_rectangle(cr, d.x, d.y, d.w, d.h);
         cairo_clip(cr);
@@ -1003,7 +1032,7 @@ void GuiPlatform::paint_one_frame() {
     }
     cairo_destroy(cr);
 
-    for (const DamageRect& d : damage_) {
+    for (const DamageRect& d : buf->pending) {
         wl_surface_damage_buffer(wl_surface_, d.x, d.y, d.w, d.h);
     }
 
@@ -1011,6 +1040,7 @@ void GuiPlatform::paint_one_frame() {
     wl_surface_commit(wl_surface_);
     buf->busy = true;
 
+    buf->pending.clear();
     damage_.clear();
 
     schedule_frame_callback();
@@ -1019,29 +1049,14 @@ void GuiPlatform::paint_one_frame() {
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
 
-    // Containment suppression: invalidate_region is called from many sites
-    // per paint cycle (tick heartbeat, pre-paint hook, input handlers).
-    // Each surviving rect costs one on_redraw call downstream, so coalesce
-    // here. First, if any existing rect fully contains the new one, drop
-    // the new one. Second, after pushing, drop any existing rects fully
-    // contained by the new one. Together these maintain the invariant
-    // that damage_ never holds a rect that another rect in the list
-    // strictly contains.
-    auto contains = [](const DamageRect& outer, const DamageRect& inner) {
-        return outer.x <= inner.x &&
-               outer.y <= inner.y &&
-               outer.x + outer.w >= inner.x + inner.w &&
-               outer.y + outer.h >= inner.y + inner.h;
-    };
+    // Each surviving rect costs one on_redraw call downstream, so the
+    // global damage signal and every per-buffer pending list use the same
+    // containment coalescing.
     const DamageRect nr{x, y, w, h};
-    for (const DamageRect& e : damage_) {
-        if (contains(e, nr)) return;
+    if (!append_coalesced_rect(damage_, nr)) return;
+    for (int i = 0; i < kShmBufferCount; ++i) {
+        append_coalesced_rect(shm_buffers_[i].pending, nr);
     }
-    damage_.push_back(nr);
-    damage_.erase(
-        std::remove_if(damage_.begin(), damage_.end() - 1,
-                       [&](const DamageRect& e) { return contains(nr, e); }),
-        damage_.end() - 1);
 
     if (in_pre_paint_) return;  // paint_one_frame will commit shortly
     if (has_initial_configure_ && !frame_callback_) {
@@ -1257,6 +1272,13 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     xdg_surface_ack_configure(xs, serial);
 
     const bool first = !has_initial_configure_;
+    auto queue_full_surface_damage = [&]() {
+        const DamageRect full{0, 0, width_, height_};
+        append_coalesced_rect(damage_, full);
+        for (int i = 0; i < kShmBufferCount; ++i) {
+            append_coalesced_rect(shm_buffers_[i].pending, full);
+        }
+    };
 
     if (first) {
         has_initial_configure_ = true;
@@ -1266,7 +1288,7 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
             height_ = pending_h_;
             recreate_shm_pool(width_, height_);
         }
-        damage_.push_back(DamageRect{0, 0, width_, height_});
+        queue_full_surface_damage();
         if (on_resize_) on_resize_(width_, height_);
         paint_one_frame();
         return;
@@ -1278,13 +1300,13 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         width_  = pending_w_;
         height_ = pending_h_;
         recreate_shm_pool(width_, height_);
-        damage_.push_back(DamageRect{0, 0, width_, height_});
+        queue_full_surface_damage();
         if (on_resize_) on_resize_(width_, height_);
     } else if (damage_.empty()) {
         // No size change and nothing pending — still schedule a paint so
         // the compositor's reconfigure (e.g. activation/maximize state
         // change) gets honored.
-        damage_.push_back(DamageRect{0, 0, width_, height_});
+        queue_full_surface_damage();
     }
 
     if (!frame_callback_) schedule_frame_callback();

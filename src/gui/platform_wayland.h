@@ -112,6 +112,12 @@ private:
     // -- Frame callback (one in flight at a time, or none) --
     struct wl_callback*      frame_callback_   = nullptr;
 
+    // -- Damage accumulator --
+    // Set by invalidate_region() at any time; consumed at the next
+    // frame-callback paint and cleared after attach + commit.
+    struct DamageRect { int x, y, w, h; };
+    std::vector<DamageRect> damage_;
+
     // -- Buffer pool (pattern B: double-buffered wl_shm) --
     // Pattern X: cairo surfaces are created directly on the wl_shm buffer's
     // mmap'd memory. The cairo_t* the on_redraw callback receives is a
@@ -125,6 +131,11 @@ private:
         void*             pixels       = nullptr;  // points into mmap region
         size_t            size_bytes   = 0;
         bool              busy         = false;    // true between attach and release
+        // Damage accumulated since this buffer was last attached. The list is
+        // bounded by the same containment coalescing as damage_; in practice
+        // it stays to a few rects, and the occasional larger clip set on
+        // buffer alternation is the cost of correctness.
+        std::vector<DamageRect> pending;
     };
     // Buffer count is the single source of truth for the array size and
     // every loop that walks the buffers (pool sizing, per-buffer layout,
@@ -154,12 +165,6 @@ private:
     // roundtrip, in millihertz. Zero means no output advertised a mode;
     // detect_refresh_rate_ms() then falls back to 60 Hz.
     int  output_refresh_mhz_ = 0;
-
-    // -- Damage accumulator --
-    // Set by invalidate_region() at any time; consumed at the next
-    // frame-callback paint and cleared after attach + commit.
-    struct DamageRect { int x, y, w, h; };
-    std::vector<DamageRect> damage_;
 
     // -- Playhead triangle surface (loaded once during init) --
     cairo_surface_t* playhead_triangle_surface_ = nullptr;
