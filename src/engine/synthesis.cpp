@@ -654,9 +654,11 @@ void Synthesis::synthesize_full(
 }
 
 bool Synthesis::process(AudioSTFT& stft) {
-    const WavSampleFormat format =
-        stft.limiter ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
-    auto writer = WavWriter::open_file(stft.output_audio_file, format,
+    // process() is the clean, unlimited disk path only -- the limited chain
+    // writes through write_render_to_file instead, which already hardcodes
+    // Pcm24.
+    auto writer = WavWriter::open_file(stft.output_audio_file,
+                                       WavSampleFormat::Float32,
                                        stft.src_info.channels,
                                        stft.src_info.samplerate);
     if (!writer) {
