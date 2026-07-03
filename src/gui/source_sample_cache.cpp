@@ -22,10 +22,17 @@ namespace {
 constexpr char kMagic[] = "WARPTEMPO_SOURCE_SAMPLE_CACHE";
 constexpr uint32_t kFileVersion = 2;
 constexpr uint32_t kHashAlgorithmNone = 0;
+constexpr uint32_t kHashAlgorithmFlacStreaminfoMd5 = 1;
 constexpr char kPayloadType[] = "float32_interleaved";
 constexpr char kSampleCacheExtension[] = ".samples";
 std::atomic<uint64_t> g_cache_tmp_counter{0};
 
+// For FLAC sources the identity includes the STREAMINFO MD5 of the unencoded
+// audio, read for free by the probe, so content replacement invalidates the
+// cache even when size and mtime are preserved. WAV sources deliberately trust
+// this metadata tuple alone because hashing a WAV costs the full read this
+// cache exists to avoid. An all-zero FLAC MD5 means the encoder never set it
+// and falls back to the same metadata-only trust.
 struct SourceMetadata {
     std::string basename;
     std::string extension;
@@ -35,6 +42,8 @@ struct SourceMetadata {
     int channels = 0;
     int64_t frame_count = 0;
     int kind_code = 0;
+    uint32_t hash_algorithm = kHashAlgorithmNone;
+    unsigned char hash[16] = {};
 };
 
 bool put_bytes(std::FILE* f, const void* p, size_t n) {
@@ -122,6 +131,10 @@ SourceMetadata source_metadata(const std::string& source_path,
     m.channels = source_info.channels;
     m.frame_count = static_cast<int64_t>(source_info.frames);
     m.kind_code = audio_kind_code(source_info.kind);
+    if (source_info.has_content_md5) {
+        m.hash_algorithm = kHashAlgorithmFlacStreaminfoMd5;
+        std::memcpy(m.hash, source_info.content_md5, sizeof(m.hash));
+    }
     return m;
 }
 
@@ -133,7 +146,10 @@ bool metadata_matches(const SourceMetadata& have, const SourceMetadata& want) {
            have.sample_rate == want.sample_rate &&
            have.channels == want.channels &&
            have.frame_count == want.frame_count &&
-           have.kind_code == want.kind_code;
+           have.kind_code == want.kind_code &&
+           have.hash_algorithm == want.hash_algorithm &&
+           (want.hash_algorithm != kHashAlgorithmFlacStreaminfoMd5 ||
+            std::memcmp(have.hash, want.hash, sizeof(want.hash)) == 0);
 }
 
 bool read_header_metadata(std::FILE* f, SourceMetadata& have,
@@ -165,10 +181,17 @@ bool read_header_metadata(std::FILE* f, SourceMetadata& have,
     if (!get_i64(f, payload_frames)) return false;
     if (!get_u64(f, payload_bytes)) return false;
 
-    uint32_t hash_algorithm = 0, hash_len = 0;
-    if (!get_u32(f, hash_algorithm)) return false;
+    uint32_t hash_len = 0;
+    if (!get_u32(f, have.hash_algorithm)) return false;
     if (!get_u32(f, hash_len)) return false;
-    if (hash_algorithm != kHashAlgorithmNone || hash_len != 0) return false;
+    if (have.hash_algorithm == kHashAlgorithmNone) {
+        if (hash_len != 0) return false;
+    } else if (have.hash_algorithm == kHashAlgorithmFlacStreaminfoMd5) {
+        if (hash_len != sizeof(have.hash)) return false;
+        if (!get_bytes(f, have.hash, sizeof(have.hash))) return false;
+    } else {
+        return false;
+    }
 
     payload_offset = std::ftell(f);
     return payload_offset >= 0;
@@ -265,6 +288,10 @@ bool cache_file_matches(const std::filesystem::path& cache_path,
 }
 
 bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes) {
+    const uint32_t hash_len =
+        m.hash_algorithm == kHashAlgorithmFlacStreaminfoMd5
+            ? static_cast<uint32_t>(sizeof(m.hash))
+            : 0;
     return put_bytes(f, kMagic, sizeof(kMagic)) &&
            put_u32(f, kFileVersion) &&
            put_str(f, m.basename) &&
@@ -278,8 +305,9 @@ bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes)
            put_str(f, kPayloadType) &&
            put_i64(f, m.frame_count) &&
            put_u64(f, payload_bytes) &&
-           put_u32(f, kHashAlgorithmNone) &&
-           put_u32(f, 0);
+           put_u32(f, m.hash_algorithm) &&
+           put_u32(f, hash_len) &&
+           put_bytes(f, m.hash, hash_len);
 }
 
 bool write_cache_samples(const std::filesystem::path& cache_path,
@@ -394,6 +422,7 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
 
     const SourceMetadata meta = source_metadata(source_path, source_info);
     const std::filesystem::path cache_path = cache_path_for_source(source_path);
+    const bool existed = std::filesystem::exists(cache_path);
 
     SourceSampleReadResult result;
     if (read_cache_range(cache_path, meta, begin_frame, end_frame, out_samples)) {
@@ -404,9 +433,9 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
         return result;
     }
 
-    result.cache_status = std::filesystem::exists(cache_path)
-        ? SourceSampleCacheStatus::Rebuilt
-        : SourceSampleCacheStatus::Miss;
+    result.cache_status = existed
+        ? SourceSampleCacheStatus::StaleRebuild
+        : SourceSampleCacheStatus::FirstBuild;
 
     if (!rebuild_cache(source_path, cache_path, meta)) {
         if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
@@ -414,6 +443,7 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
                                                 out_channels); !r) {
             return std::unexpected(r.error());
         }
+        result.cache_status = SourceSampleCacheStatus::FallbackDirect;
         result.used_cache = false;
         return result;
     }
@@ -424,6 +454,7 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
                                                 out_channels); !r) {
             return std::unexpected(r.error());
         }
+        result.cache_status = SourceSampleCacheStatus::FallbackDirect;
         result.used_cache = false;
         return result;
     }
@@ -431,8 +462,6 @@ load_source_range_with_source_sample_cache(const std::string& source_path,
     out_sample_rate = meta.sample_rate;
     out_channels = meta.channels;
     result.used_cache = true;
-    if (result.cache_status == SourceSampleCacheStatus::Miss)
-        result.cache_status = SourceSampleCacheStatus::Rebuilt;
     return result;
 }
 
@@ -527,10 +556,11 @@ source_path_for_source_sample_cache(const std::string& cache_path_string) {
 
 const char* source_sample_cache_status_name(SourceSampleCacheStatus status) {
     switch (status) {
-        case SourceSampleCacheStatus::Bypassed: return "bypassed";
-        case SourceSampleCacheStatus::Hit:      return "hit";
-        case SourceSampleCacheStatus::Miss:     return "miss";
-        case SourceSampleCacheStatus::Rebuilt:  return "rebuilt";
+        case SourceSampleCacheStatus::Bypassed:       return "bypassed";
+        case SourceSampleCacheStatus::Hit:            return "hit";
+        case SourceSampleCacheStatus::FirstBuild:     return "first_build";
+        case SourceSampleCacheStatus::StaleRebuild:   return "stale_rebuild";
+        case SourceSampleCacheStatus::FallbackDirect: return "fallback_direct";
     }
     return "bypassed";
 }

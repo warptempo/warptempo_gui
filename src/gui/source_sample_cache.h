@@ -10,8 +10,9 @@
 enum class SourceSampleCacheStatus {
     Bypassed,
     Hit,
-    Miss,
-    Rebuilt,
+    FirstBuild,
+    StaleRebuild,
+    FallbackDirect,
 };
 
 struct SourceSampleReadResult {

@@ -37,6 +37,14 @@ std::string append_errno_detail(std::string message, int err)
     return message;
 }
 
+std::string implausible_alloc_message(uint64_t bytes)
+{
+    const uint64_t mib =
+        (bytes + 1024ull * 1024ull - 1) / (1024ull * 1024ull);
+    return "implausibly large audio allocation (" + std::to_string(mib) +
+           " MiB); refusing";
+}
+
 struct ByteSource {
     SourceKind kind = SourceKind::Memory;
     FILE* file = nullptr;
@@ -264,21 +272,51 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     if (info_out) *info_out = layout.info;
 
     const int64_t frames = end_frame - begin_frame;
-    const int64_t samples = frames * layout.info.channels;
+    const uint64_t samples =
+        static_cast<uint64_t>(frames) *
+        static_cast<uint64_t>(layout.info.channels);
+    if (layout.info.channels > 0 &&
+        samples / static_cast<uint64_t>(layout.info.channels) !=
+            static_cast<uint64_t>(frames)) {
+        return std::unexpected("WAV read is too large");
+    }
+    const uint64_t float_bytes = samples * sizeof(float);
+    if (float_bytes / sizeof(float) != samples) {
+        return std::unexpected("WAV read is too large");
+    }
+    if (float_bytes > kMaxPlausibleAudioAllocBytes) {
+        return std::unexpected(implausible_alloc_message(float_bytes));
+    }
+    if (samples > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        return std::unexpected("WAV read is too large");
+    }
     std::vector<float> out(static_cast<size_t>(samples));
     if (samples == 0) return out;
 
     const uint64_t byte_offset =
         layout.data_offset +
         static_cast<uint64_t>(begin_frame) * layout.block_align;
-    const size_t bytes =
-        static_cast<size_t>(frames) * static_cast<size_t>(layout.block_align);
-    std::vector<unsigned char> raw(bytes);
+    const uint64_t bytes =
+        static_cast<uint64_t>(frames) *
+        static_cast<uint64_t>(layout.block_align);
+    if (layout.block_align != 0 &&
+        bytes / static_cast<uint64_t>(layout.block_align) !=
+            static_cast<uint64_t>(frames)) {
+        return std::unexpected("WAV read is too large");
+    }
+    if (bytes > kMaxPlausibleAudioAllocBytes) {
+        return std::unexpected(implausible_alloc_message(bytes));
+    }
+    if (bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        return std::unexpected("WAV read is too large");
+    }
+    std::vector<unsigned char> raw(static_cast<size_t>(bytes));
     if (!src.seek(byte_offset) || !src.read(raw.data(), raw.size())) {
         return std::unexpected("truncated WAV data");
     }
 
-    decode_wav_samples(raw.data(), layout.info.format, samples, out.data());
+    decode_wav_samples(raw.data(), layout.info.format,
+                       static_cast<int64_t>(samples), out.data());
     return out;
 }
 
@@ -335,6 +373,15 @@ void append_u32(std::vector<unsigned char>& v, uint32_t x)
 }
 
 } // namespace
+
+bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
+                             uint64_t frames_written)
+{
+    if (data_bytes > std::numeric_limits<uint32_t>::max()) return true;
+    const uint64_t riff_size = header_span + data_bytes - 8;
+    return riff_size > std::numeric_limits<uint32_t>::max() ||
+           frames_written > std::numeric_limits<uint32_t>::max();
+}
 
 std::expected<WavInfo, std::string> wav_probe(const std::string& path)
 {
@@ -406,6 +453,7 @@ WavReader& WavReader::operator=(WavReader&& other) noexcept
     data_offset_ = other.data_offset_;
     block_align_ = other.block_align_;
     cursor_frame_ = other.cursor_frame_;
+    scratch_ = std::move(other.scratch_);
     other.file_ = nullptr;
     other.info_ = {};
     other.data_offset_ = 0;
@@ -479,11 +527,13 @@ std::expected<int64_t, std::string> WavReader::read_frames(float* out,
     if (bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
         return std::unexpected("WAV read is too large");
     }
-    std::vector<unsigned char> raw(static_cast<size_t>(bytes));
-    if (std::fread(raw.data(), 1, raw.size(), file_) != raw.size()) {
+    scratch_.resize(static_cast<size_t>(bytes));
+    if (std::fread(scratch_.data(), 1, scratch_.size(), file_) !=
+        scratch_.size()) {
         return std::unexpected("truncated WAV data");
     }
-    decode_wav_samples(raw.data(), info_.format, to_read * info_.channels, out);
+    decode_wav_samples(scratch_.data(), info_.format,
+                       to_read * info_.channels, out);
     cursor_frame_ += to_read;
     return to_read;
 }
@@ -519,6 +569,7 @@ WavWriter& WavWriter::operator=(WavWriter&& other) noexcept
     fact_frames_offset_ = other.fact_frames_offset_;
     data_size_offset_ = other.data_size_offset_;
     closed_ = other.closed_;
+    scratch_ = std::move(other.scratch_);
     other.sink_kind_ = SinkKind::None;
     other.file_ = nullptr;
     other.memory_ = nullptr;
@@ -535,10 +586,15 @@ std::expected<WavWriter, std::string>
 WavWriter::open_file(const std::string& path, WavSampleFormat format,
                      int channels, int sample_rate)
 {
+    constexpr int kMaxWavWriterChannels = 256;
+    constexpr int kMaxWavWriterSampleRate = 1536000;
     if ((format != WavSampleFormat::Pcm24 &&
-         format != WavSampleFormat::Float32) ||
-        channels <= 0 || sample_rate <= 0) {
-        return std::unexpected("invalid WAV writer parameters");
+        format != WavSampleFormat::Float32) ||
+        channels < 1 || channels > kMaxWavWriterChannels ||
+        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
+        return std::unexpected(
+            "invalid WAV writer parameters (channels must be 1..256, "
+            "sample_rate must be 1..1536000)");
     }
     FILE* f = std::fopen(path.c_str(), "wb+");
     if (!f) {
@@ -563,10 +619,15 @@ std::expected<WavWriter, std::string>
 WavWriter::open_memory(std::vector<char>& out, WavSampleFormat format,
                        int channels, int sample_rate)
 {
+    constexpr int kMaxWavWriterChannels = 256;
+    constexpr int kMaxWavWriterSampleRate = 1536000;
     if ((format != WavSampleFormat::Pcm24 &&
-         format != WavSampleFormat::Float32) ||
-        channels <= 0 || sample_rate <= 0) {
-        return std::unexpected("invalid WAV writer parameters");
+        format != WavSampleFormat::Float32) ||
+        channels < 1 || channels > kMaxWavWriterChannels ||
+        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
+        return std::unexpected(
+            "invalid WAV writer parameters (channels must be 1..256, "
+            "sample_rate must be 1..1536000)");
     }
     out.clear();
     WavWriter w;
@@ -592,43 +653,66 @@ std::expected<void, std::string> WavWriter::write_frames(
 
     const uint64_t samples =
         static_cast<uint64_t>(frames) * static_cast<uint64_t>(channels_);
+    if (channels_ > 0 &&
+        samples / static_cast<uint64_t>(channels_) !=
+            static_cast<uint64_t>(frames)) {
+        return std::unexpected("WAV write is too large");
+    }
+    const uint64_t bytes =
+        format_ == WavSampleFormat::Pcm24 ? samples * 3
+                                          : samples * sizeof(float);
+    if ((format_ == WavSampleFormat::Pcm24 && bytes / 3 != samples) ||
+        (format_ == WavSampleFormat::Float32 &&
+         bytes / sizeof(float) != samples) ||
+        bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max()) ||
+        data_bytes_ > std::numeric_limits<uint64_t>::max() - bytes ||
+        frames_written_ > std::numeric_limits<uint64_t>::max() -
+                              static_cast<uint64_t>(frames)) {
+        return std::unexpected("WAV write is too large");
+    }
+    const uint64_t post_data_bytes = data_bytes_ + bytes;
+    const uint64_t post_frames =
+        frames_written_ + static_cast<uint64_t>(frames);
+    const uint64_t header_span = data_size_offset_ + 4;
+    if (wav_exceeds_riff_limits(header_span, post_data_bytes, post_frames)) {
+        if (post_data_bytes > std::numeric_limits<uint32_t>::max()) {
+            return std::unexpected("WAV data chunk exceeds RIFF size limit");
+        }
+        return std::unexpected("WAV file exceeds RIFF size limit");
+    }
+
     if (format_ == WavSampleFormat::Pcm24) {
-        std::vector<unsigned char> packed(samples * 3);
+        scratch_.resize(static_cast<size_t>(bytes));
         size_t wp = 0;
         for (uint64_t i = 0; i < samples; ++i) {
             const uint32_t code =
                 static_cast<uint32_t>(pcm24_code_from_float(interleaved[i]));
-            packed[wp++] = static_cast<unsigned char>(code & 0xff);
-            packed[wp++] = static_cast<unsigned char>((code >> 8) & 0xff);
-            packed[wp++] = static_cast<unsigned char>((code >> 16) & 0xff);
+            scratch_[wp++] = static_cast<unsigned char>(code & 0xff);
+            scratch_[wp++] = static_cast<unsigned char>((code >> 8) & 0xff);
+            scratch_[wp++] = static_cast<unsigned char>((code >> 16) & 0xff);
         }
-        auto ok = write_bytes(packed.data(), packed.size());
+        auto ok = write_bytes(scratch_.data(), scratch_.size());
         if (!ok) return ok;
-        data_bytes_ += packed.size();
     } else {
-        const uint64_t bytes = samples * sizeof(float);
-        if (bytes > std::numeric_limits<size_t>::max()) {
-            return std::unexpected("WAV write is too large");
-        }
         auto ok = write_bytes(interleaved, static_cast<size_t>(bytes));
         if (!ok) return ok;
-        data_bytes_ += bytes;
     }
-    frames_written_ += static_cast<uint64_t>(frames);
+    data_bytes_ = post_data_bytes;
+    frames_written_ = post_frames;
     return {};
 }
 
 std::expected<void, std::string> WavWriter::close()
 {
     if (closed_) return {};
-    if (data_bytes_ > std::numeric_limits<uint32_t>::max()) {
-        return std::unexpected("WAV data chunk exceeds RIFF size limit");
-    }
-    const uint64_t riff_size = data_size_offset_ + 4 + data_bytes_ - 8;
-    if (riff_size > std::numeric_limits<uint32_t>::max() ||
-        frames_written_ > std::numeric_limits<uint32_t>::max()) {
+    const uint64_t header_span = data_size_offset_ + 4;
+    if (wav_exceeds_riff_limits(header_span, data_bytes_, frames_written_)) {
+        if (data_bytes_ > std::numeric_limits<uint32_t>::max()) {
+            return std::unexpected("WAV data chunk exceeds RIFF size limit");
+        }
         return std::unexpected("WAV file exceeds RIFF size limit");
     }
+    const uint64_t riff_size = header_span + data_bytes_ - 8;
     auto ok = patch_u32(riff_size_offset_, static_cast<uint32_t>(riff_size));
     if (!ok) return ok;
     ok = patch_u32(data_size_offset_, static_cast<uint32_t>(data_bytes_));

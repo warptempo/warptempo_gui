@@ -15,12 +15,23 @@
 
 enum class WavSampleFormat { Pcm16, Pcm24, Float32 };
 
+// Refusal policy for absurd header claims, not a memory manager. This leaves
+// generous headroom for real sources while rejecting malformed terabyte shapes.
+inline constexpr uint64_t kMaxPlausibleAudioAllocBytes =
+    8ull * 1024ull * 1024ull * 1024ull;
+
 struct WavInfo {
     int             sample_rate = 0;
     int             channels    = 0;
     int64_t         frames      = 0;
     WavSampleFormat format      = WavSampleFormat::Float32;
 };
+
+// True when a WAV of this shape can no longer be finalized inside RIFF's
+// 32-bit size fields. header_span is the byte length of everything before the
+// data payload, data_bytes and frames_written are the running totals.
+bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
+                             uint64_t frames_written);
 
 std::expected<WavInfo, std::string> wav_probe(const std::string& path);
 std::expected<WavInfo, std::string> wav_probe(std::span<const char> bytes);
@@ -37,6 +48,8 @@ std::expected<std::vector<float>, std::string>
 wav_read_range(std::span<const char> bytes, int64_t begin_frame,
                int64_t end_frame, WavInfo* info_out = nullptr);
 
+// Call close() explicitly and check its result. The destructor closes only as a
+// last resort and swallows errors by design.
 class WavWriter {
 public:
     WavWriter() = default;
@@ -46,6 +59,9 @@ public:
     WavWriter& operator=(WavWriter&& other) noexcept;
     ~WavWriter();
 
+    // channels must be 1..256 and sample_rate 1..1536000. RIFF fmt stores
+    // channels in u16 and byte_rate in u32; these bounds keep block_align and
+    // byte_rate representable for the writer's supported formats.
     static std::expected<WavWriter, std::string>
     open_file(const std::string& path, WavSampleFormat format, int channels,
               int sample_rate);
@@ -72,6 +88,8 @@ private:
     uint64_t fact_frames_offset_ = 0;
     uint64_t data_size_offset_ = 0;
     bool closed_ = true;
+    // Writer objects are single-threaded; this scratch is reused across writes.
+    std::vector<unsigned char> scratch_;
 
     std::expected<void, std::string> write_header();
     std::expected<void, std::string> write_bytes(const void* data, size_t size);
@@ -102,6 +120,8 @@ private:
     uint64_t data_offset_ = 0;
     uint16_t block_align_ = 0;
     int64_t cursor_frame_ = 0;
+    // Reader objects are single-threaded; this scratch is reused across reads.
+    std::vector<unsigned char> scratch_;
 
     void reset();
 };

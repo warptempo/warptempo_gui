@@ -13,6 +13,8 @@ struct FlacInfo {
     int     channels        = 0;
     int64_t frames          = 0;
     int     bits_per_sample = 0;
+    // STREAMINFO MD5 of the unencoded audio; all zero when the encoder left it unset.
+    unsigned char md5[16]   = {};
 };
 
 std::expected<FlacInfo, std::string> flac_probe(const std::string& path);

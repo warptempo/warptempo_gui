@@ -47,6 +47,7 @@ std::expected<FlacInfo, std::string> flac_probe(const std::string& path)
                               (static_cast<uint64_t>(s[16]) << 8) |
                               static_cast<uint64_t>(s[17]);
     info.frames = static_cast<int64_t>(total_hi | total_lo);
+    std::memcpy(info.md5, s + 18, sizeof(info.md5));
     if (info.sample_rate <= 0 || info.channels <= 0 ||
         info.bits_per_sample <= 0 || info.frames < 0) {
         return std::unexpected("invalid FLAC STREAMINFO values");

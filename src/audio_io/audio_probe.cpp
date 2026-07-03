@@ -47,6 +47,14 @@ audio_probe(const std::string& path)
         out.sample_rate = info->sample_rate;
         out.channels = info->channels;
         out.frames = info->frames;
+        std::memcpy(out.content_md5, info->md5, sizeof(out.content_md5));
+        out.has_content_md5 = false;
+        for (unsigned char b : out.content_md5) {
+            if (b != 0) {
+                out.has_content_md5 = true;
+                break;
+            }
+        }
         return out;
     }
 

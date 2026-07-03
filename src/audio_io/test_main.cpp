@@ -1,10 +1,13 @@
+#include "audio_probe.h"
 #include "pcm24.h"
 #include "wav_io.h"
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -29,6 +32,66 @@ std::string temp_path(const char* stem)
 std::span<const char> bytes_span(const std::vector<char>& v)
 {
     return std::span<const char>(v.data(), v.size());
+}
+
+void append_fourcc(std::vector<char>& v, const char* s)
+{
+    v.insert(v.end(), s, s + 4);
+}
+
+void append_u16(std::vector<char>& v, uint16_t x)
+{
+    v.push_back(static_cast<char>(x & 0xff));
+    v.push_back(static_cast<char>((x >> 8) & 0xff));
+}
+
+void append_u32(std::vector<char>& v, uint32_t x)
+{
+    v.push_back(static_cast<char>(x & 0xff));
+    v.push_back(static_cast<char>((x >> 8) & 0xff));
+    v.push_back(static_cast<char>((x >> 16) & 0xff));
+    v.push_back(static_cast<char>((x >> 24) & 0xff));
+}
+
+void patch_u32(std::vector<char>& v, size_t off, uint32_t x)
+{
+    v[off + 0] = static_cast<char>(x & 0xff);
+    v[off + 1] = static_cast<char>((x >> 8) & 0xff);
+    v[off + 2] = static_cast<char>((x >> 16) & 0xff);
+    v[off + 3] = static_cast<char>((x >> 24) & 0xff);
+}
+
+void append_pcm16_fmt(std::vector<char>& v, uint16_t channels,
+                      uint32_t sample_rate)
+{
+    append_fourcc(v, "fmt ");
+    append_u32(v, 16);
+    append_u16(v, 1);
+    append_u16(v, channels);
+    append_u32(v, sample_rate);
+    append_u32(v, sample_rate * channels * 2u);
+    append_u16(v, static_cast<uint16_t>(channels * 2u));
+    append_u16(v, 16);
+}
+
+std::vector<char> riff_prefix()
+{
+    std::vector<char> v;
+    append_fourcc(v, "RIFF");
+    append_u32(v, 0);
+    append_fourcc(v, "WAVE");
+    return v;
+}
+
+void finalize_riff_size(std::vector<char>& v)
+{
+    patch_u32(v, 4, static_cast<uint32_t>(v.size() - 8));
+}
+
+size_t find_chunk(const std::vector<char>& v, const char* id)
+{
+    auto it = std::search(v.begin(), v.end(), id, id + 4);
+    return it == v.end() ? v.size() : static_cast<size_t>(it - v.begin());
 }
 
 bool write_memory_roundtrip(WavSampleFormat fmt, const std::vector<float>& in,
@@ -122,8 +185,156 @@ bool write_file_roundtrip(WavSampleFormat fmt, const std::vector<float>& in,
     return true;
 }
 
+bool test_riff_limit_predicate()
+{
+    constexpr uint64_t u32max = std::numeric_limits<uint32_t>::max();
+    constexpr uint64_t header_span = 44;
+    if (wav_exceeds_riff_limits(header_span, u32max - 36, 1) ||
+        !wav_exceeds_riff_limits(header_span, u32max - 35, 1)) {
+        std::cout << "selftest: RIFF size limit predicate failed\n";
+        return false;
+    }
+    if (wav_exceeds_riff_limits(8, u32max, 1) ||
+        !wav_exceeds_riff_limits(8, u32max + 1, 1)) {
+        std::cout << "selftest: data chunk limit predicate failed\n";
+        return false;
+    }
+    if (wav_exceeds_riff_limits(8, 0, u32max) ||
+        !wav_exceeds_riff_limits(8, 0, u32max + 1)) {
+        std::cout << "selftest: fact frame limit predicate failed\n";
+        return false;
+    }
+    return true;
+}
+
+bool test_data_before_fmt_parses()
+{
+    std::vector<char> blob = riff_prefix();
+    append_fourcc(blob, "data");
+    append_u32(blob, 2);
+    append_u16(blob, 0x4000);
+    append_pcm16_fmt(blob, 1, 48000);
+    finalize_riff_size(blob);
+
+    WavInfo info;
+    auto out = wav_read_full(bytes_span(blob), &info);
+    if (!out || info.channels != 1 || info.sample_rate != 48000 ||
+        info.frames != 1 || out->size() != 1 || (*out)[0] != 0.5f) {
+        std::cout << "selftest: data-before-fmt parse failed";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool test_data_before_fmt_overrun_fails_cleanly()
+{
+    std::vector<char> blob = riff_prefix();
+    append_fourcc(blob, "data");
+    append_u32(blob, 100);
+    finalize_riff_size(blob);
+
+    auto out = wav_read_full(bytes_span(blob));
+    if (out || out.error() != "WAV fmt chunk not found") {
+        std::cout << "selftest: data-before-fmt overrun failure mismatch";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool test_odd_junk_chunk_before_data()
+{
+    const std::vector<float> in = {-0.25f, 0.75f, 1.25f, -1.25f};
+    std::vector<char> blob;
+    auto writer = WavWriter::open_memory(blob, WavSampleFormat::Pcm24, 2, 44100);
+    if (!writer) {
+        std::cout << "selftest: odd-junk writer open failed: "
+                  << writer.error() << "\n";
+        return false;
+    }
+    auto ok = writer->write_frames(in.data(), 2);
+    if (!ok) {
+        std::cout << "selftest: odd-junk write failed: " << ok.error()
+                  << "\n";
+        return false;
+    }
+    ok = writer->close();
+    if (!ok) {
+        std::cout << "selftest: odd-junk close failed: " << ok.error()
+                  << "\n";
+        return false;
+    }
+
+    const size_t data_pos = find_chunk(blob, "data");
+    if (data_pos == blob.size()) {
+        std::cout << "selftest: odd-junk data chunk not found\n";
+        return false;
+    }
+    std::vector<char> junk;
+    append_fourcc(junk, "JUNK");
+    append_u32(junk, 5);
+    junk.insert(junk.end(), {'a', 'b', 'c', 'd', 'e', '\0'});
+    blob.insert(blob.begin() + static_cast<std::ptrdiff_t>(data_pos),
+                junk.begin(), junk.end());
+    finalize_riff_size(blob);
+
+    auto out = wav_read_full(bytes_span(blob));
+    if (!out || out->size() != in.size()) {
+        std::cout << "selftest: odd-junk read failed";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    for (size_t i = 0; i < in.size(); ++i) {
+        if (!same_float_bits((*out)[i], pcm24_quantize(in[i]))) {
+            std::cout << "selftest: odd-junk sample mismatch at " << i
+                      << "\n";
+            return false;
+        }
+    }
+    return true;
+}
+
+bool test_unknown_magic_probe_rejection()
+{
+    const std::string path = temp_path("unknown_magic");
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) {
+        std::cout << "selftest: unknown-magic fixture create failed\n";
+        return false;
+    }
+    const char blob[8] = {'N', 'O', 'P', 'E', 'd', 'a', 't', 'a'};
+    const bool wrote = std::fwrite(blob, 1, sizeof(blob), f) == sizeof(blob);
+    std::fclose(f);
+    if (!wrote) {
+        std::remove(path.c_str());
+        std::cout << "selftest: unknown-magic fixture write failed\n";
+        return false;
+    }
+    auto probed = audio_probe(path);
+    std::remove(path.c_str());
+    if (probed || probed.error() != "unknown audio file magic") {
+        std::cout << "selftest: unknown magic probe mismatch";
+        if (!probed) std::cout << ": " << probed.error();
+        std::cout << "\n";
+        return false;
+    }
+    return true;
+}
+
 int run_selftest()
 {
+    if (!test_riff_limit_predicate() || !test_data_before_fmt_parses() ||
+        !test_data_before_fmt_overrun_fails_cleanly() ||
+        !test_odd_junk_chunk_before_data() ||
+        !test_unknown_magic_probe_rejection()) {
+        return 1;
+    }
+    std::cout << "selftest: WAV parser hardening fixtures passed\n";
+
     uint64_t checked = 0;
     for (int32_t c = -8388608;; ++c) {
         const int32_t got = pcm24_code_from_float(pcm24_float_from_code(c));

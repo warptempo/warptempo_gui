@@ -7,6 +7,10 @@
 #include <string>
 #include <vector>
 
+// The audio I/O surface is deliberately asymmetric. WAV exposes probe, full
+// read, range read, streaming reader, and writer APIs; FLAC exposes probe plus
+// this streaming reader only. audio_probe dispatches on file magic alone, and
+// FLAC means native FLAC, not another container carrying FLAC frames.
 class AudioReader {
 public:
     struct Impl;
@@ -23,6 +27,10 @@ public:
 
     const AudioFileInfo& info() const;
     std::expected<void, std::string> seek_to_frame(int64_t frame);
+    // WAV clamps to frames remaining, so a short count is clean end-of-stream
+    // with exact position bookkeeping. FLAC returns the decoder's count; a
+    // short read means end-of-stream or mid-stream decode loss. Inside a probed
+    // known-length range, use read_frames_exact.
     std::expected<int64_t, std::string> read_frames(float* out,
                                                     int64_t frames);
 
