@@ -199,6 +199,26 @@ static void rescan_region(const LimGrid& g,
 
 }  // anonymous namespace
 
+/*
+The dominant allocation is cached_spectra: num_frames_lim times channels times
+K_lim complex floats at 8 bytes each, where num_frames_lim is roughly
+render_frames divided by R_s_lim (1024) and K_lim is 2049. For stereo 44.1 kHz
+output this is roughly 85 megabytes per minute of rendered output, resident for
+the whole limiter pass, linear in render duration and in channel count.
+
+Full-render rescans (rescan_region over the entire padded range) transiently add
+OLA scratch on top: channels times slice-length doubles for the local
+overlap-add accumulators plus slice-length times channels floats for the
+assembled output - roughly another 64 megabytes per stereo output minute at
+peak, released when the rescan returns.
+
+Everything else (gain map, its snapshot and best-map copies, band tables,
+twiddle tables, FFTW plans and scratch) is bounded by num_frames times num_bands
+doubles or by N_lim, well under one megabyte per output minute combined.
+
+All allocations are function-local and freed at every return; nothing persists
+across renders.
+*/
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     const bool prof = profile::enabled();
     const auto t_total_0 = profile::now();
