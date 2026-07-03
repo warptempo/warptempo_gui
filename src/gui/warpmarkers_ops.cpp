@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "frame_map_build.h"
+#include "frame_map_view.h"
 #include "target_render.h"
 #include "time_format.h"
 
@@ -61,13 +62,9 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 // into an explicit owner carrying the exact base/scale it was inheriting,
 // freezing the value and breaking the dependency. Reads pre-delete
 // indices and copies the owner's literal fields, so processing order does
-// not matter. Called after the pre_state snapshot (so undo restores the
-// original passes intact) and before the removal loop, on the live list
-// via markers_mut() — the same bulk-mutable accessor toggle_disabled uses
-// to twiddle a flag across many markers at once.
-void collapse_dependent_passes(GuiWarpMarkers& warpmarkers,
-                                const std::set<int>& deleted) {
-    std::vector<GuiWarpMarker>& mv = warpmarkers.markers_mut();
+// not matter.
+void collapse_dependent_passes(std::vector<GuiWarpMarker>& mv,
+                               const std::set<int>& deleted) {
     for (int p = 0; p < static_cast<int>(mv.size()); ++p) {
         if (deleted.count(p)) continue;
         if (!mv[p].tempo_inherits || !mv[p].label_ref.empty()) continue;
@@ -86,6 +83,18 @@ void collapse_dependent_passes(GuiWarpMarkers& warpmarkers,
 }
 
 }  // namespace
+
+bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
+                               double scale, int sample_rate,
+                               long total_frames) {
+    const auto tmap = build_target_view_frame_map(
+        proposed, scale, sample_rate, total_frames);
+    if (!tmap.empty()) return true;
+    std::fprintf(stderr,
+        "warptempo_gui: warp edit rejected: would violate label "
+        "multiplier constraint\n");
+    return false;
+}
 
 void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
                                      double base, const std::string& scale) {
@@ -120,15 +129,26 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
             return;
         }
     }
-    // Snapshot pre-mutation state for undo. Captured after the dup
-    // check so rejected drops don't leave a no-op entry on the stack.
-    std::vector<GuiWarpMarker> pre_state = mv;
-    const int              hint_last = app.last_selected_marker;
     GuiWarpMarker nm;
     nm.time_seconds    = time_seconds;
     nm.tempo_inherits  = inherit;
     nm.tempo_base      = base;
     nm.tempo_scale     = scale;
+    std::vector<GuiWarpMarker> proposed = mv;
+    auto insert_it = std::lower_bound(
+        proposed.begin(), proposed.end(), nm.time_seconds,
+        [](const GuiWarpMarker& a, double t) { return a.time_seconds < t; });
+    proposed.insert(insert_it, nm);
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, sr,
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+    // Snapshot pre-mutation state for undo. Captured after the dup,
+    // pass-after-ref, and label-multiplier checks so rejected drops don't
+    // leave a no-op entry on the stack.
+    std::vector<GuiWarpMarker> pre_state = mv;
+    const int              hint_last = app.last_selected_marker;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
     // Newly-dropped marker becomes the sole selection.
     app.selected_markers.clear();
@@ -252,13 +272,26 @@ void GuiWarpMarkersOps::delete_selected_marker() {
         }
     }
 
+    std::vector<GuiWarpMarker> proposed = mv;
+    collapse_dependent_passes(proposed, app.selected_markers);
+    for (auto it = app.selected_markers.rbegin();
+         it != app.selected_markers.rend(); ++it) {
+        proposed.erase(proposed.begin() + *it);
+    }
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+
     // All validations passed — capture snapshot and selection hint
     // before mutating so the undo can restore the pre-delete selection.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
     // Freeze any surviving pass whose source owner is in this batch
     // before the owner is actually removed (see collapse_dependent_passes).
-    collapse_dependent_passes(app.warpmarkers, app.selected_markers);
+    collapse_dependent_passes(app.warpmarkers.markers_mut(),
+                              app.selected_markers);
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
@@ -314,6 +347,17 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
         }
     }
 
+    std::vector<GuiWarpMarker> proposed = mv;
+    collapse_dependent_passes(proposed, expanded);
+    for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
+        proposed.erase(proposed.begin() + *it);
+    }
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     int hint_last = app.last_selected_marker;
     {
@@ -342,7 +386,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     }
     // Freeze any surviving pass whose source owner is in this batch
     // before the owner is actually removed (see collapse_dependent_passes).
-    collapse_dependent_passes(app.warpmarkers, expanded);
+    collapse_dependent_passes(app.warpmarkers.markers_mut(), expanded);
     for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
@@ -373,48 +417,55 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // operation (and the resulting selection) targets last_selected only.
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
     const auto& mv_const = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via the canonical parser walk (slice once).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (!m) continue;
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        GuiWarpMarker& m = proposed[idx];
         if (idx == 0) continue;
-        if (!m->label_ref.empty()) {
-            m->label_ref.clear();
-            m->tempo_inherits = true;
-            m->tempo_base     = 1.0;
-            m->tempo_scale    = "1.0000";
-        } else if (m->tempo_inherits) {
+        if (!m.label_ref.empty()) {
+            m.label_ref.clear();
+            m.tempo_inherits = true;
+            m.tempo_base     = 1.0;
+            m.tempo_scale    = "1.0000";
+        } else if (m.tempo_inherits) {
             const double resolved_tempo =
                 resolve_inherited_tempo(resolved_src, idx);
             const std::string resolved_scale =
                 resolve_inherited_tempo_scale(resolved_src, idx);
-            m->tempo_inherits = false;
-            m->tempo_base     = resolved_tempo;
-            m->tempo_scale    = resolved_scale;
+            m.tempo_inherits = false;
+            m.tempo_base     = resolved_tempo;
+            m.tempo_scale    = resolved_scale;
         } else {
             // owner → pass: same guard as drop_marker's inherit path —
             // a pass immediately after a label_ref would skip the ref on
             // the resolver's backward walk and silently inherit a more
             // distant owner. No-op the toggle (leave it an owner) instead.
-            const int prior = find_immediate_prior(mv_const, m->time_seconds);
+            const int prior = find_immediate_prior(mv_const, m.time_seconds);
             if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
                 std::fprintf(stderr,
                     "warptempo_gui: pass marker cannot follow a label "
                     "ref\n");
                 continue;
             }
-            m->tempo_inherits = true;
-            m->tempo_base     = 1.0;
-            m->tempo_scale    = "1.0000";
+            m.tempo_inherits = true;
+            m.tempo_base     = 1.0;
+            m.tempo_scale    = "1.0000";
         }
         changed = true;
     }
     if (!changed) return;
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    const int              hint_last = app.last_selected_marker;
+    app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -427,16 +478,23 @@ void GuiWarpMarkersOps::toggle_inherits() {
 // label_def).
 void GuiWarpMarkersOps::toggle_disabled() {
     if (app.selected_markers.empty()) return;
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
+    const auto& mv_const = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv_const;
     const int              hint_last = app.last_selected_marker;
     bool changed = false;
     for (int idx : app.selected_markers) {
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (!m) continue;
-        m->disabled = !m->disabled;
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        proposed[idx].disabled = !proposed[idx].disabled;
         changed = true;
     }
     if (!changed) return;
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -456,35 +514,42 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
     const auto& mv_const = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via the canonical parser walk (slice once).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (!m) continue;
-        if (!m->label_ref.empty()) continue;
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        GuiWarpMarker& m = proposed[idx];
+        if (!m.label_ref.empty()) continue;
         double      start_tempo;
         std::string start_scale;
-        if (m->tempo_inherits) {
+        if (m.tempo_inherits) {
             start_tempo = resolve_inherited_tempo(resolved_src, idx);
             start_scale = resolve_inherited_tempo_scale(resolved_src, idx);
         } else {
-            start_tempo = m->tempo_base;
-            start_scale = m->tempo_scale;
+            start_tempo = m.tempo_base;
+            start_scale = m.tempo_scale;
         }
         double new_tempo = start_tempo + delta;
         if (new_tempo < 0.01) new_tempo = 0.01;
         if (new_tempo > 9.99) new_tempo = 9.99;
-        if (!m->tempo_inherits && new_tempo == m->tempo_base) continue;
-        m->tempo_inherits = false;
-        m->tempo_base     = new_tempo;
-        m->tempo_scale    = start_scale;
+        if (!m.tempo_inherits && new_tempo == m.tempo_base) continue;
+        m.tempo_inherits = false;
+        m.tempo_base     = new_tempo;
+        m.tempo_scale    = start_scale;
         changed = true;
     }
     if (!changed) return;
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return;
+    }
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    const int              hint_last = app.last_selected_marker;
+    app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
@@ -531,11 +596,24 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
     if (delta < d_min) delta = d_min;
     if (delta > d_max) delta = d_max;
     if (delta == 0.0) return false;
+    const auto& mv = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv;
+    bool any_changed = false;
     for (int idx : app.selected_markers) {
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (!m) continue;
-        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        const double t_new =
+            snap_to_timestamp_grid(proposed[idx].time_seconds + delta);
+        if (t_new == proposed[idx].time_seconds) continue;
+        proposed[idx].time_seconds = t_new;
+        any_changed = true;
     }
+    if (!any_changed) return false;
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        return false;
+    }
+    app.warpmarkers.markers_mut() = std::move(proposed);
     return true;
 }
 
@@ -596,6 +674,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;
+        std::vector<GuiWarpMarker> proposed = mv;
         for (const auto& [idx, t_new] : proposals) {
             if (t_new == mv[idx].time_seconds) continue;
             int prev = idx - 1;
@@ -609,22 +688,34 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             const double hi = (next < n)
                 ? (mv[next].time_seconds - eps)
                 : (total_duration - eps);
-            if (t_new < lo || t_new > hi) return;
+            if (t_new < lo || t_new > hi) {
+                std::fprintf(stderr,
+                    "warptempo_gui: nudge rejected: would collide with a "
+                    "neighbor\n");
+                return;
+            }
+            proposed[idx].time_seconds = t_new;
             any_changed = true;
         }
         if (!any_changed) return;
+        if (!proposed_warp_state_valid(
+                proposed, app.engine_settings.scale, sr,
+                static_cast<long>(audio.total_frames()))) {
+            return;
+        }
         std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
         const int              hint_last = app.last_selected_marker;
-        for (const auto& [idx, t_new] : proposals) {
-            GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-            if (!m) continue;
-            m->time_seconds = t_new;
-        }
+        app.warpmarkers.markers_mut() = std::move(proposed);
         undo.push_undo(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        // Unlike drop and delete, nudge does not route through
+        // kick_waveform_sync: nudges arrive at key-repeat rate, and a
+        // synchronous plate rebuild per repeat would cost up to the plate's
+        // worst-case render time per keypress; the one-frame async lag on
+        // a one-pixel map change is imperceptible.
         target_render.trigger();
         return;
     }

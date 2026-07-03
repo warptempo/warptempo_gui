@@ -8,9 +8,15 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 class GuiAudio;
+struct GuiWarpMarker;
 struct GuiTargetRender;
+
+bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
+                               double scale, int sample_rate,
+                               long total_frames);
 
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the selection-shift cluster (nudge /

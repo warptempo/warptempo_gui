@@ -9,6 +9,7 @@
 #include "time_format.h"
 #include "frame_map_view.h"
 #include "frame_map.h"
+#include "warpmarkers_ops.h"
 
 #include <algorithm>
 #include <cctype>
@@ -316,28 +317,20 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // Capture pre-state for undo BEFORE mutating.
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
-
-    const std::string old_def = mv_const[idx].label_def;
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    GuiWarpMarker& m = proposed[idx];
+    const std::string old_def = m.label_def;
     const std::string new_def = parsed.label_def;
-
-    GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-    if (!m) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
 
     // Snapshot the canonical (serialized) fields before writing so we can
     // tell whether the engine/dirty state actually moved. Iteration-only
     // commits (bracket changed, tempo/scale/label unchanged) must not mark
     // dirty or trigger a render — iter values are session-only.
-    const GuiWarpMarker before = *m;
+    const GuiWarpMarker before = m;
 
     // Time stays locked; preserve it (parse already produced the
     // same value via the locked prefix, but be explicit).
-    const double preserved_time = m->time_seconds;
+    const double preserved_time = m.time_seconds;
 
     // Cache-free: typing `pass` writes inert defaults into
     // tempo_base/tempo_scale; typing an explicit tempo writes the
@@ -345,22 +338,22 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // `pass:LABEL` carries a def at this position while inheriting
     // the tempo from a prior owning marker.
     if (parsed.tempo_inherits) {
-        m->tempo_inherits = true;
-        m->tempo_base     = 1.0;
-        m->tempo_scale    = "1.0000";
-        m->label_def      = parsed.label_def;
-        m->label_ref.clear();
+        m.tempo_inherits = true;
+        m.tempo_base     = 1.0;
+        m.tempo_scale    = "1.0000";
+        m.label_def      = parsed.label_def;
+        m.label_ref.clear();
     } else {
-        m->tempo_inherits = false;
-        m->tempo_base     = parsed.tempo_base;
-        m->tempo_scale    = parsed.tempo_scale;
-        m->label_def      = parsed.label_def;
-        m->label_ref      = parsed.label_ref;
+        m.tempo_inherits = false;
+        m.tempo_base     = parsed.tempo_base;
+        m.tempo_scale    = parsed.tempo_scale;
+        m.label_def      = parsed.label_def;
+        m.label_ref      = parsed.label_ref;
     }
-    m->time_seconds = preserved_time;
+    m.time_seconds = preserved_time;
     // disabled lives in the locked prefix — parse_single_canonical_line
     // populated it; reapply.
-    m->disabled      = parsed.disabled;
+    m.disabled      = parsed.disabled;
 
     // Cascade rename: if label_def changed and old_def was non-empty,
     // every other marker that referenced old_def gets its ref updated
@@ -368,39 +361,54 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // converted a def to non-def).
     int n_refs_renamed = 0;
     if (!old_def.empty() && old_def != new_def) {
-        auto& mv_mut = app.warpmarkers.markers_mut();
-        for (int i = 0; i < static_cast<int>(mv_mut.size()); ++i) {
+        for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
             if (i == idx) continue;
-            if (mv_mut[i].label_ref == old_def) {
-                mv_mut[i].label_ref = new_def;
+            if (proposed[i].label_ref == old_def) {
+                proposed[i].label_ref = new_def;
                 ++n_refs_renamed;
             }
         }
-        std::fprintf(stderr,
-            "[warptempo_gui] renamed label_def '%s' -> '%s'; "
-            "updated %d refs\n",
-            old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
     // Apply the parsed iteration bracket. Session-only; NaN
-    // bounds clear the sweep. The marker_mut above already bumped the
-    // warp generation, so the flag cache repaints the bracket regardless
-    // of whether the canonical fields moved.
+    // bounds clear the sweep. The accepted live-vector assignment bumps
+    // the warp generation, so the flag cache repaints the bracket
+    // regardless of whether the canonical fields moved.
     if (iter_grammar) {
-        m->iter_start = iter_lo;
-        m->iter_end   = iter_hi;
+        m.iter_start = iter_lo;
+        m.iter_end   = iter_hi;
     }
 
     // Did any serialized field change? Cascade renames imply a label_def
     // change, already covered by the field compare below.
     const bool canonical_changed =
-        m->tempo_inherits != before.tempo_inherits ||
-        m->tempo_base     != before.tempo_base ||
-        m->tempo_scale    != before.tempo_scale ||
-        m->label_def      != before.label_def ||
-        m->label_ref      != before.label_ref ||
-        m->disabled       != before.disabled ||
+        m.tempo_inherits != before.tempo_inherits ||
+        m.tempo_base     != before.tempo_base ||
+        m.tempo_scale    != before.tempo_scale ||
+        m.label_def      != before.label_def ||
+        m.label_ref      != before.label_ref ||
+        m.disabled       != before.disabled ||
         n_refs_renamed > 0;
+
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        app.top_flag_editor.red = true;
+        viewport.invalidate_top_strip();
+        return;
+    }
+
+    // Capture pre-state for undo BEFORE mutating.
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    const int              hint_last = app.last_selected_marker;
+    app.warpmarkers.markers_mut() = std::move(proposed);
+
+    if (n_refs_renamed > 0) {
+        std::fprintf(stderr,
+            "[warptempo_gui] renamed label_def '%s' -> '%s'; "
+            "updated %d refs\n",
+            old_def.c_str(), new_def.c_str(), n_refs_renamed);
+    }
 
     undo.push_undo(std::move(pre_state), hint_last);
 
@@ -497,31 +505,33 @@ bool GuiFlagEditor::commit_bpm_edit() {
             s.c_str());
         return false;
     }
-    GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-    if (!m) {
-        text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_timestamp_area();
-        return false;
-    }
     // Single-owner invariant: clear bpm_owner on every other marker before
     // stamping this one. The toggle handler maintains the invariant on mode
     // entry, but the editor can target a different marker than the one
     // originally stamped, so reassert it here.
-    auto& mv = app.warpmarkers.markers_mut();
-    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
         if (i == idx) continue;
-        if (mv[i].bpm_owner) {
-            mv[i].bpm_owner = false;
-            mv[i].bpm_beats = 0;
-            mv[i].bpm_lo    = 0;
-            mv[i].bpm_hi    = 0;
-            mv[i].bpm_endpoint = -1;
+        if (proposed[i].bpm_owner) {
+            proposed[i].bpm_owner = false;
+            proposed[i].bpm_beats = 0;
+            proposed[i].bpm_lo    = 0;
+            proposed[i].bpm_hi    = 0;
+            proposed[i].bpm_endpoint = -1;
         }
     }
-    m->bpm_owner = true;
-    m->bpm_beats = beats;
-    m->bpm_lo    = lo;
-    m->bpm_hi    = hi;
+    proposed[idx].bpm_owner = true;
+    proposed[idx].bpm_beats = beats;
+    proposed[idx].bpm_lo    = lo;
+    proposed[idx].bpm_hi    = hi;
+    if (!proposed_warp_state_valid(
+            proposed, app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()))) {
+        app.top_flag_editor.red = true;
+        viewport.invalidate_timestamp_area();
+        return false;
+    }
+    app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_timestamp_area();
     return true;

@@ -8,6 +8,7 @@
 #include "target_render.h"
 #include "time_format.h"
 #include "warpmarkers.h"
+#include "warpmarkers_ops.h"
 
 #include <cmath>
 #include <cstdint>
@@ -299,15 +300,9 @@ void MarkerDragOps::commit_drag() {
             if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
             proposed[idx].time_seconds = app.drag.moveable_times[k];
         }
-        // Builds from a proposed list, intentionally bypasses the
-        // live-state cache.
-        const auto tmap = build_target_view_frame_map(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
-        if (tmap.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: drag rejected: would violate label "
-                "multiplier constraint\n");
+        if (!proposed_warp_state_valid(
+                proposed, app.engine_settings.scale, audio.sample_rate(),
+                static_cast<long>(audio.total_frames()))) {
             app.drag = DragState{};
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
