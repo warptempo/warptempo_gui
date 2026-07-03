@@ -462,15 +462,21 @@ bool Synthesis::process(AudioSTFT& stft) {
                                        stft.src_info.channels,
                                        stft.src_info.samplerate);
     if (!writer) {
-        std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not open output '" << stft.output_audio_file
+                  << "': " << writer.error() << "\n";
         return false;
     }
 
     bool write_ok = true;
-    auto write_to_file = [&writer, &write_ok](const float* buf, size_t n_frames) {
+    std::string write_error;
+    auto write_to_file = [&writer, &write_ok, &write_error](const float* buf,
+                                                            size_t n_frames) {
         if (!write_ok) return;
         auto ok = writer->write_frames(buf, static_cast<int64_t>(n_frames));
-        if (!ok) write_ok = false;
+        if (!ok) {
+            write_error = ok.error();
+            write_ok = false;
+        }
     };
 
     const std::string pass_label = stft.limiter
@@ -480,14 +486,16 @@ bool Synthesis::process(AudioSTFT& stft) {
                     /*show_progress=*/true,
                     /*pass_label=*/pass_label.c_str());
     if (!write_ok) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not write output '" << stft.output_audio_file
+                  << "': " << write_error << "\n";
         return false;
     }
     // The in-tree writer emits no PEAK chunk, so float renders are
     // byte-reproducible by construction.
     auto closed = writer->close();
     if (!closed) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not close output '" << stft.output_audio_file
+                  << "': " << closed.error() << "\n";
         return false;
     }
     return true;
@@ -520,7 +528,8 @@ bool Synthesis::write_render_to_file(AudioSTFT& stft,
                                        stft.src_info.channels,
                                        stft.src_info.samplerate);
     if (!writer) {
-        std::cerr << "  ! could not open output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not open output '" << stft.output_audio_file
+                  << "': " << writer.error() << "\n";
         return false;
     }
     const size_t total_frames = stft.channels > 0
@@ -528,12 +537,14 @@ bool Synthesis::write_render_to_file(AudioSTFT& stft,
     auto ok = writer->write_frames(render.data(),
                                    static_cast<int64_t>(total_frames));
     if (!ok) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not write output '" << stft.output_audio_file
+                  << "': " << ok.error() << "\n";
         return false;
     }
     ok = writer->close();
     if (!ok) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file << "'\n";
+        std::cerr << "  ! could not close output '" << stft.output_audio_file
+                  << "': " << ok.error() << "\n";
         return false;
     }
     return true;

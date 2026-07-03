@@ -31,7 +31,8 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
                                        src_info.channels,
                                        src_info.sample_rate);
     if (!writer) {
-        return std::unexpected("could not create output '" + out_path + "'");
+        return std::unexpected("could not create output '" + out_path +
+                               "': " + writer.error());
     }
 
     const size_t kChunk = 65536;
@@ -39,17 +40,21 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
     size_t remaining = end_frame - begin_frame;
     while (remaining > 0) {
         const int64_t want = static_cast<int64_t>(std::min(kChunk, remaining));
-        auto got_read = reader->read_frames(buf.data(), want);
-        if (!got_read) return std::unexpected(got_read.error());
-        const int64_t got = *got_read;
-        if (got != want) return std::unexpected("short read");
-        auto wrote = writer->write_frames(buf.data(), got);
-        if (!wrote) return std::unexpected("short write");
-        remaining -= static_cast<size_t>(got);
+        auto read = read_frames_exact(*reader, buf.data(), want);
+        if (!read) return std::unexpected(read.error());
+        auto wrote = writer->write_frames(buf.data(), want);
+        if (!wrote) {
+            return std::unexpected("write failed for '" + out_path + "': " +
+                                   wrote.error());
+        }
+        remaining -= static_cast<size_t>(want);
     }
 
     auto closed = writer->close();
-    if (!closed) return std::unexpected("short write");
+    if (!closed) {
+        return std::unexpected("close failed for '" + out_path + "': " +
+                               closed.error());
+    }
     return {};
 }
 
@@ -80,13 +85,8 @@ std::expected<void, std::string> load_source_range_to_buffer(const std::string& 
     const size_t n_frames = end_frame - begin_frame;
     out_samples.assign(n_frames * static_cast<size_t>(out_channels), 0.0f);
 
-    auto got_read = reader->read_frames(out_samples.data(),
-                                        static_cast<int64_t>(n_frames));
-    if (!got_read) return std::unexpected(got_read.error());
-    const int64_t got = *got_read;
-    if (got != static_cast<int64_t>(n_frames)) {
-        return std::unexpected("short read (" + std::to_string(got) + "/"
-                               + std::to_string(n_frames) + ")");
-    }
+    auto read = read_frames_exact(*reader, out_samples.data(),
+                                  static_cast<int64_t>(n_frames));
+    if (!read) return std::unexpected(read.error());
     return {};
 }

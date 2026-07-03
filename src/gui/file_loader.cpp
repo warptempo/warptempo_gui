@@ -64,7 +64,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     auto source_info = audio_probe(path);
     if (!source_info) {
         std::fprintf(stderr,
-            "warptempo_gui: unsupported source format for '%s': inputs are FLAC or WAV "
+            "warptempo_gui: unsupported source format for '%s': inputs are native FLAC or WAV "
             "(convert once at acquisition, e.g. with ffmpeg or opusdec, and load the converted file)\n",
             path.c_str());
         return false;

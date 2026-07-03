@@ -9,6 +9,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <system_error>
 #include <utility>
 
 static_assert(std::endian::native == std::endian::little);
@@ -25,6 +26,16 @@ struct FileCloser {
 using FilePtr = std::unique_ptr<FILE, FileCloser>;
 
 enum class SourceKind { File, Memory };
+
+std::string append_errno_detail(std::string message, int err)
+{
+    if (err != 0) {
+        message += " (";
+        message += std::error_code(err, std::generic_category()).message();
+        message += ")";
+    }
+    return message;
+}
 
 struct ByteSource {
     SourceKind kind = SourceKind::Memory;
@@ -412,7 +423,11 @@ std::expected<WavReader, std::string>
 WavReader::open(const std::string& path)
 {
     FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return std::unexpected("failed to open WAV file");
+    if (!f) {
+        const int err = errno;
+        return std::unexpected(
+            append_errno_detail("failed to open WAV file", err));
+    }
 
     ByteSource src;
     src.kind = SourceKind::File;
@@ -526,7 +541,11 @@ WavWriter::open_file(const std::string& path, WavSampleFormat format,
         return std::unexpected("invalid WAV writer parameters");
     }
     FILE* f = std::fopen(path.c_str(), "wb+");
-    if (!f) return std::unexpected("failed to create WAV file");
+    if (!f) {
+        const int err = errno;
+        return std::unexpected(
+            append_errno_detail("failed to create WAV file", err));
+    }
 
     WavWriter w;
     w.sink_kind_ = SinkKind::File;
@@ -620,10 +639,21 @@ std::expected<void, std::string> WavWriter::close()
         if (!ok) return ok;
     }
     if (sink_kind_ == SinkKind::File) {
-        if (std::fflush(file_) != 0 || std::fclose(file_) != 0) {
+        errno = 0;
+        if (std::fflush(file_) != 0) {
+            const int err = errno;
             file_ = nullptr;
             closed_ = true;
-            return std::unexpected("failed to close WAV file");
+            return std::unexpected(
+                append_errno_detail("failed to close WAV file", err));
+        }
+        errno = 0;
+        if (std::fclose(file_) != 0) {
+            const int err = errno;
+            file_ = nullptr;
+            closed_ = true;
+            return std::unexpected(
+                append_errno_detail("failed to close WAV file", err));
         }
         file_ = nullptr;
     }
@@ -666,8 +696,11 @@ std::expected<void, std::string> WavWriter::write_bytes(const void* data,
                                                         size_t size)
 {
     if (sink_kind_ == SinkKind::File) {
+        errno = 0;
         if (size > 0 && std::fwrite(data, 1, size, file_) != size) {
-            return std::unexpected("failed to write WAV data");
+            const int err = errno;
+            return std::unexpected(
+                append_errno_detail("failed to write WAV data", err));
         }
     } else if (sink_kind_ == SinkKind::Memory) {
         const char* p = static_cast<const char*>(data);
@@ -688,10 +721,23 @@ std::expected<void, std::string> WavWriter::patch_u32(uint64_t offset,
         static_cast<unsigned char>((value >> 24) & 0xff),
     };
     if (sink_kind_ == SinkKind::File) {
-        if (std::fseek(file_, static_cast<long>(offset), SEEK_SET) != 0 ||
-            std::fwrite(b, 1, sizeof(b), file_) != sizeof(b) ||
-            std::fseek(file_, 0, SEEK_END) != 0) {
-            return std::unexpected("failed to patch WAV header");
+        errno = 0;
+        if (std::fseek(file_, static_cast<long>(offset), SEEK_SET) != 0) {
+            const int err = errno;
+            return std::unexpected(
+                append_errno_detail("failed to patch WAV header", err));
+        }
+        errno = 0;
+        if (std::fwrite(b, 1, sizeof(b), file_) != sizeof(b)) {
+            const int err = errno;
+            return std::unexpected(
+                append_errno_detail("failed to patch WAV header", err));
+        }
+        errno = 0;
+        if (std::fseek(file_, 0, SEEK_END) != 0) {
+            const int err = errno;
+            return std::unexpected(
+                append_errno_detail("failed to patch WAV header", err));
         }
     } else if (sink_kind_ == SinkKind::Memory) {
         if (offset + sizeof(b) > memory_->size()) {

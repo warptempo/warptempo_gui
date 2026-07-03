@@ -352,14 +352,15 @@ bool rebuild_cache(const std::string& source_path,
     float* dst = all_samples.data();
     while (remaining > 0) {
         const int64_t want = std::min<int64_t>(remaining, kChunkFrames);
-        auto got_read = reader->read_frames(dst, want);
-        if (!got_read) return false;
-        const int64_t got = *got_read;
-        if (got != want) {
+        auto read = read_frames_exact(*reader, dst, want);
+        if (!read) {
+            std::fprintf(stderr,
+                         "[warptempo_gui] .samples rebuild failed for %s: %s\n",
+                         source_path.c_str(), read.error().c_str());
             return false;
         }
-        dst += static_cast<size_t>(got) * static_cast<size_t>(meta.channels);
-        remaining -= static_cast<int64_t>(got);
+        dst += static_cast<size_t>(want) * static_cast<size_t>(meta.channels);
+        remaining -= want;
     }
 
     return write_cache_samples(

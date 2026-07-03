@@ -153,6 +153,22 @@ AudioReader::open(const std::string& path)
         FlacDecoder decoder;
         decoder.handle = drflac_open_file(path.c_str(), nullptr);
         if (!decoder.handle) return std::unexpected("failed to open FLAC file");
+        // The probe hand-parses STREAMINFO and enforces project policy (known
+        // length, at most 24 bits). Re-check the fields the decoder parsed so a
+        // malformed or inconsistent header cannot slip a different geometry past
+        // the probe, and re-verify the bit-depth gate the float-exactness
+        // argument depends on against the decoder's own view.
+        if (static_cast<int64_t>(decoder.handle->totalPCMFrameCount) !=
+                probed->frames ||
+            static_cast<int>(decoder.handle->channels) != probed->channels ||
+            static_cast<int>(decoder.handle->sampleRate) != probed->sample_rate) {
+            return std::unexpected(
+                "FLAC decoder disagrees with STREAMINFO probe");
+        }
+        if (decoder.handle->bitsPerSample > 24) {
+            return std::unexpected(
+                "unsupported FLAC bit depth (16- or 24-bit expected)");
+        }
         out.impl_ = std::make_unique<FlacAudioReader>(std::move(decoder), *probed);
     } else {
         auto reader = WavReader::open(path);
@@ -178,6 +194,19 @@ std::expected<int64_t, std::string> AudioReader::read_frames(float* out,
     return impl_->read_frames(out, frames);
 }
 
+std::expected<void, std::string>
+read_frames_exact(AudioReader& reader, float* out, int64_t frames)
+{
+    auto got = reader.read_frames(out, frames);
+    if (!got) return std::unexpected(got.error());
+    if (*got != frames) {
+        return std::unexpected("short audio read (got " +
+                               std::to_string(*got) + " of " +
+                               std::to_string(frames) + " frames)");
+    }
+    return {};
+}
+
 std::expected<std::vector<float>, std::string>
 audio_read_full(const std::string& path, AudioFileInfo* info_out)
 {
@@ -193,9 +222,8 @@ audio_read_full(const std::string& path, AudioFileInfo* info_out)
         return std::unexpected("audio file is too large");
     }
     std::vector<float> out(static_cast<size_t>(samples));
-    auto got = reader->read_frames(out.data(), info.frames);
-    if (!got) return std::unexpected(got.error());
-    if (*got != info.frames) return std::unexpected("short audio read");
+    auto read = read_frames_exact(*reader, out.data(), info.frames);
+    if (!read) return std::unexpected(read.error());
     if (info_out) *info_out = info;
     return out;
 }
