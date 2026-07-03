@@ -39,8 +39,8 @@ inline double princarg(double phase) {
 // it decides only which bins may ANCHOR a frequency-spread, never who gets a
 // phase. kPghiFreqStep is the per-bin frequency step b_a (constant for the r2c
 // layout) and is itself stretch-independent; the synthesis-side step is
-// b_s = alpha * b_a, applied per-frame as the alpha_fp scaling in heap_phase's
-// frequency integration. See the b_s comment in heap_phase.
+// b_s = alpha * b_a, applied per-frame as the alpha_fp scaling in PGHI's
+// frequency integration. See the b_s comment in pghi_integrate.
 // Both are named (not inlined) for later ear-tuning and so the scale can be
 // re-checked against an offline LTFAT/PVDR reference render.
 inline constexpr double kPghiTol      = 1e-6;
@@ -265,8 +265,9 @@ struct AudioSTFT {
 
     // --- Phase computation helpers ------------------------------------------
     //
-    // The synthesis pipeline runs a one-deep analysis lookahead and calls
-    // analyze_frame / heap_phase / populate_synth_spectrum per frame. The
+    // The synthesis pipeline runs a one-deep analysis lookahead. The analysis
+    // producer computes per-bin PGHI prep from the analysis stream, and the
+    // consumer integrates phases and populates the synthesis spectrum. The
     // pipeline owns all inter-frame state in run_channel locals (these helpers
     // hold no inter-frame accumulators of their own).
 
@@ -278,8 +279,8 @@ struct AudioSTFT {
     // frame's center sits at FFT index 0 and the rest of the M-length buffer
     // is zero. Clearing the whole buffer each frame is cheap next to the
     // M-point FFT. Centered placement makes the per-bin phase carry no
-    // group-delay ramp (expected_f == 0 in heap_phase) — which is the
-    // condition under which PGHI's heap integration actually converges.
+        // group-delay ramp (expected_f == 0 in PGHI) — which is the
+        // condition under which PGHI's heap integration actually converges.
     void analyze_frame(int ch, const float* planar_ch,
                        int64_t ta, int64_t src_frames,
                        std::vector<double>& M_out,
@@ -325,47 +326,30 @@ struct AudioSTFT {
         }
     }
 
-    // PGHI ("heap") phase propagation for one frame (Prusa-Holighaus Alg. 1)
-    // on the centered, zero-padded STFT. Writes theta (size K = M/2+1) and
-    // dt_out (this frame's centered time-derivative, stored as next frame's
-    // dt_prev).
+    // Producer-side PGHI prep for one frame on the centered, zero-padded STFT.
+    // Writes dt_out (this frame's centered time-derivative), df_out (this
+    // frame's frequency derivative), and quiet_out (1 for sub-tolerance quiet
+    // bins, 0 for significant bins). These are pure per-bin functions of the
+    // analysis stream and hop schedule, so the analysis producer ships them to
+    // the consumer with the lookahead frame.
     //
-    //   seed   : frame-0 or immediately-after-a-reset frame. No prior synthesis
-    //            phase to integrate from, so theta seats to phi; dt_out is
-    //            still computed for the following frame.
     //   frame0 : the file's first frame — no real backward neighbor, so the
     //            time-derivative falls back to the forward difference.
-    //   R_a_back/R_a_fwd : actual backward/forward analysis hops. Their ratio
-    //                      to R_s is alpha (the stretch); used both in the time
-    //                      integration AND as b_s = alpha * b_a in the
-    //                      frequency-spread step (Prusa).
-    //
-    // Scratch (size K, reused): df_scratch, done_scratch, heap_scratch.
-    void heap_phase(bool seed, bool frame0,
-                    int64_t R_a_back, int64_t R_a_fwd,
-                    const std::vector<double>& mag_prev,
-                    const std::vector<double>& mag_cur,
-                    const std::vector<double>& ph_prev,
-                    const std::vector<double>& ph_cur,
-                    const std::vector<double>& ph_nxt,
-                    const std::vector<double>& th_prev,
-                    const std::vector<double>& dt_prev,
-                    std::vector<double>& theta,
-                    std::vector<double>& dt_out,
-                    std::vector<double>& df_scratch,
-                    std::vector<char>&   done_scratch,
-                    std::vector<PghiHeapNode>& heap_scratch,
-                    std::mt19937& rng) {
+    //   R_a_back/R_a_fwd : actual backward/forward analysis hops used by the
+    //                      centered time derivative; the same hop pair is
+    //                      supplied to integration for the frequency-spread
+    //                      alpha.
+    void pghi_prep(bool frame0,
+                   int64_t R_a_back, int64_t R_a_fwd,
+                   const std::vector<double>& mag_prev,
+                   const std::vector<double>& mag_cur,
+                   const std::vector<double>& ph_prev,
+                   const std::vector<double>& ph_cur,
+                   const std::vector<double>& ph_nxt,
+                   std::vector<double>& dt_out,
+                   std::vector<double>& df_out,
+                   std::vector<char>&   quiet_out) {
         const int K = M / 2 + 1;
-
-        // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
-        // Used as b_s = alpha * b_a in the vertical (frequency) integration
-        // step below; the time-axis integration carries alpha implicitly via
-        // the actual hop in the principal-arg demodulation.
-        const double alpha_fp =
-            (R_a_back > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_back)
-          : (R_a_fwd  > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_fwd)
-          : 1.0;
 
         // Centered time-derivative (instantaneous frequency) for every bin,
         // each half normalized by its own hop so an alpha change across a warp
@@ -386,12 +370,6 @@ struct AudioSTFT {
             }
         }
 
-        // Reset / frame-0 seat: seed theta = phi, skip integration.
-        if (seed) {
-            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
-            return;
-        }
-
         // Frequency-direction derivative (centered; one-sided at DC and
         // Nyquist). With origin-centered analysis the window is centered at
         // FFT index 0, so the per-bin expected phase progression is zero —
@@ -399,13 +377,13 @@ struct AudioSTFT {
         // b_a = kPghiFreqStep = 1, so no scaling).
         for (int m = 0; m < K; ++m) {
             if (m == 0) {
-                df_scratch[m] = princarg(ph_cur[1] - ph_cur[0]);
+                df_out[m] = princarg(ph_cur[1] - ph_cur[0]);
             } else if (m == K - 1) {
-                df_scratch[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2]);
+                df_out[m] = princarg(ph_cur[K - 1] - ph_cur[K - 2]);
             } else {
                 const double dfb = princarg(ph_cur[m]     - ph_cur[m - 1]);
                 const double dff = princarg(ph_cur[m + 1] - ph_cur[m]);
-                df_scratch[m] = 0.5 * (dfb + dff);
+                df_out[m] = 0.5 * (dfb + dff);
             }
         }
 
@@ -417,6 +395,63 @@ struct AudioSTFT {
             if (mag_prev[k] > peak_mag) peak_mag = mag_prev[k];
         }
         const double abstol  = kPghiTol * peak_mag;
+
+        // Prusa Alg. 1 line 3 classifies sub-tolerance ("quiet") bins before
+        // heap integration. The consumer still performs quiet-bin RNG draws so
+        // the draw stream stays in synthesis frame/bin order.
+        for (int k = 0; k < K; ++k) {
+            if (mag_cur[k] > abstol) {
+                quiet_out[k] = 0;                                  // in I
+            } else {
+                quiet_out[k] = 1;
+            }
+        }
+    }
+
+    // Consumer-side PGHI phase integration for one frame (Prusa-Holighaus
+    // Alg. 1). The producer supplies dt_cur, df, and quiet. The consumer keeps
+    // the seed seating, quiet-bin RNG draws, and heap propagation so RNG state
+    // and sequential phase dependencies stay local to synthesis.
+    //
+    //   seed   : frame-0 or immediately-after-a-reset frame. No prior synthesis
+    //            phase to integrate from, so theta seats to phi and no quiet-bin
+    //            draws are consumed.
+    //   R_a_back/R_a_fwd : actual backward/forward analysis hops. Their ratio
+    //                      to R_s is alpha (the stretch); used as b_s =
+    //                      alpha * b_a in the frequency-spread step (Prusa).
+    //
+    // Scratch (size K, reused): done_scratch, heap_scratch.
+    void pghi_integrate(bool seed,
+                        int64_t R_a_back, int64_t R_a_fwd,
+                        const std::vector<double>& mag_prev,
+                        const std::vector<double>& mag_cur,
+                        const std::vector<double>& ph_cur,
+                        const std::vector<double>& th_prev,
+                        const std::vector<double>& dt_prev,
+                        const std::vector<double>& dt_cur,
+                        const std::vector<double>& df,
+                        const std::vector<char>& quiet,
+                        std::vector<double>& theta,
+                        std::vector<char>&   done_scratch,
+                        std::vector<PghiHeapNode>& heap_scratch,
+                        std::mt19937& rng) {
+        const int K = M / 2 + 1;
+
+        // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
+        // Used as b_s = alpha * b_a in the vertical (frequency) integration
+        // step below; the time-axis integration carries alpha implicitly via
+        // the actual hop in the principal-arg demodulation.
+        const double alpha_fp =
+            (R_a_back > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_back)
+          : (R_a_fwd  > 0) ? static_cast<double>(R_s) / static_cast<double>(R_a_fwd)
+          : 1.0;
+
+        // Reset / frame-0 seat: seed theta = phi, skip integration.
+        if (seed) {
+            for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
+            return;
+        }
+
         const double half_Rs = 0.5 * static_cast<double>(R_s);
 
         // Prusa Alg. 1 line 3: sub-tolerance ("quiet") bins are assigned a
@@ -427,11 +462,11 @@ struct AudioSTFT {
         // get their phase via the heap below.
         std::uniform_real_distribution<double> quiet_dist(-M_PI, M_PI);
         for (int k = 0; k < K; ++k) {
-            if (mag_cur[k] > abstol) {
-                done_scratch[k] = 0;                                  // in I
-            } else {
+            if (quiet[k] == 1) {
                 theta[k] = quiet_dist(rng);
                 done_scratch[k] = 1;
+            } else {
+                done_scratch[k] = 0;                                  // in I
             }
         }
 
@@ -455,7 +490,7 @@ struct AudioSTFT {
             if (!node.current) {
                 // Previous-frame bin -> trapezoidal time-step into frame n.
                 if (done_scratch[m] == 0) {
-                    theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_out[m]);
+                    theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                     done_scratch[m] = 1;
                     heap_scratch.push_back({mag_cur[m], m, true});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
@@ -469,7 +504,7 @@ struct AudioSTFT {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
                     if (nb < 0 || nb >= K) continue;
                     if (done_scratch[nb] != 0) continue;     // not in I, or done
-                    const double step = alpha_fp * 0.5 * (df_scratch[m] + df_scratch[nb]);
+                    const double step = alpha_fp * 0.5 * (df[m] + df[nb]);
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
                     heap_scratch.push_back({mag_cur[nb], nb, true});

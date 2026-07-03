@@ -5,12 +5,14 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <cmath>
 #include <complex>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <random>
 #include <thread>
 #include <vector>
@@ -61,10 +63,10 @@ void Synthesis::synthesize_full(
     const int wcount = wend;
 
     // --- Env-gated sub-stage profiling --------------------------------------
-    // Five ns counters per channel (held in chprof, below), summed across the
-    // channel threads after the per-channel passes complete, plus a single
-    // write/limiter timer for the one interleaved write_cb. Because the channels
-    // run concurrently, the summed work_sum reads ~channel-count times the real
+    // Per-channel ns counters (held in chprof, below), summed across the channel
+    // threads after the per-channel passes complete, plus a single write/limiter
+    // timer for the one interleaved write_cb. Because the channels run
+    // concurrently, the summed work_sum reads ~channel-count times the real
     // elapsed time; wall (measured below) is the true elapsed ms of the threaded
     // compute+write region, so the two can't be confused. The [profile] line is
     // emitted to std::cerr only when WARPTEMPO_PROFILE is set (runtime env gating
@@ -114,29 +116,132 @@ void Synthesis::synthesize_full(
     // only at the end. Each channel's pipeline state is fully local to
     // run_channel so each channel can be handed to its own thread.
     std::vector<std::vector<float>> mono(channels);
-    struct ChProf { int64_t analysis=0, heap=0, synthspec=0, ifft=0, ola=0; };
+    struct ChProf {
+        int64_t analysis=0, prep=0, wait=0, heap=0, synthspec=0, ifft=0, ola=0;
+    };
     std::vector<ChProf> chprof(channels);
     std::vector<char> ch_cancelled(channels, 0);
+
+    const int kAnalysisRingDepth = 4;
+    class AnalysisRing {
+    public:
+        struct Slot {
+            std::vector<double> mag;
+            std::vector<double> phi;
+            std::vector<double> dt;
+            std::vector<double> df;
+            std::vector<char> quiet;
+        };
+
+        AnalysisRing(int depth, int k)
+            : slots_(static_cast<size_t>(depth)) {
+            for (Slot& slot : slots_) {
+                slot.mag.resize(static_cast<size_t>(k));
+                slot.phi.resize(static_cast<size_t>(k));
+                slot.dt.resize(static_cast<size_t>(k));
+                slot.df.resize(static_cast<size_t>(k));
+                slot.quiet.resize(static_cast<size_t>(k));
+            }
+        }
+
+        Slot* begin_push() {
+            std::unique_lock<std::mutex> lock(mutex_);
+            not_full_.wait(lock, [&] {
+                return abort_ || count_ + reserved_ < slots_.size();
+            });
+            if (abort_) return nullptr;
+            Slot& slot = slots_[tail_];
+            tail_ = (tail_ + 1) % slots_.size();
+            ++reserved_;
+            return &slot;
+        }
+
+        bool finish_push() {
+            std::unique_lock<std::mutex> lock(mutex_);
+            --reserved_;
+            if (abort_) {
+                lock.unlock();
+                not_full_.notify_one();
+                not_empty_.notify_all();
+                return false;
+            }
+            ++count_;
+            lock.unlock();
+            not_empty_.notify_one();
+            return true;
+        }
+
+        bool pop(std::vector<double>& mag,
+                 std::vector<double>& phi,
+                 std::vector<double>& dt,
+                 std::vector<double>& df,
+                 std::vector<char>& quiet) {
+            std::unique_lock<std::mutex> lock(mutex_);
+            not_empty_.wait(lock, [&] { return abort_ || count_ > 0; });
+            if (abort_) return false;
+            Slot& slot = slots_[head_];
+            slot.mag.swap(mag);
+            slot.phi.swap(phi);
+            slot.dt.swap(dt);
+            slot.df.swap(df);
+            slot.quiet.swap(quiet);
+            head_ = (head_ + 1) % slots_.size();
+            --count_;
+            lock.unlock();
+            not_full_.notify_one();
+            return true;
+        }
+
+        void request_abort() {
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                abort_ = true;
+            }
+            not_full_.notify_all();
+            not_empty_.notify_all();
+        }
+
+        bool abort_requested() {
+            std::lock_guard<std::mutex> lock(mutex_);
+            return abort_;
+        }
+
+    private:
+        std::vector<Slot> slots_;
+        size_t head_ = 0;
+        size_t tail_ = 0;
+        size_t count_ = 0;
+        size_t reserved_ = 0;
+        bool abort_ = false;
+        std::mutex mutex_;
+        std::condition_variable not_full_;
+        std::condition_variable not_empty_;
+    };
 
     // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
     // fm, stft.phase_reset_placements, stft.fft_ws[ch],
     // stft.window/synth_window) and writes only mono[ch], chprof[ch],
-    // ch_cancelled[ch]. The theta/dt/df/done scratch, the heap scratch, the OLA
-    // row, the analysis-state rows, and the RNG are all locals here - that
-    // locality is what makes per-channel threading safe.
+    // ch_cancelled[ch]. Analysis runs on a per-channel producer thread, while
+    // synthesis-side inter-frame state stays consumer-local. The RNG is
+    // consumer-only, so quiet-bin draws stay in frame/bin order. Forward and
+    // inverse FFTW resources are disjoint between the two threads.
     auto run_channel = [&](int ch) {
         const int K2 = K;
-        // --- One-deep lookahead analysis pipeline ---------------------------
-        // Analysis runs one frame ahead of synthesis so PGHI's centered
-        // time-derivative can read the NEXT frame's analysis phase. This is
-        // INTERNAL pipeline latency only: synthesis frame m still OLA-adds into
-        // output position m*R_s. All inter-frame phase state is held in these
-        // per-channel buffers; the heap helper reads them directly.
+        // --- One-deep consumer lookahead state ------------------------------
+        // The producer analyzes frames in order, while the consumer keeps the
+        // current frame plus one analyzed lookahead. Producer-side PGHI prep
+        // rides with the lookahead slot: slot 0 has no usable prep, and slot
+        // f+1 carries prep for synthesis frame f. This is INTERNAL pipeline
+        // latency only: synthesis frame m still OLA-adds into output position
+        // m*R_s. All inter-frame phase state is held in these per-channel
+        // buffers; the PGHI helpers read them directly.
         std::vector<double> ph_prev(K2,0.0), ph_cur(K2,0.0), ph_nxt(K2,0.0);
         std::vector<double> mag_prev(K2,0.0), mag_cur(K2,0.0), mag_nxt(K2,0.0);
         std::vector<double> th_prev(K2,0.0), dt_prev(K2,0.0);
-        // Per-channel scratch (was shared and serially reused across channels).
-        std::vector<double> theta(K2), dt_scratch(K2), df_scratch(K2);
+        std::vector<double> dt_in(K2), df_in(K2);
+        std::vector<char>   quiet_in(K2);
+        // Per-channel synthesis scratch.
+        std::vector<double> theta(K2);
         std::vector<char>   done_scratch(K2);
         std::vector<PghiHeapNode> heap_scratch; heap_scratch.reserve(K2);
         // Per-channel quiet-bin RNG. Each stream is consumed only by its own
@@ -163,17 +268,98 @@ void Synthesis::synthesize_full(
             return fm[num_frames - 1] +
                    static_cast<int64_t>(R_s) * (aidx - (num_frames - 1));
         };
-        // analysis folds in the two one-time priming calls below as well as the
-        // per-frame in-loop call — all analysis goes through this lambda.
-        auto analyze1 = [&](int aidx, std::vector<double>& md,
-                                      std::vector<double>& pd) {
-            if (prof) {
-                const auto _a0 = prof_clock::now();
-                stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
-                chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
-            } else {
-                stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames, md, pd);
+
+        AnalysisRing analysis_ring(kAnalysisRingDepth, K2);
+        std::thread analysis_thread;
+        struct AnalysisThreadJoiner {
+            AnalysisRing& ring;
+            std::thread& thread;
+            bool abort_on_destroy = true;
+
+            ~AnalysisThreadJoiner() {
+                if (!thread.joinable()) return;
+                if (abort_on_destroy) ring.request_abort();
+                thread.join();
             }
+
+            void join_normally() {
+                if (!thread.joinable()) return;
+                abort_on_destroy = false;
+                thread.join();
+            }
+        } analysis_joiner{analysis_ring, analysis_thread};
+
+        auto cancel_requested = [&]() -> bool {
+            return stft.cancel_flag && stft.cancel_flag->load();
+        };
+
+        if (wcount > 0) {
+            analysis_thread = std::thread([&, ch, psrc] {
+                std::vector<double> ph_prev_prod(K2,0.0), ph_cur_prod(K2,0.0), ph_nxt_prod(K2,0.0);
+                std::vector<double> mag_prev_prod(K2,0.0), mag_cur_prod(K2,0.0), mag_nxt_prod(K2,0.0);
+                // With profiling enabled, this producer writes analysis/prep
+                // while the consumer writes wait/heap/synthspec/ifft/ola;
+                // those are separate ChProf scalar members.
+                for (int aidx = 0; aidx <= wend; ++aidx) {
+                    if (analysis_ring.abort_requested() || cancel_requested()) {
+                        analysis_ring.request_abort();
+                        return;
+                    }
+                    if (prof) {
+                        const auto _a0 = prof_clock::now();
+                        stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames,
+                                           mag_nxt_prod, ph_nxt_prod);
+                        chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
+                    } else {
+                        stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames,
+                                           mag_nxt_prod, ph_nxt_prod);
+                    }
+                    AnalysisRing::Slot* slot = analysis_ring.begin_push();
+                    if (!slot) return;
+                    slot->mag = mag_nxt_prod;
+                    slot->phi = ph_nxt_prod;
+                    // Slot 0 carries analysis(0) only; prep(0) is delivered
+                    // with slot 1, so the consumer never reads slot 0's prep.
+                    if (aidx >= 1) {
+                        const int f = aidx - 1;
+                        const int64_t ta_back = ta_for(f);
+                        const int64_t R_a_back = (f > 0) ? (ta_back - ta_for(f - 1)) : 0;
+                        const int64_t R_a_fwd = ta_for(f + 1) - ta_back;
+                        if (prof) {
+                            const auto _p0 = prof_clock::now();
+                            stft.pghi_prep(f == 0, R_a_back, R_a_fwd,
+                                           mag_prev_prod, mag_cur_prod,
+                                           ph_prev_prod, ph_cur_prod, ph_nxt_prod,
+                                           slot->dt, slot->df, slot->quiet);
+                            chprof[ch].prep += prof_ns(_p0, prof_clock::now());
+                        } else {
+                            stft.pghi_prep(f == 0, R_a_back, R_a_fwd,
+                                           mag_prev_prod, mag_cur_prod,
+                                           ph_prev_prod, ph_cur_prod, ph_nxt_prod,
+                                           slot->dt, slot->df, slot->quiet);
+                        }
+                    }
+                    if (!analysis_ring.finish_push()) return;
+                    ph_prev_prod.swap(ph_cur_prod);
+                    ph_cur_prod.swap(ph_nxt_prod);
+                    mag_prev_prod.swap(mag_cur_prod);
+                    mag_cur_prod.swap(mag_nxt_prod);
+                }
+            });
+        }
+
+        auto pop_analysis = [&](std::vector<double>& md,
+                                std::vector<double>& pd,
+                                std::vector<double>& dt,
+                                std::vector<double>& df,
+                                std::vector<char>& quiet) -> bool {
+            if (prof) {
+                const auto _w0 = prof_clock::now();
+                const bool ok = analysis_ring.pop(md, pd, dt, df, quiet);
+                chprof[ch].wait += prof_ns(_w0, prof_clock::now());
+                return ok;
+            }
+            return analysis_ring.pop(md, pd, dt, df, quiet);
         };
 
         // Prime: analysis frames 0 and 1 (1 is the analysis-only frame when
@@ -182,8 +368,14 @@ void Synthesis::synthesize_full(
         // no phi_prev (same as frame 0 on the full path).
         int64_t ta_prev = 0, ta_cur = 0, ta_nxt = 0;
         if (wcount >= 1) {
-            analyze1(0, mag_cur, ph_cur);
-            analyze1(1, mag_nxt, ph_nxt);
+            if (!pop_analysis(mag_cur, ph_cur, dt_in, df_in, quiet_in)) {
+                ch_cancelled[ch] = 1;
+                return;
+            }
+            if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in)) {
+                ch_cancelled[ch] = 1;
+                return;
+            }
             ta_cur = ta_for(0);
             ta_nxt = ta_for(1);
         }
@@ -192,7 +384,7 @@ void Synthesis::synthesize_full(
         // frame_idx in range and so never fire.
         int  phase_reset_cursor = 0;
         // `prev_reset` carries "the previous frame fired a reset" into the next
-        // iteration so heap_phase reseeds theta = phi on the post-reset frame.
+        // iteration so PGHI seats theta = phi on the post-reset frame.
         bool prev_reset = false;
         // Start-trim: N/2 samples -- the origin-centered analysis alignment
         // latency only, so source frame 0 maps to output frame 0. The OLA
@@ -210,13 +402,15 @@ void Synthesis::synthesize_full(
             // Cooperative cancellation: stft.cancel_flag is set by the GUI when
             // the user presses Esc during a render. Worst-case cancel-to-stop
             // latency is one frame — well below human perception.
-            if (stft.cancel_flag && stft.cancel_flag->load()) {
+            if (cancel_requested()) {
+                analysis_ring.request_abort();
                 ch_cancelled[ch] = 1;
                 return;
             }
             // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame),
-            // ph_nxt/mag_nxt = analysis(frame+1), ph_prev/mag_prev =
-            // analysis(frame-1) (zero at frame 0).
+            // ph_nxt/mag_nxt = analysis(frame+1), dt_in/df_in/quiet_in =
+            // prep(frame) delivered with the frame+1 slot, and ph_prev/mag_prev
+            // = analysis(frame-1) (zero at frame 0).
             // R_a_actual is the integer source hop this frame actually
             // traversed: fm[frame] - fm[frame-1]. fm is the once-rounded
             // schedule from generate_source_frame_positions (each entry
@@ -235,19 +429,19 @@ void Synthesis::synthesize_full(
 
             if (prof) {
                 const auto _h0 = prof_clock::now();
-                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                                mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
-                                th_prev, dt_prev, theta, dt_scratch,
-                                df_scratch, done_scratch, heap_scratch, rng);
+                stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
+                                    mag_prev, mag_cur, ph_cur,
+                                    th_prev, dt_prev, dt_in, df_in, quiet_in,
+                                    theta, done_scratch, heap_scratch, rng);
                 chprof[ch].heap += prof_ns(_h0, prof_clock::now());
             } else {
-                stft.heap_phase(seed_heap, frame0, R_a_actual, R_a_fwd,
-                                mag_prev, mag_cur, ph_prev, ph_cur, ph_nxt,
-                                th_prev, dt_prev, theta, dt_scratch,
-                                df_scratch, done_scratch, heap_scratch, rng);
+                stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
+                                    mag_prev, mag_cur, ph_cur,
+                                    th_prev, dt_prev, dt_in, df_in, quiet_in,
+                                    theta, done_scratch, heap_scratch, rng);
             }
-            // dt_scratch (this frame's dt) becomes the next frame's dt_prev.
-            dt_prev.swap(dt_scratch);
+            // dt_in (this frame's dt) becomes the next frame's dt_prev.
+            dt_prev.swap(dt_in);
 
             if (prof) {
                 const auto _s0 = prof_clock::now();
@@ -296,8 +490,8 @@ void Synthesis::synthesize_full(
             }
 
             // End-of-frame per-channel state shift. theta -> th_prev (a swap:
-            // heap_phase fully overwrites theta before reading it next frame, so
-            // the stale th_prev the swap leaves in theta is dead on arrival);
+            // PGHI fully overwrites theta before reading it next frame, so the
+            // stale th_prev the swap leaves in theta is dead on arrival);
             // ph_cur -> ph_prev and ph_nxt -> ph_cur (mag likewise). After this,
             // ph_prev holds frame_idx's analysis phase, ready for the next heap call.
             th_prev.swap(theta);
@@ -352,9 +546,14 @@ void Synthesis::synthesize_full(
                 ta_prev = ta_cur;
                 ta_cur  = ta_nxt;
                 ta_nxt  = ta_for(frame_idx + 2);
-                analyze1(frame_idx + 2, mag_nxt, ph_nxt);
+                if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in)) {
+                    ch_cancelled[ch] = 1;
+                    return;
+                }
             }
         }
+
+        analysis_joiner.join_normally();
 
         // Final tail: the last N-R_s samples of the OLA window.
         const int remaining = N - R_s;
@@ -412,18 +611,21 @@ void Synthesis::synthesize_full(
 
     if (prof) {
         const int64_t t_wall = prof_ns(_wall0, prof_clock::now());
-        int64_t t_analysis=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
+        int64_t t_analysis=0, t_prep=0, t_wait=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
         for (int ch = 0; ch < channels; ++ch) {
-            t_analysis += chprof[ch].analysis; t_heap += chprof[ch].heap;
+            t_analysis += chprof[ch].analysis; t_prep += chprof[ch].prep; t_wait += chprof[ch].wait;
+            t_heap += chprof[ch].heap;
             t_synthspec += chprof[ch].synthspec; t_ifft += chprof[ch].ifft;
             t_ola += chprof[ch].ola;
         }
-        const int64_t work_sum = t_analysis + t_heap + t_synthspec +
+        const int64_t work_sum = t_analysis + t_prep + t_wait + t_heap + t_synthspec +
                                  t_ifft + t_ola + t_write;
         const double denom = work_sum > 0 ? static_cast<double>(work_sum) : 1.0;
         auto pct = [&](int64_t v) { return 100.0 * v / denom; };
         std::cerr << "[profile] synth:"
                   << " analysis=" << (t_analysis / 1e6) << "(" << pct(t_analysis) << "%)"
+                  << " prep="     << (t_prep     / 1e6) << "(" << pct(t_prep)     << "%)"
+                  << " wait="     << (t_wait     / 1e6) << "(" << pct(t_wait)     << "%)"
                   << " heap="     << (t_heap     / 1e6) << "(" << pct(t_heap)     << "%)"
                   << " synthspec="<< (t_synthspec/ 1e6) << "(" << pct(t_synthspec)<< "%)"
                   << " ifft="     << (t_ifft     / 1e6) << "(" << pct(t_ifft)     << "%)"
