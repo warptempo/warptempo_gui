@@ -391,7 +391,8 @@ RenderOutcome do_render(const RenderRequest& req,
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
         // Only wav renders produce these — frame-map/tempo-map formats skip
-        // the engine.
+        // the engine. The phase-reset sidecar is always written on wav batch
+        // renders, including as an empty file.
         if (output_format == "wav" && !tmres.frame_map.empty() &&
             sample_rate > 0) {
             // Walk the FULL frame map (no synthetic trim anchors); each emitted
@@ -471,35 +472,35 @@ RenderOutcome do_render(const RenderRequest& req,
 
             std::vector<FrameMapSegment> real_map(real.begin, real.end);
 
-            // Phase resets: forward-map each reset's clicked source frame
-            // through the same map and place it at tgt(F) - window_offset, so
-            // a reset sits on the same musical position in render-view as in
-            // source and target views. Drop out-of-trim and disabled.
-            if (!req.phase_resets.empty()) {
-                std::vector<GuiPhaseResetMarker> warped_phase_resets;
-                warped_phase_resets.reserve(req.phase_resets.size());
-                for (const auto& t : req.phase_resets) {
-                    if (t.disabled) continue;
-                    const int64_t source_frame_abs = static_cast<int64_t>(
-                        std::nearbyint(t.time_seconds * sr_d));
-                    if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
-                    const int64_t render_frame =
-                        static_cast<int64_t>(std::llrint(map_source_to_target(
-                            static_cast<double>(source_frame_abs), real_map))) -
-                        window_offset_samples;
-                    GuiPhaseResetMarker w = t;
-                    w.time_seconds = static_cast<double>(render_frame) / sr_d;
-                    if (w.time_seconds < 0.0) w.time_seconds = 0.0;
-                    warped_phase_resets.push_back(std::move(w));
-                }
-                const std::string tmd_path =
-                    (bf / (req.batch_basename + ".renderphaseresetmarkers"))
-                    .string();
-                if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: render warning: failed to write '%s'\n",
-                        tmd_path.c_str());
-                }
+            // The render-domain phase-reset sidecar is always written for wav
+            // batch renders, including the empty-file form. Surviving resets
+            // are forward-mapped from their clicked source frame through the
+            // same map and placed at tgt(F) - window_offset, so a reset sits
+            // on the same musical position in render-view as in source and
+            // target views. Drop out-of-trim and disabled.
+            std::vector<GuiPhaseResetMarker> warped_phase_resets;
+            warped_phase_resets.reserve(req.phase_resets.size());
+            for (const auto& t : req.phase_resets) {
+                if (t.disabled) continue;
+                const int64_t source_frame_abs = static_cast<int64_t>(
+                    std::nearbyint(t.time_seconds * sr_d));
+                if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
+                const int64_t render_frame =
+                    static_cast<int64_t>(std::llrint(map_source_to_target(
+                        static_cast<double>(source_frame_abs), real_map))) -
+                    window_offset_samples;
+                GuiPhaseResetMarker w = t;
+                w.time_seconds = static_cast<double>(render_frame) / sr_d;
+                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
+                warped_phase_resets.push_back(std::move(w));
+            }
+            const std::string tmd_path =
+                (bf / (req.batch_basename + ".renderphaseresetmarkers"))
+                .string();
+            if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: failed to write '%s'\n",
+                    tmd_path.c_str());
             }
         }
     };
@@ -510,7 +511,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // source-domain .warpmarkers, source-domain .phaseresetmarkers
     // (including the empty-file form), and .rendersettings. Those
     // commit-critical sidecars must publish before the wav is reported as
-    // successful.
+    // successful. Process death after the wav rename lands on disk but before
+    // those sidecars finish can leave an orphan wav that render-view enumerates
+    // and offers; Ctrl+Alt+C's validate-before-mutate path refuses that entry
+    // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
