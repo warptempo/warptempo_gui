@@ -4,6 +4,7 @@
 #include "wav_io.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -42,9 +43,16 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
     while (remaining > 0) {
         const int64_t want = static_cast<int64_t>(std::min(kChunk, remaining));
         auto read = read_frames_exact(*reader, buf.data(), want);
-        if (!read) return std::unexpected(read.error());
+        if (!read) {
+            // A failed trimmed-source write removes its partial output, because
+            // an unfinalized header can otherwise read back as a silently
+            // shorter file through the streamed-size tolerance.
+            std::remove(out_path.c_str());
+            return std::unexpected(read.error());
+        }
         auto wrote = writer->write_frames(buf.data(), want);
         if (!wrote) {
+            std::remove(out_path.c_str());
             return std::unexpected("write failed for '" + out_path + "': " +
                                    wrote.error());
         }
@@ -53,6 +61,7 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
 
     auto closed = writer->close();
     if (!closed) {
+        std::remove(out_path.c_str());
         return std::unexpected("close failed for '" + out_path + "': " +
                                closed.error());
     }
