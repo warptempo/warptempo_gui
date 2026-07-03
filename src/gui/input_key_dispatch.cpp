@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -211,10 +212,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
 
-    // Ctrl+Alt+E: render the in-memory queue as one batch. Each
-    // queued entry produces a sibling .wav (+ .warpmarkers /
-    // .phaseresetmarkers when non-empty / .peaks sidecars) inside a fresh
-    // batch folder `<source_parent>/renders/<index>_render_all_in_queue/`.
+    // Ctrl+Alt+E: render the in-memory queue as one batch. Each wav
+    // queued entry produces a sibling .wav plus commit-critical
+    // .warpmarkers, .phaseresetmarkers, and .rendersettings sidecars inside
+    // a fresh batch folder
+    // `<source_parent>/renders/<index>_render_all_in_queue/`.
     // The index is one greater than the highest pre-existing batch index
     // in that renders folder (regardless of command tag). Filenames
     // inside the batch are the entry position zero-padded to fit the
@@ -533,21 +535,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (!app.render_view.enabled) return true;
         if (app.render_view.index < 0) return true;
 
-        // app.render_view.markers / .phase_resets are now
-        // render-domain (loaded from .renderwarpmarkers /
-        // .renderphaseresetmarkers for display). The commit promotes
-        // the render's *source-domain*
-        // markers into authoring memory, so reload them from the
-        // adjacent .warpmarkers / .phaseresetmarkers sidecars at commit
-        // time. Failure to read the source-domain warpmarkers aborts —
-        // committing render-domain values into authoring would corrupt
-        // the source coordinate system.
+        // app.render_view.markers / .phase_resets are render-domain display
+        // state. Ctrl+Alt+C promotes the render's source-domain authoring
+        // sidecars, so every required sidecar is validated and collected
+        // before the first mutation.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
         const std::filesystem::path sidecar =
             cur_e.batch_folder / (cur_e.basename + ".rendersettings");
         const RendersettingsAuthoring authoring =
             read_rendersettings_authoring(sidecar);
+        const std::optional<EngineSettings> commit_engine_settings =
+            read_rendersettings_engine_block(sidecar);
+        if (!commit_engine_settings) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: commit aborted, "
+                "rendersettings engine block invalid or absent at '%s'\n",
+                sidecar.string().c_str());
+            return true;
+        }
         const bool has_authoring_block =
             authoring.has_active_tab ||
             authoring.has_active_audio_view ||
@@ -562,10 +568,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             const std::filesystem::path wm =
                 cur_e.batch_folder / (cur_e.basename + ".warpmarkers");
             GuiWarpMarkers m;
-            if (!m.load(wm.string())) {
+            auto r = m.load(wm.string());
+            if (!r) {
                 std::fprintf(stderr,
                     "warptempo_gui: render-view: commit aborted, failed "
-                    "to load %s\n", wm.string().c_str());
+                    "to load %s: %s\n",
+                    wm.string().c_str(), r.error().c_str());
                 return true;
             }
             src_warp = m.markers();
@@ -573,15 +581,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         {
             const std::filesystem::path tm = cur_e.batch_folder /
                 (cur_e.basename + ".phaseresetmarkers");
-            std::error_code ec;
-            if (std::filesystem::exists(tm, ec)) {
-                GuiPhaseResetMarkers t;
-                if (t.load(tm.string())) {
-                    src_trans = t.markers();
-                }
-                // Load failure: treat as empty phase resets (the
-                // load() call already logged its own diagnostics).
+            GuiPhaseResetMarkers t;
+            auto r = t.load(tm.string());
+            if (!r) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-view: commit aborted, failed "
+                    "to load %s: %s\n",
+                    tm.string().c_str(), r.error().c_str());
+                return true;
             }
+            src_trans = t.markers();
         }
 
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
@@ -613,24 +622,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                        commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
 
-        // Full engine-settings commit. Every batch entry's
-        // .rendersettings carries the recipe that produced it, and commit
-        // adopts that whole typed recipe so the live render fingerprint can
-        // match the render already inserted into the cache. Settings has no
-        // undo by convention; this mutation is permanent until the next
-        // Ctrl+S overwrites or the user edits the settings again.
-        {
-            auto es = read_rendersettings_engine_block(sidecar);
-            if (!es) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: commit: "
-                    "rendersettings engine block invalid or absent "
-                    "at '%s'; engine settings unchanged\n",
-                    sidecar.string().c_str());
-            } else {
-                app.engine_settings = *es;
-            }
-        }
+        // Full engine-settings commit. The strict engine block was validated
+        // before marker mutation, so commit can adopt the typed recipe without
+        // degrading to the previous live settings.
+        app.engine_settings = *commit_engine_settings;
 
         const std::filesystem::path src(app.source_audio_path);
         std::filesystem::path src_parent = src.parent_path();

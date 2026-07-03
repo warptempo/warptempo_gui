@@ -4,11 +4,9 @@
 #include "time_format.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <cstdio>
 #include <limits>
 #include <sstream>
-#include <unistd.h>
 
 std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
     markers_.clear();
@@ -68,13 +66,6 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
 
     // tmp + fsync + rename, preserving the existing file's mode.
     return atomic_write_string_to_path(path, data);
-}
-
-bool GuiPhaseResetMarkers::delete_file(const std::string& path) const {
-    if (path.empty()) return false;
-    if (::unlink(path.c_str()) == 0) return true;
-    if (errno == ENOENT) return true;
-    return false;
 }
 
 int GuiPhaseResetMarkers::insert_marker(GuiPhaseResetMarker m) {

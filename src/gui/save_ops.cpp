@@ -32,30 +32,22 @@ bool GuiSaveOps::save() {
         return false;
     }
 
-    // Phase resets sibling write. Empty list deletes the on-disk file so
-    // a project never carries a stale empty .phaseresetmarkers.
+    // .phaseresetmarkers is the companion authoring sidecar to .warpmarkers.
+    // Empty phase-reset lists serialize as empty files, keeping Ctrl+S
+    // symmetric and preventing stale on-disk resets without making absence
+    // carry meaning.
     if (!app.phaseresetmarkers_path.empty()) {
-        if (app.phaseresetmarkers.markers().empty()) {
-            if (!app.phaseresetmarkers.delete_file(app.phaseresetmarkers_path)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: failed to delete: %s\n",
-                    app.phaseresetmarkers_path.c_str());
-                return false;
-            }
-        } else {
-            if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: phase_reset save failed: %s\n",
-                    app.phaseresetmarkers_path.c_str());
-                return false;
-            }
+        if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset save failed: %s\n",
+                app.phaseresetmarkers_path.c_str());
+            return false;
         }
     }
 
-    // .settings carries authoring-class keys (trim, engine, scale, N,
-    // limiter, title, audio_input), so a failed write fails the save:
-    // dirty must survive so the unsaved-work dialog can offer retry
-    // instead of silently baselining in-memory-only settings.
+    // .settings carries settings/state that Ctrl+S persists, so a failed
+    // write fails the save: dirty must survive so the unsaved-work dialog can
+    // offer retry instead of silently baselining in-memory-only state.
     if (!app.settings_path.empty()) {
         if (!write_settings_file(app.settings_path,
                                  app.tab_a, app.tab_b,

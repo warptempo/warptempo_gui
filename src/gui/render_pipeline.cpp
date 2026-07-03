@@ -40,6 +40,11 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
+struct CommitCriticalSidecars {
+    bool ok = true;
+    std::vector<std::string> created_paths;
+};
+
 // write_frame_map and write_tempo_map moved to the parser
 // (map_output.cpp) so the GUI render pipeline and the headless parser CLI
 // emit byte-identical artifacts from one implementation.
@@ -175,6 +180,93 @@ RenderOutcome do_render(const RenderRequest& req,
         unlink_silent(staging_output_path);
     };
 
+    auto remove_created_commit_sidecars =
+        [](const std::vector<std::string>& paths) {
+            for (const std::string& path : paths) {
+                std::error_code ec;
+                std::filesystem::remove(path, ec);
+                if (ec) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: render warning: failed to remove "
+                        "partial sidecar '%s': %s\n",
+                        path.c_str(), ec.message().c_str());
+                }
+            }
+        };
+
+    auto remove_newly_published_wav = [&]() {
+        std::error_code ec;
+        std::filesystem::remove(final_output_path, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                "warptempo_gui: render warning: failed to remove "
+                "uncommittable wav '%s': %s\n",
+                final_output_path.c_str(), ec.message().c_str());
+        }
+    };
+
+    auto publish_commit_critical_batch_sidecars =
+        [&](bool hard_fail) -> CommitCriticalSidecars {
+            CommitCriticalSidecars result;
+            if (!batch_render || req.output_buffer) return result;
+
+            const std::filesystem::path bf(req.batch_folder);
+            auto existed_before = [](const std::filesystem::path& path) {
+                std::error_code ec;
+                const bool exists = std::filesystem::exists(path, ec);
+                return ec ? true : exists;
+            };
+            auto note_failure = [&](const std::filesystem::path& path) {
+                std::fprintf(stderr,
+                    hard_fail
+                        ? "warptempo_gui: render error: failed to write '%s'\n"
+                        : "warptempo_gui: render warning: failed to write '%s'\n",
+                    path.string().c_str());
+                result.ok = false;
+            };
+            auto note_created = [&](const std::filesystem::path& path,
+                                    bool existed) {
+                if (!existed) result.created_paths.push_back(path.string());
+            };
+
+            const std::filesystem::path wm_path =
+                bf / (req.batch_basename + ".warpmarkers");
+            bool existed = existed_before(wm_path);
+            if (!GuiWarpMarkers::save(wm_path.string(), req.markers)) {
+                note_failure(wm_path);
+                return result;
+            }
+            note_created(wm_path, existed);
+
+            const std::filesystem::path tm_path =
+                bf / (req.batch_basename + ".phaseresetmarkers");
+            existed = existed_before(tm_path);
+            if (!GuiPhaseResetMarkers::save(tm_path.string(),
+                                            req.phase_resets)) {
+                note_failure(tm_path);
+                return result;
+            }
+            note_created(tm_path, existed);
+
+            // `.rendersettings` sidecar: the canonical engine block, the
+            // render-view scratch defaults, and the optional dispatch-time
+            // authoring snapshot used by Ctrl+Alt+C.
+            const std::filesystem::path rs_path =
+                bf / (req.batch_basename + ".rendersettings");
+            existed = existed_before(rs_path);
+            if (!write_rendersettings(rs_path, req.engine_settings,
+                                      /*viewport_start=*/0,
+                                      /*zoom_level=*/kFitFileLevel,
+                                      /*playhead=*/0,
+                                      req.authoring)) {
+                note_failure(rs_path);
+                return result;
+            }
+            note_created(rs_path, existed);
+
+            return result;
+        };
+
     auto finish_success = [&](const char* outcome) -> RenderOutcome {
         if (prof) {
             const auto t_render_1 = profile::now();
@@ -217,52 +309,15 @@ RenderOutcome do_render(const RenderRequest& req,
         std::fprintf(stderr,
             "[warptempo_gui] render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
+        CommitCriticalSidecars sidecars =
+            publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
+        if (!sidecars.ok) {
+            remove_created_commit_sidecars(sidecars.created_paths);
+            cleanup_all();
+            return RenderOutcome::Failed;
+        }
         return finish_success("reused_up_to_date");
     }
-
-    // Batch publishes emit the complete sidecar set at every publish site:
-    // source-domain markers/resets, .rendersettings, render-domain
-    // markers/resets, peaks, and fingerprint. This lambda covers the
-    // req-derived source-domain pair plus .rendersettings; the map-derived
-    // render-domain pair is published by publish_render_domain_sidecars below.
-    auto publish_batch_marker_sidecars = [&]() {
-        if (!batch_render || req.output_buffer) return;
-        const std::filesystem::path bf(req.batch_folder);
-        const std::string wm_path =
-            (bf / (req.batch_basename + ".warpmarkers")).string();
-        if (!GuiWarpMarkers::save(wm_path, req.markers)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to write '%s'\n",
-                wm_path.c_str());
-        }
-        if (!req.phase_resets.empty()) {
-            const std::string tm_path =
-                (bf / (req.batch_basename + ".phaseresetmarkers")).string();
-            if (!GuiPhaseResetMarkers::save(tm_path, req.phase_resets)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: failed to write '%s'\n",
-                    tm_path.c_str());
-            }
-        }
-        // `.rendersettings` sidecar: eight canonical engine keys (engine
-        // block, byte-identical to the engine block of a Ctrl+S
-        // `.settings` write), the three render-view scratch keys
-        // (viewport_start, zoom, playhead) at their natural "user has
-        // not yet viewed this render" defaults, and the optional
-        // dispatch-time authoring snapshot used by Ctrl+Alt+C.
-        // Render-view rewrites only the scratch keys on first nav.
-        const std::filesystem::path rs_path =
-            bf / (req.batch_basename + ".rendersettings");
-        if (!write_rendersettings(rs_path, req.engine_settings,
-                                  /*viewport_start=*/0,
-                                  /*zoom_level=*/kFitFileLevel,
-                                  /*playhead=*/0,
-                                  req.authoring)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: failed to write '%s'\n",
-                rs_path.string().c_str());
-        }
-    };
 
     // --- Build the maps from in-memory markers. ---
     MapBuildInput tmin;
@@ -449,11 +504,22 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     };
 
-    // Complete artifact set for every on-disk wav publish, fresh or reused:
-    // .fingerprint sidecar, .peaks pyramid, and the batch sidecar family
-    // (self-gated inside the two publish lambdas). Every wav publish site
-    // must finish through here so no path can emit a partial set.
+    // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
+    // artifacts: .fingerprint, .peaks, and display sidecars are warning-only.
+    // Ctrl+Alt+E batch wavs are committable artifact sets: wav plus
+    // source-domain .warpmarkers, source-domain .phaseresetmarkers
+    // (including the empty-file form), and .rendersettings. Those
+    // commit-critical sidecars must publish before the wav is reported as
+    // successful.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
+        CommitCriticalSidecars sidecars =
+            publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
+        if (!sidecars.ok) {
+            remove_created_commit_sidecars(sidecars.created_paths);
+            remove_newly_published_wav();
+            cleanup_all();
+            return RenderOutcome::Failed;
+        }
         if (!fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
@@ -461,7 +527,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 final_output_path.c_str());
         }
         write_peaks_cache_for_wav(final_output_path);
-        publish_batch_marker_sidecars();
         publish_render_domain_sidecars();
         cleanup_all();
         return finish_success(outcome);
@@ -805,16 +870,11 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    // Batch render: capture the per-render marker + phase reset sidecars now
-    // that the publish has succeeded. These are the markers and
-    // phase resets THIS render was produced from, not snapshots of the
-    // current source authoring state — render-view loads them later to
-    // display alongside the rendered audio. Sidecar write failures are
-    // logged but never abort: the wav itself is the primary artifact.
-    // Batch sidecars (.warpmarkers / .phaseresetmarkers / .rendersettings /
-    // .renderwarpmarkers / .renderphaseresetmarkers) are self-gated inside
-    // the publish lambdas.
-    publish_batch_marker_sidecars();
+    // Non-wav batch artifacts are not render-view commit candidates. Preserve
+    // their existing warning-only sidecar behavior, while still writing the
+    // source-domain phase-reset companion as an empty file when the list is
+    // empty.
+    publish_commit_critical_batch_sidecars(/*hard_fail=*/false);
     publish_render_domain_sidecars();
 
     cleanup_all();

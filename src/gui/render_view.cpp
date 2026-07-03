@@ -244,12 +244,13 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
     return out;
 }
 
-// Loads the render at app.render_view.list[index] into the active
-// `audio`, parking the source audio on first entry. Parses sibling
-// <basename>.warpmarkers and <basename>.phaseresetmarkers into
-// app.render_view.markers/phase resets and computes F_begin/F_end
-// against the cached source sr/total. Stops playback before the
-// swap and re-binds the playback device. Returns true on success;
+// Loads the render at app.render_view.list[index] into the active `audio`,
+// parking the source audio on first entry. Parses render-domain
+// <basename>.renderwarpmarkers and <basename>.renderphaseresetmarkers into
+// app.render_view.markers / phase resets for display; source-domain
+// .warpmarkers and .phaseresetmarkers are reserved for Ctrl+Alt+C commit.
+// Computes F_begin/F_end against the cached source sr/total. Stops playback
+// before the swap and re-binds the playback device. Returns true on success;
 // on failure logs to stderr and the prior state is preserved.
 //
 // When the destination entry's persisted stat

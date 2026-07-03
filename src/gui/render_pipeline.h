@@ -76,15 +76,14 @@ struct RenderRequest {
     uint64_t source_load_size = 0;
     int64_t  source_load_mtime = 0;
 
-    // Full phase reset store snapshot. Batch sidecar payload only: when
-    // batch_folder is set and this list is non-empty, written verbatim as
-    // `<batch_folder>/<batch_basename>.phaseresetmarkers` so render-view
-    // can later display the phase reset set this render was produced from.
+    // Full phase reset store snapshot. Batch source-domain sidecar payload:
+    // when batch_folder is set, this list is written verbatim as
+    // `<batch_folder>/<batch_basename>.phaseresetmarkers`, including the
+    // empty-file form for an empty list.
     // A second sidecar `<batch_basename>.renderphaseresetmarkers` carries
-    // the same set warped into render-domain frame coordinates. The
+    // display resets warped into render-domain frame coordinates. The
     // single-phase reset sidecar path used by the immediate Ctrl+Alt+R
     // render branch does not read this field for sidecar emission.
-    // Empty list disables sidecar emission cleanly.
     std::vector<GuiPhaseResetMarker> phase_resets;
 
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
@@ -117,12 +116,14 @@ struct RenderRequest {
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>` with the
     // selected output-format extension (.wav, .warpframemap, or .tempomap)
-    // and, on success, deposits the per-render
-    // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`
-    // (when phase resets is non-empty), and `.rendersettings` sidecars in
-    // the same folder. Wav renders also emit `.peaks` and render-domain
-    // marker sidecars. The folder must already exist; do_render does not
-    // create it. When `batch_folder` is empty, do_render uses the
+    // and attempts the per-render source-domain
+    // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
+    // and `.rendersettings` sidecars in the same folder. For wav renders,
+    // those sidecars are commit-critical to success; `.peaks`,
+    // `.fingerprint`, and render-domain marker sidecars are optional
+    // display/cache artifacts.
+    // The folder must already exist; do_render does not create it. When
+    // `batch_folder` is empty, do_render uses the
     // source-directory title/limiter-prefix naming used by the
     // immediate Ctrl+Alt+R path. Sibling wav publishes still emit `.peaks`
     // and `.fingerprint` sidecars; batch-only render-view sidecars are not

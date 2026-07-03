@@ -43,11 +43,6 @@ public:
     static bool save(const std::string& path,
                      const std::vector<GuiPhaseResetMarker>& markers);
 
-    // Best-effort unlink. Returns true on success or if the file didn't
-    // already exist; false on any other error. Used by the empty-list save
-    // path so an emptied phase reset list removes the on-disk sibling file.
-    bool delete_file(const std::string& path) const;
-
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
 
     // Inserts `m` at the position that preserves ascending time_seconds
