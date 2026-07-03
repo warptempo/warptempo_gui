@@ -2,6 +2,7 @@
 
 #include "audio_reader.h"
 #include "source_audio_io.h"
+#include "wav_io.h"
 
 #include <algorithm>
 #include <atomic>
@@ -251,7 +252,11 @@ bool read_cache_range(const std::filesystem::path& cache_path,
             break;
         if (std::fseek(f, static_cast<long>(byte_offset), SEEK_SET) != 0) break;
 
-        out_samples.assign(frames * channels, 0.0f);
+        auto sample_count =
+            checked_audio_sample_count(static_cast<int64_t>(frames),
+                                       want.channels);
+        if (!sample_count) break;
+        out_samples.assign(*sample_count, 0.0f);
         if (!out_samples.empty() &&
             std::fread(out_samples.data(), sizeof(float), out_samples.size(), f) !=
                 out_samples.size()) {
@@ -383,8 +388,15 @@ bool rebuild_cache(const std::string& source_path,
 
     constexpr int64_t kChunkFrames = 65536;
     std::vector<float> all_samples;
-    all_samples.assign(static_cast<size_t>(meta.frame_count) *
-                       static_cast<size_t>(meta.channels), 0.0f);
+    auto sample_count = checked_audio_sample_count(meta.frame_count,
+                                                   meta.channels);
+    if (!sample_count) {
+        std::fprintf(stderr,
+                     "[warptempo_gui] .samples rebuild failed for %s: %s\n",
+                     source_path.c_str(), sample_count.error().c_str());
+        return false;
+    }
+    all_samples.assign(*sample_count, 0.0f);
     int64_t remaining = meta.frame_count;
     float* dst = all_samples.data();
     while (remaining > 0) {

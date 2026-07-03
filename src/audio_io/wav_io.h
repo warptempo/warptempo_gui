@@ -20,6 +20,14 @@ enum class WavSampleFormat { Pcm16, Pcm24, Float32 };
 inline constexpr uint64_t kMaxPlausibleAudioAllocBytes =
     8ull * 1024ull * 1024ull * 1024ull;
 
+// Validates that an interleaved float32 buffer of frames-times-channels samples
+// is a plausible allocation: shape sanity, multiplication overflow, the
+// kMaxPlausibleAudioAllocBytes refusal, and size_t fit. Returns the element
+// count for the allocation so every read path applies one policy and produces
+// one message.
+std::expected<size_t, std::string>
+checked_audio_sample_count(int64_t frames, int channels);
+
 struct WavInfo {
     int             sample_rate = 0;
     int             channels    = 0;

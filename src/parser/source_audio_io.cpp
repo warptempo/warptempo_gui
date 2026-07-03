@@ -83,7 +83,10 @@ std::expected<void, std::string> load_source_range_to_buffer(const std::string& 
     out_sample_rate = src_info.sample_rate;
     out_channels    = src_info.channels;
     const size_t n_frames = end_frame - begin_frame;
-    out_samples.assign(n_frames * static_cast<size_t>(out_channels), 0.0f);
+    auto sample_count =
+        checked_audio_sample_count(static_cast<int64_t>(n_frames), out_channels);
+    if (!sample_count) return std::unexpected(sample_count.error());
+    out_samples.assign(*sample_count, 0.0f);
 
     auto read = read_frames_exact(*reader, out_samples.data(),
                                   static_cast<int64_t>(n_frames));

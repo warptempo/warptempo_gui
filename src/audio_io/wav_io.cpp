@@ -100,6 +100,39 @@ struct WavLayout {
     uint16_t block_align = 0;
 };
 
+} // namespace
+
+std::expected<size_t, std::string>
+checked_audio_sample_count(int64_t frames, int channels)
+{
+    if (frames < 0 || channels <= 0) {
+        return std::unexpected("invalid audio shape (frames=" +
+                               std::to_string(frames) + ", channels=" +
+                               std::to_string(channels) + ")");
+    }
+
+    const uint64_t samples =
+        static_cast<uint64_t>(frames) * static_cast<uint64_t>(channels);
+    if (channels > 0 &&
+        samples / static_cast<uint64_t>(channels) !=
+            static_cast<uint64_t>(frames)) {
+        return std::unexpected("audio allocation is too large");
+    }
+    const uint64_t bytes = samples * sizeof(float);
+    if (bytes / sizeof(float) != samples) {
+        return std::unexpected("audio allocation is too large");
+    }
+    if (bytes > kMaxPlausibleAudioAllocBytes) {
+        return std::unexpected(implausible_alloc_message(bytes));
+    }
+    if (samples > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        return std::unexpected("audio allocation is too large");
+    }
+    return static_cast<size_t>(samples);
+}
+
+namespace {
+
 uint16_t read_u16(const std::array<unsigned char, 40>& b, size_t off)
 {
     return static_cast<uint16_t>(b[off] | (b[off + 1] << 8));
@@ -272,26 +305,10 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     if (info_out) *info_out = layout.info;
 
     const int64_t frames = end_frame - begin_frame;
-    const uint64_t samples =
-        static_cast<uint64_t>(frames) *
-        static_cast<uint64_t>(layout.info.channels);
-    if (layout.info.channels > 0 &&
-        samples / static_cast<uint64_t>(layout.info.channels) !=
-            static_cast<uint64_t>(frames)) {
-        return std::unexpected("WAV read is too large");
-    }
-    const uint64_t float_bytes = samples * sizeof(float);
-    if (float_bytes / sizeof(float) != samples) {
-        return std::unexpected("WAV read is too large");
-    }
-    if (float_bytes > kMaxPlausibleAudioAllocBytes) {
-        return std::unexpected(implausible_alloc_message(float_bytes));
-    }
-    if (samples > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-        return std::unexpected("WAV read is too large");
-    }
-    std::vector<float> out(static_cast<size_t>(samples));
-    if (samples == 0) return out;
+    auto sample_count = checked_audio_sample_count(frames, layout.info.channels);
+    if (!sample_count) return std::unexpected(sample_count.error());
+    std::vector<float> out(*sample_count);
+    if (*sample_count == 0) return out;
 
     const uint64_t byte_offset =
         layout.data_offset +
@@ -316,7 +333,7 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     }
 
     decode_wav_samples(raw.data(), layout.info.format,
-                       static_cast<int64_t>(samples), out.data());
+                       static_cast<int64_t>(*sample_count), out.data());
     return out;
 }
 

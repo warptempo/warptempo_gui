@@ -16,14 +16,6 @@ namespace {
 // flac_probe admits at most 24 significant bits.
 constexpr float kFlacS32Scale = 1.0f / 2147483648.0f;
 
-std::string implausible_alloc_message(uint64_t bytes)
-{
-    const uint64_t mib =
-        (bytes + 1024ull * 1024ull - 1) / (1024ull * 1024ull);
-    return "implausibly large audio allocation (" + std::to_string(mib) +
-           " MiB); refusing";
-}
-
 void flac_s32_to_float(const drflac_int32* in, float* out, size_t samples)
 {
     for (size_t i = 0; i < samples; ++i) {
@@ -224,27 +216,9 @@ audio_read_full(const std::string& path, AudioFileInfo* info_out)
     auto reader = AudioReader::open(path);
     if (!reader) return std::unexpected(reader.error());
     const AudioFileInfo info = reader->info();
-    if (info.frames < 0 || info.channels <= 0) {
-        return std::unexpected("invalid audio stream info");
-    }
-    const uint64_t samples =
-        static_cast<uint64_t>(info.frames) * static_cast<uint64_t>(info.channels);
-    if (info.channels > 0 &&
-        samples / static_cast<uint64_t>(info.channels) !=
-            static_cast<uint64_t>(info.frames)) {
-        return std::unexpected("audio file is too large");
-    }
-    const uint64_t bytes = samples * sizeof(float);
-    if (bytes / sizeof(float) != samples) {
-        return std::unexpected("audio file is too large");
-    }
-    if (bytes > kMaxPlausibleAudioAllocBytes) {
-        return std::unexpected(implausible_alloc_message(bytes));
-    }
-    if (samples > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-        return std::unexpected("audio file is too large");
-    }
-    std::vector<float> out(static_cast<size_t>(samples));
+    auto sample_count = checked_audio_sample_count(info.frames, info.channels);
+    if (!sample_count) return std::unexpected(sample_count.error());
+    std::vector<float> out(*sample_count);
     auto read = read_frames_exact(*reader, out.data(), info.frames);
     if (!read) return std::unexpected(read.error());
     if (info_out) *info_out = info;
