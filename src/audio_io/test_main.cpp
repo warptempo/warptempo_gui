@@ -64,6 +64,16 @@ void patch_u32(std::vector<char>& v, size_t off, uint32_t x)
     v[off + 3] = static_cast<char>((x >> 24) & 0xff);
 }
 
+void append_i16(std::vector<char>& v, int16_t x)
+{
+    append_u16(v, static_cast<uint16_t>(x));
+}
+
+void append_float32(std::vector<char>& v, float x)
+{
+    append_u32(v, std::bit_cast<uint32_t>(x));
+}
+
 void append_pcm16_fmt(std::vector<char>& v, uint16_t channels,
                       uint32_t sample_rate)
 {
@@ -75,6 +85,33 @@ void append_pcm16_fmt(std::vector<char>& v, uint16_t channels,
     append_u32(v, sample_rate * channels * 2u);
     append_u16(v, static_cast<uint16_t>(channels * 2u));
     append_u16(v, 16);
+}
+
+void append_extensible_fmt(std::vector<char>& v, uint16_t channels,
+                           uint32_t sample_rate, uint16_t bits,
+                           uint16_t valid_bits, uint32_t subformat_tag)
+{
+    const uint16_t bytes_per_sample = static_cast<uint16_t>(bits / 8);
+    const uint16_t block_align =
+        static_cast<uint16_t>(channels * bytes_per_sample);
+    const unsigned char guid_tail[12] = {
+        0x00, 0x00, 0x10, 0x00, 0x80, 0x00,
+        0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
+    };
+
+    append_fourcc(v, "fmt ");
+    append_u32(v, 40);
+    append_u16(v, 0xfffe);
+    append_u16(v, channels);
+    append_u32(v, sample_rate);
+    append_u32(v, sample_rate * block_align);
+    append_u16(v, block_align);
+    append_u16(v, bits);
+    append_u16(v, 22);
+    append_u16(v, valid_bits);
+    append_u32(v, 0);
+    append_u32(v, subformat_tag);
+    for (unsigned char b : guid_tail) v.push_back(static_cast<char>(b));
 }
 
 std::vector<char> riff_prefix()
@@ -301,6 +338,151 @@ bool test_odd_junk_chunk_before_data()
     return true;
 }
 
+bool test_wave_format_extensible_fixtures()
+{
+    {
+        const std::vector<int16_t> samples = {
+            -32768, -16384, 0, 16384, 32767, -1};
+        std::vector<char> blob = riff_prefix();
+        append_extensible_fmt(blob, 2, 44100, 16, 16, 1);
+        append_fourcc(blob, "data");
+        append_u32(blob, static_cast<uint32_t>(samples.size() * 2));
+        for (int16_t x : samples) append_i16(blob, x);
+        finalize_riff_size(blob);
+
+        WavInfo info;
+        auto out = wav_read_full(bytes_span(blob), &info);
+        if (!out || info.format != WavSampleFormat::Pcm16 ||
+            info.channels != 2 || info.sample_rate != 44100 ||
+            info.frames != 3 || out->size() != samples.size()) {
+            std::cout << "selftest: extensible PCM16 read failed";
+            if (!out) std::cout << ": " << out.error();
+            std::cout << "\n";
+            return false;
+        }
+        for (size_t i = 0; i < samples.size(); ++i) {
+            const float want = static_cast<float>(samples[i]) / 32768.0f;
+            if (!same_float_bits((*out)[i], want)) {
+                std::cout << "selftest: extensible PCM16 sample mismatch at "
+                          << i << "\n";
+                return false;
+            }
+        }
+    }
+
+    {
+        const std::vector<float> samples = {-1.0f, -0.0f, 0.25f, 1.5f};
+        std::vector<char> blob = riff_prefix();
+        append_extensible_fmt(blob, 2, 48000, 32, 32, 3);
+        append_fourcc(blob, "data");
+        append_u32(blob, static_cast<uint32_t>(samples.size() * 4));
+        for (float x : samples) append_float32(blob, x);
+        finalize_riff_size(blob);
+
+        WavInfo info;
+        auto out = wav_read_full(bytes_span(blob), &info);
+        if (!out || info.format != WavSampleFormat::Float32 ||
+            info.channels != 2 || info.sample_rate != 48000 ||
+            info.frames != 2 || out->size() != samples.size()) {
+            std::cout << "selftest: extensible Float32 read failed";
+            if (!out) std::cout << ": " << out.error();
+            std::cout << "\n";
+            return false;
+        }
+        for (size_t i = 0; i < samples.size(); ++i) {
+            if (!same_float_bits((*out)[i], samples[i])) {
+                std::cout << "selftest: extensible Float32 sample mismatch at "
+                          << i << "\n";
+                return false;
+            }
+        }
+    }
+
+    {
+        std::vector<char> blob = riff_prefix();
+        append_extensible_fmt(blob, 1, 44100, 16, 16, 1);
+        const size_t fmt_pos = find_chunk(blob, "fmt ");
+        if (fmt_pos == blob.size()) {
+            std::cout << "selftest: extensible negative fmt not found\n";
+            return false;
+        }
+        blob[fmt_pos + 8 + 24 + 4] ^= 0x01;
+        append_fourcc(blob, "data");
+        append_u32(blob, 0);
+        finalize_riff_size(blob);
+
+        auto out = wav_read_full(bytes_span(blob));
+        if (out ||
+            out.error() != "unsupported WAVE_FORMAT_EXTENSIBLE subformat") {
+            std::cout << "selftest: extensible subformat failure mismatch";
+            if (!out) std::cout << ": " << out.error();
+            std::cout << "\n";
+            return false;
+        }
+    }
+
+    {
+        std::vector<char> blob = riff_prefix();
+        append_extensible_fmt(blob, 1, 44100, 16, 16, 1);
+        const size_t fmt_pos = find_chunk(blob, "fmt ");
+        if (fmt_pos == blob.size()) {
+            std::cout << "selftest: extensible cbSize fmt not found\n";
+            return false;
+        }
+        blob[fmt_pos + 8 + 16] = 20;
+        blob[fmt_pos + 8 + 17] = 0;
+        append_fourcc(blob, "data");
+        append_u32(blob, 0);
+        finalize_riff_size(blob);
+
+        auto out = wav_read_full(bytes_span(blob));
+        if (out || out.error() != "WAVE_FORMAT_EXTENSIBLE cbSize is too short") {
+            std::cout << "selftest: extensible cbSize failure mismatch";
+            if (!out) std::cout << ": " << out.error();
+            std::cout << "\n";
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool test_streamed_unpatched_data_size_fixture()
+{
+    constexpr int frames = 3;
+    const std::vector<int16_t> samples = {
+        -32768, -8192, 0, 8192, 16384, 32767};
+    std::vector<char> blob = riff_prefix();
+    append_pcm16_fmt(blob, 2, 44100);
+    append_fourcc(blob, "data");
+    append_u32(blob, 0xffffffffu);
+    for (int16_t x : samples) append_i16(blob, x);
+    // The unpatched-size tolerance only fires when the declared size exceeds
+    // the bytes present; a data size left at zero currently parses as zero
+    // frames, and whether to trust those bytes is still an architect question.
+    blob.push_back(static_cast<char>(0x7f));
+
+    WavInfo info;
+    auto out = wav_read_full(bytes_span(blob), &info);
+    if (!out || info.format != WavSampleFormat::Pcm16 || info.channels != 2 ||
+        info.sample_rate != 44100 || info.frames != frames ||
+        out->size() != samples.size()) {
+        std::cout << "selftest: streamed unpatched data-size read failed";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    for (size_t i = 0; i < samples.size(); ++i) {
+        const float want = static_cast<float>(samples[i]) / 32768.0f;
+        if (!same_float_bits((*out)[i], want)) {
+            std::cout << "selftest: streamed unpatched sample mismatch at "
+                      << i << "\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 bool test_unknown_magic_probe_rejection()
 {
     const std::string path = temp_path("unknown_magic");
@@ -427,6 +609,16 @@ int run_selftest()
         return 1;
     }
     std::cout << "selftest: WAV parser hardening fixtures passed\n";
+
+    if (!test_wave_format_extensible_fixtures()) {
+        return 1;
+    }
+    std::cout << "selftest: WAVE_FORMAT_EXTENSIBLE fixtures passed\n";
+
+    if (!test_streamed_unpatched_data_size_fixture()) {
+        return 1;
+    }
+    std::cout << "selftest: streamed-size fixture passed\n";
 
     uint64_t checked = 0;
     for (int32_t c = -8388608;; ++c) {

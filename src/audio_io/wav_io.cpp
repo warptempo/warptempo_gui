@@ -13,6 +13,8 @@
 #include <utility>
 
 static_assert(std::endian::native == std::endian::little);
+// fseek offset casts in this file rely on 64-bit long.
+static_assert(sizeof(long) == 8);
 
 namespace {
 
