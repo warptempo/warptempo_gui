@@ -292,7 +292,6 @@ std::expected<MapBuildResult, std::string> build_maps(
     std::map<std::string, LabelCacheEntry> label_cache;
 
     double src_f_prev = 0.0;
-    double tgt_f_prev = 0.0;
 
     for (size_t i = 0; i < markers.size(); ++i) {
         double src_frame = (i + 1 < markers.size())
@@ -309,7 +308,6 @@ std::expected<MapBuildResult, std::string> build_maps(
         }
 
         const auto& m = markers[i];
-        double current_tgt = tgt_f_prev;
         const bool is_numeric   = m.label_ref.empty();
         const bool is_label_ref = !m.label_ref.empty();
 
@@ -327,7 +325,6 @@ std::expected<MapBuildResult, std::string> build_maps(
 
             double delta_src = src_frame - src_f_prev;
             double delta_tgt = delta_src / (tempo_val * scale);
-            current_tgt += delta_tgt;
 
             if (!m.label_def.empty()) {
                 if (label_cache.count(m.label_def)) {
@@ -340,7 +337,6 @@ std::expected<MapBuildResult, std::string> build_maps(
                 e.tempo_scale = m.tempo_scale;
                 label_cache[m.label_def] = e;
             }
-            tgt_f_prev = current_tgt;
         }
         (void)is_label_ref;  // computed only for Pass 2
 
@@ -351,7 +347,7 @@ std::expected<MapBuildResult, std::string> build_maps(
     out.frame_map.push_back({0, 0});
 
     src_f_prev = 0.0;
-    tgt_f_prev = 0.0;
+    double tgt_f_prev = 0.0;
     double last_valid_multiplier = 1.0;
 
     for (size_t i = 0; i < markers.size(); ++i) {

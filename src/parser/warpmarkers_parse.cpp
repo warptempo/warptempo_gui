@@ -299,10 +299,8 @@ parse_warpmarkers_file(const std::string& path) {
     // appears as a def somewhere in the file. Disabled defs still count.
 
     std::set<std::string>            defined;
-    std::map<std::string, int>       first_def_line;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
-        const int line_number = static_cast<int>(idx + 1);
         const std::string& raw = raw_lines[idx];
         if (is_indented_raw(raw)) continue;
         std::string t = trim_ws(raw);
@@ -328,9 +326,7 @@ parse_warpmarkers_file(const std::string& path) {
                 std::string lbl = cols[2];
                 if (!lbl.empty() && lbl[0] == '#') lbl.erase(0, 1);
                 if (is_valid_label_format(lbl)) {
-                    if (defined.insert(lbl).second) {
-                        first_def_line[lbl] = line_number;
-                    }
+                    defined.insert(lbl);
                 }
             }
         } else {
@@ -346,10 +342,7 @@ parse_warpmarkers_file(const std::string& path) {
             if (colon == std::string::npos) continue;
             const std::string lbl = payload.substr(colon + 1);
             if (is_valid_label_format(lbl)) {
-                if (defined.count(lbl) == 0) {
-                    defined.insert(lbl);
-                    first_def_line[lbl] = line_number;
-                }
+                defined.insert(lbl);
             }
         }
     }
