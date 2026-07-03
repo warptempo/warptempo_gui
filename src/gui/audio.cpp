@@ -756,7 +756,6 @@ source_path_for_peaks_cache(const std::string& peaks_path_string) {
 
     for (const char* ext : kSupportedSourceExtensions) {
         const std::filesystem::path candidate = parent / (stem + ext);
-        if (is_peaks_cache_path(candidate.string())) continue;
         if (peaks_cache_header_matches_source(peaks_path.string(),
                                               candidate.string())) {
             return candidate.string();
