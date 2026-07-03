@@ -56,11 +56,13 @@ struct GuiPlayback::Impl {
     // Free-running cursor predictor anchor. The main thread extrapolates
     // linearly from (anchor_sample, anchor_ns) using wall-clock time.
     // Re-anchored at events of acceptable visible discontinuity (play(),
-    // playhead jumps, viewport reflows, speed changes, follow-mode on)
-    // — never inside the audio callback. Drift between predictor and
-    // audio is bounded by time since last resync × steady_clock vs
-    // sample-clock skew (sub-pixel at typical zoom levels for typical
-    // resync intervals).
+    // playhead jumps, viewport reflows, speed changes, follow-mode on),
+    // and continuously by cursor() while the graph is suspended (jack_rate
+    // reads 0) so the playhead holds and resume extrapolates from the held
+    // position. Main-thread-only; never inside the audio callback. Drift
+    // between predictor and audio is bounded by time since last resync ×
+    // steady_clock vs sample-clock skew (sub-pixel at typical zoom levels
+    // for typical resync intervals).
     std::atomic<int64_t> anchor_sample{0};
     std::atomic<int64_t> anchor_ns{0};
     std::atomic<int32_t> speed_x1000{1000};  // speed * 1000, so we can store in int
@@ -111,6 +113,10 @@ void fill_output(GuiPlayback::Impl& impl,
         for (int c = 0; c < channel_count; ++c) {
             std::memset(channel_buffers[c], 0, sizeof(float) * frame_count);
         }
+        // Graph unavailable: emit silence and hold the playback position.
+        // A pending_start restart is deliberately not absorbed here, so a
+        // play() issued during the outage is picked up by the first fill
+        // after the graph returns.
         return;
     }
 
@@ -252,6 +258,16 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         impl_->total_frames = 0;
         return false;
     }
+    if (sample_rate <= 0 || samples == nullptr || total_frames <= 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: invalid playback source "
+            "(sample_rate=%d, samples=%s, total_frames=%lld); playback disabled.\n",
+            sample_rate, samples ? "non-null" : "null",
+            static_cast<long long>(total_frames));
+        impl_->samples      = nullptr;
+        impl_->total_frames = 0;
+        return false;
+    }
 
     jack_status_t status = static_cast<jack_status_t>(0);
     impl_->client = jack_client_open("warptempo_gui",
@@ -338,16 +354,25 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         }
         jack_free(physical_ports);
     } else {
+        int connected = 0;
         for (int c = 0; c < channels && physical_ports[c]; ++c) {
             const int r = jack_connect(impl_->client,
                                        jack_port_name(impl_->ports[c]),
                                        physical_ports[c]);
-            if (r != 0 && r != EEXIST) {
+            if (r == 0 || r == EEXIST) {
+                ++connected;
+            } else {
                 std::fprintf(stderr,
                     "warptempo_gui: JACK auto-connect failed (%s -> %s, code=%d); "
                     "patch manually if needed.\n",
                     jack_port_name(impl_->ports[c]), physical_ports[c], r);
             }
+        }
+        if (connected < channels) {
+            std::fprintf(stderr,
+                "warptempo_gui: JACK auto-connect: connected %d of %d output ports "
+                "(physical sinks exhausted); patch remaining ports manually if needed.\n",
+                connected, channels);
         }
         jack_free(physical_ports);
     }
@@ -448,6 +473,19 @@ int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     if (!impl_->playing.load(std::memory_order_relaxed)) {
         return impl_->cursor.load(std::memory_order_relaxed);
+    }
+    // Graph suspended: the audio thread is holding position, so the playhead
+    // holds honestly at the integer cursor. Re-anchoring continuously through
+    // the outage makes resume extrapolate from the held position and wall-clock
+    // now, with no forward jump or snap-back in either direction.
+    if (impl_->jack_rate.load(std::memory_order_relaxed) == 0) {
+        const int64_t cur = impl_->cursor.load(std::memory_order_relaxed);
+        const int64_t now_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+        impl_->anchor_sample.store(cur, std::memory_order_relaxed);
+        impl_->anchor_ns.store(now_ns, std::memory_order_relaxed);
+        return cur;
     }
     const int64_t a_sample = impl_->anchor_sample.load(std::memory_order_relaxed);
     const int64_t a_ns     = impl_->anchor_ns.load(std::memory_order_relaxed);

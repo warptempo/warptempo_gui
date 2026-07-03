@@ -90,7 +90,8 @@ public:
     // when not playing — the next play() will overwrite the anchor.
     void resync_predictor();
 
-    // Snapshot accessors. Safe from the main thread.
+    // Snapshot accessors. Safe from the main thread. During a graph suspension,
+    // cursor() holds at the last audio position rather than extrapolating.
     bool    is_playing() const;
     int64_t cursor()     const;
 
