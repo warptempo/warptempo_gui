@@ -43,13 +43,11 @@ int main(int argc, char** argv) {
 
     std::string source_path, out_path, framemap_path, resetmap_path;
     bool no_limiter = false;
-    bool resetmap_explicit = false;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         if (a == "-o" && i + 1 < argc)              out_path      = argv[++i];
         else if (a == "--framemap" && i + 1 < argc) framemap_path = argv[++i];
-        else if (a == "--resetmap" && i + 1 < argc) { resetmap_path = argv[++i];
-                                                      resetmap_explicit = true; }
+        else if (a == "--resetmap" && i + 1 < argc) resetmap_path = argv[++i];
         else if (a == "--no-limiter")               no_limiter = true;
         else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
@@ -114,7 +112,6 @@ int main(int argc, char** argv) {
         }
         reset_src = std::move(*rm);
     }
-    (void)resetmap_explicit;  // explicit-missing already fails via read_reset_map
 
     // --- source audio, full file, interleaved float. ---
     std::vector<float> src_samples;
