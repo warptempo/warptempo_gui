@@ -58,8 +58,8 @@ bool validate_engine_setting(const std::string& key,
                              EngineSettings& out,
                              std::string& reason) {
     if (key == "title") {
-        // Strip a matching leading/trailing double-quote pair, then
-        // validate non-empty after whitespace trim and no embedded newline.
+        // Strip a matching leading/trailing double-quote pair, then validate
+        // non-empty after whitespace trim, no embedded newline, and no slash.
         std::string v = value;
         if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
             v = v.substr(1, v.size() - 2);
@@ -77,6 +77,10 @@ bool validate_engine_setting(const std::string& key,
         }
         if (v.find('\n') != std::string::npos) {
             reason = "must not contain an embedded newline";
+            return false;
+        }
+        if (v.find('/') != std::string::npos) {
+            reason = "must not contain '/'";
             return false;
         }
         out.title = std::move(v);
@@ -162,7 +166,12 @@ std::expected<EngineSettings, std::string> read_engine_settings_from_file(
         return std::unexpected("could not open '" + path + "'");
     }
     std::string line;
+    bool first_line = true;
     while (std::getline(f, line)) {
+        if (first_line) {
+            warptempo_parse::strip_bom(line);
+            first_line = false;
+        }
         const std::string trimmed = trim_ws(line);
         if (trimmed.empty()) continue;
         if (trimmed[0] == '#') continue;

@@ -325,7 +325,12 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
     std::ifstream f(path);
     if (!f) return false;
     std::string line;
+    bool first_line = true;
     while (std::getline(f, line)) {
+        if (first_line) {
+            warptempo_parse::strip_bom(line);
+            first_line = false;
+        }
         const std::string trimmed = warptempo_parse::trim_ws(line);
         if (trimmed.empty()) continue;
         if (trimmed[0] == '#') continue;
@@ -393,14 +398,21 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.tab_b_read_only     = v;
             }
         }
-        // Engine keys: deserialized by read_engine_settings_from_file.
-        // Unknown keys: silent-skip here; read_engine_settings_from_file
-        // surfaces them as errors.
+        // Engine keys and unknown keys are silent-skipped here; the strict
+        // engine reader also ignores non-canonical keys.
     }
 
     // Per-tab trim bounds: parsed by the parser library's reader so the
     // parser and render CLIs share one implementation with the GUI.
-    const SettingsTrimTabs t = read_settings_trim(path);
+    const auto trim_result = read_settings_trim(path);
+    if (!trim_result) {
+        std::fprintf(stderr,
+            "warptempo_gui: trim settings rejected in '%s': %s\n",
+            path.c_str(),
+            trim_result.error().c_str());
+        return false;
+    }
+    const SettingsTrimTabs& t = *trim_result;
     out.has_tab_a_trim_begin = t.tab_a.has_begin; out.tab_a_trim_begin = t.tab_a.begin_sec;
     out.has_tab_a_trim_end   = t.tab_a.has_end;   out.tab_a_trim_end   = t.tab_a.end_sec;
     out.has_tab_b_trim_begin = t.tab_b.has_begin; out.tab_b_trim_begin = t.tab_b.begin_sec;

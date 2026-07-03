@@ -69,11 +69,11 @@ bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
 // Parse `.settings`. Missing file → empty result (all has_* false).
-// Returns false only on a file-open failure of an existing file; per-line
-// errors are silent-skip. Tab values are stored raw, without range
-// validation — the caller clamps against the current audio file. Engine
-// keys are ignored by this function; they are deserialized separately by
-// read_engine_settings_from_file.
+// Returns false on a file-open failure of an existing file or malformed trim
+// timestamp. Other per-line view-state errors are silent-skip. Tab values are
+// stored raw, without range validation — the caller clamps against the current
+// audio file. Engine keys are ignored by this function; they are deserialized
+// separately by read_engine_settings_from_file.
 bool parse_settings_file(const std::string& path, ParsedSettings& out);
 
 // Tolerant view-state contents of `.rendersettings`. Missing keys are

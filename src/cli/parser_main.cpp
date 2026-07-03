@@ -73,7 +73,15 @@ int main(int argc, char** argv) {
             return 1;
         }
         es = *parsed;
-        const SettingsTrimTabs tabs = read_settings_trim(set_path);
+        const auto tabs_result = read_settings_trim(set_path);
+        if (!tabs_result) {
+            std::fprintf(stderr,
+                "warptempo_parser: trim settings rejected in '%s': %s\n",
+                set_path.c_str(),
+                tabs_result.error().c_str());
+            return 1;
+        }
+        const SettingsTrimTabs& tabs = *tabs_result;
         trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
