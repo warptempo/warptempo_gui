@@ -23,6 +23,9 @@ constexpr char kMagic[] = "WARPTEMPO_SOURCE_SAMPLE_CACHE";
 constexpr uint32_t kFileVersion = 2;
 constexpr uint32_t kHashAlgorithmNone = 0;
 constexpr uint32_t kHashAlgorithmFlacStreaminfoMd5 = 1;
+// Header strings are bounded so a corrupt cache is a cheap miss rather than a
+// memory-pressure event. The writer enforces the same bound as a format rule.
+constexpr uint32_t kMaxHeaderStringBytes = 4096;
 constexpr char kPayloadType[] = "float32_interleaved";
 constexpr char kSampleCacheExtension[] = ".samples";
 std::atomic<uint64_t> g_cache_tmp_counter{0};
@@ -56,7 +59,7 @@ bool put_i64(std::FILE* f, int64_t x)  { return std::fwrite(&x, sizeof x, 1, f) 
 bool put_i32(std::FILE* f, int32_t x)  { return std::fwrite(&x, sizeof x, 1, f) == 1; }
 
 bool put_str(std::FILE* f, const std::string& s) {
-    if (s.size() > std::numeric_limits<uint32_t>::max()) return false;
+    if (s.size() > kMaxHeaderStringBytes) return false;
     return put_u32(f, static_cast<uint32_t>(s.size())) &&
            put_bytes(f, s.data(), s.size());
 }
@@ -73,6 +76,7 @@ bool get_i32(std::FILE* f, int32_t& x)  { return std::fread(&x, sizeof x, 1, f) 
 bool get_str(std::FILE* f, std::string& s) {
     uint32_t n = 0;
     if (!get_u32(f, n)) return false;
+    if (n > kMaxHeaderStringBytes) return false;
     s.assign(n, '\0');
     return n == 0 || get_bytes(f, s.data(), n);
 }
@@ -363,12 +367,17 @@ bool write_cache_samples(const std::filesystem::path& cache_path,
 bool rebuild_cache(const std::string& source_path,
                    const std::filesystem::path& cache_path,
                    const SourceMetadata& meta) {
+    // The rebuild re-derives identity from the reader it just opened and
+    // refuses to write a cache whose header and payload could disagree.
+    // A mismatch falls back to a direct read of the current file.
     auto reader = AudioReader::open(source_path);
     if (!reader) return false;
-    const AudioFileInfo& info = reader->info();
-    if (info.sample_rate != meta.sample_rate || info.channels != meta.channels ||
-        info.frames != meta.frame_count ||
-        audio_kind_code(info.kind) != meta.kind_code) {
+    const SourceMetadata fresh = source_metadata(source_path, reader->info());
+    if (!metadata_matches(fresh, meta)) {
+        std::fprintf(stderr,
+                     "[warptempo_gui] .samples rebuild skipped for %s: "
+                     "source identity changed during rebuild\n",
+                     source_path.c_str());
         return false;
     }
 
@@ -491,7 +500,23 @@ bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
         return false;
     }
 
-    const SourceMetadata meta = source_metadata(source_path, source_info);
+    // The background writer proves the on-disk file still matches the load it
+    // decoded before publishing a cache for it, and skips silently if identity
+    // has moved.
+    auto fresh_probe = audio_probe(source_path);
+    if (!fresh_probe) return false;
+    if (fresh_probe->sample_rate != source_info.sample_rate ||
+        fresh_probe->channels != source_info.channels ||
+        fresh_probe->frames != source_info.frames ||
+        fresh_probe->kind != source_info.kind ||
+        fresh_probe->has_content_md5 != source_info.has_content_md5 ||
+        (fresh_probe->has_content_md5 &&
+         std::memcmp(fresh_probe->content_md5, source_info.content_md5,
+                     sizeof(source_info.content_md5)) != 0)) {
+        return false;
+    }
+
+    const SourceMetadata meta = source_metadata(source_path, *fresh_probe);
     const std::filesystem::path cache_path = cache_path_for_source(source_path);
 
     if (cache_file_matches(cache_path, meta)) return true;
