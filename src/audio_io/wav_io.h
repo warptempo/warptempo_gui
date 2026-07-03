@@ -41,6 +41,13 @@ struct WavInfo {
 bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
                              uint64_t frames_written);
 
+// Projects the writer's minimal layout for a WAV of this shape - header span
+// plus data bytes - onto the existing RIFF-limit predicate so a render can be
+// refused before synthesis rather than at the write that crosses the limit.
+// Keep this in step with WavWriter::write_header().
+bool wav_projected_exceeds_riff_limits(WavSampleFormat format,
+                                       int channels, uint64_t frames);
+
 std::expected<WavInfo, std::string> wav_probe(const std::string& path);
 std::expected<WavInfo, std::string> wav_probe(std::span<const char> bytes);
 

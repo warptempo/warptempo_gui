@@ -400,6 +400,20 @@ bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
            frames_written > std::numeric_limits<uint32_t>::max();
 }
 
+bool wav_projected_exceeds_riff_limits(WavSampleFormat format,
+                                       int channels, uint64_t frames)
+{
+    const uint64_t bytes_per_sample =
+        format == WavSampleFormat::Pcm16 ? 2 :
+        format == WavSampleFormat::Pcm24 ? 3 : 4;
+    const uint64_t block_align =
+        static_cast<uint64_t>(channels) * bytes_per_sample;
+    const uint64_t data_bytes = frames * block_align;
+    if (block_align > 0 && data_bytes / block_align != frames) return true;
+    const uint64_t header_span = 44 + (format == WavSampleFormat::Float32 ? 12 : 0);
+    return wav_exceeds_riff_limits(header_span, data_bytes, frames);
+}
+
 std::expected<WavInfo, std::string> wav_probe(const std::string& path)
 {
     FilePtr f(std::fopen(path.c_str(), "rb"));

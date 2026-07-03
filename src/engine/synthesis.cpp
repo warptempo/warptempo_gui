@@ -15,10 +15,9 @@
 #include <thread>
 #include <vector>
 
-// Apply the peak-limiter backstop to `buf` in place. One-shot process+flush, so
-// it is sample-for-sample identical to the previous streaming application in
-// write_render_to_file. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0
-// dBFS) - a pure clip net above the spectral limiter's -0.3.
+// Apply the peak-limiter backstop to `buf` in place, one-shot process plus
+// flush. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0 dBFS) - a pure
+// clip net above the spectral limiter's -0.3.
 void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf) {
     const int channels = stft.channels;
     const size_t total_frames =
@@ -112,10 +111,8 @@ void Synthesis::synthesize_full(
 
     // One mono output stream per channel. Each channel computes its whole
     // output independently into its own buffer; the streams are interleaved
-    // only at the end. This is the channel-major restructure: a
-    // pure reorganization of the previously frame-major loop, with each
-    // channel's pipeline state fully local to run_channel so each
-    // channel can be handed to its own thread.
+    // only at the end. Each channel's pipeline state is fully local to
+    // run_channel so each channel can be handed to its own thread.
     std::vector<std::vector<float>> mono(channels);
     struct ChProf { int64_t analysis=0, heap=0, synthspec=0, ifft=0, ola=0; };
     std::vector<ChProf> chprof(channels);
@@ -124,10 +121,9 @@ void Synthesis::synthesize_full(
     // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
     // fm, stft.phase_reset_placements, stft.fft_ws[ch],
     // stft.window/synth_window) and writes only mono[ch], chprof[ch],
-    // ch_cancelled[ch]. Every buffer that was shared across channels in the old
-    // frame-major loop (theta/dt/df/done scratch, the heap scratch, the OLA
-    // row, the analysis-state rows, the RNG) is now a local here — that
-    // locality is exactly what makes C.2 safe.
+    // ch_cancelled[ch]. The theta/dt/df/done scratch, the heap scratch, the OLA
+    // row, the analysis-state rows, and the RNG are all locals here - that
+    // locality is what makes per-channel threading safe.
     auto run_channel = [&](int ch) {
         const int K2 = K;
         // --- One-deep lookahead analysis pipeline ---------------------------
@@ -323,8 +319,8 @@ void Synthesis::synthesize_full(
                          static_cast<size_t>(N - R_s) * sizeof(double));
             std::fill(ola.data() + (N - R_s), ola.data() + N, 0.0);
 
-            // Progress is reported by channel 0 only; under C.2 it'll be
-            // approximate, which is fine (cosmetic).
+            // Progress is reported by channel 0 only; with channels running
+            // concurrently it is approximate, which is fine (cosmetic).
             if (show_progress && ch == 0 && wcount > 0 &&
                 (frame_idx % progress_stride) == 0) {
                 int pct = static_cast<int>((frame_idx * 100LL) / wcount);
@@ -384,15 +380,15 @@ void Synthesis::synthesize_full(
     for (int ch = 0; ch < channels; ++ch) {
         if (ch_cancelled[ch]) {
             stft.cancellation_observed = true;
-            return;                      // matches the old early-return on cancel
+            return;                      // cancellation on any channel aborts before emission
         }
     }
     if (show_progress) std::cout << "\r" << pass_label << "100%\n";
 
     // Interleave the per-channel mono streams and emit in one write_cb call.
     // All channels emit out_frames samples; the downstream write_cb is
-    // order-preserving and chunk-agnostic, so one big call is identical to the
-    // old per-frame calls.
+    // order-preserving and chunk-agnostic, so a single call is equivalent to
+    // any chunking.
     int64_t t_write = 0;
     double wt_interleave_ms = 0.0;
     if (out_frames > 0) {

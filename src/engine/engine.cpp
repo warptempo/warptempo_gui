@@ -31,6 +31,7 @@
 #include "limiter.h"
 #include "synthesis.h"
 #include "profile_util.h"
+#include "wav_io.h"
 
 namespace {
 
@@ -160,6 +161,30 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             const double tgt_end = audio_stft.frame_map.back().tgt_frame;
             audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
             if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
+        }
+    }
+
+    // synthesize_full buffers the full output before any write, so refuse
+    // implausible allocations and un-finalizable disk shapes here, at the last
+    // point the projected size is known and before synthesis cost is paid.
+    auto projected = checked_audio_sample_count(audio_stft.emit_sample_cap,
+                                                audio_stft.channels);
+    if (!projected) {
+        std::cerr << "Error: render refused: " << projected.error() << "\n";
+        audio_stft.cleanup();
+        return EngineResult::Failed;
+    }
+    if (!p.output_buffer) {
+        const WavSampleFormat fmt = audio_stft.limiter
+            ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
+        if (wav_projected_exceeds_riff_limits(
+                fmt, audio_stft.channels,
+                static_cast<uint64_t>(audio_stft.emit_sample_cap))) {
+            std::cerr << "Error: render refused: projected output of "
+                      << audio_stft.emit_sample_cap
+                      << " frames exceeds RIFF 32-bit limits\n";
+            audio_stft.cleanup();
+            return EngineResult::Failed;
         }
     }
 

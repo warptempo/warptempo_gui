@@ -200,9 +200,9 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Success;
     };
 
+    RenderFileIdentity source_identity;
     std::vector<uint8_t> fingerprint;
     if (output_format == "wav") {
-        RenderFileIdentity source_identity;
         if (stat_file_identity(req.source_audio_path, source_identity)) {
             fingerprint = render_fingerprint(
                 req.source_audio_path, source_identity,
@@ -598,6 +598,30 @@ RenderOutcome do_render(const RenderRequest& req,
                     profile_source_frames_passed,
                     static_cast<long long>(profile_trim_span_frames),
                     profile::bytes_to_mb(bytes), src_ch, src_sr);
+            }
+        }
+
+        // The fingerprint names the source identity statted at dispatch. The
+        // samples just loaded were validated against the file as it stood at
+        // read time, either directly or through the .samples cache identity. If
+        // the identity moved between those points, the association can no
+        // longer be proven, so publish the render without one. A rename-replace
+        // that lands mid-read can skip the fingerprint of a still-consistent
+        // render; the cost is one re-render, in the safe direction. Reuse rungs
+        // above are deliberately unguarded because they publish audio and
+        // fingerprint that were created together, so their association holds
+        // regardless of what the file does afterward.
+        if (!fingerprint.empty()) {
+            RenderFileIdentity now_identity;
+            if (!stat_file_identity(req.source_audio_path, now_identity) ||
+                now_identity.size != source_identity.size ||
+                now_identity.mtime != source_identity.mtime) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: source identity changed "
+                    "during render; skipping fingerprint and cache publication "
+                    "for '%s'\n",
+                    final_output_path.c_str());
+                fingerprint.clear();
             }
         }
 
