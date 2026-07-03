@@ -1491,9 +1491,9 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
     deliver_key(key, mods);
 
-    // Arm key repeat (last-key-wins: this replaces any prior repeating
-    // key, even if a different one was held). Skip if repeat_period_us_
-    // is zero — that's the "no repeat" advertisement from the compositor.
+    // Arm key repeat (last-key-wins). Keep the press-time codepoint; each
+    // repeat fire refreshes live modifier bits so released modifiers stop
+    // affecting the repeated chord.
     if (repeat_period_us_ > 0) {
         repeat_key_     = key;
         repeat_keycode_ = xkb_keycode;
@@ -1562,7 +1562,9 @@ void GuiPlatform::maybe_fire_repeat() {
     // repeat_period_us_. If we missed multiple periods (e.g. the main
     // thread was slow), deliver only one and resync — bursting wouldn't
     // serve the user.
-    deliver_key(repeat_key_, repeat_mods_);
+    GuiInputState mods = current_mods();
+    mods.codepoint = repeat_mods_.codepoint;
+    deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;
 }
 
@@ -1967,7 +1969,7 @@ std::string GuiPlatform::clipboard_get_text() {
     if (clipboard_we_own_) return clipboard_send_text_;
     if (!clipboard_offer_ || !clipboard_offer_has_text_) return std::string();
     int fds[2];
-    if (pipe(fds) != 0) return std::string();
+    if (pipe2(fds, O_CLOEXEC) != 0) return std::string();
     wl_data_offer_receive(clipboard_offer_,
                           "text/plain;charset=utf-8", fds[1]);
     ::close(fds[1]);

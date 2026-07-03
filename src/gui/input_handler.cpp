@@ -676,10 +676,9 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     }
     if (app.prompt.active) return;
     if (text_editor::is_active(app.settings_editor)) return;
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        return;
-    }
+    // All three text editors are wheel-modal: viewport changes mid-edit can
+    // elide or scroll off the edited flag.
+    if (text_editor::is_active(app.top_flag_editor)) return;
     if (app.loading || audio.total_frames() <= 0) return;
     // A wheel event during an active drag is ignored, matching on_button_press.
     if (app.drag.active) return;

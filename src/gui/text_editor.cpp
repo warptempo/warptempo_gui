@@ -241,18 +241,22 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (has_selection(s)) {
             erase_selection(s);
             s.red = false;
-        } else if (ctrl) {
-            const int b = prev_word_boundary(s.pending, s.cursor_pos);
-            if (b < s.cursor_pos) {
-                s.pending.erase(static_cast<size_t>(b),
-                                static_cast<size_t>(s.cursor_pos - b));
-                s.cursor_pos = b;
+        } else {
+            // Editing keys collapse degenerate anchors before cursor movement can resurrect phantom selections.
+            s.selection_anchor = -1;
+            if (ctrl) {
+                const int b = prev_word_boundary(s.pending, s.cursor_pos);
+                if (b < s.cursor_pos) {
+                    s.pending.erase(static_cast<size_t>(b),
+                                    static_cast<size_t>(s.cursor_pos - b));
+                    s.cursor_pos = b;
+                    s.red = false;
+                }
+            } else if (s.cursor_pos > 0) {
+                s.pending.erase(static_cast<size_t>(s.cursor_pos - 1), 1);
+                s.cursor_pos--;
                 s.red = false;
             }
-        } else if (s.cursor_pos > 0) {
-            s.pending.erase(static_cast<size_t>(s.cursor_pos - 1), 1);
-            s.cursor_pos--;
-            s.red = false;
         }
         touch_blink(s);
         return KeyAction::Consumed;
@@ -261,16 +265,19 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (has_selection(s)) {
             erase_selection(s);
             s.red = false;
-        } else if (ctrl) {
-            const int e = next_word_boundary(s.pending, s.cursor_pos);
-            if (e > s.cursor_pos) {
-                s.pending.erase(static_cast<size_t>(s.cursor_pos),
-                                static_cast<size_t>(e - s.cursor_pos));
+        } else {
+            s.selection_anchor = -1;
+            if (ctrl) {
+                const int e = next_word_boundary(s.pending, s.cursor_pos);
+                if (e > s.cursor_pos) {
+                    s.pending.erase(static_cast<size_t>(s.cursor_pos),
+                                    static_cast<size_t>(e - s.cursor_pos));
+                    s.red = false;
+                }
+            } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
+                s.pending.erase(static_cast<size_t>(s.cursor_pos), 1);
                 s.red = false;
             }
-        } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
-            s.pending.erase(static_cast<size_t>(s.cursor_pos), 1);
-            s.red = false;
         }
         touch_blink(s);
         return KeyAction::Consumed;

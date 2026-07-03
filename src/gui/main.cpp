@@ -60,6 +60,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <csignal>
 #include <cstring>
 #include <ctime>
 #include <fcntl.h>
@@ -418,6 +419,10 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "usage: warptempo_gui [<audio_file>]\n");
         return 1;
     }
+
+    // Wayland clipboard source writes go to consumer-owned pipes.
+    // Ignoring SIGPIPE turns a vanishing consumer into EPIPE for the send loop.
+    std::signal(SIGPIPE, SIG_IGN);
 
     AppState     app;
     GuiAudio     audio;

@@ -418,20 +418,21 @@ void Viewport::clear_hover_popup() {
     if (was_visible) invalidate_timestamp_area();
 }
 
-// Re-evaluate hover at the cursor's last on_motion
-// coordinates. Called after viewport mutations (zoom, scroll, center,
-// playhead-driven viewport shift) so a stationary cursor's hover state
-// tracks the rects that just slid under it. Mirrors the on_motion
-// hover-detection branch: same gating, same hit-test, same state
-// transitions; visibility is set immediately (no dwell).
+// Re-evaluate hover at the cursor's last on_motion coordinates. Called after
+// viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
+// so a stationary cursor's hover state tracks the rects that just slid under
+// it. The suppression set matches on_motion's hover path: prompt, editors,
+// pointer gestures, render queue, render view, non-warp marker view, and iter
+// mode.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
-    // Dialog / drag / editor / queue still suppress hover in either
-    // view. Source-view also requires warp view + iter mode off;
-    // render-view suppresses the hover popup entirely (read-only display).
     if (app.prompt.active ||
         app.drag.active ||
         app.playhead_drag.active ||
+        app.editor_text_drag.active ||
+        app.scroll_drag.active ||
+        app.trim_drag.active ||
+        text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.top_flag_editor) ||
         app.queue_running) {
         clear_hover_popup();
