@@ -3,7 +3,6 @@
 #include "settings_io.h"
 
 #include <clocale>
-#include <cerrno>
 #include <cstdio>
 #include <cstring>
 
@@ -41,6 +40,7 @@ bool GuiSaveOps::save() {
                 std::fprintf(stderr,
                     "warptempo_gui: failed to delete: %s\n",
                     app.phaseresetmarkers_path.c_str());
+                return false;
             }
         } else {
             if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
@@ -52,18 +52,10 @@ bool GuiSaveOps::save() {
         }
     }
 
-    app.first_save_pending = false;
-    // Save rebinds the saved reference to the current timeline position
-    // without touching either stack — undo still reverts the last op.
-    const bool was_dirty = app.dirty;
-    app.history.mark_saved();
-    undo.recompute_dirty();
-    if (was_dirty != app.dirty) {
-        viewport.invalidate_timestamp_area();
-    }
-
-    // Best-effort .settings write. Failure is logged but does not fail
-    // the overall save — the .warpmarkers write is the primary target.
+    // .settings carries authoring-class keys (trim, engine, scale, N,
+    // limiter, title, audio_input), so a failed write fails the save:
+    // dirty must survive so the unsaved-work dialog can offer retry
+    // instead of silently baselining in-memory-only settings.
     if (!app.settings_path.empty()) {
         if (!write_settings_file(app.settings_path,
                                  app.tab_a, app.tab_b,
@@ -74,10 +66,20 @@ bool GuiSaveOps::save() {
                                  app.playback_speed,
                                  app.engine_settings)) {
             std::fprintf(stderr,
-                "warptempo_gui: settings save failed: %s: %s\n",
-                app.settings_path.c_str(),
-                std::strerror(errno));
+                "warptempo_gui: settings save failed: %s\n",
+                app.settings_path.c_str());
+            return false;
         }
+    }
+
+    app.first_save_pending = false;
+    // Save rebinds the saved reference to the current timeline position
+    // without touching either stack — undo still reverts the last op.
+    const bool was_dirty = app.dirty;
+    app.history.mark_saved();
+    undo.recompute_dirty();
+    if (was_dirty != app.dirty) {
+        viewport.invalidate_timestamp_area();
     }
     return true;
 }
