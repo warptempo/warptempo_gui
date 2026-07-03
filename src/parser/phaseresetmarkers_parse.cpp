@@ -37,7 +37,13 @@ std::expected<double, std::string> parse_legacy_offset_suffix(const std::string&
             "phase reset offset must be signed S.mmm: " + s);
     }
 
-    const double v = std::stod(body);
+    double v = 0.0;
+    try {
+        v = std::stod(body);
+    } catch (...) {
+        return std::unexpected<std::string>(
+            "phase reset offset out of range: " + s);
+    }
     return (s[0] == '-') ? -v : v;
 }
 

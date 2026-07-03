@@ -55,7 +55,13 @@ double eval_math_string(const std::string& in) {
             ++len;
         }
         if (len > 0) {
-            const double v = std::stod(s.substr(i, len));
+            double v = 0.0;
+            try {
+                v = std::stod(s.substr(i, len));
+            } catch (...) {
+                // Unparseable tokens end evaluation rather than throwing.
+                break;
+            }
             if (op == '+') total += v;
             else if (op == '-') total -= v;
             i += len;
@@ -465,6 +471,8 @@ parse_warpmarkers_file(const std::string& path) {
                 m.tempo_scale.clear();
             }
 
+            // A leading hash disables the marker in both formats; a label-
+            // column hash additionally marks that label definition disabled.
             if (!label_raw.empty()) {
                 std::string def = label_raw;
                 bool def_disabled = false;
@@ -482,7 +490,7 @@ parse_warpmarkers_file(const std::string& path) {
                 m.label_def = def;
                 m.disabled  = def_disabled;
             }
-            (void)line_disabled;
+            if (line_disabled) m.disabled = true;
 
             last_time = m.time_seconds;
             markers.push_back(std::move(m));
