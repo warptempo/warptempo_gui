@@ -102,6 +102,7 @@ public:
                 decoder_.handle, static_cast<drflac_uint64>(frame))) {
             return std::unexpected("failed to seek FLAC file");
         }
+        cursor_frame_ = frame;
         return {};
     }
 
@@ -111,20 +112,25 @@ public:
         if (frames < 0 || (frames > 0 && out == nullptr)) {
             return std::unexpected("invalid FLAC frame read");
         }
-        if (frames == 0) return int64_t{0};
+        const int64_t remaining = info_.frames - cursor_frame_;
+        const int64_t to_read = std::min(frames, remaining);
+        if (to_read <= 0) return int64_t{0};
 
         const uint64_t samples =
-            static_cast<uint64_t>(frames) * static_cast<uint64_t>(info_.channels);
+            static_cast<uint64_t>(to_read) *
+            static_cast<uint64_t>(info_.channels);
         if (samples > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
             return std::unexpected("FLAC read is too large");
         }
 
         scratch_.resize(static_cast<size_t>(samples));
-        // dr_flac returns the frames decoded. A short read is end-of-stream or
-        // decode failure; full-file callers verify the count they requested.
+        // The request is clamped to frames remaining per the probed stream
+        // length, so a short return within the clamped request means
+        // end-of-stream arrived early: mid-stream decode loss or truncation.
         const drflac_uint64 got = drflac_read_pcm_frames_s32(
-            decoder_.handle, static_cast<drflac_uint64>(frames),
+            decoder_.handle, static_cast<drflac_uint64>(to_read),
             scratch_.data());
+        cursor_frame_ += static_cast<int64_t>(got);
         const size_t got_samples =
             static_cast<size_t>(got) * static_cast<size_t>(info_.channels);
         flac_s32_to_float(scratch_.data(), out, got_samples);
@@ -134,6 +140,7 @@ public:
 private:
     FlacDecoder decoder_;
     AudioFileInfo info_;
+    int64_t cursor_frame_ = 0;
     // Reader objects are single-threaded; this scratch is reused across reads.
     std::vector<drflac_int32> scratch_;
 };

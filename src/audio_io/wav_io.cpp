@@ -27,16 +27,6 @@ using FilePtr = std::unique_ptr<FILE, FileCloser>;
 
 enum class SourceKind { File, Memory };
 
-std::string append_errno_detail(std::string message, int err)
-{
-    if (err != 0) {
-        message += " (";
-        message += std::error_code(err, std::generic_category()).message();
-        message += ")";
-    }
-    return message;
-}
-
 std::string implausible_alloc_message(uint64_t bytes)
 {
     const uint64_t mib =
@@ -101,6 +91,17 @@ struct WavLayout {
 };
 
 } // namespace
+
+std::string append_errno_detail(const char* message, int err)
+{
+    std::string out(message);
+    if (err != 0) {
+        out += " (";
+        out += std::error_code(err, std::generic_category()).message();
+        out += ")";
+    }
+    return out;
+}
 
 std::expected<size_t, std::string>
 checked_audio_sample_count(int64_t frames, int channels)

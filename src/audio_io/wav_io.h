@@ -28,6 +28,9 @@ inline constexpr uint64_t kMaxPlausibleAudioAllocBytes =
 std::expected<size_t, std::string>
 checked_audio_sample_count(int64_t frames, int channels);
 
+// Appends the OS description for a nonzero errno to a failure message via std::error_code with the generic category, so file-open failures across the audio surface report the same thread-safe detail.
+std::string append_errno_detail(const char* message, int err);
+
 struct WavInfo {
     int             sample_rate = 0;
     int             channels    = 0;

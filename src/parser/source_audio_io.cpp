@@ -18,7 +18,8 @@ std::expected<void, std::string> write_trimmed_wav(const std::string& src_path,
 
     auto reader = AudioReader::open(src_path);
     if (!reader) {
-        return std::unexpected("could not open source '" + src_path + "'");
+        return std::unexpected("could not open source '" + src_path +
+                               "': " + reader.error());
     }
     const AudioFileInfo& src_info = reader->info();
     if (static_cast<int64_t>(end_frame) > src_info.frames) {
@@ -69,7 +70,8 @@ std::expected<void, std::string> load_source_range_to_buffer(const std::string& 
     }
     auto reader = AudioReader::open(src_path);
     if (!reader) {
-        return std::unexpected("could not open '" + src_path + "'");
+        return std::unexpected("could not open '" + src_path +
+                               "': " + reader.error());
     }
     const AudioFileInfo& src_info = reader->info();
     if (static_cast<int64_t>(end_frame) > src_info.frames) {

@@ -1,5 +1,8 @@
 #include "flac_io.h"
 
+#include "wav_io.h"
+
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -18,7 +21,11 @@ uint32_t u24be(const unsigned char* p)
 std::expected<FlacInfo, std::string> flac_probe(const std::string& path)
 {
     FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return std::unexpected("failed to open FLAC file");
+    if (!f) {
+        const int err = errno;
+        return std::unexpected(
+            append_errno_detail("failed to open FLAC file", err));
+    }
     unsigned char header[42] = {};
     const size_t got = std::fread(header, 1, sizeof(header), f);
     std::fclose(f);
