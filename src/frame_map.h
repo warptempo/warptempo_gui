@@ -73,9 +73,9 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // non-negative numeric values; the writer emits precise double breakpoints at
 // up to 17 significant digits; a leading 0 0 anchor is present unless dropped
 // at write). Blank / whitespace-only lines are skipped. Any malformed line
-// (non-numeric, negative, missing field, or trailing garbage) fails the
-// whole read (std::nullopt), so a truncated or corrupt file never feeds the
-// engine a partial map. Both columns must also be strictly ascending line over
+// (non-numeric, non-finite, negative, missing field, or trailing garbage)
+// fails the whole read (std::nullopt), so a truncated or corrupt file never
+// feeds the engine a partial map. Both columns must also be strictly ascending line over
 // line: map_source_to_target / map_target_to_source above binary-search on
 // strictly monotonic breakpoints, and a duplicated or out-of-order breakpoint
 // makes the segment interpolation divide by zero, so any accepted line whose
@@ -95,6 +95,7 @@ read_frame_map(const std::string& path) {
         if (!(ls >> s >> t)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
+        if (!std::isfinite(s) || !std::isfinite(t)) return std::nullopt;
         if (s < 0.0 || t < 0.0) return std::nullopt;
         if (!segs.empty() && (s <= segs.back().src_frame || t <= segs.back().tgt_frame)) {
             return std::nullopt;
