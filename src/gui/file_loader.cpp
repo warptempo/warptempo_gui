@@ -254,13 +254,19 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.engine_settings = EngineSettings{};
 
     // Parse .settings (if present) and apply tab values with silent
-    // coerce on out-of-range. Missing file → all keys default.
+    // coerce on out-of-range. Missing file → all keys default. A present
+    // file that fails to open or fails trim validation aborts the load,
+    // same shape as the strict engine-settings block below: the reader
+    // already printed the specific reason, so only the abort line is
+    // added here before reverting and returning false.
     {
         ParsedSettings ps;
         if (!parse_settings_file(app.settings_path, ps)) {
             std::fprintf(stderr,
-                "warptempo_gui: could not read '%s'\n",
+                "warptempo_gui: source load aborted: invalid settings in '%s'\n",
                 app.settings_path.c_str());
+            revert_to_blank();
+            return false;
         }
         const int64_t total = audio.total_frames();
         auto valid_zoom = [](int z) -> bool {
