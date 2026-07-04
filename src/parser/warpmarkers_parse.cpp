@@ -14,7 +14,6 @@
 namespace {
 
 using warptempo_parse::strip_bom;
-using warptempo_parse::trim_ws;
 
 bool is_valid_label_format(const std::string& s) {
     static const std::regex re("^[a-z]\\.[a-z0-9]{2}$");
@@ -218,8 +217,7 @@ parse_warpmarkers_file(const std::string& path) {
     std::set<std::string>            defined;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
-        const std::string& raw = raw_lines[idx];
-        std::string t = trim_ws(raw);
+        std::string t = raw_lines[idx];
         if (t.empty()) continue;
 
         if (!t.empty() && t[0] == '#') {
@@ -258,12 +256,12 @@ parse_warpmarkers_file(const std::string& path) {
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
-        const std::string& raw = raw_lines[idx];
-        // Leading and trailing whitespace is trimmed before the strict line
-        // parse, matching the phase-reset parser, so a stray indent can never
-        // silently hide a marker: a valid line loads, a malformed one is a
-        // line-numbered hard error.
-        std::string t = trim_ws(raw);
+        // Marker lines are byte-exact canonical: any space, tab, or CR
+        // anywhere on the line is a hard, line-numbered parse error via
+        // parse_single_canonical_line below. Only byte-empty lines are
+        // skipped as blanks; a whitespace-only line is an error like any
+        // other whitespace. The former trimming was legacy-format residue.
+        std::string t = raw_lines[idx];
         if (t.empty()) {
             continue;
         }
