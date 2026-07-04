@@ -14,10 +14,6 @@ class GuiAudio;
 struct GuiWarpMarker;
 struct GuiTargetRender;
 
-bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
-                               double scale, int sample_rate,
-                               long total_frames);
-
 // Index of the nearest non-disabled marker strictly before `time_seconds`,
 // or -1 if none. See the definition in warpmarkers_ops.cpp for the full
 // doc comment (matches the resolver's walk).

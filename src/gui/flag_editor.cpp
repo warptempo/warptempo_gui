@@ -389,14 +389,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        app.top_flag_editor.red = true;
-        viewport.invalidate_top_strip();
-        return;
-    }
-
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
@@ -523,13 +515,6 @@ bool GuiFlagEditor::commit_bpm_edit() {
     proposed[idx].bpm_beats = beats;
     proposed[idx].bpm_lo    = lo;
     proposed[idx].bpm_hi    = hi;
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        app.top_flag_editor.red = true;
-        viewport.invalidate_timestamp_area();
-        return false;
-    }
     app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_timestamp_area();

@@ -52,18 +52,6 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
     return i;
 }
 
-bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
-                               double scale, int sample_rate,
-                               long total_frames) {
-    const auto tmap = build_target_view_frame_map(
-        proposed, scale, sample_rate, total_frames);
-    if (!tmap.empty()) return true;
-    std::fprintf(stderr,
-        "warptempo_gui: warp edit rejected: would violate label "
-        "multiplier constraint\n");
-    return false;
-}
-
 void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
                                      double base, const std::string& scale) {
     const int sr = audio.sample_rate();
@@ -88,19 +76,8 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
     nm.tempo_inherits  = inherit;
     nm.tempo_base      = base;
     nm.tempo_scale     = scale;
-    std::vector<GuiWarpMarker> proposed = mv;
-    auto insert_it = std::lower_bound(
-        proposed.begin(), proposed.end(), nm.time_seconds,
-        [](const GuiWarpMarker& a, double t) { return a.time_seconds < t; });
-    proposed.insert(insert_it, nm);
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, sr,
-            static_cast<long>(audio.total_frames()))) {
-        return;
-    }
-    // Snapshot pre-mutation state for undo. Captured after the dup and
-    // label-multiplier checks so rejected drops don't leave a no-op entry
-    // on the stack.
+    // Snapshot pre-mutation state for undo. Captured after the dup check
+    // so rejected drops don't leave a no-op entry on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;
     const int              hint_last = app.last_selected_marker;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
@@ -228,17 +205,6 @@ void GuiWarpMarkersOps::delete_selected_marker() {
         }
     }
 
-    std::vector<GuiWarpMarker> proposed = mv;
-    for (auto it = app.selected_markers.rbegin();
-         it != app.selected_markers.rend(); ++it) {
-        proposed.erase(proposed.begin() + *it);
-    }
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return;
-    }
-
     // All validations passed — capture snapshot and selection hint
     // before mutating so the undo can restore the pre-delete selection.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
@@ -296,16 +262,6 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
                 "warptempo_gui: cannot delete first warp marker (time 0)\n");
             return;
         }
-    }
-
-    std::vector<GuiWarpMarker> proposed = mv;
-    for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
-        proposed.erase(proposed.begin() + *it);
-    }
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return;
     }
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
@@ -394,11 +350,6 @@ void GuiWarpMarkersOps::toggle_inherits() {
         changed = true;
     }
     if (!changed) return;
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return;
-    }
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
@@ -424,11 +375,6 @@ void GuiWarpMarkersOps::toggle_disabled() {
         changed = true;
     }
     if (!changed) return;
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return;
-    }
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo(std::move(pre_state), hint_last);
@@ -478,11 +424,6 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         changed = true;
     }
     if (!changed) return;
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return;
-    }
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
@@ -544,11 +485,6 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
         any_changed = true;
     }
     if (!any_changed) return false;
-    if (!proposed_warp_state_valid(
-            proposed, app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()))) {
-        return false;
-    }
     app.warpmarkers.markers_mut() = std::move(proposed);
     return true;
 }
@@ -634,11 +570,6 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             any_changed = true;
         }
         if (!any_changed) return;
-        if (!proposed_warp_state_valid(
-                proposed, app.engine_settings.scale, sr,
-                static_cast<long>(audio.total_frames()))) {
-            return;
-        }
         std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
         const int              hint_last = app.last_selected_marker;
         app.warpmarkers.markers_mut() = std::move(proposed);

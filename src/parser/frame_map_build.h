@@ -89,8 +89,7 @@ FrameMapRealRange real_segments(const MapBuildResult& r);
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames, src_frame - prev_src_frame < 1, tempo > 9.99,
-// tempo <= 0, duplicate label definition, undefined label reference,
-// final_multiplier > 9.9999 on label refs.
+// tempo <= 0, duplicate label definition, undefined label reference.
 std::expected<MapBuildResult, std::string> build_maps(
     const MapBuildInput& in);
 

@@ -378,32 +378,11 @@ std::expected<MapBuildResult, std::string> build_maps(
                                        + m.label_ref);
             }
             const LabelCacheEntry& lbl = it->second;
+            // A label_ref imposes its definition's target duration; there is
+            // no ceiling on the implied stretch multiplier. The N.NNNN syntax
+            // limit applies only to typed scale fields at parse and editor
+            // commit; extreme implied multipliers are the author's concern.
             target_frame = tgt_f_prev + lbl.delta_tgt;
-
-            double base_val = lbl.tempo_base;
-            double unadj    = tgt_f_prev + ((src_frame - src_f_prev) / (base_val * scale));
-            double multiplier = (unadj - tgt_f_prev) / (target_frame - tgt_f_prev);
-
-            double final_multiplier = multiplier;
-            if (!lbl.tempo_scale.empty()) {
-                // The parser validates every scale to the strict N.NNNN
-                // syntax, so std::stod cannot throw on a well-formed load; a
-                // throw here means a malformed scale slipped past parse.
-                double s_val = 0.0;
-                try { s_val = std::stod(lbl.tempo_scale); }
-                catch (...) {
-                    return std::unexpected("malformed tempo scale at marker "
-                                           + std::to_string(i) + " (label: "
-                                           + m.label_ref + "): "
-                                           + lbl.tempo_scale);
-                }
-                final_multiplier = s_val * multiplier;
-            }
-            if (final_multiplier > 9.9999) {
-                return std::unexpected("label final multiplier > 9.9999 at marker "
-                                       + std::to_string(i) + " (label: "
-                                       + m.label_ref + ")");
-            }
         } else {
             double tempo_val = effective_tempo(m);
             double delta_src = src_frame - src_f_prev;
