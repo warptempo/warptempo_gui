@@ -153,6 +153,32 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
+    // --- reject out-of-range trim before it can silently shorten the render.
+    // This mirrors the build_maps trim rejection, which this driver never
+    // triggers because its full-map-only flow builds the untrimmed map and
+    // derives trim frames via resolve_trim_source_window instead. Convert with
+    // the same nearbyint * sample_rate the window resolver applies: an explicit
+    // begin must lie strictly inside the source, an explicit end at most at the
+    // source end. ---
+    if (trim.has_begin) {
+        const int64_t begin_src = static_cast<int64_t>(
+            std::nearbyint(trim.begin_sec * static_cast<double>(sample_rate)));
+        if (begin_src >= total_frames) {
+            std::fprintf(stderr,
+                "warptempo_cli: trim begin at or past source end\n");
+            return 1;
+        }
+    }
+    if (trim.has_end) {
+        const int64_t end_src = static_cast<int64_t>(
+            std::nearbyint(trim.end_sec * static_cast<double>(sample_rate)));
+        if (end_src > total_frames) {
+            std::fprintf(stderr,
+                "warptempo_cli: trim end past source end\n");
+            return 1;
+        }
+    }
+
     // --- locked engine geometry (shared with render_pipeline.cpp and
     // engine_main.cpp via engine_geometry.h) ---
     const int     N_fft = kN;

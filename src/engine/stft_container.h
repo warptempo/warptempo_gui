@@ -136,8 +136,10 @@ struct AudioSTFT {
     std::vector<FftWorkspace> fft_ws;       // size == channels
     bool fftw_threads_inited = false;
 
-    // Phase reset placements: synthesis frame to re-ground plus authored
-    // source frame for diagnostics.
+    // Phase reset placements: synth_frame is the frame m at which the reset is
+    // recorded (the synthesis loop marks prev_reset when frame_idx == m); the
+    // following frame m+1 is the one that re-grounds, seeded by prev_reset via
+    // seed_heap. src_frame is the authored source frame, kept for diagnostics.
     std::vector<PhaseResetPlacement> phase_reset_placements;
 
     // Spectral limiter

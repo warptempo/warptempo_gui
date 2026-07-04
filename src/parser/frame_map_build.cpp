@@ -431,6 +431,21 @@ std::expected<MapBuildResult, std::string> build_maps(
             ? static_cast<long>(std::nearbyint(end_sec   * sample_rate))
             : total_frames;
 
+        // Reject trim bounds that fall outside the source before any map
+        // surgery. The map math identity-extrapolates past the last anchor, so
+        // an out-of-range bound would silently produce a map extent past the
+        // source and a render shorter than the authored trim. An explicit begin
+        // must lie strictly inside the source; an explicit end may sit exactly
+        // at the source end but no further. Order between begin and end is
+        // already guaranteed upstream (the file reader rejects crossed explicit
+        // bounds; GUI drag authoring preserves order).
+        if (has_begin && begin_frame >= total_frames) {
+            return std::unexpected("trim begin at or past source end");
+        }
+        if (has_end && end_frame > total_frames) {
+            return std::unexpected("trim end past source end");
+        }
+
         // Snapshot the pre-shift frame_map for boundary interpolation; the
         // shift loop below moves into out.frame_map. The engine helper
         // map_source_to_target takes std::vector<FrameMapSegment> (engine
@@ -619,9 +634,13 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // Using a real anchor keeps the final segment on the full map's exact line,
     // so source reads up to the trim boundary match a full render. The engine
     // truncates at emit_sample_cap (below), so the span between trim_end_src and
-    // this anchor is synthesized into the discarded tail only. trim_end_src is
-    // bounded by the source length, so a closing anchor always exists (at worst
-    // full_map.back()).
+    // this anchor is synthesized into the discarded tail only. trim_end_src
+    // cannot exceed the source length: build_maps rejects out-of-range trim
+    // before any map reaches this slicer (GUI renders of every output format
+    // fail at the trimmed build_maps call, and the parser CLI likewise), and the
+    // render CLI checks its trim bounds at startup because its full-map-only
+    // flow bypasses that build_maps rejection. A closing anchor therefore always
+    // exists, at worst full_map.back().
     for (const auto& s : full_map) {
         if (static_cast<int64_t>(std::llrint(s.src_frame)) < trim_end_src) continue;
         const int64_t sf = static_cast<int64_t>(std::llrint(s.src_frame));

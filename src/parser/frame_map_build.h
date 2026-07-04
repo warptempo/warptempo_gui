@@ -93,7 +93,9 @@ FrameMapRealRange real_segments(const MapBuildResult& r);
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames, src_frame - prev_src_frame < 1, tempo <= 0
 // (a zero or negative effective product divides by zero or flips sign in the
-// segment arithmetic), duplicate label definition, undefined label reference.
+// segment arithmetic), duplicate label definition, undefined label reference,
+// trim begin at or past the source end, trim end past the source end (the two
+// trim conditions checked in the trim post-pass, after marker resolution).
 std::expected<MapBuildResult, std::string> build_maps(
     const MapBuildInput& in);
 

@@ -370,10 +370,11 @@ RenderOutcome do_render(const RenderRequest& req,
     MapBuildResult tmres = std::move(*r);
 
     // Full (untrimmed) frame map for the wav engine path. A trimmed wav render
-    // hands the engine the canonical untrimmed frame map and windows it,
-    // rather than rebuilding a local trimmed map; that inherited t_a history
-    // from frame 0 is what makes the windowed render null against the full
-    // render. build_maps already produces the untrimmed segment list when
+    // slices this canonical untrimmed map into a re-anchored sub-map plus an
+    // emit_sample_cap via assign_engine_frame_map before dispatch, rather than
+    // rebuilding a local trimmed map; that inherited t_a history from frame 0 is
+    // what makes the windowed render null against the full render.
+    // build_maps already produces the untrimmed segment list when
     // trim is forced off, so reuse it instead of duplicating the map math.
     // tmres stays the source for the frame-map/tempo-map else-branch (which keeps
     // its trimmed frame map + -trimmed.wav sibling); tmfull feeds the engine and
