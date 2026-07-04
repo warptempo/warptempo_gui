@@ -16,7 +16,11 @@
 // emit_sample_cap from the full untrimmed standard map. With a trim bound set,
 // slices the synthesis-frame window via slice_frame_map_to_trim_window and
 // re-anchors; untrimmed, copies the full map verbatim (offset 0). Returns
-// window_offset_samples (0 when untrimmed). Both the GUI render pipeline and the
+// window_offset_samples (0 when untrimmed), or -1 when the trimmed window's
+// target span is entirely consumed by the hop-aligned window start and no
+// output sample would be emitted -- callers must refuse the render, because
+// emit_sample_cap == 0 means "no cap" at the engine boundary and would render
+// the whole sub-map instead of nothing. Both the GUI render pipeline and the
 // render CLI call this so their EngineParams assembly stays byte-identical — the
 // block that decides cmp-stable output lives in exactly one place.
 //
@@ -77,6 +81,10 @@ inline int64_t assign_engine_frame_map(
     if (has_trim) {
         const WindowedFrameMap w = slice_frame_map_to_trim_window(
             full_standard, trim_begin_src, trim_end_src, N, R_s);
+        // A degenerate window (target span consumed by the hop-aligned start)
+        // stores emit_sample_cap == 0, which the engine reads as "no cap".
+        // Refuse before writing anything into ep so the caller can abort.
+        if (w.emit_sample_cap <= 0) return -1;
         ep.emit_sample_cap = w.emit_sample_cap;
         ep.frame_map = w.frame_map;
         return w.window_offset_samples;

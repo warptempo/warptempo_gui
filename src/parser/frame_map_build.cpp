@@ -634,7 +634,12 @@ WindowedFrameMap slice_frame_map_to_trim_window(
 
     // Output-sample cap: the trim-end target on the full map, re-anchored. The
     // engine emits up to this and no further, so the render ends exactly at the
-    // trim boundary even though the sub-map's last anchor sits past it.
+    // trim boundary even though the sub-map's last anchor sits past it. A stored
+    // 0 signals a degenerate window: the trim's target span is entirely
+    // consumed by the hop-aligned window start (offset >= end_tgt_full), so no
+    // output sample would be emitted. assign_engine_frame_map refuses to hand
+    // such a map to the engine, because emit_sample_cap == 0 means "no cap" at
+    // the engine boundary and would otherwise render the whole sub-map.
     const int64_t cap = end_tgt_full - offset;
     out.emit_sample_cap = cap < 0 ? 0 : cap;
     return out;

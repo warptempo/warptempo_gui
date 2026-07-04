@@ -735,6 +735,13 @@ RenderOutcome do_render(const RenderRequest& req,
         window_offset_samples = assign_engine_frame_map(
             ep, tmfull.frame_map, req.has_trim_begin || req.has_trim_end,
             trim_begin_src, trim_end_src, N_fft, R_s);
+        if (window_offset_samples < 0) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: trim window too short to "
+                "emit any output samples\n");
+            cleanup_all();
+            return RenderOutcome::Failed;
+        }
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_resets(

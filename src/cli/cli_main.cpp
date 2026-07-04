@@ -215,6 +215,12 @@ int main(int argc, char** argv) {
     const int64_t window_offset_samples = assign_engine_frame_map(
         ep, tmfull.frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
+    if (window_offset_samples < 0) {
+        std::fprintf(stderr,
+            "warptempo_cli: trim window too short to emit any "
+            "output samples\n");
+        return 1;
+    }
 
     ep.N            = N_fft;
     ep.limiter      = es.limiter;
