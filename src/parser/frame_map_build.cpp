@@ -90,6 +90,12 @@ std::vector<MarkerForRender> resolve_markers_for_render(
     return out;
 }
 
+// Contract: the backward walk stops only at a non-disabled owner; label
+// refs, passes, and disabled markers are transparent. A pass directly
+// after a label ref therefore legally inherits the nearest owner further
+// back — that arrangement is bad form but accepted everywhere (parse,
+// GUI ops, flag editor), and this resolution is the single source of its
+// meaning across render, framemap, tempomap, and hover.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];

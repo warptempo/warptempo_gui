@@ -485,16 +485,6 @@ parse_warpmarkers_file(const std::string& path) {
             }
             if (line_disabled) m.disabled = true;
 
-            // Same pass-after-ref invariant as the new-format path below:
-            // a ditto line is a pass, and a bare label column is a ref.
-            if (m.tempo_inherits && m.label_ref.empty()) {
-                int p = static_cast<int>(markers.size()) - 1;
-                while (p >= 0 && markers[p].disabled) --p;
-                if (p >= 0 && !markers[p].label_ref.empty())
-                    return fail(line_number,
-                        "pass marker cannot follow a label ref");
-            }
-
             last_time = m.time_seconds;
             markers.push_back(std::move(m));
             continue;
@@ -522,13 +512,11 @@ parse_warpmarkers_file(const std::string& path) {
             return fail(line_number,
                 "time not strictly increasing: " + time_raw);
 
-        // Cross-marker validation. Load enforces the same pass-after-ref
-        // invariant the GUI's proposed_warp_state_valid maintains: a pass
-        // (tempo_inherits, empty label_ref) whose nearest non-disabled
-        // prior marker is a label ref is an invalid state, so a violating
-        // file aborts the source load like any other parse error. The
-        // pass's own disabled bit is ignored — a disabled pass must already
-        // satisfy the invariant so re-enabling it is always valid.
+        // Cross-marker validation. A pass following a label ref is
+        // deliberately accepted: the resolver inherits from the nearest
+        // owner on the backward walk, skipping label refs and disabled
+        // markers, deterministically. Bad form is the author's concern,
+        // not a parse error.
         if (!m.label_ref.empty() && defined.count(m.label_ref) == 0)
             return fail(line_number,
                 "reference to undefined label: " + m.label_ref);
@@ -540,13 +528,6 @@ parse_warpmarkers_file(const std::string& path) {
                     std::to_string(seen_def_line[m.label_def]) + ")");
             seen_def_in_pass2.insert(m.label_def);
             seen_def_line[m.label_def] = line_number;
-        }
-        if (m.tempo_inherits && m.label_ref.empty()) {
-            int p = static_cast<int>(markers.size()) - 1;
-            while (p >= 0 && markers[p].disabled) --p;
-            if (p >= 0 && !markers[p].label_ref.empty())
-                return fail(line_number,
-                    "pass marker cannot follow a label ref");
         }
 
         // pass markers carry inert defaults (set by parse_new_payload). No

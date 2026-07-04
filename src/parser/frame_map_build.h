@@ -131,8 +131,8 @@ std::string resolve_inherited_tempo_scale(
 //                resolve_inherited_tempo(_scale).
 //   label_ref -> the label-definition marker (def_idx); base/scale are the
 //                def's effective base and the combined "~=" scale.
-// A pass immediately after a label_ref cannot occur (authoring-time no-op),
-// so that combination is not handled here.
+// A pass immediately after a label_ref is legal; source_idx then names the
+// ref (the visible immediate prior), base/scale still the resolved owner's.
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
                                   int idx, int sample_rate);
 

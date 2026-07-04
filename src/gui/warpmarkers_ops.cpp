@@ -38,13 +38,10 @@
 // Index of the nearest non-disabled marker strictly before `time_seconds`,
 // or -1 if none. Matches the resolver's walk (frame_map_build.cpp's
 // resolve_inherited_tempo): disabled markers are skipped. `time_seconds`
-// need not be present in `mv` — drop_marker calls this before insertion,
-// landing on the same slot insert_marker's lower_bound would place the new
-// marker at, one step back. toggle_inherits calls this with an existing
-// marker's own time, which lower_bound locates at that marker's own index,
-// so "one step back" still means "the slot before it". Declared in
-// warpmarkers_ops.h — flag_editor.cpp's commit_top_flag_edit shares this
-// same guard depth.
+// need not be present in `mv` — drop_copy_previous_at_playhead calls this
+// with the prospective drop time before insertion, landing on the same
+// slot insert_marker's lower_bound would place the new marker at, one
+// step back.
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_seconds) {
     auto it = std::lower_bound(
@@ -89,25 +86,6 @@ void collapse_dependent_passes(std::vector<GuiWarpMarker>& mv,
 bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
                                double scale, int sample_rate,
                                long total_frames) {
-    // Hard pass-after-ref invariant: every mutating op routes through this
-    // validator, so disable/enable can no longer expose a pass to a ref.
-    // For each pass (tempo_inherits, empty label_ref, regardless of its own
-    // disabled bit), find_immediate_prior lands on the marker's own slot and
-    // steps back over disabled markers; a non-empty label_ref there is
-    // rejected. The targeted guards in drop_marker, toggle_inherits, and the
-    // flag editor stay as friendlier front-line messages; deletion is
-    // covered by collapse_dependent_passes freezing any pass whose owner is
-    // deleted.
-    for (const auto& marker : proposed) {
-        if (!marker.tempo_inherits || !marker.label_ref.empty()) continue;
-        const int prior = find_immediate_prior(proposed, marker.time_seconds);
-        if (prior >= 0 && !proposed[prior].label_ref.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: warp edit rejected: pass marker cannot "
-                "follow a label ref\n");
-            return false;
-        }
-    }
     const auto tmap = build_target_view_frame_map(
         proposed, scale, sample_rate, total_frames);
     if (!tmap.empty()) return true;
@@ -136,20 +114,6 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
         return;
     const auto& mv = app.warpmarkers.markers();
     if (reject_if_marker_within_eps(mv, time_seconds, eps, "warp")) return;
-    // A pass placed immediately after a label_ref would skip the ref on
-    // the resolver's backward walk and silently inherit a more distant
-    // owner. Never let that arrangement exist: reject the drop instead of
-    // teaching the resolver to inherit a ref's effective tempo. Owner
-    // drops (inherit false) are unaffected — only a pass needs a real
-    // owner immediately behind it.
-    if (inherit) {
-        const int prior = find_immediate_prior(mv, time_seconds);
-        if (prior >= 0 && !mv[prior].label_ref.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: pass marker cannot follow a label ref\n");
-            return;
-        }
-    }
     GuiWarpMarker nm;
     nm.time_seconds    = time_seconds;
     nm.tempo_inherits  = inherit;
@@ -165,9 +129,9 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
             static_cast<long>(audio.total_frames()))) {
         return;
     }
-    // Snapshot pre-mutation state for undo. Captured after the dup,
-    // pass-after-ref, and label-multiplier checks so rejected drops don't
-    // leave a no-op entry on the stack.
+    // Snapshot pre-mutation state for undo. Captured after the dup and
+    // label-multiplier checks so rejected drops don't leave a no-op entry
+    // on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;
     const int              hint_last = app.last_selected_marker;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
@@ -221,8 +185,7 @@ void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
-// used by the hover popup. The new marker is an owner (tempo_inherits =
-// false), so it is not subject to the pass-after-label-ref guard.
+// used by the hover popup.
 // Exception: when the prior marker is a label ref, the copy is skipped and a
 // neutral owner (base 1.0 / empty scale) is dropped instead. Copying the
 // ref's resolved effective value would freeze a literal of the pre-drop
@@ -448,17 +411,6 @@ void GuiWarpMarkersOps::toggle_inherits() {
         GuiWarpMarker& m = proposed[idx];
         if (idx == 0) continue;
         if (!m.label_ref.empty()) {
-            // label_ref → pass: same guard as the owner→pass branch below —
-            // a pass immediately after a label_ref would skip the ref on
-            // the resolver's backward walk and silently inherit a more
-            // distant owner. No-op the toggle (leave it a ref) instead.
-            const int prior = find_immediate_prior(mv_const, m.time_seconds);
-            if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
-                std::fprintf(stderr,
-                    "warptempo_gui: pass marker cannot follow a label "
-                    "ref\n");
-                continue;
-            }
             m.label_ref.clear();
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;
@@ -472,17 +424,6 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_base     = resolved_tempo;
             m.tempo_scale    = resolved_scale;
         } else {
-            // owner → pass: same guard as drop_marker's inherit path —
-            // a pass immediately after a label_ref would skip the ref on
-            // the resolver's backward walk and silently inherit a more
-            // distant owner. No-op the toggle (leave it an owner) instead.
-            const int prior = find_immediate_prior(mv_const, m.time_seconds);
-            if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
-                std::fprintf(stderr,
-                    "warptempo_gui: pass marker cannot follow a label "
-                    "ref\n");
-                continue;
-            }
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;
             m.tempo_scale    = "1.0000";

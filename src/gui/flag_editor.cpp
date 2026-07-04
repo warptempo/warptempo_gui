@@ -308,38 +308,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
             }
         }
     }
-    // Becoming a pass: a pass immediately after a label_ref would skip
-    // the ref on the resolver's backward walk and silently inherit a
-    // more distant owner (frame_map_build.cpp's resolve_inherited_tempo).
-    // Under the hard invariant an existing pass never has a ref prior, so
-    // the check is unconditional.
-    if (ok && parsed.tempo_inherits) {
-        const int prior = find_immediate_prior(
-            mv_const, mv_const[idx].time_seconds);
-        if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
-            ok = false;
-            err = "pass marker cannot follow a label ref";
-        }
-    }
-    // Becoming a ref: the mirror-image adjacency — a label_ref directly
-    // preceding a pass creates the same resolver skip from the other
-    // side. Under the hard invariant an existing ref never directly
-    // precedes a pass, so the check is unconditional. The forward walk
-    // skips markers that are disabled and not passes; a disabled pass
-    // still blocks, since the invariant covers disabled passes.
-    if (ok && !parsed.label_ref.empty()) {
-        int j = idx + 1;
-        while (j < static_cast<int>(mv_const.size()) &&
-               mv_const[j].disabled &&
-               !(mv_const[j].tempo_inherits &&
-                 mv_const[j].label_ref.empty())) ++j;
-        if (j < static_cast<int>(mv_const.size()) &&
-            mv_const[j].tempo_inherits && mv_const[j].label_ref.empty()) {
-            ok = false;
-            err = "label ref cannot directly precede a pass marker";
-        }
-    }
-
     if (!ok) {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
