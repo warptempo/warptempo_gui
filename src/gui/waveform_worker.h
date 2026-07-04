@@ -14,12 +14,12 @@
 
 class GuiAudio;
 
-// The waveform-cache rebuild runs off the
-// paint thread on a dedicated worker. Shape mirrors GuiAsyncRenderer
-// byte-for-byte: single std::thread, single-in-flight job, condition-variable
-// wakeup, stop-on-shutdown atomic, completion signaled via an eventfd that
-// the platform run loop poll()s. The cache lifecycle owns the destination
-// surface — the worker writes pixels but never destroys.
+// The waveform-cache rebuild runs off the paint thread on a dedicated worker.
+// Shape mirrors GuiAsyncRenderer byte-for-byte: single std::thread,
+// single-in-flight job, condition-variable wakeup, stop-on-shutdown atomic,
+// completion signaled via an eventfd that the platform run loop poll()s. The
+// cache lifecycle owns the destination surface — the worker writes pixels but
+// never destroys.
 //
 // The job-payload owns no audio bytes. It carries `const GuiAudio*` whose
 // lifetime invariant is: audio outlives all in-flight jobs because (a)

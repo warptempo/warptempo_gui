@@ -76,13 +76,12 @@ struct SettingsSnapshot {
 // a pre-op selection hint (so Undo-of-Destroy / Undo-of-Move can restore
 // a sensible selection anchor).
 //
-// Every entry also carries the pre-mutation phase reset
-// snapshot and the mode the operation was performed in. Both lists are
-// always restored on undo/redo so the inverse is symmetric regardless of
-// which list the op actually touched. `op_mode` lets undo flip the active
-// mode; `tab` lets undo switch the active tab — both are context tags
-// that restore the original authoring view as visual feedback for what's
-// being undone.
+// Every entry also carries the pre-mutation phase reset snapshot and the mode
+// the operation was performed in. Both lists are always restored on undo/redo
+// so the inverse is symmetric regardless of which list the op actually
+// touched. `op_mode` lets undo flip the active mode; `tab` lets undo switch
+// the active tab — both are context tags that restore the original authoring
+// view as visual feedback for what's being undone.
 //
 // Carry-everywhere shape: every entry — marker, phase reset, or settings
 // — populates `settings` from app at push time, so do_undo/do_redo can
@@ -477,9 +476,9 @@ struct AppState {
     int           last_selected_marker = -1;
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
-    // Toggled by `p`. Determines which marker collection
-    // is visible / edited / hit-tested and which color set is used for
-    // the playhead and selected indicators.
+    // Toggled by `p`. Determines which marker collection is visible / edited /
+    // hit-tested and which color set is used for the playhead and selected
+    // indicators.
     char active_markers_view = 'W';
 
     // Active audio view: 'S' = source (the authored timeline), 'T' =
@@ -524,10 +523,10 @@ struct AppState {
     // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
-    // Cursor screen position from the last on_motion
-    // event. Used by recompute_hover_at_cursor() to re-evaluate hover
-    // after a viewport mutation (when the cursor is stationary but rects
-    // have shifted). -1 means "no motion seen yet".
+    // Cursor screen position from the last on_motion event. Used by
+    // recompute_hover_at_cursor() to re-evaluate hover after a viewport
+    // mutation (when the cursor is stationary but rects have shifted). -1
+    // means "no motion seen yet".
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
 
@@ -986,15 +985,14 @@ enum class TrimHit { None, Begin, End };
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 
-// hit_test_trim_chip: like hit_test_trim_boundary, but tests the press
-// against each set bound's painted CHIP RECT in the upper top row rather
-// than the stem column. The chip glyph ("b"/"e") is drawn hl_pad to the
-// right of the bound's column, so a column-only test misses clicks on the
-// visible chip. The rect mirrors regular-flag hit geometry
-// (flag_chip_rect, the shared chip-rect helper): x = round(text_left),
-// w = round(glyph_advance + 2*kFlagPadXPx), with y/h from the row metrics;
-// the same rect the renderers fill, so paint and hit cannot drift.
-// Tests both mouse_x and mouse_y. Used for upper-row
+// hit_test_trim_chip: like hit_test_trim_boundary, but tests the press against
+// each set bound's painted CHIP RECT in the upper top row rather than the stem
+// column. The chip glyph ("b"/"e") is drawn hl_pad to the right of the bound's
+// column, so a column-only test misses clicks on the visible chip. The rect
+// mirrors regular-flag hit geometry (flag_chip_rect, the shared chip-rect
+// helper): x = round(text_left), w = round(glyph_advance + 2*kFlagPadXPx),
+// with y/h from the row metrics; the same rect the renderers fill, so paint
+// and hit cannot drift. Tests both mouse_x and mouse_y. Used for upper-row
 // presses; the stem elsewhere still routes through hit_test_trim_boundary.
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);

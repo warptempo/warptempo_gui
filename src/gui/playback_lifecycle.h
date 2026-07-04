@@ -6,13 +6,12 @@
 #include "platform_wayland.h"
 #include "viewport.h"
 
-// Playback-orchestration operations, extracted from
-// main.cpp's inline lambdas. Owns the four GUI-level wrappers
-// around GuiPlayback's mechanism: stop on gesture, restore the
-// visible playhead at end-of-play, toggle play/stop, and apply a
-// new speed. AppState, Viewport, GuiPlatform, and GuiAudio are
-// captured directly. GuiPlayback stays a pure mechanism class —
-// these operations live one layer up.
+// Playback-orchestration operations, extracted from main.cpp's inline lambdas.
+// Owns the four GUI-level wrappers around GuiPlayback's mechanism: stop on
+// gesture, restore the visible playhead at end-of-play, toggle play/stop, and
+// apply a new speed. AppState, Viewport, GuiPlatform, and GuiAudio are
+// captured directly. GuiPlayback stays a pure mechanism class — these
+// operations live one layer up.
 struct GuiPlaybackLifecycle {
     AppState&         app;
     const GuiAudio&   audio;

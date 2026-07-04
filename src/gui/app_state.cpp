@@ -22,10 +22,9 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
-// hit_test_* promoted from lambdas in main(). The captured `app` and
-// `audio` references are now explicit arguments. The
-// kMarkerHitHalfPx / kFlagFontSize constants resolve through app_state.h /
-// paint_handler.h respectively.
+// hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
+// references are now explicit arguments. The kMarkerHitHalfPx / kFlagFontSize
+// constants resolve through app_state.h / paint_handler.h respectively.
 
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                          int mouse_x) {
@@ -39,10 +38,9 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
     const bool rv = app.render_view.enabled;
-    // In render-view, the visible sub-view's
-    // list drives hit-testing. 'P' reads phase reset time_seconds and
-    // converts to source frames via the source sample rate
-    // (matching source-view's phase reset branch).
+    // In render-view, the visible sub-view's list drives hit-testing. 'P'
+    // reads phase reset time_seconds and converts to source frames via the
+    // source sample rate (matching source-view's phase reset branch).
     const bool rv_trans = rv && app.active_markers_view == 'P';
     const int n =
         rv_trans
@@ -246,9 +244,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
-    // Render-view's phase reset sub-view paints no
-    // flags; short-circuit to no-hit so click and hover paths see a
-    // bare top strip.
+    // Render-view's phase reset sub-view paints no flags; short-circuit to
+    // no-hit so click and hover paths see a bare top strip.
     if (app.render_view.enabled &&
         app.active_markers_view == 'P') {
         return -1;

@@ -253,9 +253,9 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 // before the swap and re-binds the playback device. Returns true on success;
 // on failure logs to stderr and the prior state is preserved.
 //
-// When the destination entry's persisted stat
-// tuple matches the wav's current stat, restores the persisted
-// selection. Mismatch leaves the live selection empty.
+// When the destination entry's persisted stat tuple matches the wav's current
+// stat, restores the persisted selection. Mismatch leaves the live selection
+// empty.
 bool GuiRenderView::load_render_view_at(int index) {
     if (index < 0 ||
         index >= static_cast<int>(app.render_view.list.size())) {
@@ -338,11 +338,10 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
-    // Stat-tuple-gated selection restore. A
-    // matching persisted tuple (non-zero, equal to current) means
-    // the wav hasn't changed since stash; replay the persisted
-    // selection. Mismatch (or never-stashed defaults) drops to
-    // empty selection — the destination entry has no remembered
+    // Stat-tuple-gated selection restore. A matching persisted tuple
+    // (non-zero, equal to current) means the wav hasn't changed since stash;
+    // replay the persisted selection. Mismatch (or never-stashed defaults)
+    // drops to empty selection — the destination entry has no remembered
     // session for this file.
     const auto cur_stat = this->wav_stat_tuple(e.wav_path);
     const bool stat_match =

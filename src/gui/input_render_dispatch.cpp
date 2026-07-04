@@ -184,17 +184,15 @@ static std::string format_bpm_descriptor(int beats, int bpm,
            format_timestamp(end_seconds);
 }
 
-// Sweep every BPM in the BPM owner's
-// [bpm_lo, bpm_hi] range, computing (base_tempo, scale) per cell and
-// rendering one .wav per cell into
-// `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell
-// engine values land in the `.rendersettings` sidecar's engine block
-// (written by do_render); Ctrl+Alt+C reads only the scale field back when
-// committing a BPM cell. The substantive difference from the iter render
-// handler is per-cell mutation of cell_settings.scale, in addition to
-// per-cell marker mutation. Returns true iff a batch was dispatched; every
-// guard bail returns false. Body is the former Ctrl+Alt+M block verbatim,
-// minus the keystroke gate.
+// Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
+// (base_tempo, scale) per cell and rendering one .wav per cell into
+// `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell engine
+// values land in the `.rendersettings` sidecar's engine block (written by
+// do_render); Ctrl+Alt+C reads only the scale field back when committing a BPM
+// cell. The substantive difference from the iter render handler is per-cell
+// mutation of cell_settings.scale, in addition to per-cell marker mutation.
+// Returns true iff a batch was dispatched; every guard bail returns false.
+// Body is the former Ctrl+Alt+M block verbatim, minus the keystroke gate.
 bool GuiInputHandler::render_bpm_sweep() {
     if (app.active_markers_view != 'W') return false;
     if (!app.bpm_mode_enabled) return false;
@@ -299,10 +297,9 @@ bool GuiInputHandler::render_bpm_sweep() {
             cell_markers[i].tempo_base     = 1.0;       // inert default
             cell_markers[i].tempo_scale    = "1.0000";  // model's inert scale
             // label_def on a span-internal marker is preserved (refs are
-            // excluded from spans by the `m` two-marker span gate, but a
-            // def may exist);
-            // only the tempo fields are rewritten. Do not touch label_def,
-            // disabled, or any non-tempo field.
+            // excluded from spans by the `m` two-marker span gate, but a def
+            // may exist); only the tempo fields are rewritten. Do not touch
+            // label_def, disabled, or any non-tempo field.
         }
         // endpoint marker: untouched — its section lies outside the span.
 

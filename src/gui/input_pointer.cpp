@@ -528,8 +528,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if constexpr (kDebugPerf) {
         app.last_input_event_time = std::chrono::steady_clock::now();
     }
-    // Record latest cursor coords so viewport
-    // mutators can re-evaluate hover at the cursor's last position.
+    // Record latest cursor coords so viewport mutators can re-evaluate hover
+    // at the cursor's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     if (app.prompt.active) {

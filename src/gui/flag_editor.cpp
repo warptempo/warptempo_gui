@@ -537,14 +537,14 @@ bool GuiFlagEditor::commit_bpm_edit() {
     return true;
 }
 
-// Full mode-on transition for BPM mode. Validates the
-// activation gate, toggles iter mode off if active, maintains the
-// single-owner invariant, and marks the earlier of the two selected
-// markers as the BPM owner (preserving prior values when re-toggling on the
-// same owner), then flips the mode flag. The span endpoint is now explicit
-// — supplied by the `m` handler and recorded on the owner's bpm_endpoint —
-// so this no longer auto-selects an endpoint cue. The `m` handler
-// calls this and then opens the bottom-strip BPM editor on the owner.
+// Full mode-on transition for BPM mode. Validates the activation gate, toggles
+// iter mode off if active, maintains the single-owner invariant, and marks the
+// earlier of the two selected markers as the BPM owner (preserving prior
+// values when re-toggling on the same owner), then flips the mode flag. The
+// span endpoint is now explicit — supplied by the `m` handler and recorded on
+// the owner's bpm_endpoint — so this no longer auto-selects an endpoint cue.
+// The `m` handler calls this and then opens the bottom-strip BPM editor on the
+// owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;

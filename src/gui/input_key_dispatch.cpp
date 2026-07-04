@@ -324,15 +324,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
 
-    // Ctrl+Alt+I renders the Cartesian product of the
-    // per-marker iter ranges authored in iteration mode. Output lands
-    // in `<source_parent>/renders/<N>_render_iterations/`, with one
-    // .wav per cell named `<seq>_<delta_csv>.wav`. The CSV holds the
-    // swept markers' deltas in timeline order, formatted `%+0.2f`;
-    // markers with no iter range authored are excluded from the CSV
-    // and contribute one fixed value (their authored tempo_base) to
-    // the product. Per-cell progress and Esc cancellation are handled
-    // by run_render_batch. Silent no-op outside iteration mode.
+    // Ctrl+Alt+I renders the Cartesian product of the per-marker iter ranges
+    // authored in iteration mode. Output lands in
+    // `<source_parent>/renders/<N>_render_iterations/`, with one .wav per cell
+    // named `<seq>_<delta_csv>.wav`. The CSV holds the swept markers' deltas
+    // in timeline order, formatted `%+0.2f`; markers with no iter range
+    // authored are excluded from the CSV and contribute one fixed value (their
+    // authored tempo_base) to the product. Per-cell progress and Esc
+    // cancellation are handled by run_render_batch. Silent no-op outside
+    // iteration mode.
     if (ctrl && alt && !shift &&
         key == GuiKeys::I) {
         if (app.source_audio_path.empty()) return true;

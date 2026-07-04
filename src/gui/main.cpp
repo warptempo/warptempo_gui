@@ -116,10 +116,10 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 // position) now lives in render.h as a single shared inline constexpr,
 // reached here via the render.h include.
 
-// The BPM-sweep math primitive (BaseTempoScale +
-// compute_base_tempo_scale) moved out of this anonymous namespace into
-// input_handler.h so input_handler.cpp can reach it.
-// GuiInputHandler::render_bpm_sweep is the sole caller.
+// The BPM-sweep math primitive (BaseTempoScale + compute_base_tempo_scale)
+// moved out of this anonymous namespace into input_handler.h so
+// input_handler.cpp can reach it. GuiInputHandler::render_bpm_sweep is the
+// sole caller.
 
 // compute_hover_popup_text lives in the parser (frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
@@ -135,9 +135,9 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 // moved to settings_io.{h,cpp} so file_loader.cpp and save_markers can
 // both reach them.
 
-// WaveformCache was promoted to paint_handler.{h,cpp} so
-// paint_handler.cpp can reach it. The instance is still a local in
-// main() and is passed by reference into GuiPaintHandler.
+// WaveformCache was promoted to paint_handler.{h,cpp} so paint_handler.cpp can
+// reach it. The instance is still a local in main() and is passed by reference
+// into GuiPaintHandler.
 
 } // namespace
 
@@ -429,10 +429,10 @@ int main(int argc, char** argv) {
     GuiPlayback  playback;
     GuiPlatform  gui;
     WaveformCache wf_cache;
-    // Marker stems live on their own surface, rebuilt
-    // synchronously from on_tick. Constructed alongside wf_cache so they
-    // share the same lifetime; passed by reference into GuiPaintHandler
-    // and (for the destroy_surface hook) GuiFileLoader.
+    // Marker stems live on their own surface, rebuilt synchronously from
+    // on_tick. Constructed alongside wf_cache so they share the same lifetime;
+    // passed by reference into GuiPaintHandler and (for the destroy_surface
+    // hook) GuiFileLoader.
     StemCache     stem_cache;
     // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick alongside the stem cache. Same lifetime

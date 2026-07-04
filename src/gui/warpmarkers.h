@@ -121,11 +121,10 @@ private:
     long long                    generation_ = 0;
 };
 
-// True if the marker at `idx` should render as disabled. `disabled` is
-// allowed on any marker — a locally set flag always counts. For an
-// active (non-locally-disabled) `label_ref`, the
-// cascade rule applies: the ref inherits its target label_def's
-// disabled state.
+// True if the marker at `idx` should render as disabled. `disabled` is allowed
+// on any marker — a locally set flag always counts. For an active
+// (non-locally-disabled) `label_ref`, the cascade rule applies: the ref
+// inherits its target label_def's disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included

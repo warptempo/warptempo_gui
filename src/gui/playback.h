@@ -4,9 +4,9 @@
 #include <memory>
 
 // Audio playback engine. Owns a JACK client and drives it from JACK's process
-// thread. The sample buffer is borrowed, not owned:
-// the caller must keep the pointer passed to init() valid until shutdown()
-// returns, and must call stop()+shutdown() before tearing down the source.
+// thread. The sample buffer is borrowed, not owned: the caller must keep the
+// pointer passed to init() valid until shutdown() returns, and must call
+// stop()+shutdown() before tearing down the source.
 //
 // Thread model:
 //   - Audio thread (JACK process thread): reads cursor_/speed_, writes

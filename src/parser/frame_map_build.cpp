@@ -59,11 +59,11 @@ std::vector<MarkerForRender> resolve_markers_for_render(
         const bool is_disabled_label_ref_cascade =
             !g.disabled && !g.label_ref.empty()
             && is_disabled_ref(g.label_ref);
-        // `disabled` is allowed on any marker; whatever
-        // its kind, a disabled marker's tempo is silenced. The label_ref
-        // cascade is a separate path (the ref itself is not disabled but
-        // its target is). With trim moved to settings, a disabled marker
-        // has no reason to survive into the resolved list.
+        // `disabled` is allowed on any marker; whatever its kind, a disabled
+        // marker's tempo is silenced. The label_ref cascade is a separate path
+        // (the ref itself is not disabled but its target is). With trim moved
+        // to settings, a disabled marker has no reason to survive into the
+        // resolved list.
         const bool is_effectively_disabled =
             g.disabled || is_disabled_label_ref_cascade;
 

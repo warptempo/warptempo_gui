@@ -279,8 +279,8 @@ struct AudioSTFT {
     // frame's center sits at FFT index 0 and the rest of the M-length buffer
     // is zero. Clearing the whole buffer each frame is cheap next to the
     // M-point FFT. Centered placement makes the per-bin phase carry no
-        // group-delay ramp (expected_f == 0 in PGHI) — which is the
-        // condition under which PGHI's heap integration actually converges.
+    // group-delay ramp (expected_f == 0 in PGHI) — which is the condition
+    // under which PGHI's heap integration actually converges.
     void analyze_frame(int ch, const float* planar_ch,
                        int64_t ta, int64_t src_frames,
                        std::vector<double>& M_out,

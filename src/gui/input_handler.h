@@ -40,9 +40,9 @@ struct GuiPaintHandler;
 
 // -- BPM-sweep math primitive -------------------------------------------
 //
-// Promoted out of main.cpp's anonymous namespace so
-// input_handler.cpp can reach it. render_bpm_sweep() is the sole caller;
-// if a future TU needs it the home is open for relocation.
+// Promoted out of main.cpp's anonymous namespace so input_handler.cpp can
+// reach it. render_bpm_sweep() is the sole caller; if a future TU needs it the
+// home is open for relocation.
 //
 // Given a span's measured duration (seconds), the user-asserted beat count
 // for that span, and a target BPM, return the (base_tempo, scale) pair the
@@ -89,10 +89,10 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // -- GuiInputHandler ----------------------------------------------------
 //
 // run_render_batch was a non-trivial lambda local to main() with three
-// callers, all inside the on_key body. It now has zero
-// remaining callers in main.cpp, so it lives on this struct as a private
-// helper. RenderBatchResult was a struct local to main() (no other
-// callers); it is a nested type here for the same reason.
+// callers, all inside the on_key body. It now has zero remaining callers in
+// main.cpp, so it lives on this struct as a private helper. RenderBatchResult
+// was a struct local to main() (no other callers); it is a nested type here
+// for the same reason.
 struct GuiInputHandler {
     AppState&                app;
     const GuiAudio&          audio;

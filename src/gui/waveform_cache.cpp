@@ -896,14 +896,13 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // Trim boundary stems, painted in both 'W' and 'P' views.
-    // Positions are the displayed-domain trim frames (already translated);
-    // the has-set / selected bits decide which stems draw and in what
-    // color.
-    // Painted BEFORE the regular marker stems so that
-    // where a trim bound and a regular marker share a column the regular
-    // stem (painted last on this shared surface) sits in front; the taller
-    // trim stem reads as "underneath," reachable by its hotkey.
+    // Trim boundary stems, painted in both 'W' and 'P' views. Positions are
+    // the displayed-domain trim frames (already translated); the has-set /
+    // selected bits decide which stems draw and in what color. Painted BEFORE
+    // the regular marker stems so that where a trim bound and a regular marker
+    // share a column the regular stem (painted last on this shared surface)
+    // sits in front; the taller trim stem reads as "underneath," reachable by
+    // its hotkey.
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,

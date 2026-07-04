@@ -156,9 +156,8 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         invalidate_playhead_columns(old_px, new_px);
     }
     invalidate_timestamp_area();
-    // Viewport may have shifted (Home/End or any
-    // playhead jump that pushed the viewport). Re-evaluate hover at
-    // the cursor's last known coords.
+    // Viewport may have shifted (Home/End or any playhead jump that pushed the
+    // viewport). Re-evaluate hover at the cursor's last known coords.
     if (viewport_changed) {
         recompute_hover_at_cursor();
     }

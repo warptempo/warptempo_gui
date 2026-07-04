@@ -41,10 +41,9 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 }
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
-// target-frame in target view). Trim no longer dims any
-// renderer — it is consumed only by render_trim_stems to place the two
-// boundary stems. Values match the convention in compute_trim_samples
-// (main.cpp).
+// target-frame in target view). Trim no longer dims any renderer — it is
+// consumed only by render_trim_stems to place the two boundary stems. Values
+// match the convention in compute_trim_samples (main.cpp).
 struct TrimRange {
     int64_t begin;
     int64_t end;
@@ -390,16 +389,15 @@ void render_markers(cairo_t* cr,
                     const DragOverlay* drag_overlay = nullptr,
                     cairo_surface_t* ink_plate = nullptr);
 
-// Draws the trim begin/end boundary stems. Each set bound
-// (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
-// domain-frame column, spanning the same vertical extent as marker stems
-// (the flag chip's bottom, via flag_chip_bottom_y, down to waveform bottom).
-// Color is
+// Draws the trim begin/end boundary stems. Each set bound (gated by
+// `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
+// column, spanning the same vertical extent as marker stems (the flag chip's
+// bottom, via flag_chip_bottom_y, down to waveform bottom). Color is
 // kTrimMarker, or kSelected when that bound is selected. `trim.begin` /
-// `trim.end` are in the displayed domain (already frame_map-translated by
-// the caller), so no further translation happens here — the columns are
-// placed exactly like marker stems against the same viewport. View-
-// independent: drawn identically in 'W' and 'P' views.
+// `trim.end` are in the displayed domain (already frame_map-translated by the
+// caller), so no further translation happens here — the columns are placed
+// exactly like marker stems against the same viewport. View-independent: drawn
+// identically in 'W' and 'P' views.
 void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
@@ -648,9 +646,9 @@ constexpr bool kDebugHitRects = false;
 // perf_counters::reset() before a measured pass and reads the totals
 // afterwards. Single-threaded, no synchronization.
 //
-// The wf_cols / wf_pyramid_samples increments may
-// fire from the waveform worker thread when kDebugPerf=true. The
-// counters are not thread-safe — diagnostic use only.
+// The wf_cols / wf_pyramid_samples increments may fire from the waveform
+// worker thread when kDebugPerf=true. The counters are not thread-safe —
+// diagnostic use only.
 namespace perf_counters {
     extern int wf_cols;              // pixel columns drawn by render_waveform
     extern int wf_pyramid_samples;   // peak-pyramid samples read

@@ -220,12 +220,12 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
     return flag_text(markers, idx);
 }
 
-// The single iteration-aware text composer. Returns the plain
-// flag_text for ineligible markers or when iteration mode is off; for an
-// eligible owning marker with iteration on, splices the inline bracket
-// after `tempo_base` and before any `*scale`/`:label`
-// (e.g. `1.23+[+1.50, -0.50]*1.2345:a.aa`). All warp flag callers route
-// through here so display, hit-rects, and the editor seed stay in sync.
+// The single iteration-aware text composer. Returns the plain flag_text for
+// ineligible markers or when iteration mode is off; for an eligible owning
+// marker with iteration on, splices the inline bracket after `tempo_base` and
+// before any `*scale`/`:label` (e.g. `1.23+[+1.50, -0.50]*1.2345:a.aa`). All
+// warp flag callers route through here so display, hit-rects, and the editor
+// seed stay in sync.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on) {
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
@@ -642,13 +642,13 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);
 
-    // The step-1 fill box fills its full row slot rather
-    // than the tight glyph bounding box — that geometry now lives entirely
-    // inside flag_chip_rect (height = cached monospace_row_h(), top = baseline
-    // lifted by monospace_row_baseline_offset()), so baseline_y sits centered
-    // in the row and the box bottom lands flush at the slot bottom. Callers
-    // solve baseline_y so the box bottom coincides with flag_chip_bottom_y
-    // (chips) or the row rect (bottom-strip editors).
+    // The step-1 fill box fills its full row slot rather than the tight glyph
+    // bounding box — that geometry now lives entirely inside flag_chip_rect
+    // (height = cached monospace_row_h(), top = baseline lifted by
+    // monospace_row_baseline_offset()), so baseline_y sits centered in the row
+    // and the box bottom lands flush at the slot bottom. Callers solve
+    // baseline_y so the box bottom coincides with flag_chip_bottom_y (chips)
+    // or the row rect (bottom-strip editors).
     //
     // The cursor (step 5) and the selection highlight (step 4) span exactly the
     // glyph ink band (ascent-to-descent), no vertical padding. The band is

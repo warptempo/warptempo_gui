@@ -7,13 +7,12 @@
 #include "save_ops.h"
 #include "viewport.h"
 
-// Prompt state machine, extracted from main.cpp's inline
-// lambdas. Owns the unsaved-work dialog and the paste-confirm
-// dialog. Two entry points are exposed: request_close_or_revert
-// (called by Ctrl+Q, Ctrl+W, and the WM-close callback) and
-// activate_response (called by the keyboard handler when a prompt
-// is active). The other two former lambdas (open_unsaved, proceed)
-// are private helpers; they have no callers outside this cluster.
+// Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
+// unsaved-work dialog and the paste-confirm dialog. Two entry points are
+// exposed: request_close_or_revert (called by Ctrl+Q, Ctrl+W, and the WM-close
+// callback) and activate_response (called by the keyboard handler when a
+// prompt is active). The other two former lambdas (open_unsaved, proceed) are
+// private helpers; they have no callers outside this cluster.
 //
 // save_markers is reached through save_ops; clear_hover_popup
 // through viewport. file_loader, viewport, phase_reset_propagate,

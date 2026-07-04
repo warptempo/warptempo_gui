@@ -147,15 +147,15 @@ void GuiPlaybackLifecycle::toggle_playback() {
     playback.play(start, end);
 }
 
-// Click-keep-alive: reseek a live playback session to `sample` without
-// the stop-and-restart visual glitch. Mirrors toggle_playback's domain
-// translation (target-view buffer-local frame; source/render-view direct
-// trim_end_sample()) but is always-on rather than toggling. Called from
-// the press and motion handlers during a playhead-drag when playback was
-// alive at press time. Out-of-range positions in target view fall back to
-// stop — in-range-only semantics. No follow-scroll at
-// the reseek site: the user's click is a positional intent that takes
-// precedence over visual centering (unlike Space's start-of-listening).
+// Click-keep-alive: reseek a live playback session to `sample` without the
+// stop-and-restart visual glitch. Mirrors toggle_playback's domain translation
+// (target-view buffer-local frame; source/render-view direct
+// trim_end_sample()) but is always-on rather than toggling. Called from the
+// press and motion handlers during a playhead-drag when playback was alive at
+// press time. Out-of-range positions in target view fall back to stop —
+// in-range-only semantics. No follow-scroll at the reseek site: the user's
+// click is a positional intent that takes precedence over visual centering
+// (unlike Space's start-of-listening).
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T' && !app.render_view.enabled) {
         if (app.target_buffer_frames <= 0) { playback.stop(); return; }

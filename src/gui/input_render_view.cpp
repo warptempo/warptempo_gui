@@ -143,10 +143,10 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         app.render_view.src_sr    = audio.sample_rate();
         app.render_view.src_total = audio.total_frames();
         app.render_view.list      = std::move(list);
-        // Iter/BPM modes persist across render-view enter/leave. The flags
-        // are inert inside render view (input
-        // gate drops i/M; paint gates on !render_view.enabled) and are
-        // restored on exit. Ctrl+Alt+C is now the only forced reset.
+        // Iter/BPM modes persist across render-view enter/leave. The flags are
+        // inert inside render view (input gate drops i/M; paint gates on
+        // !render_view.enabled) and are restored on exit. Ctrl+Alt+C is now
+        // the only forced reset.
         app.render_view.enabled    = true;
         // Render-view shares the global active_markers_view
         // flag, so the user's chosen mode carries across the
@@ -238,13 +238,12 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Shift+Home / Shift+End: jump render-view to first / last entry,
-    // clamped (no wraparound — Shift+Home at index 0 stays at 0,
-    // Shift+End at the last entry stays). Gated on
-    // app.render_view.enabled; outside render-view the chord is a
-    // silent no-op (the bare-key switch at the bottom of this
-    // function is modifier-strict). Same pre-nav refresh of the
-    // renders/ folder.
+    // Shift+Home / Shift+End: jump render-view to first / last entry, clamped
+    // (no wraparound — Shift+Home at index 0 stays at 0, Shift+End at the last
+    // entry stays). Gated on app.render_view.enabled; outside render-view the
+    // chord is a silent no-op (the bare-key switch at the bottom of this
+    // function is modifier-strict). Same pre-nav refresh of the renders/
+    // folder.
     if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
         if (app.render_view.index >= 0 &&
@@ -304,9 +303,8 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
     if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
     else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
     else                  return;
-    // Live selection lives in the global
-    // pair regardless of view domain. active_markers_view tells us
-    // which marker list the indices map to.
+    // Live selection lives in the global pair regardless of view domain.
+    // active_markers_view tells us which marker list the indices map to.
     const bool sub_t = (app.active_markers_view == 'P');
     std::set<int>& sel = app.selected_markers;
     int& last_sel      = app.last_selected_marker;
