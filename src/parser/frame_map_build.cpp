@@ -113,6 +113,9 @@ double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index
             return m.tempo_base;
         }
     }
+    // For loadable projects the walk always terminates at or before the owning
+    // zero marker, so this fallback is a defensive default, not a reachable
+    // semantic.
     return 1.0;
 }
 
@@ -334,6 +337,17 @@ std::expected<MapBuildResult, std::string> build_maps(
     if (markers.empty()) {
         return std::unexpected(
             "no render-surviving warp markers (all disabled, or none authored)");
+    }
+
+    // With the parser and GUI guards in place this is unreachable for loadable
+    // projects, but the map builder is the layer that actually consumes the
+    // invariant — it seeds (0,0) and applies markers[0]'s tempo from source
+    // frame 0 — so it enforces the zero anchor independently of authoring-side
+    // guards. A first surviving marker at a nonzero source time would silently
+    // hand the opening span that marker's tempo from frame 0.
+    if (markers.front().time_seconds != 0.0) {
+        return std::unexpected(
+            "first render-surviving warp marker must be at source time zero");
     }
 
     // Trim range comes from .settings (MapBuildInput::trim_*), no

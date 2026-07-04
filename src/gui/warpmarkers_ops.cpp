@@ -302,11 +302,9 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
 //   - label_ref → pass: clear the ref; inert defaults.
-// The first marker toggles like any other: as a pass it resolves to the
-// render default (base 1.0, no scale) because the backward walk from
-// index 0 finds no owner, and freezing it back to owning (pass to
-// owning case) therefore freezes exactly that default — the round trip
-// is lossless.
+// The first marker is excluded: the zero marker must own its tempo (the map
+// builder applies it from source frame 0 and the inheritance walk has no owner
+// before it), so the whole-batch reject below refuses to toggle it.
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -315,6 +313,17 @@ void GuiWarpMarkersOps::toggle_inherits() {
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
     const auto& mv_const = app.warpmarkers.markers();
+    // Whole-batch reject: the zero marker must own its tempo, so it can never
+    // be toggled to a pass.
+    for (int idx : app.selected_markers) {
+        if (idx >= 0 && idx < static_cast<int>(mv_const.size()) &&
+            mv_const[idx].time_seconds == 0.0) {
+            std::fprintf(stderr,
+                "warptempo_gui: cannot toggle inherit on first warp marker "
+                "(time 0)\n");
+            return;
+        }
+    }
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via the canonical parser walk (slice once).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
@@ -359,6 +368,17 @@ void GuiWarpMarkersOps::toggle_inherits() {
 void GuiWarpMarkersOps::toggle_disabled() {
     if (app.selected_markers.empty()) return;
     const auto& mv_const = app.warpmarkers.markers();
+    // Whole-batch reject: the zero marker must own its tempo (the map builder
+    // applies it from source frame 0 and the inheritance walk has no owner
+    // before it), so it can never be disabled. Symmetric with the delete guard.
+    for (int idx : app.selected_markers) {
+        if (idx >= 0 && idx < static_cast<int>(mv_const.size()) &&
+            mv_const[idx].time_seconds == 0.0) {
+            std::fprintf(stderr,
+                "warptempo_gui: cannot disable first warp marker (time 0)\n");
+            return;
+        }
+    }
     std::vector<GuiWarpMarker> proposed = mv_const;
     const int              hint_last = app.last_selected_marker;
     bool changed = false;

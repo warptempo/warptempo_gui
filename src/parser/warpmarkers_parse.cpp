@@ -289,10 +289,33 @@ parse_warpmarkers_file(const std::string& path) {
         const std::string time_raw = t.substr(0, 9);
 
         if (!first_marker_seen) {
+            // The map builder applies the first surviving marker's tempo from
+            // source frame 0, and the inheritance walk has no owner before
+            // index 0. A zero marker that is disabled would drop out of the
+            // render list and silently shift opening-span tempo ownership to a
+            // later marker; a pass or label ref would leave the opening span
+            // with no literal owner (a pass's backward walk finds none and
+            // silently defaults to 1.0). A label def is banned so no ref can
+            // ever target the zero marker, keeping the position-zero cascade
+            // family unrepresentable. The grammar therefore
+            // requires the zero marker to be an enabled owning plain tempo, and
+            // every GUI mutation path guards the same rule.
             if (time_raw != "00:00.000")
                 return fail(line_number,
                     "first marker must be 00:00.000 (got " + time_raw +
                     ")");
+            if (m.disabled)
+                return fail(line_number,
+                    "first marker must not be disabled");
+            if (m.tempo_inherits)
+                return fail(line_number,
+                    "first marker must own a numeric tempo (pass not allowed)");
+            if (!m.label_ref.empty())
+                return fail(line_number,
+                    "first marker must not be a label reference");
+            if (!m.label_def.empty())
+                return fail(line_number,
+                    "first marker must not carry a label definition");
             first_marker_seen = true;
         }
         if (last_time >= 0.0 && m.time_seconds <= last_time)

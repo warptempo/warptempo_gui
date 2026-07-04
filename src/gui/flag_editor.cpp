@@ -316,6 +316,25 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
+    // The zero marker must own a plain tempo: the map builder applies it from
+    // source frame 0 and the inheritance walk has no owner before it. The
+    // disabled hash cannot be typed into the editable payload — it lives in the
+    // locked prefix (build_locked_prefix), and parse_single_canonical_line only
+    // detects `#` at the start of the whole line, so parsed.disabled reflects
+    // the marker's existing state, not the editable buffer. Only the payload-
+    // expressible shapes (pass, label ref, label def) are rejected here.
+    if (mv_const[idx].time_seconds == 0.0 &&
+        (parsed.tempo_inherits ||
+         !parsed.label_ref.empty() ||
+         !parsed.label_def.empty())) {
+        app.top_flag_editor.red = true;
+        viewport.invalidate_top_strip();
+        std::fprintf(stderr,
+            "warptempo_gui: edit rejected: first warp marker must own a "
+            "plain tempo\n");
+        return;
+    }
+
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[idx];
     const std::string old_def = m.label_def;
