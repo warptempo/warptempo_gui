@@ -512,7 +512,16 @@ parse_warpmarkers_file(const std::string& path) {
             return fail(line_number,
                 "time not strictly increasing: " + time_raw);
 
-        // Cross-marker validation.
+        // Cross-marker validation. Deliberately does not reject a pass
+        // immediately following a label_ref: that shape is reachable
+        // in-session (toggle_disabled can expose a pass to a ref by
+        // disabling the owner between them, and deleting a disabled
+        // spacer can make a ref and a pass index-adjacent), and the GUI
+        // saves such states, so a load-time reject would refuse files
+        // the GUI itself wrote. The resolver handles the shape
+        // deterministically (skips the ref, inherits the more distant
+        // owner); the GUI's creation-op guards are authoring-time
+        // mistake protection, not a state invariant enforced on load.
         if (!m.label_ref.empty() && defined.count(m.label_ref) == 0)
             return fail(line_number,
                 "reference to undefined label: " + m.label_ref);

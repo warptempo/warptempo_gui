@@ -35,8 +35,6 @@
 //   waveform_area, union_rect,
 //   playhead_invalidate_rect       → free functions, no qualifier change
 
-namespace {
-
 // Index of the nearest non-disabled marker strictly before `time_seconds`,
 // or -1 if none. Matches the resolver's walk (frame_map_build.cpp's
 // resolve_inherited_tempo): disabled markers are skipped. `time_seconds`
@@ -44,7 +42,9 @@ namespace {
 // landing on the same slot insert_marker's lower_bound would place the new
 // marker at, one step back. toggle_inherits calls this with an existing
 // marker's own time, which lower_bound locates at that marker's own index,
-// so "one step back" still means "the slot before it".
+// so "one step back" still means "the slot before it". Declared in
+// warpmarkers_ops.h — flag_editor.cpp's commit_top_flag_edit shares this
+// same guard depth.
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_seconds) {
     auto it = std::lower_bound(
@@ -54,6 +54,8 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
     while (i >= 0 && mv[i].disabled) --i;
     return i;
 }
+
+namespace {
 
 // A pass can legitimately sit after [label_ref, owner]; deleting that
 // owner would leave the pass re-resolving to a different source (the
@@ -427,6 +429,17 @@ void GuiWarpMarkersOps::toggle_inherits() {
         GuiWarpMarker& m = proposed[idx];
         if (idx == 0) continue;
         if (!m.label_ref.empty()) {
+            // label_ref → pass: same guard as the owner→pass branch below —
+            // a pass immediately after a label_ref would skip the ref on
+            // the resolver's backward walk and silently inherit a more
+            // distant owner. No-op the toggle (leave it a ref) instead.
+            const int prior = find_immediate_prior(mv_const, m.time_seconds);
+            if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
+                std::fprintf(stderr,
+                    "warptempo_gui: pass marker cannot follow a label "
+                    "ref\n");
+                continue;
+            }
             m.label_ref.clear();
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;

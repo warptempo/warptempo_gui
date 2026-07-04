@@ -18,6 +18,13 @@ bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
                                double scale, int sample_rate,
                                long total_frames);
 
+// Index of the nearest non-disabled marker strictly before `time_seconds`,
+// or -1 if none. See the definition in warpmarkers_ops.cpp for the full
+// doc comment (matches the resolver's walk, and the "one step back"
+// semantics shared by drop_marker and toggle_inherits).
+int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
+                          double time_seconds);
+
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the selection-shift cluster (nudge /
 // jump-to-playhead and their shared bounds helper). stop_playback_if_playing

@@ -308,6 +308,37 @@ void GuiFlagEditor::commit_top_flag_edit() {
             }
         }
     }
+    // Becoming a pass: a pass immediately after a label_ref would skip
+    // the ref on the resolver's backward walk and silently inherit a
+    // more distant owner (frame_map_build.cpp's resolve_inherited_tempo).
+    // Transition-only — re-committing an already-owned pass (e.g. editing
+    // its label_def) stays allowed even if its prior is a ref, since the
+    // file may already carry that shape from a load or an earlier op.
+    const bool already_pass =
+        mv_const[idx].tempo_inherits && mv_const[idx].label_ref.empty();
+    if (ok && parsed.tempo_inherits && !already_pass) {
+        const int prior = find_immediate_prior(
+            mv_const, mv_const[idx].time_seconds);
+        if (prior >= 0 && !mv_const[prior].label_ref.empty()) {
+            ok = false;
+            err = "pass marker cannot follow a label ref";
+        }
+    }
+    // Becoming a ref: the mirror-image adjacency — a label_ref directly
+    // preceding a pass creates the same resolver skip from the other
+    // side. Transition-only — a marker that is already a ref stays
+    // editable (e.g. re-pointing label_ref) even if it already precedes
+    // a pass.
+    if (ok && !parsed.label_ref.empty() && mv_const[idx].label_ref.empty()) {
+        int j = idx + 1;
+        while (j < static_cast<int>(mv_const.size()) &&
+               mv_const[j].disabled) ++j;
+        if (j < static_cast<int>(mv_const.size()) &&
+            mv_const[j].tempo_inherits && mv_const[j].label_ref.empty()) {
+            ok = false;
+            err = "label ref cannot directly precede a pass marker";
+        }
+    }
 
     if (!ok) {
         app.top_flag_editor.red = true;
