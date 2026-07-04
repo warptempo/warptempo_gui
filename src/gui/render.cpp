@@ -71,13 +71,17 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
 // Forward-translate a per-marker effective time (seconds) to the paint-
 // sample position used by the stem, flag, and hit-rect loops. In target
 // view (frame_map non-null/non-empty) the source-frame is rounded with
-// banker's nearbyint and looked up through map_source_to_target; in
-// source view (null/empty frame_map) the result is eff_time * sr rounded
-// to the nearest frame with nearbyint, matching the integer frame the
-// playhead cursor and the engine use, so the stem, chip, and hit rect
-// share the cursor's column. Callers that need an integer sample-frame
-// for trim or viewport arithmetic apply their own nearbyint to the
-// returned double; rounding an already-integer-valued double is a no-op.
+// banker's nearbyint and looked up through map_source_to_target, and that
+// lookup is itself rounded with nearbyint; in source view (null/empty
+// frame_map) the result is eff_time * sr rounded to the nearest frame with
+// nearbyint. Both branches return the same integer target/source frame
+// the playhead cursor stores (to_domain_frame applies the same nearbyint),
+// so the stem, chip, hit rect, and playhead share a column in both views.
+// Painting from the fractional map_source_to_target value placed the stem
+// one pixel off the playhead whenever rounding the target frame crossed a
+// pixel-column boundary. Callers that need an integer sample-frame for trim
+// or viewport arithmetic apply their own nearbyint to the returned double;
+// rounding an already-integer-valued double is a no-op.
 static inline double sec_to_paint_sample(
     double eff_time,
     double sr,
@@ -85,7 +89,7 @@ static inline double sec_to_paint_sample(
     if (frame_map && !frame_map->empty()) {
         const size_t src_frame = static_cast<size_t>(
             std::nearbyint(eff_time * sr));
-        return map_source_to_target(src_frame, *frame_map);
+        return std::nearbyint(map_source_to_target(src_frame, *frame_map));
     }
     return std::nearbyint(eff_time * sr);
 }
@@ -1264,7 +1268,7 @@ double flag_pending_text_left_x(
             const size_t src_frame = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(src_frame, tmap);
+            ms = std::nearbyint(map_source_to_target(src_frame, tmap));
         }
     }
     if (ms <  static_cast<double>(vp_start)) return -1.0;

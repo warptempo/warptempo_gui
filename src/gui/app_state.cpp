@@ -89,7 +89,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, *tmap);
+            ms = std::nearbyint(map_source_to_target(q, *tmap));
         }
         if (ms < vp) continue;
         if (ms >= vp + static_cast<double>(visible)) continue;
@@ -138,7 +138,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, *tmap);
+            ms = std::nearbyint(map_source_to_target(q, *tmap));
         }
         if (ms < vp) return kMarkerHitHalfPx + 1;
         if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
@@ -208,7 +208,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = map_source_to_target(q, *tmap);
+            ms = std::nearbyint(map_source_to_target(q, *tmap));
         }
         if (ms < vp) return kMiss;
         if (ms >= vp + static_cast<double>(visible)) return kMiss;
