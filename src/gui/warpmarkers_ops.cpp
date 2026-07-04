@@ -312,7 +312,11 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
 //   - label_ref → pass: clear the ref; inert defaults.
-// The first marker is silently skipped (it must own its tempo).
+// The first marker toggles like any other: as a pass it resolves to the
+// render default (base 1.0, no scale) because the backward walk from
+// index 0 finds no owner, and freezing it back to owning (pass to
+// owning case) therefore freezes exactly that default — the round trip
+// is lossless.
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -328,7 +332,6 @@ void GuiWarpMarkersOps::toggle_inherits() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         GuiWarpMarker& m = proposed[idx];
-        if (idx == 0) continue;
         if (!m.label_ref.empty()) {
             m.label_ref.clear();
             m.tempo_inherits = true;
