@@ -485,6 +485,16 @@ parse_warpmarkers_file(const std::string& path) {
             }
             if (line_disabled) m.disabled = true;
 
+            // Same pass-after-ref invariant as the new-format path below:
+            // a ditto line is a pass, and a bare label column is a ref.
+            if (m.tempo_inherits && m.label_ref.empty()) {
+                int p = static_cast<int>(markers.size()) - 1;
+                while (p >= 0 && markers[p].disabled) --p;
+                if (p >= 0 && !markers[p].label_ref.empty())
+                    return fail(line_number,
+                        "pass marker cannot follow a label ref");
+            }
+
             last_time = m.time_seconds;
             markers.push_back(std::move(m));
             continue;
@@ -512,16 +522,13 @@ parse_warpmarkers_file(const std::string& path) {
             return fail(line_number,
                 "time not strictly increasing: " + time_raw);
 
-        // Cross-marker validation. Deliberately does not reject a pass
-        // immediately following a label_ref: that shape is reachable
-        // in-session (toggle_disabled can expose a pass to a ref by
-        // disabling the owner between them, and deleting a disabled
-        // spacer can make a ref and a pass index-adjacent), and the GUI
-        // saves such states, so a load-time reject would refuse files
-        // the GUI itself wrote. The resolver handles the shape
-        // deterministically (skips the ref, inherits the more distant
-        // owner); the GUI's creation-op guards are authoring-time
-        // mistake protection, not a state invariant enforced on load.
+        // Cross-marker validation. Load enforces the same pass-after-ref
+        // invariant the GUI's proposed_warp_state_valid maintains: a pass
+        // (tempo_inherits, empty label_ref) whose nearest non-disabled
+        // prior marker is a label ref is an invalid state, so a violating
+        // file aborts the source load like any other parse error. The
+        // pass's own disabled bit is ignored — a disabled pass must already
+        // satisfy the invariant so re-enabling it is always valid.
         if (!m.label_ref.empty() && defined.count(m.label_ref) == 0)
             return fail(line_number,
                 "reference to undefined label: " + m.label_ref);
@@ -533,6 +540,13 @@ parse_warpmarkers_file(const std::string& path) {
                     std::to_string(seen_def_line[m.label_def]) + ")");
             seen_def_in_pass2.insert(m.label_def);
             seen_def_line[m.label_def] = line_number;
+        }
+        if (m.tempo_inherits && m.label_ref.empty()) {
+            int p = static_cast<int>(markers.size()) - 1;
+            while (p >= 0 && markers[p].disabled) --p;
+            if (p >= 0 && !markers[p].label_ref.empty())
+                return fail(line_number,
+                    "pass marker cannot follow a label ref");
         }
 
         // pass markers carry inert defaults (set by parse_new_payload). No

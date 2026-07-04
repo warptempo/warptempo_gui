@@ -89,6 +89,25 @@ void collapse_dependent_passes(std::vector<GuiWarpMarker>& mv,
 bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
                                double scale, int sample_rate,
                                long total_frames) {
+    // Hard pass-after-ref invariant: every mutating op routes through this
+    // validator, so disable/enable can no longer expose a pass to a ref.
+    // For each pass (tempo_inherits, empty label_ref, regardless of its own
+    // disabled bit), find_immediate_prior lands on the marker's own slot and
+    // steps back over disabled markers; a non-empty label_ref there is
+    // rejected. The targeted guards in drop_marker, toggle_inherits, and the
+    // flag editor stay as friendlier front-line messages; deletion is
+    // covered by collapse_dependent_passes freezing any pass whose owner is
+    // deleted.
+    for (const auto& marker : proposed) {
+        if (!marker.tempo_inherits || !marker.label_ref.empty()) continue;
+        const int prior = find_immediate_prior(proposed, marker.time_seconds);
+        if (prior >= 0 && !proposed[prior].label_ref.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: warp edit rejected: pass marker cannot "
+                "follow a label ref\n");
+            return false;
+        }
+    }
     const auto tmap = build_target_view_frame_map(
         proposed, scale, sample_rate, total_frames);
     if (!tmap.empty()) return true;
