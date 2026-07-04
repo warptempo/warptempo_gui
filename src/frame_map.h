@@ -73,9 +73,9 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // non-negative numeric values; the writer emits precise double breakpoints at
 // up to 17 significant digits; a leading 0 0 anchor is present unless dropped
 // at write). Blank / whitespace-only lines are skipped. Any malformed line
-// (non-numeric, missing field, or trailing garbage) fails the whole read
-// (std::nullopt), so a truncated or corrupt file never feeds the engine a
-// partial map. A missing/unopenable file is also std::nullopt.
+// (non-numeric, negative, missing field, or trailing garbage) fails the
+// whole read (std::nullopt), so a truncated or corrupt file never feeds the
+// engine a partial map. A missing/unopenable file is also std::nullopt.
 inline std::optional<std::vector<FrameMapSegment>>
 read_frame_map(const std::string& path) {
     std::ifstream in(path);
@@ -89,16 +89,17 @@ read_frame_map(const std::string& path) {
         if (!(ls >> s >> t)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
+        if (s < 0.0 || t < 0.0) return std::nullopt;
         segs.push_back(FrameMapSegment{s, t});
     }
     return segs;
 }
 
 // .resetmap: one undisplaced source-frame integer per line (non-negative),
-// in file order. Blank / whitespace-only lines skipped; any malformed line
-// fails the whole read. The file carries only active resets (the writer's
-// caller drops disabled markers), so there is no '#'/disabled syntax to
-// handle. A missing/unopenable file is std::nullopt; an empty-but-readable
+// in file order. Blank / whitespace-only lines skipped; any malformed or
+// negative line fails the whole read. The file carries only active resets
+// (the writer's caller drops disabled markers), so there is no '#'/disabled
+// syntax to handle. A missing/unopenable file is std::nullopt; an empty-but-readable
 // file yields an empty list (a valid "no resets" render input).
 inline std::optional<std::vector<int64_t>>
 read_reset_map(const std::string& path) {
@@ -113,6 +114,7 @@ read_reset_map(const std::string& path) {
         if (!(ls >> f)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
+        if (f < 0) return std::nullopt;
         frames.push_back(static_cast<int64_t>(f));
     }
     return frames;
