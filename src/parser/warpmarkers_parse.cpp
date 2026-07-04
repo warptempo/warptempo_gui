@@ -33,10 +33,6 @@ bool is_valid_scale_format(const std::string& s) {
     return std::regex_match(s, re);
 }
 
-bool is_indented_raw(const std::string& raw) {
-    return !raw.empty() && (raw[0] == ' ' || raw[0] == '\t');
-}
-
 // Parse a new-format payload (the part after the pipe) into a partly-
 // populated WarpMarker base — sets tempo/label fields only. Cross-marker
 // checks (label_ref existence, label_def uniqueness) are the caller's job.
@@ -223,7 +219,6 @@ parse_warpmarkers_file(const std::string& path) {
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const std::string& raw = raw_lines[idx];
-        if (is_indented_raw(raw)) continue;
         std::string t = trim_ws(raw);
         if (t.empty()) continue;
 
@@ -264,9 +259,10 @@ parse_warpmarkers_file(const std::string& path) {
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
         const std::string& raw = raw_lines[idx];
-        if (is_indented_raw(raw)) {
-            continue;
-        }
+        // Leading and trailing whitespace is trimmed before the strict line
+        // parse, matching the phase-reset parser, so a stray indent can never
+        // silently hide a marker: a valid line loads, a malformed one is a
+        // line-numbered hard error.
         std::string t = trim_ws(raw);
         if (t.empty()) {
             continue;
