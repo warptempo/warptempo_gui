@@ -575,15 +575,14 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     const int num_frames = static_cast<int>(dense.size());
     if (num_frames == 0) { out.frame_map = full_map; return out; }
 
-    // Window [wbegin, wend): identical selection to the engine's removed block.
+    // Window start: the last dense synthesis frame whose source read position
+    // is at or before trim_begin_src (the engine's own placement rule). The
+    // window's output extent is carried by emit_sample_cap below, not an
+    // explicit end index.
     auto bit = std::upper_bound(dense.begin(), dense.end(), trim_begin_src);
     int wbegin = (bit == dense.begin()) ? 0
                : static_cast<int>((bit - dense.begin()) - 1);
     if (wbegin > num_frames - 1) wbegin = num_frames - 1;
-    auto eit = std::upper_bound(dense.begin(), dense.end(), trim_end_src);
-    int wend = static_cast<int>(eit - dense.begin());
-    if (wend > num_frames) wend = num_frames;
-    if (wend < wbegin + 1) wend = wbegin + 1;
 
     const int64_t offset =
         static_cast<int64_t>(wbegin) * static_cast<int64_t>(R_s);
