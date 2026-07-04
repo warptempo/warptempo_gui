@@ -27,6 +27,7 @@ struct SettingsTrimTabs {
 // value is validated by is_valid_timestamp_format and decoded by
 // parse_timestamp. Missing trim keys are valid, but a present trim key with
 // a malformed timestamp is a hard parse failure.
-// On a duplicate key the last well-formed occurrence wins.
+// A duplicated trim key is a hard parse failure, matching the
+// engine-settings reader's rejection of a duplicated canonical key.
 std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     const std::string& path);

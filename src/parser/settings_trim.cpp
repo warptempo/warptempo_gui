@@ -6,6 +6,7 @@
 #include <cctype>
 #include <expected>
 #include <fstream>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -22,6 +23,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     if (!f) return out;
     std::string line;
     int ln = 0;
+    // Tracks which of the four canonical trim keys have already been
+    // assigned, so a hand-edited duplicate is rejected the same way the
+    // engine-settings reader rejects a duplicated canonical key.
+    std::set<std::string> seen;
     while (std::getline(f, line)) {
         ++ln;
         if (ln == 1) warptempo_parse::strip_bom(line);
@@ -35,6 +40,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
         if (key.empty()) continue;
 
         if (key == "tab_a_trim_begin") {
+            if (!seen.insert(key).second) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "duplicate trim key '" + key + "'");
+            }
             if (!is_valid_timestamp_format(value)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim timestamp for " + key + ": '" + value + "'");
@@ -42,6 +51,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
             out.tab_a.has_begin = true;
             out.tab_a.begin_sec = parse_timestamp(value);
         } else if (key == "tab_a_trim_end") {
+            if (!seen.insert(key).second) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "duplicate trim key '" + key + "'");
+            }
             if (!is_valid_timestamp_format(value)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim timestamp for " + key + ": '" + value + "'");
@@ -49,6 +62,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
             out.tab_a.has_end = true;
             out.tab_a.end_sec = parse_timestamp(value);
         } else if (key == "tab_b_trim_begin") {
+            if (!seen.insert(key).second) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "duplicate trim key '" + key + "'");
+            }
             if (!is_valid_timestamp_format(value)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim timestamp for " + key + ": '" + value + "'");
@@ -56,6 +73,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
             out.tab_b.has_begin = true;
             out.tab_b.begin_sec = parse_timestamp(value);
         } else if (key == "tab_b_trim_end") {
+            if (!seen.insert(key).second) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "duplicate trim key '" + key + "'");
+            }
             if (!is_valid_timestamp_format(value)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim timestamp for " + key + ": '" + value + "'");
