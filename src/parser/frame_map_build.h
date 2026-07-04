@@ -36,7 +36,10 @@ struct MarkerForRender {
 struct MarkerEffective {
     double      base       = 0.0;   // 0.0 means "could not resolve"
     std::string scale;              // "" means no typed scale (treated as 1.0)
-    int         source_idx = -1;    // marker this value was taken from
+    int         source_idx = -1;    // marker this value was taken from; -1
+                                    // means no visible source (e.g. a
+                                    // first-marker pass resolving to the 1.0
+                                    // default)
 };
 
 struct MapBuildInput {

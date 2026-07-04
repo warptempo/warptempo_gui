@@ -174,9 +174,13 @@ MarkerEffective marker_effective(
         std::string def_scale_str;
         bool        def_has_typed_scale;
         if (def.tempo_inherits) {
+            // An inheriting definition (a pass) contributes both its resolved
+            // base and its resolved scale, mirroring resolve_markers_for_render
+            // so the hover multiplier matches the frame map. Both resolvers walk
+            // backward from def_idx-1, correctly excluding the pass itself.
             def_base = resolve_inherited_tempo(mv, def_idx);
-            def_scale_str = "";
-            def_has_typed_scale = false;
+            def_scale_str = resolve_inherited_tempo_scale(mv, def_idx);
+            def_has_typed_scale = !def_scale_str.empty();
         } else {
             def_base = def.tempo_base;
             def_scale_str = def.tempo_scale;
@@ -231,6 +235,13 @@ std::string compute_hover_popup_text(
             out += "*";
             out += eff.scale;
         }
+
+        // A first-marker pass resolves to the 1.0 default and has no prior
+        // marker to attribute, so source_idx stays negative; the popup shows
+        // just the resolved tempo ("= 1.00") without a provenance suffix. The
+        // same guard covers a pass whose priors are all disabled, should that
+        // state be reachable.
+        if (eff.source_idx < 0) return out;
 
         // Provenance: the immediate prior marker's own displayed tempo
         // (its base, or base*scale if it carries a typed scale) and its
