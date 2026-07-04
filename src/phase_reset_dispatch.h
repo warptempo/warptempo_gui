@@ -61,8 +61,7 @@ inline bool phase_reset_dispatch_frame_target_domain(
     const double engine_source =
         map_target_to_source(dispatch_target, engine_map)
         - static_cast<double>(engine_query_origin_offset_samples);
-    int64_t engine_frame = static_cast<int64_t>(std::llrint(engine_source));
-    if (engine_frame < 0) engine_frame = 0;
+    const int64_t engine_frame = static_cast<int64_t>(std::llrint(engine_source));
 
     out.authored_source_frame = source_frame;
     out.authored_target_frame = authored_target_window;
