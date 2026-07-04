@@ -179,9 +179,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     create_if_missing(wm_path, "00:00.000|1.00\n");
     create_if_missing(set_path, format_default_settings_template(stem));
 
-    // Load the markers file. Parse failures are non-fatal: we log each
-    // error to stderr and leave app.warpmarkers empty. The GUI still works
-    // as a waveform viewer.
+    // Load the markers file. A present-but-malformed sidecar aborts the
+    // load: GuiWarpMarkers::load clears the store before parsing, so a parse
+    // failure would leave an empty in-memory store while the authored file
+    // sits on disk. GuiSaveOps::save writes the stores unconditionally on
+    // Ctrl+S, so continuing would let one later save overwrite the authored
+    // sidecar. Aborting preserves the on-disk file, the same contract as a
+    // corrupt audio file or invalid engine settings below.
     app.warpmarkers.clear();
     app.phaseresetmarkers.clear();
     app.selected_markers.clear();
@@ -212,20 +216,32 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.settings_dirty     = false;
     app.first_save_pending = true;
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
-        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                     wm_path.string().c_str(), r.error().c_str());
+        std::fprintf(stderr,
+            "warptempo_gui: source load aborted: invalid warp markers in "
+            "'%s': %s\n",
+            wm_path.string().c_str(), r.error().c_str());
+        revert_to_blank();
+        return false;
     } else {
         std::fprintf(stderr, "[warptempo_gui] parsed %zu markers from %s\n",
                      app.warpmarkers.markers().size(), wm_path.string().c_str());
     }
 
-    // Load .phaseresetmarkers if present. Missing file is fine — the
-    // phase reset list is just empty. Parse errors are logged to stderr;
-    // the warp side stays usable regardless.
+    // Load .phaseresetmarkers if present. Missing file is fine — the phase
+    // reset list is just empty; absence is not malformation. A present-but-
+    // malformed sidecar aborts the load: GuiPhaseResetMarkers::load clears
+    // the store before parsing, so continuing would leave an empty store that
+    // an unconditional Ctrl+S save would write over the authored file.
+    // Aborting preserves the on-disk file, the same contract as a corrupt
+    // audio file or invalid engine settings below.
     if (std::filesystem::exists(tm_path)) {
         if (auto r = app.phaseresetmarkers.load(tm_path.string()); !r) {
-            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                         tm_path.string().c_str(), r.error().c_str());
+            std::fprintf(stderr,
+                "warptempo_gui: source load aborted: invalid phase reset "
+                "markers in '%s': %s\n",
+                tm_path.string().c_str(), r.error().c_str());
+            revert_to_blank();
+            return false;
         } else {
             std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
                          app.phaseresetmarkers.markers().size(),
