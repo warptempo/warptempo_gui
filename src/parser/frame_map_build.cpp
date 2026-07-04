@@ -101,8 +101,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // including the position of the very marker that follows it, so
 // inheriting it would make a pass's tempo drift under unrelated position
 // edits. Pass values must stay literal, grammar-exact owner fields so
-// that freezing a pass (owner-deletion collapse, tempo nudge, Ctrl+N)
-// is lossless.
+// that freezing a pass (tempo nudge, Ctrl+N) is lossless.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
@@ -339,8 +338,7 @@ std::expected<MapBuildResult, std::string> build_maps(
             // The effective product (base times scale) has no ceiling. The
             // N.NN and N.NNNN limits are typed-field input syntax enforced at
             // parse and editor commit only; extreme products are the author's
-            // concern. Legacy-format files, whose tempo column evaluates a
-            // sum-of-decimals math string at load, are likewise uncapped here.
+            // concern.
             // Only a <= 0 product is rejected: the segment arithmetic divides
             // by it, so a zero or negative product divides by zero or flips
             // sign in delta_tgt. That guard is correctness, not form.

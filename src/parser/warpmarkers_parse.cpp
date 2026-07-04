@@ -4,14 +4,12 @@
 #include "time_format.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cstdio>
 #include <expected>
 #include <fstream>
 #include <map>
 #include <regex>
 #include <set>
-#include <sstream>
 
 namespace {
 
@@ -33,54 +31,6 @@ bool is_valid_tempo_format(const std::string& s) {
 bool is_valid_scale_format(const std::string& s) {
     static const std::regex re("^[0-9]\\.[0-9]{4}$");
     return std::regex_match(s, re);
-}
-
-// Legacy-only: evaluate a sum-of-signed-decimals like "1.23+0.05-0.03".
-// Whitespace is stripped. Used on legacy load only; new format rejects
-// arithmetic in the tempo column.
-double eval_math_string(const std::string& in) {
-    std::string s;
-    s.reserve(in.size());
-    for (char c : in) {
-        if (!std::isspace(static_cast<unsigned char>(c))) s.push_back(c);
-    }
-    double total = 0.0;
-    char op = '+';
-    size_t i = 0;
-    while (i < s.size()) {
-        size_t len = 0;
-        while (i + len < s.size() &&
-               (std::isdigit(static_cast<unsigned char>(s[i + len])) ||
-                s[i + len] == '.')) {
-            ++len;
-        }
-        if (len > 0) {
-            double v = 0.0;
-            try {
-                v = std::stod(s.substr(i, len));
-            } catch (...) {
-                // Unparseable tokens end evaluation rather than throwing.
-                break;
-            }
-            if (op == '+') total += v;
-            else if (op == '-') total -= v;
-            i += len;
-        } else if (s[i] == '+' || s[i] == '-') {
-            op = s[i];
-            ++i;
-        } else {
-            break;
-        }
-    }
-    return total;
-}
-
-std::vector<std::string> split_pipe(const std::string& s) {
-    std::vector<std::string> out;
-    std::stringstream ss(s);
-    std::string seg;
-    while (std::getline(ss, seg, '|')) out.push_back(seg);
-    return out;
 }
 
 bool is_indented_raw(const std::string& raw) {
@@ -203,22 +153,6 @@ bool parse_new_payload(const std::string& payload,
 
 namespace warpmarkers_internal {
 
-// Normalize a scale string to canonical N.NNNN form. Used by save() to
-// re-emit legacy-loaded scales (which may have had any precision) in the
-// new format. If the string can't be parsed, returns it unchanged so the
-// data isn't lost — but the next reload will reject it.
-std::string normalize_scale_string(const std::string& s) {
-    if (s.empty()) return s;
-    try {
-        const double v = std::stod(s);
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.4f", v);
-        return buf;
-    } catch (...) {
-        return s;
-    }
-}
-
 // --- single-line parser -----------------------------------------------------
 //
 // Parses one canonical line into a WarpMarker, doing line-local validation
@@ -280,23 +214,10 @@ parse_warpmarkers_file(const std::string& path) {
     }
     if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
-    // ----- File-level legacy detection ------------------------------------
-    //
-    // A file is legacy if any line contains the `""""` ditto sentinel.
-    // Mixed-format files are not handled — the first save migrates the
-    // entire file in one shot.
-    bool is_legacy_file = false;
-    for (const auto& raw : raw_lines) {
-        if (raw.find("\"\"\"\"") != std::string::npos) {
-            is_legacy_file = true;
-            break;
-        }
-    }
-
     // ----- Pass 1: gather defined labels ---------------------------------
     //
-    // For both formats. A label reference is only valid if its label
-    // appears as a def somewhere in the file. Disabled defs still count.
+    // A label reference is only valid if its label appears as a def
+    // somewhere in the file. Disabled defs still count.
 
     std::set<std::string>            defined;
 
@@ -315,45 +236,24 @@ parse_warpmarkers_file(const std::string& path) {
         }
         if (t.empty()) continue;
 
-        if (is_legacy_file) {
-            // Legacy: column 3 holds the label def. Truncate at first space
-            // so trailing freeform text doesn't end up inside the column.
-            const size_t sp = t.find(' ');
-            const std::string body =
-                (sp == std::string::npos) ? t : t.substr(0, sp);
-            const auto cols = split_pipe(body);
-            if (cols.size() > 2 && !cols[2].empty()) {
-                std::string lbl = cols[2];
-                if (!lbl.empty() && lbl[0] == '#') lbl.erase(0, 1);
-                if (is_valid_label_format(lbl)) {
-                    defined.insert(lbl);
-                }
-            }
-        } else {
-            // New format: payload after `|`, optionally containing `:label`.
-            const size_t pipe = t.find('|');
-            if (pipe == std::string::npos) continue;
-            const std::string payload = t.substr(pipe + 1);
-            if (payload.find('(') != std::string::npos ||
-                payload.find(')') != std::string::npos) {
-                continue;
-            }
-            const size_t colon = payload.find(':');
-            if (colon == std::string::npos) continue;
-            const std::string lbl = payload.substr(colon + 1);
-            if (is_valid_label_format(lbl)) {
-                defined.insert(lbl);
-            }
+        // Payload after `|`, optionally containing `:label`.
+        const size_t pipe = t.find('|');
+        if (pipe == std::string::npos) continue;
+        const std::string payload = t.substr(pipe + 1);
+        if (payload.find('(') != std::string::npos ||
+            payload.find(')') != std::string::npos) {
+            continue;
+        }
+        const size_t colon = payload.find(':');
+        if (colon == std::string::npos) continue;
+        const std::string lbl = payload.substr(colon + 1);
+        if (is_valid_label_format(lbl)) {
+            defined.insert(lbl);
         }
     }
 
     // ----- Pass 2: build markers -----------------------------------------
 
-    // `have_prev_numeric` gates the legacy `""""` ditto sentinel: ditto can
-    // only appear after a numeric tempo. The actual tempo carried forward
-    // is no longer recorded — pass markers in the in-memory model carry
-    // inert defaults and resolve live via walk-backward instead.
-    bool have_prev_numeric = false;
     bool first_marker_seen = false;
     double last_time       = -1.0;
 
@@ -385,112 +285,9 @@ parse_warpmarkers_file(const std::string& path) {
             continue;
         }
 
-        // ---------- Legacy parse path (load-only, file-level routed) ----
-        if (is_legacy_file) {
-            const size_t sp = t.find(' ');
-            if (sp != std::string::npos) {
-                t = t.substr(0, sp);
-            }
-            const auto cols = split_pipe(t);
-            if (cols.size() < 2)
-                return fail(line_number, "need at least time|tempo columns");
-            const std::string& time_raw = cols[0];
-
-            if (time_raw.size() < 9 ||
-                !is_valid_timestamp_format(time_raw.substr(0, 9)))
-                return fail(line_number, "invalid time format: " + time_raw);
-            const std::string time_initial = time_raw.substr(0, 9);
-            double final_time = parse_timestamp(time_initial);
-            if (time_raw.size() > 9) {
-                final_time += eval_math_string(time_raw.substr(9));
-            }
-
-            if (!first_marker_seen) {
-                if (time_initial != "00:00.000")
-                    return fail(line_number,
-                        "first marker must be 00:00.000 (got " + time_initial +
-                        ")");
-                first_marker_seen = true;
-            }
-            if (last_time >= 0.0 && final_time <= last_time)
-                return fail(line_number,
-                    "time not strictly increasing: " + time_initial);
-
-            WarpMarker m;
-            m.time_seconds  = final_time;
-
-            const std::string& tempo_raw = cols[1];
-            const std::string  label_raw = (cols.size() > 2) ? cols[2]
-                                                             : std::string();
-
-            const bool tempo_quoted  = (tempo_raw == "\"\"\"\"");
-            const bool tempo_numeric = !tempo_raw.empty() &&
-                (std::isdigit(static_cast<unsigned char>(tempo_raw[0])) ||
-                 tempo_raw[0] == '.');
-
-            if (tempo_quoted) {
-                if (!have_prev_numeric)
-                    return fail(line_number,
-                        "ditto tempo \"\"\"\" has no preceding numeric tempo");
-                m.tempo_inherits = true;
-                m.tempo_base     = 1.0;
-                m.tempo_scale    = "1.0000";
-            } else if (tempo_numeric) {
-                const size_t star = tempo_raw.find('*');
-                const std::string base_part = (star == std::string::npos)
-                    ? tempo_raw : tempo_raw.substr(0, star);
-                const std::string scale = (star == std::string::npos)
-                    ? std::string() : tempo_raw.substr(star + 1);
-                // The scale field uses the strict N.NNNN syntax even on the
-                // legacy load path; only the base part allows legacy
-                // arithmetic.
-                if (star != std::string::npos && !is_valid_scale_format(scale))
-                    return fail(line_number,
-                        "scale must be N.NNNN format: " + scale);
-                m.tempo_inherits = false;
-                m.tempo_base     = eval_math_string(base_part);
-                m.tempo_scale    = scale;
-                have_prev_numeric = true;
-            } else {
-                if (!is_valid_label_format(tempo_raw))
-                    return fail(line_number,
-                        "invalid tempo or label reference: " + tempo_raw);
-                if (defined.count(tempo_raw) == 0)
-                    return fail(line_number,
-                        "reference to undefined label: " + tempo_raw);
-                m.label_ref      = tempo_raw;
-                m.tempo_inherits = false;
-                m.tempo_base     = 0.0;
-                m.tempo_scale.clear();
-            }
-
-            // A leading hash disables the marker in both formats; a label-
-            // column hash additionally marks that label definition disabled.
-            if (!label_raw.empty()) {
-                std::string def = label_raw;
-                bool def_disabled = false;
-                if (def[0] == '#') {
-                    def_disabled = true;
-                    def.erase(0, 1);
-                }
-                if (!is_valid_label_format(def))
-                    return fail(line_number,
-                        "invalid label definition: " + label_raw);
-                if (!m.label_ref.empty())
-                    return fail(line_number,
-                        "marker cannot be both a label reference and a label "
-                        "definition");
-                m.label_def = def;
-                m.disabled  = def_disabled;
-            }
-            if (line_disabled) m.disabled = true;
-
-            last_time = m.time_seconds;
-            markers.push_back(std::move(m));
-            continue;
-        }
-
-        // ---------- New-format parse path -------------------------------
+        if (t.find("\"\"\"\"") != std::string::npos)
+            return fail(line_number,
+                "legacy ditto syntax no longer supported; re-save from the GUI");
 
         auto parsed = warpmarkers_internal::parse_single_canonical_line(t);
         if (!parsed)

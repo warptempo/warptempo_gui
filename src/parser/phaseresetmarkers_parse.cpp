@@ -6,7 +6,6 @@
 #include <cstring>
 #include <expected>
 #include <fstream>
-#include <regex>
 #include <sstream>
 
 namespace {
@@ -19,35 +18,12 @@ bool starts_with(const std::string& s, const char* pfx) {
     return s.size() >= n && s.compare(0, n, pfx) == 0;
 }
 
-bool is_valid_seconds_offset_body(const std::string& s) {
-    static const std::regex re("^[0-9]+\\.[0-9]{3}$");
-    return std::regex_match(s, re);
-}
-
-std::expected<double, std::string> parse_legacy_offset_suffix(const std::string& s) {
-    if (s.empty()) return 0.0;
-    if (s[0] != '+' && s[0] != '-') {
-        return std::unexpected<std::string>(
-            "malformed phase reset offset suffix: " + s);
-    }
-
-    const std::string body = s.substr(1);
-    if (!is_valid_seconds_offset_body(body)) {
-        return std::unexpected<std::string>(
-            "phase reset offset must be signed S.mmm: " + s);
-    }
-
-    double v = 0.0;
-    try {
-        v = std::stod(body);
-    } catch (...) {
-        return std::unexpected<std::string>(
-            "phase reset offset out of range: " + s);
-    }
-    return (s[0] == '-') ? -v : v;
-}
-
-std::expected<double, std::string> parse_timestamp_with_optional_offset(
+// Parse the single timestamp token into a time in seconds. The token must
+// be exactly nine characters of MM:SS.mmm; a mode token (trailing |peak /
+// |heap / |pass), an extra whitespace-separated token, or any trailing
+// characters after the timestamp are parse errors carrying an upgrade
+// diagnostic.
+std::expected<double, std::string> parse_timestamp_token(
     const std::vector<std::string>& toks) {
     if (toks.empty()) {
         return std::unexpected<std::string>("missing timestamp");
@@ -65,15 +41,12 @@ std::expected<double, std::string> parse_timestamp_with_optional_offset(
         return std::unexpected<std::string>(
             "expected MM:SS.mmm timestamp: " + token);
     }
-
-    double out = parse_timestamp(token.substr(0, 9));
     if (token.size() > 9) {
-        auto offset = parse_legacy_offset_suffix(token.substr(9));
-        if (!offset)
-            return std::unexpected(std::move(offset.error()));
-        out += *offset;
+        return std::unexpected<std::string>(
+            "trailing characters after timestamp: " + token);
     }
-    return out;
+
+    return parse_timestamp(token);
 }
 
 // Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
@@ -110,7 +83,7 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
         return std::unexpected<std::string>("missing timestamp");
     }
 
-    auto parsed_time = parse_timestamp_with_optional_offset(toks);
+    auto parsed_time = parse_timestamp_token(toks);
     if (!parsed_time)
         return std::unexpected(std::move(parsed_time.error()));
     out.time_seconds = *parsed_time;

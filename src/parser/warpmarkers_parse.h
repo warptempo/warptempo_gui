@@ -37,11 +37,11 @@ struct WarpMarker {
     bool disabled      = false;
 };
 
-// Parse a .warpmarkers file (legacy or new format). Never throws. Returns the
-// parsed markers on success; on the first malformed line, or an unopenable
-// file, returns a one-line diagnostic (line-tagged where line-specific). This
-// is the canonical .warpmarkers reader for both the GUI store and the headless
-// CLI.
+// Parse a .warpmarkers file in the canonical GUI-authored format. Never
+// throws. Returns the parsed markers on success; on the first malformed
+// line, or an unopenable file, returns a one-line diagnostic (line-tagged
+// where line-specific). This is the canonical .warpmarkers reader for both
+// the GUI store and the headless CLI.
 std::expected<std::vector<WarpMarker>, std::string>
 parse_warpmarkers_file(const std::string& path);
 
@@ -55,10 +55,5 @@ namespace warpmarkers_internal {
 // one-line diagnostic on failure.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line);
-
-// Canonicalize a scale string to the one-digit-dot-four-decimals form.
-// Owned here because both the parser and the GUI writer must agree on the
-// exact canonical form; exposed so warpmarkers.cpp's save() reuses it.
-std::string normalize_scale_string(const std::string& s);
 
 } // namespace warpmarkers_internal

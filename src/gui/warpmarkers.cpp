@@ -74,7 +74,7 @@ bool GuiWarpMarkers::save(const std::string& path,
                 std::snprintf(tbuf, sizeof(tbuf), "%.2f", m.tempo_base);
                 out << tbuf;
                 if (!m.tempo_scale.empty()) {
-                    out << '*' << warpmarkers_internal::normalize_scale_string(m.tempo_scale);
+                    out << '*' << m.tempo_scale;
                 }
             }
             if (!m.label_def.empty()) {
