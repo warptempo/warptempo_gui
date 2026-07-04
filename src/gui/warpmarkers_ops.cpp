@@ -52,37 +52,6 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
     return i;
 }
 
-namespace {
-
-// A pass can legitimately sit after [label_ref, owner]; deleting that
-// owner would leave the pass re-resolving to a different source (the
-// label ref, or a more distant owner), silently changing its tempo.
-// Hard-collapse every surviving pass whose nearest owner is being deleted
-// into an explicit owner carrying the exact base/scale it was inheriting,
-// freezing the value and breaking the dependency. Reads pre-delete
-// indices and copies the owner's literal fields, so processing order does
-// not matter.
-void collapse_dependent_passes(std::vector<GuiWarpMarker>& mv,
-                               const std::set<int>& deleted) {
-    for (int p = 0; p < static_cast<int>(mv.size()); ++p) {
-        if (deleted.count(p)) continue;
-        if (!mv[p].tempo_inherits || !mv[p].label_ref.empty()) continue;
-        int owner = p - 1;
-        while (owner >= 0 &&
-               (mv[owner].tempo_inherits || !mv[owner].label_ref.empty() ||
-                mv[owner].disabled)) {
-            --owner;
-        }
-        if (owner >= 0 && deleted.count(owner)) {
-            mv[p].tempo_base    = mv[owner].tempo_base;
-            mv[p].tempo_scale   = mv[owner].tempo_scale;
-            mv[p].tempo_inherits = false;
-        }
-    }
-}
-
-}  // namespace
-
 bool proposed_warp_state_valid(const std::vector<GuiWarpMarker>& proposed,
                                double scale, int sample_rate,
                                long total_frames) {
@@ -214,6 +183,9 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     drop_marker(t, /*inherit=*/false, base, scale);
 }
 
+// Deleting an owning marker lets downstream pass markers re-resolve to the
+// next earlier owner, the same live re-resolution that disabling an owner
+// already produces; no values are frozen on delete.
 void GuiWarpMarkersOps::delete_selected_marker() {
     if (app.selected_markers.empty()) return;
     const auto& mv = app.warpmarkers.markers();
@@ -257,7 +229,6 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     }
 
     std::vector<GuiWarpMarker> proposed = mv;
-    collapse_dependent_passes(proposed, app.selected_markers);
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
         proposed.erase(proposed.begin() + *it);
@@ -272,10 +243,6 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // before mutating so the undo can restore the pre-delete selection.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
-    // Freeze any surviving pass whose source owner is in this batch
-    // before the owner is actually removed (see collapse_dependent_passes).
-    collapse_dependent_passes(app.warpmarkers.markers_mut(),
-                              app.selected_markers);
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
@@ -332,7 +299,6 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     }
 
     std::vector<GuiWarpMarker> proposed = mv;
-    collapse_dependent_passes(proposed, expanded);
     for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         proposed.erase(proposed.begin() + *it);
     }
@@ -368,9 +334,6 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
         }
         if (def_hint >= 0) hint_last = def_hint;
     }
-    // Freeze any surviving pass whose source owner is in this batch
-    // before the owner is actually removed (see collapse_dependent_passes).
-    collapse_dependent_passes(app.warpmarkers.markers_mut(), expanded);
     for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
