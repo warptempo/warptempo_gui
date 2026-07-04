@@ -75,7 +75,13 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // at write). Blank / whitespace-only lines are skipped. Any malformed line
 // (non-numeric, negative, missing field, or trailing garbage) fails the
 // whole read (std::nullopt), so a truncated or corrupt file never feeds the
-// engine a partial map. A missing/unopenable file is also std::nullopt.
+// engine a partial map. Both columns must also be strictly ascending line over
+// line: map_source_to_target / map_target_to_source above binary-search on
+// strictly monotonic breakpoints, and a duplicated or out-of-order breakpoint
+// makes the segment interpolation divide by zero, so any accepted line whose
+// src_frame or tgt_frame does not strictly exceed the previous accepted
+// line's fails the whole read too. A missing/unopenable file is also
+// std::nullopt.
 inline std::optional<std::vector<FrameMapSegment>>
 read_frame_map(const std::string& path) {
     std::ifstream in(path);
@@ -90,6 +96,9 @@ read_frame_map(const std::string& path) {
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
         if (s < 0.0 || t < 0.0) return std::nullopt;
+        if (!segs.empty() && (s <= segs.back().src_frame || t <= segs.back().tgt_frame)) {
+            return std::nullopt;
+        }
         segs.push_back(FrameMapSegment{s, t});
     }
     return segs;
@@ -97,10 +106,16 @@ read_frame_map(const std::string& path) {
 
 // .resetmap: one undisplaced source-frame integer per line (non-negative),
 // in file order. Blank / whitespace-only lines skipped; any malformed or
-// negative line fails the whole read. The file carries only active resets
-// (the writer's caller drops disabled markers), so there is no '#'/disabled
-// syntax to handle. A missing/unopenable file is std::nullopt; an empty-but-readable
-// file yields an empty list (a valid "no resets" render input).
+// negative line fails the whole read. Frames must also be strictly ascending
+// line over line: EngineParams::phase_reset_frames is documented
+// sorted-ascending in engine.h and synthesis consumes reset placements with a
+// single forward cursor, so a descending or duplicated resetmap would render
+// while silently never firing the earlier reset; any accepted frame that does
+// not strictly exceed the previous accepted frame fails the whole read. The
+// file carries only active resets (the writer's caller drops disabled
+// markers), so there is no '#'/disabled syntax to handle. A missing/unopenable
+// file is std::nullopt; an empty-but-readable file yields an empty list (a
+// valid "no resets" render input).
 inline std::optional<std::vector<int64_t>>
 read_reset_map(const std::string& path) {
     std::ifstream in(path);
@@ -115,6 +130,7 @@ read_reset_map(const std::string& path) {
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
         if (f < 0) return std::nullopt;
+        if (!frames.empty() && f <= frames.back()) return std::nullopt;
         frames.push_back(static_cast<int64_t>(f));
     }
     return frames;
