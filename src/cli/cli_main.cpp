@@ -119,9 +119,17 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- markers; empty if the file is absent ---
+    // --- markers; a missing sidecar is a startup error, since an absent
+    // file would resolve to an empty marker list that build_maps rejects. ---
     std::vector<WarpMarker> markers;
-    if (std::filesystem::exists(wm_path)) {
+    if (!std::filesystem::exists(wm_path)) {
+        std::fprintf(stderr,
+            "warptempo_cli: missing warp markers file '%s' "
+            "(the GUI creates this sidecar on source load)\n",
+            wm_path.c_str());
+        return 1;
+    }
+    {
         auto wmp = parse_warpmarkers_file(wm_path);
         if (!wmp) {
             std::fprintf(stderr, "warptempo_cli: %s: %s\n",

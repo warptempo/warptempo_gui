@@ -300,6 +300,20 @@ std::expected<MapBuildResult, std::string> build_maps(
         return std::unexpected("invalid source audio metadata");
     }
 
+    // Reject a resolved marker list with no entries. With zero markers both
+    // passes iterate zero times and the map holds only the seed 0,0 anchor.
+    // On the full-render path the emit cap is derived from that map's last
+    // target, which is then zero, and the engine treats a zero cap as
+    // uncapped, so the defect would otherwise surface only as a near-empty
+    // rendered file rather than an error. With at least one surviving marker
+    // the map's last target is always positive (every segment is at least one
+    // source frame and tempo products are positive), so this rejection also
+    // guarantees a full map never hands the engine a zero cap.
+    if (markers.empty()) {
+        return std::unexpected(
+            "no render-surviving warp markers (all disabled, or none authored)");
+    }
+
     // Trim range comes from .settings (MapBuildInput::trim_*), no
     // longer from per-marker flags. The post-pass below filters frame_map
     // segments by source frame against this range.
