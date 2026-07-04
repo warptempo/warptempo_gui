@@ -333,15 +333,17 @@ std::expected<MapBuildResult, std::string> build_maps(
 
         const auto& m = markers[i];
         const bool is_numeric   = m.label_ref.empty();
-        const bool is_label_ref = !m.label_ref.empty();
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            if (tempo_val > 9.99) {
-                return std::unexpected("tempo " + std::to_string(tempo_val)
-                                       + " exceeds 9.99 at marker "
-                                       + std::to_string(i));
-            }
+            // The effective product (base times scale) has no ceiling. The
+            // N.NN and N.NNNN limits are typed-field input syntax enforced at
+            // parse and editor commit only; extreme products are the author's
+            // concern. Legacy-format files, whose tempo column evaluates a
+            // sum-of-decimals math string at load, are likewise uncapped here.
+            // Only a <= 0 product is rejected: the segment arithmetic divides
+            // by it, so a zero or negative product divides by zero or flips
+            // sign in delta_tgt. That guard is correctness, not form.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " + std::to_string(tempo_val)
                                        + " <= 0 at marker " + std::to_string(i));
@@ -362,7 +364,6 @@ std::expected<MapBuildResult, std::string> build_maps(
                 label_cache[m.label_def] = e;
             }
         }
-        (void)is_label_ref;  // computed only for Pass 2
 
         src_f_prev = src_frame;
     }
