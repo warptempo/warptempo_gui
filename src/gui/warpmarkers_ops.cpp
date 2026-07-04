@@ -5,6 +5,7 @@
 #include "frame_map_view.h"
 #include "target_render.h"
 #include "time_format.h"
+#include "warpmarkers.h"
 
 #include <algorithm>
 #include <cmath>
@@ -35,9 +36,12 @@
 //   waveform_area, union_rect,
 //   playhead_invalidate_rect       → free functions, no qualifier change
 
-// Index of the nearest non-disabled marker strictly before `time_seconds`,
-// or -1 if none. Matches the resolver's walk (frame_map_build.cpp's
-// resolve_inherited_tempo): disabled markers are skipped. `time_seconds`
+// Index of the nearest marker strictly before `time_seconds` that survives
+// into the render, or -1 if none. Uses the same cascade definition as render
+// resolution and hover (effective_disabled: a marker is out if its own
+// disabled flag is set, or it is an enabled label ref whose target def is
+// disabled), so copy-previous copies the previous render-visible tempo
+// rather than attributing to a marker the render ignores. `time_seconds`
 // need not be present in `mv` — drop_copy_previous_at_playhead calls this
 // with the prospective drop time before insertion, landing on the same
 // slot insert_marker's lower_bound would place the new marker at, one
@@ -48,7 +52,7 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
         mv.begin(), mv.end(), time_seconds,
         [](const GuiWarpMarker& a, double t) { return a.time_seconds < t; });
     int i = static_cast<int>(it - mv.begin()) - 1;
-    while (i >= 0 && mv[i].disabled) --i;
+    while (i >= 0 && effective_disabled(mv, i)) --i;
     return i;
 }
 
