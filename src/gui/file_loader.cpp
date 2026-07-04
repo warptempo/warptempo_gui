@@ -16,6 +16,7 @@
 #include <expected>
 #include <filesystem>
 #include <string>
+#include <system_error>
 #include <utility>
 
 GuiFileLoader::~GuiFileLoader() {
@@ -165,7 +166,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phaseresetmarkers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
-    gui.set_title(path + " - warptempo_gui");
+    // The title shows the canonical absolute source path: a relative or
+    // symlinked command-line spelling would otherwise surface verbatim in
+    // the window title. canonical() cannot fail here in practice (the file
+    // was just opened); on error the spelled path is the fallback.
+    std::error_code title_ec;
+    const std::filesystem::path title_path =
+        std::filesystem::canonical(apath, title_ec);
+    gui.set_title((title_ec ? path : title_path.string()) +
+                  " - warptempo_gui");
 
     create_if_missing(wm_path, "00:00.000|1.00\n");
     create_if_missing(set_path, format_default_settings_template(stem));
