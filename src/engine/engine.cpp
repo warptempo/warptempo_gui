@@ -213,7 +213,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         if (it == fm.begin()) continue;
         --it;
         size_t s = static_cast<size_t>(it - fm.begin());
-        if (s >= fm.size()) continue;
         audio_stft.phase_reset_placements.push_back({static_cast<int>(s), F});
     }
     std::cout << "[Pass 1/" << (audio_stft.limiter ? 3 : 2)
