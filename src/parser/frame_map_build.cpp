@@ -95,7 +95,14 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // after a label ref therefore legally inherits the nearest owner further
 // back — that arrangement is bad form but accepted everywhere (parse,
 // GUI ops, flag editor), and this resolution is the single source of its
-// meaning across render, framemap, tempomap, and hover.
+// meaning across render, framemap, tempomap, and hover. Passes
+// deliberately never inherit through a ref: a ref owns a duration
+// equation, not a rate, and its implied rate depends on segment geometry
+// including the position of the very marker that follows it, so
+// inheriting it would make a pass's tempo drift under unrelated position
+// edits. Pass values must stay literal, grammar-exact owner fields so
+// that freezing a pass (owner-deletion collapse, tempo nudge, Shift+N)
+// is lossless.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];

@@ -17,7 +17,12 @@
 // continue undisturbed through the opening stretch; a trim (or, on a
 // full render, an authored reset) placed this close to the render's own
 // start means the marker and its following segment, up to the next
-// reset, are not the passage in focus for this render.
+// reset, are not the passage in focus for this render. This near-start
+// dropzone is deliberately not gated at parse time or in the GUI -- it
+// is render-relative and warp-dependent (the same authored marker can be
+// droppable in one trim window and live in another), so no
+// authoring-time check could be correct, and the silent per-render drop
+// is the intended contract.
 inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
         int64_t source_frame,
         const std::vector<FrameMapSegment>& full_map,
