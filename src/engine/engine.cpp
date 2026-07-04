@@ -136,22 +136,23 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
     // Synthesis window and emit cap. The engine renders the supplied map but
     // emits only emit_sample_cap output samples. On the explicit-cap path (a
-    // trimmed render handed a pre-sliced sub-map), synthesis is bounded to the
-    // frames that touch [0, emit_sample_cap); frames past that write solely into
-    // the truncated tail, so omitting them is byte-identical and keeps trimmed
-    // renders from synthesizing to the sub-map's far closing anchor. On the
-    // default path (full render) the whole map is synthesized and the cap is the
-    // map's last-anchor target.
+    // trimmed render handed a pre-sliced sub-map), synthesis is bounded to
+    // exactly the frames whose OLA span touches [0, emit_sample_cap) and no
+    // further, so trimmed renders do not synthesize out to the sub-map's far
+    // closing anchor. On the default path (full render) the whole map is
+    // synthesized and the cap is the map's last-anchor target.
     {
         const int num_frames =
             static_cast<int>(audio_stft.source_frame_positions.size());
         if (p.emit_sample_cap > 0) {
             audio_stft.emit_sample_cap = p.emit_sample_cap;
-            // Frames whose output start (m*R_s) is >= emit_sample_cap contribute
-            // nothing to the emitted region. Synthesize enough that the mono
-            // length (wcount-1)*R_s + N/2 exceeds the cap (so the cap, not the
-            // mono length, binds the output); the +2 frame margin guarantees it.
-            int64_t need = (p.emit_sample_cap / audio_stft.R_s) + 2;
+            // After the N/2 head trim, frame m covers output samples
+            // [m*R_s - N/2, m*R_s + N/2), and every emitted sample needs all four
+            // overlapping frames for unity COLA gain. The last frame overlapping
+            // output sample cap-1 is (cap-1)/R_s + 2, so synthesis runs through it
+            // inclusive. This also keeps the mono push total above the cap, so the
+            // cap, not the mono length, binds the emitted count.
+            int64_t need = ((p.emit_sample_cap - 1) / audio_stft.R_s) + 3;
             if (need > num_frames) need = num_frames;
             audio_stft.synth_frame_end = static_cast<int>(need);
         } else {
