@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
         phase_reset_source_frames(resets, sample_rate);
     assign_engine_phase_resets(
         ep, reset_src_frames, tmfull.frame_map, window_offset_samples,
-        N_fft, sample_rate, "warptempo_cli");
+        N_fft);
 
     // --- render. The engine writes a sibling staging file and success
     // publishes it atomically via rename.

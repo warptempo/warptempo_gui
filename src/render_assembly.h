@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -93,14 +92,12 @@ inline int64_t assign_engine_phase_resets(
         const std::vector<int64_t>& reset_source_frames,
         const std::vector<FrameMapSegment>& full_map,
         int64_t window_offset_samples,
-        int N, long sample_rate,
-        const char* program_name) {
+        int N) {
     const int64_t render_target_frames =
         ep.emit_sample_cap > 0
             ? ep.emit_sample_cap
             : (ep.frame_map.empty() ? 0 :
                static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
-    std::vector<PhaseResetDispatchFrame> reset_placements;
     ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
         reset_source_frames,
         full_map,
@@ -108,18 +105,6 @@ inline int64_t assign_engine_phase_resets(
         window_offset_samples,
         render_target_frames,
         phase_reset_offset_samples,
-        N / 2,
-        &reset_placements);
-    for (const PhaseResetDispatchFrame& p : reset_placements) {
-        if (p.clamped_to_start) {
-            std::fprintf(stderr,
-                "%s: phase reset at %.3f s clamped to target frame 0 "
-                "(target-domain offset would place it before rendered audio "
-                "start)\n",
-                program_name,
-                static_cast<double>(p.authored_source_frame) /
-                    static_cast<double>(sample_rate));
-        }
-    }
+        N / 2);
     return render_target_frames;
 }

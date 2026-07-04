@@ -158,7 +158,6 @@ int main(int argc, char** argv) {
         ? 0
         : std::max<int64_t>(
             0, static_cast<int64_t>(std::llrint(fm->back().tgt_frame)));
-    std::vector<PhaseResetDispatchFrame> reset_placements;
     ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
         reset_src,
         *fm,
@@ -166,17 +165,7 @@ int main(int argc, char** argv) {
         0,
         render_target_frames,
         phase_reset_offset_samples,
-        N_fft / 2,
-        &reset_placements);
-    for (const PhaseResetDispatchFrame& p : reset_placements) {
-        if (p.clamped_to_start) {
-            std::fprintf(stderr,
-                "warptempo_engine: phase reset at source frame %lld clamped "
-                "to target frame 0 (target-domain offset would place it "
-                "before rendered audio start)\n",
-                static_cast<long long>(p.authored_source_frame));
-        }
-    }
+        N_fft / 2);
 
     // --- render: engine writes a sibling staging file and success publishes it
     // atomically via rename. ---

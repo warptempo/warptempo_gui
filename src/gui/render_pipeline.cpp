@@ -739,7 +739,7 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_resets(
             ep, req.phase_reset_frames, tmfull.frame_map, window_offset_samples,
-            N_fft, sample_rate, "warptempo_gui");
+            N_fft);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
             ? static_cast<double>(profile_target_frames) /
