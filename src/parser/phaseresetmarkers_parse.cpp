@@ -3,7 +3,6 @@
 #include "parse_text_util.h"
 #include "time_format.h"
 
-#include <cstring>
 #include <expected>
 #include <fstream>
 
@@ -11,47 +10,15 @@ namespace {
 
 using warptempo_parse::strip_bom;
 
-bool starts_with(const std::string& s, const char* pfx) {
-    const size_t n = std::strlen(pfx);
-    return s.size() >= n && s.compare(0, n, pfx) == 0;
-}
-
-// Parse the single timestamp token into a time in seconds. The token must
-// be exactly nine characters of MM:SS.mmm; a mode token (trailing |peak /
-// |heap / |pass) or any trailing characters after the timestamp are parse
-// errors carrying an upgrade diagnostic.
-std::expected<double, std::string> parse_timestamp_token(
-    const std::string& token) {
-    if (token.find('|') != std::string::npos) {
-        return std::unexpected<std::string>("phase-reset mode tokens removed; "
-                  "strip the trailing |peak/|heap/|pass");
-    }
-    if (token.size() < 9 || !is_valid_timestamp_format(token.substr(0, 9))) {
-        return std::unexpected<std::string>(
-            "expected MM:SS.mmm timestamp: " + token);
-    }
-    if (token.size() > 9) {
-        return std::unexpected<std::string>(
-            "trailing characters after timestamp: " + token);
-    }
-
-    return parse_timestamp(token);
-}
-
 // Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
 // success; on failure, returns a one-line diagnostic. The caller has
-// already rejected any whitespace on the line, so a legacy multi-token line
-// (an i/d status code or a displaced_frame token) fails there with the
-// no-whitespace error before reaching here. Trim flags (b= / e=) are
-// warp-only; encountering one on a phase reset line is a parse error so the
-// migration requirement surfaces.
+// already rejected any whitespace on the line, so the token reaching here is
+// non-empty and whitespace-free. The canonical grammar is an optional
+// leading '#' meaning disabled, then exactly nine characters forming a valid
+// MM:SS.mmm timestamp and nothing else; anything else fails with the generic
+// timestamp error.
 std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) {
     PhaseResetMarker out;
-
-    if (starts_with(raw, "b=") || starts_with(raw, "e=")) {
-        return std::unexpected<std::string>("phase_reset trim flags not supported; "
-                  "move b= / e= to a warp marker");
-    }
 
     std::string token = raw;
     if (!token.empty() && token[0] == '#') {
@@ -59,10 +26,11 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
         token.erase(0, 1);
     }
 
-    auto parsed_time = parse_timestamp_token(token);
-    if (!parsed_time)
-        return std::unexpected(std::move(parsed_time.error()));
-    out.time_seconds = *parsed_time;
+    if (token.size() != 9 || !is_valid_timestamp_format(token)) {
+        return std::unexpected<std::string>(
+            "expected MM:SS.mmm timestamp: " + token);
+    }
+    out.time_seconds = parse_timestamp(token);
     return out;
 }
 

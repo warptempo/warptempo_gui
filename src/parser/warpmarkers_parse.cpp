@@ -279,10 +279,6 @@ parse_warpmarkers_file(const std::string& path) {
             continue;
         }
 
-        if (t.find("\"\"\"\"") != std::string::npos)
-            return fail(line_number,
-                "legacy ditto syntax no longer supported; re-save from the GUI");
-
         auto parsed = warpmarkers_internal::parse_single_canonical_line(t);
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
