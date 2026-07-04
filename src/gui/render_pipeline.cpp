@@ -316,6 +316,36 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
+        // A fingerprint match only proves the wav and commit-critical
+        // sidecars are current; it says nothing about the render-domain
+        // display sidecars render-view reads for marker positions. Batch
+        // renders publish those, so a missing one here means an earlier
+        // publish limped through a warning-only display-sidecar failure (or
+        // the file was deleted by hand) — refuse the reuse rather than
+        // report up to date with stale or absent display state. One-off
+        // renders never produce display sidecars, so they are exempt.
+        if (batch_render) {
+            const std::filesystem::path bf(req.batch_folder);
+            const std::filesystem::path wmd_path =
+                bf / (req.batch_basename + ".renderwarpmarkers");
+            const std::filesystem::path tmd_path =
+                bf / (req.batch_basename + ".renderphaseresetmarkers");
+            std::error_code wmd_ec;
+            std::error_code tmd_ec;
+            const bool wmd_exists = std::filesystem::exists(wmd_path, wmd_ec);
+            const bool tmd_exists = std::filesystem::exists(tmd_path, tmd_ec);
+            if (!wmd_exists || !tmd_exists) {
+                const std::filesystem::path& missing =
+                    !wmd_exists ? wmd_path : tmd_path;
+                std::fprintf(stderr,
+                    "warptempo_gui: render reuse refused, missing display "
+                    "sidecar: %s\n",
+                    missing.string().c_str());
+                remove_created_commit_sidecars(sidecars.created_paths);
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+        }
         return finish_success("reused_up_to_date");
     }
 
@@ -511,10 +541,17 @@ RenderOutcome do_render(const RenderRequest& req,
     // source-domain .warpmarkers, source-domain .phaseresetmarkers
     // (including the empty-file form), and .rendersettings. Those
     // commit-critical sidecars must publish before the wav is reported as
-    // successful. Process death after the wav rename lands on disk but before
-    // those sidecars finish can leave an orphan wav that render-view enumerates
-    // and offers; Ctrl+Alt+C's validate-before-mutate path refuses that entry
-    // cleanly. That residual crash window is the accepted design.
+    // successful. The .peaks cache and the render-domain display sidecars
+    // (.renderwarpmarkers / .renderphaseresetmarkers) publish next, and
+    // .fingerprint is written last of all: it is the attestation that the
+    // full artifact set, peaks and display sidecars included, is complete,
+    // so a fingerprint match on a later render implies those files exist.
+    // The fingerprint-match reuse path above refuses a match whose display
+    // sidecars are missing rather than silently reporting up to date. Process
+    // death after the wav rename lands on disk but before those sidecars
+    // finish can leave an orphan wav that render-view enumerates and offers;
+    // Ctrl+Alt+C's validate-before-mutate path refuses that entry cleanly.
+    // That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
@@ -524,14 +561,14 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
+        write_peaks_cache_for_wav(final_output_path);
+        publish_render_domain_sidecars();
         if (!fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
                 "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
                 final_output_path.c_str());
         }
-        write_peaks_cache_for_wav(final_output_path);
-        publish_render_domain_sidecars();
         cleanup_all();
         return finish_success(outcome);
     };

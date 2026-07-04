@@ -100,7 +100,12 @@ void GuiSettingsEditor::commit() {
 
     // 3a. View-state key check. These have dedicated gestures and are
     // not settable through this editor — silently maintaining a parallel
-    // pathway here would create two ways to mutate the same thing.
+    // pathway here would create two ways to mutate the same thing. This is
+    // a deliberate asymmetry with file load: read_settings (settings_io.cpp)
+    // accepts these same keys from the .settings file because that file is
+    // their persistence domain (view state and trim survive restarts),
+    // while the editor is engine-keys-only by design — the two accept sets
+    // differ on purpose.
     if (is_view_state_key(key)) {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
