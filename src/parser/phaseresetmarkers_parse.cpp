@@ -154,10 +154,8 @@ parse_phaseresetmarkers_file(const std::string& path) {
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
         const double eff = m.time_seconds;
-        if (eff <= 0.0)
-            return fail(line_number,
-                "phase reset at 00:00.000 not allowed (degenerate: the "
-                "first frame already reseeds)");
+        // A reset at time zero parses and loads; it is inert at render because
+        // the near-start dropzone drops it at dispatch.
         if (last_time >= 0.0 && eff <= last_time)
             return fail(line_number,
                 "time_seconds not strictly increasing: " + format_timestamp(eff));
