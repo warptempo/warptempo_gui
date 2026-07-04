@@ -297,7 +297,14 @@ parse_warpmarkers_file(const std::string& path) {
             // with no literal owner (a pass's backward walk finds none and
             // silently defaults to 1.0). A label def is banned so no ref can
             // ever target the zero marker, keeping the position-zero cascade
-            // family unrepresentable. The grammar therefore
+            // family unrepresentable. The def ban is deliberate even though
+            // map math would tolerate a zero-positioned def (the marker still
+            // owns a concrete tempo): the zero marker is the one marker that
+            // can never be deleted or disabled, so a def there would make it a
+            // permanent special-case participant in every def-lifecycle path
+            // (rename cascade, referenced-def delete gate, def-removal gate),
+            // and the author loses nothing — the same label can be defined at
+            // any later marker. The grammar therefore
             // requires the zero marker to be an enabled owning plain tempo, and
             // every GUI mutation path guards the same rule.
             if (time_raw != "00:00.000")
