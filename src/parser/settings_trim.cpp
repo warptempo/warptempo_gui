@@ -7,6 +7,7 @@
 #include <expected>
 #include <fstream>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -63,5 +64,24 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
             out.tab_b.end_sec = parse_timestamp(value);
         }
     }
+
+    // Bounds are validated per tab at read time so no consumer ever sees a
+    // crossed or empty window: an end at or before its begin yields a zero- or
+    // negative-length window that has no meaning downstream (the GUI clamps it,
+    // the wav render's emit cap goes non-positive, and framemap/tempomap emit a
+    // non-monotonic end anchor). GUI gestures maintain ordering, so only a hand
+    // edit can author a crossed pair. No line-number prefix: the defect spans
+    // the two bound lines, not one.
+    for (const auto& [name, tab] :
+         {std::pair<const char*, const SettingsTrim&>{"tab_a", out.tab_a},
+          std::pair<const char*, const SettingsTrim&>{"tab_b", out.tab_b}}) {
+        if (tab.has_begin && tab.has_end && tab.end_sec <= tab.begin_sec) {
+            return std::unexpected(
+                std::string("crossed trim bounds for ") + name + ": end " +
+                format_timestamp(tab.end_sec) + " <= begin " +
+                format_timestamp(tab.begin_sec));
+        }
+    }
+
     return out;
 }
