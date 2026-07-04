@@ -410,9 +410,13 @@ RenderOutcome do_render(const RenderRequest& req,
         window_offset_samples = w.window_offset_samples;
     }
 
-    auto publish_render_domain_sidecars = [&]() {
-        if (!batch_render || req.output_buffer) return;
+    // Returns false if any attempted display-sidecar write failed (vacuously
+    // true when the batch/wav conditions skip the writes). The wav publish
+    // path uses that to withhold the fingerprint attestation.
+    auto publish_render_domain_sidecars = [&]() -> bool {
+        if (!batch_render || req.output_buffer) return true;
 
+        bool all_ok = true;
         const std::filesystem::path bf(req.batch_folder);
 
         // Render-domain sidecars (.renderwarpmarkers / .renderphaseresetmarkers).
@@ -499,6 +503,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     wmd_path.c_str());
+                all_ok = false;
             }
 
             std::vector<FrameMapSegment> real_map(real.begin, real.end);
@@ -532,8 +537,10 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     tmd_path.c_str());
+                all_ok = false;
             }
         }
+        return all_ok;
     };
 
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
@@ -547,8 +554,14 @@ RenderOutcome do_render(const RenderRequest& req,
     // .fingerprint is written last of all: it is the attestation that the
     // full artifact set, peaks and display sidecars included, is complete,
     // so a fingerprint match on a later render implies those files exist.
-    // The fingerprint-match reuse path above refuses a match whose display
-    // sidecars are missing rather than silently reporting up to date. Process
+    // If the peaks or display-sidecar writes fail, the render still succeeds
+    // (the wav and commit-critical sidecars are intact) but the fingerprint
+    // is withheld so the attestation stays truthful: a later matching render
+    // finds no fingerprint and regenerates, rather than matching an
+    // incomplete set. The fingerprint-match reuse path above still refuses a
+    // match whose display sidecars are missing rather than silently
+    // reporting up to date — that covers fingerprints published before a
+    // sidecar was deleted out from under them. Process
     // death after the wav rename lands on disk but before those sidecars
     // finish can leave an orphan wav that render-view enumerates and offers;
     // Ctrl+Alt+C's validate-before-mutate path refuses that entry cleanly.
@@ -562,9 +575,15 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        write_peaks_cache_for_wav(final_output_path);
-        publish_render_domain_sidecars();
-        if (!fingerprint.empty() &&
+        const bool peaks_ok = write_peaks_cache_for_wav(final_output_path);
+        const bool display_ok = publish_render_domain_sidecars();
+        if (!peaks_ok || !display_ok) {
+            std::fprintf(stderr,
+                "[warptempo_gui] fingerprint withheld for %s: %s write "
+                "failed\n",
+                final_output_path.c_str(),
+                !peaks_ok ? "peaks cache" : "display sidecar");
+        } else if (!fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
                 "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
