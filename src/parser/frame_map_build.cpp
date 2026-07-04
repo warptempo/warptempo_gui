@@ -32,20 +32,30 @@ struct LabelCacheEntry {
     std::string tempo_scale;
 };
 
+// Single source of truth for "does this raw marker survive into the render
+// list". A marker is silenced either by its own disabled flag or, for an
+// enabled label ref, by its definition marker being disabled — the cascade,
+// because the definition supplies the duration the ref imposes, so a silenced
+// definition leaves the ref with nothing to reproduce. resolve_markers_for_render
+// filters on this, and marker_effective measures label-ref segment distances to
+// the next marker that passes it, so the hover multiplier tracks the frame map.
+bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) {
+    const WarpMarker& g = mv[idx];
+    if (g.disabled) return true;
+    if (!g.label_ref.empty()) {
+        for (const auto& d : mv) {
+            if (d.disabled && !d.label_def.empty() && d.label_def == g.label_ref) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<WarpMarker>& src) {
-
-    // First pass: collect disabled label names.
-    std::vector<std::string> disabled;
-    for (const auto& m : src) {
-        if (!m.label_def.empty() && m.disabled) disabled.push_back(m.label_def);
-    }
-    auto is_disabled_ref = [&](const std::string& label) {
-        for (const auto& d : disabled) if (d == label) return true;
-        return false;
-    };
 
     // Inherited-tempo resolution for pass markers is the canonical
     // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
@@ -55,20 +65,14 @@ std::vector<MarkerForRender> resolve_markers_for_render(
     std::vector<MarkerForRender> out;
     out.reserve(src.size());
     for (size_t i = 0; i < src.size(); ++i) {
-        const auto& g = src[i];
-        const bool is_disabled_label_ref_cascade =
-            !g.disabled && !g.label_ref.empty()
-            && is_disabled_ref(g.label_ref);
         // `disabled` is allowed on any marker; whatever its kind, a disabled
         // marker's tempo is silenced. The label_ref cascade is a separate path
         // (the ref itself is not disabled but its target is). With trim moved
         // to settings, a disabled marker has no reason to survive into the
         // resolved list.
-        const bool is_effectively_disabled =
-            g.disabled || is_disabled_label_ref_cascade;
+        if (marker_effectively_disabled(src, i)) continue;
 
-        if (is_effectively_disabled) continue;
-
+        const auto& g = src[i];
         MarkerForRender m;
         m.time_seconds  = g.time_seconds;
         m.label_def     = g.label_def;
@@ -157,15 +161,33 @@ MarkerEffective marker_effective(
             }
         }
         if (def_idx < 0) return r;
-        if (def_idx + 1 >= static_cast<int>(mv.size())) return r;
-        if (idx     + 1 >= static_cast<int>(mv.size())) return r;
+
+        // Render measures each segment to the next marker that survives into
+        // the resolved list, so the reference and definition distances must run
+        // to the next surviving successor, not the raw adjacent marker: a
+        // disabled marker (or a cascade-disabled ref) parked immediately after
+        // either endpoint would otherwise skew the implied multiplier while
+        // leaving the frame map untouched.
+        auto next_surviving = [&](int from) -> int {
+            for (int i = from + 1; i < static_cast<int>(mv.size()); ++i) {
+                if (!marker_effectively_disabled(mv, static_cast<size_t>(i)))
+                    return i;
+            }
+            return -1;
+        };
+        const int idx_next = next_surviving(idx);
+        const int def_next = next_surviving(def_idx);
+        // No surviving successor means render gives that segment a duration
+        // running to the end of the source, which this function cannot know
+        // without total_frames. No popup is the existing contract for that case.
+        if (idx_next < 0 || def_next < 0) return r;
         const double sr_d = static_cast<double>(sample_rate);
         if (sr_d <= 0.0) return r;
 
         const double lr_src_dist =
-            (mv[idx + 1].time_seconds - mv[idx].time_seconds) * sr_d;
+            (mv[idx_next].time_seconds - mv[idx].time_seconds) * sr_d;
         const double def_src_dist =
-            (mv[def_idx + 1].time_seconds - mv[def_idx].time_seconds) * sr_d;
+            (mv[def_next].time_seconds - mv[def_idx].time_seconds) * sr_d;
         if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
