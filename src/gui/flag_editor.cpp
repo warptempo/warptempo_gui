@@ -308,6 +308,34 @@ void GuiFlagEditor::commit_top_flag_edit() {
             }
         }
     }
+    // A pure label ref owns no tempo of its own — it parses with
+    // tempo_base 0.0 (the label_ref branch in parse_single_canonical_line).
+    // Clearing every ref to a def by removing the def here would leave
+    // those markers serializing as owning 0.00 markers: reloadable (0.00 is
+    // syntactically valid) but rejected by render's effective-tempo check.
+    // Refuse up front instead, symmetric with the referenced-def delete
+    // gate in warpmarkers_ops.cpp (delete_selected_marker).
+    if (ok && !mv_const[idx].label_def.empty() && parsed.label_def.empty()) {
+        const std::string& old_def = mv_const[idx].label_def;
+        std::string refs;
+        int ref_count = 0;
+        for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
+            if (i == idx) continue;
+            if (mv_const[i].label_ref == old_def) {
+                char tbuf[32];
+                std::snprintf(tbuf, sizeof(tbuf), "%.3fs",
+                              mv_const[i].time_seconds);
+                if (!refs.empty()) refs += ", ";
+                refs += tbuf;
+                ++ref_count;
+            }
+        }
+        if (ref_count > 0) {
+            ok = false;
+            err = "cannot remove label definition: label '" + old_def +
+                  "' is referenced at " + refs;
+        }
+    }
     if (!ok) {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
@@ -374,9 +402,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
     m.disabled      = parsed.disabled;
 
     // Cascade rename: if label_def changed and old_def was non-empty,
-    // every other marker that referenced old_def gets its ref updated
-    // to the new name (or cleared if new_def is empty — the user
-    // converted a def to non-def).
+    // every other marker that referenced old_def gets its ref updated to
+    // the new name. The gate above already refused new_def empty while
+    // refs exist, so the empty-new_def case only reaches here with zero
+    // refs and the loop body never fires for it — it just formalizes the
+    // no-refs removal.
     int n_refs_renamed = 0;
     if (!old_def.empty() && old_def != new_def) {
         for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
