@@ -119,16 +119,6 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
     drop_marker(t, /*inherit=*/false, /*base=*/1.0, /*scale=*/"");
 }
 
-void GuiWarpMarkersOps::drop_inherit_marker_at_playhead() {
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-    const int64_t src_frame =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-    const double t = static_cast<double>(src_frame) /
-                     static_cast<double>(sr);
-    drop_marker(t, /*inherit=*/true, /*base=*/1.0, /*scale=*/"1.0000");
-}
-
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
 // used by the hover popup.
@@ -305,7 +295,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     target_render.trigger();
 }
 
-// Shift+N: convert each selected marker's tempo source. Cache-free —
+// Ctrl+N: convert each selected marker's tempo source. Cache-free —
 // the only stored state on a pass marker is `tempo_inherits = true`
 // plus inert defaults. Three input cases per marker:
 //   - owning   → pass: inert defaults; label_def preserved.
@@ -388,7 +378,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
 }
 
 // Nudge every selected marker by `delta`. Label refs are silently
-// skipped (no tempo to nudge — convert via Shift+N first). Pass markers
+// skipped (no tempo to nudge — convert via Ctrl+N first). Pass markers
 // resolve walk-backward to get their starting tempo/scale, then freeze
 // to owning at the nudged value. Owning markers nudge in place.
 // Clamps to [0.01, 9.99]. Only dirties / invalidates on real change.

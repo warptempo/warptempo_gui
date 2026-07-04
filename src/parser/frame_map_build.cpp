@@ -101,7 +101,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // including the position of the very marker that follows it, so
 // inheriting it would make a pass's tempo drift under unrelated position
 // edits. Pass values must stay literal, grammar-exact owner fields so
-// that freezing a pass (owner-deletion collapse, tempo nudge, Shift+N)
+// that freezing a pass (owner-deletion collapse, tempo nudge, Ctrl+N)
 // is lossless.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {

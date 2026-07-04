@@ -53,7 +53,6 @@ struct GuiWarpMarkersOps {
     void drop_marker(double time_seconds, bool inherit,
                       double base, const std::string& scale);
     void drop_marker_at_playhead();
-    void drop_inherit_marker_at_playhead();
     void drop_copy_previous_at_playhead();
     void delete_selected_marker();
     void force_delete_selected_marker();

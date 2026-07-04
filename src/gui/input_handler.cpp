@@ -368,13 +368,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                  app.active_markers_view == 'W') warpops.drop_copy_previous_at_playhead();
         return;
     }
-    // n / Shift+N: warp-only authoring (pass drop / toggle inherit). No
-    // phase-reset equivalent, so this no-ops in P view (matching the
-    // !ctrl && !alt gate the S handler above uses for its W-view branches).
-    if (key == GuiKeys::N && !ctrl && !alt) {
+    // Ctrl+N: toggle pass (inherit) status on the focused warp marker,
+    // symmetric with Ctrl+D below — pass, like disabled, is a status
+    // toggled on an existing marker, never dropped directly. No
+    // phase-reset equivalent (a reset has no tempo source to inherit
+    // from), so this no-ops in P view. Plain `n` and Shift+N are unbound.
+    if (key == GuiKeys::N && ctrl && !alt && !shift) {
         if (app.active_markers_view == 'P') return;
-        if (shift) warpops.toggle_inherits();
-        else       warpops.drop_inherit_marker_at_playhead();
+        warpops.toggle_inherits();
         return;
     }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.

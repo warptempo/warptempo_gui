@@ -177,7 +177,7 @@ The reference is grouped by function. Within the prose of this document a groupe
 
 **Marker focus and selection.** `Tab` and `Shift+Tab` (the latter also reachable as the ISO left-tab key some layouts send) cycle marker focus forward and backward, recentering the current zoom on the focused marker; the focus walk skips disabled markers and operates on whichever collection the W/P toggle has active.
 
-**Warp marker authoring (W view).** `s` drops a marker at the playhead copying the previous marker's tempo; `Shift+S` drops one at tempo 1.00. `n` drops an inheriting ("pass") marker; `Shift+N` toggles inherit on the focused marker. `Ctrl+D` toggles the disabled flag (this works in both W and P views). `Delete` deletes the selected marker, and `Shift+Delete` force-deletes it. `Ctrl+Up` and `Ctrl+Down` nudge the focused marker's tempo by ±0.01. `Ctrl+Left` and `Ctrl+Right` nudge the focused marker's position by one pixel.
+**Warp marker authoring (W view).** `s` drops a marker at the playhead copying the previous marker's tempo; `Shift+S` drops one at tempo 1.00. `Ctrl+N` toggles pass (inherit) status on the focused marker. `Ctrl+D` toggles the disabled flag (this works in both W and P views). `Delete` deletes the selected marker, and `Shift+Delete` force-deletes it. `Ctrl+Up` and `Ctrl+Down` nudge the focused marker's tempo by ±0.01. `Ctrl+Left` and `Ctrl+Right` nudge the focused marker's position by one pixel.
 
 **Phase reset authoring (P view).** `s` drops a phase reset at the playhead. `Ctrl+D` toggles its disabled flag. `Delete` deletes the selected phase reset. `Ctrl+Left` and `Ctrl+Right` nudge the focused phase reset by one pixel.
 
