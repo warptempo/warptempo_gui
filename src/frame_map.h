@@ -73,12 +73,12 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // The readers validate line shape only. Value-domain and ordering conformance
 // is the writers' contract: build_maps and the trimmed-artifact derivation
 // emit finite, non-negative, strictly ascending values with a first target of
-// exactly zero by construction, and the consumers assume those preconditions —
-// the map helpers above binary-search and interpolate over strictly monotonic
-// breakpoints (documented there), and the engine's reset cursor consumes
-// phase_reset_frames sorted ascending (documented in engine.h). A hand-edited
-// artifact that breaks the contract is outside the program's usage model; the
-// readers do not police it.
+// exactly zero by construction. Ordering is not left as an assumed
+// precondition downstream: the engine refuses loudly at init on a
+// non-monotonic frame map or an out-of-order phase reset list (the two
+// validators in src/engine/engine.cpp), so a hand-edited artifact that breaks
+// the ordering contract fails the render instead of producing silently wrong
+// bytes. The readers themselves do not police it.
 //
 // .warpframemap: one "src_frame tgt_frame" line per segment (space-separated;
 // the writer emits precise double breakpoints at up to 17 significant digits;

@@ -52,6 +52,27 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     }
 }
 
+// Engine-boundary ordering guards. These two init-time hardfails are
+// deliberate and stay even though the frame_map.h artifact readers validate
+// line shape only: the writers' contract (build_maps, the trimmed-artifact
+// derivation, the resetmap writer) makes both checks unreachable from
+// program-written inputs, but a breach — a hand-edited artifact fed to the
+// engine CLI, or a future writer bug — would otherwise render silently wrong
+// deliverable bytes (a misinterpolated map, or resets silently skipped by the
+// forward synthesis cursor). A loud init refusal is the designed response.
+//
+// The two predicates differ on purpose. The frame map must be strictly
+// ascending on both axes: the map helpers binary-search and interpolate over
+// it, and an equal breakpoint is a zero-length segment (division by zero in
+// the interpolation). The reset list only needs to be non-decreasing,
+// duplicates allowed: each reset frame maps through upper_bound over the
+// monotone source_frame_positions, so a non-decreasing input yields
+// non-decreasing synth-frame placements, and the synthesis cursor's while
+// loop consumes equal placements on the same frame correctly. Equal reset
+// frames are constructible from legitimate input — two authored resets on
+// adjacent milliseconds can llrint to the same engine query frame under
+// strong target compression — so only a strict decrease is rejected.
+
 // Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
 bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
@@ -65,6 +86,20 @@ bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
             std::cerr << "Error: frame_map entry " << i << " has non-monotonic tgt_frame ("
                       << tm[i - 1].tgt_frame << " -> "
                       << tm[i].tgt_frame << ").\n";
+            return false;
+        }
+    }
+    return true;
+}
+
+// Validate the phase reset list is non-decreasing (duplicates allowed; see
+// the ruling comment above). Returns true if OK.
+bool validate_phase_resets_ordered(const std::vector<int64_t>& resets) {
+    for (size_t i = 1; i < resets.size(); ++i) {
+        if (resets[i] < resets[i - 1]) {
+            std::cerr << "Error: phase reset entry " << i << " is out of order ("
+                      << resets[i - 1] << " -> "
+                      << resets[i] << ").\n";
             return false;
         }
     }
@@ -111,6 +146,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // rounded fields until the interpolation flip.
     audio_stft.frame_map = p.frame_map;
     if (!validate_frame_map_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
+    if (!validate_phase_resets_ordered(p.phase_reset_frames)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {
