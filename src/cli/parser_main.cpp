@@ -200,11 +200,19 @@ int main(int argc, char** argv) {
     // they describe the trimmed deliverable byte-for-byte; untrimmed writes the
     // full maps verbatim. ---
     const bool trimmed = trim.has_begin || trim.has_end;
-    const TrimmedArtifactMaps artifacts = trimmed
-        ? derive_trimmed_artifact_maps(out.frame_map, out.tempo_map,
-                                       trim_begin_src, trim_end_src,
-                                       kN, kRs, sample_rate)
-        : TrimmedArtifactMaps{out.frame_map, out.tempo_map};
+    TrimmedArtifactMaps artifacts;
+    if (trimmed) {
+        auto a = derive_trimmed_artifact_maps(out.frame_map, out.tempo_map,
+                                              trim_begin_src, trim_end_src,
+                                              kN, kRs, sample_rate);
+        if (!a) {
+            std::fprintf(stderr, "warptempo_parser: %s\n", a.error().c_str());
+            return 1;
+        }
+        artifacts = std::move(*a);
+    } else {
+        artifacts = TrimmedArtifactMaps{out.frame_map, out.tempo_map};
+    }
 
     // --- output path: -o, else the sibling convention ---
     if (out_path.empty()) {

@@ -906,12 +906,22 @@ RenderOutcome do_render(const RenderRequest& req,
         // Trimmed artifacts derive from the same window the engine renders, so
         // they describe the trimmed deliverable byte-for-byte; untrimmed renders
         // write the full maps verbatim. This path runs no engine.
-        const TrimmedArtifactMaps artifacts = trimmed
-            ? derive_trimmed_artifact_maps(
-                  tmfull.frame_map, tmfull.tempo_map,
-                  trim_window.trim_begin_src, trim_window.trim_end_src,
-                  N_fft, R_s, sample_rate)
-            : TrimmedArtifactMaps{tmfull.frame_map, tmfull.tempo_map};
+        TrimmedArtifactMaps artifacts;
+        if (trimmed) {
+            auto a = derive_trimmed_artifact_maps(
+                tmfull.frame_map, tmfull.tempo_map,
+                trim_window.trim_begin_src, trim_window.trim_end_src,
+                N_fft, R_s, sample_rate);
+            if (!a) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             a.error().c_str());
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+            artifacts = std::move(*a);
+        } else {
+            artifacts = TrimmedArtifactMaps{tmfull.frame_map, tmfull.tempo_map};
+        }
         auto map_write = (output_format == "framemap")
             ? write_frame_map(final_output_path, artifacts.frame_map,
                                      /*drop_zero_zero=*/false)

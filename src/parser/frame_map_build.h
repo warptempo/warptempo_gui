@@ -198,6 +198,21 @@ struct TrimmedArtifactMaps {
 // deliverable-relative time domain, origin at time zero, a final no-op event at
 // the end so DAWs learn the track length.
 //
+// Returns the derived maps on success, or std::unexpected carrying a concise
+// lowercase reason (callers add their own context prefix, same contract as
+// validate_trim_frames). Refuses the same degenerate window the WAV path refuses
+// through assign_engine_frame_map, up front, instead of writing a map that is
+// either reader-rejected or engine-misread. The two refusal conditions, checked
+// immediately after slicing:
+//   - emit_sample_cap <= 0: the trim's target span is entirely consumed by the
+//     hop-aligned window start, so no output sample lies between the window start
+//     and the trim end; a stored zero cap reads back as "uncapped" at the engine
+//     boundary, so warptempo_engine fed such a map would render a spurious tail.
+//   - llrint of the window's first pair source >= trim_end_src: the window spans
+//     less than one source frame, so the keep-filter would drop the target-zero
+//     start anchor and read_frame_map would reject the very artifact this writer
+//     produced (its first pair's target would not be zero).
+//
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source
 // column stays absolute undisplaced source frames, matching the project-wide
@@ -205,7 +220,7 @@ struct TrimmedArtifactMaps {
 // The first pair (s, 0) is therefore self-describing: s is the absolute source
 // position of the deliverable's first sample, roughly the trim instant plus the
 // N/2 analysis margin, hop-quantized.
-TrimmedArtifactMaps derive_trimmed_artifact_maps(
+std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     const std::vector<FrameMapSegment>& full_map,
     const std::vector<TempoMapEntry>&  full_tempo_map,
     int64_t trim_begin_src, int64_t trim_end_src,

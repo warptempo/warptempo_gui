@@ -585,13 +585,15 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // consumed by the hop-aligned window start (offset >= end_tgt_full), so no
     // output sample would be emitted. assign_engine_frame_map refuses to hand
     // such a map to the engine, because emit_sample_cap == 0 means "no cap" at
-    // the engine boundary and would otherwise render the whole sub-map.
+    // the engine boundary and would otherwise render the whole sub-map;
+    // derive_trimmed_artifact_maps refuses the same stored-zero window for the
+    // external .warpframemap / .tempomap artifacts.
     const int64_t cap = end_tgt_full - offset;
     out.emit_sample_cap = cap < 0 ? 0 : cap;
     return out;
 }
 
-TrimmedArtifactMaps derive_trimmed_artifact_maps(
+std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     const std::vector<FrameMapSegment>& full_map,
     const std::vector<TempoMapEntry>&  full_tempo_map,
     int64_t trim_begin_src, int64_t trim_end_src,
@@ -603,16 +605,38 @@ TrimmedArtifactMaps derive_trimmed_artifact_maps(
     const WindowedFrameMap w = slice_frame_map_to_trim_window(
         full_map, trim_begin_src, trim_end_src, N, R_s);
 
+    // Refuse the same degenerate window the WAV path refuses through
+    // assign_engine_frame_map, up front, before deriving anything. A stored-zero
+    // (or negative) cap means the trim's output span is entirely consumed by the
+    // hop-aligned window start, and reads back as "uncapped" at the engine
+    // boundary; a window whose first-pair source already rounds to trim_end_src
+    // spans less than one source frame, and the keep-filter below would then drop
+    // the target-zero start anchor and leave read_frame_map to reject the very
+    // artifact this writer produced.
+    if (w.emit_sample_cap <= 0) {
+        return std::unexpected(
+            "degenerate trim window: no output samples between the window "
+            "start and the trim end");
+    }
+    if (w.frame_map.empty() ||
+        std::llrint(w.frame_map.front().src_frame) >= trim_end_src) {
+        return std::unexpected(
+            "degenerate trim window: spans less than one source frame");
+    }
+
     // Frame map. Keep every window pair whose target is strictly below the emit
     // cap and whose source is strictly below the trim end, then append the exact
     // (trim_end_src, emit_sample_cap) boundary pair. The window's start anchor
-    // (absolute source, target 0) passes both filters and stays as the first
-    // pair; the window's closing anchor sits at or past both caps and is
-    // replaced by the boundary. A real marker landing exactly at the trim end is
-    // excluded by the strict source filter and the boundary pair carries its
-    // exact values — that is coalescing, not dropping. The integer-domain
-    // (llrint) filters plus the slicer's own strict-ascending guarantee keep
-    // both columns strictly ascending with no tolerance constant.
+    // (absolute source, target 0) provably passes both filters and stays as the
+    // first pair: the refusal above guarantees cap >= 1, so the anchor's target
+    // zero is strictly below the cap, and guarantees the anchor's rounded source
+    // is strictly below trim_end_src, so it passes the source filter. The
+    // window's closing anchor sits at or past both caps and is replaced by the
+    // boundary. A real marker landing exactly at the trim end is excluded by the
+    // strict source filter and the boundary pair carries its exact values — that
+    // is coalescing, not dropping. The integer-domain (llrint) filters plus the
+    // slicer's own strict-ascending guarantee keep both columns strictly
+    // ascending with no tolerance constant.
     for (const auto& s : w.frame_map) {
         const int64_t tgt = static_cast<int64_t>(std::llrint(s.tgt_frame));
         const int64_t src = static_cast<int64_t>(std::llrint(s.src_frame));
