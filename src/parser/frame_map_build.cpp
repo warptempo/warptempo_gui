@@ -15,13 +15,14 @@
 namespace {
 
 double effective_tempo(const MarkerForRender& m) {
+    // Every producer of tempo_scale writes grammar-shaped numeric text (the
+    // strict parser's N.NNNN form, the inert "1.0000" literal, a copy of an
+    // existing owner's resolved scale, or a %.4f-formatted display scale), so
+    // the parse is total here. A genuinely non-positive product is still
+    // rejected by the callers' tempo <= 0 checks.
     double v = m.tempo_base;
     if (!m.tempo_scale.empty()) {
-        try {
-            v *= std::stod(m.tempo_scale);
-        } catch (...) {
-            return 0.0;
-        }
+        v *= std::stod(m.tempo_scale);
     }
     return v;
 }
