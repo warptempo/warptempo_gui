@@ -119,8 +119,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- markers; a missing sidecar is a startup error, since an absent
-    // file would resolve to an empty marker list that build_maps rejects. ---
+    // --- markers; a missing sidecar is a startup error. Without it an absent
+    // file would flow an empty marker list through build_maps to a
+    // seed-anchor-only map whose zero emit cap the engine refuses at dispatch;
+    // erroring here gives the pointed missing-file message instead of that
+    // indirect refusal. ---
     std::vector<WarpMarker> markers;
     if (!std::filesystem::exists(wm_path)) {
         std::fprintf(stderr,

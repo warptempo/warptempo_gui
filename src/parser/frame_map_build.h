@@ -218,16 +218,14 @@ struct TrimmedArtifactMaps {
 // lowercase reason (callers add their own context prefix, same contract as
 // validate_trim_frames). Refuses the same degenerate window the WAV path refuses
 // through assign_engine_frame_map, up front, instead of writing a map that is
-// either reader-rejected or engine-misread. The two refusal conditions, checked
-// immediately after slicing:
-//   - emit_sample_cap <= 0: the trim's target span is entirely consumed by the
-//     hop-aligned window start, so no output sample lies between the window start
-//     and the trim end; a stored zero cap reads back as "uncapped" at the engine
-//     boundary, so warptempo_engine fed such a map would render a spurious tail.
-//   - the window's first pair source at or past trim_end_src (precise-domain):
-//     the window has no source span, so the keep-filter would drop the
-//     target-zero start anchor and read_frame_map would reject the very artifact
-//     this writer produced (its first pair's target would not be zero).
+// either reader-rejected or engine-misread. The single refusal condition,
+// checked immediately after slicing: emit_sample_cap <= 0 — the trim's target
+// span is entirely consumed by the hop-aligned window start, so no output
+// sample lies between the window start and the trim end; a stored zero cap
+// reads back as "uncapped" at the engine boundary, so warptempo_engine fed
+// such a map would render a spurious tail. The same refusal covers an empty
+// window map, which the slicer returns only with the cap at its default of
+// zero.
 //
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source

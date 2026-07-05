@@ -358,33 +358,6 @@ std::expected<MapBuildResult, std::string> build_maps(
         return std::unexpected("invalid source audio metadata");
     }
 
-    // Reject a resolved marker list with no entries. With zero markers both
-    // passes iterate zero times and the map holds only the seed 0,0 anchor.
-    // On the full-render path the emit cap is derived from that map's last
-    // target, which is then zero, and the engine treats a zero cap as
-    // uncapped, so the defect would otherwise surface only as a near-empty
-    // rendered file rather than an error. With at least one surviving marker
-    // the map's last target is always positive in the double domain (every
-    // segment is at least one source frame and tempo products are positive),
-    // but an extreme tempo product can leave a sub-half-sample final target
-    // whose integer emit cap still rounds to zero; the engine refuses that
-    // cap at dispatch rather than treating it as uncapped.
-    if (markers.empty()) {
-        return std::unexpected(
-            "no render-surviving warp markers (all disabled, or none authored)");
-    }
-
-    // With the parser and GUI guards in place this is unreachable for loadable
-    // projects, but the map builder is the layer that actually consumes the
-    // invariant — it seeds (0,0) and applies markers[0]'s tempo from source
-    // frame 0 — so it enforces the zero anchor independently of authoring-side
-    // guards. A first surviving marker at a nonzero source time would silently
-    // hand the opening span that marker's tempo from frame 0.
-    if (markers.front().time_seconds != 0.0) {
-        return std::unexpected(
-            "first render-surviving warp marker must be at source time zero");
-    }
-
     // Pass 1: accumulate per-label deltas so forward-declared references
     // receive the correct duration when encountered in Pass 2.
     std::map<std::string, LabelCacheEntry> label_cache;
@@ -647,47 +620,16 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // assign_engine_frame_map, up front, before deriving anything. A stored-zero
     // (or negative) cap means the trim's output span is entirely consumed by the
     // hop-aligned window start, and reads back as "uncapped" at the engine
-    // boundary; a window whose first-pair source sits at or past trim_end_src
-    // (precise-domain, like every other comparison here) has no source span at
-    // all, and the keep-filter below would then drop the target-zero start
-    // anchor and leave read_frame_map to reject the very artifact this writer
-    // produced.
-    //
-    // w.frame_map.empty() cannot fire past the cap refusal: the only slicer
-    // paths that return without pushing the start anchor (an empty full map,
-    // and the dense-schedule-empty path, itself impossible since target_total
-    // is at least N) leave emit_sample_cap at its default of 0, which the first
-    // refusal above already catches; every path that reaches the anchor push
-    // pushes it unconditionally from there, so any window that passes the cap
-    // refusal carries at least that one pair. The
-    // front-source half of the second condition is unreachable as well when
-    // map_source_to_target and map_target_to_source behave as exact
-    // mathematical inverses: the start anchor's source is
-    // map_target_to_source(window offset), clamped up to zero, and a clamped
-    // zero can never reach trim_end_src because trim validation keeps
-    // trim_end_src positive. An unclamped anchor source at or past trim_end_src
-    // would then mean, by monotonicity, that end_tgt_precise sits at or below
-    // the window offset — exactly the condition that rounds the cap to zero or
-    // below, so the first refusal above already returns before this one is ever
-    // reached.
-    //
-    // The front-source check is kept anyway as a precise-domain floating-point
-    // backstop, the same class as the slicer's own strict-ascent guards against
-    // ties and inversions: the two interpolators are not bit-exact inverses, so
-    // if this condition ever did fire past the cap refusal, the keep-filter
-    // below would drop the target-zero start anchor and this writer would hand
-    // read_frame_map an artifact it rejects on load. Catching it here turns that
-    // failure into an up-front refusal instead.
+    // boundary. This refusal also covers an empty window map: the only slicer
+    // paths that return before the start-anchor push (an empty full map, and
+    // the dense-schedule-empty path, itself impossible since target_total is at
+    // least N) leave emit_sample_cap at its default of 0, and every path that
+    // reaches the anchor push pushes it unconditionally, so any window that
+    // passes here carries at least the start-anchor pair.
     if (w.emit_sample_cap <= 0) {
         return std::unexpected(
             "degenerate trim window: no output samples between the window "
             "start and the trim end");
-    }
-    if (w.frame_map.empty() ||
-        w.frame_map.front().src_frame >= static_cast<double>(trim_end_src)) {
-        return std::unexpected(
-            "degenerate trim window: window start source at or past the "
-            "trim end");
     }
 
     // Frame map. Keep every window pair whose target is strictly below the emit
@@ -696,10 +638,16 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // sub-sample segments survive instead of being coalesced by rounding — then
     // append the exact (trim_end_src, emit_sample_cap) boundary pair. The
     // window's start anchor (absolute source, target 0) provably passes both
-    // filters and stays as the first pair: the refusals above guarantee
-    // cap >= 1, so the anchor's target zero is strictly below the cap, and
-    // guarantee the anchor's source is strictly below trim_end_src, so it
-    // passes the source filter. The window's closing anchor sits at or past the
+    // filters and stays as the first pair: the cap refusal above guarantees
+    // cap >= 1, so the anchor's target zero is strictly below the cap, and the
+    // anchor's source lies strictly inside the trim window by construction of
+    // the slice — it is map_target_to_source(window offset) clamped up to zero
+    // (a clamped zero never reaches trim_end_src, which trim validation keeps
+    // positive), and under exact inverse interpolation an unclamped start
+    // source at or past trim_end_src would by monotonicity put end_tgt_precise
+    // at or below the window offset, rounding the cap to zero or below — a
+    // window the refusal above already rejected. So the anchor passes the
+    // source filter. The window's closing anchor sits at or past the
     // trim end in source and is replaced by the boundary. A real marker landing
     // exactly at the trim end is excluded by the strict source filter and the
     // boundary pair carries its exact values — that is coalescing, not
