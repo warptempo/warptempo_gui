@@ -7,6 +7,7 @@
 #include "render.h"
 #include "phaseresetmarkers.h"
 #include "map_output.h"
+#include "phase_reset_dispatch.h"
 #include "phase_reset_frame_map_build.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
@@ -168,6 +169,35 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Failed;
     }
     const std::vector<double>& phase_reset_frame_map = *phase_reset_frame_map_r;
+
+    // --- Build the full (untrimmed) frame map from in-memory markers. The
+    // engine always renders the full map: a trimmed wav render slices this
+    // canonical map into a re-anchored sub-map plus an emit_sample_cap via
+    // assign_engine_warp_frame_map before dispatch, and the trimmed
+    // warpframemap / miditempomap artifacts derive from that same window —
+    // one trim computation, shared. The inherited t_a history from frame 0
+    // is what makes the windowed render null against the full render.
+    // Built here at the probe, beside the phase-reset conversion above: the
+    // two authored-time-to-frame conversions are this pipeline's parallel
+    // pair. Running it ahead of the fingerprint reuse return below is
+    // behavior-neutral — a fingerprint match implies this exact marker set
+    // already built successfully when the matching render was produced, so
+    // no reuse path can fail here that previously succeeded, and the reuse
+    // hit's extra map build is negligible against the pipeline. ---
+    WarpMapBuildInput tmin;
+    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
+    tmin.scale          = scale;
+    tmin.sample_rate    = sample_rate;
+    tmin.total_frames   = total_frames;
+
+    auto rfull = build_warp_maps(tmin);
+    if (!rfull) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: map build failed: %s\n",
+            rfull.error().c_str());
+        return RenderOutcome::Failed;
+    }
+    WarpMapBuildResult tmfull = std::move(*rfull);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
@@ -382,29 +412,6 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
-    // --- Build the full (untrimmed) frame map from in-memory markers. The
-    // engine always renders the full map: a trimmed wav render slices this
-    // canonical map into a re-anchored sub-map plus an emit_sample_cap via
-    // assign_engine_warp_frame_map before dispatch, and the trimmed
-    // warpframemap / miditempomap artifacts derive from that same window —
-    // one trim computation,
-    // shared. The inherited t_a history from frame 0 is what makes the windowed
-    // render null against the full render. ---
-    WarpMapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
-    tmin.scale          = scale;
-    tmin.sample_rate    = sample_rate;
-    tmin.total_frames   = total_frames;
-
-    auto rfull = build_warp_maps(tmin);
-    if (!rfull) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: map build failed: %s\n",
-            rfull.error().c_str());
-        return RenderOutcome::Failed;
-    }
-    WarpMapBuildResult tmfull = std::move(*rfull);
-
     const TrimSourceWindow trim_window = resolve_trim_source_window(
         req.has_trim_begin, req.trim_begin_sec,
         req.has_trim_end, req.trim_end_sec,
@@ -423,13 +430,17 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // The engine no longer windows; render-domain sidecars subtract the slice
     // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
-    // need the same value before the engine assembly path runs.
+    // need the same value before the engine assembly path runs. The sidecar
+    // writer also needs the trim's emit cap (0 when untrimmed) for its
+    // window-participation verdict below.
     int64_t window_offset_samples = 0;
+    int64_t trim_emit_sample_cap = 0;
     if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
         const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
             tmfull.warp_frame_map, trim_window.trim_begin_src,
             trim_window.trim_end_src, N_fft, R_s);
         window_offset_samples = w.window_offset_samples;
+        trim_emit_sample_cap = w.emit_sample_cap;
     }
 
     // Returns false if any attempted display-sidecar write failed (vacuously
@@ -533,29 +544,53 @@ RenderOutcome do_render(const RenderRequest& req,
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
             // are forward-mapped from their clicked source time through the
-            // same map and placed at tgt(F) - window_offset, so a reset sits
-            // on the same musical position in render-view as in source and
-            // target views, expressed as the same exact double the warp loop
-            // above uses, with no intermediate frame rounding. The trim-range
-            // filter runs in authored seconds against the request's trim
-            // bounds. Drop disabled, out-of-trim, and pre-origin.
+            // same map and placed at tgt(F) - window_offset by the dispatch
+            // chain's own window verdict (phase_reset_window_target_frame),
+            // so a reset sits on the same musical position in render-view as
+            // in source and target views, expressed as the same exact double
+            // the warp loop above uses, with no intermediate frame rounding.
+            // The trim-range filter runs in authored seconds against the
+            // request's trim bounds, ahead of the window verdict. Drop
+            // disabled, out-of-trim, and window non-participants.
+            //
+            // Render target frames for the window verdict, computed the same
+            // way assign_engine_phase_reset_frame_map computes the dispatch
+            // bound: the emit cap when the trim set one, else llrint of the
+            // map's last target anchor.
+            const int64_t render_target_frames_for_sidecars =
+                trim_emit_sample_cap > 0
+                    ? trim_emit_sample_cap
+                    : static_cast<int64_t>(std::llrint(
+                          tmfull.warp_frame_map.back().tgt_frame));
             std::vector<GuiPhaseResetMarker> warped_phase_resets;
             warped_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
                 if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
                 if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
+                // Window-participation verdict, shared with engine dispatch.
+                // nullopt drops two classes, both deliberate. A negative
+                // window target is dispatch's before-window drop: the
+                // instant precedes the deliverable's first sample and is
+                // unrepresentable on its time axis. A window target at or
+                // past the emit cap is dispatch's past-cap drop: the instant
+                // lies beyond the deliverable's last sample (a reset exactly
+                // at the trim end, or at source EOF on an untrimmed render),
+                // so display participation converges on the window's own
+                // bounds. Resets dropped only by dispatch's lead-in dropzone
+                // (window target above zero but within
+                // phase_reset_offset_samples of the window start) still
+                // display, deliberately: the display sidecars show every
+                // authored marker that exists on the deliverable's time axis
+                // regardless of its engine-side fate, exactly as the warp
+                // sidecar displays markers whose breakpoints the slicer
+                // coalesced into window anchors.
+                const auto window_target = phase_reset_window_target_frame(
+                    t.time_seconds * sr_d, tmfull.warp_frame_map,
+                    window_offset_samples, render_target_frames_for_sidecars);
+                if (!window_target) continue;
                 GuiPhaseResetMarker w = t;
-                w.time_seconds =
-                    (map_source_to_target(t.time_seconds * sr_d, tmfull.warp_frame_map)
-                     - static_cast<double>(window_offset_samples)) / sr_d;
-                // Pre-origin filter, same rationale as the warp loop above: a
-                // reset whose render position precedes the delivered WAV's
-                // first sample was never audible in this deliverable anyway
-                // (its target image precedes the WAV origin, so dispatch's
-                // lead-in dropzone had already dropped it at render), so it
-                // is dropped here rather than pinned at zero.
-                if (w.time_seconds < 0.0) continue;
+                w.time_seconds = *window_target / sr_d;
                 warped_phase_resets.push_back(std::move(w));
             }
             const std::string tmd_path =

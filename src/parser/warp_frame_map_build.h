@@ -69,7 +69,10 @@ struct WarpMapBuildResult {
 // segment arithmetic), duplicate label definition, undefined label reference.
 // Builds the full untrimmed map unconditionally; trim is applied downstream by
 // slice_warp_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
-// (external artifacts), never here.
+// (external artifacts), never here. Scale participates here and not in
+// build_phase_reset_frame_map because scale multiplies tempo, a
+// target-duration quantity; phase reset positions are undisplaced source
+// instants and have no target-duration component.
 std::expected<WarpMapBuildResult, std::string> build_warp_maps(
     const WarpMapBuildInput& in);
 

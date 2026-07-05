@@ -6,13 +6,54 @@
 #include <optional>
 #include <vector>
 
+// Phase-reset dispatch: authored (undisplaced) source positions -> the
+// engine's origin-centered query domain, for a given render (full or
+// trim-windowed).
+//
+// These helpers live in this root header rather than the parser library
+// because warptempo_engine dispatches phase resets while linking the engine
+// archive alone, with no parser; the warp axis's window-participation
+// sibling (slice_warp_frame_map_to_trim_window) is parser-owned because no
+// parser-less driver slices — trim is not an engine-CLI concept. The verbs
+// differ deliberately: the slicer coalesces out-of-window breakpoints into
+// boundary anchors because a map is a connected piecewise function, while
+// dispatch drops out-of-window resets because point events have nothing to
+// coalesce into.
+
+// Window-participation verdict for one authored (undisplaced) phase-reset
+// source position — an exact double source frame. Maps it through the full
+// map to its target image and re-anchors to the rendered window's origin.
+// Returns the window-domain target frame W, or std::nullopt when the reset
+// does not participate in this render: W negative (before the window — the
+// instant precedes the deliverable's first sample) or at or past
+// render_target_frames (past the emit cap, beyond the deliverable's last
+// sample). Shared by the engine dispatch below and the render-view display
+// sidecar writer, so display participation and engine dispatch converge on
+// the same window-bounds verdict.
+inline std::optional<double> phase_reset_window_target_frame(
+        double source_frame,
+        const std::vector<WarpFrameMapSegment>& full_map,
+        int64_t window_offset_samples,
+        int64_t render_target_frames) {
+    const double authored_target_full =
+        map_source_to_target(source_frame, full_map);
+    const double authored_target_window =
+        authored_target_full - static_cast<double>(window_offset_samples);
+
+    if (authored_target_window < 0.0) return std::nullopt;
+    if (authored_target_window >= static_cast<double>(render_target_frames)) {
+        return std::nullopt;
+    }
+    return authored_target_window;
+}
+
 // Maps one authored (undisplaced) phase-reset source position — an exact
 // double source frame — into the engine's origin-centered query domain
 // for a given render (full or trim-windowed). Returns std::nullopt
-// when the reset does not apply to this render: authored
-// outside the rendered window, or its lead-in anticipation
-// (target_offset_samples, i.e. phase_reset_offset_samples) would fall
-// before the window's own start. Dropping in that last case,
+// when the reset does not apply to this render: outside the rendered
+// window (the window-participation verdict above), or its lead-in
+// anticipation (target_offset_samples, i.e. phase_reset_offset_samples)
+// would fall before the window's own start. Dropping in that last case,
 // rather than clamping forward, lets the natural PGHI heap propagation
 // continue undisturbed through the opening stretch; a trim (or, on a
 // full render, an authored reset) placed this close to the render's own
@@ -31,18 +72,14 @@ inline std::optional<double> phase_reset_dispatch_frame_target_domain(
         int64_t render_target_frames,
         int64_t target_offset_samples,
         int64_t engine_query_origin_offset_samples) {
-    const double authored_target_full =
-        map_source_to_target(source_frame, full_map);
-    const double authored_target_window =
-        authored_target_full - static_cast<double>(window_offset_samples);
-
-    if (authored_target_window < 0.0) return std::nullopt;
-    if (authored_target_window >= static_cast<double>(render_target_frames)) {
-        return std::nullopt;
-    }
+    const std::optional<double> authored_target_window =
+        phase_reset_window_target_frame(
+            source_frame, full_map, window_offset_samples,
+            render_target_frames);
+    if (!authored_target_window) return std::nullopt;
 
     const double dispatch_target =
-        authored_target_window - static_cast<double>(target_offset_samples);
+        *authored_target_window - static_cast<double>(target_offset_samples);
     if (dispatch_target < 0.0) return std::nullopt;
 
     // Dispatch mapping:

@@ -25,7 +25,10 @@
 // output, and target-domain dispatch placement; the dispatch mapping
 // (phase_reset_dispatch.h) stays in doubles, and quantization to the
 // engine's integer query schedule happens inside the engine at placement
-// time.
+// time. There is no resolver cascade sibling to
+// resolve_markers_for_render because phase reset markers carry no
+// inheritance, labels, or references — a timestamp and a disabled flag are
+// the whole grammar.
 std::expected<std::vector<double>, std::string> build_phase_reset_frame_map(
     const std::vector<PhaseResetMarker>& markers, long sample_rate,
     int64_t total_frames);
