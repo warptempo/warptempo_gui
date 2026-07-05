@@ -537,9 +537,11 @@ WindowedFrameMap slice_frame_map_to_trim_window(
         static_cast<int64_t>(wbegin) * static_cast<int64_t>(R_s);
     out.window_offset_samples = offset;
 
-    // Edge sources/targets on the full map's exact piecewise lines.
-    const int64_t end_tgt_full = static_cast<int64_t>(std::llrint(
-        map_source_to_target(static_cast<double>(trim_end_src), full_map)));
+    // Edge sources/targets on the full map's exact piecewise lines. The precise
+    // end target gates breakpoint retention below; its rounded form becomes the
+    // integer emit cap only.
+    const double end_tgt_precise =
+        map_source_to_target(static_cast<double>(trim_end_src), full_map);
     const double start_src_precise =
         map_target_to_source(static_cast<double>(offset), full_map);
 
@@ -549,17 +551,22 @@ WindowedFrameMap slice_frame_map_to_trim_window(
         start_src_precise < 0.0 ? 0.0 : start_src_precise, 0.0});
     // Interior real segments strictly inside the window's output span, target
     // shifted by -offset (rigid integer translation -> lines preserved exactly),
-    // source absolute. Skip any that would collide with the start anchor's
-    // source or land at/under target 0 (strict-monotonic guard).
+    // source absolute. All comparisons run in the precise double domain that
+    // read_frame_map and the engine's monotonicity validator check: sub-sample
+    // target segments are legal under the no-ceiling tempo rule, and a rounded
+    // (llrint) guard here silently dropped strictly ascending breakpoints whose
+    // shifted targets collide only after rounding, collapsing the span and
+    // displacing engine source queries across it. The strict guards against the
+    // last kept pair skip anything that would tie or invert (floating-point
+    // backstop; a real breakpoint past the window origin lies strictly above
+    // the start anchor on the full map's own lines).
     for (const auto& s : full_map) {
-        const int64_t tf = static_cast<int64_t>(std::llrint(s.tgt_frame));
-        if (tf <= offset || tf >= end_tgt_full) continue;
-        const int64_t sf = static_cast<int64_t>(std::llrint(s.src_frame));
-        if (sf <= static_cast<int64_t>(std::llrint(sm.back().src_frame))) continue;  // src strict
-        const int64_t st = tf - offset;
-        if (st <= static_cast<int64_t>(std::llrint(sm.back().tgt_frame))) continue;  // tgt strict
-        sm.push_back(FrameMapSegment{s.src_frame,
-                                     s.tgt_frame - static_cast<double>(offset)});
+        if (s.tgt_frame <= static_cast<double>(offset) ||
+            s.tgt_frame >= end_tgt_precise) continue;
+        if (s.src_frame <= sm.back().src_frame) continue;   // src strict
+        const double st = s.tgt_frame - static_cast<double>(offset);
+        if (st <= sm.back().tgt_frame) continue;            // tgt strict
+        sm.push_back(FrameMapSegment{s.src_frame, st});
     }
     // End on the first full-map anchor at or past trim_end_src (the anchor that
     // closes the segment containing trim_end_src), target-shifted by -offset.
@@ -574,28 +581,28 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // flow bypasses that build_maps rejection. A closing anchor therefore always
     // exists, at worst full_map.back().
     for (const auto& s : full_map) {
-        if (static_cast<int64_t>(std::llrint(s.src_frame)) < trim_end_src) continue;
-        const int64_t sf = static_cast<int64_t>(std::llrint(s.src_frame));
-        const int64_t st = static_cast<int64_t>(std::llrint(s.tgt_frame)) - offset;
-        if (sf > static_cast<int64_t>(std::llrint(sm.back().src_frame)) &&
-            st > static_cast<int64_t>(std::llrint(sm.back().tgt_frame))) {
+        if (s.src_frame < static_cast<double>(trim_end_src)) continue;
+        if (s.src_frame > sm.back().src_frame &&
+            s.tgt_frame - static_cast<double>(offset) > sm.back().tgt_frame) {
             sm.push_back(FrameMapSegment{s.src_frame,
                                          s.tgt_frame - static_cast<double>(offset)});
         }
         break;
     }
 
-    // Output-sample cap: the trim-end target on the full map, re-anchored. The
-    // engine emits up to this and no further, so the render ends exactly at the
-    // trim boundary even though the sub-map's last anchor sits past it. A stored
-    // 0 signals a degenerate window: the trim's target span is entirely
-    // consumed by the hop-aligned window start (offset >= end_tgt_full), so no
-    // output sample would be emitted. assign_engine_frame_map refuses to hand
-    // such a map to the engine, because emit_sample_cap == 0 means "no cap" at
-    // the engine boundary and would otherwise render the whole sub-map;
+    // Output-sample cap: the trim-end target on the full map, rounded to the
+    // integer output-sample domain and re-anchored. The engine emits up to this
+    // and no further, so the render ends exactly at the trim boundary even
+    // though the sub-map's last anchor sits past it. A stored 0 signals a
+    // degenerate window: the trim's target span is entirely consumed by the
+    // hop-aligned window start (offset at or past the rounded trim-end target),
+    // so no output sample would be emitted. assign_engine_frame_map refuses to
+    // hand such a map to the engine, because emit_sample_cap == 0 means "no
+    // cap" at the engine boundary and would otherwise render the whole sub-map;
     // derive_trimmed_artifact_maps refuses the same stored-zero window for the
     // external .warpframemap / .tempomap artifacts.
-    const int64_t cap = end_tgt_full - offset;
+    const int64_t cap =
+        static_cast<int64_t>(std::llrint(end_tgt_precise)) - offset;
     out.emit_sample_cap = cap < 0 ? 0 : cap;
     return out;
 }
@@ -616,38 +623,43 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // assign_engine_frame_map, up front, before deriving anything. A stored-zero
     // (or negative) cap means the trim's output span is entirely consumed by the
     // hop-aligned window start, and reads back as "uncapped" at the engine
-    // boundary; a window whose first-pair source already rounds to trim_end_src
-    // spans less than one source frame, and the keep-filter below would then drop
-    // the target-zero start anchor and leave read_frame_map to reject the very
-    // artifact this writer produced.
+    // boundary; a window whose first-pair source sits at or past trim_end_src
+    // (precise-domain, like every other comparison here) has no source span at
+    // all, and the keep-filter below would then drop the target-zero start
+    // anchor and leave read_frame_map to reject the very artifact this writer
+    // produced.
     if (w.emit_sample_cap <= 0) {
         return std::unexpected(
             "degenerate trim window: no output samples between the window "
             "start and the trim end");
     }
     if (w.frame_map.empty() ||
-        std::llrint(w.frame_map.front().src_frame) >= trim_end_src) {
+        w.frame_map.front().src_frame >= static_cast<double>(trim_end_src)) {
         return std::unexpected(
-            "degenerate trim window: spans less than one source frame");
+            "degenerate trim window: window start source at or past the "
+            "trim end");
     }
 
     // Frame map. Keep every window pair whose target is strictly below the emit
-    // cap and whose source is strictly below the trim end, then append the exact
-    // (trim_end_src, emit_sample_cap) boundary pair. The window's start anchor
-    // (absolute source, target 0) provably passes both filters and stays as the
-    // first pair: the refusal above guarantees cap >= 1, so the anchor's target
-    // zero is strictly below the cap, and guarantees the anchor's rounded source
-    // is strictly below trim_end_src, so it passes the source filter. The
-    // window's closing anchor sits at or past both caps and is replaced by the
-    // boundary. A real marker landing exactly at the trim end is excluded by the
-    // strict source filter and the boundary pair carries its exact values — that
-    // is coalescing, not dropping. The integer-domain (llrint) filters plus the
-    // slicer's own strict-ascending guarantee keep both columns strictly
-    // ascending with no tolerance constant.
+    // cap and whose source is strictly below the trim end — precise-domain
+    // comparisons, matching read_frame_map's strict-ascent contract, so legal
+    // sub-sample segments survive instead of being coalesced by rounding — then
+    // append the exact (trim_end_src, emit_sample_cap) boundary pair. The
+    // window's start anchor (absolute source, target 0) provably passes both
+    // filters and stays as the first pair: the refusals above guarantee
+    // cap >= 1, so the anchor's target zero is strictly below the cap, and
+    // guarantee the anchor's source is strictly below trim_end_src, so it
+    // passes the source filter. The window's closing anchor sits at or past the
+    // trim end in source and is replaced by the boundary. A real marker landing
+    // exactly at the trim end is excluded by the strict source filter and the
+    // boundary pair carries its exact values — that is coalescing, not
+    // dropping. The precise filters plus the slicer's own precise
+    // strict-ascending guards keep both columns strictly ascending with no
+    // tolerance constant, and every kept value round-trips exactly through the
+    // writer's 17-significant-digit serialization.
     for (const auto& s : w.frame_map) {
-        const int64_t tgt = static_cast<int64_t>(std::llrint(s.tgt_frame));
-        const int64_t src = static_cast<int64_t>(std::llrint(s.src_frame));
-        if (tgt < w.emit_sample_cap && src < trim_end_src) {
+        if (s.tgt_frame < static_cast<double>(w.emit_sample_cap) &&
+            s.src_frame < static_cast<double>(trim_end_src)) {
             out.frame_map.push_back(s);
         }
     }

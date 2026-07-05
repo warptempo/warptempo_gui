@@ -212,10 +212,10 @@ struct TrimmedArtifactMaps {
 //     hop-aligned window start, so no output sample lies between the window start
 //     and the trim end; a stored zero cap reads back as "uncapped" at the engine
 //     boundary, so warptempo_engine fed such a map would render a spurious tail.
-//   - llrint of the window's first pair source >= trim_end_src: the window spans
-//     less than one source frame, so the keep-filter would drop the target-zero
-//     start anchor and read_frame_map would reject the very artifact this writer
-//     produced (its first pair's target would not be zero).
+//   - the window's first pair source at or past trim_end_src (precise-domain):
+//     the window has no source span, so the keep-filter would drop the
+//     target-zero start anchor and read_frame_map would reject the very artifact
+//     this writer produced (its first pair's target would not be zero).
 //
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source
