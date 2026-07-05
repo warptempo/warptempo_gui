@@ -349,46 +349,23 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
-    // --- Build the maps from in-memory markers. ---
+    // --- Build the full (untrimmed) frame map from in-memory markers. The
+    // engine always renders the full map: a trimmed wav render slices this
+    // canonical map into a re-anchored sub-map plus an emit_sample_cap via
+    // assign_engine_frame_map before dispatch, and the trimmed frame-map /
+    // tempo-map artifacts derive from that same window — one trim computation,
+    // shared. The inherited t_a history from frame 0 is what makes the windowed
+    // render null against the full render. ---
     MapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
-    tmin.has_trim_begin = req.has_trim_begin;
-    tmin.trim_begin_sec = req.trim_begin_sec;
-    tmin.has_trim_end   = req.has_trim_end;
-    tmin.trim_end_sec   = req.trim_end_sec;
 
-    auto r = build_maps(tmin);
-    if (!r) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: map build failed: %s\n",
-            r.error().c_str());
-        return RenderOutcome::Failed;
-    }
-    MapBuildResult tmres = std::move(*r);
-
-    // Full (untrimmed) frame map for the wav engine path. A trimmed wav render
-    // slices this canonical untrimmed map into a re-anchored sub-map plus an
-    // emit_sample_cap via assign_engine_frame_map before dispatch, rather than
-    // rebuilding a local trimmed map; that inherited t_a history from frame 0 is
-    // what makes the windowed render null against the full render.
-    // build_maps already produces the untrimmed segment list when
-    // trim is forced off, so reuse it instead of duplicating the map math.
-    // tmres stays the source for the frame-map/tempo-map else-branch (which keeps
-    // its trimmed frame map + -trimmed.wav sibling); tmfull feeds the engine and
-    // the render-domain sidecar block. Declared here (not inside the wav
-    // branch) so the sidecar block outside the branch can read it.
-    MapBuildInput tmin_full = tmin;
-    tmin_full.has_trim_begin = false;
-    tmin_full.trim_begin_sec = 0.0;
-    tmin_full.has_trim_end   = false;
-    tmin_full.trim_end_sec   = 0.0;
-    auto rfull = build_maps(tmin_full);
+    auto rfull = build_maps(tmin);
     if (!rfull) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: full map build failed: %s\n",
+            "warptempo_gui: render error: map build failed: %s\n",
             rfull.error().c_str());
         return RenderOutcome::Failed;
     }
@@ -398,6 +375,17 @@ RenderOutcome do_render(const RenderRequest& req,
         req.has_trim_begin, req.trim_begin_sec,
         req.has_trim_end, req.trim_end_sec,
         sample_rate, total_frames, N_fft);
+
+    // Source-aware trim check, formerly inside build_maps' post-pass. Runs
+    // before any window computation, engine slice, or artifact derivation.
+    if (auto v = validate_trim_frames(
+            trim_window.trim_begin_src, trim_window.trim_end_src,
+            req.has_trim_begin, req.has_trim_end,
+            static_cast<int64_t>(total_frames)); !v) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: %s\n", v.error().c_str());
+        return RenderOutcome::Failed;
+    }
 
     // The engine no longer windows; render-domain sidecars subtract the slice
     // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
@@ -428,18 +416,13 @@ RenderOutcome do_render(const RenderRequest& req,
         // Only wav renders produce these — frame-map/tempo-map formats skip
         // the engine. The phase-reset sidecar is always written on wav batch
         // renders, including as an empty file.
-        if (output_format == "wav" && !tmres.frame_map.empty() &&
+        if (output_format == "wav" && !tmfull.frame_map.empty() &&
             sample_rate > 0) {
-            // Walk the FULL frame map (no synthetic trim anchors); each emitted
-            // render-domain time is the full-render output sample minus the
-            // slice origin. When untrimmed, window_offset_samples is 0 and this
-            // reduces to old behavior.
-            const FrameMapRealRange real = real_segments(tmfull);
-            const int64_t trim_begin =
-                static_cast<int64_t>(tmres.trim_begin_frame);
-            const int64_t trim_end = tmres.trimmed
-                ? static_cast<int64_t>(tmres.trim_end_frame)
-                : static_cast<int64_t>(total_frames);
+            // Walk the FULL frame map; each emitted render-domain time is the
+            // full-render output sample minus the slice origin. When untrimmed,
+            // window_offset_samples is 0 and this reduces to old behavior.
+            const int64_t trim_begin = trim_window.trim_begin_src;
+            const int64_t trim_end   = trim_window.trim_end_src;
             const double sr_d = static_cast<double>(sample_rate);
             // window_offset_samples was computed at slice time. The engine no
             // longer windows, so there is no engine-side offset to recompute.
@@ -466,7 +449,7 @@ RenderOutcome do_render(const RenderRequest& req,
                        disabled_label_defs.count(m.label_ref) > 0;
             };
 
-            auto seg_it = real.begin;
+            auto seg_it = tmfull.frame_map.begin();
             std::vector<GuiWarpMarker> warped_markers;
             warped_markers.reserve(req.markers.size());
             for (const auto& g : req.markers) {
@@ -479,13 +462,12 @@ RenderOutcome do_render(const RenderRequest& req,
                 // Consume this marker's segment first (tmfull holds every
                 // segment, so the lockstep advances for every non-disabled
                 // marker regardless of trim).
-                if (seg_it == real.end) break;
+                if (seg_it == tmfull.frame_map.end()) break;
                 const auto& s = *seg_it;
                 ++seg_it;
 
-                // Trim-range filter (inclusive both ends — matches the
-                // post-pass at frame_map_build.cpp). Gates emission only; the segment
-                // above is already consumed.
+                // Trim-range filter (inclusive both ends). Gates emission only;
+                // the segment above is already consumed.
                 const int64_t source_frame_abs = static_cast<int64_t>(
                     std::nearbyint(g.time_seconds * sr_d));
                 if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
@@ -506,7 +488,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 all_ok = false;
             }
 
-            std::vector<FrameMapSegment> real_map(real.begin, real.end);
+            std::vector<FrameMapSegment> real_map = tmfull.frame_map;
 
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
@@ -902,27 +884,38 @@ RenderOutcome do_render(const RenderRequest& req,
         // When trim is active, emit a sibling trimmed wav so the consumer
         // adapter operates on the trimmed source range; when there's no
         // trim, the consumer can use the original source directly.
+        const bool trimmed = req.has_trim_begin || req.has_trim_end;
         std::filesystem::path out_dir =
             std::filesystem::path(final_output_path).parent_path();
         if (out_dir.empty()) out_dir = std::filesystem::path(".");
-        if (tmres.trimmed) {
+        if (trimmed) {
             const std::string src_stem =
                 std::filesystem::path(req.source_audio_path).stem().string();
             const std::string trimmed_path =
                 (out_dir / (src_stem + "-trimmed.wav")).string();
-            if (auto r = write_trimmed_wav(req.source_audio_path, trimmed_path,
-                                   tmres.trim_begin_frame,
-                                   tmres.trim_end_frame); !r) {
+            if (auto r = write_trimmed_wav(
+                    req.source_audio_path, trimmed_path,
+                    static_cast<size_t>(trim_window.trim_begin_src),
+                    static_cast<size_t>(trim_window.trim_end_src)); !r) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              r.error().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
         }
+        // Trimmed artifacts derive from the same window the engine renders, so
+        // they describe the trimmed deliverable byte-for-byte; untrimmed renders
+        // write the full maps verbatim. This path runs no engine.
+        const TrimmedArtifactMaps artifacts = trimmed
+            ? derive_trimmed_artifact_maps(
+                  tmfull.frame_map, tmfull.tempo_map,
+                  trim_window.trim_begin_src, trim_window.trim_end_src,
+                  N_fft, R_s, sample_rate)
+            : TrimmedArtifactMaps{tmfull.frame_map, tmfull.tempo_map};
         auto map_write = (output_format == "framemap")
-            ? write_frame_map(final_output_path, tmres.frame_map,
+            ? write_frame_map(final_output_path, artifacts.frame_map,
                                      /*drop_zero_zero=*/false)
-            : write_tempo_map(final_output_path, tmres.tempo_map);
+            : write_tempo_map(final_output_path, artifacts.tempo_map);
         if (!map_write) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                          map_write.error().c_str());
@@ -930,8 +923,8 @@ RenderOutcome do_render(const RenderRequest& req,
             return RenderOutcome::Failed;
         }
         if (prof) {
-            profile_trim_begin_frame = static_cast<int64_t>(tmres.trim_begin_frame);
-            profile_trim_end_frame = static_cast<int64_t>(tmres.trim_end_frame);
+            profile_trim_begin_frame = trim_window.trim_begin_src;
+            profile_trim_end_frame = trim_window.trim_end_src;
             profile_trim_span_frames =
                 profile_trim_end_frame - profile_trim_begin_frame;
             profile_source_channels = source_channels_probe;

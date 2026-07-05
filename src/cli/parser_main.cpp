@@ -7,9 +7,11 @@
 #include "locale_check.h"
 #include "map_output.h"                 // write_frame_map /
                                         // write_tempo_map / write_reset_map
+#include "engine/engine_geometry.h"     // kN, kRs (header-only constants)
 
 #include "audio_probe.h"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -161,16 +163,30 @@ int main(int argc, char** argv) {
         markers = std::move(*wmp);
     }
 
-    // --- resolve + build (trim honored from the project .settings) ---
+    // --- trim frames from the project .settings, with the same source-aware
+    // check the GUI and render CLI share. Convert with the nearbyint *
+    // sample_rate the window resolver uses. ---
+    const int64_t trim_begin_src = trim.has_begin
+        ? static_cast<int64_t>(std::nearbyint(
+              trim.begin_sec * static_cast<double>(sample_rate)))
+        : 0;
+    const int64_t trim_end_src = trim.has_end
+        ? static_cast<int64_t>(std::nearbyint(
+              trim.end_sec * static_cast<double>(sample_rate)))
+        : total_frames;
+    if (auto v = validate_trim_frames(trim_begin_src, trim_end_src,
+                                      trim.has_begin, trim.has_end,
+                                      total_frames); !v) {
+        std::fprintf(stderr, "warptempo_parser: %s\n", v.error().c_str());
+        return 1;
+    }
+
+    // --- resolve + build the full untrimmed map ---
     MapBuildInput in;
     in.markers        = resolve_markers_for_render(markers);
     in.scale          = es.scale;
     in.sample_rate    = sample_rate;
     in.total_frames   = total_frames;
-    in.has_trim_begin = trim.has_begin;
-    in.trim_begin_sec = trim.begin_sec;
-    in.has_trim_end   = trim.has_end;
-    in.trim_end_sec   = trim.end_sec;
 
     auto r = build_maps(in);
     if (!r) {
@@ -180,6 +196,16 @@ int main(int argc, char** argv) {
     }
     MapBuildResult out = std::move(*r);
 
+    // --- trimmed artifacts derive from the same window the engine renders, so
+    // they describe the trimmed deliverable byte-for-byte; untrimmed writes the
+    // full maps verbatim. ---
+    const bool trimmed = trim.has_begin || trim.has_end;
+    const TrimmedArtifactMaps artifacts = trimmed
+        ? derive_trimmed_artifact_maps(out.frame_map, out.tempo_map,
+                                       trim_begin_src, trim_end_src,
+                                       kN, kRs, sample_rate)
+        : TrimmedArtifactMaps{out.frame_map, out.tempo_map};
+
     // --- output path: -o, else the sibling convention ---
     if (out_path.empty()) {
         const std::string ext = (fmt == "framemap") ? ".warpframemap" : ".tempomap";
@@ -187,13 +213,13 @@ int main(int argc, char** argv) {
     }
 
     if (fmt == "framemap") {
-        if (auto w = write_frame_map(out_path, out.frame_map,
+        if (auto w = write_frame_map(out_path, artifacts.frame_map,
                                               /*drop_zero_zero=*/false); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
     } else {
-        if (auto w = write_tempo_map(out_path, out.tempo_map); !w) {
+        if (auto w = write_tempo_map(out_path, artifacts.tempo_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }

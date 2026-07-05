@@ -24,16 +24,12 @@ std::vector<FrameMapSegment> build_target_view_frame_map(
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
-    // Trim is render-time, not view-time — target view paints the WHOLE
-    // song. Forcing trim off here matches the paint_handler construction
-    // so hit-test math and waveform paint walk the same segment list.
-    // This overload always builds directly and is the entry point for
-    // hypothetical (non-live) marker lists; live-state consumers go
-    // through target_view_map_cached.
-    tmin.has_trim_begin = false;
-    tmin.trim_begin_sec = 0.0;
-    tmin.has_trim_end   = false;
-    tmin.trim_end_sec   = 0.0;
+    // Trim is render-time, not view-time — target view paints the WHOLE song,
+    // and build_maps builds the whole-song map, matching the paint_handler
+    // construction so hit-test math and waveform paint walk the same segment
+    // list. This overload always builds directly and is the entry point for
+    // hypothetical (non-live) marker lists; live-state consumers go through
+    // target_view_map_cached.
     std::vector<FrameMapSegment> out;
     auto r = build_maps(tmin);
     if (!r) {

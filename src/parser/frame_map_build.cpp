@@ -354,16 +354,6 @@ std::expected<MapBuildResult, std::string> build_maps(
             "first render-surviving warp marker must be at source time zero");
     }
 
-    // Trim range comes from .settings (MapBuildInput::trim_*), no
-    // longer from per-marker flags. The post-pass below filters frame_map
-    // segments by source frame against this range.
-    // A begin of <= 0 means "start at the start", identical to no begin
-    // trim, so normalize it away here rather than treating it as an error.
-    const bool   has_begin = in.has_trim_begin && in.trim_begin_sec > 0.0;
-    const bool   has_end   = in.has_trim_end;
-    const double begin_sec = in.trim_begin_sec;
-    const double end_sec   = in.trim_end_sec;
-
     // Pass 1: accumulate per-label deltas so forward-declared references
     // receive the correct duration when encountered in Pass 2.
     std::map<std::string, LabelCacheEntry> label_cache;
@@ -471,143 +461,24 @@ std::expected<MapBuildResult, std::string> build_maps(
     double final_tgt_sec = tgt_f_prev / static_cast<double>(sample_rate);
     out.tempo_map.push_back({final_tgt_sec, last_valid_multiplier});
 
-    // Trim post-pass. Shifts both frame_map and tempo_map vectors to begin at
-    // the trim start; drops entries outside [begin_frame, end_frame]. Injects
-    // synthetic boundary anchors into frame_map (and, on the end side,
-    // tempo_map) when the trim boundaries do not align with real warp markers, so the
-    // engine reads target_total_frames = anchor + N rather than truncating
-    // at the last in-range marker.
-    if (has_begin || has_end) {
-        long begin_frame = has_begin
-            ? static_cast<long>(std::nearbyint(begin_sec * sample_rate))
-            : 0;
-        long end_frame   = has_end
-            ? static_cast<long>(std::nearbyint(end_sec   * sample_rate))
-            : total_frames;
-
-        // Reject trim bounds that fall outside the source before any map
-        // surgery. The map math identity-extrapolates past the last anchor, so
-        // an out-of-range bound would silently produce a map extent past the
-        // source and a render shorter than the authored trim. An explicit begin
-        // must lie strictly inside the source; an explicit end may sit exactly
-        // at the source end but no further. Order between begin and end is
-        // already guaranteed upstream (the file reader rejects crossed explicit
-        // bounds; GUI drag authoring preserves order).
-        if (has_begin && begin_frame >= total_frames) {
-            return std::unexpected("trim begin at or past source end");
-        }
-        if (has_end && end_frame > total_frames) {
-            return std::unexpected("trim end past source end");
-        }
-
-        // Snapshot the pre-shift frame_map for boundary interpolation; the
-        // shift loop below moves into out.frame_map. The engine helper
-        // map_source_to_target takes std::vector<FrameMapSegment> (engine
-        // struct), so build a one-shot element-wise copy.
-        std::vector<FrameMapSegment> pre_shift_frame_map = out.frame_map;
-
-        // Boundary tgt values (unrounded). Aligning to a real marker
-        // degenerates to that marker's tgt (interpolation at a node returns the
-        // node); off-alignment yields the interpolated tgt at the trim boundary
-        // so the shift offset preserves strict monotonicity when the synthetic
-        // anchor is later prepended/appended. Source offset is the integer trim
-        // cut (begin_frame); only the target offset is fractional.
-        const double begin_tgt = has_begin
-            ? map_source_to_target(static_cast<double>(begin_frame),
-                                   pre_shift_frame_map)
-            : 0.0;
-        const double end_tgt = has_end
-            ? map_source_to_target(static_cast<double>(end_frame),
-                                   pre_shift_frame_map)
-            : (pre_shift_frame_map.empty()
-                  ? 0.0
-                  : pre_shift_frame_map.back().tgt_frame);
-
-        std::vector<FrameMapSegment> frame_map_shifted;
-        for (const auto& seg : pre_shift_frame_map) {
-            const long sf = static_cast<long>(std::llrint(seg.src_frame));
-            if (sf >= begin_frame && sf <= end_frame) {
-                frame_map_shifted.push_back({
-                    seg.src_frame - static_cast<double>(begin_frame),
-                    seg.tgt_frame - begin_tgt
-                });
-            }
-        }
-        out.frame_map = std::move(frame_map_shifted);
-
-        // Begin anchor: prepend (0, 0) when no surviving entry shifted to
-        // src_frame == 0. The interpolated begin_tgt above guarantees
-        // strict monotonicity against the first real entry.
-        if (has_begin &&
-            (out.frame_map.empty() ||
-             std::llrint(out.frame_map.front().src_frame) != 0)) {
-            out.frame_map.insert(out.frame_map.begin(), FrameMapSegment{0.0, 0.0});
-            out.has_trim_begin_anchor = true;
-        }
-
-        // End anchor: append (end-begin, end_tgt-begin_tgt) when no
-        // surviving entry sits at the trim_end boundary.
-        if (has_end) {
-            const long end_src_shifted = end_frame - begin_frame;
-            if (out.frame_map.empty() ||
-                std::llrint(out.frame_map.back().src_frame) != end_src_shifted) {
-                out.frame_map.push_back(FrameMapSegment{
-                    static_cast<double>(end_frame - begin_frame),
-                    end_tgt - begin_tgt
-                });
-                out.has_trim_end_anchor = true;
-            }
-        }
-
-        {
-            double begin_tgt_sec =
-                static_cast<double>(std::llrint(begin_tgt)) / sample_rate;
-            double end_tgt_sec   =
-                static_cast<double>(std::llrint(end_tgt))   / sample_rate;
-
-            std::vector<TempoMapEntry> tempo_map_shifted;
-            double active_multiplier = 1.0;
-            bool   start_point_written = false;
-            for (const auto& e : out.tempo_map) {
-                if (e.target_time_sec < begin_tgt_sec) {
-                    active_multiplier = e.multiplier;
-                } else if (e.target_time_sec <= end_tgt_sec) {
-                    if (!start_point_written) {
-                        if (e.target_time_sec > begin_tgt_sec) {
-                            tempo_map_shifted.push_back({0.0, active_multiplier});
-                        }
-                        start_point_written = true;
-                    }
-                    tempo_map_shifted.push_back({e.target_time_sec - begin_tgt_sec, e.multiplier});
-                    active_multiplier = e.multiplier;
-                }
-            }
-            if (!start_point_written) {
-                tempo_map_shifted.push_back({0.0, active_multiplier});
-            }
-            // End anchor for tempo_map: a final tempo event at the trim_end
-            // timestamp carrying the multiplier active just before the
-            // boundary — a no-op tempo change that gives DAWs the correct
-            // track length. Mirrors the frame_map end anchor's presence.
-            if (out.has_trim_end_anchor) {
-                tempo_map_shifted.push_back(
-                    {end_tgt_sec - begin_tgt_sec, active_multiplier});
-            }
-            out.tempo_map = std::move(tempo_map_shifted);
-        }
-
-        out.trimmed          = true;
-        out.trim_begin_frame = static_cast<size_t>(begin_frame);
-        out.trim_end_frame   = static_cast<size_t>(end_frame);
-    }
-
     return out;
 }
 
-FrameMapRealRange real_segments(const MapBuildResult& r) {
-    auto b = r.frame_map.begin() + (r.has_trim_begin_anchor ? 1 : 0);
-    auto e = r.frame_map.end()   - (r.has_trim_end_anchor   ? 1 : 0);
-    return {b, e};
+std::expected<void, std::string> validate_trim_frames(
+    int64_t begin_frame, int64_t end_frame,
+    bool has_begin, bool has_end, int64_t total_frames) {
+    // An out-of-range bound would silently produce a map extent past the source
+    // and a render shorter than the authored trim, because the map math
+    // identity-extrapolates past the last anchor. A begin of <= 0 normalizes to
+    // "start at the start" and is not an error (0 >= total_frames is false for a
+    // valid source).
+    if (has_begin && begin_frame >= total_frames) {
+        return std::unexpected("trim begin at or past source end");
+    }
+    if (has_end && end_frame > total_frames) {
+        return std::unexpected("trim end past source end");
+    }
+    return {};
 }
 
 std::vector<int64_t> phase_reset_source_frames(
@@ -717,5 +588,76 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // the engine boundary and would otherwise render the whole sub-map.
     const int64_t cap = end_tgt_full - offset;
     out.emit_sample_cap = cap < 0 ? 0 : cap;
+    return out;
+}
+
+TrimmedArtifactMaps derive_trimmed_artifact_maps(
+    const std::vector<FrameMapSegment>& full_map,
+    const std::vector<TempoMapEntry>&  full_tempo_map,
+    int64_t trim_begin_src, int64_t trim_end_src,
+    int N, int R_s, long sample_rate) {
+    TrimmedArtifactMaps out;
+
+    // One trim computation, shared with the engine: the same window
+    // assign_engine_frame_map hands the engine.
+    const WindowedFrameMap w = slice_frame_map_to_trim_window(
+        full_map, trim_begin_src, trim_end_src, N, R_s);
+
+    // Frame map. Keep every window pair whose target is strictly below the emit
+    // cap and whose source is strictly below the trim end, then append the exact
+    // (trim_end_src, emit_sample_cap) boundary pair. The window's start anchor
+    // (absolute source, target 0) passes both filters and stays as the first
+    // pair; the window's closing anchor sits at or past both caps and is
+    // replaced by the boundary. A real marker landing exactly at the trim end is
+    // excluded by the strict source filter and the boundary pair carries its
+    // exact values — that is coalescing, not dropping. The integer-domain
+    // (llrint) filters plus the slicer's own strict-ascending guarantee keep
+    // both columns strictly ascending with no tolerance constant.
+    for (const auto& s : w.frame_map) {
+        const int64_t tgt = static_cast<int64_t>(std::llrint(s.tgt_frame));
+        const int64_t src = static_cast<int64_t>(std::llrint(s.src_frame));
+        if (tgt < w.emit_sample_cap && src < trim_end_src) {
+            out.frame_map.push_back(s);
+        }
+    }
+    out.frame_map.push_back(FrameMapSegment{
+        static_cast<double>(trim_end_src),
+        static_cast<double>(w.emit_sample_cap)});
+
+    // Tempo map. Shift the full tempo-map times by -window_offset into the
+    // deliverable-relative domain. Entries at or before the window start fold
+    // into the running multiplier so the origin entry (time zero) carries the
+    // multiplier active at the window start; interior entries emit at their
+    // shifted times while strictly below the end cap; a final entry at exactly
+    // the end time carries the multiplier then active — the no-op tempo event
+    // that gives DAWs the deliverable's track length. All boundary comparisons
+    // are between doubles derived from integers over the sample rate; a
+    // coincidence at a boundary lands in either branch with sub-sample
+    // consequence, covered by the head/tail slop ruling, so there is no
+    // tolerance constant.
+    const double sr_d     = static_cast<double>(sample_rate);
+    const double offset_s = static_cast<double>(w.window_offset_samples) / sr_d;
+    const double cap_s    = static_cast<double>(w.emit_sample_cap) / sr_d;
+    double active_mult = 1.0;
+    bool   origin_written = false;
+    for (const auto& e : full_tempo_map) {
+        const double shifted = e.target_time_sec - offset_s;
+        if (shifted <= 0.0) {
+            active_mult = e.multiplier;
+        } else if (shifted < cap_s) {
+            if (!origin_written) {
+                out.tempo_map.push_back({0.0, active_mult});
+                origin_written = true;
+            }
+            out.tempo_map.push_back({shifted, e.multiplier});
+            active_mult = e.multiplier;
+        } else {
+            break;
+        }
+    }
+    if (!origin_written) {
+        out.tempo_map.push_back({0.0, active_mult});
+    }
+    out.tempo_map.push_back({cap_s, active_mult});
     return out;
 }

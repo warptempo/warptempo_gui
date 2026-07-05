@@ -161,28 +161,23 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
-    // --- reject out-of-range trim before it can silently shorten the render.
-    // This mirrors the build_maps trim rejection, which this driver never
-    // triggers because its full-map-only flow builds the untrimmed map and
-    // derives trim frames via resolve_trim_source_window instead. Convert with
-    // the same nearbyint * sample_rate the window resolver applies: an explicit
-    // begin must lie strictly inside the source, an explicit end at most at the
-    // source end. ---
-    if (trim.has_begin) {
-        const int64_t begin_src = static_cast<int64_t>(
-            std::nearbyint(trim.begin_sec * static_cast<double>(sample_rate)));
-        if (begin_src >= total_frames) {
-            std::fprintf(stderr,
-                "warptempo_cli: trim begin at or past source end\n");
-            return 1;
-        }
-    }
-    if (trim.has_end) {
-        const int64_t end_src = static_cast<int64_t>(
-            std::nearbyint(trim.end_sec * static_cast<double>(sample_rate)));
-        if (end_src > total_frames) {
-            std::fprintf(stderr,
-                "warptempo_cli: trim end past source end\n");
+    // --- reject out-of-range trim before it can silently shorten the render,
+    // the same source-aware check validate_trim_frames applies for the GUI and
+    // the parser CLI. Convert with the nearbyint * sample_rate the window
+    // resolver uses: an explicit begin must lie strictly inside the source, an
+    // explicit end at most at the source end. ---
+    {
+        const int64_t begin_src = trim.has_begin
+            ? static_cast<int64_t>(std::nearbyint(
+                  trim.begin_sec * static_cast<double>(sample_rate)))
+            : 0;
+        const int64_t end_src = trim.has_end
+            ? static_cast<int64_t>(std::nearbyint(
+                  trim.end_sec * static_cast<double>(sample_rate)))
+            : total_frames;
+        if (auto v = validate_trim_frames(begin_src, end_src, trim.has_begin,
+                                          trim.has_end, total_frames); !v) {
+            std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
             return 1;
         }
     }
@@ -201,10 +196,6 @@ int main(int argc, char** argv) {
     tmin.scale          = es.scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
-    tmin.has_trim_begin = false;
-    tmin.trim_begin_sec = 0.0;
-    tmin.has_trim_end   = false;
-    tmin.trim_end_sec   = 0.0;
 
     auto r = build_maps(tmin);
     if (!r) {

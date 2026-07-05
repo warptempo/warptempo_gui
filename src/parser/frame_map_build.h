@@ -11,7 +11,8 @@
 #include <vector>
 
 // In-memory map build used by the engine. Math is organized as
-// Pass 1, Pass 2, and a trim post-pass.
+// Pass 1 and Pass 2; the full untrimmed map is built unconditionally and trim
+// is applied downstream, never here.
 
 struct TempoMapEntry {
     double target_time_sec;
@@ -48,44 +49,12 @@ struct MapBuildInput {
     double scale        = 1.0;   // from settings; 1.0 default
     long   sample_rate  = 0;     // from the source audio file
     long   total_frames = 0;     // from the source audio file
-
-    // Settings-side trim, lifted out of warp markers into project settings
-    // (formerly marker b=/e= flags). When has_trim_begin
-    // is false, no begin trim is applied; same for end. Times are in
-    // seconds, matching the .settings file representation.
-    bool   has_trim_begin = false;
-    double trim_begin_sec = 0.0;
-    bool   has_trim_end   = false;
-    double trim_end_sec   = 0.0;
 };
 
 struct MapBuildResult {
     std::vector<FrameMapSegment> frame_map;
     std::vector<TempoMapEntry>  tempo_map;
-
-    // Populated when MapBuildInput carries trim_begin / trim_end.
-    bool   trimmed          = false;
-    size_t trim_begin_frame = 0;
-    size_t trim_end_frame   = 0;   // exclusive; == total_frames if no end
-
-    // True when the post-pass injected a synthetic begin/end entry into
-    // frame_map (and, for end, tempo_map) because the trim boundary did not
-    // align with a real warp marker. Engine- and adapter-facing consumers
-    // read these anchors as valid waypoints; the GUI-facing render sidecar
-    // walk strips them via real_segments() below.
-    bool   has_trim_begin_anchor = false;
-    bool   has_trim_end_anchor   = false;
 };
-
-// Iterator range over the "real" segments of a built frame_map — i.e.
-// the result's frame_map with the synthetic trim anchors (if any) excluded at
-// both ends. Used by the render sidecar lockstep walk so injected
-// anchors do not surface as ghost markers in render-view.
-struct FrameMapRealRange {
-    std::vector<FrameMapSegment>::const_iterator begin;
-    std::vector<FrameMapSegment>::const_iterator end;
-};
-FrameMapRealRange real_segments(const MapBuildResult& r);
 
 // Returns the built MapBuildResult on success, or std::unexpected carrying
 // the first violated condition (a concise lowercase reason; callers add their
@@ -93,11 +62,23 @@ FrameMapRealRange real_segments(const MapBuildResult& r);
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames, src_frame - prev_src_frame < 1, tempo <= 0
 // (a zero or negative effective product divides by zero or flips sign in the
-// segment arithmetic), duplicate label definition, undefined label reference,
-// trim begin at or past the source end, trim end past the source end (the two
-// trim conditions checked in the trim post-pass, after marker resolution).
+// segment arithmetic), duplicate label definition, undefined label reference.
+// Builds the full untrimmed map unconditionally; trim is applied downstream by
+// slice_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
+// (external artifacts), never here.
 std::expected<MapBuildResult, std::string> build_maps(
     const MapBuildInput& in);
+
+// Source-aware trim-bounds check shared by every trim-taking caller (the GUI
+// render dispatch, the parser CLI's trimmed-artifact path, and warptempo_cli's
+// startup). An explicit begin must lie strictly inside the source; an explicit
+// end may sit exactly at the source end but no further. Order between begin and
+// end is guaranteed upstream (the file reader rejects crossed explicit bounds;
+// GUI drag authoring preserves order). Returns {} when in range, else
+// std::unexpected with the concise reason; callers add their own stderr prefix.
+std::expected<void, std::string> validate_trim_frames(
+    int64_t begin_frame, int64_t end_frame,
+    bool has_begin, bool has_end, int64_t total_frames);
 
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
@@ -200,3 +181,32 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     const std::vector<FrameMapSegment>& full_map,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s);
+
+// The external .warpframemap / .tempomap artifacts for a trimmed deliverable.
+struct TrimmedArtifactMaps {
+    std::vector<FrameMapSegment> frame_map;
+    std::vector<TempoMapEntry>   tempo_map;
+};
+
+// Derive the trimmed deliverable's frame map and tempo map from the SAME window
+// the engine renders, so there is exactly one trim computation in the codebase
+// and the artifacts describe the delivered WAV byte-for-byte. Slices the full
+// map with slice_frame_map_to_trim_window and reads back its window: the frame
+// map keeps every window pair strictly inside the emit cap and the trim end,
+// then appends the exact (trim_end_src, emit_sample_cap) boundary pair; the
+// tempo map is the full tempo map shifted by -window_offset into the
+// deliverable-relative time domain, origin at time zero, a final no-op event at
+// the end so DAWs learn the track length.
+//
+// Artifact convention: the target column is deliverable-relative — the first
+// pair's target is exactly zero, the WAV's first sample — while the source
+// column stays absolute undisplaced source frames, matching the project-wide
+// convention shared by marker files, resetmap output, and render-view sidecars.
+// The first pair (s, 0) is therefore self-describing: s is the absolute source
+// position of the deliverable's first sample, roughly the trim instant plus the
+// N/2 analysis margin, hop-quantized.
+TrimmedArtifactMaps derive_trimmed_artifact_maps(
+    const std::vector<FrameMapSegment>& full_map,
+    const std::vector<TempoMapEntry>&  full_tempo_map,
+    int64_t trim_begin_src, int64_t trim_end_src,
+    int N, int R_s, long sample_rate);

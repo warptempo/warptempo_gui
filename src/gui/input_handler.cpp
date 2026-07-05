@@ -738,17 +738,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     tmin.scale        = app.engine_settings.scale;
     tmin.sample_rate  = audio.sample_rate();
     tmin.total_frames = static_cast<long>(audio.total_frames());
-    // Trim is a render-time cut, not a view-time concept. The toggle
-    // translates source-frame viewport / playhead / total_frames across
-    // the WHOLE song, so the frame_map must too — see the matching
-    // comment in paint_handler.cpp's per-paint recompute. Passing the
-    // the active tab's trim here would shrink the segment list to the
-    // exposition's source-frame range and identity-extrapolate the
-    // post-exposition tail from the wrong tgt_frame anchor.
-    tmin.has_trim_begin = false;
-    tmin.trim_begin_sec = 0.0;
-    tmin.has_trim_end   = false;
-    tmin.trim_end_sec   = 0.0;
+    // Trim is a render-time cut, not a view-time concept: build_maps builds the
+    // WHOLE-song map, and the toggle translates source-frame viewport /
+    // playhead / total_frames across the whole song against it — see the
+    // matching comment in paint_handler.cpp's per-paint recompute.
     std::vector<FrameMapSegment> tmap;
     auto r = build_maps(tmin);
     if (r) {

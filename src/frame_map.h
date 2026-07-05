@@ -80,7 +80,13 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // strictly monotonic breakpoints, and a duplicated or out-of-order breakpoint
 // makes the segment interpolation divide by zero, so any accepted line whose
 // src_frame or tgt_frame does not strictly exceed the previous accepted
-// line's fails the whole read too. A missing/unopenable file is also
+// line's fails the whole read too. The first pair's target must be exactly
+// zero: every writer shape starts the target column at zero — an untrimmed map
+// at the origin pair, a trimmed artifact at the deliverable's first sample — so
+// first-target-zero is a universal writer invariant, and enforcing it catches a
+// decapitated hand-edited map that the ascending and sign checks alone would
+// admit. The first pair's source is deliberately free: zero for untrimmed, the
+// absolute deliverable start otherwise. A missing/unopenable file is also
 // std::nullopt.
 inline std::optional<std::vector<FrameMapSegment>>
 read_frame_map(const std::string& path) {
@@ -97,6 +103,9 @@ read_frame_map(const std::string& path) {
         if (ls >> extra) return std::nullopt;  // trailing garbage
         if (!std::isfinite(s) || !std::isfinite(t)) return std::nullopt;
         if (s < 0.0 || t < 0.0) return std::nullopt;
+        // First pair's target must be exactly zero — the universal writer
+        // invariant that catches a decapitated map.
+        if (segs.empty() && t != 0.0) return std::nullopt;
         if (!segs.empty() && (s <= segs.back().src_frame || t <= segs.back().tgt_frame)) {
             return std::nullopt;
         }
