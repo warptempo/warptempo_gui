@@ -454,7 +454,11 @@ std::expected<MapBuildResult, std::string> build_maps(
 
         double seg_src_dur = src_frame - src_f_prev;
         double seg_tgt_dur = target_frame - tgt_f_prev;
-        if (seg_tgt_dur > 0.000001) {
+        // Every positive target segment gets a tempomap entry: segment target
+        // durations have no floor (tempo products have no ceiling), and the
+        // frame map represents the segment, so the tempomap must agree. The
+        // > 0 comparison is division safety only, not a size threshold.
+        if (seg_tgt_dur > 0.0) {
             double effective_multiplier = seg_src_dur / seg_tgt_dur;
             last_valid_multiplier = effective_multiplier;
             double seg_start_time = tgt_f_prev / static_cast<double>(sample_rate);
