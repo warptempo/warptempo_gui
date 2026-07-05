@@ -1,6 +1,6 @@
 #include "input_handler.h"
 
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "marker_drag.h"
 #include "paint_handler.h"
 #include "render.h"
@@ -803,7 +803,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // proposed source-time lives in the drag overlay — under the
     // frozen-coord regime apply_drag_motion does not mutate the live
     // store during motion. In target view, forward-translate through
-    // the frozen frame_map (the same map paint walks during motion) so
+    // the frozen warp_frame_map (the same map paint walks during motion) so
     // the playhead lands at the same screen column as the marker stem.
     // Viewport is deliberately not followed — the user can pan manually
     // if the drag runs past the edge.
@@ -820,7 +820,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
             app.drag.moveable_times[hit_pos] * sr_d));
         const int64_t ph = (app.active_audio_view == 'T')
-            ? to_domain_frame(app, ph_src, app.drag.frozen_frame_map)
+            ? to_domain_frame(app, ph_src, app.drag.frozen_warp_frame_map)
             : ph_src;
         if (ph != app.playhead_cursor_sample) {
             const double old_px = playhead_pixel_x(app, audio);

@@ -15,7 +15,7 @@
 // Tristate result of do_render. Returned from the synchronous entry point
 // and propagated through GuiAsyncRenderer to on_done callbacks.
 //   - Success:   pipeline ran to completion; final output exists on disk.
-//   - Failed:    early-return error path (frame-map build, engine/render,
+//   - Failed:    early-return error path (warp-frame-map build, engine/render,
 //                output write/publish, or rename); diagnostics already on
 //                stderr.
 //   - Cancelled: cancel_flag was observed mid-pipeline; partial output
@@ -82,7 +82,7 @@ struct RenderRequest {
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
     // counterparts. The render pipeline forwards the active tab's trim to
-    // MapBuildInput, which drives the frame_map/tempo_map derivation for the
+    // WarpMapBuildInput, which drives the warp_frame_map/midi_tempo_map derivation for the
     // trimmed window; the WAV render path applies the same trim to the
     // engine's synthesis window.
     bool   has_trim_begin = false;
@@ -108,7 +108,8 @@ struct RenderRequest {
 
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>` with the
-    // selected output-format extension (.wav, .warpframemap, or .tempomap)
+    // selected output-format extension (.wav, .warpframemap, or
+    // .miditempomap)
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
     // and `.rendersettings` sidecars in the same folder. For wav renders,
@@ -158,7 +159,7 @@ std::filesystem::path compose_sibling_output_path(
 // marker times as authored seconds only; do_render derives the engine's
 // source-frame reset list from phase_resets against the probed source's rate —
 // the same late-conversion-at-the-probe shape warp markers already follow
-// through build_maps, so the conversion cannot use any rate other than the
+// through build_warp_maps, so the conversion cannot use any rate other than the
 // rendered source's. output_buffer is left at its nullptr default; the
 // target-view caller sets it after the call.
 RenderRequest build_render_request(std::string source_audio_path,

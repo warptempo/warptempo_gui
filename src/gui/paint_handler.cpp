@@ -4,8 +4,8 @@
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "frame_map_view.h"
-#include "frame_map.h"
+#include "warp_frame_map_view.h"
+#include "warp_frame_map.h"
 
 #include <chrono>
 #include <cmath>
@@ -101,9 +101,9 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // (after a viewport gesture, before the worker's swap).
     const int64_t  vp_start_disp = wf_cache.fp_vp_start;
     const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
-    const std::vector<FrameMapSegment>* tmap_disp =
-        (wf_cache.fp_target && !wf_cache.fp_frame_map.empty())
-            ? &wf_cache.fp_frame_map : nullptr;
+    const std::vector<WarpFrameMapSegment>* tmap_disp =
+        (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty())
+            ? &wf_cache.fp_warp_frame_map : nullptr;
 
     // Built once, threaded into the live render_one_editor_flag call below.
     // Reads only app.top_flag_editor, which has no view-domain distinction.
@@ -162,7 +162,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //      which swaps into wf_cache.surface on completion. Fires
     //      on the on_tick backstop and on non-pan viewport changes
     //      (zoom, center-on-playhead, follow-scroll), plus resize,
-    //      reload, and target-view frame_map changes.
+    //      reload, and target-view warp_frame_map changes.
     //   2. Incremental shift-and-strip — a pure horizontal pan
     //      (scroll_viewport) calls pan_waveform_incremental, which
     //      shifts the existing plate pixels by the pan delta and
@@ -317,15 +317,15 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     const int64_t dbg_vp_end = dbg_vp_start +
         static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
-    const std::vector<FrameMapSegment>* dbg_tmap_arg = nullptr;
+    const std::vector<WarpFrameMapSegment>* dbg_tmap_arg = nullptr;
     if (!app.render_view.enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
-            if (!app.drag.frozen_frame_map.empty())
-                dbg_tmap_arg = &app.drag.frozen_frame_map;
+            if (!app.drag.frozen_warp_frame_map.empty())
+                dbg_tmap_arg = &app.drag.frozen_warp_frame_map;
         } else {
             const auto& m = target_view_map_cached(
-                app, sr, static_cast<long>(audio.total_frames())).frame_map;
+                app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
             if (!m.empty()) dbg_tmap_arg = &m;
         }
     }
@@ -558,7 +558,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect exposed{x, y, w, h};
         const int     sr         = audio.sample_rate();
 
-        // Live viewport / target-frame_map / trim computations
+        // Live viewport / target-warp_frame_map / trim computations
         // that used to drive on_redraw's render_flags / render_markers
         // calls have moved into the cache rebuild paths (waveform via
         // the worker, stems via maybe_rebuild_stem_cache, flags
@@ -704,7 +704,7 @@ GuiPaintHandler::compute_displayed_trim() const {
     // Positions read LIVE from app state (no waveform-cache coupling): trim
     // no longer affects waveform pixels, so they must follow the cursor every
     // motion tick rather than lagging a worker-completion swap. Target-view
-    // positions map through the displayed frame_map (wf_cache.fp_frame_map) — the
+    // positions map through the displayed warp_frame_map (wf_cache.fp_warp_frame_map) — the
     // same coordinate system the marker stems use — which trim does not
     // perturb, so it is stable across a trim drag.
     const int sr = audio.sample_rate();
@@ -714,15 +714,15 @@ GuiPaintHandler::compute_displayed_trim() const {
     } else if (wf_cache.fp_target) {
         const auto src_trim = compute_trim_samples(
             app, sr, audio.total_frames());
-        if (!wf_cache.fp_frame_map.empty()) {
+        if (!wf_cache.fp_warp_frame_map.empty()) {
             const long long t0 = static_cast<long long>(std::nearbyint(
                 map_source_to_target(
                     static_cast<size_t>(src_trim.first),
-                    wf_cache.fp_frame_map)));
+                    wf_cache.fp_warp_frame_map)));
             const long long t1 = static_cast<long long>(std::nearbyint(
                 map_source_to_target(
                     static_cast<size_t>(src_trim.second),
-                    wf_cache.fp_frame_map)));
+                    wf_cache.fp_warp_frame_map)));
             t = {t0, t1};
         } else {
             t = src_trim;
@@ -742,7 +742,7 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
 
     // Frames in the same paint domain the trim stems use (render view forces
     // has_begin/has_end off, so the early-out below covers it). begin/end are
-    // already mapped through the displayed frame_map in target view.
+    // already mapped through the displayed warp_frame_map in target view.
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
 
@@ -790,7 +790,7 @@ void GuiPaintHandler::on_resize(int w, int h) {
 
     // A numeric zoom level may have been valid at the old width but show
     // more samples than the file at the new width — promote to fit-file.
-    // live_total_frames returns the frame_map-derived deformed total in
+    // live_total_frames returns the warp_frame_map-derived deformed total in
     // target view so the cap is consistent with the deformed timeline's
     // length.
     const int max_num = max_valid_numeric_level(

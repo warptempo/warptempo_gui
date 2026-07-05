@@ -4,8 +4,8 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
-#include "frame_map_view.h"
-#include "frame_map.h"
+#include "warp_frame_map_view.h"
+#include "warp_frame_map.h"
 
 #include <cmath>
 #include <cstdint>
@@ -51,18 +51,18 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                     ? static_cast<int>(app.phaseresetmarkers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
     // Target view paints marker stems at map_source_to_target
-    // translated positions; the hit test must walk the same frame_map so
+    // translated positions; the hit test must walk the same warp_frame_map so
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    const std::vector<FrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
     if (!rv && app.active_audio_view == 'T') {
-        // target_view_map_cached stores segments in app.target_map_cache.frame_map,
+        // target_view_map_cached stores segments in app.target_map_cache.warp_frame_map,
         // which outlives this call. The reference remains valid until a
         // changed-key rebuild, and this function does not mutate markers,
         // scale, or audio identity while holding it.
         const auto& m = target_view_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         if (!m.empty()) tmap = &m;
     }
     for (int i = 0; i < n; ++i) {
@@ -122,10 +122,10 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    const std::vector<FrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
     if (app.active_audio_view == 'T') {
         const auto& m = target_view_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         if (!m.empty()) tmap = &m;
     }
 
@@ -180,10 +180,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    const std::vector<FrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
     if (app.active_audio_view == 'T') {
         const auto& m = target_view_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         if (!m.empty()) tmap = &m;
     }
 
@@ -257,24 +257,24 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     // Target view's flags paint at translated positions
-    // (compute_flag_hit_rects with a non-null frame_map), so hit-test
-    // must walk the same frame_map. Build it locally — same construction
+    // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
+    // must walk the same warp_frame_map. Build it locally — same construction
     // as paint_handler's on_redraw, trim forced off. Empty in source-
     // view and render-view; the helper's nullptr-when-empty pass-through
     // below leaves those paths untouched.
     //
-    // During a drag, route through the frozen frame_map captured at
+    // During a drag, route through the frozen warp_frame_map captured at
     // begin_drag so hit-rect positions match the frozen-coord paint.
-    const std::vector<FrameMapSegment>* tmap_arg = nullptr;
+    const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
     if (!app.render_view.enabled &&
         app.active_audio_view == 'T') {
         if (app.drag.active) {
-            if (!app.drag.frozen_frame_map.empty())
-                tmap_arg = &app.drag.frozen_frame_map;
+            if (!app.drag.frozen_warp_frame_map.empty())
+                tmap_arg = &app.drag.frozen_warp_frame_map;
         } else {
             const auto& m = target_view_map_cached(
                 app, audio.sample_rate(),
-                static_cast<long>(audio.total_frames())).frame_map;
+                static_cast<long>(audio.total_frames())).warp_frame_map;
             if (!m.empty()) tmap_arg = &m;
         }
     }

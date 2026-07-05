@@ -21,15 +21,16 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 # ============================================================
 #  warptempo_parser — map / file-parse core.
 #  Depends on warptempo_audio_io for source reads and trimmed-WAV writes. No
-#  fftw, no GUI, no engine. frame_map.h / time_format.h are shared headers in
-#  src/.
+#  fftw, no GUI, no engine. warp_frame_map.h / phase_reset_frame_map.h /
+#  time_format.h are shared headers in src/.
 # ============================================================
 add_library(warptempo_parser_lib STATIC
     src/parser/warpmarkers_parse.cpp
     src/parser/phaseresetmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/settings_trim.cpp
-    src/parser/frame_map_build.cpp
+    src/parser/warp_frame_map_build.cpp
+    src/parser/phase_reset_frame_map_build.cpp
     src/parser/source_audio_io.cpp
     src/parser/map_output.cpp
 )
@@ -42,8 +43,8 @@ set_target_properties(warptempo_parser_lib PROPERTIES OUTPUT_NAME warptempo_pars
 
 # ============================================================
 #  warptempo_engine — PGHI DSP core.
-#  Depends on warptempo_audio_io + fftw3. Reads frame_map.h (header-only) from
-#  src/; no link edge to the parser archive.
+#  Depends on warptempo_audio_io + fftw3. Reads warp_frame_map.h (header-only)
+#  from src/; no link edge to the parser archive.
 # ============================================================
 add_library(warptempo_engine_lib STATIC
     src/engine/engine.cpp
@@ -169,7 +170,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/playback.cpp
         src/gui/playback_lifecycle.cpp
         src/gui/render_pipeline.cpp
-        src/gui/frame_map_view.cpp
+        src/gui/warp_frame_map_view.cpp
         src/gui/viewport.cpp
         src/gui/selection.cpp
         src/gui/settings_io.cpp
@@ -229,8 +230,9 @@ endif()
 
 # ============================================================
 #  warptempo_parser — headless map emitter (parser-only).
-#  Reads <source-stem>.{warpmarkers,settings} and writes the framemap /
-#  tempomap artifact the GUI would for the same project. No engine, no audio.
+#  Reads <source-stem>.{warpmarkers,settings} and writes the warpframemap /
+#  miditempomap artifact the GUI would for the same project. No engine, no
+#  audio.
 # ============================================================
 option(WARPTEMPO_BUILD_PARSER
        "Build the standalone warptempo_parser binary (the parser library always builds)" OFF)
@@ -246,7 +248,8 @@ endif()
 #  warptempo_cli — headless wav render CLI (parser + engine).
 #  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes the
 #  warped wav the GUI would render for the same project. Runs the full PGHI
-#  engine; output_format must be wav (warptempo_parser covers framemap/tempomap).
+#  engine; output_format must be wav (warptempo_parser covers warpframemap /
+#  miditempomap).
 # ============================================================
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
 if(WARPTEMPO_BUILD_CLI)
@@ -260,10 +263,11 @@ endif()
 
 # ============================================================
 #  warptempo_engine — engine-only synthesis driver.
-#  Reads a prebuilt framemap [+ resetmap] + source wav and writes the warped
-#  wav by running the PGHI engine directly. Links libwarptempo_engine ALONE —
-#  no parser archive: the map readers are header-only (frame_map.h) and the
-#  canonical phase-reset displacement is inlined. Trim is not an engine concern.
+#  Reads a prebuilt warpframemap [+ phaseresetframemap] + source wav and
+#  writes the warped wav by running the PGHI engine directly. Links
+#  libwarptempo_engine ALONE — no parser archive: the map readers are
+#  header-only (warp_frame_map.h / phase_reset_frame_map.h) and the canonical
+#  phase-reset displacement is inlined. Trim is not an engine concern.
 # ============================================================
 option(WARPTEMPO_BUILD_ENGINE
        "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)

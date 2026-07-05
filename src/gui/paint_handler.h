@@ -6,7 +6,7 @@
 #include "render.h"
 #include "warpmarkers.h"
 #include "platform_wayland.h"
-#include "frame_map.h"   // FrameMapSegment
+#include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>
 #include <string>
@@ -81,8 +81,8 @@ struct WaveformCache {
     // at completion-swap time, not at dispatch. fp_target discriminates
     // the source-view and target-view caches: a `t` toggle flips it
     // without disturbing the source-domain inputs, forcing a cache rebuild.
-    // fp_frame_map_hash captures the warp marker / trim state baked into
-    // the frame_map the target paint just consumed; any authoring edit in
+    // fp_warp_frame_map_hash captures the warp marker / trim state baked into
+    // the warp_frame_map the target paint just consumed; any authoring edit in
     // source view that would shift the deformity invalidates the target
     // view's last cached paint on its next entry.
     int64_t   fp_vp_start    = 0;
@@ -91,15 +91,15 @@ struct WaveformCache {
     int       fp_area_h      = 0;
     long long fp_audio_gen   = -1;     // -1 = never rendered
     bool      fp_target      = false;
-    uint64_t  fp_frame_map_hash = 0;
+    uint64_t  fp_warp_frame_map_hash = 0;
 
-    // Layered-paint: the frame_map baked into the live waveform
+    // Layered-paint: the warp_frame_map baked into the live waveform
     // pixels. The stem cache reads this to render target-view stems
     // against the same coordinate system the displayed waveform uses, so
     // stems and waveform pixels snap together at the completion swap
     // instead of diverging during the rebuild window. Empty in source
     // view; empty before the first completion has fired.
-    std::vector<FrameMapSegment> fp_frame_map;
+    std::vector<WarpFrameMapSegment> fp_warp_frame_map;
 
     // Pending-slot surface and fingerprint. The worker renders
     // into pending_surface; the completion handler swaps it into surface
@@ -117,12 +117,12 @@ struct WaveformCache {
     int       pending_fp_area_h      = 0;
     long long pending_fp_audio_gen   = -1;
     bool      pending_fp_target      = false;
-    uint64_t  pending_fp_frame_map_hash = 0;
+    uint64_t  pending_fp_warp_frame_map_hash = 0;
 
-    // The frame_map the in-flight job is consuming. Set at
-    // dispatch alongside the other pending_fp_*; swapped into fp_frame_map
+    // The warp_frame_map the in-flight job is consuming. Set at
+    // dispatch alongside the other pending_fp_*; swapped into fp_warp_frame_map
     // at completion.
-    std::vector<FrameMapSegment> pending_fp_frame_map;
+    std::vector<WarpFrameMapSegment> pending_fp_warp_frame_map;
 
     // Supersede slot: when dirty-detect sees a new viewport mid-render,
     // it stashes the desired fingerprint here instead of dispatching.
@@ -137,8 +137,8 @@ struct WaveformCache {
     int       supersede_area_h      = 0;
     long long supersede_audio_gen   = -1;
     bool      supersede_target      = false;
-    uint64_t  supersede_frame_map_hash = 0;
-    std::vector<FrameMapSegment> supersede_frame_map;
+    uint64_t  supersede_warp_frame_map_hash = 0;
+    std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
 
     // `dirty` no longer drives the dispatch decision (the
     // pending_fp_* comparison does). It remains as a startup/clear flag:
@@ -165,9 +165,9 @@ struct WaveformCache {
         fp_audio_gen         = -1;
         pending_fp_audio_gen = -1;
         supersede = false;
-        supersede_frame_map.clear();
-        fp_frame_map.clear();
-        pending_fp_frame_map.clear();
+        supersede_warp_frame_map.clear();
+        fp_warp_frame_map.clear();
+        pending_fp_warp_frame_map.clear();
     }
 
     ~WaveformCache() { destroy_surface(); }
@@ -179,7 +179,7 @@ struct WaveformCache {
 // — stem rebuilds are synchronous on the main thread (sub-millisecond at
 // the marker counts the editor admits). The fingerprint is split into two
 // halves:
-//   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/frame_map_hash/
+//   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/warp_frame_map_hash/
 //      area dimensions/audio_gen): read from wf_cache.fp_*, NOT from
 //      current app state. This is how the stem layer snaps together with
 //      the waveform layer at the worker's completion swap — both sides
@@ -210,7 +210,7 @@ struct StemCache {
     int       fp_area_w           = 0;
     int       fp_area_h           = 0;       // surface height (incl. stem overhang)
     bool      fp_target           = false;
-    uint64_t  fp_frame_map_hash     = 0;
+    uint64_t  fp_warp_frame_map_hash     = 0;
 
     long long fp_warpmarker_generation       = -1;
     long long fp_phase_reset_generation      = -1;
@@ -277,7 +277,7 @@ struct FlagCache {
     int       fp_area_w              = 0;
     int       fp_area_h              = 0;
     bool      fp_target              = false;
-    uint64_t  fp_frame_map_hash        = 0;
+    uint64_t  fp_warp_frame_map_hash        = 0;
 
     long long fp_warpmarker_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -413,7 +413,7 @@ struct GuiPaintHandler {
     // the displayed domain. Wired from main.cpp into Viewport via the
     // request_waveform_pan_ callback. Falls back to the worker / a synchronous
     // full render for every case that is not a clean translate of the current
-    // plate (no plate, worker busy, drag, resize, view/frame_map change,
+    // plate (no plate, worker busy, drag, resize, view/warp_frame_map change,
     // over-a-window flick); the on_tick backstop catches any residual drift.
     void pan_waveform_incremental(int64_t new_vp_start);
 
@@ -430,9 +430,9 @@ private:
         int      area_w        = 0;
         int      area_h        = 0;
         bool     is_target     = false;
-        uint64_t frame_map_hash  = 0;
+        uint64_t warp_frame_map_hash  = 0;
         int      channel_count = 0;
-        std::vector<FrameMapSegment> frame_map;   // empty in source view
+        std::vector<WarpFrameMapSegment> warp_frame_map;   // empty in source view
         bool     valid         = false;        // false if degenerate / loading
     };
 
@@ -443,7 +443,7 @@ private:
     // chips that cap them). Computing it in one place keeps chip and stem in
     // lockstep — same positions, same has/selected bits — so they always read
     // as one continuous unit. Positions are translated into the displayed
-    // domain (target-view frame_map from wf_cache.fp_frame_map, or source-frame),
+    // domain (target-view warp_frame_map from wf_cache.fp_warp_frame_map, or source-frame),
     // matching the marker stems' coordinate system. Render view forces the
     // bounds off (trim is a source-view authoring concept).
     struct DisplayedTrim {

@@ -1,4 +1,4 @@
-#include "frame_map_build.h"
+#include "warp_frame_map_build.h"
 #include "time_format.h"  // format_timestamp
 
 #include <algorithm>
@@ -62,7 +62,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 
     // Inherited-tempo resolution for pass markers is the canonical
     // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
-    // declared in frame_map_build.h) — the same walk the hover popup uses. Called
+    // declared in warp_frame_map_build.h) — the same walk the hover popup uses. Called
     // directly at the tempo_inherits branch.
 
     std::vector<MarkerForRender> out;
@@ -102,7 +102,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // after a label ref therefore legally inherits the nearest owner further
 // back — that arrangement is bad form but accepted everywhere (parse,
 // GUI ops, flag editor), and this resolution is the single source of its
-// meaning across render, framemap, tempomap, and hover. Passes
+// meaning across render, warpframemap, miditempomap, and hover. Passes
 // deliberately never inherit through a ref: a ref owns a duration
 // equation, not a rate, and its implied rate depends on segment geometry
 // including the position of the very marker that follows it, so
@@ -350,9 +350,9 @@ std::string compute_hover_popup_text(
     return "";
 }
 
-std::expected<MapBuildResult, std::string> build_maps(
-    const MapBuildInput& in) {
-    MapBuildResult out;
+std::expected<WarpMapBuildResult, std::string> build_warp_maps(
+    const WarpMapBuildInput& in) {
+    WarpMapBuildResult out;
 
     const auto&  markers      = in.markers;
     const double scale        = in.scale;
@@ -419,8 +419,8 @@ std::expected<MapBuildResult, std::string> build_maps(
         src_f_prev = src_frame;
     }
 
-    // Pass 2: emit frame_map segments + tempo_map entries.
-    out.frame_map.push_back({0, 0});
+    // Pass 2: emit warp_frame_map segments + midi_tempo_map entries.
+    out.warp_frame_map.push_back({0, 0});
 
     src_f_prev = 0.0;
     double tgt_f_prev = 0.0;
@@ -454,25 +454,25 @@ std::expected<MapBuildResult, std::string> build_maps(
 
         double seg_src_dur = src_frame - src_f_prev;
         double seg_tgt_dur = target_frame - tgt_f_prev;
-        // Every positive target segment gets a tempomap entry: segment target
+        // Every positive target segment gets a miditempomap entry: segment target
         // durations have no floor (tempo products have no ceiling), and the
-        // frame map represents the segment, so the tempomap must agree. The
+        // frame map represents the segment, so the miditempomap must agree. The
         // > 0 comparison is division safety only, not a size threshold.
         if (seg_tgt_dur > 0.0) {
             double effective_multiplier = seg_src_dur / seg_tgt_dur;
             last_valid_multiplier = effective_multiplier;
             double seg_start_time = tgt_f_prev / static_cast<double>(sample_rate);
-            out.tempo_map.push_back({seg_start_time, effective_multiplier});
+            out.midi_tempo_map.push_back({seg_start_time, effective_multiplier});
         }
 
-        out.frame_map.push_back({src_frame, target_frame});
+        out.warp_frame_map.push_back({src_frame, target_frame});
 
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;
     }
 
     double final_tgt_sec = tgt_f_prev / static_cast<double>(sample_rate);
-    out.tempo_map.push_back({final_tgt_sec, last_valid_multiplier});
+    out.midi_tempo_map.push_back({final_tgt_sec, last_valid_multiplier});
 
     return out;
 }
@@ -494,31 +494,12 @@ std::expected<void, std::string> validate_trim_frames(
     return {};
 }
 
-std::expected<std::vector<double>, std::string> phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate,
-    int64_t total_frames) {
-    std::vector<double> out;
-    out.reserve(markers.size());
-    for (size_t i = 0; i < markers.size(); ++i) {
-        const auto& m = markers[i];
-        if (m.disabled) continue;
-        double src_frame = m.time_seconds * static_cast<double>(sample_rate);
-        if (src_frame > static_cast<double>(total_frames)) {
-            return std::unexpected(
-                "phase reset time exceeds source length at marker "
-                + std::to_string(i));
-        }
-        out.push_back(src_frame);
-    }
-    return out;
-}
-
-WindowedFrameMap slice_frame_map_to_trim_window(
-    const std::vector<FrameMapSegment>& full_map,
+WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
+    const std::vector<WarpFrameMapSegment>& full_map,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s) {
-    WindowedFrameMap out;
-    if (full_map.empty()) { out.frame_map = full_map; return out; }
+    WindowedWarpFrameMap out;
+    if (full_map.empty()) { out.warp_frame_map = full_map; return out; }
 
     // Dense synthesis-frame source schedule over the FULL map. Identical to the
     // engine's generate_source_frame_positions(): frame m at output m*R_s reads
@@ -554,17 +535,17 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     const double start_src_precise =
         map_target_to_source(static_cast<double>(offset), full_map);
 
-    std::vector<FrameMapSegment>& sm = out.frame_map;
+    std::vector<WarpFrameMapSegment>& sm = out.warp_frame_map;
     // Start anchor at output 0.
-    sm.push_back(FrameMapSegment{
+    sm.push_back(WarpFrameMapSegment{
         start_src_precise < 0.0 ? 0.0 : start_src_precise, 0.0});
     // Interior real segments strictly inside the window's output span, target
     // shifted by -offset (rigid integer translation -> lines preserved exactly),
     // source absolute. All comparisons run in the precise double domain, and
     // they are what keep the emitted pairs strictly ascending and finite —
-    // read_frame_map validates line shape only, so ordering and value
+    // read_warp_frame_map validates line shape only, so ordering and value
     // conformance is this writer's own contract, consumed as a precondition by
-    // the map helpers in frame_map.h and the engine's monotonicity validator.
+    // the map helpers in warp_frame_map.h and the engine's monotonicity validator.
     // Sub-sample target segments are legal under the no-ceiling tempo rule,
     // and a rounded
     // (llrint) guard here silently dropped strictly ascending breakpoints whose
@@ -579,7 +560,7 @@ WindowedFrameMap slice_frame_map_to_trim_window(
         if (s.src_frame <= sm.back().src_frame) continue;   // src strict
         const double st = s.tgt_frame - static_cast<double>(offset);
         if (st <= sm.back().tgt_frame) continue;            // tgt strict
-        sm.push_back(FrameMapSegment{s.src_frame, st});
+        sm.push_back(WarpFrameMapSegment{s.src_frame, st});
     }
     // End on the first full-map anchor at or past trim_end_src (the anchor that
     // closes the segment containing trim_end_src), target-shifted by -offset.
@@ -587,17 +568,17 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // so source reads up to the trim boundary match a full render. The engine
     // truncates at emit_sample_cap (below), so the span between trim_end_src and
     // this anchor is synthesized into the discarded tail only. trim_end_src
-    // cannot exceed the source length: build_maps rejects out-of-range trim
+    // cannot exceed the source length: build_warp_maps rejects out-of-range trim
     // before any map reaches this slicer (GUI renders of every output format
-    // fail at the trimmed build_maps call, and the parser CLI likewise), and the
+    // fail at the trimmed build_warp_maps call, and the parser CLI likewise), and the
     // render CLI checks its trim bounds at startup because its full-map-only
-    // flow bypasses that build_maps rejection. A closing anchor therefore always
+    // flow bypasses that build_warp_maps rejection. A closing anchor therefore always
     // exists, at worst full_map.back().
     for (const auto& s : full_map) {
         if (s.src_frame < static_cast<double>(trim_end_src)) continue;
         if (s.src_frame > sm.back().src_frame &&
             s.tgt_frame - static_cast<double>(offset) > sm.back().tgt_frame) {
-            sm.push_back(FrameMapSegment{s.src_frame,
+            sm.push_back(WarpFrameMapSegment{s.src_frame,
                                          s.tgt_frame - static_cast<double>(offset)});
         }
         break;
@@ -609,11 +590,11 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     // though the sub-map's last anchor sits past it. A stored 0 signals a
     // degenerate window: the trim's target span is entirely consumed by the
     // hop-aligned window start (offset at or past the rounded trim-end target),
-    // so no output sample would be emitted. assign_engine_frame_map refuses to
+    // so no output sample would be emitted. assign_engine_warp_frame_map refuses to
     // hand such a map to the engine, because emit_sample_cap == 0 means "no
     // cap" at the engine boundary and would otherwise render the whole sub-map;
     // derive_trimmed_artifact_maps refuses the same stored-zero window for the
-    // external .warpframemap / .tempomap artifacts.
+    // external .warpframemap / .miditempomap artifacts.
     const int64_t cap =
         static_cast<int64_t>(std::llrint(end_tgt_precise)) - offset;
     out.emit_sample_cap = cap < 0 ? 0 : cap;
@@ -621,19 +602,19 @@ WindowedFrameMap slice_frame_map_to_trim_window(
 }
 
 std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
-    const std::vector<FrameMapSegment>& full_map,
-    const std::vector<TempoMapEntry>&  full_tempo_map,
+    const std::vector<WarpFrameMapSegment>& full_map,
+    const std::vector<MidiTempoMapEntry>&  full_midi_tempo_map,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s, long sample_rate) {
     TrimmedArtifactMaps out;
 
     // One trim computation, shared with the engine: the same window
-    // assign_engine_frame_map hands the engine.
-    const WindowedFrameMap w = slice_frame_map_to_trim_window(
+    // assign_engine_warp_frame_map hands the engine.
+    const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
         full_map, trim_begin_src, trim_end_src, N, R_s);
 
     // Refuse the same degenerate window the WAV path refuses through
-    // assign_engine_frame_map, up front, before deriving anything. A stored-zero
+    // assign_engine_warp_frame_map, up front, before deriving anything. A stored-zero
     // (or negative) cap means the trim's output span is entirely consumed by the
     // hop-aligned window start, and reads back as "uncapped" at the engine
     // boundary. This refusal also covers an empty window map: the only slicer
@@ -650,7 +631,7 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // Frame map. Keep every window pair whose target is strictly below the emit
     // cap and whose source is strictly below the trim end — precise-domain
     // comparisons, preserving the strict ascent this writer itself guarantees
-    // (read_frame_map validates line shape only; the map helpers and the
+    // (read_warp_frame_map validates line shape only; the map helpers and the
     // engine consume strictly ascending, finite pairs as a precondition), so
     // legal sub-sample segments survive instead of being coalesced by
     // rounding — then
@@ -673,17 +654,18 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // strict-ascending guards keep both columns strictly ascending with no
     // tolerance constant, and every kept value round-trips exactly through the
     // writer's 17-significant-digit serialization.
-    for (const auto& s : w.frame_map) {
+    for (const auto& s : w.warp_frame_map) {
         if (s.tgt_frame < static_cast<double>(w.emit_sample_cap) &&
             s.src_frame < static_cast<double>(trim_end_src)) {
-            out.frame_map.push_back(s);
+            out.warp_frame_map.push_back(s);
         }
     }
-    out.frame_map.push_back(FrameMapSegment{
+    out.warp_frame_map.push_back(WarpFrameMapSegment{
         static_cast<double>(trim_end_src),
         static_cast<double>(w.emit_sample_cap)});
 
-    // Tempo map. Shift the full tempo-map times by -window_offset into the
+    // Tempo map. Shift the full midi-tempo-map times by -window_offset into
+    // the
     // deliverable-relative domain. Entries at or before the window start fold
     // into the running multiplier so the origin entry (time zero) carries the
     // multiplier active at the window start; interior entries emit at their
@@ -699,24 +681,24 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     const double cap_s    = static_cast<double>(w.emit_sample_cap) / sr_d;
     double active_mult = 1.0;
     bool   origin_written = false;
-    for (const auto& e : full_tempo_map) {
+    for (const auto& e : full_midi_tempo_map) {
         const double shifted = e.target_time_sec - offset_s;
         if (shifted <= 0.0) {
             active_mult = e.multiplier;
         } else if (shifted < cap_s) {
             if (!origin_written) {
-                out.tempo_map.push_back({0.0, active_mult});
+                out.midi_tempo_map.push_back({0.0, active_mult});
                 origin_written = true;
             }
-            out.tempo_map.push_back({shifted, e.multiplier});
+            out.midi_tempo_map.push_back({shifted, e.multiplier});
             active_mult = e.multiplier;
         } else {
             break;
         }
     }
     if (!origin_written) {
-        out.tempo_map.push_back({0.0, active_mult});
+        out.midi_tempo_map.push_back({0.0, active_mult});
     }
-    out.tempo_map.push_back({cap_s, active_mult});
+    out.midi_tempo_map.push_back({cap_s, active_mult});
     return out;
 }

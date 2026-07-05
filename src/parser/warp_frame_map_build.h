@@ -1,8 +1,7 @@
 #pragma once
 
 #include "warpmarkers_parse.h"          // WarpMarker
-#include "phaseresetmarkers_parse.h"  // PhaseResetMarker
-#include "frame_map.h"                  // FrameMapSegment
+#include "warp_frame_map.h"                  // WarpFrameMapSegment
 
 #include <cstddef>
 #include <cstdint>
@@ -14,12 +13,12 @@
 // Pass 1 and Pass 2; the full untrimmed map is built unconditionally and trim
 // is applied downstream, never here.
 
-struct TempoMapEntry {
+struct MidiTempoMapEntry {
     double target_time_sec;
     double multiplier;
 };
 
-// Minimal POD the frame_map math needs. The GUI's `GuiWarpMarker` resolves into
+// Minimal POD the warp_frame_map math needs. The GUI's `GuiWarpMarker` resolves into
 // this: tempo_inherits markers are walked back to their nearest owning
 // ancestor and their effective tempo_base / tempo_scale are copied forward.
 // Disabled markers (and any references to disabled-defined labels) are
@@ -48,7 +47,7 @@ struct MarkerEffective {
                                     // and unaffected
 };
 
-struct MapBuildInput {
+struct WarpMapBuildInput {
     std::vector<MarkerForRender> markers;
 
     double scale        = 1.0;   // from settings; 1.0 default
@@ -56,12 +55,12 @@ struct MapBuildInput {
     long   total_frames = 0;     // from the source audio file
 };
 
-struct MapBuildResult {
-    std::vector<FrameMapSegment> frame_map;
-    std::vector<TempoMapEntry>  tempo_map;
+struct WarpMapBuildResult {
+    std::vector<WarpFrameMapSegment> warp_frame_map;
+    std::vector<MidiTempoMapEntry>  midi_tempo_map;
 };
 
-// Returns the built MapBuildResult on success, or std::unexpected carrying
+// Returns the built WarpMapBuildResult on success, or std::unexpected carrying
 // the first violated condition (a concise lowercase reason; callers add their
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
@@ -69,10 +68,10 @@ struct MapBuildResult {
 // (a zero or negative effective product divides by zero or flips sign in the
 // segment arithmetic), duplicate label definition, undefined label reference.
 // Builds the full untrimmed map unconditionally; trim is applied downstream by
-// slice_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
+// slice_warp_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
 // (external artifacts), never here.
-std::expected<MapBuildResult, std::string> build_maps(
-    const MapBuildInput& in);
+std::expected<WarpMapBuildResult, std::string> build_warp_maps(
+    const WarpMapBuildInput& in);
 
 // Source-aware trim-bounds check shared by every trim-taking caller (the GUI
 // render dispatch, the parser CLI's trimmed-artifact path, and warptempo_cli's
@@ -92,7 +91,7 @@ std::expected<void, std::string> validate_trim_frames(
 // markers (and thereby all refs to them). The inherit walk-back is applied
 // here so MarkerForRender carries a concrete tempo_base / tempo_scale —
 // same rule as resolve_inherited_tempo. Both the engine-bound render
-// pipeline and the target view's frame_map recompute go through this single
+// pipeline and the target view's warp_frame_map recompute go through this single
 // resolver so the visible deformity matches what the engine would emit.
 std::vector<MarkerForRender> resolve_markers_for_render(
     const std::vector<WarpMarker>& src);
@@ -132,7 +131,8 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
 // parser-domain string/math — computes the same resolution the engine uses
-// when emitting the framemap, so the popup matches what will be rendered. Pass
+// when emitting the warpframemap, so the popup matches what will be
+// rendered. Pass
 // markers emit "= TEMPO (from SOURCE @ TIME)" or "= TEMPO*SCALE (from SOURCE @
 // TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
 // immediate prior marker's own resolved displayed tempo — matching what that
@@ -155,28 +155,6 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate);
 
-// Pure parser-domain assembly: phase-reset markers -> absolute source-frame
-// positions. Drops disabled markers; converts time_seconds to an exact double
-// source-frame position (time * sample_rate, no rounding), matching the
-// warp-marker time->frame convention in build_maps. Refuses an enabled reset
-// authored past the source end (strictly greater than total_frames; equal is
-// allowed), the producer-side validation layer parallel to build_maps'
-// past-end check on the warp axis: a phase-reset sidecar sitting beside a
-// shorter or replaced source fails loudly here instead of the reset silently
-// falling out of dispatch's window drop test. Disabled markers are skipped
-// before the check — only resolved markers are validated, as in build_maps —
-// so a disabled past-end reset stays loadable and inert. No ordering check
-// lives here: the strict marker parser owns ordering at load, and the
-// engine's non-decreasing hardfail covers raw resetmap inputs that bypass
-// the marker parser. The result is the undisplaced authored source-frame
-// list used for render-view display, resetmap output, and target-domain
-// dispatch placement; the dispatch mapping (phase_reset_dispatch.h) stays in
-// doubles, and quantization to the engine's integer query schedule happens
-// inside the engine at placement time.
-std::expected<std::vector<double>, std::string> phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate,
-    int64_t total_frames);
-
 // Result of slicing the full untrimmed frame map to a trim window: the
 // re-anchored sub-map the engine renders, the output offset of the window
 // origin (wbegin * R_s) for the render-view marker sidecar, and the
@@ -184,8 +162,8 @@ std::expected<std::vector<double>, std::string> phase_reset_source_frames(
 // target, re-anchored). The sub-map extends to the first real anchor at or
 // past trim_end_src so the final segment carries the full map's exact slope;
 // emit_sample_cap then cuts the output back to the trim boundary.
-struct WindowedFrameMap {
-    std::vector<FrameMapSegment> frame_map;     // source absolute; target re-anchored to 0
+struct WindowedWarpFrameMap {
+    std::vector<WarpFrameMapSegment> warp_frame_map;     // source absolute; target re-anchored to 0
     int64_t                      window_offset_samples = 0;
     int64_t                      emit_sample_cap       = 0;  // trim-end output length
 };
@@ -204,33 +182,34 @@ struct WindowedFrameMap {
 // returned emit_sample_cap is the trim-end target minus the window offset; the
 // engine emits only up to it, so the few frames between trim_end_src and the
 // closing anchor are synthesized into the truncated tail only. The returned map
-// must be strictly monotonic in both axes (engine validate_frame_map_monotonic
+// must be strictly monotonic in both axes (engine validate_warp_frame_map_monotonic
 // rejects it otherwise). Caller invokes this only when a trim bound is set.
-WindowedFrameMap slice_frame_map_to_trim_window(
-    const std::vector<FrameMapSegment>& full_map,
+WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
+    const std::vector<WarpFrameMapSegment>& full_map,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s);
 
-// The external .warpframemap / .tempomap artifacts for a trimmed deliverable.
+// The external .warpframemap / .miditempomap artifacts for a trimmed
+// deliverable.
 struct TrimmedArtifactMaps {
-    std::vector<FrameMapSegment> frame_map;
-    std::vector<TempoMapEntry>   tempo_map;
+    std::vector<WarpFrameMapSegment> warp_frame_map;
+    std::vector<MidiTempoMapEntry>   midi_tempo_map;
 };
 
-// Derive the trimmed deliverable's frame map and tempo map from the SAME window
-// the engine renders, so there is exactly one trim computation in the codebase
-// and the artifacts describe the delivered WAV byte-for-byte. Slices the full
-// map with slice_frame_map_to_trim_window and reads back its window: the frame
-// map keeps every window pair strictly inside the emit cap and the trim end,
-// then appends the exact (trim_end_src, emit_sample_cap) boundary pair; the
-// tempo map is the full tempo map shifted by -window_offset into the
-// deliverable-relative time domain, origin at time zero, a final no-op event at
-// the end so DAWs learn the track length.
+// Derive the trimmed deliverable's warpframemap and miditempomap from the SAME
+// window the engine renders, so there is exactly one trim computation in the
+// codebase and the artifacts describe the delivered WAV byte-for-byte. Slices
+// the full map with slice_warp_frame_map_to_trim_window and reads back its
+// window: the warpframemap keeps every window pair strictly inside the emit
+// cap and the trim end, then appends the exact (trim_end_src, emit_sample_cap)
+// boundary pair; the miditempomap is the full midi tempo map shifted by
+// -window_offset into the deliverable-relative time domain, origin at time
+// zero, a final no-op event at the end so DAWs learn the track length.
 //
 // Returns the derived maps on success, or std::unexpected carrying a concise
 // lowercase reason (callers add their own context prefix, same contract as
 // validate_trim_frames). Refuses the same degenerate window the WAV path refuses
-// through assign_engine_frame_map, up front, instead of writing a map that is
+// through assign_engine_warp_frame_map, up front, instead of writing a map that is
 // either reader-rejected or engine-misread. The single refusal condition,
 // checked immediately after slicing: emit_sample_cap <= 0 — the trim's target
 // span is entirely consumed by the hop-aligned window start, so no output
@@ -243,12 +222,13 @@ struct TrimmedArtifactMaps {
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source
 // column stays absolute undisplaced source frames, matching the project-wide
-// convention shared by marker files, resetmap output, and render-view sidecars.
+// convention shared by marker files, phaseresetframemap output, and
+// render-view sidecars.
 // The first pair (s, 0) is therefore self-describing: s is the absolute source
 // position of the deliverable's first sample, roughly the trim instant plus the
 // N/2 analysis margin, hop-quantized.
 std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
-    const std::vector<FrameMapSegment>& full_map,
-    const std::vector<TempoMapEntry>&  full_tempo_map,
+    const std::vector<WarpFrameMapSegment>& full_map,
+    const std::vector<MidiTempoMapEntry>&  full_midi_tempo_map,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s, long sample_rate);

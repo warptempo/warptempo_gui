@@ -87,8 +87,8 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "output_format") {
-        if (value != "wav" && value != "framemap" && value != "tempomap") {
-            reason = "must be one of {wav, framemap, tempomap}";
+        if (value != "wav" && value != "warpframemap" && value != "miditempomap") {
+            reason = "must be one of {wav, warpframemap, miditempomap}";
             return false;
         }
         out.output_format = value;
@@ -105,7 +105,7 @@ bool validate_engine_setting(const std::string& key,
         // reload (sub-half-micro values serialize as 0.000000, which the
         // greater-than-zero check above rejects) or silently changes value
         // across save and reload. The implied lower bound in the one-micro
-        // class also keeps build_maps' target-delta division finite: a
+        // class also keeps build_warp_maps' target-delta division finite: a
         // subnormal scale could otherwise drive delta_tgt to inf and emit
         // non-finite map artifacts as success.
         char buf[64];

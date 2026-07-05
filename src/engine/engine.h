@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "frame_map.h"      // FrameMapSegment
+#include "warp_frame_map.h"      // WarpFrameMapSegment
 
 // Parameter struct for the warptempo DSP pipeline. Constructed by the GUI's
 // render pipeline and passed to run_warptempo_engine().
@@ -32,7 +32,7 @@ struct EngineParams {
     // for clearing or reserving.
     std::vector<float>* output_buffer = nullptr;
 
-    std::vector<FrameMapSegment> frame_map;  // rounded + precise breakpoints
+    std::vector<WarpFrameMapSegment> warp_frame_map;  // rounded + precise breakpoints
 
     int    N                          = 4096;
     bool   limiter                    = false;
@@ -50,10 +50,10 @@ struct EngineParams {
     // engine skips its internal phase reset detection and uses this list
     // verbatim for phase reset positioning. Must be non-decreasing
     // (duplicates allowed); the engine refuses loudly at init otherwise,
-    // mirroring the frame-map monotonicity validation.
+    // mirroring the warp-frame-map monotonicity validation.
     // Typical source: GUI's phase reset view, providing the union of inserted
     // + active-detected (with displacement applied) entries.
-    std::vector<double> phase_reset_frames;
+    std::vector<double> phase_reset_frame_map;
 
     // Output-sample cap. When > 0, the engine emits exactly this many output
     // samples and synthesizes only the frames needed to cover them; the rest of
@@ -61,17 +61,17 @@ struct EngineParams {
     // the cap is derived from the map's last anchor (full-render behavior). This
     // is a pure output-length budget, not a trim window: the engine has no
     // notion of trim begin/end source frames. A trimmed render supplies the
-    // parser's WindowedFrameMap::emit_sample_cap here.
+    // parser's WindowedWarpFrameMap::emit_sample_cap here.
     int64_t emit_sample_cap = 0;
 
-    // The engine renders the supplied frame_map wholesale and is trim-ignorant:
+    // The engine renders the supplied warp_frame_map wholesale and is trim-ignorant:
     // a trimmed render is produced by handing it a pre-sliced sub-map (the
-    // parser's slice_frame_map_to_trim_window), not by an internal window.
+    // parser's slice_warp_frame_map_to_trim_window), not by an internal window.
 };
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation
 // (worker observed `cancel_flag` set at a frame boundary) from genuine
-// failure (open errors, bad frame_map, etc.).
+// failure (open errors, bad warp_frame_map, etc.).
 enum class EngineResult { Success, Failed, Cancelled };
 
 // `cancel_flag` is optional. When non-null, the synthesis loop checks it

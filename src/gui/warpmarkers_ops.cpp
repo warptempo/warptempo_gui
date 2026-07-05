@@ -1,8 +1,8 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
-#include "frame_map_build.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_build.h"
+#include "warp_frame_map_view.h"
 #include "target_render.h"
 #include "time_format.h"
 #include "warpmarkers.h"
@@ -102,7 +102,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
     const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     viewport.move_playhead_to(sample);
 
-    // Discrete frame_map change while target view is displayed: the plate
+    // Discrete warp_frame_map change while target view is displayed: the plate
     // must re-warp. Route this one-shot jump through the synchronous
     // rebuild — the same fix applied to tab cycling (Tab / Shift+Tab /
     // Ctrl+Shift+Tab) and render-view entry — so the re-warped waveform,
@@ -214,7 +214,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-frame_map-change class as drop_marker (see comment
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
     // there): re-warp synchronously in target view.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
@@ -293,7 +293,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-frame_map-change class as drop_marker (see comment
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
     // there): re-warp synchronously in target view.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
@@ -537,14 +537,14 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         }
         const double sr_d = static_cast<double>(sr);
         const auto& tmap = target_view_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
         // Compute proposed new source-times per selected marker, then
         // validate against non-selected source-domain neighbors. eps
         // here is the minimum 1-frame gap; the visual 3-px gap source
         // view enforces doesn't translate uniformly to source-domain
-        // under a non-trivial frame_map, so we degrade to strict-monotonic
+        // under a non-trivial warp_frame_map, so we degrade to strict-monotonic
         // with one-frame headroom. In target view a pixel delta can
         // translate to a sub-grid source move only when the map is deformed
         // by extreme stretch, which is outside the usage model (real

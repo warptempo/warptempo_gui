@@ -3,7 +3,7 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "time_format.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
 #include <algorithm>

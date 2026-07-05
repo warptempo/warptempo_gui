@@ -6,9 +6,9 @@
 #include "settings_io.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "warpmarkers.h"
-#include "frame_map.h"
+#include "warp_frame_map.h"
 
 #include <algorithm>
 #include <chrono>
@@ -727,28 +727,28 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         return;
     }
 
-    // Build the current frame_map from the live warp marker store +
+    // Build the current warp_frame_map from the live warp marker store +
     // settings trim. Same resolve-then-build pipeline the render
     // pipeline runs, so the visible deformity in target view matches
     // what the engine would emit. An empty / failed build degenerates
     // to identity (the helpers return src_frame unchanged), which is
     // the right fallback when there are no qualifying markers.
-    MapBuildInput tmin;
+    WarpMapBuildInput tmin;
     tmin.markers      = resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers()));
     tmin.scale        = app.engine_settings.scale;
     tmin.sample_rate  = audio.sample_rate();
     tmin.total_frames = static_cast<long>(audio.total_frames());
-    // Trim is a render-time cut, not a view-time concept: build_maps builds the
+    // Trim is a render-time cut, not a view-time concept: build_warp_maps builds the
     // WHOLE-song map, and the toggle translates source-frame viewport /
     // playhead / total_frames across the whole song against it — see the
     // matching comment in paint_handler.cpp's per-paint recompute.
-    std::vector<FrameMapSegment> tmap;
-    auto r = build_maps(tmin);
+    std::vector<WarpFrameMapSegment> tmap;
+    auto r = build_warp_maps(tmin);
     if (r) {
-        const MapBuildResult& tmres = *r;
-        tmap.reserve(tmres.frame_map.size());
-        for (const auto& s : tmres.frame_map) {
-            tmap.push_back(FrameMapSegment{s.src_frame, s.tgt_frame});
+        const WarpMapBuildResult& tmres = *r;
+        tmap.reserve(tmres.warp_frame_map.size());
+        for (const auto& s : tmres.warp_frame_map) {
+            tmap.push_back(WarpFrameMapSegment{s.src_frame, s.tgt_frame});
         }
     }
 
@@ -760,10 +760,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     playback_lifecycle.stop_playback_if_playing();
 
     // Anchor the toggle on the playhead's pre-flip screen-pixel column.
-    // Compute ph_px now, translate the playhead through the frame_map,
+    // Compute ph_px now, translate the playhead through the warp_frame_map,
     // then derive the new viewport_start so the translated playhead
     // occupies the same column. zoom_level is preserved across the
-    // flip (the visible time span will differ by the frame_map's net
+    // flip (the visible time span will differ by the warp_frame_map's net
     // stretch — that is the deformity made visible). clamp_viewport_start
     // below pins viewport_start to file bounds; when the playhead sits
     // near the start / end of the file, the clamp moves the playhead's
@@ -780,7 +780,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     bool going_to_target = false;
     if (app.active_audio_view == 'S') {
         // S → T: forward-translate the playhead. The deformed-domain
-        // total is derived from the frame_map cache by live_total_frames,
+        // total is derived from the warp_frame_map cache by live_total_frames,
         // so the post-flip viewport math needs no cached total here.
         const double tph = map_source_to_target(
             static_cast<size_t>(app.playhead_cursor_sample < 0
@@ -807,7 +807,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // the toggle (matching the active-tab invariant above), the viewport is
     // shifted by the same delta as the playhead rather than translated
     // independently — translating both endpoints separately through the
-    // nonlinear frame_map was what caused the slide. At a fixed numeric zoom
+    // nonlinear warp_frame_map was what caused the slide. At a fixed numeric zoom
     // the samples-per-pixel is domain-invariant, so equal sample deltas map
     // to equal pixel columns; at fit-file zoom the viewport is re-clamped to
     // zero on the next tab activation anyway, so the shifted value is
@@ -845,11 +845,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
     // One-shot discrete jump with a domain change: is_target, the viewport, and
-    // the frame_map hash all flip, so the displayed plate must change. Render it
+    // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the
     // bottom-strip S/T indicator and the playhead column do not repaint a frame
     // ahead of the deformed waveform. The plate is built from source audio plus
-    // the live frame_map, independent of the target render buffer, so this is
+    // the live warp_frame_map, independent of the target render buffer, so this is
     // unaffected by the ensure_ready / rebind_to_source below.
     viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);

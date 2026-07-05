@@ -2,9 +2,9 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "frame_map_build.h"               // MapBuildInput/Result, build_maps,
-                                        // resolve_markers_for_render,
-                                        // phase_reset_source_frames
+#include "warp_frame_map_build.h"               // WarpMapBuildInput/Result, build_warp_maps,
+                                        // resolve_markers_for_render
+#include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -37,7 +37,7 @@ void usage(const char* argv0) {
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  warped wav the GUI would render for the same project. Runs the full\n"
         "  PGHI engine; output_format must be wav (use warptempo_parser for\n"
-        "  framemap/tempomap). -o is required; there is no default sibling.\n"
+        "  warpframemap/miditempomap). -o is required; there is no default sibling.\n"
         "  --tab selects which per-tab trim to apply (default A).\n",
         argv0);
 }
@@ -94,12 +94,12 @@ int main(int argc, char** argv) {
         trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
-    // --- engine-only: this CLI renders wav. framemap/tempomap are
+    // --- engine-only: this CLI renders wav. warpframemap/miditempomap are
     // warptempo_parser's job (the engine never runs for those). ---
     if (es.output_format != "wav") {
         std::fprintf(stderr,
             "warptempo_cli: output_format '%s' is not a wav render "
-            "(use warptempo_parser for framemap/tempomap)\n",
+            "(use warptempo_parser for warpframemap/miditempomap)\n",
             es.output_format.c_str());
         return 1;
     }
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     }
 
     // --- markers; a missing sidecar is a startup error. Without it an absent
-    // file would flow an empty marker list through build_maps to a
+    // file would flow an empty marker list through build_warp_maps to a
     // seed-anchor-only map whose zero emit cap the engine refuses at dispatch;
     // erroring here gives the pointed missing-file message instead of that
     // indirect refusal. ---
@@ -194,19 +194,19 @@ int main(int argc, char** argv) {
     // trim is applied by slicing it, never by an engine window. This is
     // do_render's tmfull: its t_a history from frame 0 is what keeps a windowed
     // render sample-aligned with the full render. ---
-    MapBuildInput tmin;
+    WarpMapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(markers);
     tmin.scale          = es.scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
 
-    auto r = build_maps(tmin);
+    auto r = build_warp_maps(tmin);
     if (!r) {
         std::fprintf(stderr,
             "warptempo_cli: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    MapBuildResult tmfull = std::move(*r);
+    WarpMapBuildResult tmfull = std::move(*r);
 
     const TrimSourceWindow trim_window = resolve_trim_source_window(
         trim.has_begin, trim.begin_sec, trim.has_end, trim.end_sec,
@@ -240,8 +240,8 @@ int main(int argc, char** argv) {
     // window. With a bound set, hand the engine the re-anchored sub-map and its
     // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
     // do_render's wav branch. ---
-    const int64_t window_offset_samples = assign_engine_frame_map(
-        ep, tmfull.frame_map, trim.has_begin || trim.has_end,
+    const int64_t window_offset_samples = assign_engine_warp_frame_map(
+        ep, tmfull.warp_frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
     if (window_offset_samples < 0) {
         std::fprintf(stderr,
@@ -255,15 +255,15 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter and inherits the rest.
 
-    auto reset_src_frames_r =
-        phase_reset_source_frames(resets, sample_rate, total_frames);
-    if (!reset_src_frames_r) {
+    auto phase_reset_frame_map_r =
+        build_phase_reset_frame_map(resets, sample_rate, total_frames);
+    if (!phase_reset_frame_map_r) {
         std::fprintf(stderr, "warptempo_cli: %s\n",
-                     reset_src_frames_r.error().c_str());
+                     phase_reset_frame_map_r.error().c_str());
         return 1;
     }
-    assign_engine_phase_resets(
-        ep, *reset_src_frames_r, tmfull.frame_map, window_offset_samples,
+    assign_engine_phase_reset_frame_map(
+        ep, *phase_reset_frame_map_r, tmfull.warp_frame_map, window_offset_samples,
         N_fft);
 
     // --- render. The engine writes a sibling staging file and success

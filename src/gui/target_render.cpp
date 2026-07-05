@@ -1,8 +1,8 @@
 #include "target_render.h"
 
 #include "app_state.h"
-#include "frame_map_view.h"
-#include "frame_map.h"
+#include "warp_frame_map_view.h"
+#include "warp_frame_map.h"
 #include <cmath>
 #include <cstdio>
 #include <utility>
@@ -279,7 +279,7 @@ void GuiTargetRender::complete_successful_buffer() {
 void GuiTargetRender::recompute_target_buffer_start_frame() {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
     // with trim set, to map_source_to_target(trim_begin_frame) against the
-    // full-source frame_map, since the engine rendered only the trim range.
+    // full-source warp_frame_map, since the engine rendered only the trim range.
     // Compute only after target_buffer_frames is set so a failed/empty buffer
     // does not leave a stale anchor.
     app.target_buffer_start_frame = 0;
@@ -287,7 +287,7 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& tmap = target_view_map_cached(
             app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames())).frame_map;
+            static_cast<long>(audio.total_frames())).warp_frame_map;
         const int64_t trim_begin_frame = static_cast<int64_t>(
             std::nearbyint(app.trim.begin_seconds *
                            static_cast<double>(audio.sample_rate())));
@@ -365,7 +365,7 @@ void GuiTargetRender::leave_target_view() {
 
     const auto& tmap = target_view_map_cached(
         app, audio.sample_rate(),
-        static_cast<long>(audio.total_frames())).frame_map;
+        static_cast<long>(audio.total_frames())).warp_frame_map;
 
     const auto to_source = [&](int64_t s) -> int64_t {
         const size_t q = static_cast<size_t>(s < 0 ? 0 : s);

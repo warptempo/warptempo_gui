@@ -361,7 +361,7 @@ private:
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
     // translates app.viewport_start_sample / playhead_cursor_sample /
-    // zoom_level through the current frame_map in place and enters target
+    // zoom_level through the current warp_frame_map in place and enters target
     // view only when target view is available. target-view playback is
     // allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere. Silent no-op while

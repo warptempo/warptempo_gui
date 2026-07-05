@@ -53,9 +53,11 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 }
 
 // Engine-boundary ordering guards. These two init-time hardfails are
-// deliberate and stay even though the frame_map.h artifact readers validate
-// line shape only: the writers' contract (build_maps, the trimmed-artifact
-// derivation, the resetmap writer) makes both checks unreachable from
+// deliberate and stay even though the warp_frame_map.h /
+// phase_reset_frame_map.h artifact readers validate
+// line shape only: the writers' contract (build_warp_maps, the trimmed-artifact
+// derivation, the phaseresetframemap writer) makes both checks unreachable
+// from
 // program-written inputs, but a breach — a hand-edited artifact fed to the
 // engine CLI, or a future writer bug — would otherwise render silently wrong
 // deliverable bytes (a misinterpolated map, or resets silently skipped by the
@@ -82,17 +84,17 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // cursor has already passed, which it would then skip silently. So the
 // predicate rejects every decrease and nothing else, with no epsilon band.
 
-// Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
-bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
+// Validate strict monotonicity of a (src,tgt) warp_frame_map. Returns true if OK.
+bool validate_warp_frame_map_monotonic(const std::vector<WarpFrameMapSegment>& tm) {
     for (size_t i = 1; i < tm.size(); ++i) {
         if (tm[i].src_frame <= tm[i - 1].src_frame) {
-            std::cerr << "Error: frame_map entry " << i << " has non-monotonic src_frame ("
+            std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic src_frame ("
                       << tm[i - 1].src_frame << " -> "
                       << tm[i].src_frame << ").\n";
             return false;
         }
         if (tm[i].tgt_frame <= tm[i - 1].tgt_frame) {
-            std::cerr << "Error: frame_map entry " << i << " has non-monotonic tgt_frame ("
+            std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic tgt_frame ("
                       << tm[i - 1].tgt_frame << " -> "
                       << tm[i].tgt_frame << ").\n";
             return false;
@@ -103,7 +105,7 @@ bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
 
 // Validate the phase reset list is non-decreasing (duplicates allowed; see
 // the ruling comment above). Returns true if OK.
-bool validate_phase_resets_ordered(const std::vector<double>& resets) {
+bool validate_phase_reset_frame_map_ordered(const std::vector<double>& resets) {
     for (size_t i = 1; i < resets.size(); ++i) {
         if (resets[i] < resets[i - 1]) {
             std::cerr << "Error: phase reset entry " << i << " is out of order ("
@@ -150,12 +152,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // Populate frame_map from caller and validate monotonicity. Whole-segment
+    // Populate warp_frame_map from caller and validate monotonicity. Whole-segment
     // copy carries the precise breakpoints; the dense schedule still reads the
     // rounded fields until the interpolation flip.
-    audio_stft.frame_map = p.frame_map;
-    if (!validate_frame_map_monotonic(audio_stft.frame_map)) return EngineResult::Failed;
-    if (!validate_phase_resets_ordered(p.phase_reset_frames)) return EngineResult::Failed;
+    audio_stft.warp_frame_map = p.warp_frame_map;
+    if (!validate_warp_frame_map_monotonic(audio_stft.warp_frame_map)) return EngineResult::Failed;
+    if (!validate_phase_reset_frame_map_ordered(p.phase_reset_frame_map)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {
@@ -174,7 +176,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.src_samples = p.source_audio_samples;
     audio_stft.channels = audio_stft.src_info.channels;
     audio_stft.target_total_frames =
-        static_cast<size_t>(std::llrint(audio_stft.frame_map.back().tgt_frame)) +
+        static_cast<size_t>(std::llrint(audio_stft.warp_frame_map.back().tgt_frame)) +
         audio_stft.N;
 
     audio_stft.init_fftw();
@@ -191,7 +193,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     } else {
         // Full-render cap is the last anchor's target; map_source_to_target
         // at the final node is exactly that node's target, so read it direct.
-        const double tgt_end = audio_stft.frame_map.back().tgt_frame;
+        const double tgt_end = audio_stft.warp_frame_map.back().tgt_frame;
         audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
         // A sub-half-sample final target rounds to a zero cap, and the
         // synthesis loop reads cap 0 as uncapped — the render would emit
@@ -271,17 +273,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // Pass 1: phase reset placement.
     auto t_p1_0 = profile::now();
     audio_stft.phase_reset_placements.clear();
-    audio_stft.phase_reset_placements.reserve(p.phase_reset_frames.size());
+    audio_stft.phase_reset_placements.reserve(p.phase_reset_frame_map.size());
     const auto& fm = audio_stft.source_frame_positions;
     // The src-frame -> synth-frame upper_bound filter drops entries before
     // the first frame.
-    for (size_t i = 0; i < p.phase_reset_frames.size(); ++i) {
+    for (size_t i = 0; i < p.phase_reset_frame_map.size(); ++i) {
         // Quantization into the integer query schedule happens here,
         // engine-owned, symmetric with generate_source_frame_positions.
         // Rounding before the less-than-or-equal search makes a position
         // within half a sample below a schedule entry count as at that entry.
         const int64_t F =
-            static_cast<int64_t>(std::llrint(p.phase_reset_frames[i]));
+            static_cast<int64_t>(std::llrint(p.phase_reset_frame_map[i]));
         auto it = std::upper_bound(fm.begin(), fm.end(), F);
         if (it == fm.begin()) continue;
         --it;
@@ -298,7 +300,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     if (prof) {
         std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
                   << p1_ms
-                  << " phase_reset_count=" << p.phase_reset_frames.size()
+                  << " phase_reset_count=" << p.phase_reset_frame_map.size()
                   << " placed_count=" << audio_stft.phase_reset_placements.size()
                   << "\n";
     }

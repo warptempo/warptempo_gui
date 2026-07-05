@@ -1,8 +1,8 @@
 #include "marker_drag.h"
 
 #include "audio.h"
-#include "frame_map.h"
-#include "frame_map_view.h"
+#include "warp_frame_map.h"
+#include "warp_frame_map_view.h"
 #include "phaseresetmarkers.h"
 #include "render.h"
 #include "target_render.h"
@@ -161,7 +161,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // Seed moveable_times from original_times. apply_drag_motion writes
     // moveable_times[k] = original_times[k] + delta on every motion event.
     d.moveable_times = d.original_times;
-    // Capture a snapshot of the pre-drag frame_map so paint can route
+    // Capture a snapshot of the pre-drag warp_frame_map so paint can route
     // selected-marker positions and target-view waveform through a frozen
     // coordinate system. Both views capture: in source view the segment
     // list is harmless (its forward translation is identity at the
@@ -169,7 +169,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // through DragOverlay unconditionally. Build may fail (returns empty)
     // — in that case paint walks the identity fallback for the duration
     // of the drag, which is the correct degradation.
-    d.frozen_frame_map = build_target_view_frame_map(
+    d.frozen_warp_frame_map = build_target_view_warp_frame_map(
         app.warpmarkers.markers(), app.engine_settings.scale,
         sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
@@ -191,13 +191,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // Writes proposed new times into app.drag.moveable_times — the live
 // marker store is NOT mutated. Paint reads moveable_times through the
 // DragOverlay so dragged markers paint at their proposed positions while
-// the frame_map stays frozen at its pre-drag snapshot. The live store is
+// the warp_frame_map stays frozen at its pre-drag snapshot. The live store is
 // updated wholesale in commit_drag.
 //
 // Symmetric across warp and phase reset: both branches write the same
 // statement into the same vector. The waveform cache stays valid
 // throughout the drag — viewport / trim / dimensions / view-domain /
-// frozen-frame_map-hash don't change — so the invalidation triggers a
+// frozen-warp_frame_map-hash don't change — so the invalidation triggers a
 // cheap blit of cached pixels with stems, flags, and playhead repainted
 // on top. A narrow per-marker rect would be wrong in target view, where
 // the dragged marker's proposed position lands at the cursor's pixel
@@ -269,18 +269,18 @@ void MarkerDragOps::commit_drag() {
         }
     }
     // Bug fix: the playhead is stored in active-domain frames, so a warp
-    // drag that changes the frame_map would silently re-point it at
+    // drag that changes the warp_frame_map would silently re-point it at
     // different music. Capture its source-domain anchor against the
     // pre-drag (frozen) map now; after write-back it is re-expressed
     // through the new map below, so the playhead follows the deformation
     // exactly like the marker chips. Phase-reset drags don't touch the
-    // frame_map, and in source view the coordinate is already
+    // warp_frame_map, and in source view the coordinate is already
     // source-domain — both skip.
     bool    reanchor_playhead   = false;
     int64_t playhead_src_anchor = 0;
     if (net_changed && !phase_reset && app.active_audio_view == 'T') {
         playhead_src_anchor = to_source_frame(
-            app, app.playhead_cursor_sample, app.drag.frozen_frame_map);
+            app, app.playhead_cursor_sample, app.drag.frozen_warp_frame_map);
         reanchor_playhead = true;
     }
     if (net_changed) {
@@ -320,7 +320,7 @@ void MarkerDragOps::commit_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, playhead_src_anchor));
     }
-    // Same discrete-frame_map-change class as drop_marker (see comment
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
     // there): the commit re-warps the plate, so render it synchronously
     // — re-warped waveform and re-anchored playhead land in one frame.
     if (net_changed && !phase_reset && app.active_audio_view == 'T')

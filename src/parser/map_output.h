@@ -1,7 +1,7 @@
 #pragma once
 
-#include "frame_map.h"      // FrameMapSegment
-#include "frame_map_build.h"   // TempoMapEntry
+#include "warp_frame_map.h"      // WarpFrameMapSegment
+#include "warp_frame_map_build.h"   // MidiTempoMapEntry
 
 #include <cstdint>
 #include <expected>
@@ -13,24 +13,26 @@
 // readers require a first-target-zero pair, so the leading anchor is part of
 // the contract. Shared by the GUI render pipeline and the headless parser
 // CLI so both emit byte-identical artifacts.
-std::expected<void, std::string> write_frame_map(
-    const std::string& path, const std::vector<FrameMapSegment>& segs);
+std::expected<void, std::string> write_warp_frame_map(
+    const std::string& path, const std::vector<WarpFrameMapSegment>& segs);
 
-// Serialize a tempo map to the canonical .tempomap text form: one
+// Serialize a tempo map to the canonical .miditempomap text form: one
 // "target_time_sec multiplier" line per entry at fixed 16-digit precision.
-std::expected<void, std::string> write_tempo_map(
-    const std::string& path, const std::vector<TempoMapEntry>& entries);
+std::expected<void, std::string> write_midi_tempo_map(
+    const std::string& path, const std::vector<MidiTempoMapEntry>& entries);
 
 // Serialize an undisplaced source-frame phase-reset list to the canonical
-// .resetmap text form: one undisplaced source-frame double per line, in
+// .phaseresetframemap text form: one undisplaced source-frame double per
+// line, in
 // input order, at up to 17 significant digits (round-trips an IEEE double
-// exactly, same serialization as write_frame_map; whole-frame values print
-// with no decimal point). The companion to write_frame_map on the
+// exactly, same serialization as write_warp_frame_map; whole-frame values print
+// with no decimal point). The companion to write_warp_frame_map on the
 // phase-reset axis — the frame-domain export warptempo_parser emits and the
-// engine-only synthesis driver consumes (read_reset_map in frame_map.h). The
+// engine-only synthesis driver consumes (read_phase_reset_frame_map in
+// phase_reset_frame_map.h). The
 // caller supplies the already-resolved active source-frame positions
-// (phase_reset_source_frames drops disabled markers and converts
+// (build_phase_reset_frame_map drops disabled markers and converts
 // time->exact double source frame), so this writer applies no policy: it
 // does not displace, sort, or dedupe.
-std::expected<void, std::string> write_reset_map(
+std::expected<void, std::string> write_phase_reset_frame_map(
     const std::string& path, const std::vector<double>& source_frames);

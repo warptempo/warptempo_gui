@@ -2,11 +2,12 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "frame_map_build.h"               // MapBuildInput/Result, resolve,
-                                        // build_maps, phase_reset_source_frames
+#include "warp_frame_map_build.h"               // WarpMapBuildInput/Result, resolve,
+                                        // build_warp_maps
+#include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
 #include "locale_check.h"
-#include "map_output.h"                 // write_frame_map /
-                                        // write_tempo_map / write_reset_map
+#include "map_output.h"                 // write_warp_frame_map /
+                                        // write_midi_tempo_map / write_phase_reset_frame_map
 #include "engine/engine_geometry.h"     // kN, kRs (header-only constants)
 
 #include "audio_probe.h"
@@ -23,14 +24,15 @@ namespace {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> [--format framemap|tempomap|resetmap] [-o <output>] [--tab A|B]\n"
+        "usage: %s <source-audio> [--format warpframemap|miditempomap|phaseresetframemap] [-o <output>] [--tab A|B]\n"
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio and writes the\n"
-        "  framemap, tempomap, or resetmap. framemap/tempomap are built from the\n"
-        "  warp markers; resetmap is the undisplaced source-frame phase-reset\n"
-        "  list (the frame-domain companion the synthesis engine consumes).\n"
-        "  resetmap must be requested via --format; it is never a settings\n"
-        "  output_format. --tab selects which per-tab trim to apply (default A).\n",
+        "  warpframemap, miditempomap, or phaseresetframemap. warpframemap and\n"
+        "  miditempomap are built from the warp markers; phaseresetframemap is\n"
+        "  the undisplaced source-frame phase-reset list (the frame-domain\n"
+        "  companion the synthesis engine consumes). phaseresetframemap must be\n"
+        "  requested via --format; it is never a settings output_format. --tab\n"
+        "  selects which per-tab trim to apply (default A).\n",
         argv0);
 }
 
@@ -87,14 +89,15 @@ int main(int argc, char** argv) {
         trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
-    // --- emit format: --format overrides the project setting. resetmap is a
-    // CLI-only format (read_engine_settings_from_file only accepts wav /
-    // framemap / tempomap), so it can arrive only through --format. ---
+    // --- emit format: --format overrides the project setting. phaseresetframemap
+    // is a CLI-only format (read_engine_settings_from_file only accepts wav /
+    // warpframemap / miditempomap), so it can arrive only through --format. ---
     const std::string fmt = !fmt_override.empty() ? fmt_override : es.output_format;
-    if (fmt != "framemap" && fmt != "tempomap" && fmt != "resetmap") {
+    if (fmt != "warpframemap" && fmt != "miditempomap" && fmt != "phaseresetframemap") {
         std::fprintf(stderr,
             "warptempo_parser: nothing to emit for output_format '%s' "
-            "(this tool writes framemap, tempomap, or resetmap; pass --format)\n",
+            "(this tool writes warpframemap, miditempomap, or phaseresetframemap; "
+            "pass --format)\n",
             fmt.c_str());
         return 1;
     }
@@ -109,17 +112,17 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
-    // --- resetmap: undisplaced source-frame phase-reset list. Independent of
+    // --- phaseresetframemap: undisplaced source-frame phase-reset list. Independent of
     // the warp markers and the map build — reads only the phase-reset sidecar
-    // and the source sample rate and length. phase_reset_source_frames drops
+    // and the source sample rate and length. build_phase_reset_frame_map drops
     // disabled markers, converts time->exact double source frame, and refuses
     // an enabled reset past the source end — the same conversion the GUI and
     // render CLIs use before target-domain dispatch placement. The file is
     // undisplaced by design: phase_reset_offset_samples is an engine-input
     // convention, applied driver-side after temporal warping, not baked into
-    // the portable file. An absent sidecar yields an empty (valid) resetmap.
-    // ---
-    if (fmt == "resetmap") {
+    // the portable file. An absent sidecar yields an empty (valid)
+    // phaseresetframemap. ---
+    if (fmt == "phaseresetframemap") {
         std::vector<PhaseResetMarker> resets;
         if (std::filesystem::exists(pr_path)) {
             auto prp = parse_phaseresetmarkers_file(pr_path);
@@ -131,7 +134,7 @@ int main(int argc, char** argv) {
             resets = std::move(*prp);
         }
         auto source_frames_r =
-            phase_reset_source_frames(resets, sample_rate, total_frames);
+            build_phase_reset_frame_map(resets, sample_rate, total_frames);
         if (!source_frames_r) {
             std::fprintf(stderr, "warptempo_parser: %s\n",
                          source_frames_r.error().c_str());
@@ -140,8 +143,8 @@ int main(int argc, char** argv) {
         const std::vector<double>& source_frames = *source_frames_r;
 
         if (out_path.empty())
-            out_path = (parent / (stem + ".resetmap")).string();
-        if (auto w = write_reset_map(out_path, source_frames); !w) {
+            out_path = (parent / (stem + ".phaseresetframemap")).string();
+        if (auto w = write_phase_reset_frame_map(out_path, source_frames); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
@@ -149,9 +152,9 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    // --- framemap / tempomap: built from the warp markers. A missing sidecar
+    // --- warpframemap / miditempomap: built from the warp markers. A missing sidecar
     // is a startup error. Without it an absent file would flow an empty marker
-    // list through build_maps to a seed-anchor-only map whose zero emit cap the
+    // list through build_warp_maps to a seed-anchor-only map whose zero emit cap the
     // engine refuses at dispatch; erroring here gives the pointed missing-file
     // message instead of that indirect refusal. ---
     std::vector<WarpMarker> markers;
@@ -191,19 +194,19 @@ int main(int argc, char** argv) {
     }
 
     // --- resolve + build the full untrimmed map ---
-    MapBuildInput in;
+    WarpMapBuildInput in;
     in.markers        = resolve_markers_for_render(markers);
     in.scale          = es.scale;
     in.sample_rate    = sample_rate;
     in.total_frames   = total_frames;
 
-    auto r = build_maps(in);
+    auto r = build_warp_maps(in);
     if (!r) {
         std::fprintf(stderr,
             "warptempo_parser: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    MapBuildResult out = std::move(*r);
+    WarpMapBuildResult out = std::move(*r);
 
     // --- trimmed artifacts derive from the same window the engine renders, so
     // they describe the trimmed deliverable byte-for-byte; untrimmed writes the
@@ -211,7 +214,7 @@ int main(int argc, char** argv) {
     const bool trimmed = trim.has_begin || trim.has_end;
     TrimmedArtifactMaps artifacts;
     if (trimmed) {
-        auto a = derive_trimmed_artifact_maps(out.frame_map, out.tempo_map,
+        auto a = derive_trimmed_artifact_maps(out.warp_frame_map, out.midi_tempo_map,
                                               trim_begin_src, trim_end_src,
                                               kN, kRs, sample_rate);
         if (!a) {
@@ -220,22 +223,22 @@ int main(int argc, char** argv) {
         }
         artifacts = std::move(*a);
     } else {
-        artifacts = TrimmedArtifactMaps{out.frame_map, out.tempo_map};
+        artifacts = TrimmedArtifactMaps{out.warp_frame_map, out.midi_tempo_map};
     }
 
     // --- output path: -o, else the sibling convention ---
     if (out_path.empty()) {
-        const std::string ext = (fmt == "framemap") ? ".warpframemap" : ".tempomap";
+        const std::string ext = (fmt == "warpframemap") ? ".warpframemap" : ".miditempomap";
         out_path = (parent / (stem + ext)).string();
     }
 
-    if (fmt == "framemap") {
-        if (auto w = write_frame_map(out_path, artifacts.frame_map); !w) {
+    if (fmt == "warpframemap") {
+        if (auto w = write_warp_frame_map(out_path, artifacts.warp_frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
     } else {
-        if (auto w = write_tempo_map(out_path, artifacts.tempo_map); !w) {
+        if (auto w = write_midi_tempo_map(out_path, artifacts.midi_tempo_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }

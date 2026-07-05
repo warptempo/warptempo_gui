@@ -2,8 +2,8 @@
 
 #include "engine/engine.h"      // EngineParams
 #include "engine/engine_geometry.h"  // phase_reset_offset_samples
-#include "frame_map.h"          // FrameMapSegment
-#include "frame_map_build.h"    // WindowedFrameMap, slice_frame_map_to_trim_window
+#include "warp_frame_map.h"          // WarpFrameMapSegment
+#include "warp_frame_map_build.h"    // WindowedWarpFrameMap, slice_warp_frame_map_to_trim_window
 #include "phase_reset_dispatch.h"  // phase_reset_dispatch_frames_target_domain
 
 #include <algorithm>
@@ -12,9 +12,9 @@
 #include <cstdint>
 #include <vector>
 
-// Single source of truth for populating EngineParams.frame_map and
+// Single source of truth for populating EngineParams.warp_frame_map and
 // emit_sample_cap from the full untrimmed standard map. With a trim bound set,
-// slices the synthesis-frame window via slice_frame_map_to_trim_window and
+// slices the synthesis-frame window via slice_warp_frame_map_to_trim_window and
 // re-anchors; untrimmed, copies the full map verbatim (offset 0). Returns
 // window_offset_samples (0 when untrimmed), or -1 when the trimmed window's
 // target span is entirely consumed by the hop-aligned window start and no
@@ -24,7 +24,7 @@
 // render CLI call this so their EngineParams assembly stays byte-identical — the
 // block that decides cmp-stable output lives in exactly one place.
 //
-// Header-only inline: it calls slice_frame_map_to_trim_window from
+// Header-only inline: it calls slice_warp_frame_map_to_trim_window from
 // libwarptempo_parser and phase-reset dispatch helpers, which both
 // warptempo_gui and warptempo_cli already link, so no new compiled TU or
 // CMake source entry is needed.
@@ -72,43 +72,43 @@ inline TrimSourceWindow resolve_trim_source_window(
     return w;
 }
 
-inline int64_t assign_engine_frame_map(
+inline int64_t assign_engine_warp_frame_map(
         EngineParams& ep,
-        const std::vector<FrameMapSegment>& full_standard,
+        const std::vector<WarpFrameMapSegment>& full_standard,
         bool has_trim,
         int64_t trim_begin_src, int64_t trim_end_src,
         int N, int R_s) {
     if (has_trim) {
-        const WindowedFrameMap w = slice_frame_map_to_trim_window(
+        const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
             full_standard, trim_begin_src, trim_end_src, N, R_s);
         // A degenerate window (target span consumed by the hop-aligned start)
         // stores emit_sample_cap == 0, which the engine reads as "no cap".
         // Refuse before writing anything into ep so the caller can abort.
         if (w.emit_sample_cap <= 0) return -1;
         ep.emit_sample_cap = w.emit_sample_cap;
-        ep.frame_map = w.frame_map;
+        ep.warp_frame_map = w.warp_frame_map;
         return w.window_offset_samples;
     }
-    ep.frame_map = full_standard;
+    ep.warp_frame_map = full_standard;
     return 0;
 }
 
-// Precondition: assign_engine_frame_map has already populated ep.frame_map and
+// Precondition: assign_engine_warp_frame_map has already populated ep.warp_frame_map and
 // ep.emit_sample_cap.
-inline int64_t assign_engine_phase_resets(
+inline int64_t assign_engine_phase_reset_frame_map(
         EngineParams& ep,
         const std::vector<double>& reset_source_frames,
-        const std::vector<FrameMapSegment>& full_map,
+        const std::vector<WarpFrameMapSegment>& full_map,
         int64_t window_offset_samples,
         int N) {
     const int64_t render_target_frames =
         ep.emit_sample_cap > 0
             ? ep.emit_sample_cap
-            : static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame));
-    ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
+            : static_cast<int64_t>(std::llrint(ep.warp_frame_map.back().tgt_frame));
+    ep.phase_reset_frame_map = phase_reset_dispatch_frames_target_domain(
         reset_source_frames,
         full_map,
-        ep.frame_map,
+        ep.warp_frame_map,
         window_offset_samples,
         render_target_frames,
         phase_reset_offset_samples,

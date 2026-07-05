@@ -1,6 +1,7 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
 #include "engine/engine_geometry.h"   // kN, kRs, phase_reset_offset_samples
-#include "frame_map.h"       // FrameMapSegment, read_frame_map, read_reset_map
+#include "warp_frame_map.h"           // WarpFrameMapSegment, read_warp_frame_map
+#include "phase_reset_frame_map.h"    // read_phase_reset_frame_map
 #include "locale_check.h"
 #include "phase_reset_dispatch.h"
 
@@ -25,14 +26,15 @@ void unlink_silent(const std::string& path) {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> -o <output.wav> [--framemap <f>] "
-        "[--resetmap <f>] [--no-limiter]\n"
-        "  Runs the PGHI engine on a prebuilt framemap and writes the warped\n"
-        "  wav. The framemap defaults to the sibling <source-stem>.warpframemap;\n"
-        "  the resetmap to the sibling <source-stem>.resetmap when present\n"
-        "  (undisplaced source frames). Limiter is on unless --no-limiter is\n"
-        "  given. N is fixed at 4096. Trim is not an engine concern: the supplied\n"
-        "  map is rendered wholesale.\n",
+        "usage: %s <source-audio> -o <output.wav> [--warpframemap <f>] "
+        "[--phaseresetframemap <f>] [--no-limiter]\n"
+        "  Runs the PGHI engine on a prebuilt warpframemap and writes the\n"
+        "  warped wav. The warpframemap defaults to the sibling\n"
+        "  <source-stem>.warpframemap; the phaseresetframemap to the sibling\n"
+        "  <source-stem>.phaseresetframemap when present (undisplaced source\n"
+        "  frames). Limiter is on unless --no-limiter is given. N is fixed at\n"
+        "  4096. Trim is not an engine concern: the supplied map is rendered\n"
+        "  wholesale.\n",
         argv0);
 }
 
@@ -41,13 +43,13 @@ void usage(const char* argv0) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_engine")) return 1;
 
-    std::string source_path, out_path, framemap_path, resetmap_path;
+    std::string source_path, out_path, warpframemap_path, phaseresetframemap_path;
     bool no_limiter = false;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         if (a == "-o" && i + 1 < argc)              out_path      = argv[++i];
-        else if (a == "--framemap" && i + 1 < argc) framemap_path = argv[++i];
-        else if (a == "--resetmap" && i + 1 < argc) resetmap_path = argv[++i];
+        else if (a == "--warpframemap" && i + 1 < argc) warpframemap_path = argv[++i];
+        else if (a == "--phaseresetframemap" && i + 1 < argc) phaseresetframemap_path = argv[++i];
         else if (a == "--no-limiter")               no_limiter = true;
         else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
@@ -59,15 +61,15 @@ int main(int argc, char** argv) {
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem = src.stem().string();
 
-    // Sibling defaults: framemap is required (default or override must exist);
-    // resetmap is optional — the sibling is used only when present, and an
-    // explicit --resetmap must exist (read_reset_map fails on an unopenable
-    // file, caught below).
-    if (framemap_path.empty())
-        framemap_path = (parent / (stem + ".warpframemap")).string();
-    if (resetmap_path.empty()) {
-        const std::string sib = (parent / (stem + ".resetmap")).string();
-        if (std::filesystem::exists(sib)) resetmap_path = sib;
+    // Sibling defaults: the warpframemap is required (default or override must
+    // exist); the phaseresetframemap is optional — the sibling is used only
+    // when present, and an explicit --phaseresetframemap must exist
+    // (read_phase_reset_frame_map fails on an unopenable file, caught below).
+    if (warpframemap_path.empty())
+        warpframemap_path = (parent / (stem + ".warpframemap")).string();
+    if (phaseresetframemap_path.empty()) {
+        const std::string sib = (parent / (stem + ".phaseresetframemap")).string();
+        if (std::filesystem::exists(sib)) phaseresetframemap_path = sib;
     }
 
     // Hard refusal: never write over the source audio itself. equivalent() is
@@ -84,30 +86,30 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- framemap (required) ---
-    std::optional<std::vector<FrameMapSegment>> fm =
-        read_frame_map(framemap_path);
+    // --- warpframemap (required) ---
+    std::optional<std::vector<WarpFrameMapSegment>> fm =
+        read_warp_frame_map(warpframemap_path);
     if (!fm) {
         std::fprintf(stderr,
-            "warptempo_engine: could not read framemap '%s' "
-            "(missing, unreadable, or malformed)\n", framemap_path.c_str());
+            "warptempo_engine: could not read warpframemap '%s' "
+            "(missing, unreadable, or malformed)\n", warpframemap_path.c_str());
         return 1;
     }
     if (fm->empty()) {
         std::fprintf(stderr,
-            "warptempo_engine: framemap '%s' is empty; nothing to render\n",
-            framemap_path.c_str());
+            "warptempo_engine: warpframemap '%s' is empty; nothing to render\n",
+            warpframemap_path.c_str());
         return 1;
     }
 
-    // --- resetmap (optional) ---
+    // --- phaseresetframemap (optional) ---
     std::vector<double> reset_src;
-    if (!resetmap_path.empty()) {
-        std::optional<std::vector<double>> rm = read_reset_map(resetmap_path);
+    if (!phaseresetframemap_path.empty()) {
+        std::optional<std::vector<double>> rm = read_phase_reset_frame_map(phaseresetframemap_path);
         if (!rm) {
             std::fprintf(stderr,
-                "warptempo_engine: could not read resetmap '%s' "
-                "(unreadable or malformed)\n", resetmap_path.c_str());
+                "warptempo_engine: could not read phaseresetframemap '%s' "
+                "(unreadable or malformed)\n", phaseresetframemap_path.c_str());
             return 1;
         }
         reset_src = std::move(*rm);
@@ -146,7 +148,7 @@ int main(int argc, char** argv) {
 
     // The supplied map is rendered wholesale — synthesis does no trim, so
     // emit_sample_cap stays 0 (full render to the map's last anchor).
-    ep.frame_map = *fm;
+    ep.warp_frame_map = *fm;
     ep.emit_sample_cap = 0;
 
     ep.N            = N_fft;
@@ -158,7 +160,7 @@ int main(int argc, char** argv) {
         ? 0
         : std::max<int64_t>(
             0, static_cast<int64_t>(std::llrint(fm->back().tgt_frame)));
-    ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
+    ep.phase_reset_frame_map = phase_reset_dispatch_frames_target_domain(
         reset_src,
         *fm,
         *fm,

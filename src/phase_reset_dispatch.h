@@ -1,6 +1,6 @@
 #pragma once
 
-#include "frame_map.h"
+#include "warp_frame_map.h"
 
 #include <cstdint>
 #include <optional>
@@ -25,8 +25,8 @@
 // is the intended contract.
 inline std::optional<double> phase_reset_dispatch_frame_target_domain(
         double source_frame,
-        const std::vector<FrameMapSegment>& full_map,
-        const std::vector<FrameMapSegment>& engine_map,
+        const std::vector<WarpFrameMapSegment>& full_map,
+        const std::vector<WarpFrameMapSegment>& engine_map,
         int64_t window_offset_samples,
         int64_t render_target_frames,
         int64_t target_offset_samples,
@@ -67,8 +67,8 @@ inline std::optional<double> phase_reset_dispatch_frame_target_domain(
 
 inline std::vector<double> phase_reset_dispatch_frames_target_domain(
         const std::vector<double>& source_frames,
-        const std::vector<FrameMapSegment>& full_map,
-        const std::vector<FrameMapSegment>& engine_map,
+        const std::vector<WarpFrameMapSegment>& full_map,
+        const std::vector<WarpFrameMapSegment>& engine_map,
         int64_t window_offset_samples,
         int64_t render_target_frames,
         int64_t target_offset_samples,

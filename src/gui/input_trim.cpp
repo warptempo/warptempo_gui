@@ -1,6 +1,6 @@
 #include "input_handler.h"
 
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "time_format.h"
 
 #include <algorithm>
@@ -396,7 +396,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // runs past the edge. move_playhead_to would scroll when an
         // off-center grab pushes the bound a few pixels past the visible
         // edge; the marker drag never scrolls, and symmetry is the point.
-        // Trim is a render-time cut and is NOT in build_target_view_frame_map,
+        // Trim is a render-time cut and is NOT in build_target_view_warp_frame_map,
         // so the bound carries no deformation: new_seconds (source-domain)
         // maps straight to the playhead, inverse-translated to target-domain
         // in target view. No predictor resync and no scanner-sample sync,

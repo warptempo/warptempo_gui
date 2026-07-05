@@ -457,7 +457,7 @@ void GuiRenderView::restore_source_audio() {
     // force_synchronous_waveform_rebuild, whose compute_waveform_render_inputs
     // derives is_target as (active_audio_view == 'T') && !render_view.enabled.
     // If the flag is still set when the kick runs, is_target is false, the
-    // plate is rendered with no frame_map (an unwarped source plate) and that
+    // plate is rendered with no warp_frame_map (an unwarped source plate) and that
     // non-target fingerprint is published; the next on_redraw then sees the
     // inputs differ and rebuilds the real target plate on the async worker,
     // which is the visible flash on the render -> target transition. Clearing
@@ -516,7 +516,7 @@ void GuiRenderView::restore_source_audio() {
     // and publish the displayed fingerprint now. Covers the R-key toggle-off and
     // exit_render_view_and_clear paths, which route through here. The plate is
     // built from the restored source audio (or, when active_audio_view is
-    // Target, source audio plus the live frame_map), independent of the target
+    // Target, source audio plus the live warp_frame_map), independent of the target
     // render buffer ensure_ready rebinds above.
     viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);

@@ -6,7 +6,7 @@
 #include "phaseresetmarkers.h"
 #include "target_render.h"
 #include "time_format.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
 #include <algorithm>

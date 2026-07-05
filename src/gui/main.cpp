@@ -121,7 +121,7 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 // input_handler.cpp can reach it. GuiInputHandler::render_bpm_sweep is the
 // sole caller.
 
-// compute_hover_popup_text lives in the parser (frame_map_build.{cpp,h})
+// compute_hover_popup_text lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
 // unit from flag_text_for_marker, which stays in render.cpp over
 // GuiWarpMarker.
@@ -301,7 +301,7 @@ int max_valid_numeric_level(int waveform_width_px,
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
     int64_t result = audio.total_frames();
     if (a.active_audio_view == 'T' && !a.render_view.enabled) {
-        const TargetMapCache& c = target_view_map_cached(
+        const TargetWarpMapCache& c = target_view_map_cached(
             a, audio.sample_rate(),
             static_cast<long>(audio.total_frames()));
         if (c.tgt_total_frames > 0) result = c.tgt_total_frames;

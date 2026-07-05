@@ -254,7 +254,7 @@ void Synthesis::synthesize_full(
         out.reserve(static_cast<size_t>(mono_len));
 
         // t_a for analysis-frame index `aidx`. Beyond the last synthesis frame
-        // the frame_map range is exhausted (alpha == 1), so each extra
+        // the warp_frame_map range is exhausted (alpha == 1), so each extra
         // analysis-only frame advances by R_s. We never read more than one
         // frame past EOF: that single analysis-only frame supplies the last
         // emitted frame's phi_next and is never itself emitted, so the total

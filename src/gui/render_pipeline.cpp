@@ -7,8 +7,9 @@
 #include "render.h"
 #include "phaseresetmarkers.h"
 #include "map_output.h"
+#include "phase_reset_frame_map_build.h"
 #include "settings_io.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"
 #include "render_cache.h"
@@ -44,11 +45,11 @@ struct CommitCriticalSidecars {
     std::vector<std::string> created_paths;
 };
 
-// write_frame_map and write_tempo_map moved to the parser
+// write_warp_frame_map and write_midi_tempo_map moved to the parser
 // (map_output.cpp) so the GUI render pipeline and the headless parser CLI
 // emit byte-identical artifacts from one implementation.
 
-// resolve_markers_for_render moved to frame_map_build.cpp (public function) so the
+// resolve_markers_for_render moved to warp_frame_map_build.cpp (public function) so the
 // target-view paint can reach it without crossing the render_pipeline
 // boundary. Both callers — do_render below and the GUI paint in
 // paint_handler — receive the same resolved list.
@@ -59,8 +60,8 @@ std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es) {
     const std::string ext =
-        (es.output_format == "framemap")  ? ".warpframemap" :
-        (es.output_format == "tempomap") ? ".tempomap" : ".wav";
+        (es.output_format == "warpframemap")  ? ".warpframemap" :
+        (es.output_format == "miditempomap") ? ".miditempomap" : ".wav";
     std::filesystem::path src(source_audio_path);
     std::filesystem::path dir = src.parent_path();
     if (dir.empty()) dir = std::filesystem::path(".");
@@ -154,24 +155,24 @@ RenderOutcome do_render(const RenderRequest& req,
     profile_source_sample_rate = static_cast<int>(sample_rate);
 
     // Derived here, at the probe, so the reset frames are always in the frame
-    // domain of the source actually being rendered, symmetric with build_maps'
+    // domain of the source actually being rendered, symmetric with build_warp_maps'
     // conversion of warp marker seconds; the conversion also validates the
     // authored reset times against the probed source length.
-    auto phase_reset_frames_r =
-        phase_reset_source_frames(
+    auto phase_reset_frame_map_r =
+        build_phase_reset_frame_map(
             slice_to_phaseresetmarkers(req.phase_resets), sample_rate,
             total_frames);
-    if (!phase_reset_frames_r) {
+    if (!phase_reset_frame_map_r) {
         std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                     phase_reset_frames_r.error().c_str());
+                     phase_reset_frame_map_r.error().c_str());
         return RenderOutcome::Failed;
     }
-    const std::vector<double>& phase_reset_frames = *phase_reset_frames_r;
+    const std::vector<double>& phase_reset_frame_map = *phase_reset_frame_map_r;
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
-        if (output_format == "framemap")  return ".warpframemap";
-        if (output_format == "tempomap") return ".tempomap";
+        if (output_format == "warpframemap")  return ".warpframemap";
+        if (output_format == "miditempomap") return ".miditempomap";
         return ".wav";
     };
     const bool batch_render = !req.batch_folder.empty();
@@ -313,7 +314,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<long long>(profile_trim_span_frames),
                 static_cast<long long>(profile_target_frames),
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
-                req.markers.size(), phase_reset_frames.size(),
+                req.markers.size(), phase_reset_frame_map.size(),
                 static_cast<long long>(phase_reset_offset_samples),
                 req.output_buffer ? "yes" : "no",
                 req.engine_settings.limiter ? "yes" : "no",
@@ -384,31 +385,32 @@ RenderOutcome do_render(const RenderRequest& req,
     // --- Build the full (untrimmed) frame map from in-memory markers. The
     // engine always renders the full map: a trimmed wav render slices this
     // canonical map into a re-anchored sub-map plus an emit_sample_cap via
-    // assign_engine_frame_map before dispatch, and the trimmed frame-map /
-    // tempo-map artifacts derive from that same window — one trim computation,
+    // assign_engine_warp_frame_map before dispatch, and the trimmed
+    // warpframemap / miditempomap artifacts derive from that same window —
+    // one trim computation,
     // shared. The inherited t_a history from frame 0 is what makes the windowed
     // render null against the full render. ---
-    MapBuildInput tmin;
+    WarpMapBuildInput tmin;
     tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
     tmin.scale          = scale;
     tmin.sample_rate    = sample_rate;
     tmin.total_frames   = total_frames;
 
-    auto rfull = build_maps(tmin);
+    auto rfull = build_warp_maps(tmin);
     if (!rfull) {
         std::fprintf(stderr,
             "warptempo_gui: render error: map build failed: %s\n",
             rfull.error().c_str());
         return RenderOutcome::Failed;
     }
-    MapBuildResult tmfull = std::move(*rfull);
+    WarpMapBuildResult tmfull = std::move(*rfull);
 
     const TrimSourceWindow trim_window = resolve_trim_source_window(
         req.has_trim_begin, req.trim_begin_sec,
         req.has_trim_end, req.trim_end_sec,
         sample_rate, total_frames, N_fft);
 
-    // Source-aware trim check, formerly inside build_maps' post-pass. Runs
+    // Source-aware trim check, formerly inside build_warp_maps' post-pass. Runs
     // before any window computation, engine slice, or artifact derivation.
     if (auto v = validate_trim_frames(
             trim_window.trim_begin_src, trim_window.trim_end_src,
@@ -424,8 +426,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // need the same value before the engine assembly path runs.
     int64_t window_offset_samples = 0;
     if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
-        const WindowedFrameMap w = slice_frame_map_to_trim_window(
-            tmfull.frame_map, trim_window.trim_begin_src,
+        const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
+            tmfull.warp_frame_map, trim_window.trim_begin_src,
             trim_window.trim_end_src, N_fft, R_s);
         window_offset_samples = w.window_offset_samples;
     }
@@ -445,7 +447,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // The source-domain pair above stays authoritative for
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
-        // Only wav renders produce these — frame-map/tempo-map formats skip
+        // Only wav renders produce these — warpframemap/miditempomap formats skip
         // the engine. The phase-reset sidecar is always written on wav batch
         // renders, including as an empty file.
         if (output_format == "wav") {
@@ -461,7 +463,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // with no start-trim term.
 
             // Markers: lockstep walk between req.markers and the real-segment
-            // range of tmfull.frame_map (built trim-off, so no synthetic trim
+            // range of tmfull.warp_frame_map (built trim-off, so no synthetic trim
             // anchors). Each non-disabled marker consumes the next-in-order
             // segment; the trim range gates only emission, not consumption, so
             // the lockstep stays in step with tmfull's all-segments vector.
@@ -482,7 +484,7 @@ RenderOutcome do_render(const RenderRequest& req,
                        disabled_label_defs.count(m.label_ref) > 0;
             };
 
-            auto seg_it = tmfull.frame_map.begin();
+            auto seg_it = tmfull.warp_frame_map.begin();
             std::vector<GuiWarpMarker> warped_markers;
             warped_markers.reserve(req.markers.size());
             for (const auto& g : req.markers) {
@@ -495,7 +497,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // Consume this marker's segment first (tmfull holds every
                 // segment, so the lockstep advances for every non-disabled
                 // marker regardless of trim).
-                if (seg_it == tmfull.frame_map.end()) break;
+                if (seg_it == tmfull.warp_frame_map.end()) break;
                 const auto& s = *seg_it;
                 ++seg_it;
 
@@ -545,7 +547,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
                 GuiPhaseResetMarker w = t;
                 w.time_seconds =
-                    (map_source_to_target(t.time_seconds * sr_d, tmfull.frame_map)
+                    (map_source_to_target(t.time_seconds * sr_d, tmfull.warp_frame_map)
                      - static_cast<double>(window_offset_samples)) / sr_d;
                 // Pre-origin filter, same rationale as the warp loop above: a
                 // reset whose render position precedes the delivered WAV's
@@ -805,8 +807,8 @@ RenderOutcome do_render(const RenderRequest& req,
         // sub-map covering the synthesis-frame window; the engine renders it
         // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
         // offset 0 (provably identical to the pre-slice behavior).
-        window_offset_samples = assign_engine_frame_map(
-            ep, tmfull.frame_map, req.has_trim_begin || req.has_trim_end,
+        window_offset_samples = assign_engine_warp_frame_map(
+            ep, tmfull.warp_frame_map, req.has_trim_begin || req.has_trim_end,
             trim_begin_src, trim_end_src, N_fft, R_s);
         if (window_offset_samples < 0) {
             std::fprintf(stderr,
@@ -817,8 +819,8 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
-        const int64_t render_target_frames = assign_engine_phase_resets(
-            ep, phase_reset_frames, tmfull.frame_map, window_offset_samples,
+        const int64_t render_target_frames = assign_engine_phase_reset_frame_map(
+            ep, phase_reset_frame_map, tmfull.warp_frame_map, window_offset_samples,
             N_fft);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
@@ -914,7 +916,8 @@ RenderOutcome do_render(const RenderRequest& req,
             return finalize_published_wav("success");
         }
     } else {
-        // output_format == "framemap" or "tempomap". No engine, no limiter.
+        // output_format == "warpframemap" or "miditempomap". No engine, no
+        // limiter.
         // These exports carry deliverable-relative targets and absolute
         // source frames, so a consumer reads the original source audio
         // directly — trimmed or not — and no companion audio is written.
@@ -925,7 +928,7 @@ RenderOutcome do_render(const RenderRequest& req,
         TrimmedArtifactMaps artifacts;
         if (trimmed) {
             auto a = derive_trimmed_artifact_maps(
-                tmfull.frame_map, tmfull.tempo_map,
+                tmfull.warp_frame_map, tmfull.midi_tempo_map,
                 trim_window.trim_begin_src, trim_window.trim_end_src,
                 N_fft, R_s, sample_rate);
             if (!a) {
@@ -936,11 +939,11 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             artifacts = std::move(*a);
         } else {
-            artifacts = TrimmedArtifactMaps{tmfull.frame_map, tmfull.tempo_map};
+            artifacts = TrimmedArtifactMaps{tmfull.warp_frame_map, tmfull.midi_tempo_map};
         }
-        auto map_write = (output_format == "framemap")
-            ? write_frame_map(final_output_path, artifacts.frame_map)
-            : write_tempo_map(final_output_path, artifacts.tempo_map);
+        auto map_write = (output_format == "warpframemap")
+            ? write_warp_frame_map(final_output_path, artifacts.warp_frame_map)
+            : write_midi_tempo_map(final_output_path, artifacts.midi_tempo_map);
         if (!map_write) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                          map_write.error().c_str());

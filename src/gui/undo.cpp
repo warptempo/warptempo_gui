@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "target_render.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 
 #include <algorithm>
 #include <cmath>
@@ -340,10 +340,10 @@ void Undo::do_undo() {
     recompute_dirty();
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
-    // settings, changing the displayed plate (the target-view frame_map, and the
+    // settings, changing the displayed plate (the target-view warp_frame_map, and the
     // viewport when an offscreen-marker restore recenters). Render it
     // synchronously so the restored markers and the waveform land together. A
-    // single keystroke, so bounded — the drag-time async-frame_map policy is about
+    // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
     // duplicates invalidate_waveform_area above (harmless); target_render.trigger
     // below still owns target-buffer freshness when target view is available.
@@ -429,10 +429,10 @@ void Undo::do_redo() {
     recompute_dirty();
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
-    // settings, changing the displayed plate (the target-view frame_map, and the
+    // settings, changing the displayed plate (the target-view warp_frame_map, and the
     // viewport when an offscreen-marker restore recenters). Render it
     // synchronously so the restored markers and the waveform land together. A
-    // single keystroke, so bounded — the drag-time async-frame_map policy is about
+    // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
     // duplicates invalidate_waveform_area above (harmless); target_render.trigger
     // below still owns target-buffer freshness when target view is available.

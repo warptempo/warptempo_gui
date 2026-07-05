@@ -3,8 +3,8 @@
 #include "audio.h"
 #include "target_render.h"
 #include "time_format.h"
-#include "frame_map_view.h"
-#include "frame_map.h"
+#include "warp_frame_map_view.h"
+#include "warp_frame_map.h"
 
 #include <algorithm>
 #include <cmath>
@@ -181,7 +181,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         }
         const double sr_d = static_cast<double>(sr);
         const auto& tmap = target_view_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).frame_map;
+            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
         const double eps = 1.0 / sr_d;

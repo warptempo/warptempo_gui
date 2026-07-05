@@ -1,6 +1,6 @@
 #include "input_handler.h"
 
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
 #include <cmath>

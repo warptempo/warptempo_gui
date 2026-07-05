@@ -4,7 +4,7 @@
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
-#include "frame_map_view.h"
+#include "warp_frame_map_view.h"
 #include "platform_wayland.h"
 
 #include <algorithm>
@@ -24,7 +24,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // source-domain seconds via inverse-translation in
         // handle_trim_set_autoset) but Home/End needs to land
         // the playhead in the active target-frame domain. Build
-        // the live frame_map and forward-translate the source-domain
+        // the live warp_frame_map and forward-translate the source-domain
         // trim boundaries; unset sides fall back to 0 / live total,
         // matching compute_trim_samples' unset-side semantics for
         // S-view.
@@ -448,7 +448,7 @@ void Viewport::recompute_hover_at_cursor() {
         return;
     }
     // Target view's hover popup runs the same way as
-    // source view's. hit_test_flag builds the target_frame_map
+    // source view's. hit_test_flag builds the target_warp_frame_map
     // internally when active_audio_view == Target so the flag rects it
     // walks match what paint_handler renders at translated columns.
     const int hit = hit_test_flag(app, audio,

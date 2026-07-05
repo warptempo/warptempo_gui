@@ -7,8 +7,8 @@
 #include "render.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "frame_map_view.h"
-#include "frame_map.h"
+#include "warp_frame_map_view.h"
+#include "warp_frame_map.h"
 #include "warpmarkers_ops.h"
 
 #include <algorithm>

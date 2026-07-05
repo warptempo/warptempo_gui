@@ -10,7 +10,7 @@
 #include <fftw3.h>
 
 #include "engine.h"
-#include "frame_map.h"
+#include "warp_frame_map.h"
 
 // --- Data Structures ---
 struct PhaseResetPlacement {
@@ -74,7 +74,7 @@ struct PghiHeapNode {
 //     alignment to the audio.
 //   - Total output length is AudioSTFT::emit_sample_cap: the target-frame
 //     position of the window's last source sample (full render: last_tgt =
-//     frame_map.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
+//     warp_frame_map.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
 //     longer the output length, and target_total_frames describes the *input*
 //     plan, not the emitted sample count. Any auxiliary buffer sized to match the
 //     output (limiter meas_ola) must use the actually emitted length (synthesis
@@ -114,7 +114,7 @@ struct AudioSTFT {
     size_t target_total_frames = 0;
 
     // Frame map
-    std::vector<FrameMapSegment> frame_map;
+    std::vector<WarpFrameMapSegment> warp_frame_map;
 
     // Windows
     std::vector<double> window;
@@ -184,7 +184,7 @@ struct AudioSTFT {
 
     // Emit cap: output length in samples. The synthesizer truncates its emitted
     // stream to this many samples so render length equals the target-view length
-    // (full render: frame_map.back().tgt_frame). run_warptempo_engine resolves
+    // (full render: warp_frame_map.back().tgt_frame). run_warptempo_engine resolves
     // this to a positive value on every path before synthesis runs (a cap that
     // rounds to zero is refused at init), and synthesize_full reads it as
     // resolved.
@@ -207,9 +207,13 @@ struct AudioSTFT {
     // position m * R_s), valued in source sample-frames.
     // R_a_actual for frame m is source_frame_positions[m] -
     // source_frame_positions[m-1] (caller derives).
+    // generate_source_frame_positions (like phase_reset_placements above)
+    // keeps its unprefixed name: the analysis schedule and the placement list
+    // are engine-internal, not artifacts, so they sit outside the
+    // warp/phase-reset artifact naming columns.
     std::vector<int64_t> generate_source_frame_positions() const {
         // Synthesis frame m sits at output position t_s = m * R_s. Its source
-        // read position is the exact inverse-frame_map value at t_s, minus the
+        // read position is the exact inverse-warp_frame_map value at t_s, minus the
         // N/2 origin-centered analysis offset:
         //     t_a(m) = map_target_to_source(m * R_s) - N/2.
         // map_target_to_source is piecewise-linear and splits exactly at every
@@ -226,7 +230,7 @@ struct AudioSTFT {
         if (R_s > 0)
             positions.reserve(target_total_frames / static_cast<size_t>(R_s) + 1);
         for (size_t t_s = 0; t_s < target_total_frames; t_s += R_s) {
-            double src = map_target_to_source(static_cast<double>(t_s), frame_map)
+            double src = map_target_to_source(static_cast<double>(t_s), warp_frame_map)
                        - static_cast<double>(N) / 2.0;
             // Round half-to-even (llrint), the project-wide convention; do not
             // reintroduce llround (half-away-from-zero) here.
