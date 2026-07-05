@@ -436,7 +436,11 @@ RenderOutcome do_render(const RenderRequest& req,
             // segment; the trim range gates only emission, not consumption, so
             // the lockstep stays in step with tmfull's all-segments vector.
             // s.tgt_frame is the full-render target sample; subtracting
-            // window_offset_samples places it on the trimmed wav axis.
+            // window_offset_samples places it on the trimmed wav axis. The
+            // effective-disabled check gates consumption itself (a disabled
+            // marker has no segment in tmfull, so it skips before the
+            // iterator advances), while out-of-trim and pre-origin gate
+            // emission only, each running after the segment is consumed.
             std::set<std::string> disabled_label_defs;
             for (const auto& m : req.markers) {
                 if (!m.label_def.empty() && m.disabled) {
@@ -475,7 +479,15 @@ RenderOutcome do_render(const RenderRequest& req,
                 w.time_seconds  =
                     (s.tgt_frame - static_cast<double>(window_offset_samples))
                     / sr_d;
-                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
+                // Pre-origin filter: a marker whose render position falls
+                // before the delivered WAV's first sample is not present in
+                // the delivered audio (the trimmed deliverable starts about
+                // N/2 after the trim instant), so it is dropped rather than
+                // pinned at zero. After this drop, the surviving warp times
+                // are strictly ascending doubles by map monotonicity, so the
+                // strict-ascent abort in GuiWarpMarkers::save is unreachable
+                // from this caller.
+                if (w.time_seconds < 0.0) continue;
                 warped_markers.push_back(std::move(w));
             }
             const std::string wmd_path =
@@ -494,7 +506,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // are forward-mapped from their clicked source frame through the
             // same map and placed at tgt(F) - window_offset, so a reset sits
             // on the same musical position in render-view as in source and
-            // target views. Drop out-of-trim and disabled.
+            // target views. Drop disabled, out-of-trim, and pre-origin.
             std::vector<GuiPhaseResetMarker> warped_phase_resets;
             warped_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
@@ -508,7 +520,13 @@ RenderOutcome do_render(const RenderRequest& req,
                     window_offset_samples;
                 GuiPhaseResetMarker w = t;
                 w.time_seconds = static_cast<double>(render_frame) / sr_d;
-                if (w.time_seconds < 0.0) w.time_seconds = 0.0;
+                // Pre-origin filter, same rationale as the warp loop above: a
+                // reset whose render position precedes the delivered WAV's
+                // first sample was never audible in this deliverable anyway
+                // (its target image precedes the WAV origin, so dispatch's
+                // lead-in dropzone had already dropped it at render), so it
+                // is dropped here rather than pinned at zero.
+                if (w.time_seconds < 0.0) continue;
                 warped_phase_resets.push_back(std::move(w));
             }
             const std::string tmd_path =

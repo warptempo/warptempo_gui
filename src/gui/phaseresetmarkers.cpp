@@ -29,65 +29,33 @@ bool GuiPhaseResetMarkers::save(const std::string& path) const {
 
 bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
-    // The refusal compares in the writer's serialized millisecond domain
-    // because that is the persistence quantum: two distinct in-memory
-    // doubles that round to one on-disk millisecond could otherwise only be
-    // silently collapsed or written as a duplicate line the strict
-    // authoring parser rejects on reload, and refusal is preferred over
-    // silent correction. Lexicographic comparison is chronological here
-    // because format_timestamp always emits the fixed-width nine-character
-    // MM:SS.mmm form. Nothing of value is refused — two resets inside
-    // one millisecond collapse to the same synthesis frame at the engine,
-    // the earlier one superseded — so a colliding pair is an authoring slip
-    // by definition.
-    //
-    // The shape is symmetric with GuiWarpMarkers::save's strict-ascent
-    // abort; the comparison domains deliberately differ, exact doubles
-    // there and serialized strings here, because sub-millisecond target
-    // separations of warp markers are legal, load-bearing map geometry
-    // under the no-ceiling rule and warp's only non-gridded caller feeds
-    // the lenient render-view display reader, while this save's
-    // strict-reloaded outputs — the authoring .phaseresetmarkers and the
-    // source-domain batch sidecar that Ctrl+Alt+C commit reloads — are what
-    // force the serialized domain here; the render display sidecar itself
-    // is read leniently by render-view. The refusal is kept for all three
-    // outputs regardless, because a colliding pair is a senseless authoring
-    // slip and refusal is preferred over silent correction.
-    //
-    // Consequences: an authoring save that catches an equal-time collision
-    // mid-nudge now aborts with the message instead of silently dropping,
-    // exactly as warp saves always have. A render-domain collision —
-    // sub-millisecond target separation at extreme scale, or two
-    // trim-head resets both clamped to the delivered WAV's origin —
-    // refuses the display sidecar while the render itself succeeds, the
-    // publisher prints its write-failed warning, and the fingerprint is
-    // withheld by the existing attestation plumbing, so the failure is
-    // visible and the remedy is authoring-side (remove the redundant
-    // reset, or adjust the trim).
-    //
-    // Because the refusal validates the emitted sequence itself, every file
-    // this writer produces is strictly increasing in the parser's domain
-    // for any input whatsoever; no reload verification exists at the
-    // publish seam and none is needed.
+    // Mirrors GuiWarpMarkers::save: refuse on exact-double non-ascent.
+    // Authoring times are millisecond-gridded by construction (format
+    // plus snap_to_timestamp_grid on every mutation path), so the
+    // exact-double comparison is the on-disk millisecond contract for the
+    // strict-reloaded outputs — the authoring file and the source-domain
+    // batch sidecar the commit path reloads. The render publisher's
+    // non-gridded computed times feed only render-view's lenient reader,
+    // where a same-millisecond pair from distinct frames is
+    // display-harmless, and a pair colliding to the same integer frame
+    // refuses here visibly with the publisher's write-failed warning and
+    // a withheld fingerprint.
     std::ostringstream out;
-    std::string last_ts;  // empty is a safe first-iteration sentinel:
-                          // format_timestamp never returns an empty string.
-    for (const auto& m : markers_) {
-        const std::string ts = format_timestamp(m.time_seconds);
-        if (!last_ts.empty() && !(ts > last_ts)) {
+    for (size_t i = 0; i < markers_.size(); ++i) {
+        if (i > 0 && !(markers_[i].time_seconds > markers_[i - 1].time_seconds)) {
             std::fprintf(stderr,
                 "warptempo_gui: save aborted: phase_resets not strictly "
-                "increasing at %s\n",
-                ts.c_str());
+                "increasing at %.3fs\n",
+                markers_[i].time_seconds);
             return false;
         }
-        last_ts = ts;
 
         // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
         // timestamp, exactly as the parser strips it. No mode suffix — the
         // peak/heap/pass model was removed when heap became the sole engine.
+        const auto& m = markers_[i];
         if (m.disabled) out << '#';
-        out << ts << '\n';
+        out << format_timestamp(m.time_seconds) << '\n';
     }
     const std::string data = out.str();
 

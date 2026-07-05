@@ -253,10 +253,12 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 // depends on their invariants — a bad line costs one flag, never the whole
 // overlay — while the strict authoring parser (parse_phaseresetmarkers_file,
 // reached via GuiPhaseResetMarkers::load) owns every load whose result gets
-// edited, re-saved, or rendered from. The writer-side refusal in
-// GuiPhaseResetMarkers::save already guarantees program-produced files are
-// clean, so lenient reading forfeits no detection for files this program
-// wrote.
+// edited, re-saved, or rendered from. GuiPhaseResetMarkers::save's writer-side
+// refusal only catches equal-time collisions; the render publisher can
+// legitimately write two distinct-frame resets that serialize to the same
+// millisecond, which the strict authoring parser would reject but this
+// reader displays as overlapping flags — exactly the case leniency exists
+// for.
 //
 // Each line: skip byte-empty lines; a leading `#` marks the marker disabled
 // and is stripped before the timestamp check. The remainder must satisfy
