@@ -125,6 +125,28 @@ RenderOutcome do_render(const RenderRequest& req,
             req.source_audio_path.c_str());
         return RenderOutcome::Failed;
     }
+
+    // Hard refusal: a source that changed on disk since the GUI loaded it is
+    // adversarial state, not a warn-and-continue case. Every output format
+    // and both the file and target-view buffer paths go through this same
+    // check before any other probe-derived work runs. A request with no
+    // recorded load identity (the GUI failed to stat at load, or a caller
+    // never populated it) skips the check; the existing empty-fingerprint
+    // behavior already degrades those renders safely.
+    if (req.has_source_load_identity) {
+        RenderFileIdentity load_time_identity;
+        if (!stat_file_identity(req.source_audio_path, load_time_identity) ||
+            load_time_identity.size != req.source_load_size ||
+            load_time_identity.mtime != req.source_load_mtime) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: source '%s' changed on disk "
+                "since it was loaded; refusing to render (reload the "
+                "source)\n",
+                req.source_audio_path.c_str());
+            return RenderOutcome::Failed;
+        }
+    }
+
     const long sample_rate  = src_info->sample_rate;
     const long total_frames = static_cast<long>(src_info->frames);
     const int source_channels_probe = src_info->channels;
@@ -690,21 +712,11 @@ RenderOutcome do_render(const RenderRequest& req,
                     src_sr = static_cast<int>(sample_rate);
                     src_ch = source_channels_probe;
                     used_gui_buffer = true;
-                    // Borrowed samples are the audio the user authored
-                    // against, so they render as-is; only the claim that this
-                    // render is reproducible from the source file as it now
-                    // stands is dropped when the identities diverge.
-                    if (!fingerprint.empty() &&
-                        (!req.has_source_load_identity ||
-                         req.source_load_size != source_identity.size ||
-                         req.source_load_mtime != source_identity.mtime)) {
-                        std::fprintf(stderr,
-                            "warptempo_gui: render warning: source changed on disk since it "
-                            "was loaded; rendering the loaded audio and skipping fingerprint "
-                            "and cache publication for '%s'\n",
-                            final_output_path.c_str());
-                        fingerprint.clear();
-                    }
+                    // Borrowed samples and the probed file are the same
+                    // audio: the load-identity hardfail at the probe already
+                    // proved req.source_load_size / req.source_load_mtime
+                    // match the file as stat'd this dispatch, so no
+                    // divergence check is needed here.
                 }
             }
             if (!used_gui_buffer) {
