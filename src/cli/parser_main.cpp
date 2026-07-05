@@ -110,14 +110,15 @@ int main(int argc, char** argv) {
     const long total_frames = static_cast<long>(info->frames);
 
     // --- resetmap: undisplaced source-frame phase-reset list. Independent of
-    // the warp markers and the map build — reads only the phase-reset
-    // sidecar and the source sample rate. phase_reset_source_frames drops
-    // disabled markers and converts time->exact double source frame, the
-    // same conversion the GUI and render CLIs use before target-domain
-    // dispatch placement. The file is undisplaced by design:
-    // phase_reset_offset_samples is an engine-input convention, applied
-    // driver-side after temporal warping, not baked into the portable file.
-    // An absent sidecar yields an empty (valid) resetmap. ---
+    // the warp markers and the map build — reads only the phase-reset sidecar
+    // and the source sample rate and length. phase_reset_source_frames drops
+    // disabled markers, converts time->exact double source frame, and refuses
+    // an enabled reset past the source end — the same conversion the GUI and
+    // render CLIs use before target-domain dispatch placement. The file is
+    // undisplaced by design: phase_reset_offset_samples is an engine-input
+    // convention, applied driver-side after temporal warping, not baked into
+    // the portable file. An absent sidecar yields an empty (valid) resetmap.
+    // ---
     if (fmt == "resetmap") {
         std::vector<PhaseResetMarker> resets;
         if (std::filesystem::exists(pr_path)) {
@@ -129,8 +130,14 @@ int main(int argc, char** argv) {
             }
             resets = std::move(*prp);
         }
-        const std::vector<double> source_frames =
-            phase_reset_source_frames(resets, sample_rate);
+        auto source_frames_r =
+            phase_reset_source_frames(resets, sample_rate, total_frames);
+        if (!source_frames_r) {
+            std::fprintf(stderr, "warptempo_parser: %s\n",
+                         source_frames_r.error().c_str());
+            return 1;
+        }
+        const std::vector<double>& source_frames = *source_frames_r;
 
         if (out_path.empty())
             out_path = (parent / (stem + ".resetmap")).string();

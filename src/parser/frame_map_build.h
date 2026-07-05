@@ -158,14 +158,24 @@ std::string compute_hover_popup_text(
 // Pure parser-domain assembly: phase-reset markers -> absolute source-frame
 // positions. Drops disabled markers; converts time_seconds to an exact double
 // source-frame position (time * sample_rate, no rounding), matching the
-// warp-marker time->frame convention in build_maps. The result is the
-// undisplaced authored source-frame list used for render-view display,
-// resetmap output, and target-domain dispatch placement; the dispatch
-// mapping (phase_reset_dispatch.h) stays in doubles, and quantization to
-// the engine's integer query schedule happens inside the engine at
-// placement time.
-std::vector<double> phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate);
+// warp-marker time->frame convention in build_maps. Refuses an enabled reset
+// authored past the source end (strictly greater than total_frames; equal is
+// allowed), the producer-side validation layer parallel to build_maps'
+// past-end check on the warp axis: a phase-reset sidecar sitting beside a
+// shorter or replaced source fails loudly here instead of the reset silently
+// falling out of dispatch's window drop test. Disabled markers are skipped
+// before the check — only resolved markers are validated, as in build_maps —
+// so a disabled past-end reset stays loadable and inert. No ordering check
+// lives here: the strict marker parser owns ordering at load, and the
+// engine's non-decreasing hardfail covers raw resetmap inputs that bypass
+// the marker parser. The result is the undisplaced authored source-frame
+// list used for render-view display, resetmap output, and target-domain
+// dispatch placement; the dispatch mapping (phase_reset_dispatch.h) stays in
+// doubles, and quantization to the engine's integer query schedule happens
+// inside the engine at placement time.
+std::expected<std::vector<double>, std::string> phase_reset_source_frames(
+    const std::vector<PhaseResetMarker>& markers, long sample_rate,
+    int64_t total_frames);
 
 // Result of slicing the full untrimmed frame map to a trim window: the
 // re-anchored sub-map the engine renders, the output offset of the window

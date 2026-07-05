@@ -133,10 +133,18 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Derived here, at the probe, so the reset frames are always in the frame
     // domain of the source actually being rendered, symmetric with build_maps'
-    // conversion of warp marker seconds.
-    const std::vector<double> phase_reset_frames =
+    // conversion of warp marker seconds; the conversion also validates the
+    // authored reset times against the probed source length.
+    auto phase_reset_frames_r =
         phase_reset_source_frames(
-            slice_to_phaseresetmarkers(req.phase_resets), sample_rate);
+            slice_to_phaseresetmarkers(req.phase_resets), sample_rate,
+            total_frames);
+    if (!phase_reset_frames_r) {
+        std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                     phase_reset_frames_r.error().c_str());
+        return RenderOutcome::Failed;
+    }
+    const std::vector<double>& phase_reset_frames = *phase_reset_frames_r;
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {

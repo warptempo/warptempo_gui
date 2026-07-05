@@ -255,10 +255,15 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter and inherits the rest.
 
-    const std::vector<double> reset_src_frames =
-        phase_reset_source_frames(resets, sample_rate);
+    auto reset_src_frames_r =
+        phase_reset_source_frames(resets, sample_rate, total_frames);
+    if (!reset_src_frames_r) {
+        std::fprintf(stderr, "warptempo_cli: %s\n",
+                     reset_src_frames_r.error().c_str());
+        return 1;
+    }
     assign_engine_phase_resets(
-        ep, reset_src_frames, tmfull.frame_map, window_offset_samples,
+        ep, *reset_src_frames_r, tmfull.frame_map, window_offset_samples,
         N_fft);
 
     // --- render. The engine writes a sibling staging file and success
