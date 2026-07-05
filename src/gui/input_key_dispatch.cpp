@@ -178,8 +178,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
             app.trim.has_begin, app.trim.begin_seconds,
-            app.trim.has_end,   app.trim.end_seconds,
-            audio.sample_rate());
+            app.trim.has_end,   app.trim.end_seconds);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
         // Empty batch_folder/basename selects the source-dir naming
@@ -312,7 +311,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             RenderRequest req = build_render_request(
                 q.source_audio_path, q.markers, q.phase_resets, q.engine_settings,
                 q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
-                audio.sample_rate(),
                 batch_folder.string(), num_buf);
             req.authoring = q.authoring;
             attach_shared_render_resources(req);
@@ -493,7 +491,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 app.engine_settings,
                 app.trim.has_begin, app.trim.begin_seconds,
                 app.trim.has_end,   app.trim.end_seconds,
-                audio.sample_rate(),
                 batch_folder.string(), std::move(basename));
             req.authoring = snapshot_current_authoring_state();
             attach_shared_render_resources(req);

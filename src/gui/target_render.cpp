@@ -178,8 +178,7 @@ void GuiTargetRender::dispatch_render_now() {
         app.source_audio_path, app.warpmarkers.markers(),
         app.phaseresetmarkers.markers(), app.engine_settings,
         app.trim.has_begin, app.trim.begin_seconds,
-        app.trim.has_end,   app.trim.end_seconds,
-        audio.sample_rate());
+        app.trim.has_end,   app.trim.end_seconds);
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The limited chain (spectral + peak backstop)

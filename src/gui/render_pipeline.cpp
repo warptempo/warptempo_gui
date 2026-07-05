@@ -78,15 +78,12 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    EngineSettings engine_settings,
                                    bool has_trim_begin, double trim_begin_sec,
                                    bool has_trim_end,   double trim_end_sec,
-                                   long sample_rate,
     std::string batch_folder,
     std::string batch_basename) {
     RenderRequest req;
     req.source_audio_path  = std::move(source_audio_path);
     req.markers            = std::move(markers);
     req.engine_settings    = std::move(engine_settings);
-    req.phase_reset_frames = phase_reset_source_frames(
-        slice_to_phaseresetmarkers(phase_resets), sample_rate);
     req.phase_resets       = std::move(phase_resets);
     req.has_trim_begin     = has_trim_begin;
     req.trim_begin_sec     = trim_begin_sec;
@@ -133,6 +130,13 @@ RenderOutcome do_render(const RenderRequest& req,
     const int source_channels_probe = src_info->channels;
     profile_source_channels = source_channels_probe;
     profile_source_sample_rate = static_cast<int>(sample_rate);
+
+    // Derived here, at the probe, so the reset frames are always in the frame
+    // domain of the source actually being rendered, symmetric with build_maps'
+    // conversion of warp marker seconds.
+    const std::vector<int64_t> phase_reset_frames =
+        phase_reset_source_frames(
+            slice_to_phaseresetmarkers(req.phase_resets), sample_rate);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
@@ -279,7 +283,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<long long>(profile_trim_span_frames),
                 static_cast<long long>(profile_target_frames),
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
-                req.markers.size(), req.phase_reset_frames.size(),
+                req.markers.size(), phase_reset_frames.size(),
                 static_cast<long long>(phase_reset_offset_samples),
                 req.output_buffer ? "yes" : "no",
                 req.engine_settings.limiter ? "yes" : "no",
@@ -794,7 +798,7 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_resets(
-            ep, req.phase_reset_frames, tmfull.frame_map, window_offset_samples,
+            ep, phase_reset_frames, tmfull.frame_map, window_offset_samples,
             N_fft);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0

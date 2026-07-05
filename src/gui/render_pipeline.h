@@ -52,14 +52,6 @@ struct RenderRequest {
     // do_render reads engine-relevant keys exclusively from this struct.
     EngineSettings engine_settings;
 
-    // User-curated phase reset frame list (source-frame domain). When non-empty
-    // and the active engine is "warptempo", this overrides the engine's
-    // internal detection — typical population is the union of inserted +
-    // active-detected entries from the GUI's phase reset list, with disabled
-    // entries filtered out and time_seconds converted to source frames at
-    // the GUI-to-engine boundary via banker's rounding.
-    std::vector<int64_t>   phase_reset_frames;
-
     // Borrowed source audio: the GUI's resident sample buffer plus its
     // frame count, captured at dispatch. When set and sufficient, do_render
     // skips the source-sample-cache read entirely. Null means fall back to
@@ -162,17 +154,18 @@ std::filesystem::path compose_sibling_output_path(
 
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,
-// iteration batch, and the target-view buffer render). Derives
-// phase_reset_frames internally via slice_to_phaseresetmarkers +
-// phase_reset_source_frames so all callers stay in lockstep on that
-// filter-disabled + banker's-round derivation. output_buffer is left at its
-// nullptr default; the target-view caller sets it after the call.
+// iteration batch, and the target-view buffer render). RenderRequest carries
+// marker times as authored seconds only; do_render derives the engine's
+// source-frame reset list from phase_resets against the probed source's rate —
+// the same late-conversion-at-the-probe shape warp markers already follow
+// through build_maps, so the conversion cannot use any rate other than the
+// rendered source's. output_buffer is left at its nullptr default; the
+// target-view caller sets it after the call.
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
                                    bool has_trim_begin, double trim_begin_sec,
                                    bool has_trim_end,   double trim_end_sec,
-                                   long sample_rate,
                                    std::string batch_folder = {},
                                    std::string batch_basename = {});

@@ -343,7 +343,6 @@ bool GuiInputHandler::render_bpm_sweep() {
             std::move(cell_settings),
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,
-            audio.sample_rate(),
         batch_folder.string(), std::move(basename));
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
