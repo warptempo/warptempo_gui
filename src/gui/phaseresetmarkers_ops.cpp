@@ -214,7 +214,12 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             const double hi = (next < n)
                 ? (tv[next].time_seconds - eps)
                 : (total_duration - eps);
-            if (t_new < lo || t_new > hi) return;
+            if (t_new < lo || t_new > hi) {
+                std::fprintf(stderr,
+                    "warptempo_gui: nudge rejected: would collide with a "
+                    "neighbor\n");
+                return;
+            }
             any_changed = true;
         }
         if (!any_changed) return;
