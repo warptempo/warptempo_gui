@@ -41,6 +41,11 @@ struct MarkerEffective {
                                     // means no visible source (e.g. a
                                     // first-marker pass resolving to the 1.0
                                     // default)
+    bool scale_saturated = false;   // true when the label_ref branch clamped
+                                    // the displayed combined scale to the
+                                    // 9.9999 typed-field ceiling; display-only,
+                                    // the render's ref handling is delta-based
+                                    // and unaffected
 };
 
 struct MapBuildInput {
@@ -116,7 +121,10 @@ std::string resolve_inherited_tempo_scale(
 //                base/scale are still the fully-resolved owner values via
 //                resolve_inherited_tempo(_scale).
 //   label_ref -> the label-definition marker (def_idx); base/scale are the
-//                def's effective base and the combined "~=" scale.
+//                def's effective base and the combined "~=" scale — or the
+//                "9.9999" ceiling with scale_saturated set when the combined
+//                value is at or above the typed-field ceiling (displayed
+//                ">=", a lower bound).
 // A pass immediately after a label_ref is legal; source_idx then names the
 // ref (the visible immediate prior), base/scale still the resolved owner's.
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
@@ -135,7 +143,11 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE at 2 decimals;
 // COMBINED_SCALE = def_scale * multiplier when the def has a typed scale,
 // else multiplier, at 4 decimals; DEF_BASE:LABEL and TIME describe the
-// label-definition marker). TIME is formatted with format_timestamp
+// label-definition marker). When the combined scale saturates at the 9.9999
+// typed-field ceiling the leading "~=" becomes ">=" and COMBINED_SCALE is
+// "9.9999" (a lower bound, not an approximation); the same ">=" prefixes a
+// pass popup's provenance descriptor when its visible immediate prior is a
+// saturated ref. TIME is formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
 // Returns "" when the marker does not qualify (owning, missing def,
 // malformed). GUI callers slice their GuiWarpMarker store to WarpMarker

@@ -231,10 +231,23 @@ MarkerEffective marker_effective(
             ? (def_scale_val * multiplier)
             : multiplier;
 
-        char scale_buf[32];
-        std::snprintf(scale_buf, sizeof(scale_buf), "%.4f", combined_scale);
+        // The typed scale grammar caps at 9.9999, so larger implied values
+        // cannot be rendered in the N.NNNN display shape (%.4f of ten or more
+        // overflows the one-integer-digit form). The displayed value saturates
+        // at that ceiling; the render is unaffected because a ref imposes its
+        // definition's target frame delta, not a scale. A combined scale just
+        // below 9.9999 that merely rounds to 9.9999 under %.4f stays
+        // unsaturated — that is ordinary in-domain rounding, not saturation,
+        // and carries no at-least marker.
+        if (combined_scale >= 9.9999) {
+            r.scale           = "9.9999";
+            r.scale_saturated = true;
+        } else {
+            char scale_buf[32];
+            std::snprintf(scale_buf, sizeof(scale_buf), "%.4f", combined_scale);
+            r.scale = scale_buf;
+        }
         r.base       = def_base;
-        r.scale      = scale_buf;
         r.source_idx = def_idx;
         return r;
     }
@@ -284,7 +297,14 @@ std::string compute_hover_popup_text(
 
         char sbuf[32];
         std::snprintf(sbuf, sizeof(sbuf), "%.2f", src_eff.base);
-        std::string descriptor = sbuf;
+        // The visible immediate prior can be an enabled label ref whose
+        // combined scale saturated at the 9.9999 display ceiling; the
+        // descriptor then carries the same ">=" lower-bound prefix as that
+        // ref's own popup. The main resolved value above cannot saturate —
+        // passes never inherit through a ref, so eff.scale is always a typed
+        // field string.
+        std::string descriptor = src_eff.scale_saturated ? ">= " : "";
+        descriptor += sbuf;
         if (!src_eff.scale.empty()) {
             descriptor += "*";
             descriptor += src_eff.scale;
@@ -303,7 +323,9 @@ std::string compute_hover_popup_text(
 
         char base_buf[32];
         std::snprintf(base_buf, sizeof(base_buf), "%.2f", eff.base);
-        std::string out = "~= ";
+        // A saturated scale is a lower bound, not an approximation, so the
+        // popup opens with ">=" instead of "~=".
+        std::string out = eff.scale_saturated ? ">= " : "~= ";
         out += base_buf;
         out += "*";
         out += eff.scale;
