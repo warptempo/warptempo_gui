@@ -100,6 +100,23 @@ bool validate_engine_setting(const std::string& key,
             reason = "must be a finite double strictly greater than 0";
             return false;
         }
+        // The canonical writers persist scale as %.6f, so a value that does
+        // not round-trip that serialization exactly either fails its own
+        // reload (sub-half-micro values serialize as 0.000000, which the
+        // greater-than-zero check above rejects) or silently changes value
+        // across save and reload. The implied lower bound in the one-micro
+        // class also keeps build_maps' target-delta division finite: a
+        // subnormal scale could otherwise drive delta_tgt to inf and emit
+        // non-finite map artifacts as success.
+        char buf[64];
+        const int n = std::snprintf(buf, sizeof(buf), "%.6f", v);
+        double rt;
+        if (n < 0 || static_cast<std::size_t>(n) >= sizeof(buf) ||
+            !parse_double_strict(buf, rt) || rt != v) {
+            reason = "must survive the settings writer's %.6f serialization "
+                     "unchanged (at most six decimal places of precision)";
+            return false;
+        }
         out.scale = v;
         return true;
     }
