@@ -117,6 +117,19 @@ bool validate_engine_setting(const std::string& key,
                      "unchanged (at most six decimal places of precision)";
             return false;
         }
+        // Ruled authoring bound: scale must lie in [0.000001, 9.999999]
+        // inclusive, preventing degenerate global tempo scales at authoring
+        // rather than leaving them for the engine to catch. Because the %.6f
+        // round-trip above has already passed, v is exactly representable at
+        // six decimals, so these plain double comparisons against the two
+        // six-decimal literals are exact at the boundaries — no epsilon or
+        // string comparison is needed. This ceiling does not cap label-ref
+        // implied multipliers; the engine's zero-cap dispatch refusal remains
+        // the backstop for ref-implied extreme geometry.
+        if (v < 0.000001 || v > 9.999999) {
+            reason = "must be between 0.000001 and 9.999999";
+            return false;
+        }
         out.scale = v;
         return true;
     }
