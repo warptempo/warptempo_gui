@@ -284,6 +284,22 @@ bool GuiInputHandler::render_bpm_sweep() {
             continue;
         }
 
+        // Sweeps outside base tempo 0.50-2.00 fall outside the documented
+        // usage model and can overflow the %.2f N.NN marker grammar this
+        // cell's tempo_base is serialized with (save/reload round-trip
+        // requires exactly one integer digit). Reject the cell rather than
+        // let it corrupt the batch's reloadability; base_tempo is already
+        // round2-quantized above, so these bounds compare exactly.
+        if (computed->base_tempo < 0.50 || computed->base_tempo > 2.00) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-bpm: rejected cell "
+                "bpm=%d base_tempo=%.2f out of range "
+                "[0.50, 2.00] (duration=%.6f, beats=%d)\n",
+                bpm, computed->base_tempo, duration_seconds,
+                owner.bpm_beats);
+            continue;
+        }
+
         std::vector<GuiWarpMarker> cell_markers = base_markers;
         // Owner: concrete computed base tempo, scale carried in settings.
         cell_markers[owner_idx].tempo_inherits = false;
