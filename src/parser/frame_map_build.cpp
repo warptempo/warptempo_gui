@@ -494,15 +494,13 @@ std::expected<void, std::string> validate_trim_frames(
     return {};
 }
 
-std::vector<int64_t> phase_reset_source_frames(
+std::vector<double> phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate) {
-    std::vector<int64_t> out;
+    std::vector<double> out;
     out.reserve(markers.size());
     for (const auto& m : markers) {
         if (m.disabled) continue;
-        out.push_back(static_cast<int64_t>(
-            std::nearbyint(m.time_seconds *
-                           static_cast<double>(sample_rate))));
+        out.push_back(m.time_seconds * static_cast<double>(sample_rate));
     }
     return out;
 }

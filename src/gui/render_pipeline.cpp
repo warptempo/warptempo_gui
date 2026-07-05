@@ -134,7 +134,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // Derived here, at the probe, so the reset frames are always in the frame
     // domain of the source actually being rendered, symmetric with build_maps'
     // conversion of warp marker seconds.
-    const std::vector<int64_t> phase_reset_frames =
+    const std::vector<double> phase_reset_frames =
         phase_reset_source_frames(
             slice_to_phaseresetmarkers(req.phase_resets), sample_rate);
 

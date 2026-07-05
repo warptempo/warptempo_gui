@@ -155,13 +155,15 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate);
 
-// Pure parser-domain assembly: phase-reset markers -> absolute source frames.
-// Drops disabled markers; converts time_seconds to a source frame via
-// nearbyint(time * sample_rate), matching the warp-marker time->frame
-// convention. The result is the undisplaced authored source-frame list used
-// for render-view display, resetmap output, and target-domain dispatch
-// placement.
-std::vector<int64_t> phase_reset_source_frames(
+// Pure parser-domain assembly: phase-reset markers -> absolute source-frame
+// positions. Drops disabled markers; converts time_seconds to an exact double
+// source-frame position (time * sample_rate, no rounding), matching the
+// warp-marker time->frame convention in build_maps. The result is the
+// undisplaced authored source-frame list used for render-view display,
+// resetmap output, and target-domain dispatch placement; quantization to the
+// engine's integer query schedule happens only at the engine query boundary
+// (the llrint in phase_reset_dispatch.h).
+std::vector<double> phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate);
 
 // Result of slicing the full untrimmed frame map to a trim window: the

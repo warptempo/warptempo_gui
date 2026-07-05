@@ -97,7 +97,7 @@ inline int64_t assign_engine_frame_map(
 // ep.emit_sample_cap.
 inline int64_t assign_engine_phase_resets(
         EngineParams& ep,
-        const std::vector<int64_t>& reset_source_frames,
+        const std::vector<double>& reset_source_frames,
         const std::vector<FrameMapSegment>& full_map,
         int64_t window_offset_samples,
         int N) {

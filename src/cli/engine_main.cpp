@@ -101,9 +101,9 @@ int main(int argc, char** argv) {
     }
 
     // --- resetmap (optional) ---
-    std::vector<int64_t> reset_src;
+    std::vector<double> reset_src;
     if (!resetmap_path.empty()) {
-        std::optional<std::vector<int64_t>> rm = read_reset_map(resetmap_path);
+        std::optional<std::vector<double>> rm = read_reset_map(resetmap_path);
         if (!rm) {
             std::fprintf(stderr,
                 "warptempo_engine: could not read resetmap '%s' "

@@ -39,12 +39,13 @@ std::expected<void, std::string> write_tempo_map(
 }
 
 std::expected<void, std::string> write_reset_map(
-    const std::string& path, const std::vector<int64_t>& source_frames) {
+    const std::string& path, const std::vector<double>& source_frames) {
     std::ofstream of(path);
     if (!of) {
         return std::unexpected("could not write resetmap '" + path + "'");
     }
-    for (const int64_t f : source_frames) {
+    of << std::setprecision(17);
+    for (const double f : source_frames) {
         of << f << "\n";
     }
     of.flush();

@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
     // --- resetmap: undisplaced source-frame phase-reset list. Independent of
     // the warp markers and the map build — reads only the phase-reset
     // sidecar and the source sample rate. phase_reset_source_frames drops
-    // disabled markers and converts time->source frame via nearbyint, the
+    // disabled markers and converts time->exact double source frame, the
     // same conversion the GUI and render CLIs use before target-domain
     // dispatch placement. The file is undisplaced by design:
     // phase_reset_offset_samples is an engine-input convention, applied
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
             }
             resets = std::move(*prp);
         }
-        const std::vector<int64_t> source_frames =
+        const std::vector<double> source_frames =
             phase_reset_source_frames(resets, sample_rate);
 
         if (out_path.empty())

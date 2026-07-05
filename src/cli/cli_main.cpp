@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter and inherits the rest.
 
-    const std::vector<int64_t> reset_src_frames =
+    const std::vector<double> reset_src_frames =
         phase_reset_source_frames(resets, sample_rate);
     assign_engine_phase_resets(
         ep, reset_src_frames, tmfull.frame_map, window_offset_samples,

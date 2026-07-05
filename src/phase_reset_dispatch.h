@@ -7,12 +7,13 @@
 #include <optional>
 #include <vector>
 
-// Maps one authored (undisplaced) phase-reset source frame into the
-// engine's origin-centered query domain for a given render (full or
-// trim-windowed). Returns std::nullopt when the reset does not apply to
-// this render: authored outside the rendered window, or its lead-in
-// anticipation (target_offset_samples, i.e. phase_reset_offset_samples)
-// would fall before the window's own start. Dropping in that last case,
+// Maps one authored (undisplaced) phase-reset source position — an exact
+// double source frame — into the engine's origin-centered query domain
+// for a given render (full or trim-windowed). Returns std::nullopt
+// when the reset does not apply to this render: authored
+// outside the rendered window, or its lead-in anticipation
+// (target_offset_samples, i.e. phase_reset_offset_samples) would fall
+// before the window's own start. Dropping in that last case,
 // rather than clamping forward, lets the natural PGHI heap propagation
 // continue undisturbed through the opening stretch; a trim (or, on a
 // full render, an authored reset) placed this close to the render's own
@@ -24,7 +25,7 @@
 // authoring-time check could be correct, and the silent per-render drop
 // is the intended contract.
 inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
-        int64_t source_frame,
+        double source_frame,
         const std::vector<FrameMapSegment>& full_map,
         const std::vector<FrameMapSegment>& engine_map,
         int64_t window_offset_samples,
@@ -32,7 +33,7 @@ inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
         int64_t target_offset_samples,
         int64_t engine_query_origin_offset_samples) {
     const double authored_target_full =
-        map_source_to_target(static_cast<double>(source_frame), full_map);
+        map_source_to_target(source_frame, full_map);
     const double authored_target_window =
         authored_target_full - static_cast<double>(window_offset_samples);
 
@@ -65,7 +66,7 @@ inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
 }
 
 inline std::vector<int64_t> phase_reset_dispatch_frames_target_domain(
-        const std::vector<int64_t>& source_frames,
+        const std::vector<double>& source_frames,
         const std::vector<FrameMapSegment>& full_map,
         const std::vector<FrameMapSegment>& engine_map,
         int64_t window_offset_samples,
@@ -74,7 +75,7 @@ inline std::vector<int64_t> phase_reset_dispatch_frames_target_domain(
         int64_t engine_query_origin_offset_samples) {
     std::vector<int64_t> out;
     out.reserve(source_frames.size());
-    for (const int64_t source_frame : source_frames) {
+    for (const double source_frame : source_frames) {
         if (auto f = phase_reset_dispatch_frame_target_domain(
                 source_frame, full_map, engine_map,
                 window_offset_samples, render_target_frames,

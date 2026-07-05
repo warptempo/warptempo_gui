@@ -105,27 +105,30 @@ read_frame_map(const std::string& path) {
     return segs;
 }
 
-// .resetmap: one undisplaced source-frame integer per line, in file order.
-// Blank / whitespace-only lines skipped; any malformed line (non-numeric,
-// missing field, or trailing garbage) fails the whole read. The file carries
-// only active resets (the writer's caller drops disabled markers), so there
-// is no '#'/disabled syntax to handle. A missing/unopenable file is
-// std::nullopt; an empty-but-readable file yields an empty list (a valid
-// "no resets" render input).
-inline std::optional<std::vector<int64_t>>
+// .resetmap: one undisplaced source-frame double per line, in file order
+// (the writer emits up to 17 significant digits, so the value round-trips
+// exactly; whole-frame positions carry no decimal point, so old
+// integer-format files parse unchanged). Blank / whitespace-only lines
+// skipped; any malformed line (non-numeric, missing field, or trailing
+// garbage) fails the whole read. The file carries only active resets (the
+// writer's caller drops disabled markers), so there is no '#'/disabled
+// syntax to handle. A missing/unopenable file is std::nullopt; an
+// empty-but-readable file yields an empty list (a valid "no resets" render
+// input).
+inline std::optional<std::vector<double>>
 read_reset_map(const std::string& path) {
     std::ifstream in(path);
     if (!in) return std::nullopt;
-    std::vector<int64_t> frames;
+    std::vector<double> frames;
     std::string line;
     while (std::getline(in, line)) {
         if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
         std::istringstream ls(line);
-        long long f = 0;
+        double f = 0.0;
         if (!(ls >> f)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
-        frames.push_back(static_cast<int64_t>(f));
+        frames.push_back(f);
     }
     return frames;
 }
