@@ -9,12 +9,12 @@
 #include <vector>
 
 // Serialize a built frame map to the canonical .warpframemap text form: one
-// "src_frame tgt_frame" line per segment. When drop_zero_zero is true a
-// leading (0,0) anchor is omitted. Shared by the GUI render pipeline and the
-// headless parser CLI so both emit byte-identical artifacts.
+// "src_frame tgt_frame" line per segment, every segment included — the
+// readers require a first-target-zero pair, so the leading anchor is part of
+// the contract. Shared by the GUI render pipeline and the headless parser
+// CLI so both emit byte-identical artifacts.
 std::expected<void, std::string> write_frame_map(
-    const std::string& path, const std::vector<FrameMapSegment>& segs,
-    bool drop_zero_zero);
+    const std::string& path, const std::vector<FrameMapSegment>& segs);
 
 // Serialize a tempo map to the canonical .tempomap text form: one
 // "target_time_sec multiplier" line per entry at fixed 16-digit precision.

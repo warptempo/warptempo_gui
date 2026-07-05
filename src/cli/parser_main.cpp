@@ -221,8 +221,7 @@ int main(int argc, char** argv) {
     }
 
     if (fmt == "framemap") {
-        if (auto w = write_frame_map(out_path, artifacts.frame_map,
-                                              /*drop_zero_zero=*/false); !w) {
+        if (auto w = write_frame_map(out_path, artifacts.frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }

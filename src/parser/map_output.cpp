@@ -5,15 +5,13 @@
 #include <iomanip>
 
 std::expected<void, std::string> write_frame_map(
-    const std::string& path, const std::vector<FrameMapSegment>& segs,
-    bool drop_zero_zero) {
+    const std::string& path, const std::vector<FrameMapSegment>& segs) {
     std::ofstream of(path);
     if (!of) {
         return std::unexpected("could not write frame map '" + path + "'");
     }
     of << std::setprecision(17);
     for (const auto& s : segs) {
-        if (drop_zero_zero && s.src_frame == 0.0 && s.tgt_frame == 0.0) continue;
         of << s.src_frame << " " << s.tgt_frame << "\n";
     }
     of.flush();

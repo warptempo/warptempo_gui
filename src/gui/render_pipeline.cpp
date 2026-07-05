@@ -904,8 +904,7 @@ RenderOutcome do_render(const RenderRequest& req,
             artifacts = TrimmedArtifactMaps{tmfull.frame_map, tmfull.tempo_map};
         }
         auto map_write = (output_format == "framemap")
-            ? write_frame_map(final_output_path, artifacts.frame_map,
-                                     /*drop_zero_zero=*/false)
+            ? write_frame_map(final_output_path, artifacts.frame_map)
             : write_tempo_map(final_output_path, artifacts.tempo_map);
         if (!map_write) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
