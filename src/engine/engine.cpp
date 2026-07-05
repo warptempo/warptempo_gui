@@ -178,53 +178,40 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         audio_stft.N;
 
     audio_stft.init_fftw();
-    audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
-    // Synthesis window and emit cap. The engine renders the supplied map but
-    // emits only emit_sample_cap output samples. On the explicit-cap path (a
-    // trimmed render handed a pre-sliced sub-map), synthesis is bounded to
-    // exactly the frames whose OLA span touches [0, emit_sample_cap) and no
-    // further, so trimmed renders do not synthesize out to the sub-map's far
-    // closing anchor. On the default path (full render) the whole map is
-    // synthesized and the cap is the map's last-anchor target.
-    {
-        const int num_frames =
-            static_cast<int>(audio_stft.source_frame_positions.size());
-        if (p.emit_sample_cap > 0) {
-            audio_stft.emit_sample_cap = p.emit_sample_cap;
-            // After the N/2 head trim, frame m covers output samples
-            // [m*R_s - N/2, m*R_s + N/2), and every emitted sample needs all four
-            // overlapping frames for unity COLA gain. The last frame overlapping
-            // output sample cap-1 is (cap-1)/R_s + 2, so synthesis runs through it
-            // inclusive. This also keeps the mono push total above the cap, so the
-            // cap, not the mono length, binds the emitted count.
-            int64_t need = ((p.emit_sample_cap - 1) / audio_stft.R_s) + 3;
-            if (need > num_frames) need = num_frames;
-            audio_stft.synth_frame_end = static_cast<int>(need);
-        } else {
-            audio_stft.synth_frame_end = num_frames;
-            // Full-render cap is the last anchor's target; map_source_to_target
-            // at the final node is exactly that node's target, so read it direct.
-            const double tgt_end = audio_stft.frame_map.back().tgt_frame;
-            audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
-            // A sub-half-sample final target rounds to a zero cap, and the
-            // synthesis loop reads cap 0 as uncapped — the render would emit
-            // the full STFT tail instead of a near-zero-length deliverable.
-            // A deliverable of zero samples is not renderable output, so
-            // refuse it here, symmetric with the trimmed path's degenerate
-            // window refusal.
-            if (audio_stft.emit_sample_cap <= 0) {
-                std::cerr << "Error: render refused: final map target of "
-                          << tgt_end
-                          << " frames rounds to zero output samples\n";
-                audio_stft.cleanup();
-                return EngineResult::Failed;
-            }
+    // Emit cap. The engine renders the supplied map but emits only
+    // emit_sample_cap output samples. On the explicit-cap path (a trimmed
+    // render handed a pre-sliced sub-map) the cap comes straight from the
+    // caller; on the default path (full render) it is the map's last-anchor
+    // target. The cap is resolved here, before the dense schedule is
+    // generated, so the output-size refusals below can reject an implausible
+    // render before the schedule's target-length-proportional reserve is
+    // paid.
+    if (p.emit_sample_cap > 0) {
+        audio_stft.emit_sample_cap = p.emit_sample_cap;
+    } else {
+        // Full-render cap is the last anchor's target; map_source_to_target
+        // at the final node is exactly that node's target, so read it direct.
+        const double tgt_end = audio_stft.frame_map.back().tgt_frame;
+        audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
+        // A sub-half-sample final target rounds to a zero cap, and the
+        // synthesis loop reads cap 0 as uncapped — the render would emit
+        // the full STFT tail instead of a near-zero-length deliverable.
+        // A deliverable of zero samples is not renderable output, so
+        // refuse it here, symmetric with the trimmed path's degenerate
+        // window refusal.
+        if (audio_stft.emit_sample_cap <= 0) {
+            std::cerr << "Error: render refused: final map target of "
+                      << tgt_end
+                      << " frames rounds to zero output samples\n";
+            audio_stft.cleanup();
+            return EngineResult::Failed;
         }
     }
 
     // synthesize_full buffers the full output before any write, so refuse
-    // implausible allocations and un-finalizable disk shapes here, at the last
-    // point the projected size is known and before synthesis cost is paid.
+    // implausible allocations and un-finalizable disk shapes here, as soon as
+    // the projected size is known and before any output-proportional cost —
+    // the dense schedule's reserve or the synthesis itself — is paid.
     auto projected = checked_audio_sample_count(audio_stft.emit_sample_cap,
                                                 audio_stft.channels);
     if (!projected) {
@@ -243,6 +230,29 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                       << " frames exceeds RIFF 32-bit limits\n";
             audio_stft.cleanup();
             return EngineResult::Failed;
+        }
+    }
+
+    audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
+    // Synthesis window. On the explicit-cap path synthesis is bounded to
+    // exactly the frames whose OLA span touches [0, emit_sample_cap) and no
+    // further, so trimmed renders do not synthesize out to the sub-map's far
+    // closing anchor. On the default path the whole map is synthesized.
+    {
+        const int num_frames =
+            static_cast<int>(audio_stft.source_frame_positions.size());
+        if (p.emit_sample_cap > 0) {
+            // After the N/2 head trim, frame m covers output samples
+            // [m*R_s - N/2, m*R_s + N/2), and every emitted sample needs all four
+            // overlapping frames for unity COLA gain. The last frame overlapping
+            // output sample cap-1 is (cap-1)/R_s + 2, so synthesis runs through it
+            // inclusive. This also keeps the mono push total above the cap, so the
+            // cap, not the mono length, binds the emitted count.
+            int64_t need = ((p.emit_sample_cap - 1) / audio_stft.R_s) + 3;
+            if (need > num_frames) need = num_frames;
+            audio_stft.synth_frame_end = static_cast<int>(need);
+        } else {
+            audio_stft.synth_frame_end = num_frames;
         }
     }
 
