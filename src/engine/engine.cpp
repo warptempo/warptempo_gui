@@ -103,7 +103,7 @@ bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
 
 // Validate the phase reset list is non-decreasing (duplicates allowed; see
 // the ruling comment above). Returns true if OK.
-bool validate_phase_resets_ordered(const std::vector<int64_t>& resets) {
+bool validate_phase_resets_ordered(const std::vector<double>& resets) {
     for (size_t i = 1; i < resets.size(); ++i) {
         if (resets[i] < resets[i - 1]) {
             std::cerr << "Error: phase reset entry " << i << " is out of order ("
@@ -276,7 +276,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // The src-frame -> synth-frame upper_bound filter drops entries before
     // the first frame.
     for (size_t i = 0; i < p.phase_reset_frames.size(); ++i) {
-        int64_t F = p.phase_reset_frames[i];
+        // Quantization into the integer query schedule happens here,
+        // engine-owned, symmetric with generate_source_frame_positions.
+        // Rounding before the less-than-or-equal search makes a position
+        // within half a sample below a schedule entry count as at that entry.
+        const int64_t F =
+            static_cast<int64_t>(std::llrint(p.phase_reset_frames[i]));
         auto it = std::upper_bound(fm.begin(), fm.end(), F);
         if (it == fm.begin()) continue;
         --it;

@@ -2,7 +2,6 @@
 
 #include "frame_map.h"
 
-#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -24,7 +23,7 @@
 // droppable in one trim window and live in another), so no
 // authoring-time check could be correct, and the silent per-render drop
 // is the intended contract.
-inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
+inline std::optional<double> phase_reset_dispatch_frame_target_domain(
         double source_frame,
         const std::vector<FrameMapSegment>& full_map,
         const std::vector<FrameMapSegment>& engine_map,
@@ -58,14 +57,15 @@ inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
     // searches phase reset frames against source_frame_positions[m], which are
     // origin-centered analysis query frames:
     //   map_target_to_source(m * R_s) - N/2.
-    // The helper must return frames in that same query domain.
+    // The helper returns the exact double in that same query domain; the
+    // engine performs the quantization against its schedule.
     const double engine_source =
         map_target_to_source(dispatch_target, engine_map)
         - static_cast<double>(engine_query_origin_offset_samples);
-    return static_cast<int64_t>(std::llrint(engine_source));
+    return engine_source;
 }
 
-inline std::vector<int64_t> phase_reset_dispatch_frames_target_domain(
+inline std::vector<double> phase_reset_dispatch_frames_target_domain(
         const std::vector<double>& source_frames,
         const std::vector<FrameMapSegment>& full_map,
         const std::vector<FrameMapSegment>& engine_map,
@@ -73,7 +73,7 @@ inline std::vector<int64_t> phase_reset_dispatch_frames_target_domain(
         int64_t render_target_frames,
         int64_t target_offset_samples,
         int64_t engine_query_origin_offset_samples) {
-    std::vector<int64_t> out;
+    std::vector<double> out;
     out.reserve(source_frames.size());
     for (const double source_frame : source_frames) {
         if (auto f = phase_reset_dispatch_frame_target_domain(

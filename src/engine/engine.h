@@ -42,14 +42,18 @@ struct EngineParams {
     double peak_limiter_attack_ms     = 0.25;
     double peak_limiter_release_ms    = 0.5;
 
-    // User-curated phase reset frame list (source-frame domain). When non-empty,
-    // the engine skips its internal phase reset detection and uses this list
-    // verbatim for phase reset positioning. Must be non-decreasing (duplicates
-    // allowed); the engine refuses loudly at init otherwise, mirroring the
-    // frame-map monotonicity validation.
+    // User-curated phase reset position list. Each entry is an exact double
+    // position already mapped by the driver into the engine's origin-centered
+    // query domain (via the driver-side dispatch mapping); the engine
+    // quantizes it into its integer query schedule at placement time, the
+    // same ownership as the schedule's own llrint. When non-empty, the
+    // engine skips its internal phase reset detection and uses this list
+    // verbatim for phase reset positioning. Must be non-decreasing
+    // (duplicates allowed); the engine refuses loudly at init otherwise,
+    // mirroring the frame-map monotonicity validation.
     // Typical source: GUI's phase reset view, providing the union of inserted
     // + active-detected (with displacement applied) entries.
-    std::vector<int64_t> phase_reset_frames;
+    std::vector<double> phase_reset_frames;
 
     // Output-sample cap. When > 0, the engine emits exactly this many output
     // samples and synthesizes only the frames needed to cover them; the rest of

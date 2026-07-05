@@ -160,9 +160,10 @@ std::string compute_hover_popup_text(
 // source-frame position (time * sample_rate, no rounding), matching the
 // warp-marker time->frame convention in build_maps. The result is the
 // undisplaced authored source-frame list used for render-view display,
-// resetmap output, and target-domain dispatch placement; quantization to the
-// engine's integer query schedule happens only at the engine query boundary
-// (the llrint in phase_reset_dispatch.h).
+// resetmap output, and target-domain dispatch placement; the dispatch
+// mapping (phase_reset_dispatch.h) stays in doubles, and quantization to
+// the engine's integer query schedule happens inside the engine at
+// placement time.
 std::vector<double> phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate);
 
