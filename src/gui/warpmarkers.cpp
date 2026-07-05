@@ -46,16 +46,6 @@ bool GuiWarpMarkers::save(const std::string& path,
         if (m.disabled) out << '#';
         out << format_timestamp(m.time_seconds) << '|';
 
-        // Defensive guard against invalid in-memory combinations.
-        const bool both_def_and_ref =
-            !m.label_def.empty() && !m.label_ref.empty();
-        if (both_def_and_ref) {
-            std::fprintf(stderr,
-                "warptempo_gui: marker at %.3fs has both label_ref and "
-                "label_def; emitting as reference\n",
-                m.time_seconds);
-        }
-
         // Payload:
         //   label_ref               → "a.42"
         //   inherit, no def         → "pass"
