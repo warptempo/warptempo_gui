@@ -311,10 +311,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // A pure label ref owns no tempo of its own — it parses with
     // tempo_base 0.0 (the label_ref branch in parse_single_canonical_line).
     // Clearing every ref to a def by removing the def here would leave
-    // those markers serializing as owning 0.00 markers: reloadable (0.00 is
-    // syntactically valid) but rejected by render's effective-tempo check.
-    // Refuse up front instead, symmetric with the referenced-def delete
-    // gate in warpmarkers_ops.cpp (delete_selected_marker).
+    // those markers serializing as owning 0.00 markers, which no longer
+    // parse (the parser rejects the zero tempo literal), so the save would
+    // produce an unloadable file. Refuse up front instead, symmetric with
+    // the referenced-def delete gate in warpmarkers_ops.cpp
+    // (delete_selected_marker).
     if (ok && !mv_const[idx].label_def.empty() && parsed.label_def.empty()) {
         const std::string& old_def = mv_const[idx].label_def;
         std::string refs;

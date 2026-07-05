@@ -93,8 +93,18 @@ bool parse_new_payload(const std::string& payload,
             error_out = "tempo must be N.NN format: " + tempo_part;
             return false;
         }
+        // The grammar admits no sign and no other spelling of zero, so an
+        // exact compare against the zero literal is a total positivity check.
+        if (tempo_part == "0.00") {
+            error_out = "tempo must be positive: 0.00";
+            return false;
+        }
         if (star != std::string::npos && !is_valid_scale_format(scale_part)) {
             error_out = "scale must be N.NNNN format: " + scale_part;
+            return false;
+        }
+        if (scale_part == "0.0000") {
+            error_out = "scale must be positive: 0.0000";
             return false;
         }
         m.tempo_inherits = false;
@@ -133,8 +143,18 @@ bool parse_new_payload(const std::string& payload,
         error_out = "tempo must be N.NN format: " + tempo_part;
         return false;
     }
+    // Same positivity check as the no-colon branch: the zero literal is the
+    // grammar's only non-positive spelling, so the exact compare is total.
+    if (tempo_part == "0.00") {
+        error_out = "tempo must be positive: 0.00";
+        return false;
+    }
     if (star != std::string::npos && !is_valid_scale_format(scale_part)) {
         error_out = "scale must be N.NNNN format: " + scale_part;
+        return false;
+    }
+    if (scale_part == "0.0000") {
+        error_out = "scale must be positive: 0.0000";
         return false;
     }
     m.tempo_inherits = false;

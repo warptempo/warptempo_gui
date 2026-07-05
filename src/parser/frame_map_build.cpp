@@ -390,7 +390,11 @@ std::expected<MapBuildResult, std::string> build_maps(
             // concern.
             // Only a <= 0 product is rejected: the segment arithmetic divides
             // by it, so a zero or negative product divides by zero or flips
-            // sign in delta_tgt. That guard is correctness, not form.
+            // sign in delta_tgt. That guard is correctness, not form. Typed
+            // zeros are rejected at parse and editor commit, so this check is
+            // the division-safety backstop for the resolved product —
+            // unreachable from program-written input, kept deliberately as a
+            // loud refusal.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " + std::to_string(tempo_val)
                                        + " <= 0 at marker " + std::to_string(i));
