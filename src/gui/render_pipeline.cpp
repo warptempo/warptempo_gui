@@ -485,8 +485,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // N/2 after the trim instant), so it is dropped rather than
                 // pinned at zero. After this drop, the surviving warp times
                 // are strictly ascending doubles by map monotonicity, so the
-                // strict-ascent abort in GuiWarpMarkers::save is unreachable
-                // from this caller.
+                // display sidecar's timestamps are strictly ascending too.
                 if (w.time_seconds < 0.0) continue;
                 warped_markers.push_back(std::move(w));
             }

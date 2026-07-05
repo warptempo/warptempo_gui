@@ -29,16 +29,16 @@ bool GuiWarpMarkers::save(const std::string& path) const {
 
 bool GuiWarpMarkers::save(const std::string& path,
                       const std::vector<GuiWarpMarker>& markers_) {
-    for (size_t i = 1; i < markers_.size(); ++i) {
-        if (!(markers_[i].time_seconds > markers_[i - 1].time_seconds)) {
-            std::fprintf(stderr,
-                "warptempo_gui: save aborted: markers not strictly "
-                "increasing at %.3fs\n",
-                markers_[i].time_seconds);
-            return false;
-        }
-    }
-
+    // Serializer contract: this save performs no ordering validation.
+    // Strict ascent of the input is an ops-layer construction invariant —
+    // gesture eps clamps (drop/drag/shift/nudge) hold far wider than the
+    // millisecond snap radius, the target-view nudge validates snapped
+    // proposals against neighbors before committing, and propagate's paste
+    // erases any exact-equal occupant before inserting. The strict
+    // authoring parser re-enforces ordering at every load, so a
+    // hypothetical future op bug that broke the invariant would surface as
+    // a loud line-numbered parse error on the next load rather than
+    // silently.
     std::ostringstream out;
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:

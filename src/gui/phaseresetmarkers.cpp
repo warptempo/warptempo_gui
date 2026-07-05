@@ -29,31 +29,25 @@ bool GuiPhaseResetMarkers::save(const std::string& path) const {
 
 bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
-    // Mirrors GuiWarpMarkers::save: refuse on exact-double non-ascent.
-    // Authoring times are millisecond-gridded by construction (format
-    // plus snap_to_timestamp_grid on every mutation path), so the
-    // exact-double comparison is the on-disk millisecond contract for the
-    // strict-reloaded outputs — the authoring file and the source-domain
-    // batch sidecar the commit path reloads. The render publisher's
-    // non-gridded computed times feed only render-view's lenient reader,
-    // where a same-millisecond pair from distinct frames is
-    // display-harmless, and a pair colliding to the same integer frame
-    // refuses here visibly with the publisher's write-failed warning and
-    // a withheld fingerprint.
+    // Serializer contract: this save performs no ordering validation.
+    // Strict ascent of the input is an ops-layer construction invariant —
+    // gesture eps clamps (drop/drag/shift/nudge) hold far wider than the
+    // millisecond snap radius, the target-view nudge validates snapped
+    // proposals against neighbors before committing, and propagate's paste
+    // erases any exact-equal occupant before inserting. The strict
+    // authoring parser re-enforces ordering at every load, so a
+    // hypothetical future op bug that broke the invariant would surface as
+    // a loud line-numbered parse error on the next load rather than
+    // silently. The render publisher can legitimately produce two resets
+    // on the same millisecond (distinct target frames rounding together,
+    // or two colliding to one integer frame); both lines simply serialize
+    // here, and the display sidecar's lenient reader shows them as
+    // overlapping flags.
     std::ostringstream out;
-    for (size_t i = 0; i < markers_.size(); ++i) {
-        if (i > 0 && !(markers_[i].time_seconds > markers_[i - 1].time_seconds)) {
-            std::fprintf(stderr,
-                "warptempo_gui: save aborted: phase_resets not strictly "
-                "increasing at %.3fs\n",
-                markers_[i].time_seconds);
-            return false;
-        }
-
+    for (const auto& m : markers_) {
         // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
         // timestamp, exactly as the parser strips it. No mode suffix — the
         // peak/heap/pass model was removed when heap became the sole engine.
-        const auto& m = markers_[i];
         if (m.disabled) out << '#';
         out << format_timestamp(m.time_seconds) << '\n';
     }
