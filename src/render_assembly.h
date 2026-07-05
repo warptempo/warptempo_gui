@@ -104,8 +104,7 @@ inline int64_t assign_engine_phase_resets(
     const int64_t render_target_frames =
         ep.emit_sample_cap > 0
             ? ep.emit_sample_cap
-            : (ep.frame_map.empty() ? 0 :
-               static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame)));
+            : static_cast<int64_t>(std::llrint(ep.frame_map.back().tgt_frame));
     ep.phase_reset_frames = phase_reset_dispatch_frames_target_domain(
         reset_source_frames,
         full_map,

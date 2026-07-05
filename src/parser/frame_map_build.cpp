@@ -527,8 +527,6 @@ WindowedFrameMap slice_frame_map_to_trim_window(
             - static_cast<double>(N) / 2.0;
         dense.push_back(static_cast<int64_t>(std::llrint(src)));
     }
-    const int num_frames = static_cast<int>(dense.size());
-    if (num_frames == 0) { out.frame_map = full_map; return out; }
 
     // Window start: the last dense synthesis frame whose source read position
     // is at or before trim_begin_src (the engine's own placement rule). The
@@ -537,7 +535,6 @@ WindowedFrameMap slice_frame_map_to_trim_window(
     auto bit = std::upper_bound(dense.begin(), dense.end(), trim_begin_src);
     int wbegin = (bit == dense.begin()) ? 0
                : static_cast<int>((bit - dense.begin()) - 1);
-    if (wbegin > num_frames - 1) wbegin = num_frames - 1;
 
     const int64_t offset =
         static_cast<int64_t>(wbegin) * static_cast<int64_t>(R_s);
@@ -634,11 +631,10 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // (or negative) cap means the trim's output span is entirely consumed by the
     // hop-aligned window start, and reads back as "uncapped" at the engine
     // boundary. This refusal also covers an empty window map: the only slicer
-    // paths that return before the start-anchor push (an empty full map, and
-    // the dense-schedule-empty path, itself impossible since target_total is at
-    // least N) leave emit_sample_cap at its default of 0, and every path that
-    // reaches the anchor push pushes it unconditionally, so any window that
-    // passes here carries at least the start-anchor pair.
+    // path that returns before the start-anchor push is the empty-full-map
+    // return at the top, which leaves emit_sample_cap at its default of 0,
+    // and every path that reaches the anchor push pushes it unconditionally,
+    // so any window that passes here carries at least the start-anchor pair.
     if (w.emit_sample_cap <= 0) {
         return std::unexpected(
             "degenerate trim window: no output samples between the window "

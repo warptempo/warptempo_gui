@@ -99,7 +99,6 @@ RenderRequest build_render_request(std::string source_audio_path,
 
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag) {
-    if (req.source_audio_path.empty()) return RenderOutcome::Failed;
     const bool prof = profile::enabled();
     const auto t_render_0 = profile::now();
     double source_read_ms = 0.0;
@@ -415,8 +414,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // Only wav renders produce these — frame-map/tempo-map formats skip
         // the engine. The phase-reset sidecar is always written on wav batch
         // renders, including as an empty file.
-        if (output_format == "wav" && !tmfull.frame_map.empty() &&
-            sample_rate > 0) {
+        if (output_format == "wav") {
             // Walk the FULL frame map; each emitted render-domain time is the
             // full-render output sample minus the slice origin. When untrimmed,
             // window_offset_samples is 0 and this reduces to old behavior.

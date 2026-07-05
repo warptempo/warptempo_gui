@@ -31,10 +31,6 @@ inline std::optional<int64_t> phase_reset_dispatch_frame_target_domain(
         int64_t render_target_frames,
         int64_t target_offset_samples,
         int64_t engine_query_origin_offset_samples) {
-    if (full_map.empty()) return std::nullopt;
-    if (engine_map.empty()) return std::nullopt;
-    if (render_target_frames <= 0) return std::nullopt;
-
     const double authored_target_full =
         map_source_to_target(static_cast<double>(source_frame), full_map);
     const double authored_target_window =
