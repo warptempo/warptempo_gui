@@ -498,14 +498,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 all_ok = false;
             }
 
-            std::vector<FrameMapSegment> real_map = tmfull.frame_map;
-
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
             // are forward-mapped from their clicked source frame through the
             // same map and placed at tgt(F) - window_offset, so a reset sits
             // on the same musical position in render-view as in source and
-            // target views. Drop disabled, out-of-trim, and pre-origin.
+            // target views, expressed as the same exact double the warp loop
+            // above uses (no intermediate frame rounding). Drop disabled,
+            // out-of-trim, and pre-origin.
             std::vector<GuiPhaseResetMarker> warped_phase_resets;
             warped_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
@@ -513,12 +513,11 @@ RenderOutcome do_render(const RenderRequest& req,
                 const int64_t source_frame_abs = static_cast<int64_t>(
                     std::nearbyint(t.time_seconds * sr_d));
                 if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
-                const int64_t render_frame =
-                    static_cast<int64_t>(std::llrint(map_source_to_target(
-                        static_cast<double>(source_frame_abs), real_map))) -
-                    window_offset_samples;
                 GuiPhaseResetMarker w = t;
-                w.time_seconds = static_cast<double>(render_frame) / sr_d;
+                w.time_seconds =
+                    (map_source_to_target(static_cast<double>(source_frame_abs),
+                                           tmfull.frame_map)
+                     - static_cast<double>(window_offset_samples)) / sr_d;
                 // Pre-origin filter, same rationale as the warp loop above: a
                 // reset whose render position precedes the delivered WAV's
                 // first sample was never audible in this deliverable anyway

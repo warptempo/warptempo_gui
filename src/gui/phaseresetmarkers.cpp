@@ -39,8 +39,8 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
     // hypothetical future op bug that broke the invariant would surface as
     // a loud line-numbered parse error on the next load rather than
     // silently. The render publisher can legitimately produce two resets
-    // on the same millisecond (distinct target frames rounding together,
-    // or two colliding to one integer frame); both lines simply serialize
+    // on the same millisecond (distinct exact target-frame doubles whose
+    // millisecond timestamps round together); both lines simply serialize
     // here, and the display sidecar's lenient reader shows them as
     // overlapping flags.
     std::ostringstream out;
