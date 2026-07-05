@@ -46,9 +46,13 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
     // there and serialized strings here, because sub-millisecond target
     // separations of warp markers are legal, load-bearing map geometry
     // under the no-ceiling rule and warp's only non-gridded caller feeds
-    // the lenient render-view display reader, while the phase-reset render
-    // sidecar reloads through the strict authoring parser, which forces the
-    // serialized domain.
+    // the lenient render-view display reader, while this save's
+    // strict-reloaded outputs — the authoring .phaseresetmarkers and the
+    // source-domain batch sidecar that Ctrl+Alt+C commit reloads — are what
+    // force the serialized domain here; the render display sidecar itself
+    // is read leniently by render-view. The refusal is kept for all three
+    // outputs regardless, because a colliding pair is a senseless authoring
+    // slip and refusal is preferred over silent correction.
     //
     // Consequences: an authoring save that catches an equal-time collision
     // mid-nudge now aborts with the message instead of silently dropping,

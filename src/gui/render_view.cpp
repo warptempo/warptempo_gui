@@ -207,7 +207,9 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // authoring parser (parse_warpmarkers_file, reached via GuiWarpMarkers::load)
 // rejects both, so render-view reads through this reader instead — render-view
 // is a read-only overlay on already-canonical output and must accommodate the
-// canonical parser, not the reverse.
+// canonical parser, not the reverse. (read_render_view_phaseresetmarkers below
+// shares the display-only-overlay rationale, though its reset sidecar has no
+// grammar mismatch of its own to accommodate.)
 //
 // The on-disk payload after the pipe IS the display string the flag painter
 // shows (flag_text returns label_ref verbatim when set), so the whole payload
@@ -238,6 +240,50 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         GuiWarpMarker m;
         m.time_seconds = parse_timestamp(left);
         m.label_ref    = t.substr(pipe + 1);
+        m.disabled     = disabled;
+        out.push_back(std::move(m));
+    }
+    return out;
+}
+
+// Lenient, display-only reader for a .renderphaseresetmarkers sidecar —
+// the reset-side counterpart to read_render_view_warpmarkers above, sharing
+// its rationale: both render-domain sidecars are display-only overlays on
+// already-published output, read leniently because nothing downstream
+// depends on their invariants — a bad line costs one flag, never the whole
+// overlay — while the strict authoring parser (parse_phaseresetmarkers_file,
+// reached via GuiPhaseResetMarkers::load) owns every load whose result gets
+// edited, re-saved, or rendered from. The writer-side refusal in
+// GuiPhaseResetMarkers::save already guarantees program-produced files are
+// clean, so lenient reading forfeits no detection for files this program
+// wrote.
+//
+// Each line: skip byte-empty lines; a leading `#` marks the marker disabled
+// and is stripped before the timestamp check. The remainder must satisfy
+// is_valid_timestamp_format in full (the regex full-matches the nine-
+// character MM:SS.mmm form, so trailing characters fail it) or the line is
+// skipped individually — no cross-line validation of any kind. Hash
+// semantics fall out naturally and match the strict parser's: hash followed
+// by a valid timestamp is a disabled marker, hash followed by anything else
+// skips as a comment, and garbage without a hash skips instead of erroring —
+// the last is the deliberate lenient difference.
+static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
+        const std::string& path) {
+    std::vector<GuiPhaseResetMarker> out;
+    std::ifstream f(path);
+    if (!f.is_open()) return out;
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        std::string t = line;
+        bool disabled = false;
+        if (t[0] == '#') {
+            disabled = true;
+            t.erase(0, 1);
+        }
+        if (!is_valid_timestamp_format(t)) continue;
+        GuiPhaseResetMarker m;
+        m.time_seconds = parse_timestamp(t);
         m.disabled     = disabled;
         out.push_back(std::move(m));
     }
@@ -302,12 +348,12 @@ bool GuiRenderView::load_render_view_at(int index) {
             e.batch_folder / (e.basename + ".renderphaseresetmarkers");
         std::error_code ec;
         if (std::filesystem::exists(tmd, ec)) {
-            GuiPhaseResetMarkers t;
-            if (auto r = t.load(tmd.string()); !r) {
-                std::fprintf(stderr, "warptempo_gui: render-view: %s: %s\n",
-                             tmd.string().c_str(), r.error().c_str());
-            }
-            loaded_trans = t.markers();
+            loaded_trans = read_render_view_phaseresetmarkers(tmd.string());
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: %s missing — phase resets "
+                "will not be displayed for this render\n",
+                tmd.string().c_str());
         }
     }
     playback.stop();
