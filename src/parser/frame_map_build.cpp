@@ -630,6 +630,32 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     // all, and the keep-filter below would then drop the target-zero start
     // anchor and leave read_frame_map to reject the very artifact this writer
     // produced.
+    //
+    // w.frame_map.empty() cannot fire past the cap refusal: the only slicer
+    // paths that return without pushing the start anchor (an empty full map,
+    // and the dense-schedule-empty path, itself impossible since target_total
+    // is at least N) leave emit_sample_cap at its default of 0, which the first
+    // refusal above already catches; every path that reaches the anchor push
+    // pushes it unconditionally from there, so any window that passes the cap
+    // refusal carries at least that one pair. The
+    // front-source half of the second condition is unreachable as well when
+    // map_source_to_target and map_target_to_source behave as exact
+    // mathematical inverses: the start anchor's source is
+    // map_target_to_source(window offset), clamped up to zero, and a clamped
+    // zero can never reach trim_end_src because trim validation keeps
+    // trim_end_src positive. An unclamped anchor source at or past trim_end_src
+    // would then mean, by monotonicity, that end_tgt_precise sits at or below
+    // the window offset — exactly the condition that rounds the cap to zero or
+    // below, so the first refusal above already returns before this one is ever
+    // reached.
+    //
+    // The front-source check is kept anyway as a precise-domain floating-point
+    // backstop, the same class as the slicer's own strict-ascent guards against
+    // ties and inversions: the two interpolators are not bit-exact inverses, so
+    // if this condition ever did fire past the cap refusal, the keep-filter
+    // below would drop the target-zero start anchor and this writer would hand
+    // read_frame_map an artifact it rejects on load. Catching it here turns that
+    // failure into an up-front refusal instead.
     if (w.emit_sample_cap <= 0) {
         return std::unexpected(
             "degenerate trim window: no output samples between the window "
