@@ -628,15 +628,12 @@ std::expected<WavWriter, std::string>
 WavWriter::open_file(const std::string& path, WavSampleFormat format,
                      int channels, int sample_rate)
 {
-    constexpr int kMaxWavWriterChannels = 256;
-    constexpr int kMaxWavWriterSampleRate = 1536000;
-    if ((format != WavSampleFormat::Pcm24 &&
-        format != WavSampleFormat::Float32) ||
-        channels < 1 || channels > kMaxWavWriterChannels ||
-        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
-        return std::unexpected(
-            "invalid WAV writer parameters (channels must be 1..256, "
-            "sample_rate must be 1..1536000)");
+    // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
+    // otherwise silently take the float path. Channel count and sample rate
+    // arrive already validated from the probed source, so they are not rechecked.
+    if (format != WavSampleFormat::Pcm24 &&
+        format != WavSampleFormat::Float32) {
+        return std::unexpected("unsupported WAV writer format");
     }
     FILE* f = std::fopen(path.c_str(), "wb+");
     if (!f) {
@@ -669,15 +666,12 @@ std::expected<WavWriter, std::string>
 WavWriter::open_memory(std::vector<char>& out, WavSampleFormat format,
                        int channels, int sample_rate)
 {
-    constexpr int kMaxWavWriterChannels = 256;
-    constexpr int kMaxWavWriterSampleRate = 1536000;
-    if ((format != WavSampleFormat::Pcm24 &&
-        format != WavSampleFormat::Float32) ||
-        channels < 1 || channels > kMaxWavWriterChannels ||
-        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
-        return std::unexpected(
-            "invalid WAV writer parameters (channels must be 1..256, "
-            "sample_rate must be 1..1536000)");
+    // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
+    // otherwise silently take the float path. Channel count and sample rate
+    // arrive already validated from the probed source, so they are not rechecked.
+    if (format != WavSampleFormat::Pcm24 &&
+        format != WavSampleFormat::Float32) {
+        return std::unexpected("unsupported WAV writer format");
     }
     out.clear();
     WavWriter w;

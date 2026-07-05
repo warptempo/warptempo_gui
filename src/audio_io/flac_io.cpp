@@ -55,9 +55,12 @@ std::expected<FlacInfo, std::string> flac_probe(const std::string& path)
                               static_cast<uint64_t>(s[17]);
     info.frames = static_cast<int64_t>(total_hi | total_lo);
     std::memcpy(info.md5, s + 18, sizeof(info.md5));
-    if (info.sample_rate <= 0 || info.channels <= 0 ||
-        info.bits_per_sample <= 0 || info.frames < 0) {
-        return std::unexpected("invalid FLAC STREAMINFO values");
+    // Only sample_rate can be zero here: it is a 20-bit field and zero is
+    // encodable. channels (3-bit field + 1) and bits_per_sample (5-bit field
+    // + 1) are at least 1, and frames is a 36-bit unsigned value assembled into
+    // int64, so it is never negative -- those arms could not fire.
+    if (info.sample_rate <= 0) {
+        return std::unexpected("invalid FLAC sample rate");
     }
     if (info.frames == 0) {
         return std::unexpected(
