@@ -26,10 +26,10 @@ double effective_tempo(const MarkerForRender& m) {
     return v;
 }
 
+// A label definition contributes exactly one thing to its references: the
+// defining segment's target duration, which the ref imposes on its own span.
 struct LabelCacheEntry {
-    double      delta_tgt   = 0.0;
-    double      tempo_base  = 1.0;
-    std::string tempo_scale;
+    double delta_tgt = 0.0;
 };
 
 // Single source of truth for "does this raw marker survive into the render
@@ -408,11 +408,7 @@ std::expected<MapBuildResult, std::string> build_maps(
                     return std::unexpected("duplicate label definition: "
                                            + m.label_def);
                 }
-                LabelCacheEntry e;
-                e.delta_tgt   = delta_tgt;
-                e.tempo_base  = m.tempo_base;
-                e.tempo_scale = m.tempo_scale;
-                label_cache[m.label_def] = e;
+                label_cache[m.label_def] = LabelCacheEntry{delta_tgt};
             }
         }
 
