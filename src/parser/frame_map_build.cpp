@@ -37,8 +37,10 @@ struct LabelCacheEntry {
 // enabled label ref, by its definition marker being disabled — the cascade,
 // because the definition supplies the duration the ref imposes, so a silenced
 // definition leaves the ref with nothing to reproduce. resolve_markers_for_render
-// filters on this, and marker_effective measures label-ref segment distances to
-// the next marker that passes it, so the hover multiplier tracks the frame map.
+// filters on this, marker_effective measures label-ref segment distances to
+// the next marker that passes it, and the pass-provenance source walk selects
+// the immediate prior marker that passes it, so both the hover multiplier and
+// the hover source attribution track the frame map.
 bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) {
     const WarpMarker& g = mv[idx];
     if (g.disabled) return true;
@@ -143,11 +145,13 @@ MarkerEffective marker_effective(
         const int walk = idx + 1;
         r.base  = resolve_inherited_tempo(mv, walk);
         r.scale = resolve_inherited_tempo_scale(mv, walk);
-        // source_idx is the immediate prior non-disabled marker — the
-        // visible source of the inherited value, not necessarily the
-        // owning marker if there's a chain of passes.
+        // source_idx is the immediate prior render-surviving marker — the
+        // visible source of the inherited value, not necessarily the owning
+        // marker if there is a chain of passes; cascade-disabled refs are
+        // skipped because they are render-inert and carry no tempo payload, so
+        // they can never be the visible source.
         for (int i = idx - 1; i >= 0; --i) {
-            if (!mv[i].disabled) {
+            if (!marker_effectively_disabled(mv, static_cast<size_t>(i))) {
                 r.source_idx = i;
                 break;
             }
