@@ -271,16 +271,23 @@ std::string compute_hover_popup_text(
         // state be reachable.
         if (eff.source_idx < 0) return out;
 
-        // Provenance: the immediate prior marker's own displayed tempo
-        // (its base, or base*scale if it carries a typed scale) and its
-        // time_seconds.
+        // Provenance: the immediate prior marker's own resolved displayed
+        // tempo (its base, or base*scale if it carries a typed scale) and its
+        // time_seconds. The prior marker can itself be a pass or a label_ref,
+        // whose stored tempo_base/tempo_scale are inert placeholders, so the
+        // descriptor is built from that marker's own resolution rather than
+        // its raw fields.
         const WarpMarker& src = mv[eff.source_idx];
+        const MarkerEffective src_eff =
+            marker_effective(mv, eff.source_idx, sample_rate);
+        if (src_eff.base == 0.0) return out;
+
         char sbuf[32];
-        std::snprintf(sbuf, sizeof(sbuf), "%.2f", src.tempo_base);
+        std::snprintf(sbuf, sizeof(sbuf), "%.2f", src_eff.base);
         std::string descriptor = sbuf;
-        if (!src.tempo_scale.empty()) {
+        if (!src_eff.scale.empty()) {
             descriptor += "*";
-            descriptor += src.tempo_scale;
+            descriptor += src_eff.scale;
         }
         out += " (from ";
         out += descriptor;

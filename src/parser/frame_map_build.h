@@ -127,14 +127,18 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 // when emitting the framemap, so the popup matches what will be rendered. Pass
 // markers emit "= TEMPO (from SOURCE @ TIME)" or "= TEMPO*SCALE (from SOURCE @
 // TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
-// immediate prior marker's own displayed tempo, TIME its time_seconds).
-// Label_ref markers emit "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @
-// TIME)" (BASE at 2 decimals; COMBINED_SCALE = def_scale * multiplier when
-// the def has a typed scale, else multiplier, at 4 decimals; DEF_BASE:LABEL
-// and TIME describe the label-definition marker). TIME is formatted with
-// format_timestamp (time_format.h), the same mm:ss.mmm formatter the rest of
-// the GUI uses. Returns "" when the marker does not qualify (owning, missing
-// def, malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
+// immediate prior marker's own resolved displayed tempo — matching what that
+// marker's own popup or flag shows, not its raw stored fields, which are
+// inert for a pass or a label_ref — TIME its time_seconds). If SOURCE's own
+// resolution is unresolvable (base 0.0), the suffix is dropped entirely and
+// the popup shows just the resolved tempo. Label_ref markers emit
+// "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE at 2 decimals;
+// COMBINED_SCALE = def_scale * multiplier when the def has a typed scale,
+// else multiplier, at 4 decimals; DEF_BASE:LABEL and TIME describe the
+// label-definition marker). TIME is formatted with format_timestamp
+// (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
+// Returns "" when the marker does not qualify (owning, missing def,
+// malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
 // (slice_to_warp_markers) before calling.
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate);
