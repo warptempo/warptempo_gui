@@ -61,12 +61,34 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const double spp       = current_samples_per_pixel(app, audio);
     const double eps       = marker_hit_eps_seconds(spp, sr_d);
     const double total_dur = static_cast<double>(audio.total_frames()) / sr_d;
-    if (app.trim.end_seconds > total_dur - eps)
-        app.trim.end_seconds = total_dur - eps;
+
+    // Stored-grid invariant: every value written into app.trim.begin_seconds /
+    // end_seconds is on the millisecond grid the .settings format persists at,
+    // so an authored bound equals its own reloaded value bit-for-bit. The eps
+    // ceilings above are sub-grid quantities, so a raw clamp to total_dur - eps
+    // would store off the grid and shift on the next save/reload. Snap the
+    // clamped value back onto the grid — but snap-to-nearest can round the
+    // value UP, past the ceiling, which would erase the very eps gap the clamp
+    // exists to hold (end flush against EOF, or begin flush against end). So
+    // when the snap lands above the ceiling, step down one grid unit to the
+    // nearest grid point at or below it rather than rounding upward. Because
+    // the two ceilings sit eps and 2*eps below EOF and eps exceeds the grid
+    // unit for every source in the project's length domain, they floor to
+    // distinct grid points and begin stays strictly below end.
+    constexpr double kGrid = 0.001;
+    const double end_ceiling = total_dur - eps;
+    if (app.trim.end_seconds > end_ceiling) {
+        double v = snap_to_timestamp_grid(end_ceiling);
+        if (v > end_ceiling) v -= kGrid;
+        app.trim.end_seconds = v;
+    }
     double begin_ceiling = total_dur - 2.0 * eps;
     if (begin_ceiling < 0.0) begin_ceiling = 0.0;
-    if (app.trim.begin_seconds > begin_ceiling)
-        app.trim.begin_seconds = begin_ceiling;
+    if (app.trim.begin_seconds > begin_ceiling) {
+        double v = snap_to_timestamp_grid(begin_ceiling);
+        if (v > begin_ceiling) v -= kGrid;
+        app.trim.begin_seconds = v;
+    }
 
     // Snap the playhead onto the bound just set at it. The bound is grid-
     // quantized by snap_to_timestamp_grid (millisecond resolution, required
