@@ -22,9 +22,7 @@
 // clip net above the spectral limiter's -0.3.
 void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf) {
     const int channels = stft.channels;
-    const size_t total_frames =
-        channels > 0 ? buf.size() / static_cast<size_t>(channels) : 0;
-    if (total_frames == 0) return;
+    const size_t total_frames = buf.size() / static_cast<size_t>(channels);
     PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
                    stft.peak_limiter_attack_ms,
                    stft.peak_limiter_release_ms,
@@ -53,13 +51,11 @@ void Synthesis::synthesize_full(
     const int num_frames = static_cast<int>(fm.size());
     // Synthesis frame window [0, wend): the half-open range of frames this pass
     // emits. num_frames stays the full map size and ta_for stays absolute over
-    // the full fm; only the emit range narrows. Defaults describe the whole map
-    // (full-render behavior); engine.cpp narrows synth_frame_end when
-    // EngineParams::emit_sample_cap is set (a trimmed render). wend == 0 means
-    // "unset" (a caller that bypassed engine.cpp's resolution) -> treat as the
-    // full map.
-    const int wend   = (stft.synth_frame_end > 0) ? stft.synth_frame_end
-                                                  : num_frames;
+    // the full fm; only the emit range narrows. engine.cpp resolves
+    // synth_frame_end to a positive frame count on every path before synthesis
+    // runs — narrowed to the frames covering [0, emit_sample_cap) when an
+    // explicit cap is set, the full map otherwise.
+    const int wend   = stft.synth_frame_end;
     const int wcount = wend;
 
     // --- Env-gated sub-stage profiling --------------------------------------
@@ -108,7 +104,7 @@ void Synthesis::synthesize_full(
     const int64_t mono_len =
         (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s + N / 2 : 0;
     int64_t out_frames = mono_len;
-    if (stft.emit_sample_cap > 0 && stft.emit_sample_cap < out_frames)
+    if (stft.emit_sample_cap < out_frames)
         out_frames = stft.emit_sample_cap;
 
     // One mono output stream per channel. Each channel computes its whole
@@ -737,8 +733,7 @@ bool Synthesis::write_render_to_file(AudioSTFT& stft,
                   << "': " << writer.error() << "\n";
         return false;
     }
-    const size_t total_frames = stft.channels > 0
-        ? render.size() / static_cast<size_t>(stft.channels) : 0;
+    const size_t total_frames = render.size() / static_cast<size_t>(stft.channels);
     auto ok = writer->write_frames(render.data(),
                                    static_cast<int64_t>(total_frames));
     if (!ok) {

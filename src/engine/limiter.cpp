@@ -226,19 +226,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
 
     const int channels    = stft.channels;
     const int sample_rate  = stft.src_info.samplerate;
-    if (channels <= 0) return;
     const int64_t render_frames = static_cast<int64_t>(render.size()) / channels;
-    if (render_frames <= 0) {
-        std::cout << "[Pass 3/3] Limiter.......................... empty render, skipped\n";
-        if (prof) {
-            const auto t_total_1 = profile::now();
-            std::cerr << "[profile] limiter_summary ms="
-                      << profile::ms(t_total_0, t_total_1)
-                      << " sample_frames=0 channels=" << channels
-                      << " peak_count=0 iteration_count=0 active=no bypass=empty\n";
-        }
-        return;
-    }
 
     // -- Limiter's own analysis grid (independent of the PV's 2N-padded grid) --
     const int    N_lim   = stft.N;            // 4096
@@ -272,7 +260,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         int n_max = static_cast<int>(std::floor(3.0 * std::log2(nyq  / 1000.0)));
         for (int n = n_min; n <= n_max; ++n)
             centers.push_back(1000.0 * std::pow(2.0, n / 3.0));
-        if (centers.empty()) centers.push_back(1000.0);
         num_bands = static_cast<int>(centers.size());
         for (int k = 0; k < K_lim; ++k) {
             double hz = k * bin_hz_width_lim;
@@ -507,7 +494,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                                 double current_val, double target_val,
                                 std::vector<std::vector<double>>& out) {
             out = base;
-            if (std::abs(current_val) < 1e-30) return;
             double r = target_val / current_val;
             if (r < 0.0) r = 0.0;
             if (r > 1.0) r = 1.0;
@@ -522,7 +508,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                     contrib[i * num_bands + b] = c;
                     total_mag += c;
                 }
-            if (total_mag < 1e-30) return;
 
             const double one_minus_r = 1.0 - r;
             double active_total_mag    = total_mag;

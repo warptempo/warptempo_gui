@@ -176,15 +176,18 @@ struct AudioSTFT {
     // Synthesis frame end, resolved from EngineParams::emit_sample_cap in
     // engine.cpp after the frame map is built. Synthesis always begins at
     // frame 0 because a trimmed render is a pre-sliced sub-map anchored at
-    // output 0, not an internal window. engine.cpp narrows synth_frame_end to
-    // the frames covering [0, emit_sample_cap) when an explicit cap is set,
-    // and leaves it at the full map otherwise.
-    int synth_frame_end   = 0;   // 0 means "use full map" until engine sets it
+    // output 0, not an internal window. run_warptempo_engine resolves this to
+    // a positive frame count on every path before synthesis runs — narrowed
+    // to the frames covering [0, emit_sample_cap) when an explicit cap is
+    // set, the full map otherwise — and synthesize_full reads it as resolved.
+    int synth_frame_end   = 0;
 
     // Emit cap: output length in samples. The synthesizer truncates its emitted
     // stream to this many samples so render length equals the target-view length
-    // (full render: frame_map.back().tgt_frame). Set by engine.cpp after the synth
-    // window is resolved. 0 means "no cap" (defensive default).
+    // (full render: frame_map.back().tgt_frame). run_warptempo_engine resolves
+    // this to a positive value on every path before synthesis runs (a cap that
+    // rounds to zero is refused at init), and synthesize_full reads it as
+    // resolved.
     int64_t emit_sample_cap = 0;
 
     // Optional cancellation hook. When non-null, synthesize_full checks
