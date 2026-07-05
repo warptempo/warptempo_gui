@@ -29,53 +29,61 @@ bool GuiPhaseResetMarkers::save(const std::string& path) const {
 
 bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
-    // Dedup compares the serialized timestamp string, not the in-memory
-    // double. Mid-edit nudge gestures may transit through equal-time
-    // collisions, and the render-domain publisher
-    // (publish_render_domain_sidecars in render_pipeline.cpp) feeds
-    // non-gridded times where two distinct doubles can round to the same
-    // on-disk millisecond through format_timestamp's std::nearbyint
-    // rounding. Comparing the serialized string mirrors the writer exactly
-    // by construction, so any collision the writer could create is dropped
-    // here before it reaches the file. For a time-sorted input list (every
-    // caller holds one) the written file is therefore strictly increasing
-    // in the strict authoring parser's domain: format_timestamp is monotone
-    // non-decreasing in seconds. For millisecond-gridded authoring lists
-    // this dedup is identical to exact-double dedup, since grid values
-    // round-trip through format_timestamp exactly.
+    // The refusal compares in the writer's serialized millisecond domain
+    // because that is the persistence quantum: two distinct in-memory
+    // doubles that round to one on-disk millisecond could otherwise only be
+    // silently collapsed or written as a duplicate line the strict
+    // authoring parser rejects on reload, and refusal is preferred over
+    // silent correction. Lexicographic comparison is chronological here
+    // because format_timestamp always emits the fixed-width nine-character
+    // MM:SS.mmm form. Nothing of value is refused — two resets inside
+    // one millisecond collapse to the same synthesis frame at the engine,
+    // the earlier one superseded — so a colliding pair is an authoring slip
+    // by definition.
     //
-    // Deliberate asymmetry with GuiWarpMarkers::save: warp save refuses a
-    // non-strictly-increasing exact-double list outright instead of
-    // dedup-dropping. Its one non-gridded caller writes the
-    // .renderwarpmarkers display sidecar, consumed only by render-view's
-    // lenient line-skipping reader (read_render_view_warpmarkers in
-    // render_view.cpp), so a same-millisecond warp pair there is
-    // display-harmless and no strict reloader ever sees it. The phase-reset
-    // render sidecar, by contrast, reloads through the strict authoring
-    // parser, so dropping here is what keeps that reload alive.
+    // The shape is symmetric with GuiWarpMarkers::save's strict-ascent
+    // abort; the comparison domains deliberately differ, exact doubles
+    // there and serialized strings here, because sub-millisecond target
+    // separations of warp markers are legal, load-bearing map geometry
+    // under the no-ceiling rule and warp's only non-gridded caller feeds
+    // the lenient render-view display reader, while the phase-reset render
+    // sidecar reloads through the strict authoring parser, which forces the
+    // serialized domain.
+    //
+    // Consequences: an authoring save that catches an equal-time collision
+    // mid-nudge now aborts with the message instead of silently dropping,
+    // exactly as warp saves always have. A render-domain collision —
+    // sub-millisecond target separation at extreme scale, or two
+    // trim-head resets both clamped to the delivered WAV's origin —
+    // refuses the display sidecar while the render itself succeeds, the
+    // publisher prints its write-failed warning, and the fingerprint is
+    // withheld by the existing attestation plumbing, so the failure is
+    // visible and the remedy is authoring-side (remove the redundant
+    // reset, or adjust the trim).
+    //
+    // Because the refusal validates the emitted sequence itself, every file
+    // this writer produces is strictly increasing in the parser's domain
+    // for any input whatsoever; no reload verification exists at the
+    // publish seam and none is needed.
     std::ostringstream out;
-    std::string last_ts;
-    bool have_last = false;
-    int dropped = 0;
+    std::string last_ts;  // empty is a safe first-iteration sentinel:
+                          // format_timestamp never returns an empty string.
     for (const auto& m : markers_) {
         const std::string ts = format_timestamp(m.time_seconds);
-        if (have_last && ts == last_ts) {
-            ++dropped;
-            continue;
+        if (!last_ts.empty() && !(ts > last_ts)) {
+            std::fprintf(stderr,
+                "warptempo_gui: save aborted: phase_resets not strictly "
+                "increasing at %s\n",
+                ts.c_str());
+            return false;
         }
         last_ts = ts;
-        have_last = true;
 
         // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
         // timestamp, exactly as the parser strips it. No mode suffix — the
         // peak/heap/pass model was removed when heap became the sole engine.
         if (m.disabled) out << '#';
         out << ts << '\n';
-    }
-    if (dropped > 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: dropped %d duplicate phase_reset(s) on save\n",
-            dropped);
     }
     const std::string data = out.str();
 
