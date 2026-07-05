@@ -215,10 +215,14 @@ MarkerEffective marker_effective(
             def_scale_str = def.tempo_scale;
             def_has_typed_scale = !def_scale_str.empty();
         }
+        // def_scale_str is either def's own typed scale field or the output of
+        // resolve_inherited_tempo_scale, both grammar-shaped numeric text (the
+        // strict parser's N.NNNN form or a copy of an existing owner's
+        // resolved scale) whenever def_has_typed_scale is true, so the parse
+        // is total here — same argument as effective_tempo above.
         double def_scale_val = 1.0;
         if (def_has_typed_scale) {
-            try { def_scale_val = std::stod(def_scale_str); }
-            catch (...) { def_scale_val = 1.0; }
+            def_scale_val = std::stod(def_scale_str);
         }
         const double def_eff_tempo = def_base * def_scale_val;
         if (def_base == 0.0 || def_eff_tempo == 0.0) return r;
