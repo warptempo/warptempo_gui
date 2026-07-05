@@ -244,6 +244,17 @@ void PhaseResetPropagate::paste_apply() {
     // (captured from a lead-in placement) lands the marker in the lead-in
     // before dst_start. Clamp to 0 per the universal no-negative-time
     // rule; insert_marker does not clamp.
+    //
+    // propagate is an overwrite command, so a materialized reset owns its
+    // landing millisecond: duration rescaling can land a placement outside
+    // the cleared membership windows above (a lead-in scaled by a longer
+    // destination block, a near-end placement scaled by a shorter one),
+    // landing among surviving pre-existing resets, and a strongly shrunken
+    // block or the zero clamp can land two placements on the same grid
+    // point. Erasing an exact-equal occupant before each insert keeps the
+    // overwrite semantics uniform across both cases and keeps the
+    // in-memory list strictly ascending, which insert_marker alone does
+    // not guarantee since it accepts equal times.
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
         const double dst_dur   = dest_blocks[i].end - dst_start;
@@ -253,6 +264,10 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_seconds = snap_to_timestamp_grid(
                 std::max(0.0, dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
+            out.erase(std::remove_if(out.begin(), out.end(),
+                [&nm](const GuiPhaseResetMarker& m) {
+                    return m.time_seconds == nm.time_seconds;
+                }), out.end());
             app.phaseresetmarkers.insert_marker(std::move(nm));
         }
     }
