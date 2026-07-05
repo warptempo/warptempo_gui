@@ -69,9 +69,18 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // monotone source_frame_positions, so a non-decreasing input yields
 // non-decreasing synth-frame placements, and the synthesis cursor's while
 // loop consumes equal placements on the same frame correctly. Equal reset
-// frames are constructible from legitimate input — two authored resets on
-// adjacent milliseconds can llrint to the same engine query frame under
-// strong target compression — so only a strict decrease is rejected.
+// frames are unreachable under the usage model: the dispatch chain's
+// forward-map, subtract-anticipation, inverse-map slopes cancel within a
+// tempo segment, so two authored resets a millisecond apart land about 44
+// engine frames apart at 44100 Hz regardless of compression, and even a
+// boundary-straddling anticipation gap needs a slope ratio near ninety to
+// collide them — far past the usage model's actual ceiling. They remain
+// legal, though, under the no-ceiling rule for tempo products and
+// ref-implied multipliers, and the consumer handles them correctly. Only a
+// decrease is a breach: the writer's output is provably non-decreasing, and
+// a decrease of even one sample can land in a synth frame the forward-only
+// cursor has already passed, which it would then skip silently. So the
+// predicate rejects every decrease and nothing else, with no epsilon band.
 
 // Validate strict monotonicity of a (src,tgt) frame_map. Returns true if OK.
 bool validate_frame_map_monotonic(const std::vector<FrameMapSegment>& tm) {
