@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <limits>
 #include <sstream>
 
 std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
@@ -30,37 +29,53 @@ bool GuiPhaseResetMarkers::save(const std::string& path) const {
 
 bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
-    // Mid-edit nudge gestures may transit through equal-time collisions.
-    // Drop duplicates silently here (keep the first occurrence) and emit
-    // a one-line stderr notice so the user sees that the on-disk content
-    // diverges from the in-memory list. Dedup is keyed on time_seconds
-    // (exact double match, matching warp-marker save behavior).
-    std::vector<GuiPhaseResetMarker> deduped;
-    deduped.reserve(markers_.size());
-    double last_time = std::numeric_limits<double>::lowest();
+    // Dedup compares the serialized timestamp string, not the in-memory
+    // double. Mid-edit nudge gestures may transit through equal-time
+    // collisions, and the render-domain publisher
+    // (publish_render_domain_sidecars in render_pipeline.cpp) feeds
+    // non-gridded times where two distinct doubles can round to the same
+    // on-disk millisecond through format_timestamp's std::nearbyint
+    // rounding. Comparing the serialized string mirrors the writer exactly
+    // by construction, so any collision the writer could create is dropped
+    // here before it reaches the file. For a time-sorted input list (every
+    // caller holds one) the written file is therefore strictly increasing
+    // in the strict authoring parser's domain: format_timestamp is monotone
+    // non-decreasing in seconds. For millisecond-gridded authoring lists
+    // this dedup is identical to exact-double dedup, since grid values
+    // round-trip through format_timestamp exactly.
+    //
+    // Deliberate asymmetry with GuiWarpMarkers::save: warp save refuses a
+    // non-strictly-increasing exact-double list outright instead of
+    // dedup-dropping. Its one non-gridded caller writes the
+    // .renderwarpmarkers display sidecar, consumed only by render-view's
+    // lenient line-skipping reader (read_render_view_warpmarkers in
+    // render_view.cpp), so a same-millisecond warp pair there is
+    // display-harmless and no strict reloader ever sees it. The phase-reset
+    // render sidecar, by contrast, reloads through the strict authoring
+    // parser, so dropping here is what keeps that reload alive.
+    std::ostringstream out;
+    std::string last_ts;
+    bool have_last = false;
     int dropped = 0;
     for (const auto& m : markers_) {
-        const double eff = m.time_seconds;
-        if (eff == last_time) {
+        const std::string ts = format_timestamp(m.time_seconds);
+        if (have_last && ts == last_ts) {
             ++dropped;
             continue;
         }
-        deduped.push_back(m);
-        last_time = eff;
+        last_ts = ts;
+        have_last = true;
+
+        // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
+        // timestamp, exactly as the parser strips it. No mode suffix — the
+        // peak/heap/pass model was removed when heap became the sole engine.
+        if (m.disabled) out << '#';
+        out << ts << '\n';
     }
     if (dropped > 0) {
         std::fprintf(stderr,
             "warptempo_gui: dropped %d duplicate phase_reset(s) on save\n",
             dropped);
-    }
-
-    std::ostringstream out;
-    for (const auto& m : deduped) {
-        // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
-        // timestamp, exactly as the parser strips it. No mode suffix — the
-        // peak/heap/pass model was removed when heap became the sole engine.
-        if (m.disabled) out << '#';
-        out << format_timestamp(m.time_seconds) << '\n';
     }
     const std::string data = out.str();
 
