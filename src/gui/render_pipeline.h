@@ -90,8 +90,9 @@ struct RenderRequest {
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
     // counterparts. The render pipeline forwards the active tab's trim to
-    // MapBuildInput, which drives the frame_map post-pass + write_trimmed_wav
-    // cut.
+    // MapBuildInput, which drives the frame_map/tempo_map derivation for the
+    // trimmed window; the WAV render path applies the same trim to the
+    // engine's synthesis window.
     bool   has_trim_begin = false;
     double trim_begin_sec = 0.0;
     bool   has_trim_end   = false;

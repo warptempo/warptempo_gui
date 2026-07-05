@@ -8,7 +8,6 @@
 #include "phaseresetmarkers.h"
 #include "map_output.h"
 #include "settings_io.h"
-#include "source_audio_io.h"
 #include "frame_map_view.h"
 #include "render_assembly.h"
 #include "profile_util.h"
@@ -881,28 +880,10 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     } else {
         // output_format == "framemap" or "tempomap". No engine, no limiter.
-        // When trim is active, emit a sibling trimmed wav so the consumer
-        // adapter operates on the trimmed source range; when there's no
-        // trim, the consumer can use the original source directly.
+        // These exports carry deliverable-relative targets and absolute
+        // source frames, so a consumer reads the original source audio
+        // directly — trimmed or not — and no companion audio is written.
         const bool trimmed = req.has_trim_begin || req.has_trim_end;
-        std::filesystem::path out_dir =
-            std::filesystem::path(final_output_path).parent_path();
-        if (out_dir.empty()) out_dir = std::filesystem::path(".");
-        if (trimmed) {
-            const std::string src_stem =
-                std::filesystem::path(req.source_audio_path).stem().string();
-            const std::string trimmed_path =
-                (out_dir / (src_stem + "-trimmed.wav")).string();
-            if (auto r = write_trimmed_wav(
-                    req.source_audio_path, trimmed_path,
-                    static_cast<size_t>(trim_window.trim_begin_src),
-                    static_cast<size_t>(trim_window.trim_end_src)); !r) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             r.error().c_str());
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-        }
         // Trimmed artifacts derive from the same window the engine renders, so
         // they describe the trimmed deliverable byte-for-byte; untrimmed renders
         // write the full maps verbatim. This path runs no engine.
