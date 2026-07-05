@@ -161,7 +161,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             // at the final node is exactly that node's target, so read it direct.
             const double tgt_end = audio_stft.frame_map.back().tgt_frame;
             audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
-            if (audio_stft.emit_sample_cap < 0) audio_stft.emit_sample_cap = 0;
+            // A sub-half-sample final target rounds to a zero cap, and the
+            // synthesis loop reads cap 0 as uncapped — the render would emit
+            // the full STFT tail instead of a near-zero-length deliverable.
+            // A deliverable of zero samples is not renderable output, so
+            // refuse it here, symmetric with the trimmed path's degenerate
+            // window refusal.
+            if (audio_stft.emit_sample_cap <= 0) {
+                std::cerr << "Error: render refused: final map target of "
+                          << tgt_end
+                          << " frames rounds to zero output samples\n";
+                audio_stft.cleanup();
+                return EngineResult::Failed;
+            }
         }
     }
 

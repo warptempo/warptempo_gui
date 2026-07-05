@@ -342,9 +342,11 @@ std::expected<MapBuildResult, std::string> build_maps(
     // target, which is then zero, and the engine treats a zero cap as
     // uncapped, so the defect would otherwise surface only as a near-empty
     // rendered file rather than an error. With at least one surviving marker
-    // the map's last target is always positive (every segment is at least one
-    // source frame and tempo products are positive), so this rejection also
-    // guarantees a full map never hands the engine a zero cap.
+    // the map's last target is always positive in the double domain (every
+    // segment is at least one source frame and tempo products are positive),
+    // but an extreme tempo product can leave a sub-half-sample final target
+    // whose integer emit cap still rounds to zero; the engine refuses that
+    // cap at dispatch rather than treating it as uncapped.
     if (markers.empty()) {
         return std::unexpected(
             "no render-surviving warp markers (all disabled, or none authored)");
