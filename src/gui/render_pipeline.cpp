@@ -418,8 +418,6 @@ RenderOutcome do_render(const RenderRequest& req,
             // Walk the FULL frame map; each emitted render-domain time is the
             // full-render output sample minus the slice origin. When untrimmed,
             // window_offset_samples is 0 and this reduces to old behavior.
-            const int64_t trim_begin = trim_window.trim_begin_src;
-            const int64_t trim_end   = trim_window.trim_end_src;
             const double sr_d = static_cast<double>(sample_rate);
             // window_offset_samples was computed at slice time. The engine no
             // longer windows, so there is no engine-side offset to recompute.
@@ -467,11 +465,11 @@ RenderOutcome do_render(const RenderRequest& req,
                 const auto& s = *seg_it;
                 ++seg_it;
 
-                // Trim-range filter (inclusive both ends). Gates emission only;
-                // the segment above is already consumed.
-                const int64_t source_frame_abs = static_cast<int64_t>(
-                    std::nearbyint(g.time_seconds * sr_d));
-                if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
+                // Trim-range filter (inclusive both ends), run in authored
+                // seconds against the request's trim bounds. Gates emission
+                // only; the segment above is already consumed.
+                if (req.has_trim_begin && g.time_seconds < req.trim_begin_sec) continue;
+                if (req.has_trim_end && g.time_seconds > req.trim_end_sec) continue;
 
                 GuiWarpMarker w = g;
                 w.time_seconds  =
@@ -498,23 +496,22 @@ RenderOutcome do_render(const RenderRequest& req,
 
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
-            // are forward-mapped from their clicked source frame through the
+            // are forward-mapped from their clicked source time through the
             // same map and placed at tgt(F) - window_offset, so a reset sits
             // on the same musical position in render-view as in source and
             // target views, expressed as the same exact double the warp loop
-            // above uses (no intermediate frame rounding). Drop disabled,
-            // out-of-trim, and pre-origin.
+            // above uses, with no intermediate frame rounding. The trim-range
+            // filter runs in authored seconds against the request's trim
+            // bounds. Drop disabled, out-of-trim, and pre-origin.
             std::vector<GuiPhaseResetMarker> warped_phase_resets;
             warped_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
-                const int64_t source_frame_abs = static_cast<int64_t>(
-                    std::nearbyint(t.time_seconds * sr_d));
-                if (source_frame_abs < trim_begin || source_frame_abs > trim_end) continue;
+                if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
+                if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
                 GuiPhaseResetMarker w = t;
                 w.time_seconds =
-                    (map_source_to_target(static_cast<double>(source_frame_abs),
-                                           tmfull.frame_map)
+                    (map_source_to_target(t.time_seconds * sr_d, tmfull.frame_map)
                      - static_cast<double>(window_offset_samples)) / sr_d;
                 // Pre-origin filter, same rationale as the warp loop above: a
                 // reset whose render position precedes the delivered WAV's
