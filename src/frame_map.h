@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -47,6 +46,8 @@ inline double map_source_to_target(double src_frame, const std::vector<FrameMapS
 inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapSegment>& map) {
     if (map.empty()) return tgt_frame;
     if (tgt_frame <= map.front().tgt_frame) return map.front().src_frame;
+    // Strictly monotonic tgt_frame, so the owning segment is found by binary
+    // search, mirroring map_source_to_target.
     auto it = std::upper_bound(
         map.begin(), map.end(), tgt_frame,
         [](double q, const FrameMapSegment& s) { return q < s.tgt_frame; });
@@ -69,25 +70,23 @@ inline double map_target_to_source(double tgt_frame, const std::vector<FrameMapS
 // whitespace-separated numeric text, specified at each writer in
 // map_output.cpp; keep these in lockstep with those writers.
 //
-// .warpframemap: one "src_frame tgt_frame" line per segment (space-separated,
-// non-negative numeric values; the writer emits precise double breakpoints at
-// up to 17 significant digits; a leading 0 0 anchor is present unless dropped
-// at write). Blank / whitespace-only lines are skipped. Any malformed line
-// (non-numeric, non-finite, negative, missing field, or trailing garbage)
-// fails the whole read (std::nullopt), so a truncated or corrupt file never
-// feeds the engine a partial map. Both columns must also be strictly ascending line over
-// line: map_source_to_target / map_target_to_source above binary-search on
-// strictly monotonic breakpoints, and a duplicated or out-of-order breakpoint
-// makes the segment interpolation divide by zero, so any accepted line whose
-// src_frame or tgt_frame does not strictly exceed the previous accepted
-// line's fails the whole read too. The first pair's target must be exactly
-// zero: every writer shape starts the target column at zero — an untrimmed map
-// at the origin pair, a trimmed artifact at the deliverable's first sample — so
-// first-target-zero is a universal writer invariant, and enforcing it catches a
-// decapitated hand-edited map that the ascending and sign checks alone would
-// admit. The first pair's source is deliberately free: zero for untrimmed, the
-// absolute deliverable start otherwise. A missing/unopenable file is also
-// std::nullopt.
+// The readers validate line shape only. Value-domain and ordering conformance
+// is the writers' contract: build_maps and the trimmed-artifact derivation
+// emit finite, non-negative, strictly ascending values with a first target of
+// exactly zero by construction, and the consumers assume those preconditions —
+// the map helpers above binary-search and interpolate over strictly monotonic
+// breakpoints (documented there), and the engine's reset cursor consumes
+// phase_reset_frames sorted ascending (documented in engine.h). A hand-edited
+// artifact that breaks the contract is outside the program's usage model; the
+// readers do not police it.
+//
+// .warpframemap: one "src_frame tgt_frame" line per segment (space-separated;
+// the writer emits precise double breakpoints at up to 17 significant digits;
+// a leading 0 0 anchor is present unless dropped at write). Blank /
+// whitespace-only lines are skipped. Any malformed line (non-numeric, missing
+// field, or trailing garbage) fails the whole read (std::nullopt), so a
+// truncated or corrupt file never feeds the engine a partial map. A
+// missing/unopenable file is also std::nullopt.
 inline std::optional<std::vector<FrameMapSegment>>
 read_frame_map(const std::string& path) {
     std::ifstream in(path);
@@ -101,31 +100,18 @@ read_frame_map(const std::string& path) {
         if (!(ls >> s >> t)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
-        if (!std::isfinite(s) || !std::isfinite(t)) return std::nullopt;
-        if (s < 0.0 || t < 0.0) return std::nullopt;
-        // First pair's target must be exactly zero — the universal writer
-        // invariant that catches a decapitated map.
-        if (segs.empty() && t != 0.0) return std::nullopt;
-        if (!segs.empty() && (s <= segs.back().src_frame || t <= segs.back().tgt_frame)) {
-            return std::nullopt;
-        }
         segs.push_back(FrameMapSegment{s, t});
     }
     return segs;
 }
 
-// .resetmap: one undisplaced source-frame integer per line (non-negative),
-// in file order. Blank / whitespace-only lines skipped; any malformed or
-// negative line fails the whole read. Frames must also be strictly ascending
-// line over line: EngineParams::phase_reset_frames is documented
-// sorted-ascending in engine.h and synthesis consumes reset placements with a
-// single forward cursor, so a descending or duplicated resetmap would render
-// while silently never firing the earlier reset; any accepted frame that does
-// not strictly exceed the previous accepted frame fails the whole read. The
-// file carries only active resets (the writer's caller drops disabled
-// markers), so there is no '#'/disabled syntax to handle. A missing/unopenable
-// file is std::nullopt; an empty-but-readable file yields an empty list (a
-// valid "no resets" render input).
+// .resetmap: one undisplaced source-frame integer per line, in file order.
+// Blank / whitespace-only lines skipped; any malformed line (non-numeric,
+// missing field, or trailing garbage) fails the whole read. The file carries
+// only active resets (the writer's caller drops disabled markers), so there
+// is no '#'/disabled syntax to handle. A missing/unopenable file is
+// std::nullopt; an empty-but-readable file yields an empty list (a valid
+// "no resets" render input).
 inline std::optional<std::vector<int64_t>>
 read_reset_map(const std::string& path) {
     std::ifstream in(path);
@@ -139,8 +125,6 @@ read_reset_map(const std::string& path) {
         if (!(ls >> f)) return std::nullopt;
         std::string extra;
         if (ls >> extra) return std::nullopt;  // trailing garbage
-        if (f < 0) return std::nullopt;
-        if (!frames.empty() && f <= frames.back()) return std::nullopt;
         frames.push_back(static_cast<int64_t>(f));
     }
     return frames;

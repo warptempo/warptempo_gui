@@ -545,7 +545,12 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         // here is the minimum 1-frame gap; the visual 3-px gap source
         // view enforces doesn't translate uniformly to source-domain
         // under a non-trivial frame_map, so we degrade to strict-monotonic
-        // with one-frame headroom.
+        // with one-frame headroom. In target view a pixel delta can
+        // translate to a sub-grid source move only when the map is deformed
+        // by extreme stretch, which is outside the usage model (real
+        // effective speed stays around 2x or below); the designed response
+        // to that degenerate case is exactly this all-or-nothing hard
+        // reject — no finer-grained backstop is wanted.
         const double eps = 1.0 / sr_d;
         std::vector<std::pair<int, double>> proposals;
         proposals.reserve(app.selected_markers.size());

@@ -548,9 +548,13 @@ WindowedFrameMap slice_frame_map_to_trim_window(
         start_src_precise < 0.0 ? 0.0 : start_src_precise, 0.0});
     // Interior real segments strictly inside the window's output span, target
     // shifted by -offset (rigid integer translation -> lines preserved exactly),
-    // source absolute. All comparisons run in the precise double domain that
-    // read_frame_map and the engine's monotonicity validator check: sub-sample
-    // target segments are legal under the no-ceiling tempo rule, and a rounded
+    // source absolute. All comparisons run in the precise double domain, and
+    // they are what keep the emitted pairs strictly ascending and finite —
+    // read_frame_map validates line shape only, so ordering and value
+    // conformance is this writer's own contract, consumed as a precondition by
+    // the map helpers in frame_map.h and the engine's monotonicity validator.
+    // Sub-sample target segments are legal under the no-ceiling tempo rule,
+    // and a rounded
     // (llrint) guard here silently dropped strictly ascending breakpoints whose
     // shifted targets collide only after rounding, collapsing the span and
     // displacing engine source queries across it. The strict guards against the
@@ -634,8 +638,11 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
 
     // Frame map. Keep every window pair whose target is strictly below the emit
     // cap and whose source is strictly below the trim end — precise-domain
-    // comparisons, matching read_frame_map's strict-ascent contract, so legal
-    // sub-sample segments survive instead of being coalesced by rounding — then
+    // comparisons, preserving the strict ascent this writer itself guarantees
+    // (read_frame_map validates line shape only; the map helpers and the
+    // engine consume strictly ascending, finite pairs as a precondition), so
+    // legal sub-sample segments survive instead of being coalesced by
+    // rounding — then
     // append the exact (trim_end_src, emit_sample_cap) boundary pair. The
     // window's start anchor (absolute source, target 0) provably passes both
     // filters and stays as the first pair: the cap refusal above guarantees
