@@ -207,6 +207,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
     app.last_sel_group = LastSelGroup::Markers;
+    // Queued renders snapshot the loaded source's authoring state and the
+    // dispatch loop converts their phase reset times with the loaded
+    // source's sample rate, so entries must not outlive the source they
+    // were queued on.
+    app.queued_renders.clear();
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
     app.history.reset();
