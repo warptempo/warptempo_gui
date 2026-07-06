@@ -1,7 +1,5 @@
 #include "source_sample_cache.h"
 
-#include "audio_reader.h"
-#include "source_audio_io.h"
 #include "wav_io.h"
 
 #include <algorithm>
@@ -223,11 +221,9 @@ bool read_header(std::FILE* f, const SourceMetadata& want,
     return true;
 }
 
-bool read_cache_range(const std::filesystem::path& cache_path,
-                      const SourceMetadata& want,
-                      size_t begin_frame,
-                      size_t end_frame,
-                      std::vector<float>& out_samples) {
+bool read_cache_full(const std::filesystem::path& cache_path,
+                     const SourceMetadata& want,
+                     std::vector<float>& out_samples) {
     std::FILE* f = std::fopen(cache_path.c_str(), "rb");
     if (!f) return false;
 
@@ -237,24 +233,11 @@ bool read_cache_range(const std::filesystem::path& cache_path,
         uint64_t payload_bytes = 0;
         long payload_offset = 0;
         if (!read_header(f, want, payload_frames, payload_bytes, payload_offset)) break;
-        if (end_frame > static_cast<size_t>(payload_frames) ||
-            end_frame <= begin_frame) {
-            break;
-        }
 
-        const size_t channels = static_cast<size_t>(want.channels);
-        const size_t frames = end_frame - begin_frame;
-        const uint64_t sample_offset =
-            static_cast<uint64_t>(begin_frame) * static_cast<uint64_t>(channels);
-        const uint64_t byte_offset =
-            static_cast<uint64_t>(payload_offset) + sample_offset * sizeof(float);
-        if (byte_offset > static_cast<uint64_t>(std::numeric_limits<long>::max()))
-            break;
-        if (std::fseek(f, static_cast<long>(byte_offset), SEEK_SET) != 0) break;
-
+        // The header read leaves the stream at payload_offset, so the whole
+        // interleaved payload reads back from here.
         auto sample_count =
-            checked_audio_sample_count(static_cast<int64_t>(frames),
-                                       want.channels);
+            checked_audio_sample_count(payload_frames, want.channels);
         if (!sample_count) break;
         out_samples.assign(*sample_count, 0.0f);
         if (!out_samples.empty() &&
@@ -369,121 +352,11 @@ bool write_cache_samples(const std::filesystem::path& cache_path,
     return true;
 }
 
-bool rebuild_cache(const std::string& source_path,
-                   const std::filesystem::path& cache_path,
-                   const SourceMetadata& meta) {
-    // The rebuild re-derives identity from the reader it just opened and
-    // refuses to write a cache whose header and payload could disagree.
-    // A mismatch falls back to a direct read of the current file.
-    auto reader = AudioReader::open(source_path);
-    if (!reader) return false;
-    const SourceMetadata fresh = source_metadata(source_path, reader->info());
-    if (!metadata_matches(fresh, meta)) {
-        std::fprintf(stderr,
-                     "[warptempo_gui] .samples rebuild skipped for %s: "
-                     "source identity changed during rebuild\n",
-                     source_path.c_str());
-        return false;
-    }
-
-    constexpr int64_t kChunkFrames = 65536;
-    std::vector<float> all_samples;
-    auto sample_count = checked_audio_sample_count(meta.frame_count,
-                                                   meta.channels);
-    if (!sample_count) {
-        std::fprintf(stderr,
-                     "[warptempo_gui] .samples rebuild failed for %s: %s\n",
-                     source_path.c_str(), sample_count.error().c_str());
-        return false;
-    }
-    all_samples.assign(*sample_count, 0.0f);
-    int64_t remaining = meta.frame_count;
-    float* dst = all_samples.data();
-    while (remaining > 0) {
-        const int64_t want = std::min<int64_t>(remaining, kChunkFrames);
-        auto read = read_frames_exact(*reader, dst, want);
-        if (!read) {
-            std::fprintf(stderr,
-                         "[warptempo_gui] .samples rebuild failed for %s: %s\n",
-                         source_path.c_str(), read.error().c_str());
-            return false;
-        }
-        dst += static_cast<size_t>(want) * static_cast<size_t>(meta.channels);
-        remaining -= want;
-    }
-
-    return write_cache_samples(
-        cache_path, meta, all_samples.data(),
-        static_cast<uint64_t>(all_samples.size()));
-}
-
 } // namespace
 
 bool is_source_sample_cache_path(const std::string& path) {
     return lowercase(std::filesystem::path(path).extension().string()) ==
            kSampleCacheExtension;
-}
-
-std::expected<SourceSampleReadResult, std::string>
-load_source_range_with_source_sample_cache(const std::string& source_path,
-                                           const AudioFileInfo& source_info,
-                                           size_t begin_frame,
-                                           size_t end_frame,
-                                           std::vector<float>& out_samples,
-                                           int& out_sample_rate,
-                                           int& out_channels) {
-    if (!is_cacheable_source(source_info)) {
-        if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
-                                                out_samples, out_sample_rate,
-                                                out_channels); !r) {
-            return std::unexpected(r.error());
-        }
-        return SourceSampleReadResult{SourceSampleCacheStatus::Bypassed, false};
-    }
-
-    const SourceMetadata meta = source_metadata(source_path, source_info);
-    const std::filesystem::path cache_path = cache_path_for_source(source_path);
-    const bool existed = std::filesystem::exists(cache_path);
-
-    SourceSampleReadResult result;
-    if (read_cache_range(cache_path, meta, begin_frame, end_frame, out_samples)) {
-        out_sample_rate = meta.sample_rate;
-        out_channels = meta.channels;
-        result.cache_status = SourceSampleCacheStatus::Hit;
-        result.used_cache = true;
-        return result;
-    }
-
-    result.cache_status = existed
-        ? SourceSampleCacheStatus::StaleRebuild
-        : SourceSampleCacheStatus::FirstBuild;
-
-    if (!rebuild_cache(source_path, cache_path, meta)) {
-        if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
-                                                out_samples, out_sample_rate,
-                                                out_channels); !r) {
-            return std::unexpected(r.error());
-        }
-        result.cache_status = SourceSampleCacheStatus::FallbackDirect;
-        result.used_cache = false;
-        return result;
-    }
-
-    if (!read_cache_range(cache_path, meta, begin_frame, end_frame, out_samples)) {
-        if (auto r = load_source_range_to_buffer(source_path, begin_frame, end_frame,
-                                                out_samples, out_sample_rate,
-                                                out_channels); !r) {
-            return std::unexpected(r.error());
-        }
-        result.cache_status = SourceSampleCacheStatus::FallbackDirect;
-        result.used_cache = false;
-        return result;
-    }
-
-    out_sample_rate = meta.sample_rate;
-    out_channels = meta.channels;
-    result.used_cache = true;
-    return result;
 }
 
 bool read_full_source_from_source_sample_cache(const std::string& source_path,
@@ -494,8 +367,7 @@ bool read_full_source_from_source_sample_cache(const std::string& source_path,
     const SourceMetadata meta = source_metadata(source_path, source_info);
     if (meta.frame_count <= 0) return false;
 
-    return read_cache_range(cache_path_for_source(source_path), meta, 0,
-                            static_cast<size_t>(meta.frame_count), out_samples);
+    return read_cache_full(cache_path_for_source(source_path), meta, out_samples);
 }
 
 bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
@@ -589,15 +461,4 @@ source_path_for_source_sample_cache(const std::string& cache_path_string) {
     }
 
     return source_path.string();
-}
-
-const char* source_sample_cache_status_name(SourceSampleCacheStatus status) {
-    switch (status) {
-        case SourceSampleCacheStatus::Bypassed:       return "bypassed";
-        case SourceSampleCacheStatus::Hit:            return "hit";
-        case SourceSampleCacheStatus::FirstBuild:     return "first_build";
-        case SourceSampleCacheStatus::StaleRebuild:   return "stale_rebuild";
-        case SourceSampleCacheStatus::FallbackDirect: return "fallback_direct";
-    }
-    return "bypassed";
 }

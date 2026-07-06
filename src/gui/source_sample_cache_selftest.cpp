@@ -209,39 +209,6 @@ bool test_write_and_read_back()
     return ok;
 }
 
-bool test_range_hits()
-{
-    const std::string path = temp_path("range_hits");
-    remove_pair(path);
-    bool ok = false;
-    do {
-        AudioFileInfo info;
-        if (!create_cache(path, info)) break;
-        std::vector<float> out;
-        int sample_rate = 0;
-        int channels = 0;
-        auto full = load_source_range_with_source_sample_cache(
-            path, info, 0, 4, out, sample_rate, channels);
-        if (!full || full->cache_status != SourceSampleCacheStatus::Hit ||
-            !full->used_cache || sample_rate != kSampleRate ||
-            channels != kChannels || !float_payload_equal(out, standard_payload())) {
-            break;
-        }
-        auto part = load_source_range_with_source_sample_cache(
-            path, info, 1, 3, out, sample_rate, channels);
-        const std::vector<float> want = {0.5f, -0.25f, 0.875f, -0.625f};
-        if (!part || part->cache_status != SourceSampleCacheStatus::Hit ||
-            !part->used_cache || sample_rate != kSampleRate ||
-            channels != kChannels || !float_payload_equal(out, want)) {
-            break;
-        }
-        ok = true;
-    } while (false);
-    remove_pair(path);
-    if (!ok) std::printf("selftest: .samples range hit fixtures failed\n");
-    return ok;
-}
-
 bool test_md5_mismatch_preserved_size_mtime()
 {
     const std::string path = temp_path("md5_preserved_mtime");
@@ -447,7 +414,6 @@ bool run_source_sample_cache_selftest()
     // windows are not externally observable from a single-call test.
     return test_fixture_self_validation() &&
            test_write_and_read_back() &&
-           test_range_hits() &&
            test_md5_mismatch_preserved_size_mtime() &&
            test_zero_md5_metadata_fallback() &&
            test_nonzero_md5_staleness() &&
