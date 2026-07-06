@@ -142,10 +142,12 @@ void GuiSettingsEditor::commit() {
     // geometry-and-cache rebuild a window resize performs (the next redraw
     // re-measures the grid metrics and the cache fingerprints follow the
     // new strip geometry) — plus a full-window invalidation mirroring the
-    // resize path's full-surface damage. Deliberately NO settings-undo
-    // entry and NO target_render.trigger(): font_size is a display
-    // preference, not engine input and not authoring state, so it neither
-    // enters the undo history nor dirties the target render.
+    // resize path's full-surface damage. Undo YES: capture-before-mutate and
+    // push a settings-undo entry, so font_size rides the snapshot like the
+    // engine keys; push_settings_undo recomputes the dirty flags, so
+    // settings_dirty tracks font_size commits for free. Target-render NO:
+    // font_size is a display preference, not engine input, so it never
+    // dirties the target render.
     if (key == "font_size") {
         double v = 0.0;
         if (!parse_double_full_token(value, v) || v < 6.0 || v > 72.0) {
@@ -156,8 +158,10 @@ void GuiSettingsEditor::commit() {
                 "must be a number in [6, 72]\n", value.c_str());
             return;
         }
+        SettingsSnapshot pre = capture_current_settings(app);
         app.font_size = v;
         set_gui_font_size_pt(v);
+        undo.push_settings_undo(std::move(pre));
         std::fprintf(stderr,
             "warptempo_gui: setting applied: %s=%s\n",
             key.c_str(), value.c_str());

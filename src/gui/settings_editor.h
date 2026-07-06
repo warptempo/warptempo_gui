@@ -22,8 +22,9 @@ struct GuiPaintHandler;
 // 2. font_size, the one GUI-kind key with no dedicated gesture: strict
 //    range-validated double, applied to app.font_size and the renderer's
 //    file-scope size, then routed through the resize-path geometry-and-
-//    cache rebuild. No undo entry, no target render — it is a display
-//    preference, not engine input.
+//    cache rebuild. Undoable — a settings-undo entry is pushed (font_size
+//    rides the snapshot like the engine keys) — but no target render, since
+//    it is a display preference, not engine input.
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown

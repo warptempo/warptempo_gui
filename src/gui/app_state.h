@@ -67,9 +67,11 @@ inline double marker_hit_eps_seconds(double spp, double sr_d) {
 }
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
-// EngineSettings captured at undo-push time and restored on undo/redo.
+// EngineSettings plus the GUI-kind font_size, both captured at undo-push
+// time and restored on undo/redo.
 struct SettingsSnapshot {
     EngineSettings engine_settings;
+    double         font_size = 11.0;
 };
 
 // One entry on either stack. Carries the pre-mutation marker snapshot plus
@@ -434,10 +436,11 @@ struct AppState {
     float   playback_speed          = 1.0f;
 
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
-    // default 11). A display preference, not engine input and not authoring
-    // state: persisted on Ctrl+S like playback_speed, applied on load and
-    // through the settings editor, and pushed to the renderer's file-scope
-    // state via set_gui_font_size_pt at both application points.
+    // default 11). A display preference persisted on Ctrl+S like
+    // playback_speed and undoable like engine settings (it rides the
+    // SettingsSnapshot on every undo entry), but never engine input. Applied
+    // on load and through the settings editor, and pushed to the renderer's
+    // file-scope state via set_gui_font_size_pt at every application point.
     double  font_size               = 11.0;
 
     // One-shot stash of the scanner's last painted pixel-x under the
