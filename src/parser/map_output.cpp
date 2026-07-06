@@ -39,13 +39,13 @@ std::expected<void, std::string> write_midi_tempo_map(
 }
 
 std::expected<void, std::string> write_phase_reset_frame_map(
-    const std::string& path, const std::vector<double>& source_frames) {
+    const std::string& path, const std::vector<double>& engine_query_frames) {
     std::ofstream of(path);
     if (!of) {
         return std::unexpected("could not write phaseresetframemap '" + path + "'");
     }
     of << std::setprecision(17);
-    for (const double f : source_frames) {
+    for (const double f : engine_query_frames) {
         of << f << "\n";
     }
     of.flush();

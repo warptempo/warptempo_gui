@@ -57,7 +57,7 @@ struct MarkerEffective {
 // Builds the full untrimmed map unconditionally; trim is applied downstream by
 // slice_warp_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
 // (external artifacts), never here. Scale participates here and not in
-// build_phase_reset_frame_map because scale multiplies tempo, a
+// build_phase_reset_source_frames because scale multiplies tempo, a
 // target-duration quantity; phase reset positions are undisplaced source
 // instants and have no target-duration component.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
@@ -230,8 +230,7 @@ struct TrimmedArtifactMaps {
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source
 // column stays absolute undisplaced source frames, matching the project-wide
-// convention shared by marker files, phaseresetframemap output, and
-// render-view sidecars.
+// convention shared by marker files and render-view sidecars.
 // The first pair (s, 0) is therefore self-describing: s is the absolute source
 // position of the deliverable's first sample, roughly the trim instant plus the
 // N/2 analysis margin, hop-quantized.

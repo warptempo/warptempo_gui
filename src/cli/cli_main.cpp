@@ -4,7 +4,7 @@
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
-#include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
+#include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -251,16 +251,16 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter and inherits the rest.
 
-    auto phase_reset_frame_map_r =
-        build_phase_reset_frame_map(resets, sample_rate, total_frames);
-    if (!phase_reset_frame_map_r) {
+    auto phase_reset_source_frames_r =
+        build_phase_reset_source_frames(resets, sample_rate, total_frames);
+    if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_cli: %s\n",
-                     phase_reset_frame_map_r.error().c_str());
+                     phase_reset_source_frames_r.error().c_str());
         return 1;
     }
     assign_engine_phase_reset_frame_map(
-        ep, *phase_reset_frame_map_r, full_warp_frame_map, window_offset_samples,
-        N_fft);
+        ep, *phase_reset_source_frames_r, full_warp_frame_map,
+        window_offset_samples);
 
     // --- render. The engine writes a sibling staging file and success
     // publishes it atomically via rename.

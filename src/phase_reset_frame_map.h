@@ -21,16 +21,17 @@
 // src/engine/engine.cpp), so a hand-edited artifact that breaks the ordering
 // contract fails the render instead of producing silently wrong bytes.
 //
-// .phaseresetframemap: one undisplaced source-frame double per line, in file
-// order (the writer emits up to 17 significant digits, so the value
-// round-trips exactly; whole-frame positions carry no decimal point, so old
-// integer-format files parse unchanged). Blank / whitespace-only lines
+// .phaseresetframemap: one engine query-domain double per line, in file
+// order — the parser's derivation output, anticipation and drops applied,
+// computed against the warpframemap shipped beside it (the writer emits up
+// to 17 significant digits, so the value round-trips exactly; whole-frame
+// values print without a decimal point). Blank / whitespace-only lines
 // skipped; any malformed line (non-numeric, missing field, or trailing
-// garbage) fails the whole read. The file carries only active resets (the
-// writer's caller drops disabled markers), so there is no '#'/disabled
-// syntax to handle. A missing/unopenable file is std::nullopt; an
-// empty-but-readable file yields an empty list (a valid "no resets" render
-// input).
+// garbage) fails the whole read. The file carries only participating resets
+// (the parser's derivation drops disabled markers and non-participants), so
+// there is no '#'/disabled syntax to handle. A missing/unopenable file is
+// std::nullopt; an empty-but-readable file yields an empty list (a valid
+// "no resets" render input).
 inline std::optional<std::vector<double>>
 read_phase_reset_frame_map(const std::string& path) {
     std::ifstream in(path);

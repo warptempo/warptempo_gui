@@ -58,7 +58,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // one because the objects' shapes differ, not their treatment. The two
 // init-time hardfails are deliberate and stay even though the writers'
 // contract (build_warp_frame_map, the trimmed-artifact derivation, the
-// phaseresetframemap writer) makes both checks unreachable from
+// parser's phase reset frame map derivation) makes both checks unreachable from
 // program-written inputs: a breach — a hand-edited artifact fed to the
 // engine CLI, or a future writer bug — would otherwise render silently wrong
 // deliverable bytes (a misinterpolated map, or resets silently skipped by the
@@ -67,11 +67,12 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // Strictness is the right predicate on both lists because the engine
 // validates pre-quantization doubles, and every program path produces
 // strictly increasing ones: strictly ascending authored markers map through
-// the strictly monotone dispatch chain (a reset whose anticipation falls
-// before the window start is dropped, not clamped, so at most one survivor
-// can sit exactly at zero and every later survivor is strictly greater), and
-// raw phaseresetframemap files come from strictly ascending markers. Equal
-// values therefore always mean a breach. No epsilon band on either.
+// the parser's strictly monotone derivation chain (a reset whose anticipation
+// falls before the window start is dropped, not clamped, so at most one
+// survivor can sit exactly at zero and every later survivor is strictly
+// greater), and .phaseresetframemap artifacts are written from that same
+// derivation. Equal values therefore always mean a breach. No epsilon band
+// on either.
 
 // Validate strict ascent of a (src,tgt) warp_frame_map on both axes. Returns
 // true if OK.

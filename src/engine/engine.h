@@ -43,11 +43,12 @@ struct EngineParams {
     double peak_limiter_release_ms    = 0.5;
 
     // Phase reset position list. Each entry is an exact double position in
-    // the engine's origin-centered query domain, produced by the drivers'
-    // dispatch chain (phase_reset_dispatch.h). Must be strictly increasing;
-    // the engine refuses loudly at init otherwise, mirroring the
-    // warp-frame-map strict-ascent validation. Quantized exactly once, by
-    // Pass 1's llrint against the query schedule.
+    // the engine's origin-centered query domain, produced by the parser's
+    // derivation (phase_reset_frame_map_build.h) — for artifact-driven
+    // renders, read verbatim from the .phaseresetframemap file the parser
+    // wrote. Must be strictly increasing; the engine refuses loudly at init
+    // otherwise, mirroring the warp-frame-map strict-ascent validation.
+    // Quantized exactly once, by Pass 1's llrint against the query schedule.
     std::vector<double> phase_reset_frame_map;
 
     // Output-sample cap. When > 0, the engine emits exactly this many output

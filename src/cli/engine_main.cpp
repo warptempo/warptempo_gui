@@ -1,14 +1,11 @@
 #include "engine/engine.h"   // EngineParams, run_warptempo_engine, EngineResult
-#include "engine/engine_geometry.h"   // kN, kRs, phase_reset_offset_samples
+#include "engine/engine_geometry.h"   // kN, kRs
 #include "warp_frame_map.h"           // WarpFrameMapSegment, read_warp_frame_map
 #include "phase_reset_frame_map.h"    // read_phase_reset_frame_map
 #include "locale_check.h"
-#include "phase_reset_dispatch.h"
 
 #include "audio_reader.h"
 
-#include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -31,10 +28,11 @@ void usage(const char* argv0) {
         "  Runs the PGHI engine on a prebuilt warpframemap and writes the\n"
         "  warped wav. The warpframemap defaults to the sibling\n"
         "  <source-stem>.warpframemap; the phaseresetframemap to the sibling\n"
-        "  <source-stem>.phaseresetframemap when present (undisplaced source\n"
-        "  frames). Limiter is on unless --no-limiter is given. N is fixed at\n"
-        "  4096. Trim is not an engine concern: the supplied map is rendered\n"
-        "  wholesale.\n",
+        "  <source-stem>.phaseresetframemap when present (the engine\n"
+        "  query-domain list warptempo_parser computes against the same\n"
+        "  warpframemap; consumed as-is). Limiter is on unless --no-limiter\n"
+        "  is given. N is fixed at 4096. Trim is not an engine concern: the\n"
+        "  supplied map is rendered wholesale.\n",
         argv0);
 }
 
@@ -102,8 +100,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- phaseresetframemap (optional) ---
-    std::vector<double> reset_src;
+    // --- phaseresetframemap (optional). Engine query-domain doubles,
+    // anticipation and drops already applied by warptempo_parser against the
+    // same warpframemap read above; consumed as-is with no conversion. ---
+    std::vector<double> reset_frames;
     if (!phaseresetframemap_path.empty()) {
         std::optional<std::vector<double>> rm = read_phase_reset_frame_map(phaseresetframemap_path);
         if (!rm) {
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
                 "(unreadable or malformed)\n", phaseresetframemap_path.c_str());
             return 1;
         }
-        reset_src = std::move(*rm);
+        reset_frames = std::move(*rm);
     }
 
     // --- source audio, full file, interleaved float. ---
@@ -156,18 +156,7 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults, matching
     // render_pipeline / cli_main.
 
-    const int64_t render_target_frames = fm->empty()
-        ? 0
-        : std::max<int64_t>(
-            0, static_cast<int64_t>(std::llrint(fm->back().tgt_frame)));
-    ep.phase_reset_frame_map = phase_reset_dispatch_frames_target_domain(
-        reset_src,
-        *fm,
-        *fm,
-        0,
-        render_target_frames,
-        phase_reset_offset_samples,
-        N_fft / 2);
+    ep.phase_reset_frame_map = std::move(reset_frames);
 
     // --- render: engine writes a sibling staging file and success publishes it
     // atomically via rename. ---

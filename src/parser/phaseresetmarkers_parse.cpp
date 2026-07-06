@@ -83,7 +83,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
         PhaseResetMarker m = std::move(*parsed);
         const double eff = m.time_seconds;
         // A reset at time zero parses and loads; it is inert at render because
-        // the near-start dropzone drops it at dispatch.
+        // the near-start dropzone drops it at derivation.
         if (last_time >= 0.0 && eff <= last_time)
             return fail(line_number,
                 "time_seconds not strictly increasing: " + format_timestamp(eff));

@@ -21,18 +21,16 @@ std::expected<void, std::string> write_warp_frame_map(
 std::expected<void, std::string> write_midi_tempo_map(
     const std::string& path, const std::vector<MidiTempoMapEntry>& entries);
 
-// Serialize an undisplaced source-frame phase-reset list to the canonical
-// .phaseresetframemap text form: one undisplaced source-frame double per
-// line, in
+// Serialize an engine query-domain phase-reset list to the canonical
+// .phaseresetframemap text form: one engine query-domain double per line, in
 // input order, at up to 17 significant digits (round-trips an IEEE double
 // exactly, same serialization as write_warp_frame_map; whole-frame values print
 // with no decimal point). The companion to write_warp_frame_map on the
-// phase-reset axis — the frame-domain export warptempo_parser emits and the
-// engine-only synthesis driver consumes (read_phase_reset_frame_map in
-// phase_reset_frame_map.h). The
-// caller supplies the already-resolved active source-frame positions
-// (build_phase_reset_frame_map drops disabled markers and converts
-// time->exact double source frame), so this writer applies no policy: it
-// does not displace, sort, or dedupe.
+// phase-reset axis — the engine-input export warptempo_parser emits and the
+// engine-only synthesis driver consumes as-is (read_phase_reset_frame_map in
+// phase_reset_frame_map.h). The caller supplies the already-derived engine
+// query-domain positions (derive_phase_reset_frame_map applies the
+// anticipation offset and drops against the map shipped beside the file), so
+// this writer applies no policy: it does not displace, sort, or dedupe.
 std::expected<void, std::string> write_phase_reset_frame_map(
-    const std::string& path, const std::vector<double>& source_frames);
+    const std::string& path, const std::vector<double>& engine_query_frames);

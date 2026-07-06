@@ -7,7 +7,6 @@
 #include "render.h"
 #include "phaseresetmarkers.h"
 #include "map_output.h"
-#include "phase_reset_dispatch.h"
 #include "phase_reset_frame_map_build.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
@@ -160,16 +159,17 @@ RenderOutcome do_render(const RenderRequest& req,
     // build_warp_frame_map's conversion of warp marker seconds; the conversion
     // also validates the authored reset times against the probed source
     // length.
-    auto phase_reset_frame_map_r =
-        build_phase_reset_frame_map(
+    auto phase_reset_source_frames_r =
+        build_phase_reset_source_frames(
             slice_to_phase_reset_markers(req.phase_resets), sample_rate,
             total_frames);
-    if (!phase_reset_frame_map_r) {
+    if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                     phase_reset_frame_map_r.error().c_str());
+                     phase_reset_source_frames_r.error().c_str());
         return RenderOutcome::Failed;
     }
-    const std::vector<double>& phase_reset_frame_map = *phase_reset_frame_map_r;
+    const std::vector<double>& phase_reset_source_frames =
+        *phase_reset_source_frames_r;
 
     // --- Build the full (untrimmed) frame map from in-memory markers. The
     // engine always renders the full map: a trimmed wav render slices this
@@ -342,7 +342,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<long long>(profile_trim_span_frames),
                 static_cast<long long>(profile_target_frames),
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
-                req.warp_markers.size(), phase_reset_frame_map.size(),
+                req.warp_markers.size(), phase_reset_source_frames.size(),
                 static_cast<long long>(phase_reset_offset_samples),
                 req.output_buffer ? "yes" : "no",
                 req.engine_settings.limiter ? "yes" : "no",
@@ -543,17 +543,18 @@ RenderOutcome do_render(const RenderRequest& req,
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
             // are forward-mapped from their clicked source time through the
-            // same map and placed at tgt(F) - window_offset by the dispatch
-            // chain's own window verdict (phase_reset_window_target_frame),
-            // so a reset sits on the same musical position in render-view as
-            // in source and target views, expressed as the same exact double
-            // the warp loop above uses, with no intermediate frame rounding.
-            // The trim-range filter runs in authored seconds against the
-            // request's trim bounds, ahead of the window verdict. Drop
-            // disabled, out-of-trim, and window non-participants.
+            // same map and placed at tgt(F) - window_offset by the derivation
+            // chain's own window verdict (phase_reset_window_target_frame in
+            // phase_reset_frame_map_build.h), so a reset sits on the same
+            // musical position in render-view as in source and target views,
+            // expressed as the same exact double the warp loop above uses,
+            // with no intermediate frame rounding. The trim-range filter runs
+            // in authored seconds against the request's trim bounds, ahead of
+            // the window verdict. Drop disabled, out-of-trim, and window
+            // non-participants.
             //
             // Render target frames for the window verdict, computed the same
-            // way assign_engine_phase_reset_frame_map computes the dispatch
+            // way assign_engine_phase_reset_frame_map computes the derivation
             // bound: the emit cap when the trim set one, else llrint of the
             // map's last target anchor.
             const int64_t render_target_frames_for_sidecars =
@@ -567,17 +568,17 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (t.disabled) continue;
                 if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
                 if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
-                // Window-participation verdict, shared with engine dispatch.
-                // nullopt drops two classes, both deliberate. A negative
-                // window target is dispatch's before-window drop: the
-                // instant precedes the deliverable's first sample and is
-                // unrepresentable on its time axis. A window target at or
-                // past the emit cap is dispatch's past-cap drop: the instant
-                // lies beyond the deliverable's last sample (a reset exactly
-                // at the trim end, or at source EOF on an untrimmed render),
-                // so display participation converges on the window's own
-                // bounds. Resets dropped only by dispatch's lead-in dropzone
-                // (window target above zero but within
+                // Window-participation verdict, shared with the engine-input
+                // derivation. nullopt drops two classes, both deliberate. A
+                // negative window target is the derivation's before-window
+                // drop: the instant precedes the deliverable's first sample
+                // and is unrepresentable on its time axis. A window target at
+                // or past the emit cap is the derivation's past-cap drop: the
+                // instant lies beyond the deliverable's last sample (a reset
+                // exactly at the trim end, or at source EOF on an untrimmed
+                // render), so display participation converges on the window's
+                // own bounds. Resets dropped only by the derivation's lead-in
+                // dropzone (window target above zero but within
                 // phase_reset_offset_samples of the window start) still
                 // display, deliberately: the display sidecars show every
                 // authored marker that exists on the deliverable's time axis
@@ -854,8 +855,8 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_reset_frame_map(
-            ep, phase_reset_frame_map, full_warp_frame_map, window_offset_samples,
-            N_fft);
+            ep, phase_reset_source_frames, full_warp_frame_map,
+            window_offset_samples);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
             ? static_cast<double>(profile_target_frames) /

@@ -1,10 +1,9 @@
 #pragma once
 
 #include "engine/engine.h"      // EngineParams
-#include "engine/engine_geometry.h"  // phase_reset_offset_samples
 #include "warp_frame_map.h"          // WarpFrameMapSegment
 #include "warp_frame_map_build.h"    // WindowedWarpFrameMap, slice_warp_frame_map_to_trim_window
-#include "phase_reset_dispatch.h"  // phase_reset_dispatch_frames_target_domain
+#include "phase_reset_frame_map_build.h"  // derive_phase_reset_frame_map
 
 #include <algorithm>
 #include <cmath>
@@ -24,8 +23,8 @@
 // render CLI call this so their EngineParams assembly stays byte-identical — the
 // block that decides cmp-stable output lives in exactly one place.
 //
-// Header-only inline: it calls slice_warp_frame_map_to_trim_window from
-// libwarptempo_parser and phase-reset dispatch helpers, which both
+// Header-only inline: it calls slice_warp_frame_map_to_trim_window and
+// derive_phase_reset_frame_map from libwarptempo_parser, which both
 // warptempo_gui and warptempo_cli already link, so no new compiled TU or
 // CMake source entry is needed.
 struct TrimSourceWindow {
@@ -99,19 +98,16 @@ inline int64_t assign_engine_phase_reset_frame_map(
         EngineParams& ep,
         const std::vector<double>& reset_source_frames,
         const std::vector<WarpFrameMapSegment>& full_map,
-        int64_t window_offset_samples,
-        int N) {
+        int64_t window_offset_samples) {
     const int64_t render_target_frames =
         ep.emit_sample_cap > 0
             ? ep.emit_sample_cap
             : static_cast<int64_t>(std::llrint(ep.warp_frame_map.back().tgt_frame));
-    ep.phase_reset_frame_map = phase_reset_dispatch_frames_target_domain(
+    ep.phase_reset_frame_map = derive_phase_reset_frame_map(
         reset_source_frames,
         full_map,
         ep.warp_frame_map,
         window_offset_samples,
-        render_target_frames,
-        phase_reset_offset_samples,
-        N / 2);
+        render_target_frames);
     return render_target_frames;
 }
