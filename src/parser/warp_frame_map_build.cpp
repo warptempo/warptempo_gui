@@ -418,10 +418,6 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             double delta_tgt = delta_src / (tempo_val * scale);
 
             if (!m.label_def.empty()) {
-                if (label_cache.count(m.label_def)) {
-                    return std::unexpected("duplicate label definition: "
-                                           + m.label_def);
-                }
                 label_cache[m.label_def] = LabelCacheEntry{delta_tgt};
             }
         }
@@ -444,12 +440,15 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         double target_frame = 0.0;
 
         if (!m.label_ref.empty()) {
-            auto it = label_cache.find(m.label_ref);
-            if (it == label_cache.end()) {
-                return std::unexpected("undefined label reference: "
-                                       + m.label_ref);
-            }
-            const LabelCacheEntry& lbl = it->second;
+            // Label grammar integrity (unique definitions, resolvable
+            // references) is enforced at the strict .warpmarkers load
+            // boundary (parse_warpmarkers_file) and at GUI editor commit
+            // (flag_editor.cpp); every caller resolves markers through
+            // resolve_warp_markers_for_render before reaching this builder.
+            // An unresolved reference here means a fabricated marker vector,
+            // and at() terminating the process is the deliberate hardfail
+            // for that state.
+            const LabelCacheEntry& lbl = label_cache.at(m.label_ref);
             // A label_ref imposes its definition's target duration; there is
             // no ceiling on the implied stretch multiplier. The N.NNNN syntax
             // limit applies only to typed scale fields at parse and editor
