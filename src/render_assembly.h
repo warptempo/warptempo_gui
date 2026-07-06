@@ -9,19 +9,24 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
-// Single source of truth for populating EngineParams.warp_frame_map and
-// emit_sample_cap from the full untrimmed standard map. With a trim bound set,
-// slices the synthesis-frame window via slice_warp_frame_map_to_trim_window and
-// re-anchors; untrimmed, copies the full map verbatim (offset 0). Returns
+// Single source of truth for populating EngineParams.warp_frame_map from the
+// full untrimmed standard map. With a trim bound set, slices the trimmed
+// deliverable map via slice_warp_frame_map_to_trim_window; untrimmed, copies
+// the full map verbatim (offset 0). Either way the engine receives one map
+// shape and no emit cap crosses the engine boundary: the engine renders the
+// map wholesale and derives its output length from the map's last anchor
+// (trimmed, the rounded boundary pair the slicer closes on). Returns
 // window_offset_samples (0 when untrimmed), or -1 when the trimmed window's
 // target span is entirely consumed by the hop-aligned window start and no
 // output sample would be emitted -- callers must refuse the render, because
-// emit_sample_cap == 0 means "no cap" at the engine boundary and would render
-// the whole sub-map instead of nothing. Both the GUI render pipeline and the
-// render CLI call this so their EngineParams assembly stays byte-identical — the
-// block that decides cmp-stable output lives in exactly one place.
+// the parser-side stored-zero refusal exists precisely because a degenerate
+// window has no map to hand the engine (the slicer leaves its map unbuilt).
+// Both the GUI render pipeline and the render CLI call this so their
+// EngineParams assembly stays byte-identical — the block that decides
+// cmp-stable output lives in exactly one place.
 //
 // Header-only inline: it calls slice_warp_frame_map_to_trim_window and
 // derive_phase_reset_frame_map from libwarptempo_parser, which both
@@ -78,36 +83,32 @@ inline int64_t assign_engine_warp_frame_map(
         int64_t trim_begin_src, int64_t trim_end_src,
         int N, int R_s) {
     if (has_trim) {
-        const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
+        WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
             full_standard, trim_begin_src, trim_end_src, N, R_s);
         // A degenerate window (target span consumed by the hop-aligned start)
-        // stores emit_sample_cap == 0, which the engine reads as "no cap".
-        // Refuse before writing anything into ep so the caller can abort.
+        // stores emit_sample_cap == 0 and carries no map. Refuse before
+        // writing anything into ep so the caller can abort.
         if (w.emit_sample_cap <= 0) return -1;
-        ep.emit_sample_cap = w.emit_sample_cap;
-        ep.warp_frame_map = w.warp_frame_map;
+        ep.warp_frame_map = std::move(w.warp_frame_map);
         return w.window_offset_samples;
     }
     ep.warp_frame_map = full_standard;
     return 0;
 }
 
-// Precondition: assign_engine_warp_frame_map has already populated ep.warp_frame_map and
-// ep.emit_sample_cap.
+// Precondition: assign_engine_warp_frame_map has already populated
+// ep.warp_frame_map. Derives the engine-input phase reset list through the
+// deliverable form against that very map — the same form the artifact pair
+// uses — so the in-process render and the .warpframemap /
+// .phaseresetframemap pair coincide by construction. Returns the render's
+// output length, llrint of the map's last anchor target (the same integer
+// the engine derives at init), for the GUI's profiling consumer.
 inline int64_t assign_engine_phase_reset_frame_map(
         EngineParams& ep,
-        const std::vector<double>& reset_source_frames,
-        const std::vector<WarpFrameMapSegment>& full_map,
-        int64_t window_offset_samples) {
+        const std::vector<double>& reset_source_frames) {
     const int64_t render_target_frames =
-        ep.emit_sample_cap > 0
-            ? ep.emit_sample_cap
-            : static_cast<int64_t>(std::llrint(ep.warp_frame_map.back().tgt_frame));
+        static_cast<int64_t>(std::llrint(ep.warp_frame_map.back().tgt_frame));
     ep.phase_reset_frame_map = derive_phase_reset_frame_map(
-        reset_source_frames,
-        full_map,
-        ep.warp_frame_map,
-        window_offset_samples,
-        render_target_frames);
+        reset_source_frames, ep.warp_frame_map);
     return render_target_frames;
 }

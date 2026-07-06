@@ -267,9 +267,9 @@ int main(int argc, char** argv) {
     ep.output_audio_path    = staging_output_path;
 
     // Trim is a parser-side slice of the full untrimmed map, not an engine
-    // window. With a bound set, hand the engine the re-anchored sub-map and its
-    // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
-    // do_render's wav branch. ---
+    // window. With a bound set, hand the engine the trimmed deliverable map,
+    // which ends at its rounded boundary pair; untrimmed, the full map
+    // verbatim (offset 0). Identical to do_render's wav branch. ---
     const int64_t window_offset_samples = assign_engine_warp_frame_map(
         ep, full_warp_frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
@@ -292,9 +292,7 @@ int main(int argc, char** argv) {
                      phase_reset_source_frames_r.error().c_str());
         return 1;
     }
-    assign_engine_phase_reset_frame_map(
-        ep, *phase_reset_source_frames_r, full_warp_frame_map,
-        window_offset_samples);
+    assign_engine_phase_reset_frame_map(ep, *phase_reset_source_frames_r);
 
     // --- render. The engine writes a sibling staging file and success
     // publishes it atomically via rename.

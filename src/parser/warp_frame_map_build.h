@@ -182,32 +182,34 @@ std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate);
 
 // Result of slicing the full untrimmed frame map to a trim window: the
-// re-anchored sub-map the engine renders, the output offset of the window
-// origin (wbegin * R_s) for the render-view marker sidecar, and the
-// output-sample cap the engine truncates the emitted render at (the trim-end
-// target, re-anchored). The sub-map extends to the first real anchor at or
-// past trim_end_src so the final segment carries the full map's exact slope;
-// emit_sample_cap then cuts the output back to the trim boundary.
+// trimmed deliverable map the engine renders wholesale (start anchor,
+// interior pairs strictly inside the window, cap, and trim end, exact
+// (trim_end_src, emit_sample_cap) boundary pair), the output offset of the
+// window origin (wbegin * R_s) for the render-view marker sidecar, and the
+// output-sample cap — the boundary pair's target, so the engine, deriving
+// its output length from its map's last anchor, ends exactly at the trim
+// boundary. A stored-zero cap marks a degenerate window that carries no map
+// (warp_frame_map is left empty); every caller refuses stored-zero before
+// reading the map.
 struct WindowedWarpFrameMap {
     std::vector<WarpFrameMapSegment> warp_frame_map;     // source absolute; target re-anchored to 0
     int64_t                      window_offset_samples = 0;
-    int64_t                      emit_sample_cap       = 0;  // trim-end output length
+    int64_t                      emit_sample_cap       = 0;  // trim-end output length; 0 = degenerate, no map
 };
 
 // Slice the full untrimmed map to the synthesis-frame window covering
-// [trim_begin_src, trim_end_src], reproducing the engine's former internal
-// trim window as a standalone sub-map. The window start is selected against the
+// [trim_begin_src, trim_end_src]: the returned warp_frame_map IS the trimmed
+// deliverable map. The window start is selected against the
 // dense synthesis-frame schedule (the same generate_source_frame_positions
-// logic the engine used), so the slice lands on a synthesis-frame boundary, NOT
+// logic the engine uses), so the slice lands on a synthesis-frame boundary, NOT
 // a source-frame boundary. Target is shifted by -wbegin*R_s (a rigid integer
 // translation, so interior segment lines are preserved exactly); source stays
-// absolute. The sub-map TERMINATES on the first full-map anchor whose source is
-// at or past trim_end_src (the anchor closing the segment that contains
-// trim_end_src), target-shifted — NOT on a synthetic rounded anchor at
-// trim_end_src — so the final segment carries the full map's exact slope. The
-// returned emit_sample_cap is the trim-end target minus the window offset; the
-// engine emits only up to it, so the few frames between trim_end_src and the
-// closing anchor are synthesized into the truncated tail only. The returned map
+// absolute. Interior pairs are kept only strictly inside the window's output
+// span, the cap, and the trim end; the map CLOSES on the exact
+// (trim_end_src, emit_sample_cap) boundary pair, so the engine renders the
+// map wholesale, ends at its last anchor, and identity-extrapolates past the
+// map end into the final window skirts, reading post-trim source at natural
+// rate. The returned map
 // must be strictly monotonic in both axes (engine
 // validate_warp_frame_map_strictly_ascending rejects it otherwise). Caller invokes this only when a trim bound is set.
 WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
@@ -228,31 +230,27 @@ struct TrimmedArtifactMaps {
 // miditempomap from the SAME window the engine renders, so there is exactly
 // one trim computation in the codebase and the artifacts describe the
 // delivered WAV byte-for-byte. Slices the full map with
-// slice_warp_frame_map_to_trim_window and reads back its
-// window: the warpframemap keeps every window pair strictly inside the emit
-// cap and the trim end, then appends the exact (trim_end_src, emit_sample_cap)
-// boundary pair; the phaseresetframemap is the deliverable-form
+// slice_warp_frame_map_to_trim_window and reads back its window: the
+// warpframemap is the slicer's map verbatim — the slicer's result already IS
+// the trimmed deliverable map; the phaseresetframemap is the deliverable-form
 // derive_phase_reset_frame_map of phase_reset_source_frames (authored,
-// undisplaced) against the just-derived trimmed warpframemap — the same map
-// the member ships beside, so the pair is self-consistent; see the
-// deliverable form's comment in phase_reset_frame_map_build.h for the
-// sub-sample-distinctness record against the in-process trimmed render; the
-// miditempomap is the full midi tempo map shifted by
+// undisplaced) against that map — the same map the member ships beside, so
+// the pair is self-consistent, and the same derivation the in-process
+// trimmed render runs, so the pair and the render coincide by construction;
+// the miditempomap is the full midi tempo map shifted by
 // -window_offset into the deliverable-relative time domain, origin at time
 // zero, a final no-op event at the end so DAWs learn the track length.
 //
 // Returns the derived maps on success, or std::unexpected carrying a concise
 // lowercase reason (callers add their own context prefix, same contract as
 // validate_trim_frames). Refuses the same degenerate window the WAV path refuses
-// through assign_engine_warp_frame_map, up front, instead of writing a map that is
-// either reader-rejected or engine-misread. The single refusal condition,
-// checked immediately after slicing: emit_sample_cap <= 0 — the trim's target
-// span is entirely consumed by the hop-aligned window start, so no output
-// sample lies between the window start and the trim end; a stored zero cap
-// reads back as "uncapped" at the engine boundary, so warptempo_engine fed
-// such a map would render a spurious tail. The same refusal covers an empty
-// window map, which the slicer returns only with the cap at its default of
-// zero.
+// through assign_engine_warp_frame_map, up front. The single refusal
+// condition, checked immediately after slicing: emit_sample_cap <= 0 — the
+// trim's target span is entirely consumed by the hop-aligned window start,
+// so no output sample lies between the window start and the trim end; the
+// slicer leaves such a stored-zero window's map unbuilt, so there is nothing
+// to derive from. The same refusal covers the empty-full-map slicer return,
+// which also leaves the cap at its default of zero.
 //
 // Artifact convention: the target column is deliverable-relative — the first
 // pair's target is exactly zero, the WAV's first sample — while the source

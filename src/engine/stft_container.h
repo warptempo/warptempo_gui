@@ -72,11 +72,11 @@ struct PghiHeapNode {
 //     target(S)) -- frame-exact with an ideal time-stretch from frame 0 onward.
 //   - The +N/2 head trim is uniform, so phase resets keep their relative
 //     alignment to the audio.
-//   - Total output length is AudioSTFT::emit_sample_cap: the target-frame
-//     position of the window's last source sample (full render: last_tgt =
-//     warp_frame_map.back().tgt_frame), set in engine.cpp. (num_frames - 1) * R_s is no
-//     longer the output length, and target_total_frames describes the *input*
-//     plan, not the emitted sample count. Any auxiliary buffer sized to match the
+//   - Total output length is AudioSTFT::emit_sample_cap: llrint of the map's
+//     last anchor's target (warp_frame_map.back().tgt_frame), resolved in
+//     engine.cpp on every path. (num_frames - 1) * R_s is not the output
+//     length, and target_total_frames describes the *input* plan, not the
+//     emitted sample count. Any auxiliary buffer sized to match the
 //     output (limiter meas_ola) must use the actually emitted length (synthesis
 //     out_frames), not a recomputed frame-count formula.
 //
@@ -173,21 +173,11 @@ struct AudioSTFT {
     // source_frame_positions[m].
     std::vector<int64_t> source_frame_positions;
 
-    // Synthesis frame end, resolved from EngineParams::emit_sample_cap in
-    // engine.cpp after the frame map is built. Synthesis always begins at
-    // frame 0 because a trimmed render is a pre-sliced sub-map anchored at
-    // output 0, not an internal window. run_warptempo_engine resolves this to
-    // a positive frame count on every path before synthesis runs — narrowed
-    // to the frames covering [0, emit_sample_cap) when an explicit cap is
-    // set, the full map otherwise — and synthesize_full reads it as resolved.
-    int synth_frame_end   = 0;
-
-    // Emit cap: output length in samples. The synthesizer truncates its emitted
-    // stream to this many samples so render length equals the target-view length
-    // (full render: warp_frame_map.back().tgt_frame). run_warptempo_engine resolves
-    // this to a positive value on every path before synthesis runs (a cap that
-    // rounds to zero is refused at init), and synthesize_full reads it as
-    // resolved.
+    // Emit cap: output length in samples, resolved at init from the map's
+    // last anchor on every path (llrint of warp_frame_map.back().tgt_frame; a
+    // cap that rounds to zero is refused at init). The synthesizer truncates
+    // its emitted stream to this many samples so render length equals the
+    // map's target length; synthesize_full reads it as resolved.
     int64_t emit_sample_cap = 0;
 
     // Optional cancellation hook. When non-null, synthesize_full checks

@@ -550,8 +550,8 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
 
     // Window start: the last dense synthesis frame whose source read position
     // is at or before trim_begin_src (the engine's own placement rule). The
-    // window's output extent is carried by emit_sample_cap below, not an
-    // explicit end index.
+    // window's output extent is the boundary pair's target below, mirrored in
+    // emit_sample_cap.
     auto bit = std::upper_bound(dense.begin(), dense.end(), trim_begin_src);
     int wbegin = (bit == dense.begin()) ? 0
                : static_cast<int>((bit - dense.begin()) - 1);
@@ -562,75 +562,90 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
 
     // Edge sources/targets on the full map's exact piecewise lines. The precise
     // end target gates breakpoint retention below; its rounded form becomes the
-    // integer emit cap only.
+    // integer cap and the boundary pair's target.
     const double end_tgt_precise =
         map_source_to_target(static_cast<double>(trim_end_src), full_map);
     const double start_src_precise =
         map_target_to_source(static_cast<double>(offset), full_map);
 
+    // Output-sample cap: the trim-end target on the full map, rounded to the
+    // integer output-sample domain and re-anchored — the target of the
+    // boundary pair that closes the map below, so the engine, which derives
+    // its output length from its map's last anchor, ends exactly at the trim
+    // boundary. Computed before any pair is built. A zero-or-negative cap is
+    // a degenerate window: the trim's target span is entirely consumed by the
+    // hop-aligned window start (offset at or past the rounded trim-end
+    // target), so no output sample would be emitted. A stored-zero window
+    // carries NO map — the vector is left empty — and every caller refuses
+    // stored-zero before reading the map: assign_engine_warp_frame_map
+    // returns -1, derive_trimmed_artifact_maps returns its unexpected, and
+    // the GUI's sidecar pre-slice reads only the offset and cap fields.
+    const int64_t cap =
+        static_cast<int64_t>(std::llrint(end_tgt_precise)) - offset;
+    if (cap <= 0) {
+        out.emit_sample_cap = 0;
+        return out;
+    }
+
     std::vector<WarpFrameMapSegment>& sm = out.warp_frame_map;
-    // Start anchor at output 0.
+    // Start anchor at output 0. It provably passes both deliverable filters
+    // below: the cap refusal above guarantees cap >= 1, so the anchor's
+    // target zero is strictly below the cap, and the anchor's source lies
+    // strictly inside the trim window by construction — it is
+    // map_target_to_source(window offset) clamped up to zero (a clamped zero
+    // never reaches trim_end_src, which trim validation keeps positive), and
+    // under exact inverse interpolation an unclamped start source at or past
+    // trim_end_src would by monotonicity put end_tgt_precise at or below the
+    // window offset, rounding the cap to zero or below — a window the cap
+    // refusal above already rejected.
     sm.push_back(WarpFrameMapSegment{
         start_src_precise < 0.0 ? 0.0 : start_src_precise, 0.0});
-    // Interior real segments strictly inside the window's output span, target
-    // shifted by -offset (rigid integer translation -> lines preserved exactly),
-    // source absolute. All comparisons run in the precise double domain, and
-    // they are what keep the emitted pairs strictly ascending and finite —
-    // read_warp_frame_map validates line shape only, so ordering and value
-    // conformance is this writer's own contract, consumed as a precondition by
-    // the map helpers in warp_frame_map.h and the engine's strict-ascent validator.
-    // Sub-sample target segments are legal under the no-ceiling tempo rule,
-    // and a rounded
-    // (llrint) guard here silently dropped strictly ascending breakpoints whose
-    // shifted targets collide only after rounding, collapsing the span and
-    // displacing engine source queries across it. The strict guards against the
-    // last kept pair skip anything that would tie or invert (floating-point
-    // backstop; a real breakpoint past the window origin lies strictly above
-    // the start anchor on the full map's own lines).
+    // Interior real segments strictly inside the window's output span AND
+    // strictly inside the deliverable bounds — shifted target strictly below
+    // the cap, source strictly below the trim end, both compared as doubles —
+    // target shifted by -offset (rigid integer translation -> lines preserved
+    // exactly), source absolute. All comparisons run in the precise double
+    // domain, and they are what keep the emitted pairs strictly ascending and
+    // finite — read_warp_frame_map validates line shape only, so ordering and
+    // value conformance is this writer's own contract, consumed as a
+    // precondition by the map helpers in warp_frame_map.h and the engine's
+    // strict-ascent validator. Sub-sample target segments are legal under the
+    // no-ceiling tempo rule, and a rounded (llrint) guard here silently
+    // dropped strictly ascending breakpoints whose shifted targets collide
+    // only after rounding, collapsing the span and displacing engine source
+    // queries across it. The strict guards against the last kept pair skip
+    // anything that would tie or invert (floating-point backstop; a real
+    // breakpoint past the window origin lies strictly above the start anchor
+    // on the full map's own lines, and build_warp_frame_map guarantees strict
+    // ascent in both columns). A real marker landing exactly at the trim end
+    // is excluded by the strict source filter and the boundary pair below
+    // carries its exact values — that is coalescing, not dropping. Every kept
+    // value round-trips exactly through the writer's 17-significant-digit
+    // serialization; no tolerance constant anywhere.
     for (const auto& s : full_map) {
         if (s.tgt_frame <= static_cast<double>(offset) ||
             s.tgt_frame >= end_tgt_precise) continue;
+        if (s.src_frame >= static_cast<double>(trim_end_src)) continue;
         if (s.src_frame <= sm.back().src_frame) continue;   // src strict
         const double st = s.tgt_frame - static_cast<double>(offset);
+        if (st >= static_cast<double>(cap)) continue;
         if (st <= sm.back().tgt_frame) continue;            // tgt strict
         sm.push_back(WarpFrameMapSegment{s.src_frame, st});
     }
-    // End on the first full-map anchor at or past trim_end_src (the anchor that
-    // closes the segment containing trim_end_src), target-shifted by -offset.
-    // Using a real anchor keeps the final segment on the full map's exact line,
-    // so source reads up to the trim boundary match a full render. The engine
-    // truncates at emit_sample_cap (below), so the span between trim_end_src and
-    // this anchor is synthesized into the discarded tail only. trim_end_src
-    // cannot exceed the source length: validate_trim_frames rejects out-of-range
-    // trim before any map reaches this slicer (GUI renders of every output
-    // format fail that check ahead of the window computation, and the parser
-    // CLI likewise), and the render CLI checks its trim bounds at startup
-    // through the same validator. A closing anchor therefore always
-    // exists, at worst full_map.back().
-    for (const auto& s : full_map) {
-        if (s.src_frame < static_cast<double>(trim_end_src)) continue;
-        if (s.src_frame > sm.back().src_frame &&
-            s.tgt_frame - static_cast<double>(offset) > sm.back().tgt_frame) {
-            sm.push_back(WarpFrameMapSegment{s.src_frame,
-                                         s.tgt_frame - static_cast<double>(offset)});
-        }
-        break;
-    }
-
-    // Output-sample cap: the trim-end target on the full map, rounded to the
-    // integer output-sample domain and re-anchored. The engine emits up to this
-    // and no further, so the render ends exactly at the trim boundary even
-    // though the sub-map's last anchor sits past it. A stored 0 signals a
-    // degenerate window: the trim's target span is entirely consumed by the
-    // hop-aligned window start (offset at or past the rounded trim-end target),
-    // so no output sample would be emitted. assign_engine_warp_frame_map refuses to
-    // hand such a map to the engine, because emit_sample_cap == 0 means "no
-    // cap" at the engine boundary and would otherwise render the whole sub-map;
-    // derive_trimmed_artifact_maps refuses the same stored-zero window for the
-    // external .warpframemap / .miditempomap artifacts.
-    const int64_t cap =
-        static_cast<int64_t>(std::llrint(end_tgt_precise)) - offset;
-    out.emit_sample_cap = cap < 0 ? 0 : cap;
+    // Close on the exact boundary pair — source at the trim end, target at
+    // the cap — making the returned map the trimmed deliverable map itself.
+    // The engine renders it wholesale and ends at this last anchor; frames
+    // past the map end identity-extrapolate (map_target_to_source's
+    // past-the-last-segment arm) into the final window skirts, reading
+    // post-trim source at natural rate. trim_end_src cannot exceed the source
+    // length: validate_trim_frames rejects out-of-range trim before any map
+    // reaches this slicer (GUI renders of every output format fail that check
+    // ahead of the window computation, and the parser CLI likewise), and the
+    // render CLI checks its trim bounds at startup through the same
+    // validator.
+    sm.push_back(WarpFrameMapSegment{
+        static_cast<double>(trim_end_src), static_cast<double>(cap)});
+    out.emit_sample_cap = cap;
     return out;
 }
 
@@ -644,59 +659,27 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
 
     // One trim computation, shared with the engine: the same window
     // assign_engine_warp_frame_map hands the engine.
-    const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
+    WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
         full_map, trim_begin_src, trim_end_src, N, R_s);
 
     // Refuse the same degenerate window the WAV path refuses through
-    // assign_engine_warp_frame_map, up front, before deriving anything. A stored-zero
-    // (or negative) cap means the trim's output span is entirely consumed by the
-    // hop-aligned window start, and reads back as "uncapped" at the engine
-    // boundary. This refusal also covers an empty window map: the only slicer
-    // path that returns before the start-anchor push is the empty-full-map
-    // return at the top, which leaves emit_sample_cap at its default of 0,
-    // and every path that reaches the anchor push pushes it unconditionally,
-    // so any window that passes here carries at least the start-anchor pair.
+    // assign_engine_warp_frame_map, up front, before deriving anything. A
+    // stored-zero (or negative) cap means the trim's output span is entirely
+    // consumed by the hop-aligned window start; the slicer leaves such a
+    // window's map unbuilt (the vector is empty), so there is nothing to
+    // derive from. The empty-full-map slicer return lands here too — it
+    // leaves emit_sample_cap at its default of 0.
     if (w.emit_sample_cap <= 0) {
         return std::unexpected(
             "degenerate trim window: no output samples between the window "
             "start and the trim end");
     }
 
-    // Frame map. Keep every window pair whose target is strictly below the emit
-    // cap and whose source is strictly below the trim end — precise-domain
-    // comparisons, preserving the strict ascent this writer itself guarantees
-    // (read_warp_frame_map validates line shape only; the map helpers and the
-    // engine consume strictly ascending, finite pairs as a precondition), so
-    // legal sub-sample segments survive instead of being coalesced by
-    // rounding — then
-    // append the exact (trim_end_src, emit_sample_cap) boundary pair. The
-    // window's start anchor (absolute source, target 0) provably passes both
-    // filters and stays as the first pair: the cap refusal above guarantees
-    // cap >= 1, so the anchor's target zero is strictly below the cap, and the
-    // anchor's source lies strictly inside the trim window by construction of
-    // the slice — it is map_target_to_source(window offset) clamped up to zero
-    // (a clamped zero never reaches trim_end_src, which trim validation keeps
-    // positive), and under exact inverse interpolation an unclamped start
-    // source at or past trim_end_src would by monotonicity put end_tgt_precise
-    // at or below the window offset, rounding the cap to zero or below — a
-    // window the refusal above already rejected. So the anchor passes the
-    // source filter. The window's closing anchor sits at or past the
-    // trim end in source and is replaced by the boundary. A real marker landing
-    // exactly at the trim end is excluded by the strict source filter and the
-    // boundary pair carries its exact values — that is coalescing, not
-    // dropping. The precise filters plus the slicer's own precise
-    // strict-ascending guards keep both columns strictly ascending with no
-    // tolerance constant, and every kept value round-trips exactly through the
-    // writer's 17-significant-digit serialization.
-    for (const auto& s : w.warp_frame_map) {
-        if (s.tgt_frame < static_cast<double>(w.emit_sample_cap) &&
-            s.src_frame < static_cast<double>(trim_end_src)) {
-            out.warp_frame_map.push_back(s);
-        }
-    }
-    out.warp_frame_map.push_back(WarpFrameMapSegment{
-        static_cast<double>(trim_end_src),
-        static_cast<double>(w.emit_sample_cap)});
+    // Frame map: the slicer's map verbatim — it already IS the trimmed
+    // deliverable map (start anchor, interior pairs strictly inside the
+    // window, cap, and trim end, exact (trim_end_src, emit_sample_cap)
+    // boundary pair).
+    out.warp_frame_map = std::move(w.warp_frame_map);
 
     // Tempo map. Shift the full midi-tempo-map times by -window_offset into
     // the

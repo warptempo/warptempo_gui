@@ -160,10 +160,9 @@ int main(int argc, char** argv) {
     const std::string staging_output_path = out_path + ".tmp";
     ep.output_audio_path    = staging_output_path;
 
-    // The supplied map is rendered wholesale — synthesis does no trim, so
-    // emit_sample_cap stays 0 (full render to the map's last anchor).
+    // The supplied map is rendered wholesale; the engine derives its output
+    // length from the map's last anchor.
     ep.warp_frame_map = *fm;
-    ep.emit_sample_cap = 0;
 
     ep.N            = N_fft;
     ep.limiter      = !no_limiter;   // on by default; --no-limiter clears it

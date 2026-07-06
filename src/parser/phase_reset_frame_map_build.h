@@ -111,18 +111,19 @@ std::vector<double> derive_phase_reset_frame_map(
 // llrint of the deliverable map's last pair's target. The emitted list is
 // computed against the exact map shipped beside it, so the artifact pair is
 // exactly warptempo_engine's input and an engine fed the pair renders that
-// map's geometry exactly. For a trimmed deliverable this makes the pair
-// sub-sample distinct from the GUI's in-process trimmed render: the
-// in-process engine sub-map keeps the closing anchor's exact slope while the
-// deliverable map rounds at its boundary pair — already true of the warp
-// artifact alone, now symmetric across the pair. The window verdict against
+// map's geometry exactly. This is the single trimmed derivation everywhere:
+// the in-process trimmed render derives its engine-input list through this
+// same form against the same deliverable map, so the artifact pair and the
+// in-process render coincide by construction. The window verdict against
 // a trimmed deliverable map clamps a pre-window source position to window
 // target zero (map_source_to_target clamps before the first pair) rather
 // than going negative; such a reset still drops, via the anticipation
 // dropzone instead of the negative-target test — same drop set, different
-// test. An empty map yields an empty list (unreachable from program paths,
-// since the map builders always emit at least the seed anchor; kept so the
-// back() access is unconditionally safe, as in derive_midi_tempo_map).
+// test. An empty map yields an empty list (unreachable from program paths:
+// the full-map builder always emits the seed anchor, and every trimmed
+// caller refuses the degenerate stored-zero window — whose map the slicer
+// leaves unbuilt — before deriving; kept so the back() access is
+// unconditionally safe, as in derive_midi_tempo_map).
 std::vector<double> derive_phase_reset_frame_map(
     const std::vector<double>& source_frames,
     const std::vector<WarpFrameMapSegment>& deliverable_map);

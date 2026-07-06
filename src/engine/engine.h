@@ -51,18 +51,12 @@ struct EngineParams {
     // Quantized exactly once, by Pass 1's llrint against the query schedule.
     std::vector<double> phase_reset_frame_map;
 
-    // Output-sample cap. When > 0, the engine emits exactly this many output
-    // samples and synthesizes only the frames needed to cover them; the rest of
-    // the supplied map is rendered into the discarded tail. When 0 (default),
-    // the cap is derived from the map's last anchor (full-render behavior). This
-    // is a pure output-length budget, not a trim window: the engine has no
-    // notion of trim begin/end source frames. A trimmed render supplies the
-    // parser's WindowedWarpFrameMap::emit_sample_cap here.
-    int64_t emit_sample_cap = 0;
-
-    // The engine renders the supplied warp_frame_map wholesale and is trim-ignorant:
-    // a trimmed render is produced by handing it a pre-sliced sub-map (the
-    // parser's slice_warp_frame_map_to_trim_window), not by an internal window.
+    // The engine renders the supplied warp_frame_map wholesale and is
+    // trim-ignorant: a trimmed render is produced by handing it the trimmed
+    // deliverable map (the parser's slice_warp_frame_map_to_trim_window),
+    // which ends at its rounded boundary pair. The engine derives its output
+    // length from the map's last anchor and identity-extrapolates past the
+    // map end into the final window skirts.
 };
 
 // Tristate result so the GUI-thread dispatcher can distinguish cancellation

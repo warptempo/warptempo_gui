@@ -49,13 +49,12 @@ void Synthesis::synthesize_full(
     const int K          = Mfft / 2 + 1;
     const auto& fm       = stft.source_frame_positions;
     const int num_frames = static_cast<int>(fm.size());
-    // Synthesis frame window [0, wend): the half-open range of frames this pass
-    // emits. num_frames stays the full map size and ta_for stays absolute over
-    // the full fm; only the emit range narrows. engine.cpp resolves
-    // synth_frame_end to a positive frame count on every path before synthesis
-    // runs — narrowed to the frames covering [0, emit_sample_cap) when an
-    // explicit cap is set, the full map otherwise.
-    const int wend   = stft.synth_frame_end;
+    // Synthesis frame window [0, wend): synthesis always runs the whole map,
+    // so wend is num_frames on every path. The emit cap truncates the emitted
+    // stream at the map's last anchor target (a trimmed render's map already
+    // ends at its rounded boundary pair); ta_for stays absolute over the full
+    // fm.
+    const int wend   = num_frames;
     const int wcount = wend;
 
     // --- Env-gated sub-stage profiling --------------------------------------
@@ -97,10 +96,12 @@ void Synthesis::synthesize_full(
 
     // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
     // leaves in, then capped at stft.emit_sample_cap so the file ends at the
-    // window's target position (render length == target length). See the
+    // map's last anchor target (render length == target length). See the
     // timing-convention block in stft_container.h. mono_len is the uncapped
-    // per-channel push total (what each run_channel actually appends); the
-    // reserve uses it so the cap never under-reserves the mono buffer.
+    // per-channel push total (what each run_channel actually appends); with
+    // the whole map synthesized it always exceeds the cap, so the cap binds.
+    // The reserve uses mono_len so the cap never under-reserves the mono
+    // buffer.
     const int64_t mono_len =
         (wcount > 0) ? static_cast<int64_t>(wcount - 1) * R_s + N / 2 : 0;
     int64_t out_frames = mono_len;
@@ -376,8 +377,9 @@ void Synthesis::synthesize_full(
             ta_nxt = ta_for(1);
         }
 
-        // Phase reset cursor: placements at or after wend never match a
-        // frame_idx in range and so never fire. The forward-only walk is safe
+        // Phase reset cursor: every placement's synth_frame indexes the
+        // schedule (upper_bound over fm in run_warptempo_engine), so every
+        // placement lies inside [0, wend). The forward-only walk is safe
         // because placements are non-decreasing in synth_frame: the strictly
         // ascending input list (engine init refuses anything else) maps
         // through a monotone upper_bound in run_warptempo_engine, so a
@@ -540,11 +542,11 @@ void Synthesis::synthesize_full(
             prev_reset = reset_fired;
 
             // Advance the analysis pipeline by one frame. Only needed while
-            // another synthesis frame follows within the window; the window's
-            // analysis-only frame (index == wend) is reached when frame_idx ==
-            // wend-2, supplying the last emitted frame's phi_next. ta_for
-            // supplies fm[wend] when wend < num_frames and the clamped tail
-            // otherwise. Each spectrum is analyzed exactly once.
+            // another synthesis frame follows; the analysis-only frame
+            // (index == wend == num_frames) is reached when frame_idx ==
+            // wend-2 and sits one hop past the schedule, so the last emitted
+            // frame's phi_next comes through ta_for's clamped tail. Each
+            // spectrum is analyzed exactly once.
             if (frame_idx + 1 < wend) {
                 ta_prev = ta_cur;
                 ta_cur  = ta_nxt;

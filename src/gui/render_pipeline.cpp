@@ -155,8 +155,8 @@ RenderOutcome do_render(const RenderRequest& req,
         *phase_reset_source_frames_r;
 
     // --- Build the full (untrimmed) frame map from in-memory markers. The
-    // engine always renders the full map: a trimmed wav render slices this
-    // canonical map into a re-anchored sub-map plus an emit_sample_cap via
+    // engine always renders its map wholesale: a trimmed wav render slices
+    // this canonical map into the trimmed deliverable map via
     // assign_engine_warp_frame_map before dispatch, and the trimmed
     // .warpframemap / .phaseresetframemap / .miditempomap artifacts derive
     // from that same window —
@@ -422,8 +422,12 @@ RenderOutcome do_render(const RenderRequest& req,
     // The engine no longer windows; render-domain sidecars subtract the slice
     // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
     // need the same value before the engine assembly path runs. The sidecar
-    // writer also needs the trim's emit cap (0 when untrimmed) for its
-    // window-participation verdict below.
+    // writer also needs the trim's cap (0 when untrimmed) for its
+    // window-participation verdict below — llrint of the deliverable map's
+    // boundary-pair target, the same integer
+    // assign_engine_phase_reset_frame_map derives from the map's last anchor.
+    // Only the offset and cap fields are read here; a degenerate stored-zero
+    // window carries no map, which this pre-slice never touches.
     int64_t window_offset_samples = 0;
     int64_t trim_emit_sample_cap = 0;
     if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
@@ -540,10 +544,12 @@ RenderOutcome do_render(const RenderRequest& req,
             // the window verdict. Drop disabled, out-of-trim, and window
             // non-participants.
             //
-            // Render target frames for the window verdict, computed the same
-            // way assign_engine_phase_reset_frame_map computes the derivation
-            // bound: the emit cap when the trim set one, else llrint of the
-            // map's last target anchor.
+            // Render target frames for the window verdict: the trim's cap
+            // when the trim set one, else llrint of the full map's last
+            // target anchor. Value-identical to the derivation bound
+            // assign_engine_phase_reset_frame_map derives from its map's last
+            // anchor, because the trimmed deliverable map's boundary-pair
+            // target is exactly the cap.
             const int64_t render_target_frames_for_sidecars =
                 trim_emit_sample_cap > 0
                     ? trim_emit_sample_cap
@@ -824,10 +830,10 @@ RenderOutcome do_render(const RenderRequest& req,
             ep.output_audio_path = staging_output_path;
         }
         // Trim is a parser-side slice of the full untrimmed map, not an engine
-        // window. When a bound is set, hand the engine the re-anchored
-        // sub-map covering the synthesis-frame window; the engine renders it
-        // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
-        // offset 0 (provably identical to the pre-slice behavior).
+        // window. When a bound is set, hand the engine the trimmed
+        // deliverable map, which ends at its rounded boundary pair; the
+        // engine renders it wholesale, ends at its last anchor, and stays
+        // trim-ignorant. Untrimmed: the full map verbatim, offset 0.
         window_offset_samples = assign_engine_warp_frame_map(
             ep, full_warp_frame_map, req.has_trim_begin || req.has_trim_end,
             trim_begin_src, trim_end_src, N_fft, R_s);
@@ -841,8 +847,7 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_reset_frame_map(
-            ep, phase_reset_source_frames, full_warp_frame_map,
-            window_offset_samples);
+            ep, phase_reset_source_frames);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
             ? static_cast<double>(profile_target_frames) /
@@ -866,7 +871,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 "[profile] stage name=engine_total ms=%.3f result=%d source_buffer_frames=%zu target_frames=%lld output_buffer=%s limiter=%s\n",
                 engine_ms, static_cast<int>(er),
                 ep.source_audio_frames,
-                static_cast<long long>(ep.emit_sample_cap),
+                static_cast<long long>(profile_target_frames),
                 req.output_buffer ? "yes" : "no",
                 ep.limiter ? "yes" : "no");
         }
