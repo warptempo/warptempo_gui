@@ -8,6 +8,7 @@
 #include "phaseresetmarkers.h"
 #include "map_output.h"
 #include "phase_reset_frame_map_build.h"
+#include "render_output_naming.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
 #include "render_assembly.h"
@@ -54,39 +55,6 @@ struct CommitCriticalSidecars {
 // paint_handler — receive the same resolved list.
 
 }  // namespace
-
-std::filesystem::path compose_sibling_output_path(
-    const std::string& source_audio_path,
-    const EngineSettings& es) {
-    // warptempo_maps names its warp column here; the .phaseresetframemap
-    // sibling is derived from this path by render_output_paths_for_format.
-    const std::string ext =
-        (es.output_format == "generic_map" ||
-         es.output_format == "warptempo_maps") ? ".warpframemap" :
-        (es.output_format == "midi_map")       ? ".miditempomap" : ".wav";
-    std::filesystem::path src(source_audio_path);
-    std::filesystem::path dir = src.parent_path();
-    if (dir.empty()) dir = std::filesystem::path(".");
-    const bool clean_float_render =
-        es.output_format == "wav" && !es.limiter;
-    const std::string out_filename = clean_float_render
-        ? ("limiter=false;" + es.title + ext)
-        : (es.title + ext);
-    return dir / out_filename;
-}
-
-std::vector<std::filesystem::path> render_output_paths_for_format(
-    const std::string& output_format,
-    const std::filesystem::path& primary_path) {
-    std::vector<std::filesystem::path> paths;
-    paths.push_back(primary_path);
-    if (output_format == "warptempo_maps") {
-        std::filesystem::path phase_reset_path = primary_path;
-        phase_reset_path.replace_extension(".phaseresetframemap");
-        paths.push_back(std::move(phase_reset_path));
-    }
-    return paths;
-}
 
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
@@ -213,27 +181,25 @@ RenderOutcome do_render(const RenderRequest& req,
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*rfull);
 
-    // --- Compute output path. ---
-    // Mirrors compose_sibling_output_path's format->extension mapping for the
-    // batch-folder naming; warptempo_maps names its warp column and the
-    // phase reset sibling comes from render_output_paths_for_format.
-    auto ext_for_format = [&]() -> std::string {
-        if (output_format == "generic_map" ||
-            output_format == "warptempo_maps") return ".warpframemap";
-        if (output_format == "midi_map")       return ".miditempomap";
-        return ".wav";
-    };
+    // --- Compose the full output-path list. ---
+    // One entry per extension of the format, composed co-equally from a
+    // directory and a stem (render_output_naming.h). Batch renders name into
+    // the batch folder with the batch basename and no clean-float prefix;
+    // source-sibling renders name into the source's parent with
+    // render_output_stem. The warptempo_maps pair is the two entries of one
+    // list, warp column first by the extension list's order.
     const bool batch_render = !req.batch_folder.empty();
-    std::string final_output_path;
-    if (batch_render) {
-        final_output_path =
-            (std::filesystem::path(req.batch_folder) /
-             (req.batch_basename + ext_for_format())).string();
-    } else {
-        final_output_path =
-            compose_sibling_output_path(req.source_audio_path,
-                                        req.engine_settings).string();
-    }
+    auto compose_source_sibling_paths = [&]() {
+        return compose_render_output_paths(
+            render_output_directory(req.source_audio_path),
+            render_output_stem(req.engine_settings), output_format);
+    };
+    const std::vector<std::filesystem::path> output_paths =
+        batch_render
+            ? compose_render_output_paths(req.batch_folder, req.batch_basename,
+                                          output_format)
+            : compose_source_sibling_paths();
+    const std::string final_output_path = output_paths.front().string();
     // Hard refusal: never overwrite the source audio itself. Overwriting a
     // previous render with the same title is intended behavior; the source
     // is the one path that must survive every dispatch. equivalent() is an
@@ -241,8 +207,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // output path doesn't exist yet it cannot be the source. Every output
     // path of the format is checked, so the warptempo_maps pair's second
     // file is covered by the same refusal.
-    for (const std::filesystem::path& out_path :
-         render_output_paths_for_format(output_format, final_output_path)) {
+    for (const std::filesystem::path& out_path : output_paths) {
         std::error_code ec;
         if (std::filesystem::exists(out_path, ec) &&
             std::filesystem::equivalent(out_path,
@@ -688,8 +653,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // the candidate, this rung is the up-to-date check above and has
         // already run.
         const std::string artifact_candidate =
-            compose_sibling_output_path(req.source_audio_path,
-                                        req.engine_settings).string();
+            compose_source_sibling_paths().front().string();
         if (artifact_candidate != final_output_path &&
             fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
             std::error_code ec;
@@ -1023,11 +987,10 @@ RenderOutcome do_render(const RenderRequest& req,
             // exactly. Both columns always ship — an empty reset list
             // still writes the empty .phaseresetframemap file, mirroring
             // the marker sidecars' empty-file convention.
-            const std::string warp_final = final_output_path;
-            const std::string phase_reset_final =
-                render_output_paths_for_format(output_format,
-                                               final_output_path)
-                    .back().string();
+            // output_paths' order comes from the extension list: entry 0 is
+            // the warp column, entry 1 the phase reset column.
+            const std::string warp_final = output_paths.front().string();
+            const std::string phase_reset_final = output_paths.back().string();
             const std::string warp_staging = warp_final + ".tmp";
             const std::string phase_reset_staging = phase_reset_final + ".tmp";
             // All-or-nothing publish: both staging files are written first;

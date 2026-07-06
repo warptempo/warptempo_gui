@@ -1,5 +1,6 @@
 #include "settings_editor.h"
 
+#include "render_output_naming.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
@@ -148,12 +149,12 @@ void GuiSettingsEditor::commit() {
     // by the same refusal. Refuse it here so the colliding value never
     // reaches app.engine_settings.
     if (!app.source_audio_path.empty()) {
-        const std::filesystem::path primary =
-            compose_sibling_output_path(app.source_audio_path, candidate);
         const std::filesystem::path src(app.source_audio_path);
         for (const std::filesystem::path& out :
-             render_output_paths_for_format(candidate.output_format,
-                                            primary)) {
+             compose_render_output_paths(
+                 render_output_directory(app.source_audio_path),
+                 render_output_stem(candidate),
+                 candidate.output_format)) {
             std::error_code ec;
             const bool same =
                 std::filesystem::equivalent(out, src, ec)

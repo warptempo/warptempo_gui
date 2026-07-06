@@ -1,9 +1,11 @@
 #include "target_render.h"
 
 #include "app_state.h"
+#include "render_output_naming.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include <cmath>
+#include <filesystem>
 #include <cstdio>
 #include <utility>
 
@@ -140,8 +142,11 @@ void GuiTargetRender::dispatch_render_now() {
 
     if (!last_fingerprint_.empty()) {
         const std::string artifact_candidate =
-            compose_sibling_output_path(app.source_audio_path,
-                                        app.engine_settings).string();
+            compose_render_output_paths(
+                render_output_directory(app.source_audio_path),
+                render_output_stem(app.engine_settings),
+                app.engine_settings.output_format)
+                .front().string();
         // This rung auditions the actual archival deliverable. Fresh renders,
         // cache hits, and archival artifact loads all expose identical
         // deliverable-lattice samples because fresh limited renders quantize

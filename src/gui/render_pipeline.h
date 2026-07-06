@@ -143,29 +143,10 @@ struct RenderRequest {
 RenderOutcome do_render(const RenderRequest& req,
                         const std::atomic<bool>* cancel_flag = nullptr);
 
-// Compose the single-render ("Ctrl+Alt+R") sibling output path for a given
-// source path and engine settings — the path do_render writes when
-// req.batch_folder is empty. Mirrors the inline composition in
-// do_render; both must stay in lockstep. Directory is the
-// source's parent ("." when the source has no parent). Extension is
-// selected by output_format (warptempo_maps names its warp column here;
-// the .phaseresetframemap sibling comes from
-// render_output_paths_for_format); the clean-float-wav path carries the
-// `limiter=false;` filename prefix.
-std::filesystem::path compose_sibling_output_path(
-    const std::string& source_audio_path,
-    const EngineSettings& es);
-
-// Full list of on-disk output paths for a render of `output_format` whose
-// primary output is `primary_path`: one entry for the single-file formats
-// (wav, generic_map, midi_map), two for the warptempo_maps pair — the
-// warp-column primary plus the .phaseresetframemap sibling, the same path
-// with the extension swapped. Shared by do_render's source-overwrite
-// refusal and pair emission and by the settings editor's commit guard, so
-// every file a format writes is covered by the same checks.
-std::vector<std::filesystem::path> render_output_paths_for_format(
-    const std::string& output_format,
-    const std::filesystem::path& primary_path);
+// Output-path composition (render_output_extensions / render_output_stem /
+// compose_render_output_paths) lives parser-side in render_output_naming.h so
+// the GUI render pipeline and the headless CLI binaries compose byte-identical
+// paths from one implementation.
 
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,

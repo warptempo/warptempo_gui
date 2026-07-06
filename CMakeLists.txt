@@ -33,6 +33,7 @@ add_library(warptempo_parser_lib STATIC
     src/parser/phase_reset_frame_map_build.cpp
     src/parser/source_audio_io.cpp
     src/parser/map_output.cpp
+    src/parser/render_output_naming.cpp
 )
 target_include_directories(warptempo_parser_lib
     PUBLIC
