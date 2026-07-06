@@ -153,6 +153,27 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
     return bounds;
 }
 
+// Shift every selected phase reset by the clamped delta. Returns whether
+// a nonzero clamped delta was applied. Unlike the warp sibling
+// (apply_selection_shift), this does not verify per-reset that the snapped
+// position changed; a sub-grid delta can apply as a no-op that still
+// reports true.
+bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta) {
+    bool ok = false;
+    auto [d_min, d_max] = compute_phase_reset_delta_bounds(ok);
+    if (!ok) return false;
+    double delta = raw_delta;
+    if (delta < d_min) delta = d_min;
+    if (delta > d_max) delta = d_max;
+    if (delta == 0.0) return false;
+    for (int idx : app.selected_markers) {
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
+        if (!m) continue;
+        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
+    }
+    return true;
+}
+
 // Nudge selected phase resets by +/- 1 source-pixel of seconds. Direction:
 // -1 for earlier, +1 for later. Symmetric with nudge_selected_markers.
 //
@@ -244,26 +265,14 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const double delta_s =
         static_cast<double>(direction) * spp / static_cast<double>(sr);
     if (delta_s == 0.0) return;
-
-    bool ok = false;
-    auto [d_min, d_max] = compute_phase_reset_delta_bounds(ok);
-    if (!ok) return;
-    double delta = delta_s;
-    if (delta < d_min) delta = d_min;
-    if (delta > d_max) delta = d_max;
-    if (delta == 0.0) return;
-
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
-    for (int idx : app.selected_markers) {
-        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
-        if (!m) continue;
-        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
+    if (apply_phase_reset_selection_shift(delta_s)) {
+        undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
     }
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
-    selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
-    undo.recompute_dirty();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
 }
