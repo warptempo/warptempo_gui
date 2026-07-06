@@ -266,14 +266,14 @@ endif()
 #  warptempo_engine — engine-only synthesis driver.
 #  Reads the prebuilt source-sibling warpframemap [+ phaseresetframemap]
 #  pair (the <source-stem> naming warptempo_parser writes) + source wav and
-#  writes the warped wav by running the PGHI engine directly. The map
-#  readers are header-only (warp_frame_map.h / phase_reset_frame_map.h)
-#  and both files are engine-domain inputs consumed as-is (warptempo_parser
-#  applies the phase-reset anticipation when deriving the artifact); the
-#  parser archive is linked only for the shared output-naming composer
-#  (render_output_naming) and the default render title — the driver reads
-#  no authoring files and stays blind to .settings. Trim is not an engine
-#  concern.
+#  writes the warped wav by running the PGHI engine directly. No parser
+#  archive: the map readers are header-only (warp_frame_map.h /
+#  phase_reset_frame_map.h) and both files are engine-domain inputs consumed
+#  as-is (warptempo_parser applies the phase-reset anticipation when deriving
+#  the artifact). The driver's input and output names are its own command-line
+#  contract, restated inline in engine_main and mirroring the parser-side
+#  naming rules (render_output_naming); the driver reads no authoring files
+#  and stays blind to .settings. Trim is not an engine concern.
 # ============================================================
 option(WARPTEMPO_BUILD_ENGINE
        "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)
@@ -281,7 +281,6 @@ if(WARPTEMPO_BUILD_ENGINE)
     add_executable(warptempo_engine src/cli/engine_main.cpp)
     target_link_libraries(warptempo_engine PRIVATE
         warptempo_engine_lib
-        warptempo_parser_lib
         warptempo_audio_io_lib
     )
 endif()

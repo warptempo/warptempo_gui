@@ -2,10 +2,6 @@
 #include "engine/engine_geometry.h"   // kN, kRs
 #include "warp_frame_map.h"           // WarpFrameMapSegment, read_warp_frame_map
 #include "phase_reset_frame_map.h"    // read_phase_reset_frame_map
-#include "engine_settings.h"          // EngineSettings, default_render_title
-#include "render_output_naming.h"     // render_output_directory,
-                                      // render_output_stem,
-                                      // compose_render_output_paths
 #include "locale_check.h"
 
 #include "audio_reader.h"
@@ -59,39 +55,32 @@ int main(int argc, char** argv) {
 
     const std::string stem =
         std::filesystem::path(source_path).stem().string();
-    const std::filesystem::path dir = render_output_directory(source_path);
+    std::filesystem::path dir =
+        std::filesystem::path(source_path).parent_path();
+    if (dir.empty()) dir = std::filesystem::path(".");
 
-    // This driver stays blind to .settings by design, so it synthesizes the
-    // naming inputs the settings-reading tools get from the project — the
-    // default title the GUI assigns at source load, format wav, limiter from
-    // the flag — and feeds them through the shared composer. The output is
-    // therefore <source-stem>-rendered.wav beside the source, with the
-    // clean-float limiter=false; prefix under --no-limiter — exactly the
-    // GUI's naming for a default-titled project.
-    const std::string default_title = default_render_title(stem);
-    EngineSettings naming;
-    naming.title         = default_title;
-    naming.output_format = "wav";
-    naming.limiter       = !no_limiter;
+    // These literals restate the driver's command-line contract (also stated
+    // in the usage text) and mirror the naming rules owned parser-side in
+    // render_output_naming.h — the default render title (source stem plus
+    // "-rendered"), the clean-float "limiter=false;" prefix, and the pair
+    // extensions. The driver deliberately restates them inline instead of
+    // linking the parser archive, keeping its link line engine and audio_io
+    // alone; a drift between the two would hardfail on missing inputs rather
+    // than corrupt output. The output is <source-stem>-rendered.wav beside the
+    // source, prefixed "limiter=false;" under --no-limiter (the clean-float
+    // wav render). The map inputs are the <source-stem> siblings
+    // warptempo_parser writes for the same project — the .warpframemap
+    // required, the .phaseresetframemap used only when present (an empty reset
+    // list is an empty, valid file, not an absent one).
     const std::string out_path =
-        compose_render_output_paths(dir, render_output_stem(naming, stem),
-                                    naming.output_format)
-            .front()
+        (dir / ((no_limiter ? "limiter=false;" : "") + stem + "-rendered.wav"))
             .string();
 
-    // Map inputs: the source-stem siblings, where warptempo_parser writes the
-    // pair for the same project. Composed through the shared composer so this
-    // discovery and the parser's emission are one composition — a
-    // parser-then-engine run on a project directory needs no renames. The
-    // warpframemap is required; the phaseresetframemap is optional — used only
-    // when present (an empty reset list is an empty, valid file, not an absent
-    // one).
-    const std::vector<std::filesystem::path> map_paths =
-        compose_render_output_paths(dir, stem, "warptempo_maps");
-    const std::string warpframemap_path = map_paths[0].string();
+    const std::string warpframemap_path =
+        (dir / (stem + ".warpframemap")).string();
     std::string phaseresetframemap_path;
     {
-        const std::string sib = map_paths[1].string();
+        const std::string sib = (dir / (stem + ".phaseresetframemap")).string();
         if (std::filesystem::exists(sib)) phaseresetframemap_path = sib;
     }
 

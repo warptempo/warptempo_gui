@@ -9,8 +9,11 @@
 // Co-equal composition of a render's on-disk output paths from a directory,
 // a name stem, and a per-file extension. No path is derived from another by
 // extension swap: the warptempo_maps pair's two files are two entries of one
-// composed list, ordered by the extension list. Parser-side so the GUI and
-// the headless CLI binaries compose identical paths from one implementation.
+// composed list, ordered by the extension list. Parser-side so the
+// settings-reading producers — the GUI, warptempo_parser, and warptempo_cli —
+// compose identical paths from one implementation; warptempo_engine reads no
+// .settings and restates the same conventions inline as its command-line
+// contract.
 
 // The format's ordered extension list — the single owner of the
 // format-to-extensions mapping:
