@@ -423,9 +423,11 @@ RenderOutcome do_render(const RenderRequest& req,
     // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
     // need the same value before the engine assembly path runs. The sidecar
     // writer also needs the trim's cap (0 when untrimmed) for its
-    // window-participation verdict below — llrint of the deliverable map's
-    // boundary-pair target, the same integer
-    // assign_engine_phase_reset_frame_map derives from the map's last anchor.
+    // window-participation verdict below — the cap is value-identical to the
+    // trimmed deliverable map's boundary-pair target, exactly, so the verdict
+    // bound is the deliverable map's own final anchor target (not the integer
+    // output length assign_engine_phase_reset_frame_map derives from the
+    // map's last anchor).
     // Only the offset and cap fields are read here; a degenerate stored-zero
     // window carries no map, which this pre-slice never touches.
     int64_t window_offset_samples = 0;
@@ -544,17 +546,16 @@ RenderOutcome do_render(const RenderRequest& req,
             // the window verdict. Drop disabled, out-of-trim, and window
             // non-participants.
             //
-            // Render target frames for the window verdict: the trim's cap
-            // when the trim set one, else llrint of the full map's last
-            // target anchor. Value-identical to the derivation bound
-            // assign_engine_phase_reset_frame_map derives from its map's last
-            // anchor, because the trimmed deliverable map's boundary-pair
-            // target is exactly the cap.
-            const int64_t render_target_frames_for_sidecars =
+            // Render target end for the window verdict: the trim's cap when
+            // the trim set one (value-identical to the trimmed deliverable
+            // map's boundary-pair target, exactly), else the full map's last
+            // target anchor unrounded — the deliverable map's own final
+            // anchor target in both cases, matching the exact bound the
+            // deliverable-form derivation compares against.
+            const double render_target_end_for_sidecars =
                 trim_emit_sample_cap > 0
-                    ? trim_emit_sample_cap
-                    : static_cast<int64_t>(std::llrint(
-                          full_warp_frame_map.back().tgt_frame));
+                    ? static_cast<double>(trim_emit_sample_cap)
+                    : full_warp_frame_map.back().tgt_frame;
             std::vector<GuiPhaseResetMarker> sidecar_phase_resets;
             sidecar_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
@@ -566,21 +567,21 @@ RenderOutcome do_render(const RenderRequest& req,
                 // negative window target is the derivation's before-window
                 // drop: the instant precedes the deliverable's first sample
                 // and is unrepresentable on its time axis. A window target at
-                // or past the emit cap is the derivation's past-cap drop: the
-                // instant lies beyond the deliverable's last sample (a reset
-                // exactly at the trim end, or at source EOF on an untrimmed
-                // render), so display participation converges on the window's
-                // own bounds. Resets dropped only by the derivation's lead-in
-                // dropzone (window target above zero but within
-                // phase_reset_offset_samples of the window start) still
-                // display, deliberately: the display sidecars show every
-                // authored marker that exists on the deliverable's time axis
-                // regardless of its engine-side fate, exactly as the warp
-                // sidecar displays markers whose breakpoints the slicer
-                // coalesced into window anchors.
+                // or past the deliverable map's final anchor target is the
+                // derivation's final-anchor drop: the instant lies beyond the
+                // deliverable's last sample (a reset exactly at the trim end,
+                // or at source EOF on an untrimmed render), so display
+                // participation converges on the window's own bounds. Resets
+                // dropped only by the derivation's lead-in dropzone (window
+                // target above zero but within phase_reset_offset_samples of
+                // the window start) still display, deliberately: the display
+                // sidecars show every authored marker that exists on the
+                // deliverable's time axis regardless of its engine-side fate,
+                // exactly as the warp sidecar displays markers whose
+                // breakpoints the slicer coalesced into window anchors.
                 const auto window_target = phase_reset_window_target_frame(
                     t.time_seconds * sr_d, full_warp_frame_map,
-                    window_offset_samples, render_target_frames_for_sidecars);
+                    window_offset_samples, render_target_end_for_sidecars);
                 if (!window_target) continue;
                 GuiPhaseResetMarker w = t;
                 w.time_seconds = *window_target / sr_d;

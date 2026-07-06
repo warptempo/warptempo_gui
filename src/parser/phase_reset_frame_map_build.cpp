@@ -1,6 +1,5 @@
 #include "phase_reset_frame_map_build.h"
 
-#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -29,16 +28,14 @@ std::optional<double> phase_reset_window_target_frame(
         double source_frame,
         const std::vector<WarpFrameMapSegment>& full_map,
         int64_t window_offset_samples,
-        int64_t render_target_frames) {
+        double render_target_end) {
     const double authored_target_full =
         map_source_to_target(source_frame, full_map);
     const double authored_target_window =
         authored_target_full - static_cast<double>(window_offset_samples);
 
     if (authored_target_window < 0.0) return std::nullopt;
-    if (authored_target_window >= static_cast<double>(render_target_frames)) {
-        return std::nullopt;
-    }
+    if (authored_target_window >= render_target_end) return std::nullopt;
     return authored_target_window;
 }
 
@@ -65,11 +62,11 @@ std::optional<double> phase_reset_engine_query_frame(
         const std::vector<WarpFrameMapSegment>& full_map,
         const std::vector<WarpFrameMapSegment>& engine_map,
         int64_t window_offset_samples,
-        int64_t render_target_frames) {
+        double render_target_end) {
     const std::optional<double> authored_target_window =
         phase_reset_window_target_frame(
             source_frame, full_map, window_offset_samples,
-            render_target_frames);
+            render_target_end);
     if (!authored_target_window) return std::nullopt;
 
     const double anticipated_target =
@@ -107,13 +104,13 @@ std::vector<double> derive_phase_reset_frame_map(
         const std::vector<WarpFrameMapSegment>& full_map,
         const std::vector<WarpFrameMapSegment>& engine_map,
         int64_t window_offset_samples,
-        int64_t render_target_frames) {
+        double render_target_end) {
     std::vector<double> out;
     out.reserve(source_frames.size());
     for (const double source_frame : source_frames) {
         if (auto f = phase_reset_engine_query_frame(
                 source_frame, full_map, engine_map,
-                window_offset_samples, render_target_frames)) {
+                window_offset_samples, render_target_end)) {
             out.push_back(*f);
         }
     }
@@ -124,9 +121,7 @@ std::vector<double> derive_phase_reset_frame_map(
         const std::vector<double>& source_frames,
         const std::vector<WarpFrameMapSegment>& deliverable_map) {
     if (deliverable_map.empty()) return {};
-    const int64_t render_target_frames =
-        static_cast<int64_t>(std::llrint(deliverable_map.back().tgt_frame));
     return derive_phase_reset_frame_map(
         source_frames, deliverable_map, deliverable_map,
-        /*window_offset_samples=*/0, render_target_frames);
+        /*window_offset_samples=*/0, deliverable_map.back().tgt_frame);
 }

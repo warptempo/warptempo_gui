@@ -79,15 +79,20 @@ inline const int64_t phase_reset_offset_samples = static_cast<int64_t>(
 // Returns the window-domain target frame W, or std::nullopt when the reset
 // does not participate in this render: W negative (before the window — the
 // instant precedes the deliverable's first sample) or at or past
-// render_target_frames (past the emit cap, beyond the deliverable's last
-// sample). Shared by the engine-input derivation below and the render-view
-// display sidecar writer, so display participation and engine input converge
-// on the same window-bounds verdict.
+// render_target_end (beyond the deliverable's last sample). The bound is
+// the deliverable map's own final anchor target, compared exactly in the
+// double target domain: trimmed maps carry the integral boundary-pair cap
+// there, the full map carries the exact source-EOF target, so a reset at
+// the trim end or at source EOF drops identically on both forms.
+// Quantization to the engine's integer output length is engine-owned and
+// never enters this verdict. Shared by the engine-input derivation below
+// and the render-view display sidecar writer, so display participation and
+// engine input converge on the same window-bounds verdict.
 std::optional<double> phase_reset_window_target_frame(
     double source_frame,
     const std::vector<WarpFrameMapSegment>& full_map,
     int64_t window_offset_samples,
-    int64_t render_target_frames);
+    double render_target_end);
 
 // Derive the engine-input phase reset frame map for a given render (full or
 // trim-windowed): each authored source position is taken through the window
@@ -103,12 +108,12 @@ std::vector<double> derive_phase_reset_frame_map(
     const std::vector<WarpFrameMapSegment>& full_map,
     const std::vector<WarpFrameMapSegment>& engine_map,
     int64_t window_offset_samples,
-    int64_t render_target_frames);
+    double render_target_end);
 
 // Deliverable form: derive the .phaseresetframemap artifact against the
 // exact deliverable map shipped beside it — full_map and engine_map are both
 // the deliverable map, the window offset is zero, and the render bound is
-// llrint of the deliverable map's last pair's target. The emitted list is
+// the deliverable map's last pair's target, exact. The emitted list is
 // computed against the exact map shipped beside it, so the artifact pair is
 // exactly warptempo_engine's input and an engine fed the pair renders that
 // map's geometry exactly. This is the single trimmed derivation everywhere:
