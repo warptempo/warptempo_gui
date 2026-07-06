@@ -973,9 +973,28 @@ RenderOutcome do_render(const RenderRequest& req,
             const std::string phase_reset_final = output_paths.back().string();
             const std::string warp_staging = warp_final + ".tmp";
             const std::string phase_reset_staging = phase_reset_final + ".tmp";
-            // All-or-nothing publish: both staging files are written first;
-            // if either write fails, both stagings are unlinked and the
-            // render fails with nothing published.
+            // Delete-first, all-or-nothing publish: the old pair's two finals
+            // are unlinked before any new byte becomes visible under a final
+            // name; only then are both staging files written and rename-
+            // published, warp first, phase reset second. Once this sequence
+            // begins the old pair is forfeited, and from that point every
+            // possible interruption — an in-process write or rename failure,
+            // or process death at any instant — leaves at most one column
+            // present on disk, so warptempo_engine refuses loudly on the
+            // missing column. A mixed-generation pair (a fresh warp map beside
+            // a phase reset list derived against a different warp map) can no
+            // longer exist: the stale finals are gone before the first new byte
+            // lands under a final name. In-process the arms still tidy up — a
+            // staging-write failure unlinks both stagings, and a second-rename
+            // failure pulls back the just-published warp final. The cost is
+            // that a failed or interrupted publish destroys the previous pair;
+            // that is accepted, because the pair regenerates from the authored
+            // sources with a single re-run, and a loud refusal beats a silent
+            // wrong render. The single-file formats below stay direct writes: a
+            // lone artifact has no cross-generation sibling to mix with.
+            // Forfeit the old pair up front:
+            unlink_silent(warp_final);
+            unlink_silent(phase_reset_final);
             bool staged_ok = true;
             if (auto w = write_warp_frame_map(warp_staging,
                                               artifacts.warp_frame_map); !w) {

@@ -296,19 +296,32 @@ int main(int argc, char** argv) {
     // (untrimmed: the full map; trimmed: the trimmed deliverable map), so
     // the engine consumes the pair as-is. The authored-domain record of
     // reset positions remains the .phaseresetmarkers file. An empty reset
-    // list yields an empty (valid) .phaseresetframemap. All-or-nothing
-    // publish: both files are written to ".tmp" staging paths first, then
-    // rename-published, so a mixed-generation pair (a fresh warp map beside
-    // a stale phase reset map derived against a different warp map) can
-    // never land; if the second rename fails, the just-published warp final
-    // is pulled back, and warptempo_engine then refuses on the missing warp
-    // column rather than silently rendering a stale pairing. The single-file
-    // formats below stay direct writes: a lone artifact has no
-    // cross-generation sibling to mix with. ---
+    // list yields an empty (valid) .phaseresetframemap. Delete-first,
+    // all-or-nothing publish: the old pair's two finals are unlinked before
+    // any new byte becomes visible under a final name; only then are the two
+    // files written to ".tmp" staging paths and rename-published, warp first,
+    // phase reset second. Once this sequence begins the old pair is forfeited,
+    // and from that point every possible interruption — an in-process write or
+    // rename failure, or process death at any instant — leaves at most one
+    // column present on disk, so warptempo_engine refuses loudly on the
+    // missing column. A mixed-generation pair (a fresh warp map beside a phase
+    // reset list derived against a different warp map) can no longer exist:
+    // the stale finals are gone before the first new byte lands under a final
+    // name. In-process the arms still tidy up — a staging-write failure unlinks
+    // both stagings, and a second-rename failure pulls back the just-published
+    // warp final. The cost is that a failed or interrupted publish destroys the
+    // previous pair; that is accepted, because the pair regenerates from the
+    // authored sources with a single re-run, and a loud refusal beats a silent
+    // wrong render. The single-file formats below stay direct writes: a lone
+    // artifact has no cross-generation sibling to mix with. ---
     if (fmt == "warptempo_maps") {
         const std::string pr_out = out_paths[1].string();
         const std::string warp_staging = out_path + ".tmp";
         const std::string pr_staging = pr_out + ".tmp";
+        // Forfeit the old pair up front: no interruption from here can leave a
+        // mixed-generation pair, only a missing column the engine refuses on.
+        unlink_silent(out_path);
+        unlink_silent(pr_out);
         bool staged_ok = true;
         if (auto w = write_warp_frame_map(warp_staging,
                                           artifacts.warp_frame_map); !w) {
