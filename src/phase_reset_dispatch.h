@@ -12,13 +12,21 @@
 //
 // These helpers live in this root header rather than the parser library
 // because warptempo_engine dispatches phase resets while linking the engine
-// archive alone, with no parser; the warp axis's window-participation
-// sibling (slice_warp_frame_map_to_trim_window) is parser-owned because no
-// parser-less driver slices — trim is not an engine-CLI concept. The verbs
-// differ deliberately: the slicer coalesces out-of-window breakpoints into
-// boundary anchors because a map is a connected piecewise function, while
-// dispatch drops out-of-window resets because point events have nothing to
-// coalesce into.
+// archive alone, with no parser. At the window-restriction stage, the warp
+// axis's sibling is the parser-owned slicer
+// (slice_warp_frame_map_to_trim_window, parser-owned because no parser-less
+// driver slices — trim is not an engine-CLI concept) against
+// phase_reset_window_target_frame below: the warp slicer coalesces
+// out-of-window breakpoints into boundary anchors because a map is a
+// connected piecewise function that must stay defined over every output
+// sample, while the phase-reset window verdict drops non-participating
+// points because point events have nothing to coalesce into. One stage
+// later, the engine-handoff siblings assign_engine_warp_frame_map and
+// assign_engine_phase_reset_frame_map are already parallel; the dispatch
+// conversion below, one stage further in, has no warp sibling at all,
+// because the warp frame map is already the engine's input domain and needs
+// only windowing, while a phase-reset position alone crosses three domains —
+// authored source, to window target, to engine query.
 
 // Window-participation verdict for one authored (undisplaced) phase-reset
 // source position — an exact double source frame. Maps it through the full

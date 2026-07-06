@@ -52,9 +52,10 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     }
 }
 
-// Engine-boundary ordering guards. Both validators demand strict ascent on
-// doubles; the one remaining live asymmetry between them is column count —
-// the map validates two axes (src and tgt), the reset list one. The two
+// Engine-boundary ordering guards. The two validators are fully symmetric
+// per column: same strict-ascent predicate, no epsilon band, same loud init
+// refusal. The map simply has two columns (src and tgt) to the reset list's
+// one because the objects' shapes differ, not their treatment. The two
 // init-time hardfails are deliberate and stay even though the writers'
 // contract (build_warp_frame_map, the trimmed-artifact derivation, the
 // phaseresetframemap writer) makes both checks unreachable from
