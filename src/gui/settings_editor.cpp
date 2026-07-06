@@ -54,9 +54,12 @@ namespace {
 
 // Keys owned by a dedicated gesture; rejected by commit() to keep the
 // settings editor as a single canonical entry point for engine keys. This
-// covers viewport/playback state, per-tab trim, and font_size — all are set
-// through their own gestures, not here. font_size is a display preference
-// stepped by the Ctrl+Shift+= / Ctrl+Shift+- pair (input_handler.cpp).
+// covers viewport/playback state, the view toggles, the per-tab read-only
+// flags, per-tab trim, and font_size — all are set through their own
+// gestures, not here. active_audio_view toggles on bare `t`, active_tab_view
+// switches on Ctrl+Tab, the per-tab read-only flags toggle on bare `o`, and
+// font_size is a display preference stepped by the Ctrl+Shift+= /
+// Ctrl+Shift+- pair (input_handler.cpp).
 bool is_view_state_key(const std::string& k) {
     return k == "tab_a_viewport_start"   ||
            k == "tab_a_zoom"             ||
@@ -65,13 +68,17 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_b_zoom"             ||
            k == "tab_b_playhead_cursor"  ||
            k == "follow"                 ||
+           k == "active_audio_view"      ||
            k == "active_markers_view"    ||
+           k == "active_tab_view"        ||
            k == "playback_speed"         ||
            k == "font_size"              ||
            k == "tab_a_trim_begin"       ||
            k == "tab_a_trim_end"         ||
+           k == "tab_a_read_only"        ||
            k == "tab_b_trim_begin"       ||
-           k == "tab_b_trim_end";
+           k == "tab_b_trim_end"         ||
+           k == "tab_b_read_only";
 }
 
 } // namespace

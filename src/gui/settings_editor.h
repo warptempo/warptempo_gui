@@ -16,7 +16,8 @@ struct GuiTargetRender;
 //
 // commit() routes the typed key through two paths:
 // 1. Gesture-owned keys (viewport / zoom / playhead / follow /
-//    active_markers_view / playback_speed / per-tab trim / font_size) are
+//    active_audio_view / active_markers_view / active_tab_view /
+//    playback_speed / per-tab trim / per-tab read_only / font_size) are
 //    rejected — each is set through its own gesture, never typed here.
 //    font_size is a display preference stepped by the Ctrl+Shift+= /
 //    Ctrl+Shift+- pair (input_handler.cpp).
