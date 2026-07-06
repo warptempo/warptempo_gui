@@ -34,7 +34,6 @@ public:
     bool load(const std::string& path, const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
-    bool    has_source_load_identity() const { return has_load_identity_; }
     uint64_t source_load_size()  const { return load_identity_size_; }
     int64_t  source_load_mtime() const { return load_identity_mtime_; }
     int     sample_rate()     const { return sample_rate_; }
@@ -83,8 +82,8 @@ private:
     // decoded into this buffer, captured through the same stat_file_identity
     // used by the render fingerprint so the two are directly comparable. This
     // lets the render pipeline prove a borrowed buffer still corresponds to
-    // the identity a fingerprint names.
-    bool     has_load_identity_ = false;
+    // the identity a fingerprint names. load() refuses a source it cannot
+    // stat, so both fields are valid whenever a source is loaded.
     uint64_t load_identity_size_ = 0;
     int64_t  load_identity_mtime_ = 0;
 

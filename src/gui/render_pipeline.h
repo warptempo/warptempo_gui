@@ -53,18 +53,21 @@ struct RenderRequest {
     EngineSettings engine_settings;
 
     // Borrowed source audio: the GUI's resident sample buffer plus its
-    // frame count, captured at dispatch. When set and sufficient, do_render
-    // skips the source-sample-cache read entirely. Null means fall back to
-    // the self-contained cache read (defensive; the GUI always populates
-    // it). Shared ownership makes this safe across file loads mid-render;
-    // the transient cost of two live buffers during such a swap is accepted.
+    // frame count, captured at dispatch. Required contract: every dispatcher
+    // populates these (attach_shared_render_resources, or the target view's
+    // direct fill); they are never absent in a program-built request, and
+    // do_render compensates for nothing — it reads the buffer directly.
+    // Shared ownership makes this safe across file loads mid-render; the
+    // transient cost of two live buffers during such a swap is accepted.
     std::shared_ptr<const std::vector<float>> source_samples;
     int64_t source_total_frames = 0;
 
     // Load-time identity of the file backing source_samples, captured by
-    // GuiAudio at decode. do_render compares it against the dispatch-time
-    // identity before associating a borrowed-buffer render with a fingerprint.
-    bool     has_source_load_identity = false;
+    // GuiAudio at decode (a load whose stat fails is refused, so a loaded
+    // source always carries its identity). Required contract, same as
+    // source_samples: every dispatcher populates the pair. do_render
+    // compares it against the dispatch-time identity before rendering and
+    // before associating a borrowed-buffer render with a fingerprint.
     uint64_t source_load_size = 0;
     int64_t  source_load_mtime = 0;
 
@@ -128,8 +131,9 @@ struct RenderRequest {
 
     // The process's single RenderCache, populated at request-build time
     // from the same instance main.cpp constructs and hands to
-    // GuiTargetRender by reference. do_render's cache lookup/insert rung is
-    // skipped (defensively; the GUI always populates this) when null.
+    // GuiTargetRender by reference. Required contract: every dispatcher
+    // populates it; it is never null in a program-built request, and
+    // do_render dereferences it without a null check.
     RenderCache* render_cache = nullptr;
 };
 

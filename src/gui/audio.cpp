@@ -550,8 +550,12 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     const int next_sample_rate     = info->sample_rate;
     const int next_render_channels = std::min(next_channels, 2);
     RenderFileIdentity next_load_identity;
-    const bool next_has_load_identity =
-        stat_file_identity(path, next_load_identity);
+    if (!stat_file_identity(path, next_load_identity)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: could not stat '%s'\n",
+                     path.c_str());
+        return false;
+    }
 
     if (next_channels > 2) {
         std::fprintf(stderr,
@@ -590,9 +594,8 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         sample_rate_     = next_sample_rate;
         channels_        = next_channels;
         render_channels_ = next_render_channels;
-        has_load_identity_ = next_has_load_identity;
-        load_identity_size_ = next_has_load_identity ? next_load_identity.size : 0;
-        load_identity_mtime_ = next_has_load_identity ? next_load_identity.mtime : 0;
+        load_identity_size_ = next_load_identity.size;
+        load_identity_mtime_ = next_load_identity.mtime;
         levels_          = std::move(next_levels);
     };
 

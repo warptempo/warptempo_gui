@@ -225,10 +225,11 @@ private:
 
     // Attach the process-wide render resources to an assembled request:
     // the single RenderCache (constructed in main, reached through
-    // target_render's reference) and the GUI's shared source buffer so
-    // do_render can skip the source-sample-cache read. Every archival
-    // dispatch site must call this after build_render_request; forgetting
-    // it silently disables reuse and the fast source path.
+    // target_render's reference), the GUI's shared source buffer, and the
+    // source's load identity. These are required request fields — do_render
+    // no longer reads the source-sample cache at all and dereferences the
+    // buffer and cache without fallbacks. Every archival dispatch site must
+    // call this after build_render_request.
     void attach_shared_render_resources(RenderRequest& req);
 
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
