@@ -192,7 +192,10 @@ RenderOutcome do_render(const RenderRequest& req,
     auto compose_source_sibling_paths = [&]() {
         return compose_render_output_paths(
             render_output_directory(req.source_audio_path),
-            render_output_stem(req.engine_settings), output_format);
+            render_output_stem(
+                req.engine_settings,
+                std::filesystem::path(req.source_audio_path).stem().string()),
+            output_format);
     };
     const std::vector<std::filesystem::path> output_paths =
         batch_render

@@ -144,7 +144,11 @@ void GuiTargetRender::dispatch_render_now() {
         const std::string artifact_candidate =
             compose_render_output_paths(
                 render_output_directory(app.source_audio_path),
-                render_output_stem(app.engine_settings),
+                render_output_stem(
+                    app.engine_settings,
+                    std::filesystem::path(app.source_audio_path)
+                        .stem()
+                        .string()),
                 app.engine_settings.output_format)
                 .front().string();
         // This rung auditions the actual archival deliverable. Fresh renders,

@@ -28,10 +28,18 @@ std::vector<std::string> render_output_extensions(
 std::filesystem::path render_output_directory(
     const std::string& source_audio_path);
 
-// The naming stem for a source-sibling render: the title, prefixed with
-// `limiter=false;` when the format is wav and the limiter is off (the
-// clean-float wav render). The single owner of the clean-float prefix rule.
-std::string render_output_stem(const EngineSettings& es);
+// The naming stem for a source-sibling render. The map artifacts
+// (.warpframemap, .phaseresetframemap, .miditempomap) are project files
+// named by the source stem, siblings of the source exactly like the
+// authoring sidecars (.warpmarkers, .phaseresetmarkers, .settings), so for
+// the three map formats this returns source_stem. The wav deliverable is
+// title-named: the title, prefixed with `limiter=false;` when the limiter is
+// off (the clean-float wav render). Only wav reaches the title arm, so the
+// clean-float prefix is wav-scoped by construction; this is its single owner.
+// The fingerprint sidecar and the .peaks cache are not composed here — they
+// follow the output path directly.
+std::string render_output_stem(const EngineSettings& es,
+                               const std::string& source_stem);
 
 // The full output-path list for a render of `output_format`: one entry per
 // extension, each composed as `dir / (stem + extension)`. For warptempo_maps

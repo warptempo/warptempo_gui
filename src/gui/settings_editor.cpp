@@ -141,9 +141,10 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // Source-clobber guard. The single-render output lands beside the
-    // source as <source_dir>/<title><ext>; an edit that makes any of the
-    // format's output paths resolve to the source file itself would
+    // Source-clobber guard. The single-render output lands beside the source
+    // (the wav deliverable named by title, the map artifacts by the source
+    // stem — render_output_stem); an edit that makes any of the format's
+    // output paths resolve to the source file itself would
     // overwrite the source on the next Ctrl+Alt+R. Every path of the
     // format is checked — the warptempo_maps pair's second file is covered
     // by the same refusal. Refuse it here so the colliding value never
@@ -153,7 +154,11 @@ void GuiSettingsEditor::commit() {
         for (const std::filesystem::path& out :
              compose_render_output_paths(
                  render_output_directory(app.source_audio_path),
-                 render_output_stem(candidate),
+                 render_output_stem(
+                     candidate,
+                     std::filesystem::path(app.source_audio_path)
+                         .stem()
+                         .string()),
                  candidate.output_format)) {
             std::error_code ec;
             const bool same =

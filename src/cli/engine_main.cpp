@@ -29,9 +29,9 @@ void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio> [--no-limiter]\n"
         "  Runs the PGHI engine on the prebuilt map pair warptempo_parser\n"
-        "  writes for a default-titled project: the sibling\n"
-        "  <source-stem>-rendered.warpframemap (required), plus\n"
-        "  <source-stem>-rendered.phaseresetframemap when present (the\n"
+        "  writes beside the source for the same project: the sibling\n"
+        "  <source-stem>.warpframemap (required), plus\n"
+        "  <source-stem>.phaseresetframemap when present (the\n"
         "  engine query-domain list warptempo_parser computes against the\n"
         "  same warpframemap; consumed as-is). Writes the warped wav beside\n"
         "  the source as <source-stem>-rendered.wav — with --no-limiter, as\n"
@@ -74,24 +74,24 @@ int main(int argc, char** argv) {
     naming.output_format = "wav";
     naming.limiter       = !no_limiter;
     const std::string out_path =
-        compose_render_output_paths(dir, render_output_stem(naming),
+        compose_render_output_paths(dir, render_output_stem(naming, stem),
                                     naming.output_format)
             .front()
             .string();
 
-    // Map inputs: the default-title siblings, where warptempo_parser writes
-    // the pair for a default-titled project. The warpframemap is required;
-    // the phaseresetframemap is optional — used only when present (an empty
-    // reset list is an empty, valid file, not an absent one). A
-    // custom-titled map pair is reachable by renaming the files to the
-    // default-title shape — the recorded cost of keeping this driver blind
-    // and flagless.
-    const std::string warpframemap_path =
-        (dir / (default_title + ".warpframemap")).string();
+    // Map inputs: the source-stem siblings, where warptempo_parser writes the
+    // pair for the same project. Composed through the shared composer so this
+    // discovery and the parser's emission are one composition — a
+    // parser-then-engine run on a project directory needs no renames. The
+    // warpframemap is required; the phaseresetframemap is optional — used only
+    // when present (an empty reset list is an empty, valid file, not an absent
+    // one).
+    const std::vector<std::filesystem::path> map_paths =
+        compose_render_output_paths(dir, stem, "warptempo_maps");
+    const std::string warpframemap_path = map_paths[0].string();
     std::string phaseresetframemap_path;
     {
-        const std::string sib =
-            (dir / (default_title + ".phaseresetframemap")).string();
+        const std::string sib = map_paths[1].string();
         if (std::filesystem::exists(sib)) phaseresetframemap_path = sib;
     }
 

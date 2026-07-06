@@ -33,14 +33,15 @@ void usage(const char* argv0) {
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio (all three are\n"
         "  required; the GUI creates them on source load) and writes the map\n"
-        "  artifacts for the project's output_format, title-named beside the\n"
-        "  source exactly where the GUI writes them for the same project.\n"
-        "  warptempo_maps writes TWO files, <title>.warpframemap plus\n"
-        "  <title>.phaseresetframemap (the engine query-domain phase-reset\n"
+        "  artifacts for the project's output_format beside the source with the\n"
+        "  source basename — project files named like the authoring sidecars,\n"
+        "  exactly where the GUI writes them for the same project.\n"
+        "  warptempo_maps writes TWO files, <source-stem>.warpframemap plus\n"
+        "  <source-stem>.phaseresetframemap (the engine query-domain phase-reset\n"
         "  list, anticipation and drops applied, computed against the same\n"
         "  warp frame map) — together exactly warptempo_engine's input.\n"
-        "  generic_map writes <title>.warpframemap alone for generic\n"
-        "  external stretch consumers; midi_map writes <title>.miditempomap\n"
+        "  generic_map writes <source-stem>.warpframemap alone for generic\n"
+        "  external stretch consumers; midi_map writes <source-stem>.miditempomap\n"
         "  for DAW hosts. output_format=wav is refused: the engine renders\n"
         "  wav (use warptempo_cli). The trim applied is the active tab's\n"
         "  (the persisted active_tab_view key), matching the GUI.\n",
@@ -251,15 +252,17 @@ int main(int argc, char** argv) {
             full_midi_tempo_map};
     }
 
-    // --- output paths: the shared composer, title-named beside the source —
-    // exactly where the GUI writes the same project's render (one entry per
-    // extension of the format; for warptempo_maps the warp column first, the
-    // phase reset column second, by render_output_extensions' order). The
-    // clean-float prefix is wav-only, so render_output_stem is the title
-    // verbatim for every format this tool emits. ---
+    // --- output paths: the shared composer, source-stem-named beside the
+    // source — exactly where the GUI writes the same project's map artifacts
+    // (one entry per extension of the format; for warptempo_maps the warp
+    // column first, the phase reset column second, by render_output_extensions'
+    // order). The map formats are project files named by the source stem like
+    // the authoring sidecars, so render_output_stem returns the source stem for
+    // every format this tool emits (only wav, which this tool never emits, is
+    // title-named). ---
     const std::vector<std::filesystem::path> out_paths =
         compose_render_output_paths(render_output_directory(source_path),
-                                    render_output_stem(es), fmt);
+                                    render_output_stem(es, stem), fmt);
     const std::string out_path = out_paths.front().string();
 
     // --- hard refusal: never write over the source audio itself.
@@ -273,8 +276,7 @@ int main(int argc, char** argv) {
             std::filesystem::equivalent(out, source_path, ec)) {
             std::fprintf(stderr,
                 "warptempo_parser: output '%s' resolves to the source audio "
-                "file; refusing to overwrite the source. Change the title "
-                "setting.\n",
+                "file; refusing to overwrite the source.\n",
                 out.string().c_str());
             return 1;
         }

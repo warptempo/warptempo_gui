@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     // deliverable. ---
     const std::string out_path =
         compose_render_output_paths(render_output_directory(source_path),
-                                    render_output_stem(es),
+                                    render_output_stem(es, stem),
                                     es.output_format)
             .front()
             .string();
