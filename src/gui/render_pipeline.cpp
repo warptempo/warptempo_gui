@@ -995,6 +995,7 @@ RenderOutcome do_render(const RenderRequest& req,
         if (trimmed) {
             auto a = derive_trimmed_artifact_maps(
                 full_warp_frame_map, full_midi_tempo_map,
+                phase_reset_source_frames,
                 trim_window.trim_begin_src, trim_window.trim_end_src,
                 N_fft, R_s, sample_rate);
             if (!a) {
@@ -1005,25 +1006,31 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             artifacts = std::move(*a);
         } else {
-            artifacts = TrimmedArtifactMaps{full_warp_frame_map,
-                                            full_midi_tempo_map};
+            // Untrimmed: the full maps verbatim, with the phase reset column
+            // filled by the same deliverable-form derivation the trimmed path
+            // runs inside derive_trimmed_artifact_maps — here against the
+            // full map, so both cases flow through the identical formula and
+            // the member is always populated.
+            artifacts = TrimmedArtifactMaps{
+                full_warp_frame_map,
+                derive_phase_reset_frame_map(phase_reset_source_frames,
+                                             full_warp_frame_map),
+                full_midi_tempo_map};
         }
         if (output_format == "warptempo_maps") {
             // The pair: the warp frame map plus the phase reset frame map,
             // TWO files, together exactly warptempo_engine's input. The
-            // phase reset column is the deliverable-form derivation of the
-            // pipeline's already-built source-frame list against
-            // artifacts.warp_frame_map — untrimmed the full map, trimmed
-            // the trimmed deliverable map — so the window verdict and
+            // phase reset column was derived beside its siblings when
+            // `artifacts` was filled above — the deliverable-form derivation
+            // of the pipeline's already-built source-frame list against
+            // artifacts.warp_frame_map (untrimmed the full map, trimmed
+            // the trimmed deliverable map) — so the window verdict and
             // anticipation are computed against the very map shipped in
             // the pair and the two files are self-consistent:
             // warptempo_engine fed the pair renders that map's geometry
             // exactly. Both columns always ship — an empty reset list
             // still writes the empty .phaseresetframemap file, mirroring
             // the marker sidecars' empty-file convention.
-            const std::vector<double> phase_reset_frame_map =
-                derive_phase_reset_frame_map(phase_reset_source_frames,
-                                             artifacts.warp_frame_map);
             const std::string warp_final = final_output_path;
             const std::string phase_reset_final =
                 render_output_paths_for_format(output_format,
@@ -1041,7 +1048,8 @@ RenderOutcome do_render(const RenderRequest& req,
                              w.error().c_str());
                 staged_ok = false;
             } else if (auto w2 = write_phase_reset_frame_map(
-                           phase_reset_staging, phase_reset_frame_map); !w2) {
+                           phase_reset_staging,
+                           artifacts.phase_reset_frame_map); !w2) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              w2.error().c_str());
                 staged_ok = false;

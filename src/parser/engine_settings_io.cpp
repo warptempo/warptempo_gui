@@ -92,7 +92,11 @@ bool validate_engine_setting(const std::string& key,
         // plus phase reset frame map pair (together exactly
         // warptempo_engine's input), generic_map the warp frame map alone
         // for generic external stretch consumers, midi_map the midi tempo
-        // map for DAW hosts.
+        // map for DAW hosts. There is no reset-alone format because a phase
+        // reset frame map is meaningful only against the exact warp frame
+        // map it was derived beside, so the reset artifact ships only inside
+        // the warptempo_maps pair, while the warp map alone serves generic
+        // consumers.
         if (value != "wav" && value != "warptempo_maps" &&
             value != "generic_map" && value != "midi_map") {
             reason = "must be one of {wav, warptempo_maps, generic_map, midi_map}";

@@ -1,4 +1,5 @@
 #include "warp_frame_map_build.h"
+#include "phase_reset_frame_map_build.h"  // derive_phase_reset_frame_map
 #include "time_format.h"  // format_timestamp
 
 #include <algorithm>
@@ -623,6 +624,7 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
 std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     const std::vector<WarpFrameMapSegment>& full_map,
     const std::vector<MidiTempoMapEntry>&  full_midi_tempo_map,
+    const std::vector<double>&             phase_reset_source_frames,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s, long sample_rate) {
     TrimmedArtifactMaps out;
@@ -719,5 +721,13 @@ std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
         out.midi_tempo_map.push_back({0.0, active_mult});
     }
     out.midi_tempo_map.push_back({cap_s, active_mult});
+
+    // Phase reset map. The deliverable-form derivation of the authored
+    // (undisplaced) source-frame positions against the trimmed warp frame map
+    // just derived above — the same map the member ships beside, so the pair
+    // is self-consistent: the window verdict and anticipation are computed
+    // against the very map an engine fed the pair would render.
+    out.phase_reset_frame_map = derive_phase_reset_frame_map(
+        phase_reset_source_frames, out.warp_frame_map);
     return out;
 }

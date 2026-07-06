@@ -30,7 +30,8 @@ void usage(const char* argv0) {
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  requested map artifacts. Every format requires the warp markers\n"
-        "  file. warptempo_maps writes TWO files, the .warpframemap plus the\n"
+        "  and phase reset markers files.\n"
+        "  warptempo_maps writes TWO files, the .warpframemap plus the\n"
         "  .phaseresetframemap (the engine query-domain phase-reset list,\n"
         "  anticipation and drops applied, computed against the same warp\n"
         "  frame map) — together exactly warptempo_engine's input; with -o\n"
@@ -146,6 +147,43 @@ int main(int argc, char** argv) {
         markers = std::move(*wmp);
     }
 
+    // --- phase reset markers: required for every format, like the warp
+    // sidecar above — the artifacts carry the phase reset column beside its
+    // siblings, so every format needs the authored source-frame list. A
+    // missing sidecar is a startup error (the GUI creates it on source load);
+    // the empty FILE is the no-resets form and yields an empty list and an
+    // empty derived column. build_phase_reset_source_frames drops disabled
+    // markers, converts time->exact double source frame, and refuses an
+    // enabled reset past the source end. Running it here for every format
+    // aligns this CLI with the GUI render pipeline, which builds the same
+    // intermediate at its source probe for every output format — a past-end
+    // enabled reset fails a generic_map or midi_map export here exactly as it
+    // already fails those renders in the GUI. ---
+    std::vector<double> phase_reset_source_frames;
+    if (!std::filesystem::exists(pr_path)) {
+        std::fprintf(stderr,
+            "warptempo_parser: missing phase reset markers file '%s' "
+            "(the GUI creates this sidecar on source load)\n",
+            pr_path.c_str());
+        return 1;
+    }
+    {
+        auto prp = parse_phaseresetmarkers_file(pr_path);
+        if (!prp) {
+            std::fprintf(stderr, "warptempo_parser: %s: %s\n",
+                         pr_path.c_str(), prp.error().c_str());
+            return 1;
+        }
+        auto source_frames_r =
+            build_phase_reset_source_frames(*prp, sample_rate, total_frames);
+        if (!source_frames_r) {
+            std::fprintf(stderr, "warptempo_parser: %s\n",
+                         source_frames_r.error().c_str());
+            return 1;
+        }
+        phase_reset_source_frames = std::move(*source_frames_r);
+    }
+
     // --- trim frames from the project .settings, with the same source-aware
     // check the GUI and render CLI share. Convert with the nearbyint *
     // sample_rate the window resolver uses. ---
@@ -186,6 +224,7 @@ int main(int argc, char** argv) {
     if (trimmed) {
         auto a = derive_trimmed_artifact_maps(full_warp_frame_map,
                                               full_midi_tempo_map,
+                                              phase_reset_source_frames,
                                               trim_begin_src, trim_end_src,
                                               kN, kRs, sample_rate);
         if (!a) {
@@ -194,54 +233,30 @@ int main(int argc, char** argv) {
         }
         artifacts = std::move(*a);
     } else {
-        artifacts = TrimmedArtifactMaps{full_warp_frame_map,
-                                        full_midi_tempo_map};
+        // Untrimmed: the full maps verbatim, with the phase reset column
+        // filled by the same deliverable-form derivation the trimmed path
+        // runs inside derive_trimmed_artifact_maps — here against the full
+        // map, so both cases flow through the identical formula and the
+        // member is always populated.
+        artifacts = TrimmedArtifactMaps{
+            full_warp_frame_map,
+            derive_phase_reset_frame_map(phase_reset_source_frames,
+                                         full_warp_frame_map),
+            full_midi_tempo_map};
     }
 
     // --- warptempo_maps: the pair, the warp frame map plus the phase reset
     // frame map, TWO files, together exactly warptempo_engine's input. The
-    // phase reset column is the engine query-domain phase-reset list,
-    // anticipation and drops applied, computed against the same map shipped
-    // beside it (untrimmed: the full map; trimmed: the trimmed deliverable
-    // map), so the engine consumes the pair as-is. The authored-domain
-    // record of reset positions remains the .phaseresetmarkers file.
-    // build_phase_reset_source_frames drops disabled markers, converts
-    // time->exact double source frame, and refuses an enabled reset past the
-    // source end — the same intermediate the GUI and render CLIs derive from
-    // before their in-process engine handoff. The empty FILE is the no-resets
-    // form and yields an empty (valid) .phaseresetframemap; an absent file is a
-    // hard error. Direct writes, like the single-file formats: this tool has
-    // never staged, so a failed second write exits nonzero and the caller
-    // reruns. ---
+    // phase reset column was derived beside its siblings when `artifacts` was
+    // filled above: the engine query-domain phase-reset list, anticipation
+    // and drops applied, computed against the same map shipped beside it
+    // (untrimmed: the full map; trimmed: the trimmed deliverable map), so
+    // the engine consumes the pair as-is. The authored-domain record of
+    // reset positions remains the .phaseresetmarkers file. An empty reset
+    // list yields an empty (valid) .phaseresetframemap. Direct writes, like
+    // the single-file formats: this tool has never staged, so a failed
+    // second write exits nonzero and the caller reruns. ---
     if (fmt == "warptempo_maps") {
-        std::vector<PhaseResetMarker> resets;
-        if (!std::filesystem::exists(pr_path)) {
-            std::fprintf(stderr,
-                "warptempo_parser: missing phase reset markers file '%s' "
-                "(the GUI creates this sidecar on source load)\n",
-                pr_path.c_str());
-            return 1;
-        }
-        {
-            auto prp = parse_phaseresetmarkers_file(pr_path);
-            if (!prp) {
-                std::fprintf(stderr, "warptempo_parser: %s: %s\n",
-                             pr_path.c_str(), prp.error().c_str());
-                return 1;
-            }
-            resets = std::move(*prp);
-        }
-        auto source_frames_r =
-            build_phase_reset_source_frames(resets, sample_rate, total_frames);
-        if (!source_frames_r) {
-            std::fprintf(stderr, "warptempo_parser: %s\n",
-                         source_frames_r.error().c_str());
-            return 1;
-        }
-        const std::vector<double> engine_query_frames =
-            derive_phase_reset_frame_map(*source_frames_r,
-                                         artifacts.warp_frame_map);
-
         // -o names the warp column; the phase reset column lands beside it
         // with the extension swapped. Without -o, the two sibling defaults.
         if (out_path.empty())
@@ -254,8 +269,8 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
-        if (auto w = write_phase_reset_frame_map(pr_out.string(),
-                                                 engine_query_frames); !w) {
+        if (auto w = write_phase_reset_frame_map(
+                pr_out.string(), artifacts.phase_reset_frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }

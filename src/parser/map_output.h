@@ -18,6 +18,13 @@ std::expected<void, std::string> write_warp_frame_map(
 
 // Serialize a tempo map to the canonical .miditempomap text form: one
 // "target_time_sec multiplier" line per entry at fixed 16-digit precision.
+// Fixed sixteen decimals, not seventeen significant digits, deliberately:
+// this is a consumer export for external non-C++ tooling, so plain decimal
+// text with no scientific notation is the priority, and it is not an engine
+// input, so the exact-IEEE round-trip requirement of the two engine
+// artifacts (.warpframemap / .phaseresetframemap) does not apply; sixteen
+// decimals exceed any MIDI tempo consumer's resolution by orders of
+// magnitude.
 std::expected<void, std::string> write_midi_tempo_map(
     const std::string& path, const std::vector<MidiTempoMapEntry>& entries);
 

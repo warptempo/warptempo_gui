@@ -197,20 +197,29 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s);
 
-// The external .warpframemap / .miditempomap artifacts for a trimmed
-// deliverable.
+// The external artifacts for a deliverable — the .warpframemap /
+// .phaseresetframemap / .miditempomap triple, all three columns from one
+// window.
 struct TrimmedArtifactMaps {
     std::vector<WarpFrameMapSegment> warp_frame_map;
+    std::vector<double>              phase_reset_frame_map;
     std::vector<MidiTempoMapEntry>   midi_tempo_map;
 };
 
-// Derive the trimmed deliverable's warpframemap and miditempomap from the SAME
-// window the engine renders, so there is exactly one trim computation in the
-// codebase and the artifacts describe the delivered WAV byte-for-byte. Slices
-// the full map with slice_warp_frame_map_to_trim_window and reads back its
+// Derive the trimmed deliverable's warpframemap, phaseresetframemap, and
+// miditempomap from the SAME window the engine renders, so there is exactly
+// one trim computation in the codebase and the artifacts describe the
+// delivered WAV byte-for-byte. Slices the full map with
+// slice_warp_frame_map_to_trim_window and reads back its
 // window: the warpframemap keeps every window pair strictly inside the emit
 // cap and the trim end, then appends the exact (trim_end_src, emit_sample_cap)
-// boundary pair; the miditempomap is the full midi tempo map shifted by
+// boundary pair; the phaseresetframemap is the deliverable-form
+// derive_phase_reset_frame_map of phase_reset_source_frames (authored,
+// undisplaced) against the just-derived trimmed warpframemap — the same map
+// the member ships beside, so the pair is self-consistent; see the
+// deliverable form's comment in phase_reset_frame_map_build.h for the
+// sub-sample-distinctness record against the in-process trimmed render; the
+// miditempomap is the full midi tempo map shifted by
 // -window_offset into the deliverable-relative time domain, origin at time
 // zero, a final no-op event at the end so DAWs learn the track length.
 //
@@ -237,5 +246,6 @@ struct TrimmedArtifactMaps {
 std::expected<TrimmedArtifactMaps, std::string> derive_trimmed_artifact_maps(
     const std::vector<WarpFrameMapSegment>& full_map,
     const std::vector<MidiTempoMapEntry>&  full_midi_tempo_map,
+    const std::vector<double>&             phase_reset_source_frames,
     int64_t trim_begin_src, int64_t trim_end_src,
     int N, int R_s, long sample_rate);
