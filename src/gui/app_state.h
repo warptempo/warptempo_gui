@@ -435,9 +435,10 @@ struct AppState {
 
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
     // default 11). A display preference, not engine input and not authoring
-    // state: persisted on Ctrl+S like playback_speed, applied on load and
-    // through the settings editor, and pushed to the renderer's file-scope
-    // state via set_gui_font_size_pt at both application points.
+    // state: persisted on Ctrl+S like playback_speed, applied at file load
+    // and stepped by the Ctrl+Shift+= / Ctrl+Shift+- hotkeys, and pushed to
+    // the renderer's file-scope state via set_gui_font_size_pt at each of
+    // those application points.
     double  font_size               = 11.0;
 
     // One-shot stash of the scanner's last painted pixel-x under the

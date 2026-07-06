@@ -1209,9 +1209,10 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 
 namespace {
     // Current GUI font size, in points. Set by set_gui_font_size_pt from
-    // the two application points (file load, settings-editor commit); every
-    // derived pixel quantity (text px size, scale factor, scaled pads,
-    // triangle height) reads it through the accessors below.
+    // the two application points (file load, the Ctrl+Shift+= / Ctrl+Shift+-
+    // font-size hotkeys); every derived pixel quantity (text px size, scale
+    // factor, scaled pads, triangle height) reads it through the accessors
+    // below.
     double g_font_size_pt = kDefaultFontSizePt;
     double g_advance = 0.0;
     int    g_row_h            = kRowHFallbackPx;

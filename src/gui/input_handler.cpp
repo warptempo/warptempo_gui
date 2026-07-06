@@ -168,6 +168,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom in/out symbol-key alias
+    //   - Ctrl+Shift+=/-         → step GUI font size (display preference,
+    //                              not authoring state — admitted like the
+    //                              bare =/- zoom aliases)
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
@@ -208,6 +211,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom symbol-key alias
+    //   - Ctrl+Shift+=/-         → step GUI font size (display preference,
+    //                              not an authoring mutation)
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
@@ -422,6 +427,35 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
     if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
         viewport.zoom_out(); return;
+    }
+
+    // Ctrl+Shift+= / Ctrl+Shift+- step the GUI font size by one point. A
+    // display-preference gesture, the sibling of the Shift+digit
+    // playback-speed step: silent (no stderr per press, so held-key repeat
+    // does not spam the log), deliberately no undo-history entry and no
+    // target render (font_size is not engine input and not authoring state),
+    // persisted on the next Ctrl+S through the existing .settings writer. The
+    // clamp is constructive, GTK-picker style: std::clamp into [6, 72] so a
+    // fractional legacy value loaded from .settings steps to the exact bound,
+    // then further steps no-op there. When the step would not change the
+    // value (already at a bound) the chord is a consumed silent no-op — no
+    // invalidate, no rebuild. On a real change the same live sequence the
+    // resize path uses runs in order: assign app.font_size,
+    // set_gui_font_size_pt, full-window invalidate_all, then the resize-path
+    // geometry-and-cache rebuild. Alt is excluded from the guard. Shift+=
+    // arrives as GuiKeys::Equal with mods.shift set, the same level-0-keysym
+    // convention the Shift+Semicolon settings opener and the bare Equal/Minus
+    // zoom aliases rely on.
+    if ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+        ctrl && shift && !alt) {
+        const double delta = (key == GuiKeys::Equal) ? +1.0 : -1.0;
+        const double next  = std::clamp(app.font_size + delta, 6.0, 72.0);
+        if (next == app.font_size) return;
+        app.font_size = next;
+        set_gui_font_size_pt(next);
+        viewport.invalidate_all();
+        paint_handler.on_resize(app.width, app.height);
+        return;
     }
 
     // x sets the begin trim at the playhead and autosets end half of the

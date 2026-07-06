@@ -59,6 +59,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
          !ctrl && !shift && !alt);
+    // Ctrl+Shift+=/- steps the GUI font size. Pure display state, the sibling
+    // of the bare =/- zoom aliases this gate already admits, so it is honored
+    // in a read-only tab (blocking authoring mutations is not its concern).
+    const bool is_font_size_step =
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+         ctrl && shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
@@ -99,7 +105,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Delete && !ctrl && !alt);
     return !(is_o || is_play_pause || is_scrub || is_scrub_samples ||
              is_home_end || is_page_updown ||
-             is_zoom || is_zoom_symbol || is_zero ||
+             is_zoom || is_zoom_symbol || is_font_size_step || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q || is_ctrl_w || is_save ||

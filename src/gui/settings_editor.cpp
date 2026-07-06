@@ -1,7 +1,5 @@
 #include "settings_editor.h"
 
-#include "paint_handler.h"
-#include "render.h"
 #include "render_output_naming.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -11,10 +9,7 @@
 #include "undo.h"
 
 #include <cctype>
-#include <cerrno>
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -57,10 +52,11 @@ void GuiSettingsEditor::exit_no_commit() {
 
 namespace {
 
-// Keys owned by a dedicated authoring gesture; rejected by commit() to
-// keep the settings editor as a single canonical entry point for engine
-// keys. This covers viewport/playback state and per-tab trim — all are
-// set through their own gestures, not here.
+// Keys owned by a dedicated gesture; rejected by commit() to keep the
+// settings editor as a single canonical entry point for engine keys. This
+// covers viewport/playback state, per-tab trim, and font_size — all are set
+// through their own gestures, not here. font_size is a display preference
+// stepped by the Ctrl+Shift+= / Ctrl+Shift+- pair (input_handler.cpp).
 bool is_view_state_key(const std::string& k) {
     return k == "tab_a_viewport_start"   ||
            k == "tab_a_zoom"             ||
@@ -71,24 +67,11 @@ bool is_view_state_key(const std::string& k) {
            k == "follow"                 ||
            k == "active_markers_view"    ||
            k == "playback_speed"         ||
+           k == "font_size"              ||
            k == "tab_a_trim_begin"       ||
            k == "tab_a_trim_end"         ||
            k == "tab_b_trim_begin"       ||
            k == "tab_b_trim_end";
-}
-
-// Strict whole-token double parse for the font_size commit branch: the
-// entire value must be one finite number, same tolerance as the .settings
-// loader's parser.
-bool parse_double_full_token(const std::string& s, double& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const double v = std::strtod(s.c_str(), &end);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (!std::isfinite(v)) return false;
-    out = v;
-    return true;
 }
 
 } // namespace
@@ -135,39 +118,7 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // 3b. font_size — the one GUI-kind key settable through this editor
-    // (it has no dedicated gesture, unlike the view-state keys above).
-    // Strict whole-token double, finite, 6..72 inclusive. On success the
-    // change routes through GuiPaintHandler::on_resize — the same full
-    // geometry-and-cache rebuild a window resize performs (the next redraw
-    // re-measures the grid metrics and the cache fingerprints follow the
-    // new strip geometry) — plus a full-window invalidation mirroring the
-    // resize path's full-surface damage. Deliberately NO settings-undo
-    // entry and NO target_render.trigger(): font_size is a display
-    // preference, not engine input and not authoring state, so it neither
-    // enters the undo history nor dirties the target render.
-    if (key == "font_size") {
-        double v = 0.0;
-        if (!parse_double_full_token(value, v) || v < 6.0 || v > 72.0) {
-            app.settings_editor.red = true;
-            viewport.invalidate_timestamp_area();
-            std::fprintf(stderr,
-                "warptempo_gui: settings edit rejected: font_size '%s' "
-                "must be a number in [6, 72]\n", value.c_str());
-            return;
-        }
-        app.font_size = v;
-        set_gui_font_size_pt(v);
-        std::fprintf(stderr,
-            "warptempo_gui: setting applied: %s=%s\n",
-            key.c_str(), value.c_str());
-        viewport.invalidate_all();
-        text_editor::deactivate(app.settings_editor);
-        paint_handler.on_resize(app.width, app.height);
-        return;
-    }
-
-    // 3c. Canonical engine-key write. Reject any key that is not in the
+    // 3b. Canonical engine-key write. Reject any key that is not in the
     // canonical engine set; validate the value through the same helper
     // the file-load deserializer uses. Capture-before-mutate so the
     // snapshot on the undo stack reflects the pre-edit settings.
@@ -259,18 +210,12 @@ void GuiSettingsEditor::autocomplete_value() {
     if (!trim_ws(pending.substr(eq + 1)).empty()) return;
 
     const std::string key = trim_ws(pending.substr(0, eq));
-    std::optional<std::string> cur;
-    if (key == "font_size") {
-        // GUI-kind key with an editor commit route, so Tab recalls its
-        // current value like the engine keys. %g matches the writer's
-        // serialization (11 stays `11`, 10.5 stays `10.5`).
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%g", app.font_size);
-        cur = std::string(buf);
-    } else {
-        cur = format_engine_setting_value(app.engine_settings, key);
-    }
-    if (!cur) return;  // not a canonical engine key (trim / view-state / unknown)
+    std::optional<std::string> cur =
+        format_engine_setting_value(app.engine_settings, key);
+    if (!cur) return;  // not a canonical engine key (trim / view-state /
+                       // font_size / unknown are not recallable — font_size's
+                       // commit route now red-flashes, so recalling it would
+                       // be a trap)
 
     // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The
     // prefix is the typed text up to and including the first `=`, kept

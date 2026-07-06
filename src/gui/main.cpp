@@ -499,9 +499,10 @@ int main(int argc, char** argv) {
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
                                   viewport, render_cache);
-    // Paint handler constructed before file_loader and settings_editor:
-    // both apply font_size changes through its on_resize (the shared
-    // geometry-and-cache rebuild path).
+    // Paint handler constructed before file_loader, which applies font_size
+    // changes through its on_resize (the shared geometry-and-cache rebuild
+    // path). The font_size hotkey uses the input handler's own paint_handler
+    // ref for the same rebuild.
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
                                   flag_cache, waveform_worker, gui);
     // file_loader's clear sites call target_render.cancel_for_load(),
@@ -529,7 +530,7 @@ int main(int argc, char** argv) {
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
-                                      target_render, paint_handler);
+                                      target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),
