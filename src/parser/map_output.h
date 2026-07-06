@@ -17,14 +17,15 @@ std::expected<void, std::string> write_warp_frame_map(
     const std::string& path, const std::vector<WarpFrameMapSegment>& segs);
 
 // Serialize a tempo map to the canonical .miditempomap text form: one
-// "target_time_sec multiplier" line per entry at fixed 16-digit precision.
-// Fixed sixteen decimals, not seventeen significant digits, deliberately:
-// this is a consumer export for external non-C++ tooling, so plain decimal
-// text with no scientific notation is the priority, and it is not an engine
-// input, so the exact-IEEE round-trip requirement of the two engine
-// artifacts (.warpframemap / .phaseresetframemap) does not apply; sixteen
-// decimals exceed any MIDI tempo consumer's resolution by orders of
-// magnitude.
+// "target_time_sec multiplier" line per entry at up to seventeen significant
+// digits, the same serialization as the two sibling writers, round-tripping
+// an IEEE double exactly. The midi map is a consumer export for DAW hosts,
+// not an engine input, so exact round-trip is not required of it, but the
+// serialization aligns with the sibling artifact writers; the consumers
+// (verified in Ableton Live and REAPER) parse the values and round to their
+// own tempo resolution, and the default float format's scientific notation
+// for extreme values is accepted by standard float parsing on the consumer
+// side.
 std::expected<void, std::string> write_midi_tempo_map(
     const std::string& path, const std::vector<MidiTempoMapEntry>& entries);
 

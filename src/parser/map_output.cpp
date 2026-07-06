@@ -27,7 +27,7 @@ std::expected<void, std::string> write_midi_tempo_map(
     if (!of) {
         return std::unexpected("could not write miditempomap '" + path + "'");
     }
-    of << std::fixed << std::setprecision(16);
+    of << std::setprecision(17);
     for (const auto& e : entries) {
         of << e.target_time_sec << " " << e.multiplier << "\n";
     }
