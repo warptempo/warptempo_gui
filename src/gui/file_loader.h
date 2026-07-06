@@ -32,6 +32,10 @@ struct GuiFileLoader {
     GuiWaveformWorker& waveform_worker;
     Viewport&          viewport;
     GuiTargetRender&   target_render;
+    // Loading a source can change app.font_size; the load applies it
+    // through GuiPaintHandler::on_resize, the same geometry-and-cache
+    // rebuild path a window resize takes.
+    GuiPaintHandler&   paint_handler;
 
     GuiFileLoader(AppState&          app_,
                   GuiAudio&          audio_,
@@ -42,7 +46,8 @@ struct GuiFileLoader {
                   FlagCache&         flag_cache_,
                   GuiWaveformWorker& waveform_worker_,
                   Viewport&          viewport_,
-                  GuiTargetRender&   target_render_)
+                  GuiTargetRender&   target_render_,
+                  GuiPaintHandler&   paint_handler_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -52,7 +57,8 @@ struct GuiFileLoader {
           flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),
           viewport(viewport_),
-          target_render(target_render_) {}
+          target_render(target_render_),
+          paint_handler(paint_handler_) {}
 
     ~GuiFileLoader();
 

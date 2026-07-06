@@ -22,9 +22,10 @@ namespace perf_counters {
 // render.h so the iter/BPM popups in main.cpp and the stem blit in
 // paint_handler.cpp can reference the same values.
 
-// kPlayheadHalfPx is the half-width of the inverted-triangle playhead asset
-// (19×10, tip at column 9); it now lives in render.h as a single inline
-// constexpr shared by this TU's cull and main.cpp's invalidation.
+// playhead_half_px() is the half-width (H - 1) of the code-generated
+// inverted-triangle playhead mask (2H-1 wide, tip at column H-1); it lives
+// in render.h as a single inline accessor shared by this TU's cull and
+// main.cpp's invalidation.
 
 namespace {
 
@@ -385,7 +386,6 @@ void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     cairo_surface_t* triangle_surface,
                      bool draw_triangle,
                      cairo_surface_t* ink_plate) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -396,8 +396,8 @@ void render_playhead(cairo_t* cr,
     // to the area's horizontal span. This keeps the playhead's visual
     // center aligned with its true frame position rather than snapping
     // it inward at the rightmost samples.
-    if (playhead_pixel_x < -static_cast<double>(kPlayheadHalfPx)) return;
-    if (playhead_pixel_x > static_cast<double>(area.w - 1 + kPlayheadHalfPx)) return;
+    if (playhead_pixel_x < -static_cast<double>(playhead_half_px())) return;
+    if (playhead_pixel_x > static_cast<double>(area.w - 1 + playhead_half_px())) return;
 
     const double col  = std::floor(playhead_pixel_x + 0.5);
     const double x_px = area.x + col + 0.5;
@@ -424,22 +424,25 @@ void render_playhead(cairo_t* cr,
         }
     }
 
-    // Inverted-triangle indicator: stamped from a hand-authored PNG mask so
-    // every pixel is explicit (no rasterizer ambiguity). Asset is 19x10 with
-    // the tip at column index 9 (image-local); integer division places that
-    // tip column at `area.x + col`. The triangle now sits INSIDE the top
-    // waveform inset band (kWaveformInsetPx tall, equal to the asset height):
+    // Inverted-triangle indicator: stamped from the code-generated A8 mask
+    // (playhead_triangle_mask()) so every pixel is explicit — alpha is
+    // strictly 0 or 255, no rasterizer ambiguity. The mask is 2H-1 x H
+    // (odd width) with the tip at column index H-1 (image-local); integer
+    // division places that tip column at `area.x + col`. The triangle sits
+    // INSIDE the top waveform inset band (waveform_inset_px() tall, equal to
+    // the mask height by construction — both are playhead_triangle_h_px()):
     // top row at area.y, tip (bottom row) at the first drawn sample row. The
-    // samples are inset by exactly the asset height in
+    // samples are inset by exactly the mask height in
     // render_waveform_to_cache_surface, so the triangle's band and the
     // sample-free band coincide. Skipped for the scanner call
     // (draw_triangle=false): the triangle belongs to the cursor exclusively
     // under the split-playhead model. The scanner line therefore reads as
-    // running ~kWaveformInsetPx longer than the cursor's, because the cursor's
-    // top band is visually occupied by the triangle while the scanner's is a
-    // bare line — both lines actually span the identical full area height; this
-    // is expected, not a defect.
-    if (draw_triangle && triangle_surface) {
+    // running ~waveform_inset_px() longer than the cursor's, because the
+    // cursor's top band is visually occupied by the triangle while the
+    // scanner's is a bare line — both lines actually span the identical full
+    // area height; this is expected, not a defect.
+    if (draw_triangle) {
+        cairo_surface_t* triangle_surface = playhead_triangle_mask();
         const int img_w = cairo_image_surface_get_width(triangle_surface);
         const int img_h = cairo_image_surface_get_height(triangle_surface);
         const double dst_x = static_cast<double>(area.x + col - img_w / 2);
@@ -557,7 +560,7 @@ void render_trim_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagPadXPx;
+    const double hl_pad = flag_pad_x_px();
 
     // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
     // iterate_visible_flags_impl does for the lower row, one row higher. The
@@ -657,13 +660,13 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // The cursor (step 5) and the selection highlight (step 4) span exactly the
     // glyph ink band (ascent-to-descent), no vertical padding. The band is
     // recovered from the two cached monospace metrics (exact inverses of how
-    // init_monospace_grid_metrics built them: g_row_baseline_off = kFlagPadYPx
-    // + ascent, g_row_h = round(font_height + 2*kFlagPadYPx)). The round() on
+    // init_monospace_grid_metrics built them: g_row_baseline_off = flag_pad_y_px()
+    // + ascent, g_row_h = round(font_height + 2*flag_pad_y_px())). The round() on
     // the row height can leak a sub-pixel into the derived descent; that is
     // cosmetically irrelevant here and saves adding a new metric accessor.
     const double bg_h        = static_cast<double>(monospace_row_h());
-    const double ascent      = monospace_row_baseline_offset() - kFlagPadYPx;
-    const double font_height = bg_h - 2.0 * kFlagPadYPx;
+    const double ascent      = monospace_row_baseline_offset() - flag_pad_y_px();
+    const double font_height = bg_h - 2.0 * flag_pad_y_px();
     const double descent     = font_height - ascent;
     const double glyph_top   = s.baseline_y - ascent;
     const double glyph_h     = ascent + descent;
@@ -680,7 +683,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // 1. Solid fill behind the editable region, from the single source of
     //    truth (flag_chip_rect), so the painted chip and the hit rect are the
     //    same rectangle. text_left is the glyph paint x = editable_left -
-    //    hl_pad (the renderers pass anchor_x = text_left + kFlagPadXPx; prefix-
+    //    hl_pad (the renderers pass anchor_x = text_left + flag_pad_x_px(); prefix-
     //    bearing editors have their editable text begin past the prefix, and
     //    the fill still covers exactly the editable glyph run, which is what
     //    the chip rect measures).
@@ -837,11 +840,11 @@ void iterate_visible_flags_impl(
         const double text_left =
             static_cast<double>(top_strip_area.x) + std::round(x_raw);
         // Elide only on genuine overlap: a candidate is dropped only when its
-        // chip left edge (text_left - kFlagPadXPx) would fall left of the
+        // chip left edge (text_left - flag_pad_x_px()) would fall left of the
         // previous chip's right edge. Adjacent chips may share an edge (touch)
         // without being elided — there is no inter-chip gutter. Reintroducing
         // one is a single added term on the right-hand side here.
-        if (text_left < rightmost_right_edge + kFlagPadXPx) {
+        if (text_left < rightmost_right_edge + flag_pad_x_px()) {
             if constexpr (kDebugPerf) perf_counters::flag_elided++;
             continue;
         }
@@ -853,7 +856,7 @@ void iterate_visible_flags_impl(
             static_cast<double>(text.length()) * monospace_advance();
 
         emit(static_cast<int>(i), text_left, baseline_y, text);
-        rightmost_right_edge = text_left + x_advance + kFlagPadXPx;
+        rightmost_right_edge = text_left + x_advance + flag_pad_x_px();
     }
 }
 
@@ -924,7 +927,7 @@ void render_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagPadXPx;
+    const double hl_pad = flag_pad_x_px();
 
     // Collect emit args during the left-to-right iterate pass,
     // then paint the collected list in REVERSE order. The pack rule inside
@@ -996,7 +999,7 @@ void render_one_editor_flag(
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagPadXPx;
+    const double hl_pad = flag_pad_x_px();
 
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
@@ -1156,7 +1159,7 @@ void render_phase_reset_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = kFlagPadXPx;
+    const double hl_pad = flag_pad_x_px();
 
     // Collect-then-reverse-paint, mirroring render_flags. With no
     // per-flag editor every visible flag paints straight into the cache.
@@ -1205,22 +1208,75 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 }
 
 namespace {
+    // Current GUI font size, in points. Set by set_gui_font_size_pt from
+    // the two application points (file load, settings-editor commit); every
+    // derived pixel quantity (text px size, scale factor, scaled pads,
+    // triangle height) reads it through the accessors below.
+    double g_font_size_pt = kDefaultFontSizePt;
     double g_advance = 0.0;
     int    g_row_h            = kRowHFallbackPx;
     double g_row_baseline_off = kRowBaselineOffFallbackPx;
-    bool   g_metrics_initialized = false;
+    // Pixel size the grid metrics were last measured at; negative until the
+    // first measure. init_monospace_grid_metrics re-measures whenever this
+    // differs from the current flag_font_size_px(), so a font_size change
+    // picks up fresh metrics on the next frame.
+    double g_measured_font_px = -1.0;
+    // Cached playhead triangle mask (A8, 2H-1 x H) and the H it was built
+    // at; regenerated by playhead_triangle_mask() when H changes.
+    cairo_surface_t* g_playhead_triangle   = nullptr;
+    int              g_playhead_triangle_h = 0;
 } // namespace
+
+void   set_gui_font_size_pt(double pt) { g_font_size_pt = pt; }
+double gui_font_size_pt()  { return g_font_size_pt; }
+double gui_font_scale()    { return g_font_size_pt / kDefaultFontSizePt; }
+double flag_font_size_px() { return g_font_size_pt * 96.0 / 72.0; }
+
+// Build (or return the cached) playhead triangle mask for the current H.
+// The mask is the exact code equivalent of the retired 19x10 PNG asset,
+// generalized to H: row y (0-based from the top) spans columns y through
+// W-1-y inclusive, so each row is two pixels narrower than the one above,
+// from full width W = 2H-1 down to a single tip pixel at column (W-1)/2.
+// Alpha is strictly 0 or 255 — the A8 buffer is filled directly, no
+// rasterizer, no partial coverage. At scale 1 (H = 10, W = 19) this
+// reproduces the retired asset bit-for-bit.
+cairo_surface_t* playhead_triangle_mask() {
+    const int h = playhead_triangle_h_px();
+    if (g_playhead_triangle && g_playhead_triangle_h == h) {
+        return g_playhead_triangle;
+    }
+    if (g_playhead_triangle) {
+        cairo_surface_destroy(g_playhead_triangle);
+        g_playhead_triangle = nullptr;
+    }
+    const int w = 2 * h - 1;
+    cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    // The surface is created zeroed; only the opaque triangle interior is
+    // written.
+    for (int y = 0; y < h; ++y) {
+        for (int x = y; x <= w - 1 - y; ++x) {
+            data[y * stride + x] = 0xFF;
+        }
+    }
+    cairo_surface_mark_dirty(s);
+    g_playhead_triangle   = s;
+    g_playhead_triangle_h = h;
+    return g_playhead_triangle;
+}
 
 double monospace_advance() { return g_advance; }
 int    monospace_row_h()   { return g_row_h; }
 double monospace_row_baseline_offset() { return g_row_baseline_off; }
 
 void init_monospace_grid_metrics(cairo_t* cr) {
-    if (g_metrics_initialized) return;
+    const double px = flag_font_size_px();
+    if (g_measured_font_px == px) return;
     cairo_save(cr);
     cairo_select_font_face(cr, "monospace",
         CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, kFlagFontSize);
+    cairo_set_font_size(cr, px);
     cairo_text_extents_t ext;
     cairo_text_extents(cr, "M", &ext);
     g_advance = ext.x_advance;
@@ -1228,10 +1284,10 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_font_extents(cr, &fe);
     const double font_height = fe.ascent + fe.descent;
     g_row_h = static_cast<int>(std::nearbyint(
-        font_height + 2.0 * kFlagPadYPx));
-    g_row_baseline_off = kFlagPadYPx + fe.ascent;
+        font_height + 2.0 * flag_pad_y_px()));
+    g_row_baseline_off = flag_pad_y_px() + fe.ascent;
     cairo_restore(cr);
-    g_metrics_initialized = true;
+    g_measured_font_px = px;
 }
 
 double flag_pending_text_left_x(
@@ -1280,5 +1336,5 @@ double flag_pending_text_left_x(
         (ms - static_cast<double>(vp_start)) / samples_per_pixel;
     const double text_left =
         static_cast<double>(top.x) + std::nearbyint(x_raw);
-    return text_left + kFlagPadXPx;
+    return text_left + flag_pad_x_px();
 }

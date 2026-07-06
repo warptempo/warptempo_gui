@@ -79,7 +79,7 @@
 
 namespace {
 
-// kFlagFontSize, kTimestampPadX, and kTabLetterGapPx now live in
+// flag_font_size_px() (render.h), timestamp_pad_x(), and tab_letter_gap_px() now live in
 // paint_handler.h so paint_handler.cpp can reach them; the constants below
 // are paint-handler-independent and stay file-local. (kProgressBarHeight,
 // formerly in this group, was deleted with the load progress bar.)
@@ -112,8 +112,8 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
               == static_cast<size_t>(kZoomTableSize),
               "kZoomMsPerPixel size must match kZoomTableSize");
 
-// kPlayheadHalfPx (half-width of the column invalidated around a playhead
-// position) now lives in render.h as a single shared inline constexpr,
+// playhead_half_px() (half-width of the column invalidated around a playhead
+// position) now lives in render.h as a single shared inline accessor,
 // reached here via the render.h include.
 
 // The BPM-sweep math primitive (BaseTempoScale + compute_base_tempo_scale)
@@ -388,8 +388,8 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::floor(px_x + 0.5));
-    const int x0 = std::max(area.x, col - kPlayheadHalfPx);
-    const int x1 = std::min(area.x + area.w, col + kPlayheadHalfPx + 1);
+    const int x0 = std::max(area.x, col - playhead_half_px());
+    const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead line inside the waveform AND
@@ -499,11 +499,16 @@ int main(int argc, char** argv) {
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
                                   viewport, render_cache);
+    // Paint handler constructed before file_loader and settings_editor:
+    // both apply font_size changes through its on_resize (the shared
+    // geometry-and-cache rebuild path).
+    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
+                                  flag_cache, waveform_worker, gui);
     // file_loader's clear sites call target_render.cancel_for_load(),
     // so it must be constructed after target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, stem_cache,
                               flag_cache, waveform_worker, viewport,
-                              target_render);
+                              target_render, paint_handler);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
@@ -518,15 +523,13 @@ int main(int argc, char** argv) {
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
-                                  flag_cache, waveform_worker, gui);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops);
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
-                                      target_render);
+                                      target_render, paint_handler);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),

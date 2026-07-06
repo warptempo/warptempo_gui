@@ -57,7 +57,6 @@ public:
     int width()  const;
     int height() const;
     int playback_tick_ms() const;
-    cairo_surface_t* playhead_triangle_surface() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
     void set_on_redraw(RedrawCallback cb);
@@ -165,9 +164,6 @@ private:
     // roundtrip, in millihertz. Zero means no output advertised a mode;
     // detect_refresh_rate_ms() then falls back to 60 Hz.
     int  output_refresh_mhz_ = 0;
-
-    // -- Playhead triangle surface (loaded once during init) --
-    cairo_surface_t* playhead_triangle_surface_ = nullptr;
 
     // -- Idle-tick timing --
     int  playback_tick_ms_ = 8;

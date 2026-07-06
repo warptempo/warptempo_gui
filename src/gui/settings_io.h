@@ -14,8 +14,8 @@ struct ViewState;
 // Parsed view-state contents of .settings. Engine-key lines are handled
 // separately by read_engine_settings_from_file; this struct carries only
 // the typed view-state fields (per-tab viewport / zoom / playhead / trim,
-// follow, active_audio_view, active_markers_view, active_tab_view, and
-// playback_speed).
+// follow, active_audio_view, active_markers_view, active_tab_view,
+// playback_speed, and the GUI-kind font_size).
 struct ParsedSettings {
     bool    has_tab_a_vp   = false;
     int64_t tab_a_vp       = 0;
@@ -39,6 +39,11 @@ struct ParsedSettings {
     char    active_tab_view        = 'A';
     bool    has_playback_speed = false;
     float   playback_speed     = 1.0f;
+    // GUI font size in points (NOT an engine key). Absent, malformed, or
+    // out-of-range values leave has_font_size false; the default (11)
+    // applies at the call site.
+    bool    has_font_size      = false;
+    double  font_size          = 11.0;
     // Per-tab trim keys. Absence means unset.
     bool    has_tab_a_trim_begin = false;
     double  tab_a_trim_begin     = 0.0;   // seconds
@@ -182,4 +187,5 @@ bool write_settings_file(
     char active_markers_view,
     char active_tab_view,
     float playback_speed,
+    double font_size,
     const EngineSettings& engine);

@@ -433,6 +433,13 @@ struct AppState {
     bool    playhead_scanner_endpoint_painted = false;
     float   playback_speed          = 1.0f;
 
+    // GUI-wide monospace text size in points (the font_size setting; 6..72,
+    // default 11). A display preference, not engine input and not authoring
+    // state: persisted on Ctrl+S like playback_speed, applied on load and
+    // through the settings editor, and pushed to the renderer's file-scope
+    // state via set_gui_font_size_pt at both application points.
+    double  font_size               = 11.0;
+
     // One-shot stash of the scanner's last painted pixel-x under the
     // OLD viewport, set by viewport-mutating operations during
     // playback. The next pre-paint reads this in place of computing
@@ -990,7 +997,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 // column. The chip glyph ("b"/"e") is drawn hl_pad to the right of the bound's
 // column, so a column-only test misses clicks on the visible chip. The rect
 // mirrors regular-flag hit geometry (flag_chip_rect, the shared chip-rect
-// helper): x = round(text_left), w = round(glyph_advance + 2*kFlagPadXPx),
+// helper): x = round(text_left), w = round(glyph_advance + 2*flag_pad_x_px()),
 // with y/h from the row metrics; the same rect the renderers fill, so paint
 // and hit cannot drift. Tests both mouse_x and mouse_y. Used for upper-row
 // presses; the stem elsewhere still routes through hit_test_trim_boundary.

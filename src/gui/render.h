@@ -77,26 +77,57 @@ inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper wh
 // when that boundary is selected.
 inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
 
+// -- GUI font size ---------------------------------------------------------
+//
+// The single GUI-wide monospace text size is the font_size setting, a plain
+// number of points at the conventional 96 DPI. The current value lives as
+// file-scope state in render.cpp beside the monospace grid metrics; the
+// file-load and settings-editor application points push it through
+// set_gui_font_size_pt. Everything in the two strips scales proportionally
+// via gui_font_scale() = font_size / kDefaultFontSizePt, so at the default
+// (11) every derived quantity equals its former fixed constant exactly.
+inline constexpr double kDefaultFontSizePt = 11.0;
+
+// Set/read the current GUI font size (points). The setter only records the
+// value; the geometry re-measure happens on the next redraw via
+// init_monospace_grid_metrics, and the callers route the cache rebuild
+// through the same path a window resize uses.
+void set_gui_font_size_pt(double pt);
+double gui_font_size_pt();
+
+// Proportional scale factor s = font_size / 11. Exactly 1.0 at the default.
+double gui_font_scale();
+
+// Text pixel size handed to cairo: font_size * 96 / 72, carried as an exact
+// double (points -> pixels at the conventional 96 DPI; warptempo_gui does
+// not support HiDPI). Text is the only thing that renders at fractional
+// sizes — every other scaled quantity below rounds to an integer. At the
+// default this is 11.0 * 96.0 / 72.0, the former kFlagFontSize constant.
+double flag_font_size_px();
+
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
 // truth for their axis — every chip renderer and the hit-rect computation must
-// read these, never a literal.
+// read these, never a literal. Each is the authored value (4 / 2) scaled by
+// gui_font_scale() and rounded with std::nearbyint so it stays an integer:
+// the aliased plus-point-five sharp-edge convention for 1 px strokes and
+// integer-edged rects keeps holding at every size. At scale 1 each equals
+// its authored value by identity (nearbyint(4*1) == 4, nearbyint(2*1) == 2).
 //
-// kFlagPadXPx sets chip WIDTH: the painted fill and the hit rect both span
-// glyph_advance + 2*kFlagPadXPx, and the elision pack uses it as the inter-chip
-// touch threshold.
+// flag_pad_x_px sets chip WIDTH: the painted fill and the hit rect both span
+// glyph_advance + 2*flag_pad_x_px(), and the elision pack uses it as the
+// inter-chip touch threshold.
 //
-// kFlagPadYPx sets chip HEIGHT via the row metric: the row height is
-// font (ascent+descent) + 2*kFlagPadYPx, and the baseline offset is
-// kFlagPadYPx + ascent. Lowered from an effective 4 to 2 here; the old
-// vertical-only kVPadExtraPx remnant (outline-era stroke clearance, obsolete
-// since the migration to solid fills) is gone.
-constexpr double kFlagPadXPx = 4.0;
-constexpr double kFlagPadYPx = 2.0;
+// flag_pad_y_px sets chip HEIGHT via the row metric: the row height is
+// font (ascent+descent) + 2*flag_pad_y_px(), and the baseline offset is
+// flag_pad_y_px() + ascent.
+inline double flag_pad_x_px() { return std::nearbyint(4.0 * gui_font_scale()); }
+inline double flag_pad_y_px() { return std::nearbyint(2.0 * gui_font_scale()); }
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
-// edge. Now 0 — the chip bottom is flush with the waveform area's top edge
+// edge. Stays a compile-time zero under the font_size scaling — zero is
+// scale-invariant. Now 0 — the chip bottom is flush with the waveform area's top edge
 // (flag_chip_bottom_y(area, Lower) returns area.y exactly), so the regular
 // marker stem begins at the chip bottom = area top and runs straight down
 // with no overhang above the area. The constant survives as the lower-row
@@ -110,7 +141,8 @@ constexpr double kFlagBottomLiftPx = 0.0;
 
 // The lower-row component of the stem-cache overhang: the distance from the
 // waveform top up to the regular (lower-row) flag chip's bottom edge. Now 0
-// (defined off kFlagBottomLiftPx, which is 0): the lower-row stem no longer
+// (defined off kFlagBottomLiftPx, which is 0; a compile-time zero is
+// scale-invariant under font_size scaling): the lower-row stem no longer
 // overhangs above the waveform top — it begins at the chip bottom = area top.
 // The full stem-cache overhang is still the TALLER trim value (see
 // stem_cache_overhang_px, which adds one row + gap on top of this), since
@@ -125,7 +157,8 @@ constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 // one place to change it. Now 0 — the two rows of each strip touch, and the
 // waveform-side and outer (window-edge) gaps (both kFlagBottomLiftPx, also 0)
 // vanish, so rows and strips pack tight against each other and the window
-// edges.
+// edges. Stays a compile-time zero under font_size scaling — zero is
+// scale-invariant.
 constexpr double kRowGapPx = 0.0;
 
 // Defensive window floor (a conservative 640x480 minimum). Enforced two ways:
@@ -136,31 +169,53 @@ constexpr double kRowGapPx = 0.0;
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
 
-// Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
-// are confined to [area.y + kWaveformInsetPx, area.y + area.h - kWaveformInsetPx]
-// so the cursor triangle has a clear band to sit in at the top, and the
-// waveform is symmetric about its area center. MUST equal the height of
-// assets/playhead-cursor.png (19x10) — the triangle exactly fills the top band,
-// tip at the first sample row. If the asset height changes, change this to
-// match (and kPlayheadHalfPx for the width; see render.cpp). This is NOT the
-// old strip gap (kFlagBottomLiftPx, now 0) revived — it is a distinct
-// waveform-internal margin that happens to share the value 10 because that is
-// the triangle's height.
-constexpr int kWaveformInsetPx = 10;
+// Height H (px) of the code-generated playhead triangle mask: the authored
+// value 10 scaled by gui_font_scale(), rounded with std::nearbyint, and
+// clamped to at least 2 so the mask always has a tip row below a top row.
+// The mask width is 2*H - 1 (odd by construction, so it centers exactly on
+// the 1 px cursor column). At scale 1 this is exactly 10, and the mask
+// reproduces the retired 19x10 PNG asset bit-for-bit. The half-width and
+// waveform inset below both derive from H, so the three can never drift.
+inline int playhead_triangle_h_px() {
+    const int h = static_cast<int>(std::nearbyint(10.0 * gui_font_scale()));
+    return h < 2 ? 2 : h;
+}
 
-// Half-width (px) of the playhead triangle's horizontal footprint; bounds
-// the playhead's off-screen cull and its invalidation strip. Single
-// definition shared by render.cpp (cull) and main.cpp (invalidation), both of
-// which formerly held their own anonymous-namespace copy of the value.
-inline constexpr int kPlayheadHalfPx = 9;
+// The cached cairo A8 mask surface for the playhead triangle (W = 2H-1 by H,
+// binary alpha, row y spanning columns y..W-1-y). Owned by render.cpp
+// file-scope state beside the grid metrics; regenerated when H changes.
+// Never null.
+cairo_surface_t* playhead_triangle_mask();
+
+// Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
+// are confined to [area.y + waveform_inset_px(), area.y + area.h -
+// waveform_inset_px()] so the cursor triangle has a clear band to sit in at
+// the top, and the waveform is symmetric about its area center. Equal to the
+// triangle mask height BY CONSTRUCTION (both are playhead_triangle_h_px()),
+// so the triangle exactly fills the top band, tip at the first sample row,
+// at every font_size. At scale 1 it is 10, identical to the former constant.
+// This is NOT the old strip gap (kFlagBottomLiftPx, now 0) revived — it is a
+// distinct waveform-internal margin that shares the triangle's height
+// because that is the invariant it protects.
+inline int waveform_inset_px() { return playhead_triangle_h_px(); }
+
+// Half-width (px) of the playhead triangle's horizontal footprint, H - 1
+// (the mask is 2H-1 wide, centered on the cursor column); bounds the
+// playhead's off-screen cull and its invalidation strip. Single definition
+// shared by render.cpp (cull) and main.cpp (invalidation). At scale 1 it is
+// 9, identical to the former constant.
+inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
-// offset (Liberation Mono 11pt). on_resize can fire before the first redraw
-// measures the real font; these seed the geometry so it is sane (never a
-// negative waveform) until init_monospace_grid_metrics overwrites them.
+// offset (Liberation Mono at the DEFAULT 11 pt — these stay compile-time and
+// assume the default font size; they only seed geometry before the first
+// measure and are overwritten immediately). on_resize can fire before the
+// first redraw measures the real font; these seed the geometry so it is sane
+// (never a negative waveform) until init_monospace_grid_metrics overwrites
+// them. The 2.0 term is the authored flag_pad_y_px value at scale 1.
 constexpr int    kRowHFallbackPx       = 22;
 constexpr double kRowBaselineOffFallbackPx =
-    kFlagPadYPx + 14.0;
+    2.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
@@ -214,7 +269,7 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // Inputs:
 //   text_left   - glyph paint x, already snapped to the marker's integer pixel
 //                 column by the caller. Chip left edge = round(text_left); the
-//                 kFlagPadXPx left inner pad is folded into where the caller
+//                 flag_pad_x_px() left inner pad is folded into where the caller
 //                 places text_left vs. the glyph origin (see consumers).
 //   glyph_count - number of glyphs in the chip's text (== text.length() for the
 //                 ASCII chip strings). Width = round(count*advance + 2*pad).
@@ -228,7 +283,7 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // recomputes any edge.
 inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
                               double baseline_y) {
-    const double pad = kFlagPadXPx;
+    const double pad = flag_pad_x_px();
     const double advance =
         static_cast<double>(glyph_count) * monospace_advance();
     GuiRect r;
@@ -253,13 +308,9 @@ inline int stem_cache_overhang_px() {
          + static_cast<int>(kRowGapPx);
 }
 
-// Editor pixel size for the flag-payload editor, iter popup, and BPM
-// popup. Computed as 11 pt at 96 DPI (the conventional Linux default
-// at non-HiDPI). warptempo_gui does not currently support HiDPI; this is
-// a fixed pixel value rather than a runtime pt->px conversion. The
-// literal computation form makes the pt origin self-documenting --
-// the compiler folds it to a constant at compile time.
-constexpr double kFlagFontSize = 11.0 * 96.0 / 72.0;
+// The former kFlagFontSize constant (11.0 * 96.0 / 72.0) is now the runtime
+// accessor flag_font_size_px() declared above — same pt->px arithmetic,
+// driven by the font_size setting instead of a fixed 11.
 
 // Editor text-box primitive. Draws the full editable-text-box
 // anatomy shared by the flag-payload editor (top strip) and the settings
@@ -291,7 +342,7 @@ struct EditorTextBox {
     double               baseline_y      = 0.0;
     std::string          prefix;            // optional; "" = none
     std::string          text;              // editable content
-    double               hl_pad           = kFlagPadXPx;
+    double               hl_pad           = flag_pad_x_px();
     GuiColor             fill             = kMarker;
     GuiColor             text_color       = kText;
     bool                 has_selection    = false;
@@ -342,10 +393,10 @@ void render_waveform(cairo_t* cr,
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.
-// `triangle_surface` is the pre-loaded playhead-triangle indicator (loaded by
-// GuiPlatform); it's stamped above the stem via cairo_mask_surface, tinted with
-// `color`. May be nullptr — in that case the indicator is skipped. The
-// triangle belongs to the cursor exclusively under the split-playhead
+// The inverted-triangle indicator comes from the code-generated mask
+// (playhead_triangle_mask(), cached in this module's file-scope state);
+// it's stamped above the stem via cairo_mask_surface, tinted with `color`.
+// The triangle belongs to the cursor exclusively under the split-playhead
 // model; pass `draw_triangle = false` for the scanner call so only the
 // vertical line is drawn.
 //
@@ -362,7 +413,6 @@ void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     cairo_surface_t* triangle_surface,
                      bool draw_triangle = true,
                      cairo_surface_t* ink_plate = nullptr);
 
@@ -597,31 +647,33 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
-// Per-character pixel advance for the monospace font at kFlagFontSize.
-// Measured once at startup via init_monospace_grid_metrics(); returns
-// 0 if not yet measured. Used by click-to-position-cursor in the
+// Per-character pixel advance for the monospace font at flag_font_size_px().
+// Measured via init_monospace_grid_metrics(); returns 0 if not yet
+// measured. Used by click-to-position-cursor in the
 // editor (input_handler.cpp -> flag_editor.cpp).
 double monospace_advance();
 
 // Fixed-pixel row height for the strip grid, measured from cairo_font_extents
-// (ascent + descent) at kFlagFontSize plus 2*kFlagPadYPx.
+// (ascent + descent) at flag_font_size_px() plus 2*flag_pad_y_px().
 // Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
 // real font. The vertical twin of monospace_advance(); consumed by the
 // strip/row geometry helpers (which have no cairo context of their own).
 int monospace_row_h();
 
-// Baseline offset from a row rect's top edge: kFlagPadYPx
+// Baseline offset from a row rect's top edge: flag_pad_y_px()
 // + font ascent. baseline_y = row.y + monospace_row_baseline_offset() centers
 // the text in the row the same way the flag chip sits in the top strip.
 double monospace_row_baseline_offset();
 
-// Measure and cache the advance width. Idempotent. Called once at
-// GUI startup after the cairo context exists. The supplied cairo_t*
-// is used only for measurement; the font state is restored on return.
+// Measure and cache the advance width and row metrics. Runs at the top of
+// every redraw; no-ops while the pixel size it last measured equals the
+// current flag_font_size_px(), and re-measures on the first frame after a
+// font_size change. The supplied cairo_t* is used only for measurement;
+// the font state is restored on return.
 void init_monospace_grid_metrics(cairo_t* cr);
 
 // Returns the on-screen x where the given marker's flag pending text
-// starts, in pixels. Includes the kFlagPadXPx left inner pad so
+// starts, in pixels. Includes the flag_pad_x_px() left inner pad so
 // the returned value matches where pending text actually paints
 // (cairo_move_to(cr, e.text_left + hl_pad, ...) at render.cpp:620).
 // Returns -1.0 if the marker is not currently visible in the

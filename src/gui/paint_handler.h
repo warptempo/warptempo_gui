@@ -31,8 +31,10 @@ class GuiWaveformWorker;
 //     popup_eligible_marker (the eligibility check is inlined as
 //     `tempo_inherits || !label_ref.empty()` at each hover-popup paint
 //     site). Both omitted to avoid dead weight.
-//   - GuiPlatform& is added because paint calls gui.playhead_triangle_surface()
-//     for the playhead's triangle indicator.
+//   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
+//     for gui.invalidate_region calls. The playhead triangle mask now lives
+//     in render.cpp file-scope state (playhead_triangle_mask()), not on
+//     GuiPlatform.
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
@@ -41,20 +43,28 @@ class GuiWaveformWorker;
 // Hoisted from main.cpp's anonymous namespace so paint_handler.cpp
 // can reach them. Other constants (kMarkerHitHalfPx, kZoomMsPerPixel)
 // are paint-handler-independent and stay in main.cpp's anonymous namespace;
-// kPlayheadHalfPx now lives in render.h.
+// playhead_half_px() now lives in render.h.
 //
 // kProgressBarHeight was deleted with the load progress bar (replaced by a
 // bottom-left "loading..." status during app.loading, painted directly in
 // GuiPaintHandler::on_redraw's loading branch).
-// kFlagFontSize lives in render.h so render.cpp can reach it without
+// flag_font_size_px() lives in render.h so render.cpp can reach it without
 // pulling paint_handler.h into the lower-layer include graph.
 
 // Timestamp text layout (bottom-left of the status strip). The
 // window-bottom baseline anchor (kTimestampBaselineFromBottom) was replaced
 // with row-relative baselines derived from bottom_lower_row_area /
-// bottom_upper_row_area.
-constexpr int      kTimestampPadX            = 8;
-constexpr double   kTabLetterGapPx           = 10.0;
+// bottom_upper_row_area. Both scale proportionally with the font_size
+// setting: the authored value (8 / 10) times gui_font_scale(), rounded with
+// std::nearbyint so they stay integers and the sharp-edge conventions keep
+// holding. At scale 1 each equals its authored value by identity
+// (nearbyint(8*1) == 8, nearbyint(10*1) == 10).
+inline int timestamp_pad_x() {
+    return static_cast<int>(std::nearbyint(8.0 * gui_font_scale()));
+}
+inline double tab_letter_gap_px() {
+    return std::nearbyint(10.0 * gui_font_scale());
+}
 
 // Single source for the two bottom-strip editor prefixes. The paint
 // sites (render_bottom_strip_editor calls) and the mouse drag-to-select

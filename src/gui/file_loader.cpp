@@ -150,6 +150,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Reset playback bookkeeping; the device is brought up after markers
     // are parsed so the initial playhead has the final trim-begin.
     app.playback_speed = 1.0f;
+    // Mirror for font_size: reset to the default before the .settings parse
+    // below, which overwrites it when the key is present (absent key means
+    // 11.0). Applied to the renderer after the parse, beside set_speed.
+    app.font_size      = 11.0;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
     // <basename>.phaseresetmarkers, and <basename>.settings if missing.
@@ -317,6 +321,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.active_markers_view = ps.has_active_markers_view ? ps.active_markers_view : 'W';
         app.active_tab_view     = ps.has_active_tab_view     ? ps.active_tab_view     : 'A';
         app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
+        // GUI font size, same application shape as playback_speed: absent
+        // key means the default. Loading a source can therefore change the
+        // GUI text size mid-session — the same recorded behavior class as
+        // playback_speed (see the font_size descriptor in settings_io.cpp).
+        app.font_size      = ps.has_font_size ? ps.font_size : 11.0;
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.
         if (ps.has_tab_a_trim_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_seconds = ps.tab_a_trim_begin; }
@@ -387,6 +396,17 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // persisted rate rather than the engine's default 1.0.
     playback.set_speed(app.playback_speed);
 
+    // Push the loaded font size to the renderer's file-scope state and
+    // route the geometry consequences through the same rebuild path a
+    // window resize performs: on_resize re-clamps zoom/viewport against
+    // the (possibly changed) strip geometry, the next redraw re-measures
+    // the grid metrics, and the cache fingerprints (area dims keyed off
+    // monospace_row_h()) rebuild the waveform/stem/flag surfaces. The
+    // full-window invalidation at the end of this load supplies the
+    // damage, mirroring the resize path's full-surface damage.
+    set_gui_font_size_pt(app.font_size);
+    paint_handler.on_resize(app.width, app.height);
+
     const double load_ms =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::fprintf(stderr,
@@ -449,6 +469,11 @@ void GuiFileLoader::revert_to_blank() {
     app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_sample = 0;
     app.playback_speed          = 1.0f;
+    // Mirror for font_size: back to the default on revert, pushed to the
+    // renderer immediately (the invalidate_all below supplies the damage;
+    // the blank state has no caches to rebuild).
+    app.font_size               = 11.0;
+    set_gui_font_size_pt(app.font_size);
 
     app.warpmarkers.clear();
     app.phaseresetmarkers.clear();

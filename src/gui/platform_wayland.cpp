@@ -1,6 +1,5 @@
 #include "platform_wayland.h"
 
-#include "playhead_cursor_data.h"
 #include "render.h"   // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -81,20 +80,6 @@
 // ---------------------------------------------------------------------------
 
 namespace {
-
-struct PngMemReader {
-    const unsigned char* data;
-    unsigned int         len;
-    unsigned int         pos;
-};
-
-cairo_status_t png_mem_read(void* closure, unsigned char* out, unsigned int n) {
-    auto* r = static_cast<PngMemReader*>(closure);
-    if (r->pos + n > r->len) return CAIRO_STATUS_READ_ERROR;
-    std::memcpy(out, r->data + r->pos, n);
-    r->pos += n;
-    return CAIRO_STATUS_SUCCESS;
-}
 
 uint64_t monotonic_us() {
     struct timespec ts;
@@ -582,20 +567,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     width_  = width;
     height_ = height;
 
-    // Embedded playhead triangle PNG, decoded once. The cairo_t* the GUI
-    // hands out for compositing the cursor onto the draw target is built
-    // from this surface.
-    PngMemReader reader{playhead_cursor_png, playhead_cursor_png_len, 0};
-    playhead_triangle_surface_ = cairo_image_surface_create_from_png_stream(
-        png_mem_read, &reader);
-    const cairo_status_t st = cairo_surface_status(playhead_triangle_surface_);
-    if (st != CAIRO_STATUS_SUCCESS) {
-        std::fprintf(stderr,
-            "warptempo_gui: failed to decode embedded playhead triangle (%s)\n",
-            cairo_status_to_string(st));
-        return false;
-    }
-
     // Build the surface chain: wl_surface → xdg_surface → xdg_toplevel.
     wl_surface_   = wl_compositor_create_surface(wl_compositor_);
     xdg_surface_  = xdg_wm_base_get_xdg_surface(xdg_wm_base_, wl_surface_);
@@ -790,11 +761,6 @@ void GuiPlatform::destroy_wayland_state() {
     }
 
     destroy_shm_pool();
-
-    if (playhead_triangle_surface_) {
-        cairo_surface_destroy(playhead_triangle_surface_);
-        playhead_triangle_surface_ = nullptr;
-    }
 
     if (xdg_decoration_manager_) {
         zxdg_decoration_manager_v1_destroy(xdg_decoration_manager_);
@@ -2071,6 +2037,3 @@ void GuiPlatform::set_waveform_worker_completion_fd(int fd, std::function<void()
 int GuiPlatform::width()  const { return width_; }
 int GuiPlatform::height() const { return height_; }
 int GuiPlatform::playback_tick_ms() const { return playback_tick_ms_; }
-cairo_surface_t* GuiPlatform::playhead_triangle_surface() const {
-    return playhead_triangle_surface_;
-}

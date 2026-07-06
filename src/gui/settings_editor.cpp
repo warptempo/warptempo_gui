@@ -1,5 +1,7 @@
 #include "settings_editor.h"
 
+#include "paint_handler.h"
+#include "render.h"
 #include "render_output_naming.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -9,7 +11,10 @@
 #include "undo.h"
 
 #include <cctype>
+#include <cerrno>
+#include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -72,6 +77,20 @@ bool is_view_state_key(const std::string& k) {
            k == "tab_b_trim_end";
 }
 
+// Strict whole-token double parse for the font_size commit branch: the
+// entire value must be one finite number, same tolerance as the .settings
+// loader's parser.
+bool parse_double_full_token(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    errno = 0;
+    char* end = nullptr;
+    const double v = std::strtod(s.c_str(), &end);
+    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
+    if (!std::isfinite(v)) return false;
+    out = v;
+    return true;
+}
+
 } // namespace
 
 void GuiSettingsEditor::commit() {
@@ -113,6 +132,38 @@ void GuiSettingsEditor::commit() {
         std::fprintf(stderr,
             "warptempo_gui: settings edit rejected: %s has a dedicated "
             "gesture, not settable here\n", key.c_str());
+        return;
+    }
+
+    // 3b. font_size — the one GUI-kind key settable through this editor
+    // (it has no dedicated gesture, unlike the view-state keys above).
+    // Strict whole-token double, finite, 6..72 inclusive. On success the
+    // change routes through GuiPaintHandler::on_resize — the same full
+    // geometry-and-cache rebuild a window resize performs (the next redraw
+    // re-measures the grid metrics and the cache fingerprints follow the
+    // new strip geometry) — plus a full-window invalidation mirroring the
+    // resize path's full-surface damage. Deliberately NO settings-undo
+    // entry and NO target_render.trigger(): font_size is a display
+    // preference, not engine input and not authoring state, so it neither
+    // enters the undo history nor dirties the target render.
+    if (key == "font_size") {
+        double v = 0.0;
+        if (!parse_double_full_token(value, v) || v < 6.0 || v > 72.0) {
+            app.settings_editor.red = true;
+            viewport.invalidate_timestamp_area();
+            std::fprintf(stderr,
+                "warptempo_gui: settings edit rejected: font_size '%s' "
+                "must be a number in [6, 72]\n", value.c_str());
+            return;
+        }
+        app.font_size = v;
+        set_gui_font_size_pt(v);
+        std::fprintf(stderr,
+            "warptempo_gui: setting applied: %s=%s\n",
+            key.c_str(), value.c_str());
+        viewport.invalidate_all();
+        text_editor::deactivate(app.settings_editor);
+        paint_handler.on_resize(app.width, app.height);
         return;
     }
 
@@ -208,8 +259,17 @@ void GuiSettingsEditor::autocomplete_value() {
     if (!trim_ws(pending.substr(eq + 1)).empty()) return;
 
     const std::string key = trim_ws(pending.substr(0, eq));
-    const std::optional<std::string> cur =
-        format_engine_setting_value(app.engine_settings, key);
+    std::optional<std::string> cur;
+    if (key == "font_size") {
+        // GUI-kind key with an editor commit route, so Tab recalls its
+        // current value like the engine keys. %g matches the writer's
+        // serialization (11 stays `11`, 10.5 stays `10.5`).
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%g", app.font_size);
+        cur = std::string(buf);
+    } else {
+        cur = format_engine_setting_value(app.engine_settings, key);
+    }
     if (!cur) return;  // not a canonical engine key (trim / view-state / unknown)
 
     // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The

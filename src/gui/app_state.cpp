@@ -23,7 +23,7 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
 }
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. The kMarkerHitHalfPx / kFlagFontSize
+// references are now explicit arguments. The kMarkerHitHalfPx / flag_font_size_px()
 // constants resolve through app_state.h / paint_handler.h respectively.
 
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
@@ -192,7 +192,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // Per-bound chip rect, computed exactly as render_trim_flags paints it via
     // the shared flag_chip_rect helper: text_left at the bound's integer pixel
     // column (top.x + round(x_raw)), the rect spanning
-    // [round(text_left), round(text_left) + round(advance + 2*kFlagPadXPx)] —
+    // [round(text_left), round(text_left) + round(advance + 2*flag_pad_x_px())] —
     // the painted chip's left edge through its right pad, the same horizontal
     // geometry compute_flag_hit_rects derives for regular flags. The vertical band (top_upper_row_area) was checked above, so only
     // horizontal containment is tested here. Returns the bound's distance from
@@ -289,12 +289,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     if (app.render_view.enabled) {
         rects = compute_flag_hit_rects(
             top, app.render_view.warp_markers,
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             nullptr, drag_overlay);
     } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             top, app.phaseresetmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             tmap_arg, drag_overlay);
     } else {
         // Warp hit-rects must track the bracketed flag width so
@@ -302,7 +302,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         // only in warp view (not render view, not 'P').
         rects = compute_flag_hit_rects(
             top, app.warpmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
+            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);
     }

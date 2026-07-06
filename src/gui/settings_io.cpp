@@ -86,6 +86,7 @@ enum class SettingKind {
     ActiveTabViewChar,
     PlaybackSpeedFloat,
     FollowFlag,
+    FontSizePt,
     TrimBegin_A,
     TrimEnd_A,
     TrimBegin_B,
@@ -129,6 +130,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
+    // GUI-kind key, NOT an engine key: the single GUI-wide monospace text
+    // size in points (pixels = points * 4/3). Valid range 6..72. Like
+    // playback_speed, loading a source applies the file's value, so a load
+    // can change the GUI text size mid-session.
+    { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
@@ -385,6 +391,23 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
                 out.has_playback_speed = true;
                 out.playback_speed = v;
             }
+        } else if (key == "font_size") {
+            // GUI font size in points, strict whole-token double, 6..72
+            // inclusive (parse_double_full already rejects non-finite).
+            // Unlike the sibling `follow` branch, a bad value gets one
+            // diagnostic line rather than a silent skip: font_size is
+            // range-constrained and hand-editable, and silently snapping a
+            // typo to the default would be silently-correcting.
+            double v;
+            if (parse_double_full(value, v) && v >= 6.0 && v <= 72.0) {
+                out.has_font_size = true;
+                out.font_size = v;
+            } else {
+                std::fprintf(stderr,
+                    "warptempo_gui: ignoring font_size='%s' in '%s' "
+                    "(not a number in [6, 72]); default 11 applies\n",
+                    value.c_str(), path.c_str());
+            }
         } else if (key == "tab_a_read_only") {
             bool v;
             if (parse_bool_strict(value, v)) {
@@ -604,6 +627,7 @@ bool write_settings_file(
     char active_markers_view,
     char active_tab_view,
     float playback_speed,
+    double font_size,
     const EngineSettings& engine) {
     std::string data;
     char buf[64];
@@ -644,6 +668,15 @@ bool write_settings_file(
                 data += desc.key;
                 data += '=';
                 data += follow ? "true" : "false";
+                data += '\n';
+                break;
+            case SettingKind::FontSizePt:
+                // %g so the default round-trips as `11` (matching the
+                // template) and a fractional value as e.g. `10.5`.
+                std::snprintf(buf, sizeof(buf), "%g", font_size);
+                data += desc.key;
+                data += '=';
+                data += buf;
                 data += '\n';
                 break;
             case SettingKind::TrimBegin_A:

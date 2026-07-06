@@ -35,14 +35,14 @@ static void render_bottom_strip_editor(cairo_t* cr,
     cairo_select_font_face(cr, "monospace",
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, kFlagFontSize);
+    cairo_set_font_size(cr, flag_font_size_px());
 
     EditorTextBox box;
     box.anchor_x        = anchor_x;
     box.baseline_y      = baseline_y;
     box.prefix          = prefix;
     box.text            = ed.pending;
-    box.hl_pad          = kFlagPadXPx;
+    box.hl_pad          = flag_pad_x_px();
     box.fill            = ed.red ? kAccent : kBackground;
     box.text_color      = kText;
     box.has_selection   = text_editor::has_selection(ed);
@@ -141,7 +141,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
             cr, top_strip,
             app.warpmarkers.markers(),
             vp_start_disp, vp_end_disp, sr,
-            kFlagFontSize,
+            flag_font_size_px(),
             app.selected_markers,
             overlay,
             tmap_disp,
@@ -292,12 +292,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                                                wf_cache.fp_vp_start,
                                                disp_spp);
         render_playhead(cr, area, scan_px, kPlayheadScanner,
-                        gui.playhead_triangle_surface(),
                         /*draw_triangle=*/false,
                         /*ink_plate=*/wf_cache.surface);
     }
     render_playhead(cr, area, px_x, kPlayheadCursor,
-                    gui.playhead_triangle_surface(),
                     /*draw_triangle=*/true,
                     /*ink_plate=*/wf_cache.surface);
 }
@@ -342,17 +340,17 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     if (app.render_view.enabled) {
         dbg_rects = compute_flag_hit_rects(
             top_strip, app.render_view.warp_markers,
-            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
             nullptr, dbg_drag);
     } else if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
             top_strip, app.phaseresetmarkers.markers(),
-            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
             dbg_tmap_arg, dbg_drag);
     } else {
         dbg_rects = compute_flag_hit_rects(
             top_strip, app.warpmarkers.markers(),
-            dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
+            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
             dbg_tmap_arg, dbg_drag,
             app.iteration_mode_enabled);
     }
@@ -457,8 +455,8 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 
         const auto s0 = clock::now();
         text_display::draw_line(
-            cr, static_cast<double>(kTimestampPadX), lower_baseline,
-            assembled, kText, kFlagFontSize);
+            cr, static_cast<double>(timestamp_pad_x()), lower_baseline,
+            assembled, kText, flag_font_size_px());
         const auto s1 = clock::now();
         t_ts_ms =
             std::chrono::duration<double, std::milli>(s1 - s0).count();
@@ -469,21 +467,21 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // Plain tier: the prompt text followed by its response
         // labels, each chained off the measured advance returned
         // by draw_line so no separate measurement pass is needed.
-        const double label_gap = kTabLetterGapPx * 2.0;
-        double cursor_x = static_cast<double>(kTimestampPadX);
+        const double label_gap = tab_letter_gap_px() * 2.0;
+        double cursor_x = static_cast<double>(timestamp_pad_x());
         cursor_x += text_display::draw_line(
             cr, cursor_x, upper_baseline, app.prompt.text,
-            kText, kFlagFontSize);
+            kText, flag_font_size_px());
         cursor_x += label_gap;
         for (const auto& label : app.prompt.response_labels) {
             cursor_x += text_display::draw_line(
                 cr, cursor_x, upper_baseline, label,
-                kText, kFlagFontSize) + label_gap;
+                kText, flag_font_size_px()) + label_gap;
         }
     } else if (!app.queue_progress_text.empty()) {
         text_display::draw_line(
-            cr, static_cast<double>(kTimestampPadX), upper_baseline,
-            app.queue_progress_text, kText, kFlagFontSize);
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            app.queue_progress_text, kText, flag_font_size_px());
     } else if (text_editor::is_active(app.settings_editor)) {
         // Settings prompt overlay: "setting: <pending>"
         // through the shared bottom-strip editor helper. Fill is
@@ -491,7 +489,7 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // inside the helper).
         render_bottom_strip_editor(cr, app.settings_editor,
                                    kSettingsEditorPrefix,
-                                   static_cast<double>(kTimestampPadX),
+                                   static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind ==
@@ -502,7 +500,7 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // flag in the top strip.
         render_bottom_strip_editor(cr, app.top_flag_editor,
                                    kBpmEditorPrefix,
-                                   static_cast<double>(kTimestampPadX),
+                                   static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
     } else if (app.hover_popup.visible) {
         // The floating hover popup paint was deleted but the dwell
@@ -510,8 +508,8 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // upper-row branch. cached_text is the
         // resolved-tempo string from compute_hover_popup_text.
         text_display::draw_line(
-            cr, static_cast<double>(kTimestampPadX), upper_baseline,
-            app.hover_popup.cached_text, kText, kFlagFontSize);
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            app.hover_popup.cached_text, kText, flag_font_size_px());
     }
 
     return t_ts_ms;
@@ -550,8 +548,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const double  upper_baseline =
             upper_row.y + monospace_row_baseline_offset();
         text_display::draw_line(
-            cr, static_cast<double>(kTimestampPadX), upper_baseline,
-            app.queue_progress_text, kText, kFlagFontSize);
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            app.queue_progress_text, kText, flag_font_size_px());
     } else if (audio.total_frames() > 0) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);
