@@ -9,7 +9,6 @@
 #include <vector>
 
 struct GuiTargetRender;
-struct GuiPaintHandler;
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
@@ -17,9 +16,7 @@ struct GuiPaintHandler;
 // on the captured references. clear_hover_popup is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
 // switch_active_tab_view_to is reached through active_views (so do_undo / do_redo
-// can restore the originating A/B tab before applying the marker change);
-// on_resize is reached through paint_handler (so a font_size restore drives
-// the same geometry-and-cache rebuild the settings-editor commit performs).
+// can restore the originating A/B tab before applying the marker change).
 struct Undo {
     AppState&             app;
     Viewport&             viewport;
@@ -27,22 +24,19 @@ struct Undo {
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiActiveViews&       active_views;
     GuiTargetRender&   target_render;
-    GuiPaintHandler&      paint_handler;
 
     Undo(AppState&             app_,
          Viewport&             viewport_,
          Selection&            selection_,
          GuiPlaybackLifecycle& playback_lifecycle_,
          GuiActiveViews&       active_views_,
-         GuiTargetRender&   target_render_,
-         GuiPaintHandler&      paint_handler_)
+         GuiTargetRender&   target_render_)
         : app(app_),
           viewport(viewport_),
           selection(selection_),
           playback_lifecycle(playback_lifecycle_),
           active_views(active_views_),
-          target_render(target_render_),
-          paint_handler(paint_handler_) {}
+          target_render(target_render_) {}
 
     void recompute_dirty();
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last);

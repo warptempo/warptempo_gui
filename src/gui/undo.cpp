@@ -1,8 +1,6 @@
 #include "undo.h"
 
 #include "audio.h"
-#include "paint_handler.h"
-#include "render.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 
@@ -303,22 +301,6 @@ void Undo::do_undo() {
     // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
 
-    // Restore font_size only when it actually changed. font_size rides the
-    // snapshot on every entry, but marker and engine-key entries capture the
-    // font live at push time, so the restore is a no-op for them by
-    // construction — apply unconditionally and every marker undo would eat a
-    // resize-path geometry rebuild. When it does differ (a font_size undo/redo),
-    // run the same trio the settings-editor commit performs: assign, push to the
-    // renderer, full-viewport invalidate, and route the geometry consequences
-    // through on_resize. Safe here with no editor open and in any view — the
-    // trio is self-contained, exactly the commit branch's post-deactivate work.
-    if (entry.settings.font_size != app.font_size) {
-        app.font_size = entry.settings.font_size;
-        set_gui_font_size_pt(app.font_size);
-        viewport.invalidate_all();
-        paint_handler.on_resize(app.width, app.height);
-    }
-
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
@@ -414,22 +396,6 @@ void Undo::do_redo() {
     }
 
     app.engine_settings    = std::move(entry.settings.engine_settings);
-
-    // Restore font_size only when it actually changed. font_size rides the
-    // snapshot on every entry, but marker and engine-key entries capture the
-    // font live at push time, so the restore is a no-op for them by
-    // construction — apply unconditionally and every marker redo would eat a
-    // resize-path geometry rebuild. When it does differ (a font_size undo/redo),
-    // run the same trio the settings-editor commit performs: assign, push to the
-    // renderer, full-viewport invalidate, and route the geometry consequences
-    // through on_resize. Safe here with no editor open and in any view — the
-    // trio is self-contained, exactly the commit branch's post-deactivate work.
-    if (entry.settings.font_size != app.font_size) {
-        app.font_size = entry.settings.font_size;
-        set_gui_font_size_pt(app.font_size);
-        viewport.invalidate_all();
-        paint_handler.on_resize(app.width, app.height);
-    }
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);

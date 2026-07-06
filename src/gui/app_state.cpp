@@ -17,10 +17,8 @@
 SettingsSnapshot capture_current_settings(const AppState& app) {
     SettingsSnapshot s;
     s.engine_settings = app.engine_settings;
-    s.font_size       = app.font_size;
-    // Trim is view state, gesture-owned and excluded from undo/redo history.
-    // Undo entries snapshot the engine settings plus font_size, the one
-    // undoable GUI-kind key; the rest of the view state stays out of history.
+    // Trim is view state, gesture-owned and excluded from undo/redo history;
+    // undo entries snapshot engine settings only.
     return s;
 }
 

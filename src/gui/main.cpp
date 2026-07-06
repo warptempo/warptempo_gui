@@ -512,7 +512,7 @@ int main(int argc, char** argv) {
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
-              target_render, paint_handler);
+              target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle, target_render);
     GuiWarpMarkersOps warpops(app, audio, viewport, selection, undo,
