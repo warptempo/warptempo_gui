@@ -4,8 +4,8 @@
 #include "settings_trim.h"
 
 #include <cstdint>
+#include <expected>
 #include <filesystem>
-#include <optional>
 #include <string>
 
 struct AuthoringSnapshot;
@@ -80,7 +80,8 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out);
 // silently defaulted (fit-file zoom for `zoom`, zero for viewport/
 // playhead); malformed values are silent-skipped. Engine-block lines
 // in the same file are skipped — read_rendersettings_engine_block is
-// the strict reader for that side.
+// the strict reader for that side, returning std::expected rather than
+// tolerating malformed input.
 struct RenderViewState {
     int     zoom_level     = 0;   // Filled with kFitFileLevel by the reader.
     int64_t viewport_start = 0;
@@ -119,12 +120,16 @@ struct RendersettingsAuthoring {
 RendersettingsAuthoring read_rendersettings_authoring(
     const std::filesystem::path& path);
 
-// Strict engine-block reader for `.rendersettings`. Same per-field
-// validator and same stderr line shape as read_engine_settings_from_file.
-// Non-engine lines (the view-state keys and any unknown key) are ignored.
-// Only a duplicate engine key, an invalid engine value, a missing required
-// key, or an unopenable file → nullopt with a stderr line per violation.
-std::optional<EngineSettings> read_rendersettings_engine_block(
+// Strict engine-block reader for `.rendersettings`. Delegates to
+// read_engine_settings_from_file, so it shares that reader's per-field
+// validator and error semantics exactly. Non-engine lines (the view-state
+// keys and any unknown key) are ignored. A duplicate engine key, an
+// invalid engine value, a missing required key, or an unopenable file
+// yields std::unexpected carrying the underlying reader's reason string
+// for the FIRST such violation encountered (the reader does not continue
+// past it). This function prints nothing; it performs no I/O beyond
+// reading `path`. The caller owns surfacing the reason as a diagnostic.
+std::expected<EngineSettings, std::string> read_rendersettings_engine_block(
     const std::filesystem::path& path);
 
 // Full-write of `.rendersettings`: emits the eight canonical engine keys

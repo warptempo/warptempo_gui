@@ -516,14 +516,12 @@ RendersettingsAuthoring read_rendersettings_authoring(
     return out;
 }
 
-std::optional<EngineSettings> read_rendersettings_engine_block(
+std::expected<EngineSettings, std::string> read_rendersettings_engine_block(
         const std::filesystem::path& path) {
     // Identical semantics to read_engine_settings_from_file: canonical
     // engine keys are read, while non-canonical keys are silently skipped.
     // read_rendersettings_view_state is the reader for the view-state side.
-    auto r = read_engine_settings_from_file(path.string());
-    if (!r) return std::nullopt;
-    return *r;
+    return read_engine_settings_from_file(path.string());
 }
 
 bool write_rendersettings(const std::filesystem::path& path,

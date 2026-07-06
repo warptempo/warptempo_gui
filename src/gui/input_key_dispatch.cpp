@@ -23,10 +23,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <expected>
 #include <filesystem>
 #include <limits>
 #include <map>
-#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -542,13 +542,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             cur_e.batch_folder / (cur_e.basename + ".rendersettings");
         const RendersettingsAuthoring authoring =
             read_rendersettings_authoring(sidecar);
-        const std::optional<EngineSettings> commit_engine_settings =
+        const std::expected<EngineSettings, std::string> commit_engine_settings =
             read_rendersettings_engine_block(sidecar);
         if (!commit_engine_settings) {
             std::fprintf(stderr,
                 "warptempo_gui: commit aborted: rendersettings engine "
-                "block invalid or absent at '%s'\n",
-                sidecar.string().c_str());
+                "block read failed for '%s': %s\n",
+                sidecar.string().c_str(),
+                commit_engine_settings.error().c_str());
             return true;
         }
         const bool has_authoring_block =
