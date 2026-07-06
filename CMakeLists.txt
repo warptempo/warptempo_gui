@@ -264,7 +264,7 @@ endif()
 
 # ============================================================
 #  warptempo_engine — engine-only synthesis driver.
-#  Reads the prebuilt source-sibling warpframemap [+ phaseresetframemap]
+#  Reads the prebuilt source-sibling warpframemap + phaseresetframemap
 #  pair (the <source-stem> naming warptempo_parser writes) + source wav and
 #  writes the warped wav by running the PGHI engine directly. No parser
 #  archive: the map readers are header-only (warp_frame_map.h /
