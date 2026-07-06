@@ -192,6 +192,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // active, and so the new render_view.auto_open_batch_at_
     // first_file method handles only the "render-view is off"
     // case.
+    //
+    // Recorded asymmetry: Shift+0..9 playback-speed selection is
+    // deliberately NOT on this allowlist, though the read-only gate below
+    // admits it. Render-view playback is pinned to 1x by toggle_playback's
+    // force_one_x (the audible result must match the rendered warp, not
+    // the warp scaled by an extra factor), so admitting the chord here
+    // would let a press mutate live render playback mid-play and then have
+    // the next Space press silently snap it back to 1x. The chord stays
+    // blocked at this gate while the read-only gate admits it.
     if (app.render_view.enabled && render_view_key_blocked(key, mods)) {
         return;
     }
@@ -208,6 +217,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
     //   - Shift+Left/Right       → playhead-by-samples scrub
+    //   - Shift+0..9             → select playback speed
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom symbol-key alias
