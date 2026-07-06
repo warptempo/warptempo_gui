@@ -144,9 +144,18 @@ int main(int argc, char** argv) {
         markers = std::move(*wmp);
     }
 
-    // --- phase reset markers; empty if the file is absent ---
+    // --- phase reset markers; a missing sidecar is a startup error. The empty
+    // file is the no-resets form and parses to an empty list; the GUI creates
+    // this sidecar on source load, so an absent file is a hard error. ---
     std::vector<PhaseResetMarker> resets;
-    if (std::filesystem::exists(pr_path)) {
+    if (!std::filesystem::exists(pr_path)) {
+        std::fprintf(stderr,
+            "warptempo_cli: missing phase reset markers file '%s' "
+            "(the GUI creates this sidecar on source load)\n",
+            pr_path.c_str());
+        return 1;
+    }
+    {
         auto prp = parse_phaseresetmarkers_file(pr_path);
         if (!prp) {
             std::fprintf(stderr, "warptempo_cli: %s: %s\n",

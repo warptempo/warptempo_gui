@@ -151,10 +151,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // are parsed so the initial playhead has the final trim-begin.
     app.playback_speed = 1.0f;
 
-    // Companion files: discover paths, create <basename>.warpmarkers
-    // and <basename>.settings if missing. Companion file convention is
-    // <source_dir>/<source_basename>.<ext> (sibling, basename-prefixed),
-    // not the legacy hidden `./.warpmarkers` form.
+    // Companion files: discover paths, create <basename>.warpmarkers,
+    // <basename>.phaseresetmarkers, and <basename>.settings if missing.
+    // Companion file convention is <source_dir>/<source_basename>.<ext>
+    // (sibling, basename-prefixed), not the legacy hidden `./.warpmarkers`
+    // form.
     std::filesystem::path apath(path);
     std::filesystem::path parent = apath.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
@@ -177,6 +178,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
                   " - warptempo_gui");
 
     create_if_missing(wm_path, "00:00.000|1.00\n");
+    // The empty file is the canonical blank phase reset sidecar: resets have
+    // no mandatory first marker, so the seed is empty content, unlike warp's
+    // seeded first-marker line.
+    create_if_missing(tm_path, "");
     create_if_missing(set_path, format_default_settings_template(stem));
 
     // Load the markers file. A present-but-malformed sidecar aborts the
@@ -232,26 +237,25 @@ bool GuiFileLoader::load_file(const std::string& path) {
                      app.warpmarkers.markers().size(), wm_path.string().c_str());
     }
 
-    // Load .phaseresetmarkers if present. Missing file is fine — the phase
-    // reset list is just empty; absence is not malformation. A present-but-
-    // malformed sidecar aborts the load: GuiPhaseResetMarkers::load clears
-    // the store before parsing, so continuing would leave an empty store that
-    // an unconditional Ctrl+S save would write over the authored file.
-    // Aborting preserves the on-disk file, the same contract as a corrupt
-    // audio file or invalid engine settings below.
-    if (std::filesystem::exists(tm_path)) {
-        if (auto r = app.phaseresetmarkers.load(tm_path.string()); !r) {
-            std::fprintf(stderr,
-                "warptempo_gui: source load aborted: invalid phase reset "
-                "markers in '%s': %s\n",
-                tm_path.string().c_str(), r.error().c_str());
-            revert_to_blank();
-            return false;
-        } else {
-            std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
-                         app.phaseresetmarkers.markers().size(),
-                         tm_path.string().c_str());
-        }
+    // Load the phase reset markers file. The empty file is the canonical
+    // no-resets form and parses to an empty list; the load-time creation
+    // above guarantees the file is present, so the load is unconditional. A
+    // present-but-malformed sidecar aborts the load: GuiPhaseResetMarkers::load
+    // clears the store before parsing, so a parse failure would leave an empty
+    // in-memory store while the authored file sits on disk, and an unconditional
+    // Ctrl+S save would later overwrite it. Aborting preserves the on-disk file,
+    // the same contract as the warp load above.
+    if (auto r = app.phaseresetmarkers.load(tm_path.string()); !r) {
+        std::fprintf(stderr,
+            "warptempo_gui: source load aborted: invalid phase reset "
+            "markers in '%s': %s\n",
+            tm_path.string().c_str(), r.error().c_str());
+        revert_to_blank();
+        return false;
+    } else {
+        std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
+                     app.phaseresetmarkers.markers().size(),
+                     tm_path.string().c_str());
     }
 
     // Initial playhead: land at trim-begin if a b= marker was parsed,

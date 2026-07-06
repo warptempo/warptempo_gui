@@ -208,13 +208,21 @@ int main(int argc, char** argv) {
     // build_phase_reset_source_frames drops disabled markers, converts
     // time->exact double source frame, and refuses an enabled reset past the
     // source end — the same intermediate the GUI and render CLIs derive from
-    // before their in-process engine handoff. An absent sidecar yields an
-    // empty (valid) .phaseresetframemap. Direct writes, like the single-file
-    // formats: this tool has never staged, so a failed second write exits
-    // nonzero and the caller reruns. ---
+    // before their in-process engine handoff. The empty FILE is the no-resets
+    // form and yields an empty (valid) .phaseresetframemap; an absent file is a
+    // hard error. Direct writes, like the single-file formats: this tool has
+    // never staged, so a failed second write exits nonzero and the caller
+    // reruns. ---
     if (fmt == "warptempo_maps") {
         std::vector<PhaseResetMarker> resets;
-        if (std::filesystem::exists(pr_path)) {
+        if (!std::filesystem::exists(pr_path)) {
+            std::fprintf(stderr,
+                "warptempo_parser: missing phase reset markers file '%s' "
+                "(the GUI creates this sidecar on source load)\n",
+                pr_path.c_str());
+            return 1;
+        }
+        {
             auto prp = parse_phaseresetmarkers_file(pr_path);
             if (!prp) {
                 std::fprintf(stderr, "warptempo_parser: %s: %s\n",

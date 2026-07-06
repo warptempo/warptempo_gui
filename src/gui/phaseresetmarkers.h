@@ -25,8 +25,9 @@ class GuiPhaseResetMarkers {
 public:
     // Parses `path`. On success, populates markers() and returns the parsed
     // markers. The first malformed line aborts the parse and returns a
-    // one-line error; a missing/unopenable file is a failure (callers that
-    // treat absence as "no markers" check existence first). No throw.
+    // one-line error; a missing/unopenable file is a failure (the sidecar is
+    // created at source load and required at every load boundary; the empty
+    // file is the no-resets form). No throw.
     std::expected<void, std::string> load(const std::string& path);
 
     // Writes the canonical form to `path`. Atomic: writes to <path>.tmp,
