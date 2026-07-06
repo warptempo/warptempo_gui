@@ -105,7 +105,7 @@ bool validate_engine_setting(const std::string& key,
         // reload (sub-half-micro values serialize as 0.000000, which the
         // greater-than-zero check above rejects) or silently changes value
         // across save and reload. The implied lower bound in the one-micro
-        // class also keeps build_warp_maps' target-delta division finite: a
+        // class also keeps build_warp_frame_map's target-delta division finite: a
         // subnormal scale could otherwise drive delta_tgt to inf and emit
         // non-finite map artifacts as success.
         char buf[64];

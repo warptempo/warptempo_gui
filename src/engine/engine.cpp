@@ -55,7 +55,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // Engine-boundary ordering guards. These two init-time hardfails are
 // deliberate and stay even though the warp_frame_map.h /
 // phase_reset_frame_map.h artifact readers validate
-// line shape only: the writers' contract (build_warp_maps, the trimmed-artifact
+// line shape only: the writers' contract (build_warp_frame_map, the trimmed-artifact
 // derivation, the phaseresetframemap writer) makes both checks unreachable
 // from
 // program-written inputs, but a breach — a hand-edited artifact fed to the

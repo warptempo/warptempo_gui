@@ -156,9 +156,10 @@ RenderOutcome do_render(const RenderRequest& req,
     profile_source_sample_rate = static_cast<int>(sample_rate);
 
     // Derived here, at the probe, so the reset frames are always in the frame
-    // domain of the source actually being rendered, symmetric with build_warp_maps'
-    // conversion of warp marker seconds; the conversion also validates the
-    // authored reset times against the probed source length.
+    // domain of the source actually being rendered, symmetric with
+    // build_warp_frame_map's conversion of warp marker seconds; the conversion
+    // also validates the authored reset times against the probed source
+    // length.
     auto phase_reset_frame_map_r =
         build_phase_reset_frame_map(
             slice_to_phaseresetmarkers(req.phase_resets), sample_rate,
@@ -184,20 +185,17 @@ RenderOutcome do_render(const RenderRequest& req,
     // already built successfully when the matching render was produced, so
     // no reuse path can fail here that previously succeeded, and the reuse
     // hit's extra map build is negligible against the pipeline. ---
-    WarpMapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(req.markers));
-    tmin.scale          = scale;
-    tmin.sample_rate    = sample_rate;
-    tmin.total_frames   = total_frames;
-
-    auto rfull = build_warp_maps(tmin);
+    auto rfull = build_warp_frame_map(
+        resolve_markers_for_render(slice_to_warp_markers(req.markers)),
+        scale, sample_rate, total_frames);
     if (!rfull) {
         std::fprintf(stderr,
             "warptempo_gui: render error: map build failed: %s\n",
             rfull.error().c_str());
         return RenderOutcome::Failed;
     }
-    WarpMapBuildResult tmfull = std::move(*rfull);
+    const std::vector<WarpFrameMapSegment> full_warp_frame_map =
+        std::move(*rfull);
 
     // --- Compute output path. ---
     auto ext_for_format = [&]() -> std::string {
@@ -417,8 +415,8 @@ RenderOutcome do_render(const RenderRequest& req,
         req.has_trim_end, req.trim_end_sec,
         sample_rate, total_frames, N_fft);
 
-    // Source-aware trim check, formerly inside build_warp_maps' post-pass. Runs
-    // before any window computation, engine slice, or artifact derivation.
+    // Source-aware trim check. Runs before any window computation, engine
+    // slice, or artifact derivation.
     if (auto v = validate_trim_frames(
             trim_window.trim_begin_src, trim_window.trim_end_src,
             req.has_trim_begin, req.has_trim_end,
@@ -437,7 +435,7 @@ RenderOutcome do_render(const RenderRequest& req,
     int64_t trim_emit_sample_cap = 0;
     if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
         const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
-            tmfull.warp_frame_map, trim_window.trim_begin_src,
+            full_warp_frame_map, trim_window.trim_begin_src,
             trim_window.trim_end_src, N_fft, R_s);
         window_offset_samples = w.window_offset_samples;
         trim_emit_sample_cap = w.emit_sample_cap;
@@ -474,15 +472,16 @@ RenderOutcome do_render(const RenderRequest& req,
             // with no start-trim term.
 
             // Markers: lockstep walk between req.markers and the real-segment
-            // range of tmfull.warp_frame_map (built trim-off, so no synthetic trim
-            // anchors). Each non-disabled marker consumes the next-in-order
-            // segment; the trim range gates only emission, not consumption, so
-            // the lockstep stays in step with tmfull's all-segments vector.
+            // range of full_warp_frame_map (built trim-off, so no synthetic
+            // trim anchors). Each non-disabled marker consumes the
+            // next-in-order segment; the trim range gates only emission, not
+            // consumption, so the lockstep stays in step with
+            // full_warp_frame_map's all-segments vector.
             // s.tgt_frame is the full-render target sample; subtracting
             // window_offset_samples places it on the trimmed wav axis. The
             // effective-disabled check gates consumption itself (a disabled
-            // marker has no segment in tmfull, so it skips before the
-            // iterator advances), while out-of-trim and pre-origin gate
+            // marker has no segment in full_warp_frame_map, so it skips before
+            // the iterator advances), while out-of-trim and pre-origin gate
             // emission only, each running after the segment is consumed.
             std::set<std::string> disabled_label_defs;
             for (const auto& m : req.markers) {
@@ -495,7 +494,7 @@ RenderOutcome do_render(const RenderRequest& req,
                        disabled_label_defs.count(m.label_ref) > 0;
             };
 
-            auto seg_it = tmfull.warp_frame_map.begin();
+            auto seg_it = full_warp_frame_map.begin();
             std::vector<GuiWarpMarker> warped_markers;
             warped_markers.reserve(req.markers.size());
             for (const auto& g : req.markers) {
@@ -505,10 +504,10 @@ RenderOutcome do_render(const RenderRequest& req,
                 // resolve_markers_for_render filter.
                 if (eff_disabled) continue;
 
-                // Consume this marker's segment first (tmfull holds every
-                // segment, so the lockstep advances for every non-disabled
-                // marker regardless of trim).
-                if (seg_it == tmfull.warp_frame_map.end()) break;
+                // Consume this marker's segment first (full_warp_frame_map
+                // holds every segment, so the lockstep advances for every
+                // non-disabled marker regardless of trim).
+                if (seg_it == full_warp_frame_map.end()) break;
                 const auto& s = *seg_it;
                 ++seg_it;
 
@@ -561,7 +560,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 trim_emit_sample_cap > 0
                     ? trim_emit_sample_cap
                     : static_cast<int64_t>(std::llrint(
-                          tmfull.warp_frame_map.back().tgt_frame));
+                          full_warp_frame_map.back().tgt_frame));
             std::vector<GuiPhaseResetMarker> warped_phase_resets;
             warped_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
@@ -586,7 +585,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // sidecar displays markers whose breakpoints the slicer
                 // coalesced into window anchors.
                 const auto window_target = phase_reset_window_target_frame(
-                    t.time_seconds * sr_d, tmfull.warp_frame_map,
+                    t.time_seconds * sr_d, full_warp_frame_map,
                     window_offset_samples, render_target_frames_for_sidecars);
                 if (!window_target) continue;
                 GuiPhaseResetMarker w = t;
@@ -843,7 +842,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // wholesale and stays trim-ignorant. Untrimmed: the full map verbatim,
         // offset 0 (provably identical to the pre-slice behavior).
         window_offset_samples = assign_engine_warp_frame_map(
-            ep, tmfull.warp_frame_map, req.has_trim_begin || req.has_trim_end,
+            ep, full_warp_frame_map, req.has_trim_begin || req.has_trim_end,
             trim_begin_src, trim_end_src, N_fft, R_s);
         if (window_offset_samples < 0) {
             std::fprintf(stderr,
@@ -855,7 +854,7 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
         const int64_t render_target_frames = assign_engine_phase_reset_frame_map(
-            ep, phase_reset_frame_map, tmfull.warp_frame_map, window_offset_samples,
+            ep, phase_reset_frame_map, full_warp_frame_map, window_offset_samples,
             N_fft);
         profile_target_frames = render_target_frames;
         profile_target_seconds = ep.source_sample_rate > 0
@@ -959,11 +958,15 @@ RenderOutcome do_render(const RenderRequest& req,
         const bool trimmed = req.has_trim_begin || req.has_trim_end;
         // Trimmed artifacts derive from the same window the engine renders, so
         // they describe the trimmed deliverable byte-for-byte; untrimmed renders
-        // write the full maps verbatim. This path runs no engine.
+        // write the full maps verbatim. This path runs no engine. The full midi
+        // tempo map is derived here, on the only path that consumes it; the wav
+        // branch never needs it.
+        const std::vector<MidiTempoMapEntry> full_midi_tempo_map =
+            derive_midi_tempo_map(full_warp_frame_map, sample_rate);
         TrimmedArtifactMaps artifacts;
         if (trimmed) {
             auto a = derive_trimmed_artifact_maps(
-                tmfull.warp_frame_map, tmfull.midi_tempo_map,
+                full_warp_frame_map, full_midi_tempo_map,
                 trim_window.trim_begin_src, trim_window.trim_end_src,
                 N_fft, R_s, sample_rate);
             if (!a) {
@@ -974,7 +977,8 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             artifacts = std::move(*a);
         } else {
-            artifacts = TrimmedArtifactMaps{tmfull.warp_frame_map, tmfull.midi_tempo_map};
+            artifacts = TrimmedArtifactMaps{full_warp_frame_map,
+                                            full_midi_tempo_map};
         }
         auto map_write = (output_format == "warpframemap")
             ? write_warp_frame_map(final_output_path, artifacts.warp_frame_map)

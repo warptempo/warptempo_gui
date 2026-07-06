@@ -81,10 +81,10 @@ struct RenderRequest {
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
-    // counterparts. The render pipeline forwards the active tab's trim to
-    // WarpMapBuildInput, which drives the warp_frame_map/midi_tempo_map derivation for the
-    // trimmed window; the WAV render path applies the same trim to the
-    // engine's synthesis window.
+    // counterparts. The render pipeline forwards the active tab's trim to the
+    // trim-window slice, which drives the warp_frame_map/midi_tempo_map
+    // derivation for the trimmed window; the WAV render path applies the same
+    // trim to the engine's synthesis window.
     bool   has_trim_begin = false;
     double trim_begin_sec = 0.0;
     bool   has_trim_end   = false;
@@ -159,8 +159,8 @@ std::filesystem::path compose_sibling_output_path(
 // marker times as authored seconds only; do_render derives the engine's
 // source-frame reset list from phase_resets against the probed source's rate —
 // the same late-conversion-at-the-probe shape warp markers already follow
-// through build_warp_maps, so the conversion cannot use any rate other than the
-// rendered source's. output_buffer is left at its nullptr default; the
+// through build_warp_frame_map, so the conversion cannot use any rate other
+// than the rendered source's. output_buffer is left at its nullptr default; the
 // target-view caller sets it after the call.
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> markers,

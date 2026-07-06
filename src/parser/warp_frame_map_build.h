@@ -47,20 +47,7 @@ struct MarkerEffective {
                                     // and unaffected
 };
 
-struct WarpMapBuildInput {
-    std::vector<MarkerForRender> markers;
-
-    double scale        = 1.0;   // from settings; 1.0 default
-    long   sample_rate  = 0;     // from the source audio file
-    long   total_frames = 0;     // from the source audio file
-};
-
-struct WarpMapBuildResult {
-    std::vector<WarpFrameMapSegment> warp_frame_map;
-    std::vector<MidiTempoMapEntry>  midi_tempo_map;
-};
-
-// Returns the built WarpMapBuildResult on success, or std::unexpected carrying
+// Returns the built warp frame map on success, or std::unexpected carrying
 // the first violated condition (a concise lowercase reason; callers add their
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
@@ -73,8 +60,26 @@ struct WarpMapBuildResult {
 // build_phase_reset_frame_map because scale multiplies tempo, a
 // target-duration quantity; phase reset positions are undisplaced source
 // instants and have no target-duration component.
-std::expected<WarpMapBuildResult, std::string> build_warp_maps(
-    const WarpMapBuildInput& in);
+std::expected<std::vector<WarpFrameMapSegment>, std::string>
+build_warp_frame_map(const std::vector<MarkerForRender>& markers,
+                     double scale, long sample_rate, long total_frames);
+
+// Derive the midi tempo map from a finished warp frame map. Each consecutive
+// pair (a, b) with a positive target duration contributes an entry at
+// a.tgt_frame / sample_rate whose multiplier is
+// (b.src_frame - a.src_frame) / (b.tgt_frame - a.tgt_frame); after the walk a
+// final entry at map.back().tgt_frame / sample_rate carries the last valid
+// multiplier (1.0 when no pair produced one). The > 0 comparison is division
+// safety only, not a size threshold — segment target durations have no floor —
+// and the last valid multiplier carries across skips. The arithmetic reads the
+// map's stored doubles exactly as written: entries are serialized at seventeen
+// significant digits, so any reassociation would change deliverable bytes. An
+// empty map returns the single entry {0.0, 1.0} (unreachable from program
+// paths, since the build always emits the seed anchor; kept so the back()
+// access is unconditionally safe).
+std::vector<MidiTempoMapEntry> derive_midi_tempo_map(
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    long sample_rate);
 
 // Source-aware trim-bounds check shared by every trim-taking caller (the GUI
 // render dispatch, the parser CLI's trimmed-artifact path, and warptempo_cli's

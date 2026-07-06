@@ -76,7 +76,7 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
 // lockstep with that writer.
 //
 // The reader validates line shape only. Value-domain and ordering conformance
-// is the writers' contract: build_warp_maps and the trimmed-artifact derivation
+// is the writers' contract: build_warp_frame_map and the trimmed-artifact derivation
 // emit finite, non-negative, strictly ascending values with a first target of
 // exactly zero by construction. Ordering is not left as an assumed
 // precondition downstream: the engine refuses loudly at init on a

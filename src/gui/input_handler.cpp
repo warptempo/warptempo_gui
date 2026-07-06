@@ -733,23 +733,18 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // what the engine would emit. An empty / failed build degenerates
     // to identity (the helpers return src_frame unchanged), which is
     // the right fallback when there are no qualifying markers.
-    WarpMapBuildInput tmin;
-    tmin.markers      = resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers()));
-    tmin.scale        = app.engine_settings.scale;
-    tmin.sample_rate  = audio.sample_rate();
-    tmin.total_frames = static_cast<long>(audio.total_frames());
-    // Trim is a render-time cut, not a view-time concept: build_warp_maps builds the
-    // WHOLE-song map, and the toggle translates source-frame viewport /
-    // playhead / total_frames across the whole song against it — see the
-    // matching comment in paint_handler.cpp's per-paint recompute.
-    std::vector<WarpFrameMapSegment> tmap;
-    auto r = build_warp_maps(tmin);
+    // Trim is a render-time cut, not a view-time concept: build_warp_frame_map
+    // builds the WHOLE-song map, and the toggle translates source-frame
+    // viewport / playhead / total_frames across the whole song against it —
+    // see the matching comment in paint_handler.cpp's per-paint recompute.
+    // A failed build leaves the vector empty, keeping the identity fallback.
+    std::vector<WarpFrameMapSegment> warp_frame_map;
+    auto r = build_warp_frame_map(
+        resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers())),
+        app.engine_settings.scale, audio.sample_rate(),
+        static_cast<long>(audio.total_frames()));
     if (r) {
-        const WarpMapBuildResult& tmres = *r;
-        tmap.reserve(tmres.warp_frame_map.size());
-        for (const auto& s : tmres.warp_frame_map) {
-            tmap.push_back(WarpFrameMapSegment{s.src_frame, s.tgt_frame});
-        }
+        warp_frame_map = std::move(*r);
     }
 
     // Target-view playback is rebound to the rendered target buffer once it is
@@ -784,7 +779,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // so the post-flip viewport math needs no cached total here.
         const double tph = map_source_to_target(
             static_cast<size_t>(app.playhead_cursor_sample < 0
-                                ? 0 : app.playhead_cursor_sample), tmap);
+                                ? 0 : app.playhead_cursor_sample),
+            warp_frame_map);
         new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
         app.active_audio_view = 'T';
@@ -793,7 +789,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // T → S: inverse-translate the playhead.
         const double sph = map_target_to_source(
             static_cast<size_t>(app.playhead_cursor_sample < 0
-                                ? 0 : app.playhead_cursor_sample), tmap);
+                                ? 0 : app.playhead_cursor_sample),
+            warp_frame_map);
         new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
         app.active_audio_view              = 'S';
@@ -802,7 +799,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
     // a later Ctrl+Tab loads a stale-domain position that gets read in the
-    // new domain. Same tmap, same direction as the active translation.
+    // new domain. Same warp_frame_map, same direction as the active
+    // translation.
     // To keep the inactive tab's playhead at the same on-screen column after
     // the toggle (matching the active-tab invariant above), the viewport is
     // shifted by the same delta as the playhead rather than translated
@@ -819,8 +817,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         const auto xlate = [&](int64_t s) -> int64_t {
             const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
             const double r = going_to_target
-                ? map_source_to_target(q, tmap)
-                : map_target_to_source(q, tmap);
+                ? map_source_to_target(q, warp_frame_map)
+                : map_target_to_source(q, warp_frame_map);
             return static_cast<int64_t>(std::nearbyint(r));
         };
 

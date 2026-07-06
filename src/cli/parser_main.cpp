@@ -2,8 +2,9 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "warp_frame_map_build.h"               // WarpMapBuildInput/Result, resolve,
-                                        // build_warp_maps
+#include "warp_frame_map_build.h"               // resolve_markers_for_render,
+                                        // build_warp_frame_map,
+                                        // derive_midi_tempo_map
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
 #include "locale_check.h"
 #include "map_output.h"                 // write_warp_frame_map /
@@ -154,9 +155,9 @@ int main(int argc, char** argv) {
 
     // --- warpframemap / miditempomap: built from the warp markers. A missing sidecar
     // is a startup error. Without it an absent file would flow an empty marker
-    // list through build_warp_maps to a seed-anchor-only map whose zero emit cap the
-    // engine refuses at dispatch; erroring here gives the pointed missing-file
-    // message instead of that indirect refusal. ---
+    // list through build_warp_frame_map to a seed-anchor-only map whose zero
+    // emit cap the engine refuses at dispatch; erroring here gives the pointed
+    // missing-file message instead of that indirect refusal. ---
     std::vector<WarpMarker> markers;
     if (!std::filesystem::exists(wm_path)) {
         std::fprintf(stderr,
@@ -193,20 +194,19 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- resolve + build the full untrimmed map ---
-    WarpMapBuildInput in;
-    in.markers        = resolve_markers_for_render(markers);
-    in.scale          = es.scale;
-    in.sample_rate    = sample_rate;
-    in.total_frames   = total_frames;
-
-    auto r = build_warp_maps(in);
+    // --- resolve + build the full untrimmed map, then derive the full midi
+    // tempo map from it ---
+    auto r = build_warp_frame_map(resolve_markers_for_render(markers),
+                                  es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,
             "warptempo_parser: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    WarpMapBuildResult out = std::move(*r);
+    const std::vector<WarpFrameMapSegment> full_warp_frame_map =
+        std::move(*r);
+    const std::vector<MidiTempoMapEntry> full_midi_tempo_map =
+        derive_midi_tempo_map(full_warp_frame_map, sample_rate);
 
     // --- trimmed artifacts derive from the same window the engine renders, so
     // they describe the trimmed deliverable byte-for-byte; untrimmed writes the
@@ -214,7 +214,8 @@ int main(int argc, char** argv) {
     const bool trimmed = trim.has_begin || trim.has_end;
     TrimmedArtifactMaps artifacts;
     if (trimmed) {
-        auto a = derive_trimmed_artifact_maps(out.warp_frame_map, out.midi_tempo_map,
+        auto a = derive_trimmed_artifact_maps(full_warp_frame_map,
+                                              full_midi_tempo_map,
                                               trim_begin_src, trim_end_src,
                                               kN, kRs, sample_rate);
         if (!a) {
@@ -223,7 +224,8 @@ int main(int argc, char** argv) {
         }
         artifacts = std::move(*a);
     } else {
-        artifacts = TrimmedArtifactMaps{out.warp_frame_map, out.midi_tempo_map};
+        artifacts = TrimmedArtifactMaps{full_warp_frame_map,
+                                        full_midi_tempo_map};
     }
 
     // --- output path: -o, else the sibling convention ---

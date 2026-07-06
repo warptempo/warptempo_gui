@@ -2,7 +2,7 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "warp_frame_map_build.h"               // WarpMapBuildInput/Result, build_warp_maps,
+#include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     }
 
     // --- markers; a missing sidecar is a startup error. Without it an absent
-    // file would flow an empty marker list through build_warp_maps to a
+    // file would flow an empty marker list through build_warp_frame_map to a
     // seed-anchor-only map whose zero emit cap the engine refuses at dispatch;
     // erroring here gives the pointed missing-file message instead of that
     // indirect refusal. ---
@@ -192,21 +192,17 @@ int main(int argc, char** argv) {
 
     // --- full (untrimmed) frame map. The engine always renders the full map;
     // trim is applied by slicing it, never by an engine window. This is
-    // do_render's tmfull: its t_a history from frame 0 is what keeps a windowed
-    // render sample-aligned with the full render. ---
-    WarpMapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(markers);
-    tmin.scale          = es.scale;
-    tmin.sample_rate    = sample_rate;
-    tmin.total_frames   = total_frames;
-
-    auto r = build_warp_maps(tmin);
+    // do_render's full_warp_frame_map: its t_a history from frame 0 is what
+    // keeps a windowed render sample-aligned with the full render. ---
+    auto r = build_warp_frame_map(resolve_markers_for_render(markers),
+                                  es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,
             "warptempo_cli: map build failed: %s\n", r.error().c_str());
         return 1;
     }
-    WarpMapBuildResult tmfull = std::move(*r);
+    const std::vector<WarpFrameMapSegment> full_warp_frame_map =
+        std::move(*r);
 
     const TrimSourceWindow trim_window = resolve_trim_source_window(
         trim.has_begin, trim.begin_sec, trim.has_end, trim.end_sec,
@@ -241,7 +237,7 @@ int main(int argc, char** argv) {
     // emit cap; untrimmed, the full map verbatim (offset 0). Identical to
     // do_render's wav branch. ---
     const int64_t window_offset_samples = assign_engine_warp_frame_map(
-        ep, tmfull.warp_frame_map, trim.has_begin || trim.has_end,
+        ep, full_warp_frame_map, trim.has_begin || trim.has_end,
         trim_begin_src, trim_end_src, N_fft, R_s);
     if (window_offset_samples < 0) {
         std::fprintf(stderr,
@@ -263,7 +259,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     assign_engine_phase_reset_frame_map(
-        ep, *phase_reset_frame_map_r, tmfull.warp_frame_map, window_offset_samples,
+        ep, *phase_reset_frame_map_r, full_warp_frame_map, window_offset_samples,
         N_fft);
 
     // --- render. The engine writes a sibling staging file and success

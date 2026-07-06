@@ -8,7 +8,7 @@
 #include <vector>
 
 // GUI target-view warp_frame_map helpers, split out of warp_frame_map_build.cpp so the
-// build core (resolve_markers_for_render / build_warp_maps / the
+// build core (resolve_markers_for_render / build_warp_frame_map / the
 // phase-reset assembly) carries no AppState dependency and lives in
 // libwarptempo_parser. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
@@ -19,28 +19,19 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     double scale,
     int sample_rate,
     long total_frames) {
-    WarpMapBuildInput tmin;
-    tmin.markers        = resolve_markers_for_render(slice_to_warp_markers(markers));
-    tmin.scale          = scale;
-    tmin.sample_rate    = sample_rate;
-    tmin.total_frames   = total_frames;
     // Trim is render-time, not view-time — target view paints the WHOLE song,
-    // and build_warp_maps builds the whole-song map, matching the paint_handler
-    // construction so hit-test math and waveform paint walk the same segment
-    // list. This overload always builds directly and is the entry point for
-    // hypothetical (non-live) marker lists; live-state consumers go through
-    // target_view_map_cached.
-    std::vector<WarpFrameMapSegment> out;
-    auto r = build_warp_maps(tmin);
+    // and build_warp_frame_map builds the whole-song map, matching the
+    // paint_handler construction so hit-test math and waveform paint walk the
+    // same segment list. This overload always builds directly and is the entry
+    // point for hypothetical (non-live) marker lists; live-state consumers go
+    // through target_view_map_cached.
+    auto r = build_warp_frame_map(
+        resolve_markers_for_render(slice_to_warp_markers(markers)),
+        scale, sample_rate, total_frames);
     if (!r) {
-        return out;
+        return {};
     }
-    const WarpMapBuildResult& tmres = *r;
-    out.reserve(tmres.warp_frame_map.size());
-    for (const auto& s : tmres.warp_frame_map) {
-        out.push_back(WarpFrameMapSegment{s.src_frame, s.tgt_frame});
-    }
-    return out;
+    return std::move(*r);
 }
 
 const TargetWarpMapCache& target_view_map_cached(

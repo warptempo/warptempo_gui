@@ -11,8 +11,8 @@
 // view waveform translation. Trim is forced off — target view paints the
 // WHOLE song; the warp_frame_map must describe the whole song with warp segments
 // where markers exist and identity outside (see paint_handler.cpp commentary
-// next to the same construction). Returns an empty vector if build_warp_maps
-// fails or yields no segments. Callers in target view route this through
+// next to the same construction). Returns an empty vector if
+// build_warp_frame_map fails or yields no segments. Callers in target view route this through
 // compute_flag_hit_rects / render_flags / popup-hit helpers so hit-test
 // math and paint stay in sync.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(

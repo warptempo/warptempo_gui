@@ -350,14 +350,10 @@ std::string compute_hover_popup_text(
     return "";
 }
 
-std::expected<WarpMapBuildResult, std::string> build_warp_maps(
-    const WarpMapBuildInput& in) {
-    WarpMapBuildResult out;
-
-    const auto&  markers      = in.markers;
-    const double scale        = in.scale;
-    const long   sample_rate  = in.sample_rate;
-    const long   total_frames = in.total_frames;
+std::expected<std::vector<WarpFrameMapSegment>, std::string>
+build_warp_frame_map(const std::vector<MarkerForRender>& markers,
+                     double scale, long sample_rate, long total_frames) {
+    std::vector<WarpFrameMapSegment> out;
 
     if (sample_rate <= 0 || total_frames <= 0) {
         return std::unexpected("invalid source audio metadata");
@@ -419,12 +415,11 @@ std::expected<WarpMapBuildResult, std::string> build_warp_maps(
         src_f_prev = src_frame;
     }
 
-    // Pass 2: emit warp_frame_map segments + midi_tempo_map entries.
-    out.warp_frame_map.push_back({0, 0});
+    // Pass 2: emit warp_frame_map segments.
+    out.push_back({0, 0});
 
     src_f_prev = 0.0;
     double tgt_f_prev = 0.0;
-    double last_valid_multiplier = 1.0;
 
     for (size_t i = 0; i < markers.size(); ++i) {
         double src_frame = (i + 1 < markers.size())
@@ -452,27 +447,51 @@ std::expected<WarpMapBuildResult, std::string> build_warp_maps(
             target_frame = tgt_f_prev + (delta_src / (tempo_val * scale));
         }
 
-        double seg_src_dur = src_frame - src_f_prev;
-        double seg_tgt_dur = target_frame - tgt_f_prev;
-        // Every positive target segment gets a miditempomap entry: segment target
-        // durations have no floor (tempo products have no ceiling), and the
-        // frame map represents the segment, so the miditempomap must agree. The
-        // > 0 comparison is division safety only, not a size threshold.
-        if (seg_tgt_dur > 0.0) {
-            double effective_multiplier = seg_src_dur / seg_tgt_dur;
-            last_valid_multiplier = effective_multiplier;
-            double seg_start_time = tgt_f_prev / static_cast<double>(sample_rate);
-            out.midi_tempo_map.push_back({seg_start_time, effective_multiplier});
-        }
-
-        out.warp_frame_map.push_back({src_frame, target_frame});
+        out.push_back({src_frame, target_frame});
 
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;
     }
 
-    double final_tgt_sec = tgt_f_prev / static_cast<double>(sample_rate);
-    out.midi_tempo_map.push_back({final_tgt_sec, last_valid_multiplier});
+    return out;
+}
+
+std::vector<MidiTempoMapEntry> derive_midi_tempo_map(
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    long sample_rate) {
+    std::vector<MidiTempoMapEntry> out;
+    double last_valid_multiplier = 1.0;
+
+    // Empty-map guard: unreachable from program paths (the build always emits
+    // the seed anchor), kept so the back() access below is unconditionally
+    // safe.
+    if (warp_frame_map.empty()) {
+        out.push_back({0.0, last_valid_multiplier});
+        return out;
+    }
+
+    for (size_t i = 0; i + 1 < warp_frame_map.size(); ++i) {
+        const WarpFrameMapSegment& a = warp_frame_map[i];
+        const WarpFrameMapSegment& b = warp_frame_map[i + 1];
+        const double seg_tgt_dur = b.tgt_frame - a.tgt_frame;
+        // Every positive target segment gets a miditempomap entry: segment target
+        // durations have no floor (tempo products have no ceiling), and the
+        // frame map represents the segment, so the miditempomap must agree. The
+        // > 0 comparison is division safety only, not a size threshold; the
+        // last valid multiplier carries across skips.
+        if (seg_tgt_dur > 0.0) {
+            const double seg_src_dur = b.src_frame - a.src_frame;
+            const double effective_multiplier = seg_src_dur / seg_tgt_dur;
+            last_valid_multiplier = effective_multiplier;
+            const double seg_start_time =
+                a.tgt_frame / static_cast<double>(sample_rate);
+            out.push_back({seg_start_time, effective_multiplier});
+        }
+    }
+
+    const double final_tgt_sec =
+        warp_frame_map.back().tgt_frame / static_cast<double>(sample_rate);
+    out.push_back({final_tgt_sec, last_valid_multiplier});
 
     return out;
 }
@@ -568,11 +587,11 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
     // so source reads up to the trim boundary match a full render. The engine
     // truncates at emit_sample_cap (below), so the span between trim_end_src and
     // this anchor is synthesized into the discarded tail only. trim_end_src
-    // cannot exceed the source length: build_warp_maps rejects out-of-range trim
-    // before any map reaches this slicer (GUI renders of every output format
-    // fail at the trimmed build_warp_maps call, and the parser CLI likewise), and the
-    // render CLI checks its trim bounds at startup because its full-map-only
-    // flow bypasses that build_warp_maps rejection. A closing anchor therefore always
+    // cannot exceed the source length: validate_trim_frames rejects out-of-range
+    // trim before any map reaches this slicer (GUI renders of every output
+    // format fail that check ahead of the window computation, and the parser
+    // CLI likewise), and the render CLI checks its trim bounds at startup
+    // through the same validator. A closing anchor therefore always
     // exists, at worst full_map.back().
     for (const auto& s : full_map) {
         if (s.src_frame < static_cast<double>(trim_end_src)) continue;
