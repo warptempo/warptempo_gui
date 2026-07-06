@@ -25,16 +25,17 @@ void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio> [--no-limiter]\n"
         "  Runs the PGHI engine on the prebuilt map pair warptempo_parser\n"
-        "  writes beside the source for the same project: the sibling\n"
-        "  <source-stem>.warpframemap (required), plus\n"
-        "  <source-stem>.phaseresetframemap when present (the\n"
-        "  engine query-domain list warptempo_parser computes against the\n"
-        "  same warpframemap; consumed as-is). Writes the warped wav beside\n"
-        "  the source as <source-stem>-rendered.wav — with --no-limiter, as\n"
-        "  limiter=false;<source-stem>-rendered.wav, the GUI's clean-float\n"
-        "  naming. Limiter is on unless --no-limiter is given. N is fixed at\n"
-        "  4096. Trim is not an engine concern: the supplied map is rendered\n"
-        "  wholesale.\n",
+        "  writes beside the source for the same project in warptempo_maps\n"
+        "  mode: the sibling <source-stem>.warpframemap and\n"
+        "  <source-stem>.phaseresetframemap (both required; the\n"
+        "  phaseresetframemap is the engine query-domain list warptempo_parser\n"
+        "  computes against the same warpframemap, consumed as-is, with an\n"
+        "  empty file as the valid no-resets form). Writes the warped wav\n"
+        "  beside the source as <source-stem>-rendered.wav — with\n"
+        "  --no-limiter, as limiter=false;<source-stem>-rendered.wav, the\n"
+        "  GUI's clean-float naming. Limiter is on unless --no-limiter is\n"
+        "  given. N is fixed at 4096. Trim is not an engine concern: the\n"
+        "  supplied map is rendered wholesale.\n",
         argv0);
 }
 
@@ -65,24 +66,28 @@ int main(int argc, char** argv) {
     // "-rendered"), the clean-float "limiter=false;" prefix, and the pair
     // extensions. The driver deliberately restates them inline instead of
     // linking the parser archive, keeping its link line engine and audio_io
-    // alone; a drift between the two would hardfail on missing inputs rather
-    // than corrupt output. The output is <source-stem>-rendered.wav beside the
-    // source, prefixed "limiter=false;" under --no-limiter (the clean-float
-    // wav render). The map inputs are the <source-stem> siblings
-    // warptempo_parser writes for the same project — the .warpframemap
-    // required, the .phaseresetframemap used only when present (an empty reset
-    // list is an empty, valid file, not an absent one).
+    // alone. The output is <source-stem>-rendered.wav beside the source,
+    // prefixed "limiter=false;" under --no-limiter (the clean-float wav
+    // render). The map inputs are the <source-stem> siblings warptempo_parser
+    // writes for the same project in warptempo_maps mode — both the
+    // .warpframemap and the .phaseresetframemap are required, with an empty
+    // phaseresetframemap as the valid no-resets file; a naming drift between
+    // these inline literals and the parser-side composer hardfails on a
+    // missing input on either column rather than corrupting output. A
+    // presence check cannot detect a stale pair, though: a later generic_map
+    // render rewrites the warp column alone, leaving a reset sibling that was
+    // derived against an older warpframemap. The pair contract — the reset
+    // list is derived against the exact warpframemap shipped beside it — is
+    // therefore the operator's regeneration discipline, not something this
+    // driver guards; the engine validates only strict ascent on the list.
     const std::string out_path =
         (dir / ((no_limiter ? "limiter=false;" : "") + stem + "-rendered.wav"))
             .string();
 
     const std::string warpframemap_path =
         (dir / (stem + ".warpframemap")).string();
-    std::string phaseresetframemap_path;
-    {
-        const std::string sib = (dir / (stem + ".phaseresetframemap")).string();
-        if (std::filesystem::exists(sib)) phaseresetframemap_path = sib;
-    }
+    const std::string phaseresetframemap_path =
+        (dir / (stem + ".phaseresetframemap")).string();
 
     // Hard refusal: never write over the source audio itself. equivalent() is
     // an inode match and only succeeds when both paths exist.
@@ -114,20 +119,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- phaseresetframemap (optional). Engine query-domain doubles,
+    // --- phaseresetframemap (required). Engine query-domain doubles,
     // anticipation and drops already applied by warptempo_parser against the
-    // same warpframemap read above; consumed as-is with no conversion. ---
-    std::vector<double> reset_frames;
-    if (!phaseresetframemap_path.empty()) {
-        std::optional<std::vector<double>> rm = read_phase_reset_frame_map(phaseresetframemap_path);
-        if (!rm) {
-            std::fprintf(stderr,
-                "warptempo_engine: could not read phaseresetframemap '%s' "
-                "(unreadable or malformed)\n", phaseresetframemap_path.c_str());
-            return 1;
-        }
-        reset_frames = std::move(*rm);
+    // same warpframemap read above; consumed as-is with no conversion. An
+    // empty file is the valid no-resets form; absence is a refusal. ---
+    std::optional<std::vector<double>> rm =
+        read_phase_reset_frame_map(phaseresetframemap_path);
+    if (!rm) {
+        std::fprintf(stderr,
+            "warptempo_engine: could not read phaseresetframemap '%s' "
+            "(missing, unreadable, or malformed)\n",
+            phaseresetframemap_path.c_str());
+        return 1;
     }
+    std::vector<double> reset_frames = std::move(*rm);
 
     // --- source audio, full file, interleaved float. ---
     std::vector<float> src_samples;
