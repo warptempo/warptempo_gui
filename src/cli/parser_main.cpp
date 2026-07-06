@@ -27,6 +27,12 @@
 
 namespace {
 
+void unlink_silent(const std::string& path) {
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::remove(path, ec);
+}
+
 void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio>\n"
@@ -290,19 +296,53 @@ int main(int argc, char** argv) {
     // (untrimmed: the full map; trimmed: the trimmed deliverable map), so
     // the engine consumes the pair as-is. The authored-domain record of
     // reset positions remains the .phaseresetmarkers file. An empty reset
-    // list yields an empty (valid) .phaseresetframemap. Direct writes, like
-    // the single-file formats: this tool has never staged, so a failed
-    // second write exits nonzero and the caller reruns. ---
+    // list yields an empty (valid) .phaseresetframemap. All-or-nothing
+    // publish: both files are written to ".tmp" staging paths first, then
+    // rename-published, so a mixed-generation pair (a fresh warp map beside
+    // a stale phase reset map derived against a different warp map) can
+    // never land; if the second rename fails, the just-published warp final
+    // is pulled back, and warptempo_engine then refuses on the missing warp
+    // column rather than silently rendering a stale pairing. The single-file
+    // formats below stay direct writes: a lone artifact has no
+    // cross-generation sibling to mix with. ---
     if (fmt == "warptempo_maps") {
         const std::string pr_out = out_paths[1].string();
-        if (auto w = write_warp_frame_map(out_path,
+        const std::string warp_staging = out_path + ".tmp";
+        const std::string pr_staging = pr_out + ".tmp";
+        bool staged_ok = true;
+        if (auto w = write_warp_frame_map(warp_staging,
                                           artifacts.warp_frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
+            staged_ok = false;
+        } else if (auto w2 = write_phase_reset_frame_map(
+                       pr_staging, artifacts.phase_reset_frame_map); !w2) {
+            std::fprintf(stderr, "warptempo_parser: %s\n", w2.error().c_str());
+            staged_ok = false;
+        }
+        if (!staged_ok) {
+            unlink_silent(warp_staging);
+            unlink_silent(pr_staging);
             return 1;
         }
-        if (auto w = write_phase_reset_frame_map(
-                pr_out, artifacts.phase_reset_frame_map); !w) {
-            std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
+        std::error_code ec;
+        std::filesystem::rename(warp_staging, out_path, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                "warptempo_parser: rename failed for '%s' -> '%s': %s\n",
+                warp_staging.c_str(), out_path.c_str(), ec.message().c_str());
+            unlink_silent(warp_staging);
+            unlink_silent(pr_staging);
+            return 1;
+        }
+        std::filesystem::rename(pr_staging, pr_out, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                "warptempo_parser: rename failed for '%s' -> '%s': %s\n",
+                pr_staging.c_str(), pr_out.c_str(), ec.message().c_str());
+            // A half pair must never land: pull back the just-published warp
+            // final along with the remaining phase reset staging.
+            unlink_silent(out_path);
+            unlink_silent(pr_staging);
             return 1;
         }
         std::fprintf(stderr, "warptempo_parser: wrote %s\n", out_path.c_str());
