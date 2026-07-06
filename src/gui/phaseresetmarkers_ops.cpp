@@ -153,11 +153,8 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
     return bounds;
 }
 
-// Shift every selected phase reset by the clamped delta. Returns whether
-// a nonzero clamped delta was applied. Unlike the warp sibling
-// (apply_selection_shift), this does not verify per-reset that the snapped
-// position changed; a sub-grid delta can apply as a no-op that still
-// reports true.
+// Shift every selected phase reset by the clamped delta, returning whether
+// any reset actually moved.
 bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta) {
     bool ok = false;
     auto [d_min, d_max] = compute_phase_reset_delta_bounds(ok);
@@ -166,11 +163,19 @@ bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta
     if (delta < d_min) delta = d_min;
     if (delta > d_max) delta = d_max;
     if (delta == 0.0) return false;
+    const auto& mv = app.phaseresetmarkers.markers();
+    std::vector<GuiPhaseResetMarker> proposed = mv;
+    bool any_changed = false;
     for (int idx : app.selected_markers) {
-        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
-        if (!m) continue;
-        m->time_seconds = snap_to_timestamp_grid(m->time_seconds + delta);
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        const double t_new =
+            snap_to_timestamp_grid(proposed[idx].time_seconds + delta);
+        if (t_new == proposed[idx].time_seconds) continue;
+        proposed[idx].time_seconds = t_new;
+        any_changed = true;
     }
+    if (!any_changed) return false;
+    app.phaseresetmarkers.markers_mut() = std::move(proposed);
     return true;
 }
 

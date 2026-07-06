@@ -272,11 +272,26 @@ void PhaseResetPropagate::paste_apply() {
         }
     }
 
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
-    undo.recompute_dirty();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
+    // An undo entry represents a state change, not a gesture. Pasting
+    // onto the copy's own anchor reproduces the destination resets byte-
+    // equal (PhaseResetMarker is exactly time_seconds + disabled); such a
+    // no-op paste pushes nothing and touches no dirty/render state. Compare
+    // before pre_state is moved into the push. The stop message and the
+    // always-switch-to-P rule below still run.
+    bool store_changed = out.size() != pre_state.size();
+    for (size_t i = 0; !store_changed && i < out.size(); ++i) {
+        if (out[i].time_seconds != pre_state[i].time_seconds ||
+            out[i].disabled     != pre_state[i].disabled) {
+            store_changed = true;
+        }
+    }
+    if (store_changed) {
+        undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+    }
 
     // Partial paste that stopped on a divergence: matched prefix is
     // pasted AND the divergence is reported. A clean full paste leaves
@@ -397,16 +412,14 @@ void PhaseResetPropagate::paste_state_apply() {
         }
     }
 
-    // A completed paste-state run (one that passed its precondition
-    // gates and ran the walk) always occupies an undo slot, even if no
-    // flag actually flipped — otherwise a meaningless paste-state would
-    // silently swallow a later Undo gesture intended for it. The pixel /
-    // render flush stays gated on any_change: there is nothing to repaint
-    // when no flag changed.
-    undo.push_undo_phase_reset(std::move(pre_state),
-                               hint_last);
-    undo.recompute_dirty();
+    // An undo entry represents a state change, not a gesture: a paste-
+    // state run that flips no flag leaves the store byte-equal, so it
+    // pushes nothing and touches no dirty/render state. The stop message
+    // and the P-view switch below still fire unconditionally.
     if (any_change) {
+        undo.push_undo_phase_reset(std::move(pre_state),
+                                   hint_last);
+        undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();

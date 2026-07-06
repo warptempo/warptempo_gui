@@ -439,6 +439,26 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
+    // Did the session-only iteration bracket move? NaN-aware: two bounds
+    // are equal when both are NaN or when they compare equal under ==.
+    // A bracket-only edit does not mark dirty (iter values are session-
+    // only), but it is still a real undoable change — the snapshot
+    // restores the iter values — so its push must not be skipped.
+    auto iter_bound_equal = [](double a, double b) {
+        return (std::isnan(a) && std::isnan(b)) || a == b;
+    };
+    const bool bracket_changed =
+        iter_grammar &&
+        (!iter_bound_equal(iter_lo, before.iter_start) ||
+         !iter_bound_equal(iter_hi, before.iter_end));
+
+    // An undo entry represents a state change, not a gesture. A commit
+    // that moves neither a canonical field nor the bracket is a no-op:
+    // it pushes nothing and touches no dirty/render state. The live-
+    // vector assignment (which bumps the warp generation so the flag
+    // cache repaints) and the editor deactivation below still run.
+    const bool store_changed = canonical_changed || bracket_changed;
+
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
@@ -451,9 +471,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    if (store_changed) {
+        undo.push_undo_warp(std::move(pre_state), hint_last);
+    }
 
     text_editor::deactivate(app.top_flag_editor);
+
+    if (!store_changed) return;
 
     // The non-iteration commit path is untouched: it always recomputes
     // dirty and fires a render (existing behavior). Only the iteration-
