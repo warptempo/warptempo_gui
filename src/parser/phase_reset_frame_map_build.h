@@ -27,7 +27,7 @@
 // (phase_reset_dispatch.h) stays in doubles, and quantization to the
 // engine's integer query schedule happens inside the engine at placement
 // time. There is no resolver cascade sibling to
-// resolve_markers_for_render because phase reset markers carry no
+// resolve_warp_markers_for_render because phase reset markers carry no
 // inheritance, labels, or references — a timestamp and a disabled flag are
 // the whole grammar.
 std::expected<std::vector<double>, std::string> build_phase_reset_frame_map(

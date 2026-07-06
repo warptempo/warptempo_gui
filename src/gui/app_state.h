@@ -494,7 +494,7 @@ struct AppState {
 
     // Memoized target-view warp_frame_map (see warp_frame_map_view.h). Mutable: consulted and
     // refreshed from const hit-test paths.
-    mutable TargetWarpMapCache target_map_cache;
+    mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
     // Ctrl+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.
@@ -708,7 +708,7 @@ struct AppState {
     // or UI state still render distinctly.
     struct QueuedRender {
         std::string                source_audio_path;
-        std::vector<GuiWarpMarker>     markers;
+        std::vector<GuiWarpMarker>     warp_markers;
         std::vector<GuiPhaseResetMarker>  phase_resets;
         EngineSettings              engine_settings;
         bool                        has_trim_begin = false;
@@ -777,7 +777,7 @@ struct AppState {
         // The current render's loaded markers + phase resets, parsed from
         // sibling `<basename>.renderwarpmarkers` /
         // `<basename>.renderphaseresetmarkers`.
-        std::vector<GuiWarpMarker>       markers;
+        std::vector<GuiWarpMarker>       warp_markers;
         std::vector<GuiPhaseResetMarker>    phase_resets;
         // Source-frame mapping of the current render: F_begin..F_end (source
         // sample-rate frames) is what the render's full audio covers. When the

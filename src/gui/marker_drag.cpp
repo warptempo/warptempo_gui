@@ -310,7 +310,7 @@ void MarkerDragOps::commit_drag() {
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t), hint_last);
         } else {
-            undo.push_undo(std::move(snap_w), hint_last);
+            undo.push_undo_warp(std::move(snap_w), hint_last);
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();

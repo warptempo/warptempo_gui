@@ -293,7 +293,7 @@ static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
 // Loads the render at app.render_view.list[index] into the active `audio`,
 // parking the source audio on first entry. Parses render-domain
 // <basename>.renderwarpmarkers and <basename>.renderphaseresetmarkers into
-// app.render_view.markers / phase resets for display; source-domain
+// app.render_view.warp_markers / phase resets for display; source-domain
 // .warpmarkers and .phaseresetmarkers are reserved for Ctrl+Alt+C commit.
 // Computes F_begin/F_end against the cached source sr/total. Stops playback
 // before the swap and re-binds the playback device. Returns true on success;
@@ -329,31 +329,32 @@ bool GuiRenderView::load_render_view_at(int index) {
     // pair (.warpmarkers / .phaseresetmarkers) is what Ctrl+Alt+C commit
     // reloads when promoting a render's markers into authoring memory.
     std::vector<GuiWarpMarker>     loaded_warp;
-    std::vector<GuiPhaseResetMarker>  loaded_trans;
+    std::vector<GuiPhaseResetMarker>  loaded_phase_resets;
     {
-        const std::filesystem::path wmd =
+        const std::filesystem::path warp_sidecar_path =
             e.batch_folder / (e.basename + ".renderwarpmarkers");
         std::error_code ec;
-        if (std::filesystem::exists(wmd, ec)) {
-            loaded_warp = read_render_view_warpmarkers(wmd.string());
+        if (std::filesystem::exists(warp_sidecar_path, ec)) {
+            loaded_warp = read_render_view_warpmarkers(warp_sidecar_path.string());
         } else {
             std::fprintf(stderr,
                 "warptempo_gui: render-view: %s missing — markers will "
                 "not be displayed for this render\n",
-                wmd.string().c_str());
+                warp_sidecar_path.string().c_str());
         }
     }
     {
-        const std::filesystem::path tmd =
+        const std::filesystem::path phase_reset_sidecar_path =
             e.batch_folder / (e.basename + ".renderphaseresetmarkers");
         std::error_code ec;
-        if (std::filesystem::exists(tmd, ec)) {
-            loaded_trans = read_render_view_phaseresetmarkers(tmd.string());
+        if (std::filesystem::exists(phase_reset_sidecar_path, ec)) {
+            loaded_phase_resets = read_render_view_phaseresetmarkers(
+                phase_reset_sidecar_path.string());
         } else {
             std::fprintf(stderr,
                 "warptempo_gui: render-view: %s missing — phase resets "
                 "will not be displayed for this render\n",
-                tmd.string().c_str());
+                phase_reset_sidecar_path.string().c_str());
         }
     }
     playback.stop();
@@ -379,8 +380,8 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view.src_F_begin = 0;
     app.render_view.src_F_end   = app.render_view.src_total;
 
-    app.render_view.markers           = std::move(loaded_warp);
-    app.render_view.phase_resets        = std::move(loaded_trans);
+    app.render_view.warp_markers           = std::move(loaded_warp);
+    app.render_view.phase_resets        = std::move(loaded_phase_resets);
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
@@ -669,7 +670,7 @@ void GuiRenderView::auto_open_batch_at_first_file(
 // performed before calling refresh_render_view_list.
 void GuiRenderView::exit_render_view_and_clear() {
     this->restore_source_audio();
-    app.render_view.markers.clear();
+    app.render_view.warp_markers.clear();
     app.render_view.phase_resets.clear();
     app.render_view.index             = -1;
     app.render_view.src_F_begin       = 0;

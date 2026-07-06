@@ -324,7 +324,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
             if (!app.drag.frozen_warp_frame_map.empty())
                 dbg_tmap_arg = &app.drag.frozen_warp_frame_map;
         } else {
-            const auto& m = target_view_map_cached(
+            const auto& m = target_view_warp_frame_map_cached(
                 app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
             if (!m.empty()) dbg_tmap_arg = &m;
         }
@@ -341,7 +341,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     std::vector<FlagHitRect> dbg_rects;
     if (app.render_view.enabled) {
         dbg_rects = compute_flag_hit_rects(
-            top_strip, app.render_view.markers,
+            top_strip, app.render_view.warp_markers,
             dbg_vp_start, dbg_vp_end, sr, kFlagFontSize,
             nullptr, dbg_drag);
     } else if (app.active_markers_view == 'P') {

@@ -451,7 +451,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
 
     text_editor::deactivate(app.top_flag_editor);
 
@@ -489,7 +489,7 @@ void GuiFlagEditor::bulk_clear_iter_values() {
         m.iter_start = std::numeric_limits<double>::quiet_NaN();
         m.iter_end   = std::numeric_limits<double>::quiet_NaN();
     }
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     viewport.invalidate_top_strip();
 }
 

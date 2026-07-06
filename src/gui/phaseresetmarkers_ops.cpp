@@ -180,7 +180,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
         }
         const double sr_d = static_cast<double>(sr);
-        const auto& tmap = target_view_map_cached(
+        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
@@ -190,14 +190,14 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         for (int idx : app.selected_markers) {
             const double t_src = tv[idx].time_seconds;
             const double t_tgt = map_source_to_target(
-                static_cast<size_t>(std::nearbyint(t_src * sr_d)), tmap);
+                static_cast<size_t>(std::nearbyint(t_src * sr_d)), target_warp_frame_map);
             const double t_tgt_new = t_tgt +
                 static_cast<double>(direction) * spp;
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
             const double t_src_new = snap_to_timestamp_grid(
-                map_target_to_source(q, tmap) / sr_d);
+                map_target_to_source(q, target_warp_frame_map) / sr_d);
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;

@@ -15,7 +15,7 @@ struct GuiPhaseResetMarker : PhaseResetMarker {};
 // Slice a GUI phase-reset vector down to the serialized base, mirroring
 // slice_to_warp_markers. Used at the render boundary so the parser-domain
 // phase-reset assembly (build_phase_reset_frame_map) never sees the GUI type.
-inline std::vector<PhaseResetMarker> slice_to_phaseresetmarkers(
+inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
     const std::vector<GuiPhaseResetMarker>& src) {
     return std::vector<PhaseResetMarker>(src.begin(), src.end());
 }

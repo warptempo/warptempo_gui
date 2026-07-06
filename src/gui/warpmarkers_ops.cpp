@@ -89,7 +89,7 @@ void GuiWarpMarkersOps::drop_marker(double time_seconds, bool inherit,
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
     app.last_selected_marker = new_idx;
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -210,7 +210,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -289,7 +289,7 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
     }
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -359,7 +359,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -394,7 +394,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -444,7 +444,7 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
@@ -536,7 +536,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             if (idx == 0 || mv[idx].time_seconds == 0.0) return;
         }
         const double sr_d = static_cast<double>(sr);
-        const auto& tmap = target_view_map_cached(
+        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
@@ -557,14 +557,14 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         for (int idx : app.selected_markers) {
             const double t_src = mv[idx].time_seconds;
             const double t_tgt = map_source_to_target(
-                static_cast<size_t>(std::nearbyint(t_src * sr_d)), tmap);
+                static_cast<size_t>(std::nearbyint(t_src * sr_d)), target_warp_frame_map);
             const double t_tgt_new = t_tgt +
                 static_cast<double>(direction) * spp;
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
             const double t_src_new = snap_to_timestamp_grid(
-                map_target_to_source(q, tmap) / sr_d);
+                map_target_to_source(q, target_warp_frame_map) / sr_d);
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;
@@ -595,7 +595,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
         const int              hint_last = app.last_selected_marker;
         app.warpmarkers.markers_mut() = std::move(proposed);
-        undo.push_undo(std::move(pre_state), hint_last);
+        undo.push_undo_warp(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
@@ -615,7 +615,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
     if (apply_selection_shift(delta_s)) {
-        undo.push_undo(std::move(pre_state), hint_last);
+        undo.push_undo_warp(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();

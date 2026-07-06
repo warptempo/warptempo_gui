@@ -202,8 +202,8 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         if (app.drag.active) {
             target_warp_frame_map = app.drag.frozen_warp_frame_map;
         } else {
-            const TargetWarpMapCache& c =
-                target_view_map_cached(app, sr,
+            const TargetWarpFrameMapCache& c =
+                target_view_warp_frame_map_cached(app, sr,
                     static_cast<long>(audio.total_frames()));
             target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
             target_warp_frame_map_hash = c.hash;
@@ -825,7 +825,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_area_h                  == surface_h &&
         stem_cache.fp_target                  == is_target &&
         stem_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
-        stem_cache.fp_warpmarker_generation   == warp_gen &&
+        stem_cache.fp_warp_generation   == warp_gen &&
         stem_cache.fp_phase_reset_generation  == phase_gen &&
         stem_cache.fp_drag_overlay_hash       == drag_hash &&
         stem_cache.fp_drag_active             == drag_active &&
@@ -921,7 +921,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             wf_cache.surface);
     } else {
         const auto& list = rve
-            ? app.render_view.markers
+            ? app.render_view.warp_markers
             : app.warpmarkers.markers();
         render_markers(
             ccr, local_area, list,
@@ -941,7 +941,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_area_h                    = surface_h;
     stem_cache.fp_target                    = is_target;
     stem_cache.fp_warp_frame_map_hash              = warp_frame_map_hash;
-    stem_cache.fp_warpmarker_generation     = warp_gen;
+    stem_cache.fp_warp_generation     = warp_gen;
     stem_cache.fp_phase_reset_generation    = phase_gen;
     stem_cache.fp_drag_overlay_hash         = drag_hash;
     stem_cache.fp_drag_active               = drag_active;
@@ -1042,7 +1042,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
-        flag_cache.fp_warpmarker_generation   == warp_gen &&
+        flag_cache.fp_warp_generation   == warp_gen &&
         flag_cache.fp_phase_reset_generation  == phase_gen &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
@@ -1115,7 +1115,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                 drag_overlay);
         } else {
             render_flags(ccr, local_top_strip,
-                         app.render_view.markers,
+                         app.render_view.warp_markers,
                          vp_start, vp_end, sr,
                          kFlagFontSize,
                          app.selected_markers,
@@ -1166,7 +1166,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
-    flag_cache.fp_warpmarker_generation   = warp_gen;
+    flag_cache.fp_warp_generation   = warp_gen;
     flag_cache.fp_phase_reset_generation  = phase_gen;
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;

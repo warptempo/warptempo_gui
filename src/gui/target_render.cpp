@@ -285,7 +285,7 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     app.target_buffer_start_frame = 0;
     if (app.trim.has_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
-        const auto& tmap = target_view_map_cached(
+        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
         const int64_t trim_begin_frame = static_cast<int64_t>(
@@ -293,7 +293,7 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
                            static_cast<double>(audio.sample_rate())));
         const double tgt = map_source_to_target(
             static_cast<size_t>(trim_begin_frame < 0
-                                ? 0 : trim_begin_frame), tmap);
+                                ? 0 : trim_begin_frame), target_warp_frame_map);
         app.target_buffer_start_frame =
             static_cast<int64_t>(std::nearbyint(tgt));
     }
@@ -363,14 +363,14 @@ void GuiTargetRender::leave_target_view() {
                                app.viewport_start_sample) / cur_spp)
         : 0.0;
 
-    const auto& tmap = target_view_map_cached(
+    const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
 
     const auto to_source = [&](int64_t s) -> int64_t {
         const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
         return static_cast<int64_t>(
-            std::nearbyint(map_target_to_source(q, tmap)));
+            std::nearbyint(map_target_to_source(q, target_warp_frame_map)));
     };
 
     const int64_t new_playhead = to_source(app.playhead_cursor_sample);

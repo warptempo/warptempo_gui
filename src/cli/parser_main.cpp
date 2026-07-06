@@ -2,7 +2,7 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
-#include "warp_frame_map_build.h"               // resolve_markers_for_render,
+#include "warp_frame_map_build.h"               // resolve_warp_markers_for_render,
                                         // build_warp_frame_map,
                                         // derive_midi_tempo_map
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
 
     // --- resolve + build the full untrimmed map, then derive the full midi
     // tempo map from it ---
-    auto r = build_warp_frame_map(resolve_markers_for_render(markers),
+    auto r = build_warp_frame_map(resolve_warp_markers_for_render(markers),
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,

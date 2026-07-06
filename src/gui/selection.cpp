@@ -97,7 +97,7 @@ void Selection::cycle_selection(bool forward) {
     // prune_live_selection. Bind const refs once so the count, frame_of,
     // and is_disabled reads below all index the same vectors.
     const std::vector<GuiWarpMarker>& warp_vec =
-        app.render_view.enabled ? app.render_view.markers
+        app.render_view.enabled ? app.render_view.warp_markers
                                 : app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets
@@ -246,7 +246,7 @@ void Selection::prune_live_selection() {
     if (app.render_view.enabled) {
         n = (app.active_markers_view == 'P')
             ? static_cast<int>(app.render_view.phase_resets.size())
-            : static_cast<int>(app.render_view.markers.size());
+            : static_cast<int>(app.render_view.warp_markers.size());
     } else {
         n = (app.active_markers_view == 'P')
             ? static_cast<int>(app.phaseresetmarkers.markers().size())
@@ -339,7 +339,7 @@ void Selection::select_trim_bound_with_coincident(char which) {
     // bound's active-domain frame.
     const bool phase_reset = (app.active_markers_view == 'P');
     const std::vector<GuiWarpMarker>& warp_vec =
-        app.render_view.enabled ? app.render_view.markers
+        app.render_view.enabled ? app.render_view.warp_markers
                                 : app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets

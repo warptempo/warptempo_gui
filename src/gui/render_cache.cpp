@@ -176,13 +176,13 @@ std::vector<uint8_t> render_fingerprint(
         const std::string& source_audio_path,
         const RenderFileIdentity& source_identity,
         int sample_rate,
-        const std::vector<GuiWarpMarker>& markers,
+        const std::vector<GuiWarpMarker>& warp_markers,
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         const EngineSettings& s,
         bool has_trim_begin, double trim_begin_sec,
         bool has_trim_end,   double trim_end_sec) {
     std::vector<uint8_t> fp;
-    fp.reserve(256 + markers.size() * 64);
+    fp.reserve(256 + warp_markers.size() * 64);
 
     put_u32(fp, kFingerprintVersion);
     put_str(fp, source_audio_path);
@@ -213,8 +213,8 @@ std::vector<uint8_t> render_fingerprint(
 
     // Warp markers: parser-domain base fields only (the GuiWarpMarker session
     // scratch never reaches the engine).
-    put_u32(fp, static_cast<uint32_t>(markers.size()));
-    for (const auto& m : markers) {
+    put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
+    for (const auto& m : warp_markers) {
         put_f64(fp, m.time_seconds);
         put_u8 (fp, m.tempo_inherits ? 1 : 0);
         put_f64(fp, m.tempo_base);

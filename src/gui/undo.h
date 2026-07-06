@@ -39,14 +39,14 @@ struct Undo {
           target_render(target_render_) {}
 
     void recompute_dirty();
-    void push_undo(std::vector<GuiWarpMarker> pre_state, int hint_last);
+    void push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last);
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              int hint_last);
     // tab_override attributes entries pushed on behalf of a tab the caller is
     // about to switch to. The entry belongs to the edit's semantic tab, not
     // the incidental tab the cursor is in when history is pushed.
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
-                        std::vector<GuiPhaseResetMarker> trans_pre,
+                        std::vector<GuiPhaseResetMarker> phase_reset_pre,
                         char op_mode, int hint_last, char tab_override = 0);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules

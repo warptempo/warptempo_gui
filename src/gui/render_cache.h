@@ -36,7 +36,7 @@ std::vector<uint8_t> render_fingerprint(
     const std::string& source_audio_path,
     const RenderFileIdentity& source_identity,
     int sample_rate,
-    const std::vector<GuiWarpMarker>& markers,
+    const std::vector<GuiWarpMarker>& warp_markers,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     const EngineSettings& settings,
     bool has_trim_begin, double trim_begin_sec,

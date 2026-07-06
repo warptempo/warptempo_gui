@@ -48,7 +48,7 @@ void GuiInputHandler::attach_shared_render_resources(RenderRequest& req) {
 AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
     AppState::QueuedRender q;
     q.source_audio_path = app.source_audio_path;
-    q.markers            = app.warpmarkers.markers();
+    q.warp_markers            = app.warpmarkers.markers();
     q.phase_resets       = app.phaseresetmarkers.markers();
     q.engine_settings    = app.engine_settings;
     q.has_trim_begin     = app.trim.has_begin;
@@ -200,17 +200,17 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (audio.sample_rate() <= 0) return false;
     if (audio.total_frames() <= 0) return false;
 
-    const std::vector<GuiWarpMarker> base_markers =
+    const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
     int owner_idx = -1;
-    for (int i = 0; i < static_cast<int>(base_markers.size()); ++i) {
-        if (base_markers[i].bpm_owner) {
+    for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
+        if (base_warp_markers[i].bpm_owner) {
             owner_idx = i;
             break;
         }
     }
     if (owner_idx < 0) return false;
-    const GuiWarpMarker& owner = base_markers[owner_idx];
+    const GuiWarpMarker& owner = base_warp_markers[owner_idx];
     if (owner.bpm_beats <= 0) return false;
     if (owner.bpm_lo    <= 0) return false;
     if (owner.bpm_hi    <= 0) return false;
@@ -218,11 +218,11 @@ bool GuiInputHandler::render_bpm_sweep() {
     // Span endpoint is explicit (set on the `m` two-marker span gate).
     const int endpoint_idx = owner.bpm_endpoint;
     if (endpoint_idx <= owner_idx ||
-        endpoint_idx >= static_cast<int>(base_markers.size())) {
+        endpoint_idx >= static_cast<int>(base_warp_markers.size())) {
         return false;   // missing or malformed span: no sweep
     }
     const double duration_seconds =
-        base_markers[endpoint_idx].time_seconds - owner.time_seconds;
+        base_warp_markers[endpoint_idx].time_seconds - owner.time_seconds;
     if (!(duration_seconds > 0.0)) return false;
 
     std::vector<int> bpm_values;
@@ -300,18 +300,18 @@ bool GuiInputHandler::render_bpm_sweep() {
             continue;
         }
 
-        std::vector<GuiWarpMarker> cell_markers = base_markers;
+        std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
         // Owner: concrete computed base tempo, scale carried in settings.
-        cell_markers[owner_idx].tempo_inherits = false;
-        cell_markers[owner_idx].tempo_base     = computed->base_tempo;
-        cell_markers[owner_idx].tempo_scale.clear();
+        cell_warp_markers[owner_idx].tempo_inherits = false;
+        cell_warp_markers[owner_idx].tempo_base     = computed->base_tempo;
+        cell_warp_markers[owner_idx].tempo_scale.clear();
         // Span-internal markers pass: their own tempo is subsumed by the
         // owner's span tempo. Disabled span-internal markers stay disabled
         // but also pass (the disabled flag is independent of tempo_inherits).
         for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
-            cell_markers[i].tempo_inherits = true;
-            cell_markers[i].tempo_base     = 1.0;       // inert default
-            cell_markers[i].tempo_scale    = "1.0000";  // model's inert scale
+            cell_warp_markers[i].tempo_inherits = true;
+            cell_warp_markers[i].tempo_base     = 1.0;       // inert default
+            cell_warp_markers[i].tempo_scale    = "1.0000";  // model's inert scale
             // label_def on a span-internal marker is preserved (refs are
             // excluded from spans by the `m` two-marker span gate, but a def
             // may exist); only the tempo fields are rewritten. Do not touch
@@ -326,7 +326,7 @@ bool GuiInputHandler::render_bpm_sweep() {
         cell_settings.bpm =
             format_bpm_descriptor(owner.bpm_beats, bpm,
                                   owner.time_seconds,
-                                  base_markers[endpoint_idx].time_seconds);
+                                  base_warp_markers[endpoint_idx].time_seconds);
 
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
@@ -339,7 +339,7 @@ bool GuiInputHandler::render_bpm_sweep() {
         basename += rest_buf;
 
         RenderRequest req = build_render_request(
-            app.source_audio_path, std::move(cell_markers), base_phase_resets,
+            app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
             std::move(cell_settings),
             app.trim.has_begin, app.trim.begin_seconds,
             app.trim.has_end,   app.trim.end_seconds,

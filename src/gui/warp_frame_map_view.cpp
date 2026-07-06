@@ -8,7 +8,7 @@
 #include <vector>
 
 // GUI target-view warp_frame_map helpers, split out of warp_frame_map_build.cpp so the
-// build core (resolve_markers_for_render / build_warp_frame_map / the
+// build core (resolve_warp_markers_for_render / build_warp_frame_map / the
 // phase-reset assembly) carries no AppState dependency and lives in
 // libwarptempo_parser. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
@@ -24,9 +24,9 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // paint_handler construction so hit-test math and waveform paint walk the
     // same segment list. This overload always builds directly and is the entry
     // point for hypothetical (non-live) marker lists; live-state consumers go
-    // through target_view_map_cached.
+    // through target_view_warp_frame_map_cached.
     auto r = build_warp_frame_map(
-        resolve_markers_for_render(slice_to_warp_markers(markers)),
+        resolve_warp_markers_for_render(slice_to_warp_markers(markers)),
         scale, sample_rate, total_frames);
     if (!r) {
         return {};
@@ -34,9 +34,9 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     return std::move(*r);
 }
 
-const TargetWarpMapCache& target_view_map_cached(
+const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames) {
-    TargetWarpMapCache& c = app.target_map_cache;
+    TargetWarpFrameMapCache& c = app.target_warp_frame_map_cache;
     const long long gen = app.warpmarkers.generation();
     const double scale  = app.engine_settings.scale;
     if (c.valid && c.markers_gen == gen && c.scale == scale &&
@@ -94,17 +94,17 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     if (app.active_audio_view == 'S') return source_frame;
-    const auto& tmap = target_view_map_cached(
+    const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
-    return to_domain_frame(app, source_frame, tmap);
+    return to_domain_frame(app, source_frame, target_warp_frame_map);
 }
 
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame) {
     if (app.active_audio_view == 'S') return domain_frame;
-    const auto& tmap = target_view_map_cached(
+    const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
-    return to_source_frame(app, domain_frame, tmap);
+    return to_source_frame(app, domain_frame, target_warp_frame_map);
 }

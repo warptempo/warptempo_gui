@@ -174,7 +174,7 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // freshly enumerated list.
         render_view.stash_render_view_selection_to_active_entry();
         render_view.restore_source_audio();
-        app.render_view.markers.clear();
+        app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
         app.render_view.index             = -1;
         app.render_view.src_F_begin       = 0;
@@ -310,7 +310,7 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
     int& last_sel      = app.last_selected_marker;
     const int n = sub_t
         ? static_cast<int>(app.render_view.phase_resets.size())
-        : static_cast<int>(app.render_view.markers.size());
+        : static_cast<int>(app.render_view.warp_markers.size());
     if (hit >= 0 && hit < n) {
         if (shift) {
             auto it = sel.find(hit);
@@ -339,7 +339,7 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
                 static_cast<double>(sr)));
         } else {
             sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.markers[hit].time_seconds *
+                app.render_view.warp_markers[hit].time_seconds *
                 static_cast<double>(sr)));
         }
         viewport.move_playhead_to(sample);
@@ -388,7 +388,7 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
 // Render-view motion handler with playhead-drag snap support: when a drag is
 // in flight, snap the playhead to the visible sub-view's markers (3px epsilon),
 // matching source-view's gesture, with Shift sweep-select across the dragged
-// interval. Otherwise run hover-popup detection against render_view.markers
+// interval. Otherwise run hover-popup detection against render_view.warp_markers
 // (suppressed in phase reset sub-view because hit_test_flag short-circuits to
 // -1). Fully terminating; the on_motion caller returns after it.
 void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
@@ -413,7 +413,7 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
                     static_cast<double>(sr)));
             } else {
                 new_playhead = static_cast<int64_t>(std::nearbyint(
-                    app.render_view.markers[hit].time_seconds *
+                    app.render_view.warp_markers[hit].time_seconds *
                     static_cast<double>(sr)));
             }
         } else {
@@ -474,7 +474,7 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
                           lo_t, hi_t, forward,
                           app.playhead_drag.press_marker_idx)
                     : sweep_select_interval(
-                          app, app.render_view.markers,
+                          app, app.render_view.warp_markers,
                           lo_t, hi_t, forward,
                           app.playhead_drag.press_marker_idx);
                 if (swept)

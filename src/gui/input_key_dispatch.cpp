@@ -309,7 +309,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 batch_folder.filename().string().c_str(), num_buf);
 
             RenderRequest req = build_render_request(
-                q.source_audio_path, q.markers, q.phase_resets, q.engine_settings,
+                q.source_audio_path, q.warp_markers, q.phase_resets, q.engine_settings,
                 q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
                 batch_folder.string(), num_buf);
             req.authoring = q.authoring;
@@ -343,13 +343,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // iter_start to iter_end inclusive. Integer-cents avoids the
         // float-accumulation drift a naive `for (d=start; d<=end;
         // d+=0.01)` would suffer across many steps.
-        const std::vector<GuiWarpMarker> base_markers =
+        const std::vector<GuiWarpMarker> base_warp_markers =
             app.warpmarkers.markers();
         std::vector<int>                 eligible_indices;
         std::vector<std::vector<double>> per_marker_deltas;
         std::vector<bool>                is_swept;
-        for (int i = 0; i < static_cast<int>(base_markers.size()); ++i) {
-            const GuiWarpMarker& m = base_markers[i];
+        for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
+            const GuiWarpMarker& m = base_warp_markers[i];
             if (!iter_popup_eligible_marker(m)) continue;
             eligible_indices.push_back(i);
             const bool swept =
@@ -472,22 +472,22 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             basename += '_';
             basename += delta_csv;
 
-            std::vector<GuiWarpMarker> cell_markers = base_markers;
+            std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
             for (size_t k = 0; k < num_dims; ++k) {
                 const int mi = eligible_indices[k];
-                cell_markers[mi].tempo_base =
-                    base_markers[mi].tempo_base +
+                cell_warp_markers[mi].tempo_base =
+                    base_warp_markers[mi].tempo_base +
                     per_marker_deltas[k][indices[k]];
                 // The engine doesn't consume iter values; clear them
                 // so the request is quiet.
-                cell_markers[mi].iter_start =
+                cell_warp_markers[mi].iter_start =
                     std::numeric_limits<double>::quiet_NaN();
-                cell_markers[mi].iter_end =
+                cell_warp_markers[mi].iter_end =
                     std::numeric_limits<double>::quiet_NaN();
             }
 
             RenderRequest req = build_render_request(
-                app.source_audio_path, std::move(cell_markers), base_phase_resets,
+                app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
                 app.engine_settings,
                 app.trim.has_begin, app.trim.begin_seconds,
                 app.trim.has_end,   app.trim.end_seconds,
@@ -532,7 +532,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (!app.render_view.enabled) return true;
         if (app.render_view.index < 0) return true;
 
-        // app.render_view.markers / .phase_resets are render-domain display
+        // app.render_view.warp_markers / .phase_resets are render-domain display
         // state. Ctrl+Alt+C promotes the render's source-domain authoring
         // sidecars, so every required sidecar is validated and collected
         // before the first mutation.
@@ -560,7 +560,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             authoring.has_viewport_start ||
             authoring.has_playhead;
         std::vector<GuiWarpMarker>    src_warp;
-        std::vector<GuiPhaseResetMarker> src_trans;
+        std::vector<GuiPhaseResetMarker> src_phase_resets;
         {
             const std::filesystem::path wm =
                 cur_e.batch_folder / (cur_e.basename + ".warpmarkers");
@@ -587,15 +587,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                     tm.string().c_str(), r.error().c_str());
                 return true;
             }
-            src_trans = t.markers();
+            src_phase_resets = t.markers();
         }
 
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
-        std::vector<GuiPhaseResetMarker> trans_pre = app.phaseresetmarkers.markers();
+        std::vector<GuiPhaseResetMarker> phase_reset_pre = app.phaseresetmarkers.markers();
         const int                 hint_last = app.last_selected_marker;
 
         app.warpmarkers.markers_mut()    = std::move(src_warp);
-        app.phaseresetmarkers.markers_mut() = std::move(src_trans);
+        app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         // Commit is a wholesale authoring reset. Every per-tab per-mode slot
@@ -615,7 +615,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             authoring.has_active_tab ? authoring.active_tab : app.active_tab_view;
         // Attribute the entry to the mode the commit was performed in so undo/redo restore the user's context and interpret post-restore hints against that marker store.
         const char commit_marker_mode = app.active_markers_view;
-        undo.push_undo_both(std::move(warp_pre), std::move(trans_pre),
+        undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
                        commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
 
@@ -702,7 +702,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         target_render.trigger();
 
         app.render_view.list.clear();
-        app.render_view.markers.clear();
+        app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
         app.render_view.index             = -1;
         app.render_view.src_F_begin       = 0;

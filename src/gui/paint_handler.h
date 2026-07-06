@@ -212,7 +212,7 @@ struct StemCache {
     bool      fp_target           = false;
     uint64_t  fp_warp_frame_map_hash     = 0;
 
-    long long fp_warpmarker_generation       = -1;
+    long long fp_warp_generation       = -1;
     long long fp_phase_reset_generation      = -1;
     uint64_t  fp_drag_overlay_hash           = 0;
     bool      fp_drag_active                 = false;
@@ -279,7 +279,7 @@ struct FlagCache {
     bool      fp_target              = false;
     uint64_t  fp_warp_frame_map_hash        = 0;
 
-    long long fp_warpmarker_generation    = -1;
+    long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;

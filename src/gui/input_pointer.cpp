@@ -190,7 +190,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // ops and pass through unchanged. Drag-create and top-strip playhead
     // movement are silent no-ops so the read-only invariant on
     // marker state is preserved. Hover-popup motion still runs in
-    // the motion handler against render_view.markers.
+    // the motion handler against render_view.warp_markers.
     // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag
@@ -611,7 +611,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // when a drag is in flight, snap the
     // playhead to the visible sub-view's markers (3px epsilon),
     // matching source-view's gesture. Otherwise run hover popup
-    // detection against render_view.markers (suppressed in phase reset
+    // detection against render_view.warp_markers (suppressed in phase reset
     // sub-view because hit_test_flag short-circuits to -1).
     if (app.render_view.enabled) {
         handle_render_view_motion(mouse_x, mouse_y, mods);

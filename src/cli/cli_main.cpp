@@ -3,7 +3,7 @@
 #include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
 #include "settings_trim.h"              // SettingsTrim, read_settings_trim
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
-                                        // resolve_markers_for_render
+                                        // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_frame_map
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
     // trim is applied by slicing it, never by an engine window. This is
     // do_render's full_warp_frame_map: its t_a history from frame 0 is what
     // keeps a windowed render sample-aligned with the full render. ---
-    auto r = build_warp_frame_map(resolve_markers_for_render(markers),
+    auto r = build_warp_frame_map(resolve_warp_markers_for_render(markers),
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,

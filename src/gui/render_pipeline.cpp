@@ -50,7 +50,7 @@ struct CommitCriticalSidecars {
 // (map_output.cpp) so the GUI render pipeline and the headless parser CLI
 // emit byte-identical artifacts from one implementation.
 
-// resolve_markers_for_render moved to warp_frame_map_build.cpp (public function) so the
+// resolve_warp_markers_for_render moved to warp_frame_map_build.cpp (public function) so the
 // target-view paint can reach it without crossing the render_pipeline
 // boundary. Both callers — do_render below and the GUI paint in
 // paint_handler — receive the same resolved list.
@@ -75,7 +75,7 @@ std::filesystem::path compose_sibling_output_path(
 }
 
 RenderRequest build_render_request(std::string source_audio_path,
-                                   std::vector<GuiWarpMarker> markers,
+                                   std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
                                    bool has_trim_begin, double trim_begin_sec,
@@ -84,7 +84,7 @@ RenderRequest build_render_request(std::string source_audio_path,
     std::string batch_basename) {
     RenderRequest req;
     req.source_audio_path  = std::move(source_audio_path);
-    req.markers            = std::move(markers);
+    req.warp_markers            = std::move(warp_markers);
     req.engine_settings    = std::move(engine_settings);
     req.phase_resets       = std::move(phase_resets);
     req.has_trim_begin     = has_trim_begin;
@@ -162,7 +162,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // length.
     auto phase_reset_frame_map_r =
         build_phase_reset_frame_map(
-            slice_to_phaseresetmarkers(req.phase_resets), sample_rate,
+            slice_to_phase_reset_markers(req.phase_resets), sample_rate,
             total_frames);
     if (!phase_reset_frame_map_r) {
         std::fprintf(stderr, "warptempo_gui: render error: %s\n",
@@ -186,7 +186,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // no reuse path can fail here that previously succeeded, and the reuse
     // hit's extra map build is negligible against the pipeline. ---
     auto rfull = build_warp_frame_map(
-        resolve_markers_for_render(slice_to_warp_markers(req.markers)),
+        resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers)),
         scale, sample_rate, total_frames);
     if (!rfull) {
         std::fprintf(stderr,
@@ -293,7 +293,7 @@ RenderOutcome do_render(const RenderRequest& req,
             const std::filesystem::path wm_path =
                 bf / (req.batch_basename + ".warpmarkers");
             bool existed = existed_before(wm_path);
-            if (!GuiWarpMarkers::save(wm_path.string(), req.markers)) {
+            if (!GuiWarpMarkers::save(wm_path.string(), req.warp_markers)) {
                 note_failure(wm_path);
                 return result;
             }
@@ -342,7 +342,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<long long>(profile_trim_span_frames),
                 static_cast<long long>(profile_target_frames),
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
-                req.markers.size(), phase_reset_frame_map.size(),
+                req.warp_markers.size(), phase_reset_frame_map.size(),
                 static_cast<long long>(phase_reset_offset_samples),
                 req.output_buffer ? "yes" : "no",
                 req.engine_settings.limiter ? "yes" : "no",
@@ -359,7 +359,7 @@ RenderOutcome do_render(const RenderRequest& req,
         if (stat_file_identity(req.source_audio_path, source_identity)) {
             fingerprint = render_fingerprint(
                 req.source_audio_path, source_identity,
-                static_cast<int>(sample_rate), req.markers, req.phase_resets,
+                static_cast<int>(sample_rate), req.warp_markers, req.phase_resets,
                 req.engine_settings,
                 req.has_trim_begin, req.trim_begin_sec,
                 req.has_trim_end, req.trim_end_sec);
@@ -387,17 +387,17 @@ RenderOutcome do_render(const RenderRequest& req,
         // renders never produce display sidecars, so they are exempt.
         if (batch_render) {
             const std::filesystem::path bf(req.batch_folder);
-            const std::filesystem::path wmd_path =
+            const std::filesystem::path warp_sidecar_path =
                 bf / (req.batch_basename + ".renderwarpmarkers");
-            const std::filesystem::path tmd_path =
+            const std::filesystem::path phase_reset_sidecar_path =
                 bf / (req.batch_basename + ".renderphaseresetmarkers");
-            std::error_code wmd_ec;
-            std::error_code tmd_ec;
-            const bool wmd_exists = std::filesystem::exists(wmd_path, wmd_ec);
-            const bool tmd_exists = std::filesystem::exists(tmd_path, tmd_ec);
-            if (!wmd_exists || !tmd_exists) {
+            std::error_code warp_sidecar_ec;
+            std::error_code phase_reset_sidecar_ec;
+            const bool warp_sidecar_exists = std::filesystem::exists(warp_sidecar_path, warp_sidecar_ec);
+            const bool phase_reset_sidecar_exists = std::filesystem::exists(phase_reset_sidecar_path, phase_reset_sidecar_ec);
+            if (!warp_sidecar_exists || !phase_reset_sidecar_exists) {
                 const std::filesystem::path& missing =
-                    !wmd_exists ? wmd_path : tmd_path;
+                    !warp_sidecar_exists ? warp_sidecar_path : phase_reset_sidecar_path;
                 std::fprintf(stderr,
                     "warptempo_gui: render reuse refused, missing display "
                     "sidecar: %s\n",
@@ -471,7 +471,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // feature: a marker at source F displays at tgt(F) - window_offset
             // with no start-trim term.
 
-            // Markers: lockstep walk between req.markers and the real-segment
+            // Markers: lockstep walk between req.warp_markers and the real-segment
             // range of full_warp_frame_map (built trim-off, so no synthetic
             // trim anchors). Each non-disabled marker consumes the
             // next-in-order segment; the trim range gates only emission, not
@@ -484,7 +484,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // the iterator advances), while out-of-trim and pre-origin gate
             // emission only, each running after the segment is consumed.
             std::set<std::string> disabled_label_defs;
-            for (const auto& m : req.markers) {
+            for (const auto& m : req.warp_markers) {
                 if (!m.label_def.empty() && m.disabled) {
                     disabled_label_defs.insert(m.label_def);
                 }
@@ -495,13 +495,13 @@ RenderOutcome do_render(const RenderRequest& req,
             };
 
             auto seg_it = full_warp_frame_map.begin();
-            std::vector<GuiWarpMarker> warped_markers;
-            warped_markers.reserve(req.markers.size());
-            for (const auto& g : req.markers) {
+            std::vector<GuiWarpMarker> sidecar_warp_markers;
+            sidecar_warp_markers.reserve(req.warp_markers.size());
+            for (const auto& g : req.warp_markers) {
                 const bool eff_disabled =
                     g.disabled || is_cascade_disabled_ref(g);
 
-                // resolve_markers_for_render filter.
+                // resolve_warp_markers_for_render filter.
                 if (eff_disabled) continue;
 
                 // Consume this marker's segment first (full_warp_frame_map
@@ -529,14 +529,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 // are strictly ascending doubles by map monotonicity, so the
                 // display sidecar's timestamps are strictly ascending too.
                 if (w.time_seconds < 0.0) continue;
-                warped_markers.push_back(std::move(w));
+                sidecar_warp_markers.push_back(std::move(w));
             }
-            const std::string wmd_path =
+            const std::string warp_sidecar_path =
                 (bf / (req.batch_basename + ".renderwarpmarkers")).string();
-            if (!GuiWarpMarkers::save(wmd_path, warped_markers)) {
+            if (!GuiWarpMarkers::save(warp_sidecar_path, sidecar_warp_markers)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
-                    wmd_path.c_str());
+                    warp_sidecar_path.c_str());
                 all_ok = false;
             }
 
@@ -561,8 +561,8 @@ RenderOutcome do_render(const RenderRequest& req,
                     ? trim_emit_sample_cap
                     : static_cast<int64_t>(std::llrint(
                           full_warp_frame_map.back().tgt_frame));
-            std::vector<GuiPhaseResetMarker> warped_phase_resets;
-            warped_phase_resets.reserve(req.phase_resets.size());
+            std::vector<GuiPhaseResetMarker> sidecar_phase_resets;
+            sidecar_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
                 if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
@@ -590,15 +590,15 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (!window_target) continue;
                 GuiPhaseResetMarker w = t;
                 w.time_seconds = *window_target / sr_d;
-                warped_phase_resets.push_back(std::move(w));
+                sidecar_phase_resets.push_back(std::move(w));
             }
-            const std::string tmd_path =
+            const std::string phase_reset_sidecar_path =
                 (bf / (req.batch_basename + ".renderphaseresetmarkers"))
                 .string();
-            if (!GuiPhaseResetMarkers::save(tmd_path, warped_phase_resets)) {
+            if (!GuiPhaseResetMarkers::save(phase_reset_sidecar_path, sidecar_phase_resets)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
-                    tmd_path.c_str());
+                    phase_reset_sidecar_path.c_str());
                 all_ok = false;
             }
         }

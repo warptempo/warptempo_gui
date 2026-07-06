@@ -1261,14 +1261,14 @@ double flag_pending_text_left_x(
         std::nearbyint(mv[marker_idx].time_seconds * sr));
     double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {
-        const auto& tmap = target_view_map_cached(
+        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!tmap.empty()) {
+        if (!target_warp_frame_map.empty()) {
             const size_t src_frame = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(src_frame, tmap));
+            ms = std::nearbyint(map_source_to_target(src_frame, target_warp_frame_map));
         }
     }
     if (ms <  static_cast<double>(vp_start)) return -1.0;

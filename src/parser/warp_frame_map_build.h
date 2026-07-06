@@ -101,7 +101,7 @@ std::expected<void, std::string> validate_trim_frames(
 // same rule as resolve_inherited_tempo. Both the engine-bound render
 // pipeline and the target view's warp_frame_map recompute go through this single
 // resolver so the visible deformity matches what the engine would emit.
-std::vector<MarkerForRender> resolve_markers_for_render(
+std::vector<MarkerForRender> resolve_warp_markers_for_render(
     const std::vector<WarpMarker>& src);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
@@ -109,7 +109,7 @@ std::vector<MarkerForRender> resolve_markers_for_render(
 // false, not a label reference, and not disabled. Disabled markers are skipped
 // because the engine drops them before resolution, so a disabled marker
 // contributes no tempo downstream. Returns 1.0 (tempo) / "" (scale) if none is
-// found. This is the single canonical inheritance walk: resolve_markers_for_render
+// found. This is the single canonical inheritance walk: resolve_warp_markers_for_render
 // and compute_hover_popup_text both call it, so the popup display always
 // matches the tempo the engine resolves.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);

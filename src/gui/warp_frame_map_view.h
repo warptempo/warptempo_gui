@@ -30,7 +30,7 @@ struct AppState;
 // rebuild, so the waveform-cache fingerprint reads it instead of
 // rehashing per tick. A failed or empty build is cached too (empty
 // warp_frame_map, hash 0) — callers already treat an empty map as identity.
-struct TargetWarpMapCache {
+struct TargetWarpFrameMapCache {
     bool      valid        = false;
     long long markers_gen  = -1;
     double    scale        = 0.0;
@@ -52,7 +52,7 @@ struct TargetWarpMapCache {
 // next call with a changed key (single-threaded GUI use only — the
 // waveform worker receives its own copy via the job, never this
 // reference).
-const TargetWarpMapCache& target_view_map_cached(
+const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Inverse-translate a domain-frame coordinate (active-domain) into a
@@ -78,9 +78,9 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // common case: translating a single coordinate between the source-frame domain
 // and the active-domain using the LIVE target-view map. Source view: identity,
 // no map built. Target view: routes through the memoized
-// target_view_map_cached, so even repeated calls (e.g. inside a loop) cost
+// target_view_warp_frame_map_cached, so even repeated calls (e.g. inside a loop) cost
 // only a cache-key comparison after the first build. Use these at every input /
-// playhead boundary that currently reads target_view_map_cached
+// playhead boundary that currently reads target_view_warp_frame_map_cached
 // solely to feed one to_domain_frame / to_source_frame.
 //
 // NOT for sites translating against a non-live map — a drag's

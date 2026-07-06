@@ -41,12 +41,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // In render-view, the visible sub-view's list drives hit-testing. 'P'
     // reads phase reset time_seconds and converts to source frames via the
     // source sample rate (matching source-view's phase reset branch).
-    const bool rv_trans = rv && app.active_markers_view == 'P';
+    const bool rv_phase_reset = rv && app.active_markers_view == 'P';
     const int n =
-        rv_trans
+        rv_phase_reset
             ? static_cast<int>(app.render_view.phase_resets.size())
             : rv
-                ? static_cast<int>(app.render_view.markers.size())
+                ? static_cast<int>(app.render_view.warp_markers.size())
                 : (app.active_markers_view == 'P')
                     ? static_cast<int>(app.phaseresetmarkers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
@@ -55,25 +55,25 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
     if (!rv && app.active_audio_view == 'T') {
-        // target_view_map_cached stores segments in app.target_map_cache.warp_frame_map,
+        // target_view_warp_frame_map_cached stores segments in app.target_warp_frame_map_cache.warp_frame_map,
         // which outlives this call. The reference remains valid until a
         // changed-key rebuild, and this function does not mutate markers,
         // scale, or audio identity while holding it.
-        const auto& m = target_view_map_cached(
+        const auto& m = target_view_warp_frame_map_cached(
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) tmap = &m;
+        if (!m.empty()) target_warp_frame_map = &m;
     }
     for (int i = 0; i < n; ++i) {
         int64_t src_sample;
-        if (rv_trans) {
+        if (rv_phase_reset) {
             src_sample = static_cast<int64_t>(std::nearbyint(
                 app.render_view.phase_resets[i].time_seconds *
                 static_cast<double>(sr)));
         } else if (rv) {
             src_sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.markers[i].time_seconds *
+                app.render_view.warp_markers[i].time_seconds *
                 static_cast<double>(sr)));
         } else if (app.active_markers_view == 'P') {
             src_sample = static_cast<int64_t>(std::nearbyint(
@@ -85,11 +85,11 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 static_cast<double>(sr)));
         }
         double ms = static_cast<double>(src_sample);
-        if (tmap) {
+        if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *tmap));
+            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
         if (ms < vp) continue;
         if (ms >= vp + static_cast<double>(visible)) continue;
@@ -122,11 +122,11 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
     if (app.active_audio_view == 'T') {
-        const auto& m = target_view_map_cached(
+        const auto& m = target_view_warp_frame_map_cached(
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) tmap = &m;
+        if (!m.empty()) target_warp_frame_map = &m;
     }
 
     auto bound_dist = [&](double seconds, bool present) -> int {
@@ -134,11 +134,11 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(seconds * sr_d));
         double ms = static_cast<double>(src_sample);
-        if (tmap) {
+        if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *tmap));
+            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
         if (ms < vp) return kMarkerHitHalfPx + 1;
         if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
@@ -180,11 +180,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
     if (app.active_audio_view == 'T') {
-        const auto& m = target_view_map_cached(
+        const auto& m = target_view_warp_frame_map_cached(
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) tmap = &m;
+        if (!m.empty()) target_warp_frame_map = &m;
     }
 
     const int kMiss = std::numeric_limits<int>::max();
@@ -204,11 +204,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(seconds * sr_d));
         double ms = static_cast<double>(src_sample);
-        if (tmap) {
+        if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *tmap));
+            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
         if (ms < vp) return kMiss;
         if (ms >= vp + static_cast<double>(visible)) return kMiss;
@@ -272,7 +272,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             if (!app.drag.frozen_warp_frame_map.empty())
                 tmap_arg = &app.drag.frozen_warp_frame_map;
         } else {
-            const auto& m = target_view_map_cached(
+            const auto& m = target_view_warp_frame_map_cached(
                 app, audio.sample_rate(),
                 static_cast<long>(audio.total_frames())).warp_frame_map;
             if (!m.empty()) tmap_arg = &m;
@@ -288,7 +288,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     std::vector<FlagHitRect> rects;
     if (app.render_view.enabled) {
         rects = compute_flag_hit_rects(
-            top, app.render_view.markers,
+            top, app.render_view.warp_markers,
             vp_start, vp_end, audio.sample_rate(), kFlagFontSize,
             nullptr, drag_overlay);
     } else if (app.active_markers_view == 'P') {
@@ -324,7 +324,7 @@ bool popup_eligible_marker(const AppState& app, int idx) {
         // render's warpmarkers regardless of the pre-toggle mode.
         // Iteration-mode is forced off on toggle-in so its gate is
         // implicitly satisfied here too.
-        const auto& mv = app.render_view.markers;
+        const auto& mv = app.render_view.warp_markers;
         if (idx >= static_cast<int>(mv.size())) return false;
         const auto& m = mv[idx];
         return m.tempo_inherits || !m.label_ref.empty();
@@ -334,7 +334,7 @@ bool popup_eligible_marker(const AppState& app, int idx) {
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
     const auto& m = mv[idx];
-    // Render resolution (resolve_markers_for_render) drops disabled markers
+    // Render resolution (resolve_warp_markers_for_render) drops disabled markers
     // outright and drops label refs whose definition is disabled (the
     // cascade). The popup must not report a tempo the render never applies,
     // so eligibility mirrors both drops here: a disabled marker is

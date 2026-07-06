@@ -522,7 +522,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
                 tv[idx].time_seconds * static_cast<double>(sr)));
         } else {
             const auto& mv = app.render_view.enabled
-                ? app.render_view.markers
+                ? app.render_view.warp_markers
                 : app.warpmarkers.markers();
             if (idx >= static_cast<int>(mv.size())) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
@@ -740,7 +740,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // A failed build leaves the vector empty, keeping the identity fallback.
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto r = build_warp_frame_map(
-        resolve_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers())),
+        resolve_warp_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers())),
         app.engine_settings.scale, audio.sample_rate(),
         static_cast<long>(audio.total_frames()));
     if (r) {

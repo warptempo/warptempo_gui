@@ -46,7 +46,7 @@ struct AuthoringSnapshot {
 // AppState's (anonymous-namespace) shape.
 struct RenderRequest {
     std::string            source_audio_path;
-    std::vector<GuiWarpMarker> markers;
+    std::vector<GuiWarpMarker> warp_markers;
     // Typed engine settings, copied from app.engine_settings at dispatch
     // time. The only carrier of engine settings into the render pipeline;
     // do_render reads engine-relevant keys exclusively from this struct.
@@ -163,7 +163,7 @@ std::filesystem::path compose_sibling_output_path(
 // than the rendered source's. output_buffer is left at its nullptr default; the
 // target-view caller sets it after the call.
 RenderRequest build_render_request(std::string source_audio_path,
-                                   std::vector<GuiWarpMarker> markers,
+                                   std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
                                    bool has_trim_begin, double trim_begin_sec,

@@ -37,7 +37,7 @@ struct LabelCacheEntry {
 // list". A marker is silenced either by its own disabled flag or, for an
 // enabled label ref, by its definition marker being disabled — the cascade,
 // because the definition supplies the duration the ref imposes, so a silenced
-// definition leaves the ref with nothing to reproduce. resolve_markers_for_render
+// definition leaves the ref with nothing to reproduce. resolve_warp_markers_for_render
 // filters on this, marker_effective measures label-ref segment distances to
 // the next marker that passes it, and the pass-provenance source walk selects
 // the immediate prior marker that passes it, so both the hover multiplier and
@@ -57,7 +57,7 @@ bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) 
 
 }  // namespace
 
-std::vector<MarkerForRender> resolve_markers_for_render(
+std::vector<MarkerForRender> resolve_warp_markers_for_render(
     const std::vector<WarpMarker>& src) {
 
     // Inherited-tempo resolution for pass markers is the canonical
@@ -204,7 +204,7 @@ MarkerEffective marker_effective(
         bool        def_has_typed_scale;
         if (def.tempo_inherits) {
             // An inheriting definition (a pass) contributes both its resolved
-            // base and its resolved scale, mirroring resolve_markers_for_render
+            // base and its resolved scale, mirroring resolve_warp_markers_for_render
             // so the hover multiplier matches the frame map. Both resolvers walk
             // backward from def_idx-1, correctly excluding the pass itself.
             def_base = resolve_inherited_tempo(mv, def_idx);
