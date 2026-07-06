@@ -1,25 +1,15 @@
 #include "phase_reset_frame_map_build.h"
 
-#include <cstddef>
 #include <optional>
-#include <string>
 #include <vector>
 
-std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate,
-    int64_t total_frames) {
+std::vector<double> build_phase_reset_source_frames(
+    const std::vector<PhaseResetMarker>& markers, long sample_rate) {
     std::vector<double> out;
     out.reserve(markers.size());
-    for (size_t i = 0; i < markers.size(); ++i) {
-        const auto& m = markers[i];
+    for (const auto& m : markers) {
         if (m.disabled) continue;
-        double src_frame = m.time_seconds * static_cast<double>(sample_rate);
-        if (src_frame > static_cast<double>(total_frames)) {
-            return std::unexpected(
-                "phase reset time exceeds source length at marker "
-                + std::to_string(i));
-        }
-        out.push_back(src_frame);
+        out.push_back(m.time_seconds * static_cast<double>(sample_rate));
     }
     return out;
 }

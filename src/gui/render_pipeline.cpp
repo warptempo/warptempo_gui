@@ -139,20 +139,10 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Derived here, at the probe, so the reset frames are always in the frame
     // domain of the source actually being rendered, symmetric with
-    // build_warp_frame_map's conversion of warp marker seconds; the conversion
-    // also validates the authored reset times against the probed source
-    // length.
-    auto phase_reset_source_frames_r =
+    // build_warp_frame_map's conversion of warp marker seconds.
+    const std::vector<double> phase_reset_source_frames =
         build_phase_reset_source_frames(
-            slice_to_phase_reset_markers(req.phase_resets), sample_rate,
-            total_frames);
-    if (!phase_reset_source_frames_r) {
-        std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                     phase_reset_source_frames_r.error().c_str());
-        return RenderOutcome::Failed;
-    }
-    const std::vector<double>& phase_reset_source_frames =
-        *phase_reset_source_frames_r;
+            slice_to_phase_reset_markers(req.phase_resets), sample_rate);
 
     // --- Build the full (untrimmed) frame map from in-memory markers. The
     // engine always renders its map wholesale: a trimmed wav render slices
