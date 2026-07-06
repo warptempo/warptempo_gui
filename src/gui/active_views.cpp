@@ -160,8 +160,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 }
 
 // `p` key: toggle into/out of phase reset view. Phase reset markers are
-// authored independent of output_format — they're consumed only when
-// output_format=wav drives the engine; non-wav formats ignore them.
+// authored independent of output_format — they're consumed when
+// output_format=wav drives the engine and when warptempo_maps derives the
+// pair's .phaseresetframemap column; generic_map and midi_map ignore them.
 void GuiActiveViews::toggle_active_markers_view() {
     if (app.active_markers_view == 'P') {
         this->switch_active_markers_view_to('W');

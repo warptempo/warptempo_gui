@@ -108,8 +108,9 @@ struct RenderRequest {
 
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final output to `<batch_folder>/<batch_basename>` with the
-    // selected output-format extension (.wav, .warpframemap, or
-    // .miditempomap)
+    // selected output-format extension (.wav for wav, .warpframemap for
+    // generic_map and for warptempo_maps — whose .phaseresetframemap
+    // sibling lands beside it — .miditempomap for midi_map)
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
     // and `.rendersettings` sidecars in the same folder. For wav renders,
@@ -147,11 +148,24 @@ RenderOutcome do_render(const RenderRequest& req,
 // req.batch_folder is empty. Mirrors the inline composition in
 // do_render; both must stay in lockstep. Directory is the
 // source's parent ("." when the source has no parent). Extension is
-// selected by output_format; the clean-float-wav path carries the
+// selected by output_format (warptempo_maps names its warp column here;
+// the .phaseresetframemap sibling comes from
+// render_output_paths_for_format); the clean-float-wav path carries the
 // `limiter=false;` filename prefix.
 std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es);
+
+// Full list of on-disk output paths for a render of `output_format` whose
+// primary output is `primary_path`: one entry for the single-file formats
+// (wav, generic_map, midi_map), two for the warptempo_maps pair — the
+// warp-column primary plus the .phaseresetframemap sibling, the same path
+// with the extension swapped. Shared by do_render's source-overwrite
+// refusal and pair emission and by the settings editor's commit guard, so
+// every file a format writes is covered by the same checks.
+std::vector<std::filesystem::path> render_output_paths_for_format(
+    const std::string& output_format,
+    const std::filesystem::path& primary_path);
 
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,

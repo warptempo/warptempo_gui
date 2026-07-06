@@ -89,8 +89,8 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     // Bounds are validated per tab at read time so no consumer ever sees a
     // crossed or empty window: an end at or before its begin yields a zero- or
     // negative-length window that has no meaning downstream (the GUI clamps it,
-    // the wav render's emit cap goes non-positive, and warpframemap /
-    // miditempomap emit a
+    // the wav render's emit cap goes non-positive, and the .warpframemap /
+    // .miditempomap artifacts emit a
     // non-monotonic end anchor). GUI gestures maintain ordering, so only a hand
     // edit can author a crossed pair. No line-number prefix: the defect spans
     // the two bound lines, not one.

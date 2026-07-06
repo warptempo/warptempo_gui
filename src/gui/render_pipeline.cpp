@@ -59,9 +59,12 @@ struct CommitCriticalSidecars {
 std::filesystem::path compose_sibling_output_path(
     const std::string& source_audio_path,
     const EngineSettings& es) {
+    // warptempo_maps names its warp column here; the .phaseresetframemap
+    // sibling is derived from this path by render_output_paths_for_format.
     const std::string ext =
-        (es.output_format == "warpframemap")  ? ".warpframemap" :
-        (es.output_format == "miditempomap") ? ".miditempomap" : ".wav";
+        (es.output_format == "generic_map" ||
+         es.output_format == "warptempo_maps") ? ".warpframemap" :
+        (es.output_format == "midi_map")       ? ".miditempomap" : ".wav";
     std::filesystem::path src(source_audio_path);
     std::filesystem::path dir = src.parent_path();
     if (dir.empty()) dir = std::filesystem::path(".");
@@ -71,6 +74,19 @@ std::filesystem::path compose_sibling_output_path(
         ? ("limiter=false;" + es.title + ext)
         : (es.title + ext);
     return dir / out_filename;
+}
+
+std::vector<std::filesystem::path> render_output_paths_for_format(
+    const std::string& output_format,
+    const std::filesystem::path& primary_path) {
+    std::vector<std::filesystem::path> paths;
+    paths.push_back(primary_path);
+    if (output_format == "warptempo_maps") {
+        std::filesystem::path phase_reset_path = primary_path;
+        phase_reset_path.replace_extension(".phaseresetframemap");
+        paths.push_back(std::move(phase_reset_path));
+    }
+    return paths;
 }
 
 RenderRequest build_render_request(std::string source_audio_path,
@@ -175,7 +191,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // engine always renders the full map: a trimmed wav render slices this
     // canonical map into a re-anchored sub-map plus an emit_sample_cap via
     // assign_engine_warp_frame_map before dispatch, and the trimmed
-    // warpframemap / miditempomap artifacts derive from that same window —
+    // .warpframemap / .phaseresetframemap / .miditempomap artifacts derive
+    // from that same window —
     // one trim computation, shared. The inherited t_a history from frame 0
     // is what makes the windowed render null against the full render.
     // Built here at the probe, beside the phase-reset conversion above: the
@@ -198,9 +215,13 @@ RenderOutcome do_render(const RenderRequest& req,
         std::move(*rfull);
 
     // --- Compute output path. ---
+    // Mirrors compose_sibling_output_path's format->extension mapping for the
+    // batch-folder naming; warptempo_maps names its warp column and the
+    // phase reset sibling comes from render_output_paths_for_format.
     auto ext_for_format = [&]() -> std::string {
-        if (output_format == "warpframemap")  return ".warpframemap";
-        if (output_format == "miditempomap") return ".miditempomap";
+        if (output_format == "generic_map" ||
+            output_format == "warptempo_maps") return ".warpframemap";
+        if (output_format == "midi_map")       return ".miditempomap";
         return ".wav";
     };
     const bool batch_render = !req.batch_folder.empty();
@@ -218,23 +239,28 @@ RenderOutcome do_render(const RenderRequest& req,
     // previous render with the same title is intended behavior; the source
     // is the one path that must survive every dispatch. equivalent() is an
     // inode-level match and only succeeds when both paths exist — if the
-    // output path doesn't exist yet it cannot be the source.
-    {
+    // output path doesn't exist yet it cannot be the source. Every output
+    // path of the format is checked, so the warptempo_maps pair's second
+    // file is covered by the same refusal.
+    for (const std::filesystem::path& out_path :
+         render_output_paths_for_format(output_format, final_output_path)) {
         std::error_code ec;
-        if (std::filesystem::exists(final_output_path, ec) &&
-            std::filesystem::equivalent(final_output_path,
+        if (std::filesystem::exists(out_path, ec) &&
+            std::filesystem::equivalent(out_path,
                                         req.source_audio_path, ec)) {
             std::fprintf(stderr,
                 "warptempo_gui: render error: output '%s' resolves to the "
                 "source audio file; refusing to overwrite the source. "
                 "Change the title setting.\n",
-                final_output_path.c_str());
+                out_path.string().c_str());
             return RenderOutcome::Failed;
         }
     }
 
     // Staging path used by the wav engine path's atomic rename. Text-file
-    // formats write final_output_path directly.
+    // formats write final_output_path directly, except the warptempo_maps
+    // pair, which stages both of its files (path + ".tmp") so a half pair
+    // never lands.
     const std::string staging_output_path = final_output_path + ".tmp";
 
     auto cleanup_all = [&]() {
@@ -456,7 +482,8 @@ RenderOutcome do_render(const RenderRequest& req,
         // The source-domain pair above stays authoritative for
         // Ctrl+Alt+C commit and Ctrl+S authoring saves; the render-domain
         // pair is display-only and never read back into authoring memory.
-        // Only wav renders produce these — warpframemap/miditempomap formats skip
+        // Only wav renders produce these — the map formats (warptempo_maps,
+        // generic_map, midi_map) skip
         // the engine. The phase-reset sidecar is always written on wav batch
         // renders, including as an empty file.
         if (output_format == "wav") {
@@ -951,8 +978,8 @@ RenderOutcome do_render(const RenderRequest& req,
             return finalize_published_wav("success");
         }
     } else {
-        // output_format == "warpframemap" or "miditempomap". No engine, no
-        // limiter.
+        // Map formats: output_format == "warptempo_maps", "generic_map", or
+        // "midi_map". No engine, no limiter.
         // These exports carry deliverable-relative targets and absolute
         // source frames, so a consumer reads the original source audio
         // directly — trimmed or not — and no companion audio is written.
@@ -981,14 +1008,89 @@ RenderOutcome do_render(const RenderRequest& req,
             artifacts = TrimmedArtifactMaps{full_warp_frame_map,
                                             full_midi_tempo_map};
         }
-        auto map_write = (output_format == "warpframemap")
-            ? write_warp_frame_map(final_output_path, artifacts.warp_frame_map)
-            : write_midi_tempo_map(final_output_path, artifacts.midi_tempo_map);
-        if (!map_write) {
-            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                         map_write.error().c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
+        if (output_format == "warptempo_maps") {
+            // The pair: the warp frame map plus the phase reset frame map,
+            // TWO files, together exactly warptempo_engine's input. The
+            // phase reset column is the deliverable-form derivation of the
+            // pipeline's already-built source-frame list against
+            // artifacts.warp_frame_map — untrimmed the full map, trimmed
+            // the trimmed deliverable map — so the window verdict and
+            // anticipation are computed against the very map shipped in
+            // the pair and the two files are self-consistent:
+            // warptempo_engine fed the pair renders that map's geometry
+            // exactly. Both columns always ship — an empty reset list
+            // still writes the empty .phaseresetframemap file, mirroring
+            // the marker sidecars' empty-file convention.
+            const std::vector<double> phase_reset_frame_map =
+                derive_phase_reset_frame_map(phase_reset_source_frames,
+                                             artifacts.warp_frame_map);
+            const std::string warp_final = final_output_path;
+            const std::string phase_reset_final =
+                render_output_paths_for_format(output_format,
+                                               final_output_path)
+                    .back().string();
+            const std::string warp_staging = warp_final + ".tmp";
+            const std::string phase_reset_staging = phase_reset_final + ".tmp";
+            // All-or-nothing publish: both staging files are written first;
+            // if either write fails, both stagings are unlinked and the
+            // render fails with nothing published.
+            bool staged_ok = true;
+            if (auto w = write_warp_frame_map(warp_staging,
+                                              artifacts.warp_frame_map); !w) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             w.error().c_str());
+                staged_ok = false;
+            } else if (auto w2 = write_phase_reset_frame_map(
+                           phase_reset_staging, phase_reset_frame_map); !w2) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             w2.error().c_str());
+                staged_ok = false;
+            }
+            if (!staged_ok) {
+                unlink_silent(warp_staging);
+                unlink_silent(phase_reset_staging);
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+            std::error_code ec;
+            std::filesystem::rename(warp_staging, warp_final, ec);
+            if (ec) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: rename failed for '%s' -> "
+                    "'%s': %s\n",
+                    warp_staging.c_str(), warp_final.c_str(),
+                    ec.message().c_str());
+                unlink_silent(warp_staging);
+                unlink_silent(phase_reset_staging);
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+            std::filesystem::rename(phase_reset_staging, phase_reset_final, ec);
+            if (ec) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: rename failed for '%s' -> "
+                    "'%s': %s\n",
+                    phase_reset_staging.c_str(), phase_reset_final.c_str(),
+                    ec.message().c_str());
+                // A half pair must never land: pull back the just-published
+                // warp file along with the remaining staging.
+                unlink_silent(warp_final);
+                unlink_silent(phase_reset_staging);
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+        } else {
+            auto map_write = (output_format == "generic_map")
+                ? write_warp_frame_map(final_output_path,
+                                       artifacts.warp_frame_map)
+                : write_midi_tempo_map(final_output_path,
+                                       artifacts.midi_tempo_map);
+            if (!map_write) {
+                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                             map_write.error().c_str());
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
         }
         if (prof) {
             profile_trim_begin_frame = trim_window.trim_begin_src;

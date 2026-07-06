@@ -87,8 +87,15 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "output_format") {
-        if (value != "wav" && value != "warpframemap" && value != "miditempomap") {
-            reason = "must be one of {wav, warpframemap, miditempomap}";
+        // wav is the finished-audio render; the three map formats write
+        // artifacts instead of audio: warptempo_maps is the warp frame map
+        // plus phase reset frame map pair (together exactly
+        // warptempo_engine's input), generic_map the warp frame map alone
+        // for generic external stretch consumers, midi_map the midi tempo
+        // map for DAW hosts.
+        if (value != "wav" && value != "warptempo_maps" &&
+            value != "generic_map" && value != "midi_map") {
+            reason = "must be one of {wav, warptempo_maps, generic_map, midi_map}";
             return false;
         }
         out.output_format = value;

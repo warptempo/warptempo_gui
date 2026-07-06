@@ -37,7 +37,8 @@ void usage(const char* argv0) {
         "  and <source-stem>.settings beside the source audio and writes the\n"
         "  warped wav the GUI would render for the same project. Runs the full\n"
         "  PGHI engine; output_format must be wav (use warptempo_parser for\n"
-        "  warpframemap/miditempomap). -o is required; there is no default sibling.\n"
+        "  warptempo_maps/generic_map/midi_map). -o is required; there is no\n"
+        "  default sibling.\n"
         "  --tab selects which per-tab trim to apply (default A).\n",
         argv0);
 }
@@ -94,12 +95,13 @@ int main(int argc, char** argv) {
         trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
-    // --- engine-only: this CLI renders wav. warpframemap/miditempomap are
-    // warptempo_parser's job (the engine never runs for those). ---
+    // --- engine-only: this CLI renders wav. The map formats
+    // (warptempo_maps/generic_map/midi_map) are warptempo_parser's job (the
+    // engine never runs for those). ---
     if (es.output_format != "wav") {
         std::fprintf(stderr,
             "warptempo_cli: output_format '%s' is not a wav render "
-            "(use warptempo_parser for warpframemap/miditempomap)\n",
+            "(use warptempo_parser for warptempo_maps/generic_map/midi_map)\n",
             es.output_format.c_str());
         return 1;
     }
