@@ -27,7 +27,6 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
-#include <set>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -500,36 +499,29 @@ RenderOutcome do_render(const RenderRequest& req,
 
             // Markers: lockstep walk between req.warp_markers and the real-segment
             // range of full_warp_frame_map (built trim-off, so no synthetic
-            // trim anchors). Each non-disabled marker consumes the
+            // trim anchors). Each kept marker consumes the
             // next-in-order segment; the trim range gates only emission, not
             // consumption, so the lockstep stays in step with
             // full_warp_frame_map's all-segments vector.
             // s.tgt_frame is the full-render target sample; subtracting
             // window_offset_samples places it on the trimmed wav axis. The
-            // effective-disabled check gates consumption itself (a disabled
-            // marker has no segment in full_warp_frame_map, so it skips before
-            // the iterator advances), while out-of-trim and pre-origin gate
-            // emission only, each running after the segment is consumed.
-            std::set<std::string> disabled_label_defs;
-            for (const auto& m : req.warp_markers) {
-                if (!m.label_def.empty() && m.disabled) {
-                    disabled_label_defs.insert(m.label_def);
-                }
-            }
-            auto is_cascade_disabled_ref = [&](const GuiWarpMarker& m) {
-                return !m.disabled && !m.label_ref.empty() &&
-                       disabled_label_defs.count(m.label_ref) > 0;
-            };
+            // effective-disabled verdict comes from the shared
+            // warp_markers_render_keep_mask — the same mask
+            // resolve_warp_markers_for_render filters on — so the sidecar's
+            // marker set and the resolver's render list agree by construction.
+            // The mask gates consumption itself (a dropped marker has no
+            // segment in full_warp_frame_map, so it skips before the iterator
+            // advances), while out-of-trim and pre-origin gate emission only,
+            // each running after the segment is consumed.
+            const std::vector<bool> warp_keep = warp_markers_render_keep_mask(
+                slice_to_warp_markers(req.warp_markers));
 
             auto seg_it = full_warp_frame_map.begin();
             std::vector<GuiWarpMarker> sidecar_warp_markers;
             sidecar_warp_markers.reserve(req.warp_markers.size());
-            for (const auto& g : req.warp_markers) {
-                const bool eff_disabled =
-                    g.disabled || is_cascade_disabled_ref(g);
-
-                // resolve_warp_markers_for_render filter.
-                if (eff_disabled) continue;
+            for (size_t mi = 0; mi < req.warp_markers.size(); ++mi) {
+                const GuiWarpMarker& g = req.warp_markers[mi];
+                if (!warp_keep[mi]) continue;
 
                 // Consume this marker's segment first (full_warp_frame_map
                 // holds every segment, so the lockstep advances for every

@@ -92,11 +92,29 @@ std::expected<void, std::string> validate_trim_frames(
     int64_t begin_frame, int64_t end_frame,
     bool has_begin, bool has_end, int64_t total_frames);
 
+// Per-index render-participation mask over parser-domain markers: keep[i]
+// is true when marker i survives into the render, false when it is dropped.
+// A marker is dropped when it is disabled, or when it is enabled, carries a
+// label_ref, and the referenced label is defined by a disabled marker (the
+// cascade: the definition supplies the duration the ref imposes, so a
+// silenced definition leaves the ref with nothing to reproduce). Single
+// owner of the participation verdict: resolve_warp_markers_for_render
+// filters on it and the GUI's render-domain display sidecar writer gates
+// its lockstep segment consumption on it, so display lockstep and the
+// resolved render list can never disagree about which markers exist in a
+// render. Warp-only as part of the resolver cascade — phase reset markers
+// carry no labels or references, and the reset sidecar writer already
+// shares its window verdict (phase_reset_window_target_frame) with the
+// engine-input derivation.
+std::vector<bool> warp_markers_render_keep_mask(
+    const std::vector<WarpMarker>& src);
+
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
-// is parser-domain and reads no GUI-only fields). Filters out markers that
-// are references to disabled-defined labels and disabled label-definition
-// markers (and thereby all refs to them). The inherit walk-back is applied
+// is parser-domain and reads no GUI-only fields). Filters on
+// warp_markers_render_keep_mask above — the participation verdict's single
+// owner — dropping disabled label-definition markers (and thereby all refs
+// to them) and disabled markers generally. The inherit walk-back is applied
 // here so MarkerForRender carries a concrete tempo_base / tempo_scale —
 // same rule as resolve_inherited_tempo. Both the engine-bound render
 // pipeline and the target view's warp_frame_map recompute go through this single

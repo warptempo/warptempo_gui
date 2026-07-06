@@ -38,11 +38,13 @@ struct LabelCacheEntry {
 // list". A marker is silenced either by its own disabled flag or, for an
 // enabled label ref, by its definition marker being disabled — the cascade,
 // because the definition supplies the duration the ref imposes, so a silenced
-// definition leaves the ref with nothing to reproduce. resolve_warp_markers_for_render
-// filters on this, marker_effective measures label-ref segment distances to
-// the next marker that passes it, and the pass-provenance source walk selects
-// the immediate prior marker that passes it, so both the hover multiplier and
-// the hover source attribution track the frame map.
+// definition leaves the ref with nothing to reproduce.
+// warp_markers_render_keep_mask publishes this verdict per index (and
+// resolve_warp_markers_for_render filters through that mask), marker_effective
+// measures label-ref segment distances to the next marker that passes it, and
+// the pass-provenance source walk selects the immediate prior marker that
+// passes it, so both the hover multiplier and the hover source attribution
+// track the frame map.
 bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) {
     const WarpMarker& g = mv[idx];
     if (g.disabled) return true;
@@ -58,6 +60,15 @@ bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) 
 
 }  // namespace
 
+std::vector<bool> warp_markers_render_keep_mask(
+    const std::vector<WarpMarker>& src) {
+    std::vector<bool> keep(src.size());
+    for (size_t i = 0; i < src.size(); ++i) {
+        keep[i] = !marker_effectively_disabled(src, i);
+    }
+    return keep;
+}
+
 std::vector<MarkerForRender> resolve_warp_markers_for_render(
     const std::vector<WarpMarker>& src) {
 
@@ -65,6 +76,8 @@ std::vector<MarkerForRender> resolve_warp_markers_for_render(
     // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
     // declared in warp_frame_map_build.h) — the same walk the hover popup uses. Called
     // directly at the tempo_inherits branch.
+
+    const std::vector<bool> keep = warp_markers_render_keep_mask(src);
 
     std::vector<MarkerForRender> out;
     out.reserve(src.size());
@@ -74,7 +87,7 @@ std::vector<MarkerForRender> resolve_warp_markers_for_render(
         // (the ref itself is not disabled but its target is). With trim moved
         // to settings, a disabled marker has no reason to survive into the
         // resolved list.
-        if (marker_effectively_disabled(src, i)) continue;
+        if (!keep[i]) continue;
 
         const auto& g = src[i];
         MarkerForRender m;
