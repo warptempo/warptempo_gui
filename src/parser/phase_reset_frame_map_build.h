@@ -6,44 +6,37 @@
 
 #include <cmath>
 #include <cstdint>
+#include <expected>
 #include <optional>
+#include <string>
 #include <vector>
 
 // Pure parser-domain assembly: phase-reset markers -> absolute source-frame
 // positions. Drops disabled markers; converts time_seconds to an exact double
 // source-frame position (time * sample_rate, no rounding), matching the
-// warp-marker time->frame convention in build_warp_frame_map. Total — no
-// past-end check, no failure mode. Non-adversarial GUI usage can never
-// construct a reset at or past source EOF: the drop and nudge eps-guards in
-// phaseresetmarkers_ops.cpp own prevention at the authoring boundary. A
-// fabricated or stale sidecar entry at or past EOF (for example a sidecar
-// left beside a replaced, shorter source) is a non-participating point that
-// the window-participation verdict below drops exactly: the verdict bound is
-// the deliverable map's exact final anchor target and map_source_to_target
-// is monotonic with identity extrapolation past the last pair, so any source
-// position at or past total_frames maps to a window target at or past the
-// bound on both the full and the trimmed deliverable map. And the marker
-// sidecars are committed to git, so a corrupt or stale marker file is
-// mitigated by commit rollback, not by a render-time validation layer:
-// prevention belongs at the GUI authoring boundary and enforcement at the
-// strict load boundary. Recorded asymmetry: build_warp_frame_map's past-end
-// check on the warp axis stays, because a past-end warp marker corrupts the
-// map's own construction — the final segment still ends at total_frames, so
-// an earlier past-end marker breaks the source column's strict ascent and
-// the map is structurally wrong — whereas a past-end reset is a point event
-// with no structural consequence, dropped by the verdict like any other
-// non-participant. Different consequence class, so different owner. No
-// ordering check lives here: the strict marker parser owns ordering at load,
-// and the engine's strict-ascent hardfail covers raw phaseresetframemap
-// inputs that bypass the marker parser. The result is the authored
-// (undisplaced) source-frame intermediate consumed by render-view display
-// and by derive_phase_reset_frame_map below, which compiles it into the
-// engine-domain artifact and engine input. There is no resolver cascade
-// sibling to resolve_warp_markers_for_render because phase reset markers
-// carry no inheritance, labels, or references — a timestamp and a disabled
-// flag are the whole grammar.
-std::vector<double> build_phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate);
+// warp-marker time->frame convention in build_warp_frame_map. Refuses an
+// enabled reset authored past the source end (strictly greater than
+// total_frames; equal is allowed), the producer-side validation layer parallel
+// to build_warp_frame_map's past-end check on the warp axis: a phase-reset
+// sidecar sitting beside a shorter or replaced source fails loudly here
+// instead of the reset silently falling out of the derivation's window drop
+// test. The two past-end checks are one guard with two instances, kept
+// together by ruling: column symmetry outranks the constructibility
+// argument for removing either side alone. Disabled markers are skipped
+// before the check — only resolved markers
+// are validated, as in build_warp_frame_map — so a disabled past-end reset
+// stays loadable and inert. No ordering check lives here: the strict marker
+// parser owns ordering at load, and the engine's strict-ascent hardfail
+// covers raw phaseresetframemap inputs that bypass the marker parser. The
+// result is the authored (undisplaced) source-frame intermediate consumed by
+// render-view display and by derive_phase_reset_frame_map below, which
+// compiles it into the engine-domain artifact and engine input. There is no
+// resolver cascade sibling to resolve_warp_markers_for_render because phase
+// reset markers carry no inheritance, labels, or references — a timestamp
+// and a disabled flag are the whole grammar.
+std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
+    const std::vector<PhaseResetMarker>& markers, long sample_rate,
+    int64_t total_frames);
 
 // Authored -> engine derivation chain: authored (undisplaced) phase-reset
 // source positions -> the engine's origin-centered query domain, for a given

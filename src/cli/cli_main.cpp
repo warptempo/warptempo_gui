@@ -285,8 +285,14 @@ int main(int argc, char** argv) {
     // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
     // sets only limiter and inherits the rest.
 
-    assign_engine_phase_reset_frame_map(
-        ep, build_phase_reset_source_frames(resets, sample_rate));
+    auto phase_reset_source_frames_r =
+        build_phase_reset_source_frames(resets, sample_rate, total_frames);
+    if (!phase_reset_source_frames_r) {
+        std::fprintf(stderr, "warptempo_cli: %s\n",
+                     phase_reset_source_frames_r.error().c_str());
+        return 1;
+    }
+    assign_engine_phase_reset_frame_map(ep, *phase_reset_source_frames_r);
 
     // --- render. The engine writes a sibling staging file and success
     // publishes it atomically via rename.

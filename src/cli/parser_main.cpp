@@ -156,14 +156,16 @@ int main(int argc, char** argv) {
 
     // --- phase reset markers: required for every format, like the warp
     // sidecar above — the artifacts carry the phase reset column beside its
-    // siblings, so every format needs the authored source-frame list for its
-    // derived column. A missing sidecar is a startup error (the GUI creates
-    // it on source load); the empty FILE is the no-resets form and yields an
-    // empty list and an empty derived column. build_phase_reset_source_frames
-    // drops disabled markers and converts time->exact double source frame.
-    // Running it here for every format aligns this CLI with the GUI render
-    // pipeline, which builds the same intermediate at its source probe for
-    // every output format. ---
+    // siblings, so every format needs the authored source-frame list. A
+    // missing sidecar is a startup error (the GUI creates it on source load);
+    // the empty FILE is the no-resets form and yields an empty list and an
+    // empty derived column. build_phase_reset_source_frames drops disabled
+    // markers, converts time->exact double source frame, and refuses an
+    // enabled reset past the source end. Running it here for every format
+    // aligns this CLI with the GUI render pipeline, which builds the same
+    // intermediate at its source probe for every output format — a past-end
+    // enabled reset fails a generic_map or midi_map export here exactly as it
+    // already fails those renders in the GUI. ---
     std::vector<double> phase_reset_source_frames;
     if (!std::filesystem::exists(pr_path)) {
         std::fprintf(stderr,
@@ -179,8 +181,14 @@ int main(int argc, char** argv) {
                          pr_path.c_str(), prp.error().c_str());
             return 1;
         }
-        phase_reset_source_frames =
-            build_phase_reset_source_frames(*prp, sample_rate);
+        auto source_frames_r =
+            build_phase_reset_source_frames(*prp, sample_rate, total_frames);
+        if (!source_frames_r) {
+            std::fprintf(stderr, "warptempo_parser: %s\n",
+                         source_frames_r.error().c_str());
+            return 1;
+        }
+        phase_reset_source_frames = std::move(*source_frames_r);
     }
 
     // --- trim frames from the project .settings, with the same source-aware
