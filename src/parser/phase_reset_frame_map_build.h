@@ -20,7 +20,7 @@
 // validated, as in build_warp_frame_map —
 // so a disabled past-end reset stays loadable and inert. No ordering check
 // lives here: the strict marker parser owns ordering at load, and the
-// engine's non-decreasing hardfail covers raw phaseresetframemap inputs that
+// engine's strict-ascent hardfail covers raw phaseresetframemap inputs that
 // bypass the marker parser. The result is the undisplaced authored
 // source-frame list used for render-view display, phaseresetframemap
 // output, and target-domain dispatch placement; the dispatch mapping

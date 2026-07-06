@@ -564,7 +564,7 @@ WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
     // they are what keep the emitted pairs strictly ascending and finite —
     // read_warp_frame_map validates line shape only, so ordering and value
     // conformance is this writer's own contract, consumed as a precondition by
-    // the map helpers in warp_frame_map.h and the engine's monotonicity validator.
+    // the map helpers in warp_frame_map.h and the engine's strict-ascent validator.
     // Sub-sample target segments are legal under the no-ceiling tempo rule,
     // and a rounded
     // (llrint) guard here silently dropped strictly ascending breakpoints whose

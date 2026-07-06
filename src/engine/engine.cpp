@@ -52,63 +52,52 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     }
 }
 
-// Engine-boundary ordering guards. These two init-time hardfails are
-// deliberate and stay even though the warp_frame_map.h /
-// phase_reset_frame_map.h artifact readers validate
-// line shape only: the writers' contract (build_warp_frame_map, the trimmed-artifact
-// derivation, the phaseresetframemap writer) makes both checks unreachable
-// from
-// program-written inputs, but a breach — a hand-edited artifact fed to the
+// Engine-boundary ordering guards. Both validators demand strict ascent on
+// doubles; the one remaining live asymmetry between them is column count —
+// the map validates two axes (src and tgt), the reset list one. The two
+// init-time hardfails are deliberate and stay even though the writers'
+// contract (build_warp_frame_map, the trimmed-artifact derivation, the
+// phaseresetframemap writer) makes both checks unreachable from
+// program-written inputs: a breach — a hand-edited artifact fed to the
 // engine CLI, or a future writer bug — would otherwise render silently wrong
 // deliverable bytes (a misinterpolated map, or resets silently skipped by the
 // forward synthesis cursor). A loud init refusal is the designed response.
 //
-// The two predicates differ on purpose. The frame map must be strictly
-// ascending on both axes: the map helpers binary-search and interpolate over
-// it, and an equal breakpoint is a zero-length segment (division by zero in
-// the interpolation). The reset list only needs to be non-decreasing,
-// duplicates allowed: each reset frame maps through upper_bound over the
-// monotone source_frame_positions, so a non-decreasing input yields
-// non-decreasing synth-frame placements, and the synthesis cursor's while
-// loop consumes equal placements on the same frame correctly. Equal reset
-// frames are unreachable under the usage model: the dispatch chain's
-// forward-map, subtract-anticipation, inverse-map slopes cancel within a
-// tempo segment, so two authored resets a millisecond apart land about 44
-// engine frames apart at 44100 Hz regardless of compression, and even a
-// boundary-straddling anticipation gap needs a slope ratio near ninety to
-// collide them — far past the usage model's actual ceiling. They remain
-// legal, though, under the no-ceiling rule for tempo products and
-// ref-implied multipliers, and the consumer handles them correctly. Only a
-// decrease is a breach: the writer's output is provably non-decreasing, and
-// a decrease of even one sample can land in a synth frame the forward-only
-// cursor has already passed, which it would then skip silently. So the
-// predicate rejects every decrease and nothing else, with no epsilon band.
+// Strictness is the right predicate on both lists because the engine
+// validates pre-quantization doubles, and every program path produces
+// strictly increasing ones: strictly ascending authored markers map through
+// the strictly monotone dispatch chain (a reset whose anticipation falls
+// before the window start is dropped, not clamped, so at most one survivor
+// can sit exactly at zero and every later survivor is strictly greater), and
+// raw phaseresetframemap files come from strictly ascending markers. Equal
+// values therefore always mean a breach. No epsilon band on either.
 
-// Validate strict monotonicity of a (src,tgt) warp_frame_map. Returns true if OK.
-bool validate_warp_frame_map_monotonic(const std::vector<WarpFrameMapSegment>& tm) {
-    for (size_t i = 1; i < tm.size(); ++i) {
-        if (tm[i].src_frame <= tm[i - 1].src_frame) {
+// Validate strict ascent of a (src,tgt) warp_frame_map on both axes. Returns
+// true if OK.
+bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSegment>& map) {
+    for (size_t i = 1; i < map.size(); ++i) {
+        if (map[i].src_frame <= map[i - 1].src_frame) {
             std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic src_frame ("
-                      << tm[i - 1].src_frame << " -> "
-                      << tm[i].src_frame << ").\n";
+                      << map[i - 1].src_frame << " -> "
+                      << map[i].src_frame << ").\n";
             return false;
         }
-        if (tm[i].tgt_frame <= tm[i - 1].tgt_frame) {
+        if (map[i].tgt_frame <= map[i - 1].tgt_frame) {
             std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic tgt_frame ("
-                      << tm[i - 1].tgt_frame << " -> "
-                      << tm[i].tgt_frame << ").\n";
+                      << map[i - 1].tgt_frame << " -> "
+                      << map[i].tgt_frame << ").\n";
             return false;
         }
     }
     return true;
 }
 
-// Validate the phase reset list is non-decreasing (duplicates allowed; see
-// the ruling comment above). Returns true if OK.
-bool validate_phase_reset_frame_map_ordered(const std::vector<double>& resets) {
+// Validate the phase reset list is strictly ascending (see the ruling
+// comment above). Returns true if OK.
+bool validate_phase_reset_frame_map_strictly_ascending(const std::vector<double>& resets) {
     for (size_t i = 1; i < resets.size(); ++i) {
-        if (resets[i] < resets[i - 1]) {
-            std::cerr << "Error: phase reset entry " << i << " is out of order ("
+        if (resets[i] <= resets[i - 1]) {
+            std::cerr << "Error: phase reset entry " << i << " is not strictly ascending ("
                       << resets[i - 1] << " -> "
                       << resets[i] << ").\n";
             return false;
@@ -152,12 +141,12 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // Populate warp_frame_map from caller and validate monotonicity. Whole-segment
+    // Populate warp_frame_map from caller and validate strict ascent. Whole-segment
     // copy carries the precise breakpoints; the dense schedule still reads the
     // rounded fields until the interpolation flip.
     audio_stft.warp_frame_map = p.warp_frame_map;
-    if (!validate_warp_frame_map_monotonic(audio_stft.warp_frame_map)) return EngineResult::Failed;
-    if (!validate_phase_reset_frame_map_ordered(p.phase_reset_frame_map)) return EngineResult::Failed;
+    if (!validate_warp_frame_map_strictly_ascending(audio_stft.warp_frame_map)) return EngineResult::Failed;
+    if (!validate_phase_reset_frame_map_strictly_ascending(p.phase_reset_frame_map)) return EngineResult::Failed;
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {

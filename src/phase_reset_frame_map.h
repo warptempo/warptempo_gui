@@ -16,10 +16,10 @@
 //
 // The reader validates line shape only. Ordering conformance is the writers'
 // contract, and it is not left as an assumed precondition downstream: the
-// engine refuses loudly at init on an out-of-order phase reset list
-// (validate_phase_reset_frame_map_ordered in src/engine/engine.cpp), so a
-// hand-edited artifact that breaks the ordering contract fails the render
-// instead of producing silently wrong bytes.
+// engine refuses loudly at init on a phase reset list that is not strictly
+// ascending (validate_phase_reset_frame_map_strictly_ascending in
+// src/engine/engine.cpp), so a hand-edited artifact that breaks the ordering
+// contract fails the render instead of producing silently wrong bytes.
 //
 // .phaseresetframemap: one undisplaced source-frame double per line, in file
 // order (the writer emits up to 17 significant digits, so the value

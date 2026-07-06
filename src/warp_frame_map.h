@@ -79,8 +79,8 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
 // is the writers' contract: build_warp_frame_map and the trimmed-artifact derivation
 // emit finite, non-negative, strictly ascending values with a first target of
 // exactly zero by construction. Ordering is not left as an assumed
-// precondition downstream: the engine refuses loudly at init on a
-// non-monotonic frame map or an out-of-order phase reset list (the two
+// precondition downstream: the engine refuses loudly at init on a frame map
+// or phase reset list that is not strictly ascending (the two
 // validators in src/engine/engine.cpp), so a hand-edited artifact that breaks
 // the ordering contract fails the render instead of producing silently wrong
 // bytes. The reader itself does not police it.

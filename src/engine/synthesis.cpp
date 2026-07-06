@@ -378,11 +378,13 @@ void Synthesis::synthesize_full(
 
         // Phase reset cursor: placements at or after wend never match a
         // frame_idx in range and so never fire. The forward-only walk is safe
-        // because placements are non-decreasing in synth_frame: engine init
-        // refuses an out-of-order phase reset list, and the upper_bound
-        // mapping in run_warptempo_engine is monotone, so a placement never
-        // lands behind the cursor. Equal synth frames (duplicate placements)
-        // are consumed together by the while loop below.
+        // because placements are non-decreasing in synth_frame: the strictly
+        // ascending input list (engine init refuses anything else) maps
+        // through a monotone upper_bound in run_warptempo_engine, so a
+        // placement never lands behind the cursor. Equal placements after
+        // the engine's llrint quantization remain legal — quantization is
+        // downstream of input validation — and are consumed together by the
+        // while loop below.
         int  phase_reset_cursor = 0;
         // `prev_reset` carries "the previous frame fired a reset" into the next
         // iteration so PGHI seats theta = phi on the post-reset frame.

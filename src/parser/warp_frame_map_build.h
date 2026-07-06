@@ -190,8 +190,8 @@ struct WindowedWarpFrameMap {
 // returned emit_sample_cap is the trim-end target minus the window offset; the
 // engine emits only up to it, so the few frames between trim_end_src and the
 // closing anchor are synthesized into the truncated tail only. The returned map
-// must be strictly monotonic in both axes (engine validate_warp_frame_map_monotonic
-// rejects it otherwise). Caller invokes this only when a trim bound is set.
+// must be strictly monotonic in both axes (engine
+// validate_warp_frame_map_strictly_ascending rejects it otherwise). Caller invokes this only when a trim bound is set.
 WindowedWarpFrameMap slice_warp_frame_map_to_trim_window(
     const std::vector<WarpFrameMapSegment>& full_map,
     int64_t trim_begin_src, int64_t trim_end_src,
