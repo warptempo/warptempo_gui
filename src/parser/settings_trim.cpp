@@ -23,9 +23,10 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     if (!f) return out;
     std::string line;
     int ln = 0;
-    // Tracks which of the four canonical trim keys have already been
-    // assigned, so a hand-edited duplicate is rejected the same way the
-    // engine-settings reader rejects a duplicated canonical key.
+    // Tracks which of the keys this reader owns (the four canonical trim
+    // keys plus active_tab_view) have already been assigned, so a
+    // hand-edited duplicate is rejected the same way the engine-settings
+    // reader rejects a duplicated canonical key.
     std::set<std::string> seen;
     while (std::getline(f, line)) {
         ++ln;
@@ -83,6 +84,17 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
             }
             out.tab_b.has_end = true;
             out.tab_b.end_sec = parse_timestamp(value);
+        } else if (key == "active_tab_view") {
+            if (!seen.insert(key).second) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "duplicate key '" + key + "'");
+            }
+            if (value != "A" && value != "B") {
+                return warptempo_parse::prefix_line_error(
+                    ln, "invalid active_tab_view value '" + value +
+                        "' (must be A or B)");
+            }
+            out.active_tab = value[0];
         }
     }
 

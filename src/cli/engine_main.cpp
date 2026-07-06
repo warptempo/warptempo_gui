@@ -2,6 +2,10 @@
 #include "engine/engine_geometry.h"   // kN, kRs
 #include "warp_frame_map.h"           // WarpFrameMapSegment, read_warp_frame_map
 #include "phase_reset_frame_map.h"    // read_phase_reset_frame_map
+#include "engine_settings.h"          // EngineSettings, default_render_title
+#include "render_output_naming.h"     // render_output_directory,
+                                      // render_output_stem,
+                                      // compose_render_output_paths
 #include "locale_check.h"
 
 #include "audio_reader.h"
@@ -23,16 +27,18 @@ void unlink_silent(const std::string& path) {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> -o <output.wav> [--warpframemap <f>] "
-        "[--phaseresetframemap <f>] [--no-limiter]\n"
-        "  Runs the PGHI engine on a prebuilt warpframemap and writes the\n"
-        "  warped wav. The warpframemap defaults to the sibling\n"
-        "  <source-stem>.warpframemap; the phaseresetframemap to the sibling\n"
-        "  <source-stem>.phaseresetframemap when present (the engine\n"
-        "  query-domain list warptempo_parser computes against the same\n"
-        "  warpframemap; consumed as-is). Limiter is on unless --no-limiter\n"
-        "  is given. N is fixed at 4096. Trim is not an engine concern: the\n"
-        "  supplied map is rendered wholesale.\n",
+        "usage: %s <source-audio> [--no-limiter]\n"
+        "  Runs the PGHI engine on the prebuilt map pair warptempo_parser\n"
+        "  writes for a default-titled project: the sibling\n"
+        "  <source-stem>-rendered.warpframemap (required), plus\n"
+        "  <source-stem>-rendered.phaseresetframemap when present (the\n"
+        "  engine query-domain list warptempo_parser computes against the\n"
+        "  same warpframemap; consumed as-is). Writes the warped wav beside\n"
+        "  the source as <source-stem>-rendered.wav — with --no-limiter, as\n"
+        "  limiter=false;<source-stem>-rendered.wav, the GUI's clean-float\n"
+        "  naming. Limiter is on unless --no-limiter is given. N is fixed at\n"
+        "  4096. Trim is not an engine concern: the supplied map is rendered\n"
+        "  wholesale.\n",
         argv0);
 }
 
@@ -41,32 +47,51 @@ void usage(const char* argv0) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_engine")) return 1;
 
-    std::string source_path, out_path, warpframemap_path, phaseresetframemap_path;
+    std::string source_path;
     bool no_limiter = false;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "-o" && i + 1 < argc)              out_path      = argv[++i];
-        else if (a == "--warpframemap" && i + 1 < argc) warpframemap_path = argv[++i];
-        else if (a == "--phaseresetframemap" && i + 1 < argc) phaseresetframemap_path = argv[++i];
-        else if (a == "--no-limiter")               no_limiter = true;
+        if (a == "--no-limiter")                    no_limiter = true;
         else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
     }
-    if (source_path.empty() || out_path.empty()) { usage(argv[0]); return 2; }
+    if (source_path.empty()) { usage(argv[0]); return 2; }
 
-    std::filesystem::path src(source_path);
-    std::filesystem::path parent = src.parent_path();
-    if (parent.empty()) parent = std::filesystem::path(".");
-    const std::string stem = src.stem().string();
+    const std::string stem =
+        std::filesystem::path(source_path).stem().string();
+    const std::filesystem::path dir = render_output_directory(source_path);
 
-    // Sibling defaults: the warpframemap is required (default or override must
-    // exist); the phaseresetframemap is optional — the sibling is used only
-    // when present, and an explicit --phaseresetframemap must exist
-    // (read_phase_reset_frame_map fails on an unopenable file, caught below).
-    if (warpframemap_path.empty())
-        warpframemap_path = (parent / (stem + ".warpframemap")).string();
-    if (phaseresetframemap_path.empty()) {
-        const std::string sib = (parent / (stem + ".phaseresetframemap")).string();
+    // This driver stays blind to .settings by design, so it synthesizes the
+    // naming inputs the settings-reading tools get from the project — the
+    // default title the GUI assigns at source load, format wav, limiter from
+    // the flag — and feeds them through the shared composer. The output is
+    // therefore <source-stem>-rendered.wav beside the source, with the
+    // clean-float limiter=false; prefix under --no-limiter — exactly the
+    // GUI's naming for a default-titled project.
+    const std::string default_title = default_render_title(stem);
+    EngineSettings naming;
+    naming.title         = default_title;
+    naming.output_format = "wav";
+    naming.limiter       = !no_limiter;
+    const std::string out_path =
+        compose_render_output_paths(dir, render_output_stem(naming),
+                                    naming.output_format)
+            .front()
+            .string();
+
+    // Map inputs: the default-title siblings, where warptempo_parser writes
+    // the pair for a default-titled project. The warpframemap is required;
+    // the phaseresetframemap is optional — used only when present (an empty
+    // reset list is an empty, valid file, not an absent one). A
+    // custom-titled map pair is reachable by renaming the files to the
+    // default-title shape — the recorded cost of keeping this driver blind
+    // and flagless.
+    const std::string warpframemap_path =
+        (dir / (default_title + ".warpframemap")).string();
+    std::string phaseresetframemap_path;
+    {
+        const std::string sib =
+            (dir / (default_title + ".phaseresetframemap")).string();
         if (std::filesystem::exists(sib)) phaseresetframemap_path = sib;
     }
 

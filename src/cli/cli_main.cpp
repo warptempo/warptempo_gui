@@ -9,6 +9,9 @@
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
 #include "render_assembly.h"            // render parameter assembly helpers
+#include "render_output_naming.h"       // render_output_directory,
+                                        // render_output_stem,
+                                        // compose_render_output_paths
 #include "source_audio_io.h"            // load_source_range_to_buffer
 
 #include "audio_probe.h"
@@ -32,14 +35,17 @@ void unlink_silent(const std::string& path) {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> -o <output.wav> [--tab A|B]\n"
+        "usage: %s <source-audio>\n"
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
-        "  and <source-stem>.settings beside the source audio and writes the\n"
-        "  warped wav the GUI would render for the same project. Runs the full\n"
-        "  PGHI engine; output_format must be wav (use warptempo_parser for\n"
-        "  warptempo_maps/generic_map/midi_map). -o is required; there is no\n"
-        "  default sibling.\n"
-        "  --tab selects which per-tab trim to apply (default A).\n",
+        "  and <source-stem>.settings beside the source audio (all three are\n"
+        "  required; the GUI creates them on source load) and writes the\n"
+        "  warped wav the GUI would render for the same project, at the same\n"
+        "  path: title-named beside the source (<title>.wav, or\n"
+        "  limiter=false;<title>.wav when the settings limiter is off). Runs\n"
+        "  the full PGHI engine; output_format must be wav (use\n"
+        "  warptempo_parser for warptempo_maps/generic_map/midi_map). The\n"
+        "  trim applied is the active tab's (the persisted active_tab_view\n"
+        "  key), matching the GUI.\n",
         argv0);
 }
 
@@ -48,20 +54,13 @@ void usage(const char* argv0) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_cli")) return 1;
 
-    std::string source_path, out_path;
-    char tab = 'A';
+    std::string source_path;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "-o" && i + 1 < argc)            out_path = argv[++i];
-        else if (a == "--tab" && i + 1 < argc) {
-            const std::string t = argv[++i];
-            if (t == "A" || t == "B") tab = t[0];
-            else { usage(argv[0]); return 2; }
-        }
-        else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
+        if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
     }
-    if (source_path.empty() || out_path.empty()) { usage(argv[0]); return 2; }
+    if (source_path.empty()) { usage(argv[0]); return 2; }
 
     std::filesystem::path src(source_path);
     std::filesystem::path parent = src.parent_path();
@@ -71,10 +70,20 @@ int main(int argc, char** argv) {
     const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
-    // --- settings (engine block); defaults if the file is absent ---
-    EngineSettings es;    // scale 1.0, output_format "wav", limiter true, title ""
-    SettingsTrim   trim;  // all-false => untrimmed when .settings is absent
-    if (std::filesystem::exists(set_path)) {
+    // --- settings: required, like the two marker sidecars below — the GUI
+    // creates this sidecar on source load, so an absent file is a startup
+    // error, not a defaults case. output_format, title, limiter, and the
+    // applied trim all come from it. ---
+    EngineSettings es;
+    SettingsTrim   trim;
+    if (!std::filesystem::exists(set_path)) {
+        std::fprintf(stderr,
+            "warptempo_cli: missing settings file '%s' "
+            "(the GUI creates this sidecar on source load)\n",
+            set_path.c_str());
+        return 1;
+    }
+    {
         auto parsed = read_engine_settings_from_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
@@ -91,8 +100,10 @@ int main(int argc, char** argv) {
                 tabs_result.error().c_str());
             return 1;
         }
+        // The active tab's trim, matching the GUI, which renders the trim of
+        // the tab persisted in active_tab_view.
         const SettingsTrimTabs& tabs = *tabs_result;
-        trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
+        trim = (tabs.active_tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
     // --- engine-only: this CLI renders wav. The map formats
@@ -106,6 +117,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // --- output path: the shared composer's single wav entry, title-named
+    // beside the source with the limiter=false; prefix when the settings
+    // limiter is off — exactly where the GUI writes the same project's
+    // deliverable. ---
+    const std::string out_path =
+        compose_render_output_paths(render_output_directory(source_path),
+                                    render_output_stem(es),
+                                    es.output_format)
+            .front()
+            .string();
+
     // --- hard refusal: never write over the source audio itself. equivalent()
     // is an inode match and only succeeds when both paths exist, so an output
     // that does not exist yet can never resolve to the source. ---
@@ -115,7 +137,8 @@ int main(int argc, char** argv) {
             std::filesystem::equivalent(out_path, source_path, ec)) {
             std::fprintf(stderr,
                 "warptempo_cli: output '%s' resolves to the source audio "
-                "file; refusing to overwrite the source\n",
+                "file; refusing to overwrite the source. Change the title "
+                "setting.\n",
                 out_path.c_str());
             return 1;
         }

@@ -231,9 +231,9 @@ endif()
 
 # ============================================================
 #  warptempo_parser — headless map emitter (parser-only).
-#  Reads <source-stem>.{warpmarkers,settings} and writes the warpframemap /
-#  miditempomap artifact the GUI would for the same project. No engine, no
-#  audio.
+#  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes
+#  the title-named map artifacts the GUI would for the same project. No
+#  engine, no audio.
 # ============================================================
 option(WARPTEMPO_BUILD_PARSER
        "Build the standalone warptempo_parser binary (the parser library always builds)" OFF)
@@ -264,13 +264,15 @@ endif()
 
 # ============================================================
 #  warptempo_engine — engine-only synthesis driver.
-#  Reads a prebuilt warpframemap [+ phaseresetframemap] + source wav and
-#  writes the warped wav by running the PGHI engine directly. Links
-#  libwarptempo_engine ALONE — no parser archive: the map readers are
-#  header-only (warp_frame_map.h / phase_reset_frame_map.h) and both files
-#  are engine-domain inputs consumed as-is (warptempo_parser applies the
-#  phase-reset anticipation when deriving the artifact). Trim is not an
-#  engine concern.
+#  Reads the prebuilt default-title warpframemap [+ phaseresetframemap]
+#  pair + source wav and writes the warped wav by running the PGHI engine
+#  directly. The map readers are header-only (warp_frame_map.h /
+#  phase_reset_frame_map.h) and both files are engine-domain inputs
+#  consumed as-is (warptempo_parser applies the phase-reset anticipation
+#  when deriving the artifact); the parser archive is linked only for the
+#  shared output-naming composer (render_output_naming) and the default
+#  render title — the driver reads no authoring files and stays blind to
+#  .settings. Trim is not an engine concern.
 # ============================================================
 option(WARPTEMPO_BUILD_ENGINE
        "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)
@@ -278,6 +280,7 @@ if(WARPTEMPO_BUILD_ENGINE)
     add_executable(warptempo_engine src/cli/engine_main.cpp)
     target_link_libraries(warptempo_engine PRIVATE
         warptempo_engine_lib
+        warptempo_parser_lib
         warptempo_audio_io_lib
     )
 endif()

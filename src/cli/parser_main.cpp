@@ -10,6 +10,9 @@
 #include "locale_check.h"
 #include "map_output.h"                 // write_warp_frame_map /
                                         // write_midi_tempo_map / write_phase_reset_frame_map
+#include "render_output_naming.h"       // render_output_directory,
+                                        // render_output_stem,
+                                        // compose_render_output_paths
 #include "engine/engine_geometry.h"     // kN, kRs (header-only constants)
 
 #include "audio_probe.h"
@@ -26,22 +29,21 @@ namespace {
 
 void usage(const char* argv0) {
     std::fprintf(stderr,
-        "usage: %s <source-audio> [--format warptempo_maps|generic_map|midi_map] [-o <output>] [--tab A|B]\n"
+        "usage: %s <source-audio>\n"
         "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
-        "  and <source-stem>.settings beside the source audio and writes the\n"
-        "  requested map artifacts. Every format requires the warp markers\n"
-        "  and phase reset markers files.\n"
-        "  warptempo_maps writes TWO files, the .warpframemap plus the\n"
-        "  .phaseresetframemap (the engine query-domain phase-reset list,\n"
-        "  anticipation and drops applied, computed against the same warp\n"
-        "  frame map) — together exactly warptempo_engine's input; with -o\n"
-        "  the given path is the warp column and the phase reset file lands\n"
-        "  beside it with the extension swapped to .phaseresetframemap.\n"
-        "  generic_map writes the .warpframemap alone for generic external\n"
-        "  stretch consumers; midi_map writes the .miditempomap for DAW\n"
-        "  hosts; -o names their single output. Without -o every file lands\n"
-        "  at its sibling default beside the source. --tab selects which\n"
-        "  per-tab trim to apply (default A).\n",
+        "  and <source-stem>.settings beside the source audio (all three are\n"
+        "  required; the GUI creates them on source load) and writes the map\n"
+        "  artifacts for the project's output_format, title-named beside the\n"
+        "  source exactly where the GUI writes them for the same project.\n"
+        "  warptempo_maps writes TWO files, <title>.warpframemap plus\n"
+        "  <title>.phaseresetframemap (the engine query-domain phase-reset\n"
+        "  list, anticipation and drops applied, computed against the same\n"
+        "  warp frame map) — together exactly warptempo_engine's input.\n"
+        "  generic_map writes <title>.warpframemap alone for generic\n"
+        "  external stretch consumers; midi_map writes <title>.miditempomap\n"
+        "  for DAW hosts. output_format=wav is refused: the engine renders\n"
+        "  wav (use warptempo_cli). The trim applied is the active tab's\n"
+        "  (the persisted active_tab_view key), matching the GUI.\n",
         argv0);
 }
 
@@ -50,18 +52,10 @@ void usage(const char* argv0) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_parser")) return 1;
 
-    std::string source_path, out_path, fmt_override;
-    char tab = 'A';
+    std::string source_path;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "--format" && i + 1 < argc)      fmt_override = argv[++i];
-        else if (a == "-o" && i + 1 < argc)       out_path     = argv[++i];
-        else if (a == "--tab" && i + 1 < argc) {
-            const std::string t = argv[++i];
-            if (t == "A" || t == "B") tab = t[0];
-            else { usage(argv[0]); return 2; }
-        }
-        else if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
+        if (!a.empty() && a[0] != '-' && source_path.empty()) source_path = a;
         else { usage(argv[0]); return 2; }
     }
     if (source_path.empty()) { usage(argv[0]); return 2; }
@@ -74,10 +68,20 @@ int main(int argc, char** argv) {
     const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
-    // --- settings (engine block); defaults if the file is absent ---
-    EngineSettings es;    // scale 1.0, output_format "wav", title "" by default
-    SettingsTrim   trim;  // all-false => untrimmed when .settings is absent
-    if (std::filesystem::exists(set_path)) {
+    // --- settings: required, like the two marker sidecars below — the GUI
+    // creates this sidecar on source load, so an absent file is a startup
+    // error, not a defaults case. output_format, title, and the applied trim
+    // all come from it. ---
+    EngineSettings es;
+    SettingsTrim   trim;
+    if (!std::filesystem::exists(set_path)) {
+        std::fprintf(stderr,
+            "warptempo_parser: missing settings file '%s' "
+            "(the GUI creates this sidecar on source load)\n",
+            set_path.c_str());
+        return 1;
+    }
+    {
         auto parsed = read_engine_settings_from_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
@@ -94,20 +98,22 @@ int main(int argc, char** argv) {
                 tabs_result.error().c_str());
             return 1;
         }
+        // The active tab's trim, matching the GUI, which renders the trim of
+        // the tab persisted in active_tab_view.
         const SettingsTrimTabs& tabs = *tabs_result;
-        trim = (tab == 'B') ? tabs.tab_b : tabs.tab_a;
+        trim = (tabs.active_tab == 'B') ? tabs.tab_b : tabs.tab_a;
     }
 
-    // --- emit format: --format overrides the project setting. A settings-
-    // driven format accepts the three map values; wav has nothing for this
-    // tool to emit (the engine renders wav). ---
-    const std::string fmt = !fmt_override.empty() ? fmt_override : es.output_format;
-    if (fmt != "warptempo_maps" && fmt != "generic_map" && fmt != "midi_map") {
+    // --- emit format: the project's output_format. The settings reader
+    // validates the four-value vocabulary, so the only non-map value here is
+    // wav, which has nothing for this tool to emit (the engine renders wav). ---
+    const std::string fmt = es.output_format;
+    if (fmt == "wav") {
         std::fprintf(stderr,
-            "warptempo_parser: nothing to emit for output_format '%s' "
+            "warptempo_parser: nothing to emit for output_format 'wav' "
             "(this tool writes warptempo_maps, generic_map, or midi_map; "
-            "pass --format)\n",
-            fmt.c_str());
+            "the engine renders wav — use warptempo_cli, or change "
+            "output_format in the project .settings)\n");
         return 1;
     }
 
@@ -245,6 +251,35 @@ int main(int argc, char** argv) {
             full_midi_tempo_map};
     }
 
+    // --- output paths: the shared composer, title-named beside the source —
+    // exactly where the GUI writes the same project's render (one entry per
+    // extension of the format; for warptempo_maps the warp column first, the
+    // phase reset column second, by render_output_extensions' order). The
+    // clean-float prefix is wav-only, so render_output_stem is the title
+    // verbatim for every format this tool emits. ---
+    const std::vector<std::filesystem::path> out_paths =
+        compose_render_output_paths(render_output_directory(source_path),
+                                    render_output_stem(es), fmt);
+    const std::string out_path = out_paths.front().string();
+
+    // --- hard refusal: never write over the source audio itself.
+    // equivalent() is an inode match and only succeeds when both paths
+    // exist, so an output that does not exist yet can never resolve to the
+    // source. Every output path of the format is checked, so the
+    // warptempo_maps pair's second file is covered by the same refusal. ---
+    for (const std::filesystem::path& out : out_paths) {
+        std::error_code ec;
+        if (std::filesystem::exists(out, ec) &&
+            std::filesystem::equivalent(out, source_path, ec)) {
+            std::fprintf(stderr,
+                "warptempo_parser: output '%s' resolves to the source audio "
+                "file; refusing to overwrite the source. Change the title "
+                "setting.\n",
+                out.string().c_str());
+            return 1;
+        }
+    }
+
     // --- warptempo_maps: the pair, the warp frame map plus the phase reset
     // frame map, TWO files, together exactly warptempo_engine's input. The
     // phase reset column was derived beside its siblings when `artifacts` was
@@ -257,33 +292,20 @@ int main(int argc, char** argv) {
     // the single-file formats: this tool has never staged, so a failed
     // second write exits nonzero and the caller reruns. ---
     if (fmt == "warptempo_maps") {
-        // -o names the warp column; the phase reset column lands beside it
-        // with the extension swapped. Without -o, the two sibling defaults.
-        if (out_path.empty())
-            out_path = (parent / (stem + ".warpframemap")).string();
-        std::filesystem::path pr_out(out_path);
-        pr_out.replace_extension(".phaseresetframemap");
-
+        const std::string pr_out = out_paths[1].string();
         if (auto w = write_warp_frame_map(out_path,
                                           artifacts.warp_frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
         if (auto w = write_phase_reset_frame_map(
-                pr_out.string(), artifacts.phase_reset_frame_map); !w) {
+                pr_out, artifacts.phase_reset_frame_map); !w) {
             std::fprintf(stderr, "warptempo_parser: %s\n", w.error().c_str());
             return 1;
         }
         std::fprintf(stderr, "warptempo_parser: wrote %s\n", out_path.c_str());
-        std::fprintf(stderr, "warptempo_parser: wrote %s\n",
-                     pr_out.string().c_str());
+        std::fprintf(stderr, "warptempo_parser: wrote %s\n", pr_out.c_str());
         return 0;
-    }
-
-    // --- output path: -o, else the sibling convention ---
-    if (out_path.empty()) {
-        const std::string ext = (fmt == "generic_map") ? ".warpframemap" : ".miditempomap";
-        out_path = (parent / (stem + ext)).string();
     }
 
     if (fmt == "generic_map") {

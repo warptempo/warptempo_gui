@@ -50,6 +50,13 @@ enum class EngineField {
 // (title, scale, bpm, notes, url, cover, output_format, limiter).
 bool is_canonical_engine_key(const std::string& key);
 
+// The default render title for a source: the source stem plus "-rendered".
+// The GUI assigns it at source load (format_default_settings_template);
+// the engine CLI, blind to .settings by design, synthesizes the same title
+// to name its output and locate the map pair warptempo_parser writes for a
+// default-titled project.
+std::string default_render_title(const std::string& source_stem);
+
 // Validate (key, value) per the canonical engine rules and assign to the
 // corresponding EngineSettings field on success. On failure, leaves `out`
 // untouched and fills `reason` with a short human constraint string

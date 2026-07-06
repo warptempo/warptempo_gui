@@ -53,6 +53,10 @@ bool is_canonical_engine_key(const std::string& key) {
     return false;
 }
 
+std::string default_render_title(const std::string& source_stem) {
+    return source_stem + "-rendered";
+}
+
 bool validate_engine_setting(const std::string& key,
                              const std::string& value,
                              EngineSettings& out,

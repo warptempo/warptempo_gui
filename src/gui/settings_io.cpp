@@ -576,7 +576,7 @@ bool update_rendersettings_view_state(const std::filesystem::path& path,
 
 std::string format_default_settings_template(const std::string& stem) {
     EngineSettings defaults{};
-    defaults.title = stem + "-rendered";
+    defaults.title = default_render_title(stem);
     std::string s;
     for (const auto& desc : kSettingsOrder) {
         if (desc.kind == SettingKind::EnginePassthrough) {
