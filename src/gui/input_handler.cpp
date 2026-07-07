@@ -150,9 +150,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
     // flight, swallow every hotkey except the escape hatches — Esc stops
-    // the gesture (cancel_active_drags), and Ctrl+Q / Ctrl+W run the
-    // close / revert flow (the drag is uncommitted, so abandoning it is
-    // safe). This single gate is why no downstream hotkey needs its own
+    // the gesture (cancel_active_drags), and Ctrl+Q / Ctrl+W cancel the
+    // in-flight drag first (the same abandon Esc performs, since the
+    // gesture is uncommitted) and then run the close / revert flow.
+    // Cancelling before the prompt goes up is what keeps a dismissed
+    // prompt from leaving a stale drag that commits on the next motion.
+    // This single gate is why no downstream hotkey needs its own
     // drag guard: Tab, undo, `h`, and the rest never see a key mid-drag,
     // the sole exception being the playhead-scrub set-marker carve-out
     // below.
@@ -163,10 +166,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+            cancel_active_drags();
             prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
             return;
         }
         if (ctrl && !shift && !alt && key == GuiKeys::W) {
+            cancel_active_drags();
             prompt.request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
             return;
         }
