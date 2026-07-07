@@ -398,8 +398,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // phase_reset_offset_samples (two synthesis hops in the target/output-
     // sample domain) before the reset's stem column. Mnemonic: h for offset
     // Hops. It stops playback and then moves the playhead exactly as undo
-    // does — a scroll-into-view only when the edge is off-screen, never a
-    // center — so it is pure navigation and the read-only allowlist admits
+    // does — jump_playhead_to centers the viewport when the destination is
+    // off-screen and leaves it put otherwise — so it is pure navigation and
+    // the read-only allowlist admits
     // it. A bare `h` never falls through: when the overlay is not eligible it
     // returns without side effects, still consuming the key.
     //
@@ -473,9 +474,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // While 'T' is active the playhead fields carry target-frame values,
         // so the target-frame destination needs no further translation. Stop
         // playback first, then move the playhead exactly as undo does:
-        // jump_playhead_to owns the on-screen/off-screen viewport rule — a
-        // scroll-into-view only when the offset left edge is off-screen,
-        // which it usually is not, never a center — plus the playback
+        // jump_playhead_to owns the on-screen/off-screen viewport rule — it
+        // centers the viewport when the offset left edge is off-screen, which
+        // it usually is not (the offset point sits just left of the on-screen
+        // reset), and leaves it put otherwise — plus the playback
         // predictor resync. Mirror the waveform + timestamp damage a nudge
         // jump issues after it.
         playback_lifecycle.stop_playback_if_playing();
