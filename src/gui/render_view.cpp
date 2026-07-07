@@ -201,15 +201,23 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 }
 
 // Lenient, display-only reader for a .renderwarpmarkers sidecar. These
-// sidecars are a re-timed display SUBSET of the source markers: they start
-// at the first real marker (no 00:00.000 anchor) and carry bare label
-// references whose definitions live in the source file, not here. The strict
+// sidecars are a re-timed display SUBSET of the source markers, and the
+// re-timing can produce shapes the strict authoring parser rejects: the
+// mandatory 00:00.000 anchor can be dropped (a trim beginning after zero
+// drops it at the trim-range filter; a trim beginning at zero drops it at
+// the pre-origin filter, since the trimmed deliverable starts about N/2
+// after the trim instant — an untrimmed render keeps it, since the first
+// map segment's target frame is 0), and a label reference can survive the
+// render window while its definition is trimmed away, arriving orphaned
+// (a definition itself is not bare here — it serializes inline with its
+// colon-label suffix whenever the defining marker survives). The strict
 // authoring parser (parse_warpmarkers_file, reached via GuiWarpMarkers::load)
-// rejects both, so render-view reads through this reader instead — render-view
-// is a read-only overlay on already-canonical output and must accommodate the
-// canonical parser, not the reverse. (read_render_view_phaseresetmarkers below
-// shares the display-only-overlay rationale, though its reset sidecar has no
-// grammar mismatch of its own to accommodate.)
+// rejects a missing opening anchor and an orphaned reference, so render-view
+// reads through this reader instead — render-view is a read-only overlay on
+// already-canonical output and must accommodate the canonical parser, not
+// the reverse. (read_render_view_phaseresetmarkers below shares the
+// display-only-overlay rationale and has its own strict-parser mismatch,
+// the same-millisecond ordering case.)
 //
 // The on-disk payload after the pipe IS the display string the flag painter
 // shows (flag_text returns label_ref verbatim when set), so the whole payload
