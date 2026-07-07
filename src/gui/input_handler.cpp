@@ -147,6 +147,48 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
+    // Drag-modal input: a pointer drag owns the keyboard exactly as the
+    // prompt and the text editors above do. While any drag gesture is in
+    // flight, swallow every hotkey except the escape hatches — Esc stops
+    // the gesture (cancel_active_drags), and Ctrl+Q / Ctrl+W run the
+    // close / revert flow (the drag is uncommitted, so abandoning it is
+    // safe). This single gate is why no downstream hotkey needs its own
+    // drag guard: Tab, undo, `h`, and the rest never see a key mid-drag,
+    // the sole exception being the playhead-scrub set-marker carve-out
+    // below.
+    if (app.drag.active || app.trim_drag.active ||
+        app.scroll_drag.active || app.playhead_drag.active) {
+        if (key == GuiKeys::Escape) {
+            cancel_active_drags();
+            return;
+        }
+        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+            return;
+        }
+        if (ctrl && !shift && !alt && key == GuiKeys::W) {
+            prompt.request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
+            return;
+        }
+        // A playhead scrub is a navigation gesture, so it alone lets the
+        // two set-marker actions through: bare `s` and Shift+S fall
+        // through to the S handler below to drop a marker / phase reset
+        // at the scrubbed playhead. Ctrl+S (save) stays swallowed, and
+        // the position-editing drags (marker, trim, scroll) swallow
+        // these too — dropping a marker mid-marker-drag would fight the
+        // gesture. In render view the S key still falls through here but
+        // the render-view authoring gate below drops it, so scrubbing a
+        // render never authors. The four drag states are mutually
+        // exclusive, so playhead_only is belt-and-suspenders that keeps
+        // the intent explicit.
+        const bool playhead_only =
+            app.playhead_drag.active && !app.drag.active &&
+            !app.trim_drag.active && !app.scroll_drag.active;
+        if (!(playhead_only && !ctrl && !alt && key == GuiKeys::S)) {
+            return;
+        }
+    }
+
     // Render-view input gate. While render-view is active
     // only keys driving navigation / playback / exit / commit are
     // honored; every authoring key is silently dropped so a stray
@@ -324,21 +366,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // offset point — the left edge of the anticipation overlay,
     // phase_reset_offset_samples (two synthesis hops in the target/output-
     // sample domain) before the reset's stem column. Mnemonic: h for offset
-    // Hops. Pure navigation (playhead move plus at most a viewport recenter),
-    // so the read-only allowlist admits it. A bare `h` never falls through:
-    // when the overlay is not eligible it returns without side effects, still
-    // consuming the key.
+    // Hops. It stops playback and then moves the playhead exactly as undo
+    // does — a scroll-into-view only when the edge is off-screen, never a
+    // center — so it is pure navigation and the read-only allowlist admits
+    // it. A bare `h` never falls through: when the overlay is not eligible it
+    // returns without side effects, still consuming the key.
     //
     // Its eligibility gates and destination expression are kept in lockstep,
     // gate-for-gate and expression-for-expression, with
     // GuiPaintHandler::paint_phase_reset_anticipation_overlay: the two sites
     // must agree on when the overlay exists and where its left edge lands, so
-    // any change here must be mirrored there.
+    // any change here must be mirrored there. The painter carries a drag-time
+    // branch (it tracks the proposed position through DragOverlay), but `h`
+    // needs no matching branch: the drag-modal gate near the top of on_key
+    // swallows every hotkey while a drag is active, so `h` never runs
+    // mid-drag and the two sites only ever both evaluate with no drag in
+    // flight — total lockstep.
     if (key == GuiKeys::H && !ctrl && !shift && !alt) {
-        // A pointer gesture owns marker positions and the frozen-coordinate
-        // regime; defer to it and consume the key.
-        if (app.drag.active) return;
-
         // Overlay eligibility, the same gates in the same order as the paint
         // helper. render_view is already excluded by the read-only / render-
         // view gates above (the overlay never shows in render view), but keep
@@ -396,10 +440,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (destination < 0) destination = 0;
 
         // While 'T' is active the playhead fields carry target-frame values,
-        // so the target-frame destination needs no further translation.
-        // jump_playhead_to owns the on-screen/off-screen viewport rule and the
-        // playback predictor resync; mirror the waveform + timestamp damage a
-        // nudge jump issues after it.
+        // so the target-frame destination needs no further translation. Stop
+        // playback first, then move the playhead exactly as undo does:
+        // jump_playhead_to owns the on-screen/off-screen viewport rule — a
+        // scroll-into-view only when the offset left edge is off-screen,
+        // which it usually is not, never a center — plus the playback
+        // predictor resync. Mirror the waveform + timestamp damage a nudge
+        // jump issues after it.
+        playback_lifecycle.stop_playback_if_playing();
         selection.jump_playhead_to(destination);
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();

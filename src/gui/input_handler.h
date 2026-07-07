@@ -286,6 +286,8 @@ private:
     // first) and before the rest of the key handlers.
     bool handle_escape_cancels(GuiKey key);
 
+    void cancel_active_drags();
+
     // Render-trigger chords: Ctrl+E (queue-add), Ctrl+Alt+R (single render),
     // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iteration sweep),
     // Ctrl+Alt+C (commit displayed render). Returns true if key+mods matched

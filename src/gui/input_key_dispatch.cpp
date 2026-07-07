@@ -160,6 +160,41 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
     return false;
 }
 
+// Esc during a pointer drag stops the gesture. Marker and trim drags
+// are stopped before their deferred commit, so their pending change is
+// discarded and the live state returns to pre-drag; scroll and playhead
+// drags apply their motion continuously, so stopping just ends them
+// where they are. One verb across all four: Esc means stop.
+void GuiInputHandler::cancel_active_drags() {
+    if (app.drag.active) {
+        // The live marker store was untouched during motion (proposed
+        // positions lived in moveable_times, read by paint through
+        // DragOverlay) and apply_drag_motion never moved the playhead,
+        // so discarding the gesture needs no marker or playhead revert —
+        // reset and repaint the committed positions.
+        app.drag = DragState{};
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_top_strip();
+        viewport.invalidate_timestamp_area();
+    }
+    if (app.trim_drag.active) {
+        // Trim motion mutates app.trim live but keeps the pre-drag
+        // bounds in orig_begin/orig_end, so restore them before clearing
+        // the gesture.
+        if (app.trim_drag.moved) {
+            app.trim.begin_seconds = app.trim_drag.orig_begin_seconds;
+            app.trim.end_seconds   = app.trim_drag.orig_end_seconds;
+        }
+        app.trim_drag = TrimDragState{};
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+    }
+    // Scroll and playhead drags have already applied their motion, so
+    // stopping is just ending the gesture at its current position.
+    if (app.scroll_drag.active)   app.scroll_drag = ScrollDragState{};
+    if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};
+}
+
 // Render-trigger chords. See the declaration for the chord list.
 bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                                   GuiInputState mods) {
