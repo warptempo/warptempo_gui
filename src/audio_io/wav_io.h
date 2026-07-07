@@ -77,9 +77,10 @@ public:
     WavWriter& operator=(WavWriter&& other) noexcept;
     ~WavWriter();
 
-    // channels must be 1..256 and sample_rate 1..1536000. RIFF fmt stores
-    // channels in u16 and byte_rate in u32; these bounds keep block_align and
-    // byte_rate representable for the writer's supported formats.
+    // open_file and open_memory refuse channels outside 1..256 and sample_rate
+    // outside 1..1536000. RIFF fmt stores channels in u16 and byte_rate in u32;
+    // these bounds keep block_align and byte_rate representable in the fmt
+    // fields for the writer's supported formats.
     static std::expected<WavWriter, std::string>
     open_file(const std::string& path, WavSampleFormat format, int channels,
               int sample_rate);
