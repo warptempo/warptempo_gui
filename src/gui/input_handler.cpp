@@ -367,26 +367,32 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             ms = std::nearbyint(marker.time_seconds * sr);
         }
 
-        // Too-zoomed-out gate, the same column rule as the paint helper but
-        // against the LIVE viewport — this is input, not paint, so it reads
+        // Too-zoomed-out gate, the same fixed-width rule as the paint helper
+        // but against the LIVE viewport — this is input, not paint, so it reads
         // app.viewport_start_sample directly instead of the displayed-
-        // viewport lag recipe paint uses. If the anticipation span rounds
-        // below one pixel there is no overlay to jump to.
+        // viewport lag recipe paint uses. width_px is the anticipation offset
+        // rounded to whole pixels; if the back-extent rounds below one pixel
+        // there is no overlay to jump to.
         const double spp = current_samples_per_pixel(app, audio);
         if (spp <= 0.0) return;
         const double vp = static_cast<double>(app.viewport_start_sample);
         const int right_col = static_cast<int>(std::round((ms - vp) / spp));
-        const int left_col = static_cast<int>(std::round(
-            (ms - static_cast<double>(phase_reset_offset_samples) - vp) /
-            spp));
-        if (right_col - left_col < 1) return;
+        const int width_px = static_cast<int>(std::round(
+            static_cast<double>(phase_reset_offset_samples) / spp));
+        if (width_px < 1) return;
+        const int left_col = right_col - width_px;
 
-        // Destination is the overlay's left edge: the reset's target frame
-        // minus the anticipation offset. A reset near the timeline start can
-        // reach back past frame zero; the parser drops such resets at render
-        // time, but the GUI jump just clamps to 0.
-        int64_t destination =
-            static_cast<int64_t>(ms) - phase_reset_offset_samples;
+        // Destination lands on the overlay's left-edge pixel column, mapped
+        // back to a sample via the same vp + round(col*spp) mapping
+        // move_playhead_pixels uses, so the playhead sits exactly on the drawn
+        // edge without sub-pixel jitter. This approximates the
+        // phase_reset_offset_samples point to the pixel grid; the true offset
+        // lands in the Hann/OLA fade-in, so the approximation is inaudible. A
+        // reset near the timeline start can reach back past frame zero; the
+        // parser drops such resets at render time, but the GUI jump clamps to 0.
+        int64_t destination = app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint(
+                static_cast<double>(left_col) * spp));
         if (destination < 0) destination = 0;
 
         // While 'T' is active the playhead fields carry target-frame values,

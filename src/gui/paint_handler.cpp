@@ -252,9 +252,10 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
 // nothing on the warp axis to mirror.
 //
 // The bare-`h` jump handler in input_handler.cpp mirrors these eligibility
-// gates and this destination math to land the playhead on the overlay's left
-// edge, so any change to the gates or the offset expression here must be
-// reflected there.
+// gates and the fixed-width left-edge math — same width_px = round(offset/spp)
+// back-extent, same width_px < 1 gate, same left_col = right_col - width_px —
+// to land the playhead on the overlay's left-edge pixel column, so any change
+// to the gates or the back-extent expression here must be reflected there.
 void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
     cairo_t* cr, const GuiRect& area) {
     // Visibility: always-on for the focused marker, but only in target-view
@@ -321,16 +322,23 @@ void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
         ms = std::nearbyint(eff_time * sr);
     }
 
-    // Columns: the same std::round-to-int placement the stem renderer uses.
+    // Columns: right_col uses the same std::round-to-int placement the stem
+    // renderer uses, so the overlay's right edge stays on the marker's column.
+    // left_col is a fixed whole-pixel offset back from it, so the back-edge
+    // tracks the marker in lockstep instead of wobbling by independent
+    // per-endpoint rounding. width_px is the anticipation offset rounded to
+    // whole pixels — an approximate but rigid back-extent, which beats an exact
+    // but jittering one (the true offset point lands in the Hann/OLA fade-in).
     const int right_col =
         static_cast<int>(std::round((ms - vp_start) / spp));
-    const int left_col = static_cast<int>(std::round(
-        (ms - static_cast<double>(phase_reset_offset_samples) - vp_start) /
-        spp));
+    const int width_px = static_cast<int>(std::round(
+        static_cast<double>(phase_reset_offset_samples) / spp));
 
-    // Too-zoomed-out: if the anticipation span rounds below one pixel, paint
+    // Too-zoomed-out: if the fixed back-extent rounds below one pixel, paint
     // nothing at all — no sliver, no clamped minimum.
-    if (right_col - left_col < 1) return;
+    if (width_px < 1) return;
+
+    const int left_col = right_col - width_px;
 
     // Rectangle spans columns [left_col, right_col): exclusive of the stem's
     // own column (right_col), so the stem paints crisply on top of the seam.
