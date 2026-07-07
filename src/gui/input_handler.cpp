@@ -305,6 +305,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
+    //   - h (no mods)            → jump playhead to the focused phase
+    //                              reset's anticipation offset point. Pure
+    //                              navigation, admitted via is_offset_hop;
+    //                              the full rationale lives at the bare-h
+    //                              handler below.
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
     //   - x / Shift+x / Delete   → trim gestures: x sets the begin trim
