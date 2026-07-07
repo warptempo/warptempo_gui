@@ -382,7 +382,14 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             if (value == "W") { out.has_active_markers_view = true; out.active_markers_view = 'W'; }
             else if (value == "P") { out.has_active_markers_view = true; out.active_markers_view = 'P'; }
         } else if (key == "active_tab_view") {
-            // Case-sensitive "A" / "B". Anything else silent-skips.
+            // This branch stores the view-state copy of the key; strict
+            // validation is owned by read_settings_trim below, which
+            // hardfails a duplicate key or any value but A or B. Unlike its
+            // active_audio_view and active_markers_view siblings, a
+            // malformed value here is load-fatal rather than skippable:
+            // active_tab_view selects which tab's trim the GUI render and
+            // the headless CLIs apply, so silently defaulting it could
+            // render the wrong window.
             if (value == "A") { out.has_active_tab_view = true; out.active_tab_view = 'A'; }
             else if (value == "B") { out.has_active_tab_view = true; out.active_tab_view = 'B'; }
         } else if (key == "playback_speed") {
