@@ -130,6 +130,30 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // Editor text-selection drag modal gate. This sits ABOVE the
+    // text-editor handlers because the flag / settings editor is active
+    // during its own selection drag, and those handlers would otherwise
+    // tear the edit down and dispatch a command on any command key; this
+    // gate must intercept first so the drag owns the keyboard like every
+    // other drag. Swallow every key that is not an escape hatch. For an
+    // escape hatch, finalize the selection first (reading the still-live
+    // editor geometry) and then fall through with no return, so the
+    // editor and global handlers below run Esc (cancel the edit) or
+    // Ctrl+Q / Ctrl+W (tear the edit down, then open the close / revert
+    // prompt) exactly as they would with no drag in flight. A text drag
+    // is not a navigation gesture, so it gets no bare-`s` carve-out.
+    if (app.editor_text_drag.active) {
+        const bool escape_hatch =
+            key == GuiKeys::Escape ||
+            (ctrl && !shift && !alt &&
+             (key == GuiKeys::Q || key == GuiKeys::W));
+        if (!escape_hatch) return;
+        finalize_editor_text_drag();
+        // fall through: the editor handler below runs Esc (cancel the
+        // edit) or Ctrl+Q / Ctrl+W (tear the edit down, then the close /
+        // revert prompt opens) exactly as with no drag in flight.
+    }
+
     // The top-flag editor owns the keyboard while active. Routes here
     // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
     // first; Esc with no active edit falls through to the rest.
@@ -158,7 +182,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // This single gate is why no downstream hotkey needs its own
     // drag guard: Tab, undo, `h`, and the rest never see a key mid-drag,
     // the sole exception being the playhead-scrub set-marker carve-out
-    // below.
+    // below. The editor text-selection drag has its own modal gate above
+    // the text-editor handlers; the four position drags here are mutually
+    // exclusive with it.
     if (app.drag.active || app.trim_drag.active ||
         app.scroll_drag.active || app.playhead_drag.active) {
         if (key == GuiKeys::Escape) {
