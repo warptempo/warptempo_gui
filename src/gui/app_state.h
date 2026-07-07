@@ -136,6 +136,13 @@ struct DragState {
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
     // Pre-drag last_selected for the undo hint; carried onto the entry at commit.
     int                    pre_drag_last_selected = -1;
+    // Active-domain playhead position captured at begin_drag. The
+    // motion handler tracks the playhead onto the grabbed marker's
+    // proposed position during the drag; Esc-cancel restores this so an
+    // abandoned drag leaves the playhead where it started. A normal
+    // release keeps the followed position (DragState is reset wholesale
+    // at commit, discarding this).
+    int64_t                pre_drag_playhead_sample = 0;
     // Index of the marker that was clicked to start the drag. Used to track
     // the playhead during motion so the audio cursor follows the grabbed
     // marker as it moves.

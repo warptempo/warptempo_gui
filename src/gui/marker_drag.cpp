@@ -182,6 +182,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
+    d.pre_drag_playhead_sample = app.playhead_cursor_sample;
     app.drag = std::move(d);
     viewport.clear_hover_popup();
     return true;

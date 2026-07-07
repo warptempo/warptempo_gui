@@ -169,9 +169,12 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.drag.active) {
         // The live marker store was untouched during motion (proposed
         // positions lived in moveable_times, read by paint through
-        // DragOverlay) and apply_drag_motion never moved the playhead,
-        // so discarding the gesture needs no marker or playhead revert —
-        // reset and repaint the committed positions.
+        // DragOverlay), so no marker revert is needed. The motion handler
+        // did track the playhead onto the grabbed marker's proposed
+        // position, so restore the pre-drag playhead captured at
+        // begin_drag before resetting, then repaint the committed positions.
+        app.playhead_cursor_sample = app.drag.pre_drag_playhead_sample;
+        if (playback.is_playing()) playback.resync_predictor();
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
