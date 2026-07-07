@@ -153,6 +153,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Allowlist:
     //   - r (no mods)            → toggle render-view off
     //   - Shift+Left/Right       → previous/next render
+    //   - Shift+Home/Shift+End   → first/last render, clamped, no
+    //                              wraparound
     //   - Ctrl+Alt+C             → commit displayed render's markers
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
@@ -219,6 +221,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Shift+Left/Right       → playhead-by-samples scrub
     //   - Shift+0..9             → select playback speed
     //   - Home/End (no mods)     → playhead to trim region bounds
+    //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
+    //     (no mods)                step. Pure navigation, same family as
+    //                              the scrub and Home/End entries.
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom symbol-key alias
     //   - Ctrl+Shift+=/-         → step GUI font size (display preference,
@@ -228,17 +233,56 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → center+snap-zoom on playhead
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
+    //   - x / Shift+x / Delete   → trim gestures: x sets the begin trim
+    //                              (with the autoset end), Shift+x clears
+    //                              both bounds, Delete clears the
+    //                              selected trim bound(s) when a trim
+    //                              boundary is last-selected. Delete's
+    //                              other half, marker delete, is
+    //                              re-blocked inside the Delete handler's
+    //                              own read-only check, not at this gate.
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → top-level no-op
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
+    //   - Ctrl+S                 → save. Deliberately admitted: save is a
+    //                              whole-application persistence action
+    //                              (save_ops.save writes the marker
+    //                              sidecars and .settings), and admitting
+    //                              it from a locked tab is what lets
+    //                              gesture-owned state changed there —
+    //                              the read-only flag itself, trim, view
+    //                              state, font size, playback speed —
+    //                              reach disk; the bare-o handler comment
+    //                              below already records that the flag is
+    //                              silently persisted on Ctrl+S. It is
+    //                              not an authoring mutation of the
+    //                              locked tab: the marker-editing chords
+    //                              stay blocked, so the sidecar bytes
+    //                              reflect only authoring done where it
+    //                              was legal (possibly the other,
+    //                              unlocked tab).
     //   - Ctrl+P                 → copy phase reset placements
     //                              (read-only: writes only to the
     //                              session-only phase_reset_clipboard)
-    // Marker, tempo, and phase-reset authoring chords are silently
-    // dropped at this gate; trim gestures are still allowed because
-    // trim is per-tab navigation state.
+    //   - Ctrl+Z / Ctrl+Shift+Z  → undo / redo. Admitted at this gate
+    //                              because honored-ness is decided not by
+    //                              the active tab's read-only state but
+    //                              by the target entry's tab; do_undo and
+    //                              do_redo peek the entry and silently
+    //                              no-op when its target tab is
+    //                              read-only. The full rationale lives at
+    //                              is_undo_redo in input_key_dispatch.cpp
+    //                              and at the peek-then-bail sites in
+    //                              undo.cpp.
+    // Marker, tempo, and phase-reset drop / nudge / status-toggle chords
+    // are silently dropped at this gate; trim gestures are admitted
+    // because trim is per-tab navigation state. Delete and Ctrl+Z are
+    // also admitted here, but their authoring refusal lives downstream:
+    // the Delete handler's own read-only branch re-blocks marker delete,
+    // and do_undo / do_redo's target-tab peek silently no-ops when the
+    // undo/redo target's tab is read-only.
     if (!app.render_view.enabled && active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;
