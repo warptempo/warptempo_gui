@@ -64,6 +64,17 @@ inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 // pixels dim. Default is roughly kWaveform blended ~55% toward kBackground
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
+
+// Phase reset anticipation overlay fill. Pure white, composited at a small
+// alpha, so it lightens whatever it covers (background, waveform, and
+// already-dimmed out-of-trim pixels alike) — polarity-opposite to the
+// out-of-trim dim, which darkens. GuiColor carries no alpha, so the alpha is
+// the separate constexpr double below. Tuned for the dark theme: a slight
+// brightening that stays legible over silent stretches, where phase resets
+// often sit.
+inline constexpr GuiColor kPhaseResetAnticipation      = hex(0xFFFFFF);
+inline constexpr double    kPhaseResetAnticipationAlpha = 0.07;
+
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);

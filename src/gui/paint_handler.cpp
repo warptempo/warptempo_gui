@@ -6,6 +6,7 @@
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
+#include "phase_reset_frame_map_build.h"  // phase_reset_offset_samples
 
 #include <chrono>
 #include <cmath>
@@ -229,6 +230,130 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
             cairo_restore(cr);
         }
     }
+}
+
+// -- GuiPaintHandler::paint_phase_reset_anticipation_overlay -------------
+
+// Paints a transient translucent rectangle behind the focused phase reset
+// marker showing the span the phase reset anticipation operates over: it
+// runs back phase_reset_offset_samples (two synthesis hops in the
+// target/output-sample domain) in target time from the reset, ending flush
+// at the marker's stem column. Paint-only: no persisted state, nothing on
+// disk, no settings key, no undo interaction; render_background refills the
+// exposed region every frame, so the fill composites over fresh pixels and
+// never accumulates.
+//
+// Target-view-only, and this is a phase-reset-only surface with no warp
+// sibling (naming-symmetry asymmetry, recorded here per CLAUDE.md): the
+// anticipation is authored as a fixed target/output-domain offset, so it has
+// a constant width in target time. Source view would show a map-dependent,
+// varying width — misrepresenting a constant offset — so the overlay is not
+// drawn there. Anticipation itself is a phase-reset-only concept, so there is
+// nothing on the warp axis to mirror.
+void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
+    cairo_t* cr, const GuiRect& area) {
+    // Visibility: always-on for the focused marker, but only in target-view
+    // phase-reset editing, never in render view. Anything else paints nothing.
+    if (app.render_view.enabled) return;
+    if (app.active_audio_view != 'T') return;
+    if (app.active_markers_view != 'P') return;
+
+    const auto& markers = app.phaseresetmarkers.markers();
+    const int idx = app.last_selected_marker;
+    if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
+    const auto& marker = markers[idx];
+    // Mirror the phase-reset stem renderer, which skips disabled markers
+    // entirely (render_phaseresetmarkers' is_disabled reads `disabled`).
+    if (marker.disabled) return;
+
+    if (area.w <= 0 || area.h <= 0) return;
+
+    // Displayed-viewport recipe: same as paint_playheads, so the overlay
+    // stays locked to the blitted plate and the stem cache while the worker
+    // rebuilds against a viewport change.
+    const double spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const double sr = static_cast<double>(audio.sample_rate());
+
+    // Map selection: same frozen-vs-cached pattern as the debug hit-rects
+    // block and hit_test_flag. No map means identity (matching the stem
+    // renderer's fallback). We are already known to be in target view here.
+    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
+    if (app.drag.active) {
+        if (!app.drag.frozen_warp_frame_map.empty())
+            tmap = &app.drag.frozen_warp_frame_map;
+    } else {
+        const auto& m = target_view_warp_frame_map_cached(
+            app, static_cast<long>(audio.sample_rate()),
+            static_cast<long>(audio.total_frames())).warp_frame_map;
+        if (!m.empty()) tmap = &m;
+    }
+
+    // Effective time: during a phase-reset-mode drag, read the focused
+    // marker's proposed time through the DragOverlay (same construction as
+    // hit_test_flag). A warp-mode drag's indices refer to the warp list, so
+    // guard on drag_mode 'P'; otherwise use the live store's time.
+    double eff_time = marker.time_seconds;
+    if (app.drag.active && app.drag.drag_mode == 'P') {
+        DragOverlay ov;
+        ov.indices = &app.drag.dragging_markers;
+        ov.times   = &app.drag.moveable_times;
+        eff_time = ov.effective_time(idx, marker.time_seconds);
+    }
+
+    // Paint sample: the exact expression render.cpp's file-local
+    // sec_to_paint_sample uses, so marker and overlay can never disagree.
+    double ms;
+    if (tmap && !tmap->empty()) {
+        const size_t src_frame =
+            static_cast<size_t>(std::nearbyint(eff_time * sr));
+        ms = std::nearbyint(map_source_to_target(src_frame, *tmap));
+    } else {
+        ms = std::nearbyint(eff_time * sr);
+    }
+
+    // Columns: the same std::round-to-int placement the stem renderer uses.
+    const int right_col =
+        static_cast<int>(std::round((ms - vp_start) / spp));
+    const int left_col = static_cast<int>(std::round(
+        (ms - static_cast<double>(phase_reset_offset_samples) - vp_start) /
+        spp));
+
+    // Too-zoomed-out: if the anticipation span rounds below one pixel, paint
+    // nothing at all — no sliver, no clamped minimum.
+    if (right_col - left_col < 1) return;
+
+    // Rectangle spans columns [left_col, right_col): exclusive of the stem's
+    // own column (right_col), so the stem paints crisply on top of the seam.
+    // Vertical extent is the marker stem's exact span — the lower-row chip
+    // bottom down to the waveform bottom.
+    const double y_top = flag_chip_bottom_y(area, ChipRow::Lower);
+    const double y_bottom = static_cast<double>(area.y + area.h);
+    double x0 = static_cast<double>(area.x + left_col);
+    double x1 = static_cast<double>(area.x + right_col);
+
+    // Horizontal clip to [area.x, area.x + area.w); draw whenever the
+    // intersection is non-empty even if the stem column is off-screen right
+    // (the tail can be visible while the stem is not).
+    x0 = std::max(x0, static_cast<double>(area.x));
+    x1 = std::min(x1, static_cast<double>(area.x + area.w));
+    if (x1 <= x0) return;
+
+    // Flat translucent fill, integer pixel edges, no blur or plate masking,
+    // so it lightens background and waveform pixels alike (including
+    // already-dimmed out-of-trim pixels — that layering is intended).
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgba(cr, kPhaseResetAnticipation.r,
+                          kPhaseResetAnticipation.g, kPhaseResetAnticipation.b,
+                          kPhaseResetAnticipationAlpha);
+    cairo_rectangle(cr, x0, y_top, x1 - x0, y_bottom - y_top);
+    cairo_fill(cr);
+    cairo_restore(cr);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -592,6 +717,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
+            // Over the plate and dim, under the stems: the anticipation
+            // overlay lightens the span behind the focused phase reset, then
+            // the stems paint on top so the focused stem stays crisp.
+            paint_phase_reset_anticipation_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
             const auto m1 = clock::now();
             t_markers_ms =
