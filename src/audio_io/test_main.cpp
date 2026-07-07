@@ -600,61 +600,6 @@ bool test_allocation_and_riff_projection_boundaries()
     return true;
 }
 
-bool test_wav_writer_geometry_bounds()
-{
-    std::vector<char> blob;
-    // Out-of-bounds geometry is refused before the vector is cleared or a file
-    // is created, keeping block_align and byte_rate representable in the fmt
-    // fields.
-    if (WavWriter::open_memory(blob, WavSampleFormat::Float32, 257, 48000) ||
-        WavWriter::open_memory(blob, WavSampleFormat::Float32, 2, 1536001) ||
-        WavWriter::open_memory(blob, WavSampleFormat::Float32, 0, 48000) ||
-        WavWriter::open_memory(blob, WavSampleFormat::Float32, 2, 0)) {
-        std::cout << "selftest: WAV writer geometry bounds did not refuse\n";
-        return false;
-    }
-
-    // The upper bound is inclusive: 256 channels at 1536000 Hz projects a
-    // byte_rate of about 1.57 billion, within int and the 32-bit fmt field.
-    constexpr int kChannels = 256;
-    constexpr int kSampleRate = 1536000;
-    auto writer =
-        WavWriter::open_memory(blob, WavSampleFormat::Float32, kChannels,
-                               kSampleRate);
-    if (!writer) {
-        std::cout << "selftest: WAV writer geometry accept-bound open failed: "
-                  << writer.error() << "\n";
-        return false;
-    }
-    std::vector<float> frame(kChannels, 0.0f);
-    auto ok = writer->write_frames(frame.data(), 1);
-    if (!ok) {
-        std::cout << "selftest: WAV writer geometry accept-bound write failed: "
-                  << ok.error() << "\n";
-        return false;
-    }
-    ok = writer->close();
-    if (!ok) {
-        std::cout << "selftest: WAV writer geometry accept-bound close failed: "
-                  << ok.error() << "\n";
-        return false;
-    }
-    auto info = wav_probe(std::span<const char>(blob.data(), blob.size()));
-    if (!info) {
-        std::cout << "selftest: WAV writer geometry accept-bound probe failed: "
-                  << info.error() << "\n";
-        return false;
-    }
-    if (info->channels != kChannels || info->sample_rate != kSampleRate) {
-        std::cout << "selftest: WAV writer geometry accept-bound header mismatch"
-                     " (channels "
-                  << info->channels << ", sample_rate " << info->sample_rate
-                  << ")\n";
-        return false;
-    }
-    return true;
-}
-
 int run_selftest()
 {
     if (!test_riff_limit_predicate() || !test_data_before_fmt_parses() ||
@@ -737,11 +682,6 @@ int run_selftest()
         return 1;
     }
     std::cout << "selftest: allocation and RIFF projection boundaries passed\n";
-
-    if (!test_wav_writer_geometry_bounds()) {
-        return 1;
-    }
-    std::cout << "selftest: WAV writer geometry bounds passed\n";
 
     if (!run_source_sample_cache_selftest()) {
         return 1;

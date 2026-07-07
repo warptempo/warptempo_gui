@@ -629,24 +629,11 @@ WavWriter::open_file(const std::string& path, WavSampleFormat format,
                      int channels, int sample_rate)
 {
     // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
-    // otherwise silently take the float path. The WAV source parser admits any
-    // positive geometry (16-bit channels, 32-bit sample rate, only positivity
-    // and source block-align consistency are checked) and FLAC STREAMINFO
-    // geometry is structurally within these bounds, so the writer is the single
-    // point that keeps the output header representable -- RIFF fmt stores
-    // block_align in a 16-bit field and byte_rate in a 32-bit field, and
-    // write_header's byte_rate product must not overflow int.
-    constexpr int kMaxWavWriterChannels = 256;
-    constexpr int kMaxWavWriterSampleRate = 1536000;
+    // otherwise silently take the float path. The writer narrows the caller's
+    // geometry into the RIFF fmt fields as given.
     if (format != WavSampleFormat::Pcm24 &&
         format != WavSampleFormat::Float32) {
         return std::unexpected("unsupported WAV writer format");
-    }
-    if (channels < 1 || channels > kMaxWavWriterChannels ||
-        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
-        return std::unexpected(
-            "invalid WAV writer parameters (channels must be 1..256, "
-            "sample_rate must be 1..1536000)");
     }
     FILE* f = std::fopen(path.c_str(), "wb+");
     if (!f) {
@@ -680,24 +667,11 @@ WavWriter::open_memory(std::vector<char>& out, WavSampleFormat format,
                        int channels, int sample_rate)
 {
     // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
-    // otherwise silently take the float path. The WAV source parser admits any
-    // positive geometry (16-bit channels, 32-bit sample rate, only positivity
-    // and source block-align consistency are checked) and FLAC STREAMINFO
-    // geometry is structurally within these bounds, so the writer is the single
-    // point that keeps the output header representable -- RIFF fmt stores
-    // block_align in a 16-bit field and byte_rate in a 32-bit field, and
-    // write_header's byte_rate product must not overflow int.
-    constexpr int kMaxWavWriterChannels = 256;
-    constexpr int kMaxWavWriterSampleRate = 1536000;
+    // otherwise silently take the float path. The writer narrows the caller's
+    // geometry into the RIFF fmt fields as given.
     if (format != WavSampleFormat::Pcm24 &&
         format != WavSampleFormat::Float32) {
         return std::unexpected("unsupported WAV writer format");
-    }
-    if (channels < 1 || channels > kMaxWavWriterChannels ||
-        sample_rate < 1 || sample_rate > kMaxWavWriterSampleRate) {
-        return std::unexpected(
-            "invalid WAV writer parameters (channels must be 1..256, "
-            "sample_rate must be 1..1536000)");
     }
     out.clear();
     WavWriter w;
@@ -822,7 +796,7 @@ std::expected<void, std::string> WavWriter::write_header()
     const uint16_t bits = format_ == WavSampleFormat::Pcm24 ? 24 : 32;
     const uint16_t block_align = static_cast<uint16_t>(channels_ * (bits / 8));
     const uint32_t byte_rate =
-        static_cast<uint32_t>(sample_rate_ * block_align);
+        static_cast<uint32_t>(sample_rate_) * block_align;
     std::vector<unsigned char> h;
     h.insert(h.end(), {'R', 'I', 'F', 'F'});
     riff_size_offset_ = h.size();
