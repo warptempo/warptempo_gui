@@ -250,6 +250,11 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
 // varying width — misrepresenting a constant offset — so the overlay is not
 // drawn there. Anticipation itself is a phase-reset-only concept, so there is
 // nothing on the warp axis to mirror.
+//
+// The bare-`h` jump handler in input_handler.cpp mirrors these eligibility
+// gates and this destination math to land the playhead on the overlay's left
+// edge, so any change to the gates or the offset expression here must be
+// reflected there.
 void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
     cairo_t* cr, const GuiRect& area) {
     // Visibility: always-on for the focused marker, but only in target-view

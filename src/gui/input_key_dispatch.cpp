@@ -84,6 +84,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::T && !ctrl && !shift && !alt);
     const bool is_sub_p =
         (key == GuiKeys::P && !ctrl && !shift && !alt);
+    // Bare `h` jumps the playhead to the focused phase reset's anticipation
+    // offset point (input_handler.cpp). Pure navigation — a playhead move plus
+    // at most a viewport recenter, exactly the Tab/scrub family this gate
+    // admits — so a read-only tab still honors it (it authors nothing).
+    const bool is_offset_hop =
+        (key == GuiKeys::H && !ctrl && !shift && !alt);
     const bool is_tab_cycle =
         (!ctrl && key == GuiKeys::Tab) ||
         (!ctrl && key == GuiKeys::IsoLeftTab);
@@ -117,6 +123,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_zoom || is_zoom_symbol || is_font_size_step || is_zero ||
              is_speed_select ||
              is_follow || is_center || is_sub_t || is_sub_p ||
+             is_offset_hop ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q || is_ctrl_w || is_save ||
              is_copy_phase_resets || is_undo_redo ||

@@ -1,6 +1,7 @@
 #include "input_handler.h"
 
 #include "paint_handler.h"
+#include "phase_reset_frame_map_build.h"  // phase_reset_offset_samples
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -315,6 +316,86 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         ViewState& vs = active_view_state(app);
         vs.read_only = !vs.read_only;
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+
+    // Bare `h` jumps the playhead to the focused phase reset's anticipation
+    // offset point — the left edge of the anticipation overlay,
+    // phase_reset_offset_samples (two synthesis hops in the target/output-
+    // sample domain) before the reset's stem column. Mnemonic: h for offset
+    // Hops. Pure navigation (playhead move plus at most a viewport recenter),
+    // so the read-only allowlist admits it. A bare `h` never falls through:
+    // when the overlay is not eligible it returns without side effects, still
+    // consuming the key.
+    //
+    // Its eligibility gates and destination expression are kept in lockstep,
+    // gate-for-gate and expression-for-expression, with
+    // GuiPaintHandler::paint_phase_reset_anticipation_overlay: the two sites
+    // must agree on when the overlay exists and where its left edge lands, so
+    // any change here must be mirrored there.
+    if (key == GuiKeys::H && !ctrl && !shift && !alt) {
+        // A pointer gesture owns marker positions and the frozen-coordinate
+        // regime; defer to it and consume the key.
+        if (app.drag.active) return;
+
+        // Overlay eligibility, the same gates in the same order as the paint
+        // helper. render_view is already excluded by the read-only / render-
+        // view gates above (the overlay never shows in render view), but keep
+        // the check so the two sites read identically.
+        if (app.render_view.enabled) return;
+        if (app.active_audio_view != 'T') return;
+        if (app.active_markers_view != 'P') return;
+        const auto& markers = app.phaseresetmarkers.markers();
+        const int idx = app.last_selected_marker;
+        if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
+        const auto& marker = markers[idx];
+        if (marker.disabled) return;
+
+        // Paint sample: the same expression the paint helper uses, so marker
+        // and jump can never disagree. No map means identity.
+        const double sr = static_cast<double>(audio.sample_rate());
+        const auto& map = target_view_warp_frame_map_cached(
+            app, static_cast<long>(audio.sample_rate()),
+            static_cast<long>(audio.total_frames())).warp_frame_map;
+        double ms;
+        if (!map.empty()) {
+            const size_t src_frame =
+                static_cast<size_t>(std::nearbyint(marker.time_seconds * sr));
+            ms = std::nearbyint(map_source_to_target(src_frame, map));
+        } else {
+            ms = std::nearbyint(marker.time_seconds * sr);
+        }
+
+        // Too-zoomed-out gate, the same column rule as the paint helper but
+        // against the LIVE viewport — this is input, not paint, so it reads
+        // app.viewport_start_sample directly instead of the displayed-
+        // viewport lag recipe paint uses. If the anticipation span rounds
+        // below one pixel there is no overlay to jump to.
+        const double spp = current_samples_per_pixel(app, audio);
+        if (spp <= 0.0) return;
+        const double vp = static_cast<double>(app.viewport_start_sample);
+        const int right_col = static_cast<int>(std::round((ms - vp) / spp));
+        const int left_col = static_cast<int>(std::round(
+            (ms - static_cast<double>(phase_reset_offset_samples) - vp) /
+            spp));
+        if (right_col - left_col < 1) return;
+
+        // Destination is the overlay's left edge: the reset's target frame
+        // minus the anticipation offset. A reset near the timeline start can
+        // reach back past frame zero; the parser drops such resets at render
+        // time, but the GUI jump just clamps to 0.
+        int64_t destination =
+            static_cast<int64_t>(ms) - phase_reset_offset_samples;
+        if (destination < 0) destination = 0;
+
+        // While 'T' is active the playhead fields carry target-frame values,
+        // so the target-frame destination needs no further translation.
+        // jump_playhead_to owns the on-screen/off-screen viewport rule and the
+        // playback predictor resync; mirror the waveform + timestamp damage a
+        // nudge jump issues after it.
+        selection.jump_playhead_to(destination);
+        viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         return;
     }

@@ -65,15 +65,26 @@ inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 
-// Phase reset anticipation overlay fill. Pure white, composited at a small
-// alpha, so it lightens whatever it covers (background, waveform, and
-// already-dimmed out-of-trim pixels alike) — polarity-opposite to the
-// out-of-trim dim, which darkens. GuiColor carries no alpha, so the alpha is
-// the separate constexpr double below. Tuned for the dark theme: a slight
-// brightening that stays legible over silent stretches, where phase resets
-// often sit.
-inline constexpr GuiColor kPhaseResetAnticipation      = hex(0xFFFFFF);
-inline constexpr double    kPhaseResetAnticipationAlpha = 0.07;
+// Phase reset anticipation overlay fill. A flat translucent rectangle behind
+// the focused phase reset marker, composited at a small alpha so it lifts
+// whatever it covers (background, waveform, and already-dimmed out-of-trim
+// pixels alike) — polarity-opposite to the out-of-trim dim, which darkens.
+// GuiColor carries no alpha, so the alpha is the separate constexpr double
+// below.
+//
+// Flat fill, not a plate-masked recolor: a recolor was tried and rejected
+// because it goes invisible on the silent stretches where phase resets often
+// sit, whereas a flat fill keeps the span legible everywhere. Pale azure
+// rather than white: the dark theme's kBackground (0x1A1A1F) is blue-cast, and
+// white's neutral lightening pulls the covered pixels toward gray, which reads
+// greenish by contrast against the surrounding blue-cast dark; a color in the
+// kWaveform / kSelected hue family preserves the background's blue cast
+// instead of neutralizing it. A tinted source lifts less per alpha unit than
+// white (the per-channel add is alpha times source-minus-dest), so the alpha
+// rises from the old white-at-0.07 to keep the overall lift at least that
+// strong, with a slight intended bump. Both values tuned by eye on the panel.
+inline constexpr GuiColor kPhaseResetAnticipation      = hex(0xB8D4F0);
+inline constexpr double    kPhaseResetAnticipationAlpha = 0.10;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
