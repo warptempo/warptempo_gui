@@ -336,10 +336,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
     }
 
-    // Strict engine-settings deserialization. Any violation (unknown key,
-    // duplicate, parse failure, missing required key) fails the load with
-    // every reason logged. Treat like a corrupt audio file: revert the
-    // partial load and return false so the user sees no half-loaded state.
+    // Strict engine-settings deserialization. Non-canonical keys are
+    // ignored (they are GUI-kind, owned by parse_settings_file above); a
+    // duplicate canonical key, an invalid value, or a missing required key
+    // fails the load with the first violation reported. Treat like a
+    // corrupt audio file: revert the partial load and return false so the
+    // user sees no half-loaded state.
     {
         auto es = read_engine_settings_from_file(app.settings_path);
         if (!es) {

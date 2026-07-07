@@ -377,8 +377,8 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             if (value == "S") { out.has_active_audio_view = true; out.active_audio_view = 'S'; }
             else if (value == "T") { out.has_active_audio_view = true; out.active_audio_view = 'T'; }
         } else if (key == "active_markers_view") {
-            // Case-sensitive "W" / "P" — these literals cross the engine
-            // boundary. Anything else silent-skips like the `follow` parser.
+            // Case-sensitive "W" / "P". Anything else silent-skips like
+            // the `follow` parser.
             if (value == "W") { out.has_active_markers_view = true; out.active_markers_view = 'W'; }
             else if (value == "P") { out.has_active_markers_view = true; out.active_markers_view = 'P'; }
         } else if (key == "active_tab_view") {
