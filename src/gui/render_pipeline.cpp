@@ -108,10 +108,16 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Failed;
     }
 
-    // Hard refusal: a source that changed on disk since the GUI loaded it is
-    // adversarial state, not a warn-and-continue case. Every output format
-    // and both the file and target-view buffer paths go through this same
-    // check before any other probe-derived work runs. The load identity is a
+    // Hard refusal: the on-screen authored state (markers, trim, settings)
+    // describes the loaded buffer, so rendering a source that changed on disk
+    // since load — an ordinary mid-session swap or regeneration at the same
+    // path, or anything else — would silently bind those authoring decisions
+    // to different audio; hence refusal, not warn-and-continue. Every dispatched
+    // render on both the file and target-view buffer paths runs this check
+    // unconditionally, and the target-view reuse rungs in
+    // GuiTargetRender::dispatch_render_now independently prove the same
+    // load-identity equality before reusing cached or archival audio,
+    // falling through to this refusal on mismatch. The load identity is a
     // required request field — GuiAudio refuses a load it cannot stat, and
     // every dispatcher forwards the pair — so the check runs unconditionally.
     {

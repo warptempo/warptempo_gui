@@ -118,10 +118,24 @@ void GuiTargetRender::dispatch_render_now() {
     // samples: fresh limited renders quantize in place at publication, cache
     // hits decode the exact codec roundtrip of those samples, and archival
     // artifact loads decode the same deliverable.
+    //
+    // The fingerprint's identity bytes are the load-time pair (GuiAudio's
+    // recorded size/mtime), built only after proving the current disk stat
+    // still equals that pair — so a reuse hit can never bind audio for any
+    // source other than the loaded buffer, even if a different file with a
+    // matching stat is later swapped in at the path. On stat failure or
+    // identity mismatch the fingerprint clears, both reuse rungs miss, and
+    // the flow falls through to dispatch, where do_render's source-changed
+    // check refuses the render (that refusal owns the stderr diagnostic).
     RenderFileIdentity source_identity;
-    if (stat_file_identity(app.source_audio_path, source_identity)) {
+    if (stat_file_identity(app.source_audio_path, source_identity) &&
+        source_identity.size == audio.source_load_size() &&
+        source_identity.mtime == audio.source_load_mtime()) {
+        RenderFileIdentity load_time_identity;
+        load_time_identity.size  = audio.source_load_size();
+        load_time_identity.mtime = audio.source_load_mtime();
         last_fingerprint_ = render_fingerprint(
-            app.source_audio_path, source_identity, audio.sample_rate(),
+            app.source_audio_path, load_time_identity, audio.sample_rate(),
             app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
             app.engine_settings,
             app.trim.has_begin, app.trim.begin_seconds,
