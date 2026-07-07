@@ -260,8 +260,11 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
                 return std::unexpected("unsupported WAV sample format");
             }
 
-            const uint16_t expected_align =
-                static_cast<uint16_t>(layout.info.channels * (bits / 8));
+            // The multiply stays wide so a header-claimed channel count whose
+            // true alignment exceeds the u16 block_align field cannot wrap into
+            // a false match; the mismatch refusal below then covers it.
+            const uint32_t expected_align =
+                static_cast<uint32_t>(layout.info.channels) * (bits / 8u);
             if (layout.block_align != expected_align) {
                 return std::unexpected("WAV block alignment mismatch");
             }
