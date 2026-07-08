@@ -32,16 +32,16 @@ public:
 
     // Writes the canonical form to `path`. Atomic: writes to <path>.tmp,
     // fsyncs, then renames. Preserves existing permissions or uses 0644 if
-    // the file is new. Returns true on success. Save dedups duplicate
-    // time_seconds silently and emits a one-line stderr notice if any
-    // rows were dropped — mid-edit drag gestures may transit through
-    // duplicate states, so we don't error in the GUI for them.
+    // the file is new. Returns true on success. Save writes every row with
+    // no dedup or ordering validation; the serializer contract (ops-layer
+    // ordering invariants, the strict-parser backstop, and legitimate
+    // same-millisecond sidecar overlaps) is documented at the static save
+    // overload in phaseresetmarkers.cpp.
     bool save(const std::string& path) const;
 
     // Static variant for callers that hold a raw GuiPhaseResetMarker vector (e.g.
-    // the render pipeline writing per-render sidecars). Same on-disk format
-    // and dedup behavior as the instance method. Dedup is keyed on
-    // time_seconds (exact double match).
+    // the render pipeline writing per-render sidecars). Same on-disk format as
+    // the instance method.
     static bool save(const std::string& path,
                      const std::vector<GuiPhaseResetMarker>& markers);
 
@@ -50,7 +50,9 @@ public:
     // Inserts `m` at the position that preserves ascending time_seconds
     // order. Returns the insertion index. Equal-time collisions are
     // accepted at insert time (the user may transit through them via
-    // nudge); save dedups them.
+    // nudge); ops-layer callers (drop/drag/shift/nudge validation,
+    // propagate's erase-before-paste) are what keep durable equal-time
+    // occupants from persisting, not this insert.
     int insert_marker(GuiPhaseResetMarker m);
 
     // Removes the marker at `index`. No-op if out of range.
