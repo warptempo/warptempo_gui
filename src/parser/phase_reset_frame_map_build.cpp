@@ -19,6 +19,17 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
                 "phase reset time exceeds source length at marker "
                 + std::to_string(i));
         }
+        // Adjacent exact duplicates collapse to one. Input marker times are
+        // non-decreasing (the load parser rejects decreasing times; the GUI
+        // store is time-sorted), and two enabled markers with exactly equal
+        // times are one authored event, so the collapse makes this output
+        // strictly increasing — which the derivation chain (strictly
+        // monotone map interpolation, constant subtractions, participation
+        // drops) preserves, so the engine's strict-ascent init validator
+        // holds by construction. Exact equality only, no epsilon: two
+        // distinct doubles remain two resets no matter how close — the
+        // engine consumes same-hop placements together by design.
+        if (!out.empty() && src_frame == out.back()) continue;
         out.push_back(src_frame);
     }
     return out;

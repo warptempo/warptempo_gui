@@ -49,8 +49,9 @@ namespace warpmarkers_internal {
 
 // Parse one canonical new-format line into a WarpMarker. Used by the GUI
 // editor's commit path (flag_editor). Line-local validation only —
-// cross-marker rules (label_ref existence, label_def uniqueness, time
-// monotonicity) are the caller's. On `pass`, tempo_base/tempo_scale are
+// cross-marker rules (label_def uniqueness, time ordering: non-decreasing
+// at load, degeneracy refused at the render boundary) are the caller's.
+// On `pass`, tempo_base/tempo_scale are
 // populated with inert defaults. Returns the marker on success, or a
 // one-line diagnostic on failure.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(

@@ -53,7 +53,9 @@ struct MarkerEffective {
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames, src_frame - prev_src_frame < 1, tempo <= 0
 // (a zero or negative effective product divides by zero or flips sign in the
-// segment arithmetic).
+// segment arithmetic), and — in Pass 2, after all of the above — a label
+// ref with no matching label def (the render-boundary refusal for a
+// reference whose definition was deleted; such files load intact).
 // Builds the full untrimmed map unconditionally; trim is applied downstream by
 // slice_warp_frame_map_to_trim_window (engine input) and derive_trimmed_artifact_maps
 // (external artifacts), never here. Scale participates here and not in

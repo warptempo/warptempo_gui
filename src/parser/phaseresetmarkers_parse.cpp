@@ -84,9 +84,17 @@ parse_phaseresetmarkers_file(const std::string& path) {
         const double eff = m.time_seconds;
         // A reset at time zero parses and loads; it is inert at render because
         // the near-start dropzone drops it at derivation.
-        if (last_time >= 0.0 && eff <= last_time)
+        //
+        // Load rejects only DECREASING times. Equal-time markers load
+        // deliberately (the GUI may author them; two enabled markers at
+        // exactly equal times are one authored event, collapsed by
+        // build_phase_reset_source_frames before derivation). Decreasing
+        // stays load-fatal as a corruption tripwire — the GUI always saves
+        // its time-sorted store, so a decreasing file can only be a
+        // hand-edit error or corruption.
+        if (last_time >= 0.0 && eff < last_time)
             return fail(line_number,
-                "time_seconds not strictly increasing: " + format_timestamp(eff));
+                "time_seconds decreasing: " + format_timestamp(eff));
         last_time = eff;
         markers.push_back(std::move(m));
     }

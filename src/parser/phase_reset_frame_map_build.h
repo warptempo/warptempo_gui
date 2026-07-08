@@ -25,9 +25,12 @@
 // argument for removing either side alone. Disabled markers are skipped
 // before the check — only resolved markers
 // are validated, as in build_warp_frame_map — so a disabled past-end reset
-// stays loadable and inert. No ordering check lives here: the strict marker
-// parser owns ordering at load, and the engine's strict-ascent hardfail
-// covers raw phaseresetframemap inputs that bypass the marker parser. The
+// stays loadable and inert. Ordering: the load parser rejects only
+// DECREASING times (equal times load — one authored event), so the input
+// here is non-decreasing; adjacent exact-duplicate frames collapse to one
+// in this build, making the output strictly increasing, and the engine's
+// strict-ascent hardfail still covers raw phaseresetframemap inputs that
+// bypass the marker parser. The
 // result is the authored (undisplaced) source-frame intermediate consumed by
 // render-view display and by derive_phase_reset_frame_map below, which
 // compiles it into the engine-domain artifact and engine input. There is no

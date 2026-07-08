@@ -34,7 +34,9 @@ bool is_valid_scale_format(const std::string& s) {
 
 // Parse a new-format payload (the part after the pipe) into a partly-
 // populated WarpMarker base — sets tempo/label fields only. Cross-marker
-// checks (label_ref existence, label_def uniqueness) are the caller's job.
+// checks (label_def uniqueness, time ordering) are the caller's job;
+// label_ref resolvability is not checked at load at all — it is a render
+// boundary verdict (build_warp_frame_map).
 //
 // On success, returns true and the WarpMarker carries the parsed payload.
 // On failure, returns false and `error_out` is set.
@@ -171,8 +173,9 @@ namespace warpmarkers_internal {
 // --- single-line parser -----------------------------------------------------
 //
 // Parses one canonical line into a WarpMarker, doing line-local validation
-// only. Cross-marker checks (label_ref existence, label_def uniqueness,
-// time monotonicity) are left to the caller.
+// only. Cross-marker checks (label_def uniqueness, time ordering) are left
+// to the caller; label_ref resolvability is a render boundary verdict, not
+// a load check.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line) {
 
@@ -229,49 +232,13 @@ parse_warpmarkers_file(const std::string& path) {
     }
     if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
-    // ----- Pass 1: gather defined labels ---------------------------------
-    //
-    // A label reference is only valid if its label appears as a def
-    // somewhere in the file. Disabled defs still count.
-
-    std::set<std::string>            defined;
-
-    for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
-        std::string t = raw_lines[idx];
-        if (t.empty()) continue;
-
-        if (!t.empty() && t[0] == '#') {
-            if (t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9))) {
-                t.erase(0, 1);
-            } else {
-                continue;
-            }
-        }
-        if (t.empty()) continue;
-
-        // Payload after `|`, optionally containing `:label`.
-        const size_t pipe = t.find('|');
-        if (pipe == std::string::npos) continue;
-        const std::string payload = t.substr(pipe + 1);
-        if (payload.find('(') != std::string::npos ||
-            payload.find(')') != std::string::npos) {
-            continue;
-        }
-        const size_t colon = payload.find(':');
-        if (colon == std::string::npos) continue;
-        const std::string lbl = payload.substr(colon + 1);
-        if (is_valid_label_format(lbl)) {
-            defined.insert(lbl);
-        }
-    }
-
-    // ----- Pass 2: build markers -----------------------------------------
+    // ----- Build markers ---------------------------------------------------
 
     bool first_marker_seen = false;
     double last_time       = -1.0;
 
     // Track which line first defined each label (for duplicate errors).
-    std::set<std::string>      seen_def_in_pass2;
+    std::set<std::string>      seen_def;
     std::map<std::string, int> seen_def_line;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
@@ -345,25 +312,32 @@ parse_warpmarkers_file(const std::string& path) {
                     "first marker must not carry a label definition");
             first_marker_seen = true;
         }
-        if (last_time >= 0.0 && m.time_seconds <= last_time)
+        // Load rejects only DECREASING times. Equal-time markers load
+        // deliberately: the GUI may author them, so the save/reload round
+        // trip must never lock the user out; ordering degeneracy is a render
+        // boundary verdict now, refused by build_warp_frame_map's existing
+        // "marker segment < 1 frame" error. Decreasing stays load-fatal as a
+        // corruption tripwire — the GUI always saves its time-sorted store,
+        // so a decreasing file can only be a hand-edit error or corruption.
+        if (last_time >= 0.0 && m.time_seconds < last_time)
             return fail(line_number,
-                "time not strictly increasing: " + time_raw);
+                "time decreasing: " + time_raw);
 
         // Cross-marker validation. A pass following a label ref is
         // deliberately accepted: the resolver inherits from the nearest
         // owner on the backward walk, skipping label refs and disabled
         // markers, deterministically. Bad form is the author's concern,
-        // not a parse error.
-        if (!m.label_ref.empty() && defined.count(m.label_ref) == 0)
-            return fail(line_number,
-                "reference to undefined label: " + m.label_ref);
+        // not a parse error. A label reference without a matching
+        // definition is likewise authorable now (the GUI permits deleting
+        // a definition its refs outlive), loads intact, and is refused at
+        // the render boundary by build_warp_frame_map.
         if (!m.label_def.empty()) {
-            if (seen_def_in_pass2.count(m.label_def))
+            if (seen_def.count(m.label_def))
                 return fail(line_number,
                     "duplicate label definition: " + m.label_def +
                     " (first defined at line " +
                     std::to_string(seen_def_line[m.label_def]) + ")");
-            seen_def_in_pass2.insert(m.label_def);
+            seen_def.insert(m.label_def);
             seen_def_line[m.label_def] = line_number;
         }
 

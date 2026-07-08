@@ -440,15 +440,21 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         double target_frame = 0.0;
 
         if (!m.label_ref.empty()) {
-            // Label grammar integrity (unique definitions, resolvable
-            // references) is enforced at the strict .warpmarkers load
-            // boundary (parse_warpmarkers_file) and at GUI editor commit
-            // (flag_editor.cpp); every caller resolves markers through
-            // resolve_warp_markers_for_render before reaching this builder.
-            // An unresolved reference here means a fabricated marker vector,
-            // and at() terminating the process is the deliberate hardfail
-            // for that state.
-            const LabelCacheEntry& lbl = label_cache.at(m.label_ref);
+            // Label resolvability is a render-boundary verdict: a reference
+            // whose definition was deleted (or never existed) is an ordinary
+            // user-reachable state — such files load intact, and this error
+            // is the loud refusal the GUI surfaces (the stderr path in
+            // render_pipeline.cpp prints the returned message; popup wiring
+            // arrives with the GUI-side validity gate). Definition
+            // uniqueness is still load-enforced, so a found entry is the
+            // one definition.
+            const auto lbl_it = label_cache.find(m.label_ref);
+            if (lbl_it == label_cache.end()) {
+                return std::unexpected("label ref has no matching label def: '"
+                                       + m.label_ref + "' at marker "
+                                       + std::to_string(i));
+            }
+            const LabelCacheEntry& lbl = lbl_it->second;
             // A label_ref imposes its definition's target duration; there is
             // no ceiling on the implied stretch multiplier. The N.NNNN syntax
             // limit applies only to typed scale fields at parse and editor

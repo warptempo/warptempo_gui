@@ -66,13 +66,17 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 //
 // Strictness is the right predicate on both lists because the engine
 // validates pre-quantization doubles, and every program path produces
-// strictly increasing ones: strictly ascending authored markers map through
-// the parser's strictly monotone derivation chain (a reset whose anticipation
-// falls before the window start is dropped, not clamped, so at most one
-// survivor can sit exactly at zero and every later survivor is strictly
-// greater), and .phaseresetframemap artifacts are written from that same
-// derivation. Equal values therefore always mean a breach. No epsilon band
-// on either.
+// strictly increasing ones. Authored marker files load with equal times
+// permitted, but neither column lets a tie reach the engine: strict ascent
+// of the phase reset input is guaranteed by the exact-duplicate collapse in
+// build_phase_reset_source_frames plus the parser's strictly monotone
+// derivation chain (a reset whose anticipation falls before the window
+// start is dropped, not clamped, so at most one survivor can sit exactly at
+// zero and every later survivor is strictly greater), with
+// .phaseresetframemap artifacts written from that same derivation; warp
+// ordering degeneracy is refused at build_warp_frame_map (its sub-frame
+// segment error) before any engine input exists. Equal values here
+// therefore always mean a breach. No epsilon band on either.
 
 // Validate strict ascent of a (src,tgt) warp_frame_map on both axes. Returns
 // true if OK.
