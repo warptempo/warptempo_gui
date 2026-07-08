@@ -714,13 +714,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // below (see handle_render_view_nav).
     if (handle_render_view_nav(key, mods)) return;
 
-    // Ctrl+Left / Ctrl+Right: nudge selected markers by one pixel.
+    // Ctrl+Left / Ctrl+Right: nudge the last-selected group by one pixel of
+    // time. Routes like Delete and Ctrl+wheel — a last-selected trim bound
+    // (Trim group) nudges the bound; otherwise the marker/phase-reset nudge
+    // runs. Refused in render-view on the trim route, mirroring the Ctrl+wheel
+    // trim path's render-view refusal.
     if (ctrl && !shift && !alt && key == GuiKeys::Left) {
+        if (app.last_sel_group == LastSelGroup::Trim) {
+            if (app.render_view.enabled) return;
+            if ((app.trim_begin_selected && app.trim.has_begin) ||
+                (app.trim_end_selected && app.trim.has_end)) {
+                nudge_selected_trim(-1);
+                return;
+            }
+        }
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::Right) {
+        if (app.last_sel_group == LastSelGroup::Trim) {
+            if (app.render_view.enabled) return;
+            if ((app.trim_begin_selected && app.trim.has_begin) ||
+                (app.trim_end_selected && app.trim.has_end)) {
+                nudge_selected_trim(+1);
+                return;
+            }
+        }
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;

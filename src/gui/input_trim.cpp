@@ -440,6 +440,151 @@ void GuiInputHandler::delete_selected_trim() {
     app.trim_end_selected   = false;
 }
 
+// Ctrl+Left / Ctrl+Right on the trim group. The sibling of
+// nudge_selected_markers: one pixel of time per press, walls-only,
+// refuse-or-cap by the direction of travel. Trim differs from the marker
+// nudge in two designed ways, marked at their sites below — the millisecond
+// grid is the step floor (trim persists on the grid), and the partner bound
+// is a wall (trim behaves like a viewport, so its bounds keep a grid gap and
+// cannot coincide).
+void GuiInputHandler::nudge_selected_trim(int direction) {
+    if (app.loading || audio.total_frames() <= 0) return;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+    // The nudge moves the playhead onto the bound; stop playback first.
+    playback_lifecycle.stop_playback_if_playing();
+    const double sr_d = static_cast<double>(sr);
+
+    // Fine-tuning collapse, mirroring the marker nudge's collapse to the
+    // focused marker: the nudge acts on ONE bound. The focused bound is the
+    // one app.last_selected_trim names when that bound is selected and set;
+    // otherwise the sole selected-and-set bound; otherwise there is nothing
+    // to nudge.
+    const bool begin_ok = app.trim_begin_selected && app.trim.has_begin;
+    const bool end_ok   = app.trim_end_selected   && app.trim.has_end;
+    TrimHit which = TrimHit::None;
+    if (app.last_selected_trim == 'B' && begin_ok)      which = TrimHit::Begin;
+    else if (app.last_selected_trim == 'E' && end_ok)   which = TrimHit::End;
+    else if (begin_ok && !end_ok)                       which = TrimHit::Begin;
+    else if (end_ok && !begin_ok)                       which = TrimHit::End;
+    else return;
+    // Collapse the selection to the focused bound via the same helper click
+    // and drag use — it single-selects this bound, drops marker selection,
+    // and keeps group Trim.
+    select_trim_boundary(which, /*additive=*/false);
+
+    double& field = (which == TrimHit::Begin) ? app.trim.begin_seconds
+                                              : app.trim.end_seconds;
+    const double cur = field;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+    const double total_dur = static_cast<double>(audio.total_frames()) / sr_d;
+    constexpr double kGrid = 0.001;
+
+    // Step one pixel of time at the current zoom, per view. Source view steps
+    // the source-domain seconds directly; target view steps the bound's
+    // displayed (active-domain) position by one pixel and inverse-translates
+    // back to source, matching how the marker nudge steps one target pixel and
+    // how every trim gesture crosses the domain boundary.
+    double proposed;
+    if (app.active_audio_view == 'T') {
+        const int64_t src_frame =
+            static_cast<int64_t>(std::nearbyint(cur * sr_d));
+        const int64_t active = source_frame_to_active_domain(app, audio, src_frame);
+        double active_new =
+            std::nearbyint(static_cast<double>(active) +
+                           static_cast<double>(direction) * spp);
+        if (active_new < 0.0) active_new = 0.0;
+        const int64_t back_src = active_domain_to_source_frame(
+            app, audio, static_cast<int64_t>(active_new));
+        proposed = static_cast<double>(back_src) / sr_d;
+    } else {
+        proposed = cur + static_cast<double>(direction) * spp / sr_d;
+    }
+
+    // Stored-grid invariant: every value written into the trim store is on the
+    // millisecond grid the .settings format persists at. The millisecond grid
+    // is therefore the nudge's floor — a deliberate asymmetry against the
+    // marker nudge's sub-millisecond full-double fidelity, because trim
+    // persists on the grid. When the snapped proposal equals the current value
+    // (a pixel finer than the grid at deep zoom), step one grid unit in the
+    // travel direction instead, routing the grid arithmetic through the snap
+    // as every trim site does.
+    double proposed_grid = snap_to_timestamp_grid(proposed);
+    if (proposed_grid == cur) {
+        proposed_grid = snap_to_timestamp_grid(
+            cur + static_cast<double>(direction) * kGrid);
+    }
+
+    // Walls, consulting only the bound in the direction of travel (the marker
+    // nudge's rule): the wall is a ceiling when moving later, a floor when
+    // moving earlier. Values match the trim drag's single-bound clamps. The
+    // partner bound is deliberately a wall: trim bounds keep their
+    // cannot-coincide grid gap (trim behaves like a viewport, not a marker),
+    // one grid unit apart on the stored grid.
+    double wall;
+    if (which == TrimHit::Begin) {
+        if (direction > 0) {
+            // begin moving later: the begin ceiling. With an end bound, one
+            // grid unit below it; without one, the source end, snapped and
+            // stepped down one grid unit when the snap rounds past EOF (the
+            // same round-past-EOF handling the drag applies to the end cap).
+            // The render boundary owns refusing a begin at or past the source
+            // end; this mirrors the drag's data clamp and does not pre-guard.
+            if (app.trim.has_end) {
+                wall = snap_to_timestamp_grid(app.trim.end_seconds - kGrid);
+                if (wall < 0.0) wall = 0.0;
+            } else {
+                wall = snap_to_timestamp_grid(total_dur);
+                if (wall > total_dur) wall = snap_to_timestamp_grid(wall - kGrid);
+            }
+        } else {
+            wall = 0.0;   // begin moving earlier: zero.
+        }
+    } else {
+        if (direction > 0) {
+            // end moving later: total duration, snapped with the same
+            // round-past-EOF step-down.
+            wall = snap_to_timestamp_grid(total_dur);
+            if (wall > total_dur) wall = snap_to_timestamp_grid(wall - kGrid);
+        } else {
+            // end moving earlier: one grid unit above the begin bound; else
+            // zero.
+            wall = app.trim.has_begin
+                ? snap_to_timestamp_grid(app.trim.begin_seconds + kGrid)
+                : 0.0;
+        }
+    }
+    // Refuse (silent no-op) when there is no room; otherwise cap the step at
+    // the wall so repeated presses creep flush onto it.
+    if (direction > 0) {
+        if (cur >= wall) return;
+        if (proposed_grid > wall) proposed_grid = wall;
+    } else {
+        if (cur <= wall) return;
+        if (proposed_grid < wall) proposed_grid = wall;
+    }
+    if (proposed_grid == cur) return;
+
+    // Trim is gesture-owned and excluded from undo/redo history (as with every
+    // other trim gesture; see handle_trim_clear_both).
+    field = proposed_grid;
+
+    // The same invalidation set the trim drag's motion branch emits.
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
+
+    // No viewport gate, mirroring the marker nudge (drags viewport-clamp the
+    // grabbed item; nudges do not). Track the playhead onto the bound through
+    // move_playhead_to's edge-follow path — at most one pixel of scroll,
+    // keeping the bound just inside the edge.
+    const int64_t new_src =
+        static_cast<int64_t>(std::nearbyint(field * sr_d));
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, new_src));
+}
+
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
                                                  bool shift, int mouse_x) {
     // The caller consumes a trim press only for recognized gestures: a

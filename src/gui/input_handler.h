@@ -395,6 +395,13 @@ private:
     // handle_trim_unset) and clears the trim-selected flags.
     void delete_selected_trim();
 
+    // Ctrl+Left / Ctrl+Right on the trim group: nudge the focused bound by
+    // one pixel of time at the current zoom. direction: -1 earlier, +1 later.
+    // The sibling of nudge_selected_markers, sharing its walls-only,
+    // refuse-or-cap directional rule; differs where trim differs by design
+    // (the millisecond grid floor and the partner-bound cannot-coincide gap).
+    void nudge_selected_trim(int direction);
+
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
     // translates app.viewport_start_sample / playhead_cursor_sample /
