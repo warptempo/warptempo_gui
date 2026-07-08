@@ -1075,12 +1075,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_begin_sample());
                     if (app.trim.has_begin)
-                        selection.select_trim_bound_with_coincident('B');
+                        selection.select_trim_bound('B');
                     break;
     case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_end_sample() - 1);
                     if (app.trim.has_end)
-                        selection.select_trim_bound_with_coincident('E');
+                        selection.select_trim_bound('E');
                     break;
     default: break;
     }

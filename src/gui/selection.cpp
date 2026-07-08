@@ -186,11 +186,11 @@ void Selection::cycle_selection(bool forward) {
     // selects exactly one stop — a bound is an ordinary stop, never lit
     // together with a marker.
 
-    // Current stop, checked bound-first: after Home/End
-    // (select_trim_bound_with_coincident) both a bound and a coincident marker
-    // are selected with group Trim, and the bound is the primary stop. A bound
-    // is the current stop only when its group owns the selection, its named
-    // side is set and selected, and it sits on the playhead frame.
+    // Current stop, checked bound-first: the bound-first check keys the
+    // current stop off the group owner (LastSelGroup::Trim means a bound, not
+    // a marker, is selected). A bound is the current stop only when its group
+    // owns the selection, its named side is set and selected, and it sits on
+    // the playhead frame.
     char cur_bound  = 0;    // 'B' / 'E' / 0
     int  cur_marker = -1;
     if (app.last_sel_group == LastSelGroup::Trim) {
@@ -432,53 +432,21 @@ void Selection::jump_playhead_to(int64_t target_sample) {
     if (playback.is_playing()) playback.resync_predictor();
 }
 
-void Selection::select_trim_bound_with_coincident(char which) {
+void Selection::select_trim_bound(char which) {
     const bool has = (which == 'B') ? app.trim.has_begin : app.trim.has_end;
     if (!has) return;
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
 
-    const double sec = (which == 'B') ? app.trim.begin_seconds
-                                      : app.trim.end_seconds;
-    const int64_t bound_active = source_frame_to_active_domain(app, audio,
-        static_cast<int64_t>(std::nearbyint(sec * static_cast<double>(sr))));
-
-    // Search the active marker list for a non-disabled marker sharing the
-    // bound's active-domain frame.
-    const bool phase_reset = (app.active_markers_view == 'P');
-    const std::vector<GuiWarpMarker>& warp_vec =
-        app.render_view.enabled ? app.render_view.warp_markers
-                                : app.warpmarkers.markers();
-    const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
-        app.render_view.enabled ? app.render_view.phase_resets
-                                : app.phaseresetmarkers.markers();
-    const int n = phase_reset ? static_cast<int>(phase_reset_vec.size())
-                              : static_cast<int>(warp_vec.size());
-    int coincident = -1;
-    for (int i = 0; i < n; ++i) {
-        const bool dis = phase_reset ? phase_reset_vec[i].disabled
-                                     : effective_disabled(warp_vec, i);
-        if (dis) continue;
-        const double t = phase_reset ? phase_reset_vec[i].time_seconds
-                                     : warp_vec[i].time_seconds;
-        const int64_t f = source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(t * static_cast<double>(sr))));
-        if (f == bound_active) { coincident = i; break; }
-    }
-
-    // The bound is the primary selection (group Trim). A coincident marker is
-    // additionally selected so both render highlighted, with Trim still primary.
-    app.trim_begin_selected = (which == 'B');
-    app.trim_end_selected   = (which == 'E');
-    app.last_selected_trim  = which;
+    // The bound is the sole selection (group Trim); any marker selection is
+    // dropped so exactly one thing is selected, matching the Tab walk where a
+    // bound is an ordinary single stop.
+    app.trim_begin_selected  = (which == 'B');
+    app.trim_end_selected    = (which == 'E');
+    app.last_selected_trim   = which;
     app.selected_markers.clear();
-    if (coincident >= 0) {
-        app.selected_markers.insert(coincident);
-        app.last_selected_marker = coincident;
-    } else {
-        app.last_selected_marker = -1;
-    }
-    app.last_sel_group = LastSelGroup::Trim;
+    app.last_selected_marker = -1;
+    app.last_sel_group       = LastSelGroup::Trim;
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
 }
