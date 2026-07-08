@@ -283,21 +283,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
         err = std::move(result.error());
     }
 
-    // Cross-marker checks (edit target excluded).
-    if (ok && !parsed.label_ref.empty()) {
-        bool found = false;
-        for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
-            if (i == idx) continue;
-            if (mv_const[i].label_def == parsed.label_ref) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            ok = false;
-            err = "reference to undefined label: " + parsed.label_ref;
-        }
-    }
+    // Cross-marker check (edit target excluded). A dangling label_ref is
+    // deliberately not gated here — ref resolvability is a render verdict
+    // (build_warp_frame_map's "label ref has no matching label def",
+    // surfaced by the pre-flight popup and the target-view validity gate);
+    // def uniqueness is a load rule, so the editor still gates it.
     if (ok && !parsed.label_def.empty()) {
         for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
             if (i == idx) continue;

@@ -145,25 +145,56 @@ void Selection::cycle_selection(bool forward) {
     };
 
     // Playhead is the sole anchor for cycle direction. Strict inequality
-    // ensures a stop exactly at the playhead's frame is not a valid landing
-    // — Tab is motion, not confirmation. Disabled markers are skipped as if
-    // they were not present in the active mode's list.
+    // on frames still prevents re-landing on the marker just landed on;
+    // coincident (same-frame) groups are traversed by index within the
+    // shared frame (the in-group step below) so every member is
+    // Tab-reachable — the tool the coincidence notice ("N coincident
+    // markers", paint_handler.cpp) points the user at. Disabled markers
+    // are skipped as if they were not present in the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
+
+    int     marker_sel   = -1;
+    int64_t marker_frame = 0;
+
+    // In-group index step, tried before the frame scan. When the previous
+    // Tab landed on a marker, the caller synced the playhead onto it, so
+    // its active-domain frame equals the playhead frame (a playhead moved
+    // elsewhere by a click breaks the equality and disables this branch
+    // naturally). Step by index in the cycle direction to the next
+    // non-disabled marker sharing that exact frame. The group key is the
+    // active-domain frame — finer than the coincidence notice's
+    // deepest-zoom pixel bin: two markers in one pixel bin but on
+    // different frames were always separate Tab stops (the frame scan
+    // reaches both); this step covers the same-frame case the strict
+    // inequality used to skip. When the group is exhausted in this
+    // direction, no candidate is found here and the frame scan below
+    // leaves the group as before.
+    {
+        const int last = app.last_selected_marker;
+        if (last >= 0 && last < n && frame_of(last) == ph_f) {
+            const int step = forward ? 1 : -1;
+            for (int i = last + step; i >= 0 && i < n; i += step) {
+                if (frame_of(i) != ph_f) break;  // frame-sorted: group ends
+                if (is_disabled(i)) continue;
+                marker_sel = i; marker_frame = ph_f; break;
+            }
+        }
+    }
 
     // Nearest marker candidate strictly past the playhead in the cycle
     // direction. Markers are frame-sorted, so the first hit is the nearest.
-    int     marker_sel   = -1;
-    int64_t marker_frame = 0;
-    if (forward) {
-        for (int i = 0; i < n; ++i) {
-            if (frame_of(i) > ph_f && !is_disabled(i)) {
-                marker_sel = i; marker_frame = frame_of(i); break;
+    if (marker_sel < 0) {
+        if (forward) {
+            for (int i = 0; i < n; ++i) {
+                if (frame_of(i) > ph_f && !is_disabled(i)) {
+                    marker_sel = i; marker_frame = frame_of(i); break;
+                }
             }
-        }
-    } else {
-        for (int i = n - 1; i >= 0; --i) {
-            if (frame_of(i) < ph_f && !is_disabled(i)) {
-                marker_sel = i; marker_frame = frame_of(i); break;
+        } else {
+            for (int i = n - 1; i >= 0; --i) {
+                if (frame_of(i) < ph_f && !is_disabled(i)) {
+                    marker_sel = i; marker_frame = frame_of(i); break;
+                }
             }
         }
     }
