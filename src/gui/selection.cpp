@@ -99,12 +99,12 @@ void Selection::cycle_selection(bool forward) {
     const std::vector<GuiWarpMarker>& warp_vec =
         app.render_view.enabled ? app.render_view.warp_markers
                                 : app.warpmarkers.markers();
-    const std::vector<GuiPhaseResetMarker>& reset_vec =
+    const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets
                                 : app.phaseresetmarkers.markers();
 
     const int n = phase_reset
-        ? static_cast<int>(reset_vec.size())
+        ? static_cast<int>(phase_reset_vec.size())
         : static_cast<int>(warp_vec.size());
     // No early return on an empty marker list: trim bounds can still be cycle
     // stops. frame_of / is_disabled below are only invoked for indices in
@@ -118,7 +118,7 @@ void Selection::cycle_selection(bool forward) {
         int64_t src_f;
         if (phase_reset) {
             src_f = static_cast<int64_t>(std::nearbyint(
-                reset_vec[i].time_seconds *
+                phase_reset_vec[i].time_seconds *
                 static_cast<double>(sr)));
         } else {
             src_f = static_cast<int64_t>(std::nearbyint(
@@ -132,7 +132,7 @@ void Selection::cycle_selection(bool forward) {
     // effective_disabled; phase reset has no cascade and reads the bool.
     auto is_disabled = [&](int i) -> bool {
         if (phase_reset) {
-            return reset_vec[i].disabled;
+            return phase_reset_vec[i].disabled;
         }
         return effective_disabled(warp_vec, i);
     };
@@ -341,17 +341,17 @@ void Selection::select_trim_bound_with_coincident(char which) {
     const std::vector<GuiWarpMarker>& warp_vec =
         app.render_view.enabled ? app.render_view.warp_markers
                                 : app.warpmarkers.markers();
-    const std::vector<GuiPhaseResetMarker>& reset_vec =
+    const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
         app.render_view.enabled ? app.render_view.phase_resets
                                 : app.phaseresetmarkers.markers();
-    const int n = phase_reset ? static_cast<int>(reset_vec.size())
+    const int n = phase_reset ? static_cast<int>(phase_reset_vec.size())
                               : static_cast<int>(warp_vec.size());
     int coincident = -1;
     for (int i = 0; i < n; ++i) {
-        const bool dis = phase_reset ? reset_vec[i].disabled
+        const bool dis = phase_reset ? phase_reset_vec[i].disabled
                                      : effective_disabled(warp_vec, i);
         if (dis) continue;
-        const double t = phase_reset ? reset_vec[i].time_seconds
+        const double t = phase_reset ? phase_reset_vec[i].time_seconds
                                      : warp_vec[i].time_seconds;
         const int64_t f = source_frame_to_active_domain(app, audio,
             static_cast<int64_t>(std::nearbyint(t * static_cast<double>(sr))));

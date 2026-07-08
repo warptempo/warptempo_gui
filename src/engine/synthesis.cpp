@@ -388,9 +388,9 @@ void Synthesis::synthesize_full(
         // downstream of input validation — and are consumed together by the
         // while loop below.
         int  phase_reset_cursor = 0;
-        // `prev_reset` carries "the previous frame fired a reset" into the next
+        // `prev_phase_reset` carries "the previous frame fired a reset" into the next
         // iteration so PGHI seats theta = phi on the post-reset frame.
-        bool prev_reset = false;
+        bool prev_phase_reset = false;
         // Start-trim: N/2 samples -- the origin-centered analysis alignment
         // latency only, so source frame 0 maps to output frame 0. The OLA
         // ramp-up is intentionally NOT trimmed; it is kept as a brief head
@@ -430,7 +430,7 @@ void Synthesis::synthesize_full(
             const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
             const bool    frame0     = (frame_idx == 0);
-            const bool    seed_heap  = frame0 || prev_reset;
+            const bool    seed_heap  = frame0 || prev_phase_reset;
 
             if (prof) {
                 const auto _h0 = prof_clock::now();
@@ -531,15 +531,15 @@ void Synthesis::synthesize_full(
 
             // Phase reset. The post-reset frame re-grounds via seed_heap
             // (theta = phi). The loop only advances the placement cursor and
-            // records that a reset fired so `prev_reset` seeds the next frame.
+            // records that a reset fired so `prev_phase_reset` seeds the next frame.
             // Channel-independent: each channel walks its own cursor.
-            bool reset_fired = false;
+            bool phase_reset_fired = false;
             while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
                    stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {
                 ++phase_reset_cursor;
-                reset_fired = true;
+                phase_reset_fired = true;
             }
-            prev_reset = reset_fired;
+            prev_phase_reset = phase_reset_fired;
 
             // Advance the analysis pipeline by one frame. Only needed while
             // another synthesis frame follows; the analysis-only frame
