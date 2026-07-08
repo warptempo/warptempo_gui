@@ -172,9 +172,16 @@ RenderOutcome do_render(const RenderRequest& req,
     // already built successfully when the matching render was produced, so
     // no reuse path can fail here that previously succeeded, and the reuse
     // hit's extra map build is negligible against the pipeline. ---
+    auto resolved_warp_markers =
+        resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers));
+    if (!resolved_warp_markers) {
+        std::fprintf(stderr,
+            "warptempo_gui: render error: %s\n",
+            resolved_warp_markers.error().c_str());
+        return RenderOutcome::Failed;
+    }
     auto rfull = build_warp_frame_map(
-        resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers)),
-        scale, sample_rate, total_frames);
+        *resolved_warp_markers, scale, sample_rate, total_frames);
     if (!rfull) {
         std::fprintf(stderr,
             "warptempo_gui: render error: map build failed: %s\n",

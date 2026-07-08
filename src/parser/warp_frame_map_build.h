@@ -111,9 +111,36 @@ std::expected<void, std::string> validate_trim_frames(
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
+// Render-boundary grammar check for the first warp marker, operating on the
+// RAW marker list, pre-resolution (after resolution a leading pass is
+// indistinguishable from a numeric owner because of resolve_inherited_tempo's
+// 1.0 fallback). Rules: the list must be non-empty; markers[0] must sit at
+// exactly 0.0 seconds, must not be disabled, must not be a pass
+// (tempo_inherits), and must not be a label reference. A label definition on
+// markers[0] is legal. This check is mandatory correctness, not politeness:
+// build_warp_frame_map never reads markers[0].time_seconds — it seeds the
+// map at {0,0} and attributes the opening segment to the first resolved
+// marker wherever it actually sits — so without it a moved, disabled, or
+// pass/ref first marker renders SILENTLY WRONG deliverable bytes rather than
+// failing. Violating files load intact (the save/reload round trip can never
+// lock the user out); every render path refuses them here via
+// resolve_warp_markers_for_render's leading call. Kept public so display-side
+// validity gates can consult the verdict directly without building. On
+// failure the one-line message names the failed rule and, when two or more
+// markers share markers[0].time_seconds exactly, appends a coincident-marker
+// count with the formatted timestamp so the recovery path (Tab-select,
+// delete one by one, recreate the first marker) is legible from the error
+// alone.
+std::expected<void, std::string>
+validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers);
+
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
-// is parser-domain and reads no GUI-only fields). Filters on
+// is parser-domain and reads no GUI-only fields). Validates the first-marker
+// render grammar first (validate_first_marker_render_grammar above, on the
+// raw pre-resolution list) and returns its message unchanged on failure, so
+// no render path can skip the check — this resolver is the chokepoint every
+// caller passes through before build_warp_frame_map. Filters on
 // warp_markers_render_keep_mask above — the participation verdict's single
 // owner — dropping disabled label-definition markers (and thereby all refs
 // to them) and disabled markers generally. The inherit walk-back is applied
@@ -121,8 +148,8 @@ std::vector<bool> warp_markers_render_keep_mask(
 // same rule as resolve_inherited_tempo. Both the engine-bound render
 // pipeline and the target view's warp_frame_map recompute go through this single
 // resolver so the visible deformity matches what the engine would emit.
-std::vector<MarkerForRender> resolve_warp_markers_for_render(
-    const std::vector<WarpMarker>& src);
+std::expected<std::vector<MarkerForRender>, std::string>
+resolve_warp_markers_for_render(const std::vector<WarpMarker>& src);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==

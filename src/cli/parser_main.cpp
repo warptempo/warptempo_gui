@@ -217,7 +217,12 @@ int main(int argc, char** argv) {
 
     // --- resolve + build the full untrimmed map, then derive the full midi
     // tempo map from it ---
-    auto r = build_warp_frame_map(resolve_warp_markers_for_render(markers),
+    auto resolved = resolve_warp_markers_for_render(markers);
+    if (!resolved) {
+        std::fprintf(stderr, "warptempo_parser: %s\n", resolved.error().c_str());
+        return 1;
+    }
+    auto r = build_warp_frame_map(*resolved,
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,

@@ -25,9 +25,17 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // same segment list. This overload always builds directly and is the entry
     // point for hypothetical (non-live) marker lists; live-state consumers go
     // through target_view_warp_frame_map_cached.
+    // A first-marker render grammar failure falls back to the empty map —
+    // the silent identity display — exactly like the build-failure branch
+    // below. Interim behavior, preserved deliberately: the GUI validity gate
+    // arriving with the next change replaces both silent fallbacks with a
+    // popup + block.
+    auto resolved = resolve_warp_markers_for_render(slice_to_warp_markers(markers));
+    if (!resolved) {
+        return {};
+    }
     auto r = build_warp_frame_map(
-        resolve_warp_markers_for_render(slice_to_warp_markers(markers)),
-        scale, sample_rate, total_frames);
+        *resolved, scale, sample_rate, total_frames);
     if (!r) {
         return {};
     }

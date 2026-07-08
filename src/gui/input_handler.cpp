@@ -1006,14 +1006,19 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // builds the WHOLE-song map, and the toggle translates source-frame
     // viewport / playhead / total_frames across the whole song against it —
     // see the matching comment in paint_handler.cpp's per-paint recompute.
-    // A failed build leaves the vector empty, keeping the identity fallback.
+    // A failed resolve (first-marker render grammar) or a failed build
+    // leaves the vector empty, keeping the identity fallback.
     std::vector<WarpFrameMapSegment> warp_frame_map;
-    auto r = build_warp_frame_map(
-        resolve_warp_markers_for_render(slice_to_warp_markers(app.warpmarkers.markers())),
-        app.engine_settings.scale, audio.sample_rate(),
-        static_cast<long>(audio.total_frames()));
-    if (r) {
-        warp_frame_map = std::move(*r);
+    auto resolved = resolve_warp_markers_for_render(
+        slice_to_warp_markers(app.warpmarkers.markers()));
+    if (resolved) {
+        auto r = build_warp_frame_map(
+            *resolved,
+            app.engine_settings.scale, audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        if (r) {
+            warp_frame_map = std::move(*r);
+        }
     }
 
     // Target-view playback is rebound to the rendered target buffer once it is

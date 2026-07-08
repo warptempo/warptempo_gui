@@ -234,8 +234,15 @@ parse_warpmarkers_file(const std::string& path) {
 
     // ----- Build markers ---------------------------------------------------
 
-    bool first_marker_seen = false;
-    double last_time       = -1.0;
+    // The first-marker grammar — an enabled, tempo-owning numeric marker at
+    // exactly 00:00.000 — is a render-boundary requirement validated by
+    // validate_first_marker_render_grammar (warp_frame_map_build.h), not a
+    // load rule. Files violating it (a moved, disabled, pass, or label-ref
+    // first marker — or no markers at all: an empty file parses to an empty
+    // vector) load intact so the save/reload round trip can never lock the
+    // user out; every render path refuses them with a pointed message
+    // instead.
+    double last_time = -1.0;
 
     // Track which line first defined each label (for duplicate errors).
     std::set<std::string>      seen_def;
@@ -275,43 +282,6 @@ parse_warpmarkers_file(const std::string& path) {
         // `t.substr(0,9)` is a validated timestamp at this point.
         const std::string time_raw = t.substr(0, 9);
 
-        if (!first_marker_seen) {
-            // The map builder applies the first surviving marker's tempo from
-            // source frame 0, and the inheritance walk has no owner before
-            // index 0. A zero marker that is disabled would drop out of the
-            // render list and silently shift opening-span tempo ownership to a
-            // later marker; a pass or label ref would leave the opening span
-            // with no literal owner (a pass's backward walk finds none and
-            // silently defaults to 1.0). A label def is banned so no ref can
-            // ever target the zero marker, keeping the position-zero cascade
-            // family unrepresentable. The def ban is deliberate even though
-            // map math would tolerate a zero-positioned def (the marker still
-            // owns a concrete tempo): the zero marker is the one marker that
-            // can never be deleted or disabled, so a def there would make it a
-            // permanent special-case participant in every def-lifecycle path
-            // (rename cascade, referenced-def delete gate, def-removal gate),
-            // and the author loses nothing — the same label can be defined at
-            // any later marker. The grammar therefore
-            // requires the zero marker to be an enabled owning plain tempo, and
-            // every GUI mutation path guards the same rule.
-            if (time_raw != "00:00.000")
-                return fail(line_number,
-                    "first marker must be 00:00.000 (got " + time_raw +
-                    ")");
-            if (m.disabled)
-                return fail(line_number,
-                    "first marker must not be disabled");
-            if (m.tempo_inherits)
-                return fail(line_number,
-                    "first marker must own a numeric tempo (pass not allowed)");
-            if (!m.label_ref.empty())
-                return fail(line_number,
-                    "first marker must not be a label reference");
-            if (!m.label_def.empty())
-                return fail(line_number,
-                    "first marker must not carry a label definition");
-            first_marker_seen = true;
-        }
         // Load rejects only DECREASING times. Equal-time markers load
         // deliberately: the GUI may author them, so the save/reload round
         // trip must never lock the user out; ordering degeneracy is a render
@@ -349,7 +319,5 @@ parse_warpmarkers_file(const std::string& path) {
         markers.push_back(std::move(m));
     }
 
-    if (!first_marker_seen)
-        return std::unexpected(std::string("file contains no markers"));
     return markers;
 }

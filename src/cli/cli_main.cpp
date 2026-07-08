@@ -228,7 +228,12 @@ int main(int argc, char** argv) {
     // trim is applied by slicing it, never by an engine window. This is
     // do_render's full_warp_frame_map: its t_a history from frame 0 is what
     // keeps a windowed render sample-aligned with the full render. ---
-    auto r = build_warp_frame_map(resolve_warp_markers_for_render(markers),
+    auto resolved = resolve_warp_markers_for_render(markers);
+    if (!resolved) {
+        std::fprintf(stderr, "warptempo_cli: %s\n", resolved.error().c_str());
+        return 1;
+    }
+    auto r = build_warp_frame_map(*resolved,
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,

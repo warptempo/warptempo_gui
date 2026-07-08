@@ -69,8 +69,63 @@ std::vector<bool> warp_markers_render_keep_mask(
     return keep;
 }
 
-std::vector<MarkerForRender> resolve_warp_markers_for_render(
-    const std::vector<WarpMarker>& src) {
+std::expected<void, std::string>
+validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers) {
+    if (markers.empty()) {
+        return std::unexpected(std::string(
+            "render requires an enabled tempo-owning marker at 00:00.000 "
+            "(marker list is empty)"));
+    }
+    // Shared failure shape: the failed rule in parens and, when two or more
+    // markers coincide at markers[0]'s exact time, a count with the formatted
+    // timestamp — the recovery path (Tab-select, delete one by one, recreate
+    // the first marker) must be legible from the error alone.
+    auto fail = [&](const std::string& rule) {
+        std::string msg =
+            "render requires an enabled tempo-owning marker at 00:00.000 (" +
+            rule + ")";
+        size_t coincident = 0;
+        for (const auto& m : markers) {
+            if (m.time_seconds == markers[0].time_seconds) ++coincident;
+        }
+        if (coincident >= 2) {
+            msg += "; " + std::to_string(coincident) + " markers coincide at "
+                 + format_timestamp(markers[0].time_seconds);
+        }
+        return std::unexpected(std::move(msg));
+    };
+    const WarpMarker& first = markers[0];
+    if (first.time_seconds != 0.0) {
+        return fail("first marker is at " +
+                    format_timestamp(first.time_seconds));
+    }
+    // markers[0] is inspected literally: a disabled marker at 00:00.000
+    // ahead of an enabled owner hardfails by ruling — the user deletes it or
+    // re-enables it, and the coincident count above points them there.
+    if (first.disabled) {
+        return fail("first marker is disabled");
+    }
+    if (first.tempo_inherits) {
+        return fail("first marker is a pass");
+    }
+    if (!first.label_ref.empty()) {
+        return fail("first marker is a label reference");
+    }
+    // A label definition on markers[0] is legal: the marker still owns a
+    // concrete tempo, so the map math is unaffected.
+    return {};
+}
+
+std::expected<std::vector<MarkerForRender>, std::string>
+resolve_warp_markers_for_render(const std::vector<WarpMarker>& src) {
+
+    // Render grammar first, on the raw pre-resolution list — after
+    // resolution a leading pass is indistinguishable from a numeric owner
+    // because of resolve_inherited_tempo's 1.0 fallback. Every render path
+    // funnels through this resolver, so none can skip the check.
+    if (auto v = validate_first_marker_render_grammar(src); !v) {
+        return std::unexpected(std::move(v.error()));
+    }
 
     // Inherited-tempo resolution for pass markers is the canonical
     // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
@@ -130,9 +185,12 @@ double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index
             return m.tempo_base;
         }
     }
-    // For loadable projects the walk always terminates at or before the owning
-    // zero marker, so this fallback is a defensive default, not a reachable
-    // semantic.
+    // Reachable: a leading pass with no owner before it loads fine (the
+    // first-marker grammar is a render-boundary rule, not a load rule) and
+    // resolves to this fallback on display surfaces (hover popup). The
+    // render boundary refuses such a list via
+    // validate_first_marker_render_grammar before the fallback can shape
+    // deliverable bytes.
     return 1.0;
 }
 
