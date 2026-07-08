@@ -5,6 +5,8 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 // GUI target-view warp_frame_map helpers, split out of warp_frame_map_build.cpp so the
@@ -18,25 +20,31 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
-    long total_frames) {
+    long total_frames,
+    std::string* error_out) {
     // Trim is render-time, not view-time — target view paints the WHOLE song,
     // and build_warp_frame_map builds the whole-song map, matching the
     // paint_handler construction so hit-test math and waveform paint walk the
     // same segment list. This overload always builds directly and is the entry
     // point for hypothetical (non-live) marker lists; live-state consumers go
     // through target_view_warp_frame_map_cached.
-    // A first-marker render grammar failure falls back to the empty map —
-    // the silent identity display — exactly like the build-failure branch
-    // below. Interim behavior, preserved deliberately: the GUI validity gate
-    // arriving with the next change replaces both silent fallbacks with a
-    // popup + block.
+    // A resolve failure (first-marker render grammar, tie, dangling label
+    // ref) or a build failure returns the empty map and reports the message
+    // through error_out. The empty map still paints as identity for the
+    // frame or two it stays displayed, but it is no longer a silent
+    // dead-end: the cache records the error and the target-view validity
+    // gate (GuiInputHandler::enforce_target_view_validity) kicks back to
+    // source view with the error-notice popup on the next tick.
+    if (error_out) error_out->clear();
     auto resolved = resolve_warp_markers_for_render(slice_to_warp_markers(markers));
     if (!resolved) {
+        if (error_out) *error_out = std::move(resolved.error());
         return {};
     }
     auto r = build_warp_frame_map(
         *resolved, scale, sample_rate, total_frames);
     if (!r) {
+        if (error_out) *error_out = std::move(r.error());
         return {};
     }
     return std::move(*r);
@@ -52,7 +60,8 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
         return c;
     }
     c.warp_frame_map = build_target_view_warp_frame_map(
-        app.warpmarkers.markers(), scale, sample_rate, total_frames);
+        app.warpmarkers.markers(), scale, sample_rate, total_frames,
+        &c.build_error);
     uint64_t h = 0xcbf29ce484222325ULL;
     for (const auto& s : c.warp_frame_map) {
         h ^= std::bit_cast<uint64_t>(s.src_frame);

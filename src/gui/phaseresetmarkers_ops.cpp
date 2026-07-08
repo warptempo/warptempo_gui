@@ -139,8 +139,9 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // inert at derivation). Neighbors are not consulted; resets may cross
 // and overlap freely and the store reorders after the shift. No trim
 // clamp — phase resets aren't bounded by trim flags during edit. No
-// frame-zero pin either — a phase reset at time 0.0 is legitimately
-// movable, in contrast to warp marker 0.
+// frame-zero pin — a marker at time 0.0 is freely movable on both
+// columns; the warp column's first-marker grammar is a render-boundary
+// rule (validate_first_marker_render_grammar), not a gesture pin.
 std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bounds(bool& ok) {
     ok = false;
     const auto& tv = app.phaseresetmarkers.markers();

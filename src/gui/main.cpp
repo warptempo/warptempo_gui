@@ -260,6 +260,14 @@ std::pair<long long, long long> compute_trim_samples(
     return {begin, end};
 }
 
+// Single-source accessor for the deepest numeric zoom's time-per-pixel.
+// The coincidence-notice binning (paint_handler.cpp) derives its bin width
+// from this instead of duplicating the table's 0.625 literal; the table
+// above stays the sole owner of the zoom geometry.
+double deepest_zoom_ms_per_pixel() {
+    return kZoomMsPerPixel[kMinNumericLevel];
+}
+
 static double samples_per_pixel_at(int zoom_level,
                                    int waveform_width_px,
                                    int64_t total_frames,
@@ -697,6 +705,14 @@ int main(int argc, char** argv) {
             }
             return;  // loaded state paints on the next tick
         }
+
+        // Target-view validity kick-back: an invalidating edit made while
+        // target view is displayed (delete marker zero, remove a
+        // referenced def, ...) flips the view back to source and raises
+        // the error-notice popup. Runs before the waveform dirty-detect so
+        // the tick's rebuild work happens against the post-kick (source)
+        // view. Cheap in the steady state: a memoized-cache key compare.
+        input_handler.enforce_target_view_validity();
 
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either

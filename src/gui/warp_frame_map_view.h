@@ -4,6 +4,7 @@
 #include "warpmarkers.h"   // GuiWarpMarker (the view-overload signature)
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 // Builds the target-view warp_frame_map from live warp markers plus scale, mirroring
@@ -12,14 +13,19 @@
 // WHOLE song; the warp_frame_map must describe the whole song with warp segments
 // where markers exist and identity outside (see paint_handler.cpp commentary
 // next to the same construction). Returns an empty vector if
-// build_warp_frame_map fails or yields no segments. Callers in target view route this through
-// compute_flag_hit_rects / render_flags / popup-hit helpers so hit-test
-// math and paint stay in sync.
+// resolve_warp_markers_for_render or build_warp_frame_map fails; when
+// `error_out` is non-null the failure's message (the parser's own string) is
+// written there, empty on success — the cache below stores it so the
+// target-view validity gate can distinguish "empty because invalid" from
+// never-built and kick the user back to source view with the popup. Callers
+// in target view route this through compute_flag_hit_rects / render_flags /
+// popup-hit helpers so hit-test math and paint stay in sync.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
-    long total_frames);
+    long total_frames,
+    std::string* error_out = nullptr);
 
 struct AppState;
 
@@ -28,8 +34,11 @@ struct AppState;
 // setting, and the audio identity (sample rate, total frames). The
 // entry also carries the FNV-1a hash of the segment list, computed at
 // rebuild, so the waveform-cache fingerprint reads it instead of
-// rehashing per tick. A failed or empty build is cached too (empty
-// warp_frame_map, hash 0) — callers already treat an empty map as identity.
+// rehashing per tick. A failed build is cached too (empty warp_frame_map,
+// hash 0, build_error carrying the resolve/build message) — display
+// callers treat the empty map as identity for the frame or two before the
+// validity gate reacts, and the gate reads build_error to tell "empty
+// because invalid" apart from a legitimately empty/identity state.
 struct TargetWarpFrameMapCache {
     bool      valid        = false;
     long long markers_gen  = -1;
@@ -38,6 +47,12 @@ struct TargetWarpFrameMapCache {
     long      total_frames = 0;
     std::vector<WarpFrameMapSegment> warp_frame_map;
     uint64_t  hash         = 0;
+
+    // Empty when the last rebuild succeeded; otherwise the
+    // resolve_warp_markers_for_render / build_warp_frame_map error string
+    // verbatim. Consumed by GuiInputHandler::enforce_target_view_validity
+    // (the target-view kick-back) and shown in the error-notice popup.
+    std::string build_error;
 
     // Deformed-timeline length: the source total forward-translated
     // through this warp_frame_map (the same formula the S-to-T toggle used).

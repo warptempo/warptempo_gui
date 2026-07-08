@@ -44,22 +44,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     std::set<int> drag_set;
     drag_set.insert(hit);
 
-    // First-marker protection (warp only): the warp marker at frame 0 is
-    // the mandatory project anchor and never moves, so refuse index 0 and
-    // any effective-time-0 warp marker. Phase resets have no pinned frame-0
-    // anchor — the first phase reset marker is optional and freely
-    // repositionable down to time 0 exactly — so the pin is skipped in
-    // phase reset view. Runs before any selection mutation so a refused
-    // drag leaves the selection genuinely unchanged.
-    if (!phase_reset) {
-        for (int idx : drag_set) {
-            if (idx == 0 || t_of(idx) == 0.0) {
-                std::fprintf(stderr,
-                    "warptempo_gui: first warp marker cannot be dragged\n");
-                return false;
-            }
-        }
-    }
+    // No first-marker pin, either column: every marker is draggable,
+    // including a warp marker at time 0. The first-marker grammar
+    // (enabled, tempo-owning numeric marker at exactly 00:00.000) is a
+    // render-boundary rule — validate_first_marker_render_grammar refuses
+    // it at render dispatch and at the target-view validity gate — and the
+    // default marker created at source load is the recovery tool, so the
+    // GUI never pins the gesture.
 
     DragState d;
     d.active = true;
@@ -311,9 +302,10 @@ void MarkerDragOps::commit_drag() {
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();
-        // A crossing changes store order, and flag pack/elision walks
-        // store order — repaint the top strip so the committed flag
-        // layout replaces the overlay-order one from the last motion.
+        // The flag pack/elision walks visual x order (overlay-effective
+        // during a drag, live store at rest) — repaint the top strip so
+        // the committed layout, computed from the reordered live store,
+        // replaces the overlay-driven one from the last motion.
         viewport.invalidate_top_strip();
     }
     viewport.invalidate_waveform_area();

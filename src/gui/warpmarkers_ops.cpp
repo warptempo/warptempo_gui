@@ -132,7 +132,8 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
 // ref's effective value shifts — the new marker would then hold a value the
 // ref no longer carries. A 1.00 owner leaves the ref's segment unchanged.
 // Falls back to base 1.0 / empty scale if there is no prior marker
-// (should not happen given the mandatory time-0 first marker).
+// (possible: the store may be empty or the playhead may sit before the
+// first marker — marker zero is an ordinary, deletable marker).
 void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
@@ -160,40 +161,20 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     if (app.selected_markers.empty()) return;
     const auto& mv = app.warpmarkers.markers();
 
-    // Validate the batch. Reject the whole operation if any member is
-    // the time-0 first marker or has a label_def referenced from outside
-    // the selection set.
+    // Validate the batch for stale indices only. Any marker is deletable:
+    // the first-marker grammar (enabled, tempo-owning numeric marker at
+    // exactly 00:00.000) is a render-boundary rule enforced by
+    // validate_first_marker_render_grammar, and deleting a label_def its
+    // refs outlive is legal too — dangling refs load and are refused at
+    // the render / target-view validity gate with a popup. The default
+    // zero marker created at source load plus that gate are the user's
+    // tools; the GUI allows every state. Shift+Delete
+    // (force_delete_selected_marker) remains the cascade convenience for
+    // taking a def's refs along with it.
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) {
             std::fprintf(stderr,
                 "warptempo_gui: delete rejected: stale selection index\n");
-            return;
-        }
-        if (mv[idx].time_seconds == 0.0) {
-            std::fprintf(stderr,
-                "warptempo_gui: cannot delete first warp marker (time 0)\n");
-            return;
-        }
-        if (mv[idx].label_def.empty()) continue;
-        std::string refs;
-        int ref_count = 0;
-        for (size_t i = 0; i < mv.size(); ++i) {
-            if (app.selected_markers.count(static_cast<int>(i))) continue;
-            if (!mv[i].label_ref.empty() &&
-                mv[i].label_ref == mv[idx].label_def) {
-                char tbuf[32];
-                std::snprintf(tbuf, sizeof(tbuf), "%.3fs",
-                              mv[i].time_seconds);
-                if (!refs.empty()) refs += ", ";
-                refs += tbuf;
-                ++ref_count;
-            }
-        }
-        if (ref_count > 0) {
-            std::fprintf(stderr,
-                "warptempo_gui: cannot delete marker: label '%s' is "
-                "referenced at %s\n",
-                mv[idx].label_def.c_str(), refs.c_str());
             return;
         }
     }
@@ -221,9 +202,12 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 
 // Shift+Delete variant. Auto-cascades label_refs of any selected def
 // into the deletion batch, so the user doesn't have to hand-pick each
-// ref before deleting the def. With the cascade, the "label is
-// referenced from outside the selection" check is unnecessary — every
-// ref is now inside the batch by construction.
+// ref before deleting the def. The cascade is a convenience, not a
+// guard: plain Delete on a def is equally legal and simply leaves its
+// refs dangling (loads fine; refused at the render boundary). Any
+// marker — including one at time 0 — may be in the batch; the
+// first-marker grammar is validate_first_marker_render_grammar's
+// render-boundary rule, not a gesture gate.
 void GuiWarpMarkersOps::force_delete_selected_marker() {
     if (app.selected_markers.empty()) return;
     const auto& mv = app.warpmarkers.markers();
@@ -241,19 +225,6 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
                 mv[i].label_ref == mv[idx].label_def) {
                 expanded.insert(static_cast<int>(i));
             }
-        }
-    }
-
-    for (int idx : expanded) {
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) {
-            std::fprintf(stderr,
-                "warptempo_gui: delete rejected: stale selection index\n");
-            return;
-        }
-        if (mv[idx].time_seconds == 0.0) {
-            std::fprintf(stderr,
-                "warptempo_gui: cannot delete first warp marker (time 0)\n");
-            return;
         }
     }
 
@@ -305,9 +276,11 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
 //   - label_ref → pass: clear the ref; inert defaults.
-// The first marker is excluded: the zero marker must own its tempo (the map
-// builder applies it from source frame 0 and the inheritance walk has no owner
-// before it), so the whole-batch reject below refuses to toggle it.
+// The first marker is togglable like any other: the requirement that the
+// marker at 00:00.000 own its tempo is a render-boundary rule
+// (validate_first_marker_render_grammar), and a pass first marker is
+// refused there — via the render pre-flight popup and the target-view
+// validity gate — not at this gesture.
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -316,17 +289,6 @@ void GuiWarpMarkersOps::toggle_inherits() {
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
     const auto& mv_const = app.warpmarkers.markers();
-    // Whole-batch reject: the zero marker must own its tempo, so it can never
-    // be toggled to a pass.
-    for (int idx : app.selected_markers) {
-        if (idx >= 0 && idx < static_cast<int>(mv_const.size()) &&
-            mv_const[idx].time_seconds == 0.0) {
-            std::fprintf(stderr,
-                "warptempo_gui: cannot toggle inherit on first warp marker "
-                "(time 0)\n");
-            return;
-        }
-    }
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via the canonical parser walk (slice once).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
@@ -371,17 +333,10 @@ void GuiWarpMarkersOps::toggle_inherits() {
 void GuiWarpMarkersOps::toggle_disabled() {
     if (app.selected_markers.empty()) return;
     const auto& mv_const = app.warpmarkers.markers();
-    // Whole-batch reject: the zero marker must own its tempo (the map builder
-    // applies it from source frame 0 and the inheritance walk has no owner
-    // before it), so it can never be disabled. Symmetric with the delete guard.
-    for (int idx : app.selected_markers) {
-        if (idx >= 0 && idx < static_cast<int>(mv_const.size()) &&
-            mv_const[idx].time_seconds == 0.0) {
-            std::fprintf(stderr,
-                "warptempo_gui: cannot disable first warp marker (time 0)\n");
-            return;
-        }
-    }
+    // Any marker may be disabled, including the one at time 0. A disabled
+    // first marker violates the first-marker render grammar, which is
+    // enforced at the render boundary (validate_first_marker_render_grammar)
+    // via the pre-flight popup and the target-view validity gate, never here.
     std::vector<GuiWarpMarker> proposed = mv_const;
     const int              hint_last = app.last_selected_marker;
     bool changed = false;
@@ -457,18 +412,17 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
 // frame, because build_warp_frame_map refuses sub-frame segments.
 // Neighbors are not consulted; markers may cross and overlap freely and
 // the store reorders after the shift. Trim is purely cosmetic and does
-// not constrain edits. Returns (0, 0) if empty or time-0 marker present
-// (move forbidden).
+// not constrain edits. Every marker is movable — the first-marker grammar
+// is a render-boundary rule (validate_first_marker_render_grammar), not a
+// gesture pin. Returns (0, 0) if the selection is empty or stale.
 std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool& ok) {
     ok = false;
     const auto& mv = app.warpmarkers.markers();
     if (app.selected_markers.empty()) return {0.0, 0.0};
     const int sr = audio.sample_rate();
     if (sr <= 0) return {0.0, 0.0};
-    // The frame-zero pin dereferences mv[idx], so bounds-check inline.
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return {0.0, 0.0};
-        if (idx == 0 || mv[idx].time_seconds == 0.0) return {0.0, 0.0};
     }
     const double sr_d = static_cast<double>(sr);
     const double warp_wall =
@@ -559,9 +513,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
 
     if (app.active_audio_view == 'T') {
         const auto& mv = app.warpmarkers.markers();
+        // Stale-index check only: every marker is nudgeable, including the
+        // one at time 0 (the first-marker grammar is the render boundary's
+        // rule, not a gesture pin).
         for (int idx : app.selected_markers) {
             if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
-            if (idx == 0 || mv[idx].time_seconds == 0.0) return;
         }
         const double sr_d = static_cast<double>(sr);
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(

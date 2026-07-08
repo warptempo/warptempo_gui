@@ -177,6 +177,20 @@ struct GuiInputHandler {
     // main.cpp (both cancel before raising the close / revert prompt).
     void cancel_active_drags();
 
+    // Target-view validity gate, kick-back half. Called from on_tick every
+    // event-loop iteration: while target view is displayed (and render-view
+    // is off), consult the memoized target-view map cache; if the last
+    // rebuild failed (invalidating edit — first-marker grammar violation,
+    // dangling label ref, tie, ...), toggle back to source view through the
+    // same T→S path bare `t` uses and raise the error-notice popup with the
+    // build error verbatim. The cache rebuild is keyed on the marker-store
+    // generation, so this fires on the first tick after the invalidating
+    // edit — i.e. before/with its first paint — not lazily later. Deferred
+    // (silently, one tick at a time) while another prompt is up; edits are
+    // impossible mid-prompt, so the pending kick survives until dismissal.
+    // No-op in source view, render-view, blank/loading state.
+    void enforce_target_view_validity();
+
 private:
     // ActiveBatch holds the run_render_batch state machine. The batch loop
     // used to be synchronous (blocking inside do_render); now each entry is
@@ -249,6 +263,20 @@ private:
     // false on any guard bail (wrong view / mode off / no owner / blank
     // values / zero-duration span / no valid cells / renderer busy).
     bool render_bpm_sweep();
+
+    // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap):
+    // resolve_warp_markers_for_render on the sliced `markers`, then
+    // build_warp_frame_map with `scale` and the live sample_rate /
+    // total_frames. On failure raises the error-notice popup with the
+    // parser's error string, unmodified, and returns false — the caller
+    // must then refuse to enqueue. Called by every archival render
+    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch per
+    // entry, Ctrl+Alt+I iteration sweep, the BPM sweep); the async
+    // pipeline's stderr failure paths stay as the backstop for per-cell
+    // mutations the pre-flight does not model (no strings are plumbed
+    // through the async callback).
+    bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
+                               double scale);
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back

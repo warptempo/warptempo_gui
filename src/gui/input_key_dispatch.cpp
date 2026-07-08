@@ -235,6 +235,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // contract local.
         if (async_renderer.is_busy()) return true;
 
+        // Pre-flight the live store on the GUI thread; an invalid marker
+        // state raises the popup and refuses the dispatch.
+        if (!warp_render_preflight(app.warpmarkers.markers(),
+                                   app.engine_settings.scale)) {
+            return true;
+        }
+
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
@@ -298,10 +305,28 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return true;
         if (app.queued_renders.empty()) {
+            // Pre-flight the live store BEFORE the auto-enqueue so a
+            // refused dispatch leaves nothing queued.
+            if (!warp_render_preflight(app.warpmarkers.markers(),
+                                       app.engine_settings.scale)) {
+                return true;
+            }
             app.queued_renders.push_back(snapshot_current_queued_render());
             std::fprintf(stderr,
                 "warptempo_gui: queue empty; enqueueing current state "
                 "and rendering\n");
+        }
+
+        // Pre-flight every queued entry against its own snapshot (markers
+        // + scale — Ctrl+E snapshots may differ from the live store and
+        // from each other). First failure raises the popup and refuses the
+        // whole batch; the queue is left intact so the user can fix and
+        // re-dispatch. Runs before the queue is moved out.
+        for (const auto& q : app.queued_renders) {
+            if (!warp_render_preflight(q.warp_markers,
+                                       q.engine_settings.scale)) {
+                return true;
+            }
         }
 
         std::vector<AppState::QueuedRender> entries =
@@ -397,8 +422,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Snapshot markers in timeline order (GuiWarpMarkers guarantees
-        // strict-monotonic by time_seconds). For each owning marker
+        // Pre-flight the live store; an invalid marker state refuses the
+        // whole sweep with the popup. Per-cell tempo_base mutations remain
+        // on the async stderr backstop.
+        if (!warp_render_preflight(app.warpmarkers.markers(),
+                                   app.engine_settings.scale)) {
+            return true;
+        }
+
+        // Snapshot markers in timeline order (the GuiWarpMarkers store is
+        // sorted by time_seconds, with ties legal). For each owning marker
         // build its per-cell delta list: a single 0.0 when no iter
         // range is authored, otherwise integer-cents enumeration from
         // iter_start to iter_end inclusive. Integer-cents avoids the

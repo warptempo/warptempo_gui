@@ -328,10 +328,14 @@ struct HoverPopupState {
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
 // applies to the unsaved-work prompts (CLOSE_WINDOW, REVERT_TO_BLANK).
+// ERROR_NOTICE is the dismiss-only error popup (render pre-flight and
+// target-view validity refusals): its text is the parser's own error
+// string, unmodified, and its sole response is acknowledge/dismiss.
 enum class DialogTrigger {
     CLOSE_WINDOW,
     REVERT_TO_BLANK,
     PASTE_CONFIRM,
+    ERROR_NOTICE,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom strip
@@ -818,6 +822,10 @@ GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+// Time-per-pixel of the deepest numeric zoom level
+// (kZoomMsPerPixel[kMinNumericLevel]; the table lives in main.cpp, its
+// single source). The coincidence-notice bin width derives from this.
+double  deepest_zoom_ms_per_pixel();
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so

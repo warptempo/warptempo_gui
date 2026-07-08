@@ -999,15 +999,21 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // Build the current warp_frame_map from the live warp marker store +
     // settings trim. Same resolve-then-build pipeline the render
     // pipeline runs, so the visible deformity in target view matches
-    // what the engine would emit. An empty / failed build degenerates
-    // to identity (the helpers return src_frame unchanged), which is
-    // the right fallback when there are no qualifying markers.
+    // what the engine would emit.
     // Trim is a render-time cut, not a view-time concept: build_warp_frame_map
     // builds the WHOLE-song map, and the toggle translates source-frame
     // viewport / playhead / total_frames across the whole song against it —
     // see the matching comment in paint_handler.cpp's per-paint recompute.
-    // A failed resolve (first-marker render grammar) or a failed build
-    // leaves the vector empty, keeping the identity fallback.
+    //
+    // Validity gate, entry half: entering target view (S → T) with a
+    // render-invalid marker state (first-marker grammar, dangling label
+    // ref, tie) raises the error-notice popup with the parser's message and
+    // stays in source view — target view is blocked while invalid. Leaving
+    // target view (T → S) never gates: the kick-back path
+    // (enforce_target_view_validity) rides this same T → S branch while the
+    // map is invalid, so the exit falls back to the empty map — identity
+    // translation for the playhead/viewport — and always succeeds.
+    const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(app.warpmarkers.markers()));
@@ -1018,7 +1024,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
             static_cast<long>(audio.total_frames()));
         if (r) {
             warp_frame_map = std::move(*r);
+        } else if (entering_target) {
+            prompt.open_error_notice(std::move(r.error()));
+            return;
         }
+    } else if (entering_target) {
+        prompt.open_error_notice(std::move(resolved.error()));
+        return;
     }
 
     // Target-view playback is rebound to the rendered target buffer once it is
@@ -1140,4 +1152,32 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // view's playback reads source.wav across archival renders.
         target_render.rebind_to_source();
     }
+}
+
+// Validity gate, kick-back half (the entry half lives at the top of
+// handle_active_audio_view_toggle). Runs once per event-loop tick from
+// main.cpp's on_tick, before the tick's waveform dirty-detect, so the
+// kick lands on the first tick after an invalidating edit — the same
+// beat as the edit's own repaint, never lazily later. The memoized cache
+// makes the steady-state check a generation compare; the rebuild that
+// actually detects the failure is the one the invalidating edit forces.
+void GuiInputHandler::enforce_target_view_validity() {
+    if (app.loading || audio.total_frames() <= 0) return;
+    if (app.render_view.enabled) return;   // render-view lists come from
+                                           // files, not the live store
+    if (app.active_audio_view != 'T') return;
+    // Another prompt owning the bottom strip means no edit can be in
+    // flight (prompts are modal); defer the kick a tick rather than
+    // clobber it. The error state persists in the cache, so the kick
+    // fires on the first tick after dismissal.
+    if (app.prompt.active) return;
+    const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
+        app, audio.sample_rate(), static_cast<long>(audio.total_frames()));
+    if (c.build_error.empty()) return;
+    // Copy before toggling: the T → S toggle path re-resolves and can
+    // touch the cache the reference points into.
+    const std::string err = c.build_error;
+    handle_active_audio_view_toggle();   // T → S: unconditional, identity
+                                         // fallback for the playhead math
+    prompt.open_error_notice(err);
 }

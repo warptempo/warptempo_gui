@@ -41,6 +41,15 @@ struct GuiPrompt {
     void request_close_or_revert(DialogTrigger t);
     void activate_response(char k);
 
+    // Dismiss-only modal error notice in the bottom strip (ERROR_NOTICE).
+    // `text` is displayed verbatim — callers pass the parser's own error
+    // string, unmodified. While active it is modal exactly like the other
+    // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
+    // Callers: the render dispatch pre-flight (invalid warp markers refuse
+    // the render) and the target-view validity gate (entry refusal and
+    // the invalidating-edit kick back to source view).
+    void open_error_notice(std::string text);
+
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor. Called from
     // activate_response on Esc, and from the Ctrl+Q / Ctrl+W

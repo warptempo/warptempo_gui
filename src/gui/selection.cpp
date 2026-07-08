@@ -37,6 +37,9 @@ void Selection::set_single_selection(int idx) {
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     viewport.invalidate_top_strip();
+    // The bottom-strip coincidence notice keys off last_selected_marker;
+    // repaint it on every selection change so the notice tracks focus.
+    viewport.invalidate_timestamp_area();
     if (had_trim) viewport.invalidate_waveform_area();
 }
 
@@ -54,6 +57,8 @@ void Selection::clear_selection() {
     app.last_sel_group = LastSelGroup::Markers;
 
     viewport.invalidate_top_strip();
+    // Coincidence notice tracks last_selected_marker; see set_single_selection.
+    viewport.invalidate_timestamp_area();
     // Trim stems live in the stem/waveform-area cache, so repaint it when a
     // trim bound was deselected (amber stem returns from kSelected).
     if (had_trim) viewport.invalidate_waveform_area();
@@ -74,6 +79,8 @@ bool Selection::toggle_selection_membership(int idx) {
         added = false;
     }
     viewport.invalidate_top_strip();
+    // Coincidence notice tracks last_selected_marker; see set_single_selection.
+    viewport.invalidate_timestamp_area();
     return added;
 }
 

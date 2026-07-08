@@ -21,6 +21,34 @@
 // start_render_batch, dispatch_next_batch_entry, on_batch_entry_complete,
 // render_bpm_sweep). Pure definition move; no body changes.
 
+// Render dispatch pre-flight. Runs the same resolve-then-build pipeline the
+// render worker runs — resolve_warp_markers_for_render (which validates the
+// first-marker render grammar first) then build_warp_frame_map — on the GUI
+// thread, against the marker list a dispatch site is about to enqueue and
+// the scale it will render with. Marker-count-sized, so cheap. On failure
+// the error-notice popup is raised with the parser's error string,
+// unmodified, and the site must not enqueue. The async pipeline's existing
+// stderr failure paths remain the backstop for anything the pre-flight does
+// not model (per-cell tempo mutations in the sweep batches); the popup never
+// blocks the render thread and no strings flow through the async callback.
+bool GuiInputHandler::warp_render_preflight(
+        const std::vector<GuiWarpMarker>& markers, double scale) {
+    auto resolved = resolve_warp_markers_for_render(
+        slice_to_warp_markers(markers));
+    if (!resolved) {
+        prompt.open_error_notice(std::move(resolved.error()));
+        return false;
+    }
+    auto built = build_warp_frame_map(
+        *resolved, scale, audio.sample_rate(),
+        static_cast<long>(audio.total_frames()));
+    if (!built) {
+        prompt.open_error_notice(std::move(built.error()));
+        return false;
+    }
+    return true;
+}
+
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     AuthoringSnapshot s;
     s.valid             = true;
@@ -201,6 +229,15 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
+
+    // Pre-flight the live store before any cell work: an invalid marker
+    // state (first-marker grammar, dangling label ref, tie) refuses the
+    // whole sweep with the popup. Per-cell scale/tempo mutations stay on
+    // the async stderr backstop.
+    if (!warp_render_preflight(base_warp_markers, app.engine_settings.scale)) {
+        return false;
+    }
+
     int owner_idx = -1;
     for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
         if (base_warp_markers[i].bpm_owner) {

@@ -308,35 +308,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
             }
         }
     }
-    // A pure label ref owns no tempo of its own — it parses with
-    // tempo_base 0.0 (the label_ref branch in parse_single_canonical_line).
-    // Clearing every ref to a def by removing the def here would leave
-    // those markers serializing as owning 0.00 markers, which no longer
-    // parse (the parser rejects the zero tempo literal), so the save would
-    // produce an unloadable file. Refuse up front instead, symmetric with
-    // the referenced-def delete gate in warpmarkers_ops.cpp
-    // (delete_selected_marker).
-    if (ok && !mv_const[idx].label_def.empty() && parsed.label_def.empty()) {
-        const std::string& old_def = mv_const[idx].label_def;
-        std::string refs;
-        int ref_count = 0;
-        for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
-            if (i == idx) continue;
-            if (mv_const[i].label_ref == old_def) {
-                char tbuf[32];
-                std::snprintf(tbuf, sizeof(tbuf), "%.3fs",
-                              mv_const[i].time_seconds);
-                if (!refs.empty()) refs += ", ";
-                refs += tbuf;
-                ++ref_count;
-            }
-        }
-        if (ref_count > 0) {
-            ok = false;
-            err = "cannot remove label definition: label '" + old_def +
-                  "' is referenced at " + refs;
-        }
-    }
+    // Removing a label_def whose refs remain is legal: the refs go
+    // dangling, keep their `a.NN` payload (so the file still parses),
+    // and are refused at the render boundary — build_warp_frame_map's
+    // dangling-ref error surfaces through the render pre-flight popup and
+    // the target-view validity gate. No editor-side gate; the rename
+    // cascade below stays, scoped to non-empty new names.
     if (!ok) {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
@@ -345,24 +322,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // The zero marker must own a plain tempo: the map builder applies it from
-    // source frame 0 and the inheritance walk has no owner before it. The
-    // disabled hash cannot be typed into the editable payload — it lives in the
-    // locked prefix (build_locked_prefix), and parse_single_canonical_line only
-    // detects `#` at the start of the whole line, so parsed.disabled reflects
-    // the marker's existing state, not the editable buffer. Only the payload-
-    // expressible shapes (pass, label ref, label def) are rejected here.
-    if (mv_const[idx].time_seconds == 0.0 &&
-        (parsed.tempo_inherits ||
-         !parsed.label_ref.empty() ||
-         !parsed.label_def.empty())) {
-        app.top_flag_editor.red = true;
-        viewport.invalidate_top_strip();
-        std::fprintf(stderr,
-            "warptempo_gui: edit rejected: first warp marker must own a "
-            "plain tempo\n");
-        return;
-    }
+    // No first-marker special case: a marker at time 0 accepts any payload
+    // the grammar allows — pass, label ref, label def. The rule that the
+    // marker at 00:00.000 must be an enabled, tempo-owning numeric marker
+    // is validate_first_marker_render_grammar's render-boundary check,
+    // surfaced by the render pre-flight popup and the target-view validity
+    // gate, never by this editor.
 
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[idx];
@@ -402,14 +367,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // populated it; reapply.
     m.disabled      = parsed.disabled;
 
-    // Cascade rename: if label_def changed and old_def was non-empty,
+    // Cascade rename: if label_def changed to another NON-EMPTY name,
     // every other marker that referenced old_def gets its ref updated to
-    // the new name. The gate above already refused new_def empty while
-    // refs exist, so the empty-new_def case only reaches here with zero
-    // refs and the loop body never fires for it — it just formalizes the
-    // no-refs removal.
+    // the new name. Removal (new_def empty) deliberately does NOT
+    // cascade: clearing a ref would leave that marker serializing as an
+    // owning 0.00 line (a pure ref parses with tempo_base 0.0), which the
+    // parser rejects on reload. Dangling refs, by contrast, load fine and
+    // are refused at the render boundary — so the refs are left pointing
+    // at the removed name.
     int n_refs_renamed = 0;
-    if (!old_def.empty() && old_def != new_def) {
+    if (!old_def.empty() && !new_def.empty() && old_def != new_def) {
         for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
             if (i == idx) continue;
             if (proposed[i].label_ref == old_def) {

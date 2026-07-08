@@ -816,8 +816,22 @@ void iterate_visible_flags_impl(
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    double rightmost_right_edge = -1e18;
-
+    // Candidates iterate in VISUAL x order, not store order. During a
+    // Ctrl+drag the store is frozen (positions come from the DragOverlay),
+    // so once the dragged chip crosses a neighbor the store walk's
+    // ascending-x assumption is false and the greedy pack below would keep
+    // eliding the wrong chip — the dragged marker's flag vanished until
+    // drop. Collect the visible candidates with their overlay-effective
+    // paint positions and stable-sort by position; std::stable_sort over
+    // the ascending store indices makes the store index the tiebreaker for
+    // exactly-equal positions, so elision stays deterministic. At rest,
+    // store order equals x order and the sort is a no-op reorder.
+    struct FlagCandidate {
+        int    i;
+        double ms;
+    };
+    std::vector<FlagCandidate> candidates;
+    candidates.reserve(markers.size());
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         // Effective time: drag overlay > live store. The frozen warp_frame_map
@@ -833,6 +847,18 @@ void iterate_visible_flags_impl(
         const double ms = sec_to_paint_sample(eff_time, sr, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
+        candidates.push_back({static_cast<int>(i), ms});
+    }
+    std::stable_sort(candidates.begin(), candidates.end(),
+                     [](const FlagCandidate& a, const FlagCandidate& b) {
+                         return a.ms < b.ms;
+                     });
+
+    double rightmost_right_edge = -1e18;
+
+    for (const FlagCandidate& cand : candidates) {
+        const int    i  = cand.i;
+        const double ms = cand.ms;
 
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample)) /
@@ -849,13 +875,13 @@ void iterate_visible_flags_impl(
             continue;
         }
 
-        const std::string text = get_flag_text(static_cast<int>(i));
+        const std::string text = get_flag_text(i);
         if (text.empty()) continue;
 
         const double x_advance =
             static_cast<double>(text.length()) * monospace_advance();
 
-        emit(static_cast<int>(i), text_left, baseline_y, text);
+        emit(i, text_left, baseline_y, text);
         rightmost_right_edge = text_left + x_advance + flag_pad_x_px();
     }
 }

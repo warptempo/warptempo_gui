@@ -1,5 +1,7 @@
 #include "prompt.h"
 
+#include <utility>
+
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
     case DialogTrigger::CLOSE_WINDOW:
@@ -9,8 +11,9 @@ void GuiPrompt::proceed(DialogTrigger t) {
         file_loader.revert_to_blank();
         break;
     case DialogTrigger::PASTE_CONFIRM:
-        // Paste prompt is dispatched directly by activate_response;
-        // proceed is not the path it lands on.
+    case DialogTrigger::ERROR_NOTICE:
+        // Both are dispatched directly by activate_response; proceed is
+        // not the path they land on.
         break;
     }
 }
@@ -29,6 +32,21 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     viewport.invalidate_all();
 }
 
+// Dismiss-only error notice. The text is the caller's error string —
+// the parser's own message, verbatim. Single acknowledge response:
+// Esc (the '\x1b' sentinel; see open_unsaved's key-mapping note).
+// Modal like every other prompt while active: the pointer handlers
+// swallow mouse events and on_key routes only the response key.
+void GuiPrompt::open_error_notice(std::string text) {
+    app.prompt.active          = true;
+    app.prompt.text            = std::move(text);
+    app.prompt.response_keys   = {'\x1b'};
+    app.prompt.response_labels = {"[Esc]"};
+    app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
+    viewport.clear_hover_popup();
+    viewport.invalidate_all();
+}
+
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
 // response. On a Save failure, the prompt mutates in place to a
@@ -39,6 +57,15 @@ void GuiPrompt::activate_response(char k) {
     const DialogTrigger trigger = app.prompt.trigger;
     // Sentinels: '\x7f' = Delete (discard), '\x1b' = Escape (cancel).
     // See open_unsaved above.
+
+    if (trigger == DialogTrigger::ERROR_NOTICE) {
+        // Acknowledge-and-dismiss; nothing proceeds and nothing mutates.
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+        }
+        return;
+    }
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         if (k == 'y') {
