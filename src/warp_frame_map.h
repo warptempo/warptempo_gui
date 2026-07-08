@@ -68,9 +68,9 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
 
 // --- Warp-frame-map file reader (header-only, dependency-free) -------------
 // Inverse of the parser's write_warp_frame_map. It lives here, not in the
-// parser's map_output.cpp, so the engine-only warptempo_engine driver can
-// read the artifact while linking libwarptempo_engine alone (no parser
-// archive); read_phase_reset_frame_map (phase_reset_frame_map.h) is the
+// parser's map_output.cpp, so the engine sources can read the artifact while
+// staying parser-free (no parser sources compiled alongside);
+// read_phase_reset_frame_map (phase_reset_frame_map.h) is the
 // phase-reset-axis sibling. The format is trivial whitespace-separated
 // numeric text, specified at the writer in map_output.cpp; keep this in
 // lockstep with that writer.

@@ -93,8 +93,8 @@ bool validate_engine_setting(const std::string& key,
     if (key == "output_format") {
         // wav is the finished-audio render; the three map formats write
         // artifacts instead of audio: warptempo_maps is the warp frame map
-        // plus phase reset frame map pair (together exactly
-        // warptempo_engine's input), generic_map the warp frame map alone
+        // plus phase reset frame map pair (together exactly the engine's
+        // input), generic_map the warp frame map alone
         // for generic external stretch consumers, midi_map the midi tempo
         // map for DAW hosts. There is no reset-alone format because a phase
         // reset frame map is meaningful only against the exact warp frame

@@ -968,16 +968,16 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         if (output_format == "warptempo_maps") {
             // The pair: the warp frame map plus the phase reset frame map,
-            // TWO files, together exactly warptempo_engine's input. The
+            // TWO files, together exactly the engine's input. The
             // phase reset column was derived beside its siblings when
             // `artifacts` was filled above — the deliverable-form derivation
             // of the pipeline's already-built source-frame list against
             // artifacts.warp_frame_map (untrimmed the full map, trimmed
             // the trimmed deliverable map) — so the window verdict and
             // anticipation are computed against the very map shipped in
-            // the pair and the two files are self-consistent:
-            // warptempo_engine fed the pair renders that map's geometry
-            // exactly. Both columns always ship — an empty reset list
+            // the pair and the two files are self-consistent: an engine
+            // fed the pair renders that map's geometry exactly. Both
+            // columns always ship — an empty reset list
             // still writes the empty .phaseresetframemap file, mirroring
             // the marker sidecars' empty-file convention.
             // output_paths' order comes from the extension list: entry 0 is
@@ -993,8 +993,8 @@ RenderOutcome do_render(const RenderRequest& req,
             // begins the old pair is forfeited, and from that point every
             // possible interruption — an in-process write or rename failure,
             // or process death at any instant — leaves at most one column
-            // present on disk, so warptempo_engine refuses loudly on the
-            // missing column. A mixed-generation pair (a fresh warp map beside
+            // present on disk, so an engine consumer refuses loudly at init
+            // on the missing column. A mixed-generation pair (a fresh warp map beside
             // a phase reset list derived against a different warp map) can no
             // longer exist: the stale finals are gone before the first new byte
             // lands under a final name. In-process the arms still tidy up — a

@@ -10,10 +10,8 @@
 // a name stem, and a per-file extension. No path is derived from another by
 // extension swap: the warptempo_maps pair's two files are two entries of one
 // composed list, ordered by the extension list. Parser-side so the
-// settings-reading producers — the GUI, warptempo_parser, and warptempo_cli —
-// compose identical paths from one implementation; warptempo_engine reads no
-// .settings and restates the same conventions inline as its command-line
-// contract.
+// settings-reading producers — the GUI and warptempo_cli — compose identical
+// paths from one implementation.
 
 // The format's ordered extension list — the single owner of the
 // format-to-extensions mapping:

@@ -4,27 +4,47 @@ project(warptempo_gui VERSION 2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Build configuration. The two static archives (warptempo_parser,
-# warptempo_engine) always build and need only fftw3. The GUI and
-# its Wayland/Cairo/JACK toolchain are optional, so the libraries can be built
-# on a headless host that has none of the GUI platform packages installed.
-# Turning this OFF skips all GUI dependency discovery and the warptempo_gui
-# executable while still building the two static archives and the headless
-# CLI executables.
+# Build configuration. The GUI is the canonical product and builds by default;
+# warptempo_cli is the headless insurance render path and the audio_io test
+# binary is opt-in. The GUI's Wayland/Cairo/JACK toolchain is optional, so a
+# headless host with none of the GUI platform packages can still configure and
+# build warptempo_cli. Turning WARPTEMPO_BUILD_GUI OFF skips all GUI dependency
+# discovery and the warptempo_gui executable.
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
+option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
+option(WARPTEMPO_BUILD_AUDIO_IO_TEST "Build the audio_io self-test binary" OFF)
 
-# --- Dependencies shared by the libraries (always required) ---
+# --- FFTW: needed by the engine sources, so required unconditionally. The GUI
+# default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
+# does too; keeping discovery top-level lets both configurations find it. ---
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
 
 # ============================================================
-#  warptempo_parser — map / file-parse core.
-#  Depends on warptempo_audio_io for source reads and trimmed-WAV writes. No
-#  fftw, no GUI, no engine. warp_frame_map.h / phase_reset_frame_map.h /
-#  time_format.h are shared headers in src/.
+#  Per-directory source lists.
+#  Each binary compiles these .cpp lists directly rather than linking a shared
+#  archive. The duplicated object code across binaries is accepted deliberately:
+#  a single source text per list makes drift between products impossible, which
+#  is what matters — not the packaging. The GUI is canonical and warptempo_cli
+#  is the insurance render path; both draw the same three lists.
+#
+#  audio_io: in-tree audio container/codec boundary (dr_flac vendored for FLAC
+#  decode only; container probing and WAV handling are in-tree).
+#  parser: map / file-parse core (no fftw, no GUI, no engine; the shared headers
+#  warp_frame_map.h / phase_reset_frame_map.h / time_format.h live in src/).
+#  engine: PGHI DSP core (needs fftw; reads warp_frame_map.h header-only, no
+#  parser dependency).
 # ============================================================
-add_library(warptempo_parser_lib STATIC
+set(WARPTEMPO_AUDIO_IO_SOURCES
+    src/audio_io/dr_flac_impl.cpp
+    src/audio_io/pcm24.cpp
+    src/audio_io/wav_io.cpp
+    src/audio_io/flac_io.cpp
+    src/audio_io/audio_probe.cpp
+    src/audio_io/audio_reader.cpp
+)
+set(WARPTEMPO_PARSER_SOURCES
     src/parser/warpmarkers_parse.cpp
     src/parser/phaseresetmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
@@ -35,86 +55,24 @@ add_library(warptempo_parser_lib STATIC
     src/parser/map_output.cpp
     src/parser/render_output_naming.cpp
 )
-target_include_directories(warptempo_parser_lib
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/parser
-)
-set_target_properties(warptempo_parser_lib PROPERTIES OUTPUT_NAME warptempo_parser)
-
-# ============================================================
-#  warptempo_engine — PGHI DSP core.
-#  Depends on warptempo_audio_io + fftw3. Reads warp_frame_map.h (header-only)
-#  from src/; no link edge to the parser archive.
-# ============================================================
-add_library(warptempo_engine_lib STATIC
+set(WARPTEMPO_ENGINE_SOURCES
     src/engine/engine.cpp
     src/engine/limiter.cpp
     src/engine/peak_limiter.cpp
     src/engine/synthesis.cpp
 )
-target_include_directories(warptempo_engine_lib
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/engine
-    PRIVATE
-        ${FFTW3_INCLUDE_DIRS}
-)
-set_target_properties(warptempo_engine_lib PROPERTIES OUTPUT_NAME warptempo_engine)
-target_link_libraries(warptempo_engine_lib PUBLIC
-    ${FFTW3_THREADS_LIB}
-    ${FFTW3_LIBRARIES}
-    pthread
-)
-
-# ============================================================
-#  warptempo_audio_io — in-tree audio container/codec boundary.
-#  No external link dependencies; dr_flac is vendored here for FLAC bitstream
-#  decode only. Container probing and WAV handling are in-tree.
-# ============================================================
-add_library(warptempo_audio_io_lib STATIC
-    src/audio_io/dr_flac_impl.cpp
-    src/audio_io/pcm24.cpp
-    src/audio_io/wav_io.cpp
-    src/audio_io/flac_io.cpp
-    src/audio_io/audio_probe.cpp
-    src/audio_io/audio_reader.cpp
-)
-target_include_directories(warptempo_audio_io_lib
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/src/audio_io
-)
-set_target_properties(warptempo_audio_io_lib PROPERTIES OUTPUT_NAME warptempo_audio_io)
 
 # dr_flac is vendored third-party C. Suppress warnings only on its dedicated
-# implementation TU, so our own code stays under -Wall -Wextra.
+# implementation TU, so our own code stays under -Wall -Wextra. As a
+# directory-scope source property it applies to every target that compiles this
+# file from this CMakeLists.
 set_source_files_properties(src/audio_io/dr_flac_impl.cpp PROPERTIES
     COMPILE_FLAGS "-w")
 
-add_executable(warptempo_audio_io_test
-    src/audio_io/test_main.cpp
-    src/gui/source_sample_cache_selftest.cpp
-    src/gui/source_sample_cache.cpp
-)
-target_include_directories(warptempo_audio_io_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/gui
-)
-# This is the project's single test binary. It covers the audio_io codec surface
-# and the GUI-side .samples container and identity logic, compiling
-# source_sample_cache.cpp directly into the target to keep the executable count
-# flat.
-target_link_libraries(warptempo_audio_io_test PRIVATE
-    warptempo_audio_io_lib
-    warptempo_parser_lib
-)
-
-target_link_libraries(warptempo_parser_lib PUBLIC warptempo_audio_io_lib)
-target_link_libraries(warptempo_engine_lib PUBLIC warptempo_audio_io_lib)
-
 # ============================================================
-#  warptempo_gui — Cairo/Wayland front end (optional).
+#  warptempo_gui — Cairo/Wayland front end (canonical product, default ON).
 #  All GUI platform dependency discovery lives inside this guard so a
-#  libraries-only build needs none of these packages present.
+#  headless build needs none of these packages present.
 # ============================================================
 if(WARPTEMPO_BUILD_GUI)
     pkg_check_modules(WAYLAND_CLIENT    REQUIRED wayland-client)
@@ -198,6 +156,9 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/input_render_dispatch.cpp
         src/gui/input_pointer.cpp
         src/gui/input_key_dispatch.cpp
+        ${WARPTEMPO_AUDIO_IO_SOURCES}
+        ${WARPTEMPO_PARSER_SOURCES}
+        ${WARPTEMPO_ENGINE_SOURCES}
         ${WAYLAND_GENERATED_SOURCES}
     )
     target_include_directories(warptempo_gui PRIVATE
@@ -207,6 +168,7 @@ if(WARPTEMPO_BUILD_GUI)
         ${CMAKE_SOURCE_DIR}/src/audio_io
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
+        ${FFTW3_INCLUDE_DIRS}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}
         ${XKBCOMMON_INCLUDE_DIRS}
@@ -214,9 +176,8 @@ if(WARPTEMPO_BUILD_GUI)
         ${JACK_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
-        warptempo_parser_lib
-        warptempo_engine_lib
-        warptempo_audio_io_lib
+        ${FFTW3_THREADS_LIB}
+        ${FFTW3_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARIES}
         ${WAYLAND_CURSOR_LIBRARIES}
         ${XKBCOMMON_LIBRARIES}
@@ -230,83 +191,70 @@ if(WARPTEMPO_BUILD_GUI)
 endif()
 
 # ============================================================
-#  warptempo_parser — headless map emitter (parser-only).
-#  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes
-#  the source-stem-named map artifacts the GUI would for the same project.
-#  No engine, no audio.
-# ============================================================
-option(WARPTEMPO_BUILD_PARSER
-       "Build the standalone warptempo_parser binary (the parser library always builds)" OFF)
-if(WARPTEMPO_BUILD_PARSER)
-    add_executable(warptempo_parser src/cli/parser_main.cpp)
-    target_link_libraries(warptempo_parser PRIVATE
-        warptempo_parser_lib
-        warptempo_audio_io_lib
-    )
-endif()
-
-# ============================================================
-#  warptempo_cli — headless wav render CLI (parser + engine).
+#  warptempo_cli — headless wav render binary (insurance render path).
 #  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes the
 #  warped wav the GUI would render for the same project. Runs the full PGHI
-#  engine; output_format must be wav (warptempo_parser covers warpframemap /
-#  miditempomap).
+#  engine; output_format must be wav. Compiles the parser and engine sources
+#  directly, needing no Wayland/Cairo/JACK toolchain.
 # ============================================================
-option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
 if(WARPTEMPO_BUILD_CLI)
-    add_executable(warptempo_cli src/cli/cli_main.cpp)
+    add_executable(warptempo_cli
+        src/cli/cli_main.cpp
+        ${WARPTEMPO_AUDIO_IO_SOURCES}
+        ${WARPTEMPO_PARSER_SOURCES}
+        ${WARPTEMPO_ENGINE_SOURCES}
+    )
+    target_include_directories(warptempo_cli PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/engine
+        ${CMAKE_SOURCE_DIR}/src/audio_io
+        ${FFTW3_INCLUDE_DIRS}
+    )
     target_link_libraries(warptempo_cli PRIVATE
-        warptempo_parser_lib
-        warptempo_engine_lib
-        warptempo_audio_io_lib
+        ${FFTW3_THREADS_LIB}
+        ${FFTW3_LIBRARIES}
+        pthread
     )
 endif()
 
 # ============================================================
-#  warptempo_engine — engine-only synthesis driver.
-#  Reads the prebuilt source-sibling warpframemap + phaseresetframemap
-#  pair (the <source-stem> naming warptempo_parser writes) + source wav and
-#  writes the warped wav by running the PGHI engine directly. No parser
-#  archive: the map readers are header-only (warp_frame_map.h /
-#  phase_reset_frame_map.h) and both files are engine-domain inputs consumed
-#  as-is (warptempo_parser applies the phase-reset anticipation when deriving
-#  the artifact). The driver's input and output names are its own command-line
-#  contract, restated inline in engine_main and mirroring the parser-side
-#  naming rules (render_output_naming); the driver reads no authoring files
-#  and stays blind to .settings. Trim is not an engine concern.
+#  warptempo_audio_io_test — the project's single test binary.
+#  It covers the audio_io codec surface and the GUI-side .samples container and
+#  identity logic, compiling source_sample_cache.cpp directly into the target to
+#  keep the executable count flat. Draws the audio_io and parser sources (the
+#  parser side is what source_sample_cache leans on).
 # ============================================================
-option(WARPTEMPO_BUILD_ENGINE
-       "Build the standalone warptempo_engine binary (the engine library always builds)" OFF)
-if(WARPTEMPO_BUILD_ENGINE)
-    add_executable(warptempo_engine src/cli/engine_main.cpp)
-    target_link_libraries(warptempo_engine PRIVATE
-        warptempo_engine_lib
-        warptempo_audio_io_lib
+if(WARPTEMPO_BUILD_AUDIO_IO_TEST)
+    add_executable(warptempo_audio_io_test
+        src/audio_io/test_main.cpp
+        src/gui/source_sample_cache_selftest.cpp
+        src/gui/source_sample_cache.cpp
+        ${WARPTEMPO_AUDIO_IO_SOURCES}
+        ${WARPTEMPO_PARSER_SOURCES}
+    )
+    target_include_directories(warptempo_audio_io_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/audio_io
+        ${CMAKE_SOURCE_DIR}/src/gui
     )
 endif()
 
 # --- Compiler Optimizations ---
 # Applied identically to every target that exists in this configuration. The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
-# same -O3 -march=native the monolith used. warptempo_gui is appended only when
-# the GUI is being built.
-set(WARPTEMPO_OPT_TARGETS
-    warptempo_parser_lib
-    warptempo_engine_lib
-    warptempo_audio_io_lib
-    warptempo_audio_io_test
-)
+# same -O3 -march=native everywhere. Each target is appended only under its own
+# guard.
+set(WARPTEMPO_OPT_TARGETS "")
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
-endif()
-if(WARPTEMPO_BUILD_PARSER)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_parser)
 endif()
 if(WARPTEMPO_BUILD_CLI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_cli)
 endif()
-if(WARPTEMPO_BUILD_ENGINE)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_engine)
+if(WARPTEMPO_BUILD_AUDIO_IO_TEST)
+    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_audio_io_test)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})

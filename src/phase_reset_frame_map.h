@@ -8,9 +8,9 @@
 
 // --- Phase-reset-frame-map file reader (header-only, dependency-free) ------
 // Inverse of the parser's write_phase_reset_frame_map. It lives here, not in
-// the parser's map_output.cpp, so the engine-only warptempo_engine driver can
-// read the artifact while linking libwarptempo_engine alone (no parser
-// archive); read_warp_frame_map (warp_frame_map.h) is the warp-axis sibling.
+// the parser's map_output.cpp, so the engine sources can read the artifact
+// while staying parser-free (no parser sources compiled alongside);
+// read_warp_frame_map (warp_frame_map.h) is the warp-axis sibling.
 // The format is trivial whitespace-separated numeric text, specified at the
 // writer in map_output.cpp; keep this in lockstep with that writer.
 //

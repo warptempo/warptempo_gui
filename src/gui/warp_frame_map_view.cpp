@@ -12,7 +12,7 @@
 // GUI target-view warp_frame_map helpers, split out of warp_frame_map_build.cpp so the
 // build core (resolve_warp_markers_for_render / build_warp_frame_map / the
 // phase-reset assembly) carries no AppState dependency and lives in
-// libwarptempo_parser. These helpers stay GUI-side: they read the
+// the parser sources. These helpers stay GUI-side: they read the
 // live AppState marker store and the active-view selector, and own the
 // memoized target-view cache. Declarations remain in warp_frame_map_view.h.
 

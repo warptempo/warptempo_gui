@@ -121,7 +121,7 @@ std::vector<double> derive_phase_reset_frame_map(
 // the deliverable map, the window offset is zero, and the render bound is
 // the deliverable map's last pair's target, exact. The emitted list is
 // computed against the exact map shipped beside it, so the artifact pair is
-// exactly warptempo_engine's input and an engine fed the pair renders that
+// exactly the engine's input and an engine fed the pair renders that
 // map's geometry exactly. This is the single trimmed derivation everywhere:
 // the in-process trimmed render derives its engine-input list through this
 // same form against the same deliverable map, so the artifact pair and the

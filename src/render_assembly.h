@@ -29,8 +29,8 @@
 // cmp-stable output lives in exactly one place.
 //
 // Header-only inline: it calls slice_warp_frame_map_to_trim_window and
-// derive_phase_reset_frame_map from libwarptempo_parser, which both
-// warptempo_gui and warptempo_cli already link, so no new compiled TU or
+// derive_phase_reset_frame_map from the parser sources, which both
+// warptempo_gui and warptempo_cli already compile, so no new compiled TU or
 // CMake source entry is needed.
 struct TrimSourceWindow {
     int64_t trim_begin_src   = 0;  // absolute source frame of the begin bound
