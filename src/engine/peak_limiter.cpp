@@ -17,9 +17,9 @@ PeakLimiter::PeakLimiter(double ceiling_dbfs,
     : channels_(channels),
       ceiling_(std::pow(10.0, ceiling_dbfs / 20.0)),
       lookahead_frames_(std::max(1, static_cast<int>(
-          std::lrint(attack_ms * sample_rate / 1000.0)))),
+          std::llrint(attack_ms * sample_rate / 1000.0)))),
       release_frames_(std::max(1, static_cast<int>(
-          std::lrint(release_ms * sample_rate / 1000.0)))),
+          std::llrint(release_ms * sample_rate / 1000.0)))),
       ring_(static_cast<std::size_t>(lookahead_frames_) *
             static_cast<std::size_t>(channels), 0.0f),
       ring_size_(lookahead_frames_),
