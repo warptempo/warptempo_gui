@@ -480,8 +480,9 @@ std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool
     return bounds;
 }
 
-// Shift every selected marker by the clamped delta. Returns whether any
-// marker actually moved.
+// Shift every selected marker by the clamped delta, snapping each
+// destination directionally to the persistence grid so a nudge press never
+// travels less than one pixel. Returns whether any marker actually moved.
 bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
     bool ok = false;
     auto [d_min, d_max] = compute_selection_delta_bounds(ok);
@@ -493,11 +494,20 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
     const auto& mv = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv;
     bool any_changed = false;
+    const int direction = (delta > 0.0) ? 1 : -1;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        const double t_new =
-            snap_to_timestamp_grid(proposed[idx].time_seconds + delta);
-        if (t_new == proposed[idx].time_seconds) continue;
+        const double t_old = proposed[idx].time_seconds;
+        double t_new =
+            snap_to_timestamp_grid_directional(t_old + delta, direction);
+        // Wall case only: the directional snap can overshoot the clamped
+        // [d_min, d_max] bound by strictly less than 1 ms. Fall back to the
+        // nearest snap of the clamped destination so the selection still
+        // creeps flush against the neighbor.
+        if ((direction > 0 && t_new > t_old + d_max) ||
+            (direction < 0 && t_new < t_old + d_min))
+            t_new = snap_to_timestamp_grid(t_old + delta);
+        if (t_new == t_old) continue;
         proposed[idx].time_seconds = t_new;
         any_changed = true;
     }
@@ -548,9 +558,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         // with one-frame headroom. In target view a pixel delta can
         // translate to a sub-grid source move only when the map is deformed
         // by extreme stretch, which is outside the usage model (real
-        // effective speed stays around 2x or below); the designed response
-        // to that degenerate case is exactly this all-or-nothing hard
-        // reject — no finer-grained backstop is wanted.
+        // effective speed stays around 2x or below); the directional snap
+        // steps such a move up to the 1 ms grid minimum, and when the step
+        // cannot fit against a neighbor the designed response is exactly
+        // this all-or-nothing hard reject — no finer-grained backstop is
+        // wanted.
         const double eps = 1.0 / sr_d;
         std::vector<std::pair<int, double>> proposals;
         proposals.reserve(app.selected_markers.size());
@@ -563,8 +575,15 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
-            const double t_src_new = snap_to_timestamp_grid(
-                map_target_to_source(q, target_warp_frame_map) / sr_d);
+            // Directional snap so a press never travels less than one
+            // target pixel; the warp frame map is monotone increasing, so
+            // the target-domain direction is the source-domain direction.
+            // No wall fallback here: the neighbor validation below rejects
+            // all-or-nothing when the full-pixel step cannot fit, which is
+            // the designed response.
+            const double t_src_new = snap_to_timestamp_grid_directional(
+                map_target_to_source(q, target_warp_frame_map) / sr_d,
+                direction);
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;
