@@ -44,20 +44,3 @@ inline std::string format_timestamp(double seconds) {
 inline double snap_to_timestamp_grid(double seconds) {
     return parse_timestamp(format_timestamp(seconds));
 }
-
-// Directional ceiling/floor on the same persistence grid: the nearest grid
-// point at-or-beyond `seconds` in `direction` (+1: smallest grid point
-// >= seconds; -1: largest grid point <= seconds). Built on the nearest
-// snap's round-trip so it lives on exactly the same grid. Consumed by the
-// marker nudge paths, where a keypress must never round below one pixel of
-// travel; drag / jump / trim snapping stays nearest and is untouched. The
-// 1e-9 s tolerance keeps a destination that sits within float noise of a
-// grid point (one pixel spanning an exact integer number of ms) from
-// spuriously stepping an extra millisecond.
-inline double snap_to_timestamp_grid_directional(double seconds, int direction) {
-    const double nearest = snap_to_timestamp_grid(seconds);
-    if (static_cast<double>(direction) * (seconds - nearest) > 1e-9)
-        return snap_to_timestamp_grid(
-            seconds + static_cast<double>(direction) * 0.001);
-    return nearest;
-}

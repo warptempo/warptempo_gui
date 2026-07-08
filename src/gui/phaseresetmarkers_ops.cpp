@@ -153,33 +153,36 @@ std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bou
     return bounds;
 }
 
-// Shift every selected phase reset by the clamped delta, snapping each
-// destination directionally to the persistence grid so a nudge press never
-// travels less than one pixel. Returns whether any reset actually moved.
+// Shift every selected phase reset by the clamped delta, exactly — no grid
+// snap; a nudge moves exactly one pixel of time at the current zoom,
+// sub-millisecond when a pixel is finer than a millisecond. Marker times
+// live in memory at full double precision; persistence rounds to the
+// millisecond grid with banker's rounding at save (format_timestamp), so
+// a save-then-reload may shift a nudged marker by up to half a
+// millisecond. Architect ruling (2026-07-07): gesture fidelity outranks
+// the authored-equals-reloaded identity for nudges. Returns whether any
+// reset actually moved.
 bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta) {
     bool ok = false;
     auto [d_min, d_max] = compute_phase_reset_delta_bounds(ok);
     if (!ok) return false;
+    const int direction = (raw_delta > 0.0) ? 1 : -1;
     double delta = raw_delta;
     if (delta < d_min) delta = d_min;
     if (delta > d_max) delta = d_max;
-    if (delta == 0.0) return false;
+    // Direction guard: the [d_min, d_max] bounds invert when a
+    // non-selected neighbor sits closer than the eps gap, so the clamp can
+    // zero the delta (flush at the wall) or flip it against the pressed
+    // direction. A nudge never moves against the pressed direction —
+    // refusing is the whole fix.
+    if (delta * static_cast<double>(direction) <= 0.0) return false;
     const auto& mv = app.phaseresetmarkers.markers();
     std::vector<GuiPhaseResetMarker> proposed = mv;
     bool any_changed = false;
-    const int direction = (delta > 0.0) ? 1 : -1;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         const double t_old = proposed[idx].time_seconds;
-        double t_new =
-            snap_to_timestamp_grid_directional(t_old + delta, direction);
-        // Wall case only: the directional snap can overshoot the clamped
-        // [d_min, d_max] bound by strictly less than 1 ms. Fall back to the
-        // nearest snap of the clamped destination so the selection still
-        // creeps flush against the neighbor.
-        if ((direction > 0 && t_new > t_old + d_max) ||
-            (direction < 0 && t_new < t_old + d_min))
-            t_new = snap_to_timestamp_grid(t_old + delta);
+        const double t_new = t_old + delta;
         if (t_new == t_old) continue;
         proposed[idx].time_seconds = t_new;
         any_changed = true;
@@ -232,15 +235,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             const size_t q = (t_tgt_new < 0.0)
                 ? static_cast<size_t>(0)
                 : static_cast<size_t>(std::llrint(t_tgt_new));
-            // Directional snap so a press never travels less than one
-            // target pixel; the warp frame map is monotone increasing, so
-            // the target-domain direction is the source-domain direction.
-            // No wall fallback here: the neighbor validation below rejects
-            // all-or-nothing when the full-pixel step cannot fit, which is
-            // the designed response.
-            const double t_src_new = snap_to_timestamp_grid_directional(
-                map_target_to_source(q, target_warp_frame_map) / sr_d,
-                direction);
+            // Exact inverse-mapped destination, full precision; the warp
+            // frame map is monotone increasing, so the target-domain
+            // direction is the source-domain direction.
+            const double t_src_new =
+                map_target_to_source(q, target_warp_frame_map) / sr_d;
             proposals.emplace_back(idx, t_src_new);
         }
         bool any_changed = false;
