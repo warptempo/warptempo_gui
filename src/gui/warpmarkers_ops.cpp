@@ -493,16 +493,26 @@ bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
     bool ok = false;
     auto [d_min, d_max] = compute_selection_delta_bounds(ok);
     if (!ok) return false;
+    // Each press consults only the bound in its direction of travel. The
+    // opposite bound can only demand a repair move — the marker already
+    // sits closer than the eps gap to that neighbor, possible because eps
+    // is zoom-dependent — and a one-pixel step in the pressed direction
+    // never worsens that relation, so it is ignored. The directional
+    // bound refuses when there is no room (<= 0) and otherwise caps the
+    // step at the wall, preserving creep-to-the-wall. Consequences: a
+    // nudge never moves against the press, never moves more than one
+    // pixel, and never lands past a neighbor, including the
+    // inverted-bounds cluster case where neighbors sit inside eps on
+    // both sides.
     const int direction = (raw_delta > 0.0) ? 1 : -1;
-    double delta = raw_delta;
-    if (delta < d_min) delta = d_min;
-    if (delta > d_max) delta = d_max;
-    // Direction guard: the [d_min, d_max] bounds invert when a
-    // non-selected neighbor sits closer than the eps gap, so the clamp can
-    // zero the delta (flush at the wall) or flip it against the pressed
-    // direction. A nudge never moves against the pressed direction —
-    // refusing is the whole fix.
-    if (delta * static_cast<double>(direction) <= 0.0) return false;
+    double delta;
+    if (direction > 0) {
+        if (d_max <= 0.0) return false;
+        delta = std::min(raw_delta, d_max);
+    } else {
+        if (d_min >= 0.0) return false;
+        delta = std::max(raw_delta, d_min);
+    }
     const auto& mv = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv;
     bool any_changed = false;
