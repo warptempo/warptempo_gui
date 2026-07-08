@@ -874,20 +874,28 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             int64_t end_active = source_frame_to_active_domain(app, audio,
                 static_cast<int64_t>(std::nearbyint(app.trim.end_seconds * sr_d)));
             end_active += dlt;
-            const int64_t begin_active = source_frame_to_active_domain(app, audio,
-                static_cast<int64_t>(std::nearbyint(app.trim.begin_seconds * sr_d)));
-            const double spp = current_samples_per_pixel(app, audio);
-            const int64_t eps = static_cast<int64_t>(
-                std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
-            if (end_active < begin_active + eps) end_active = begin_active + eps;
-            // EOF-eps: the end stops eps short of the live EOF, matching the
-            // marker and trim-drag convention. Unlike regular marker drag,
-            // this Ctrl+wheel begin-trim gesture is allowed to move the paired
-            // end bound offscreen.
+            // Absolute bounds only: the end bound may run to the live EOF
+            // exactly, and down to the begin bound. Unlike regular marker
+            // drag, this Ctrl+wheel begin-trim gesture is allowed to move
+            // the paired end bound offscreen.
+            if (end_active < 0) end_active = 0;
             const int64_t lt = live_total_frames(app, audio);
-            if (end_active > lt - eps) end_active = lt - eps;
-            app.trim.end_seconds = snap_to_timestamp_grid(static_cast<double>(
+            if (end_active > lt) end_active = lt;
+            double v = snap_to_timestamp_grid(static_cast<double>(
                 active_domain_to_source_frame(app, audio, end_active)) / sr_d);
+            // Grid-quantized ceilings, same shape as the trim drag: the
+            // snap can round up past EOF by a sub-grid amount (step down
+            // one grid unit), and the end bound stays one grid unit above
+            // the (grid-stored) begin bound so begin < end stays
+            // representable.
+            constexpr double kGrid = 0.001;
+            const double total_dur =
+                static_cast<double>(audio.total_frames()) / sr_d;
+            if (v > total_dur) v = snap_to_timestamp_grid(v - kGrid);
+            const double end_floor =
+                snap_to_timestamp_grid(app.trim.begin_seconds + kGrid);
+            if (v < end_floor) v = end_floor;
+            app.trim.end_seconds = v;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();

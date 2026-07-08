@@ -245,16 +245,17 @@ void PhaseResetPropagate::paste_apply() {
     // before dst_start. Clamp to 0 per the universal no-negative-time
     // rule; insert_marker does not clamp.
     //
-    // propagate is an overwrite command, so a materialized reset owns its
-    // landing millisecond: duration rescaling can land a placement outside
-    // the cleared membership windows above (a lead-in scaled by a longer
-    // destination block, a near-end placement scaled by a shorter one),
-    // landing among surviving pre-existing resets, and a strongly shrunken
-    // block or the zero clamp can land two placements on the same grid
-    // point. Erasing an exact-equal occupant before each insert keeps the
-    // overwrite semantics uniform across both cases and keeps the
-    // in-memory list strictly ascending, which insert_marker alone does
-    // not guarantee since it accepts equal times.
+    // The overwrite semantics live entirely in the per-block membership-
+    // window clear above. Materialized placements land wherever rescaling
+    // puts them — possibly outside the cleared windows (a lead-in scaled
+    // by a longer destination block, a near-end placement scaled by a
+    // shorter one), possibly coinciding exactly with surviving
+    // pre-existing resets or with each other (a strongly shrunken block,
+    // or the zero clamp). Coincident resets simply stack: equal times are
+    // legal in the store, insert_marker keeps the in-memory list sorted,
+    // and the parser's exact-duplicate collapse at
+    // build_phase_reset_source_frames owns engine safety while the render
+    // boundary owns everything else.
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
         const double dst_dur   = dest_blocks[i].end - dst_start;
@@ -264,20 +265,22 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_seconds = snap_to_timestamp_grid(
                 std::max(0.0, dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
-            out.erase(std::remove_if(out.begin(), out.end(),
-                [&nm](const GuiPhaseResetMarker& m) {
-                    return m.time_seconds == nm.time_seconds;
-                }), out.end());
             app.phaseresetmarkers.insert_marker(std::move(nm));
         }
     }
 
     // An undo entry represents a state change, not a gesture. Pasting
     // onto the copy's own anchor reproduces the destination resets byte-
-    // equal (PhaseResetMarker is exactly time_seconds + disabled); such a
-    // no-op paste pushes nothing and touches no dirty/render state. Compare
-    // before pre_state is moved into the push. The stop message and the
-    // always-switch-to-P rule below still run.
+    // equal (PhaseResetMarker is exactly time_seconds + disabled) — but
+    // only when every placement lands inside the cleared membership
+    // windows above; that self-paste is a no-op that pushes nothing and
+    // touches no dirty/render state. A placement rescaled OUTSIDE the
+    // cleared windows (the lead-in / near-end cases) stacks a duplicate
+    // next to its surviving occupant on self-paste — legal, collapsed to
+    // one event at build_phase_reset_source_frames — so the store
+    // genuinely changes and the undo entry is a real state change.
+    // Compare before pre_state is moved into the push. The stop message
+    // and the always-switch-to-P rule below still run.
     bool store_changed = out.size() != pre_state.size();
     for (size_t i = 0; !store_changed && i < out.size(); ++i) {
         if (out[i].time_seconds != pre_state[i].time_seconds ||

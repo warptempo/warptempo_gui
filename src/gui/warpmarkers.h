@@ -79,28 +79,32 @@ public:
 
     const std::vector<GuiWarpMarker>&       markers() const { return markers_; }
 
-    // Inserts `m` at the position that preserves strict-monotonic order by
-    // time_seconds. Returns the insertion index.
+    // Inserts `m` at the position that preserves ascending time_seconds
+    // order. Returns the insertion index. Equal times are legal —
+    // markers may coincide exactly; degeneracy is refused at the render
+    // boundary (build_warp_frame_map), not here.
     int insert_marker(GuiWarpMarker m);
 
     // Removes the marker at `index`. No-op if out of range.
     void remove_marker(int index);
 
-    // Mutable accessor for keyboard/mouse toggles that edit a single marker
-    // in place without changing its time (so list order is preserved).
-    // Bumps generation_ on call. Contract is "you may mutate"; a
-    // spurious bump (caller read-only) costs one stem rebuild on the next
-    // tick — negligible.
+    // Mutable accessor for edits to a single marker in place. A caller
+    // that changes time_seconds must restore order via
+    // reorder_markers_by_time before the store is next read (flag/tempo
+    // toggles preserve order trivially). Bumps generation_ on call.
+    // Contract is "you may mutate"; a spurious bump (caller read-only)
+    // costs one stem rebuild on the next tick — negligible.
     GuiWarpMarker* marker_mut(int index) {
         ++generation_;
         if (index < 0 || index >= static_cast<int>(markers_.size())) return nullptr;
         return &markers_[index];
     }
 
-    // Bulk-mutable accessor. Callers must not reorder by time_seconds; the
-    // class assumes strict-monotonic order. Exposed for operations that
-    // twiddle a flag across many markers at once. Bumps generation_ on
-    // call (same rationale as marker_mut).
+    // Bulk-mutable accessor. The class assumes ascending time_seconds
+    // order (equal times legal); a caller that changes times must restore
+    // order via reorder_markers_by_time before the store is next read.
+    // Exposed for operations that twiddle a flag across many markers at
+    // once. Bumps generation_ on call (same rationale as marker_mut).
     std::vector<GuiWarpMarker>& markers_mut() {
         ++generation_;
         return markers_;

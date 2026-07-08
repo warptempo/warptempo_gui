@@ -55,16 +55,12 @@ constexpr int64_t kTrimEndWheelDivisor = 10;
 
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
-// (in input_handler.cpp) can reach them.
+// (in input_handler.cpp) can reach them. Hit-test half-width only:
+// clicking/hovering tolerance for stems, flags, and trim bounds. It is
+// NOT a spacing gap — markers may sit arbitrarily close, overlap
+// exactly, and cross during gestures; ordering degeneracy is refused at
+// the render boundary, not at authoring time.
 constexpr int kMarkerHitHalfPx    = 4;
-
-// The marker-hit gap as a duration: kMarkerHitHalfPx pixels at the current
-// zoom, in seconds. spp is samples-per-pixel, sr_d the sample rate as a
-// double. Single source for the pixels-to-seconds eps the marker-drop
-// dup-checks and drag clamps share across the warp and phase-reset ops.
-inline double marker_hit_eps_seconds(double spp, double sr_d) {
-    return static_cast<double>(kMarkerHitHalfPx) * spp / sr_d;
-}
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
@@ -102,14 +98,12 @@ struct UndoEntry {
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
-// Storing per-marker (min_allowed, max_allowed) works for a contiguous
-// drag set, but a non-contiguous set (e.g. indices 2 and
-// 5 selected, 3 and 4 not) can be bounded more tightly by the nearest
-// non-selected neighbors of every dragged marker. We precompute a single
-// scalar `delta_min` / `delta_max` that's correct for both cases: the delta
-// is applied uniformly, so its feasible range is the intersection of per-
-// marker per-neighbor bounds. Trim is purely cosmetic and does not
-// constrain edits.
+// `delta_min` / `delta_max` is a single scalar range for the uniformly-
+// applied delta: the intersection of each dragged marker's absolute
+// bounds (zero and the column's EOF wall) plus the grabbed marker's
+// viewport clamp. Neighbors do not bound a drag — markers may cross
+// freely, and commit reorders the store. Trim is purely cosmetic and
+// does not constrain edits.
 struct DragState {
     bool                active = false;
     std::vector<int>    dragging_markers;   // sorted ascending
@@ -156,9 +150,11 @@ struct DragState {
 // Drag-time position overlay. Paint sites consult this when a marker
 // index appears in `indices` to read the proposed new time from
 // `times` rather than the live store's time_seconds. The two spans
-// alias DragState's `dragging_markers` and `moveable_times` (parallel
-// vectors, sorted ascending). Empty overlay (default-constructed) is
-// equivalent to "no drag active" and falls back to the live store.
+// alias DragState's `dragging_markers` and `moveable_times` — parallel
+// vectors paired positionally by k. The indices are not necessarily in
+// ascending order (a mid-drag store reorder remaps them in place); the
+// linear scan below does not care. Empty overlay (default-constructed)
+// is equivalent to "no drag active" and falls back to the live store.
 struct DragOverlay {
     const std::vector<int>*    indices = nullptr;
     const std::vector<double>* times   = nullptr;
@@ -831,76 +827,54 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
-// Drop-marker dedup pre-check shared by GuiWarpMarkersOps::drop_marker and
-// GuiPhaseResetMarkersOps::drop_phase_reset_at_position. Iterates `markers`
-// and rejects the drop if any existing marker sits within `eps` seconds of
-// `time_seconds`, logging a `<label> marker already exists near …` line to
-// stderr. The marker container is read only through `m.time_seconds`, so
-// any marker type exposing that field works.
-template <typename MarkerVec>
-bool reject_if_marker_within_eps(
-    const MarkerVec& markers,
-    double time_seconds,
-    double eps,
-    const char* label) {
-    for (const auto& m : markers) {
-        if (std::abs(m.time_seconds - time_seconds) < eps) {
-            std::fprintf(stderr,
-                "warptempo_gui: %s marker already exists near %.3fs\n",
-                label, time_seconds);
-            return true;
+// Restore ascending time_seconds order after a mutation that may have
+// moved markers past their neighbors (shift, nudge, drag commit). The
+// marker stores are always sorted by time_seconds at rest; mutations
+// that change times in place call this immediately after writing.
+// Stable: equal-time markers keep their pre-sort relative order, so
+// ties resolve deterministically. Returns the old-index -> new-index
+// permutation when a reorder happened, or an empty vector when the list
+// was already in order (the common case — the up-front scan keeps that
+// path allocation-free). Callers pass the result to
+// remap_marker_indices_after_reorder so every index-shaped piece of
+// state that referenced a moved marker follows it. The marker container
+// is read only through `time_seconds`, so both marker types work.
+template <typename Marker>
+std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
+    const int n = static_cast<int>(markers.size());
+    bool sorted = true;
+    for (int i = 1; i < n; ++i) {
+        if (markers[i - 1].time_seconds > markers[i].time_seconds) {
+            sorted = false;
+            break;
         }
     }
-    return false;
+    if (sorted) return {};
+    std::vector<int> order(n);
+    for (int i = 0; i < n; ++i) order[i] = i;
+    std::stable_sort(order.begin(), order.end(),
+        [&markers](int a, int b) {
+            return markers[a].time_seconds < markers[b].time_seconds;
+        });
+    std::vector<Marker> reordered;
+    reordered.reserve(n);
+    for (int old_idx : order) reordered.push_back(std::move(markers[old_idx]));
+    markers = std::move(reordered);
+    std::vector<int> old_to_new(n);
+    for (int new_idx = 0; new_idx < n; ++new_idx) {
+        old_to_new[order[new_idx]] = new_idx;
+    }
+    return old_to_new;
 }
 
-// Shared neighbor-walk core for compute_selection_delta_bounds (warp) and
-// compute_phase_reset_delta_bounds (phase reset). For each selected index,
-// walks past contiguous selected neighbors on each side to find the
-// nearest non-selected neighbor, intersecting per-marker (delta_min,
-// delta_max) bounds. When a selected marker has no neighbor on a side it
-// clamps to [eps, total_duration - eps]. The marker container is read
-// only through `markers[idx].time_seconds`, so any marker type exposing
-// that field works.
-//
-// Preconditions enforced here: every idx in `selected` is in range of
-// `markers` (returns {0.0, 0.0} on violation, which the caller treats as
-// the same no-op shape it returns for its own precondition failures).
-// Caller-side preconditions (warp's frame-zero pin; non-empty selection;
-// positive sample rate) are not the helper's responsibility.
-template <typename MarkerVec>
-std::pair<double, double> compute_neighbor_walk_bounds(
-    const MarkerVec& markers,
-    const std::set<int>& selected,
-    double eps,
-    double total_duration) {
-    double d_min = -std::numeric_limits<double>::infinity();
-    double d_max =  std::numeric_limits<double>::infinity();
-    const int n = static_cast<int>(markers.size());
-    for (int idx : selected) {
-        if (idx < 0 || idx >= n) return {0.0, 0.0};
-        const double orig_t = markers[idx].time_seconds;
-        int prev = idx - 1;
-        while (prev >= 0 && selected.count(prev)) --prev;
-        if (prev >= 0) {
-            const double lb = (markers[prev].time_seconds + eps) - orig_t;
-            if (lb > d_min) d_min = lb;
-        } else {
-            const double lb = eps - orig_t;
-            if (lb > d_min) d_min = lb;
-        }
-        int next = idx + 1;
-        while (next < n && selected.count(next)) ++next;
-        if (next < n) {
-            const double ub = (markers[next].time_seconds - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        } else {
-            const double ub = (total_duration - eps) - orig_t;
-            if (ub < d_max) d_max = ub;
-        }
-    }
-    return {d_min, d_max};
-}
+// Apply a reorder_markers_by_time permutation to the index-shaped state
+// that must follow moved markers: app.selected_markers,
+// app.last_selected_marker, and — when a drag is live on the reordered
+// store — the drag state's held marker indices. Undo snapshots copy
+// whole lists and need no remap. No-op on an empty permutation (the
+// store was already in order). Body in app_state.cpp.
+void remap_marker_indices_after_reorder(AppState& app,
+                                        const std::vector<int>& old_to_new);
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.

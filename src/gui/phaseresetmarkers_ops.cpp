@@ -28,26 +28,27 @@
 //   current_samples_per_pixel   → free function
 //   stop_playback_if_playing    → playback_lifecycle.stop_playback_if_playing
 
-// Drop a phase reset marker at `time_seconds`. Rejects creation within
-// kMarkerHitHalfPx pixels at current zoom of an existing phase reset marker.
-// Selection collapses to the freshly-inserted index. Frame-0 phase alignment
-// is implicit by definition and needs no marker to assert it.
+// Drop a phase reset marker at `time_seconds`. Placement is bounded only
+// by the absolute range; arbitrarily close and exactly-coincident drops
+// are legal (the render boundary owns degeneracy). Selection collapses to
+// the freshly-inserted index. Frame-0 phase alignment is implicit by
+// definition and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_seconds) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    // Snap before the within-eps dup check so the check and the stored
-    // marker both see the grid value (mirrors warp drop_marker).
+    // Snap first so the EOF check sees the stored grid value (mirrors
+    // warp drop_marker).
     time_seconds = snap_to_timestamp_grid(time_seconds);
     const double sr_d = static_cast<double>(sr);
-    const double spp  = current_samples_per_pixel(app, audio);
-    const double eps = marker_hit_eps_seconds(spp, sr_d);
-    // Same source-end defense as the warp drop, kept symmetric across marker
-    // kinds. (An out-of-bounds phase reset is render-harmless, but placement
-    // stays uniform unless a difference is required.)
-    if (time_seconds > static_cast<double>(audio.total_frames()) / sr_d - eps)
+    // Recorded asymmetry with the warp drop: the EOF bound differs by
+    // column for a structural reason. A warp marker needs at least one
+    // source frame of segment to its next breakpoint (build_warp_frame_map
+    // refuses sub-frame segments), so warp positions stop one frame short
+    // of EOF; a phase reset is a point event, so its wall is
+    // total_duration exactly — an at-EOF reset is inert at derivation.
+    // Reject only when the snapped time lands strictly past EOF.
+    if (time_seconds > static_cast<double>(audio.total_frames()) / sr_d)
         return;
-    const auto& tv = app.phaseresetmarkers.markers();
-    if (reject_if_marker_within_eps(tv, time_seconds, eps, "phase_reset")) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     GuiPhaseResetMarker nm;
@@ -131,26 +132,35 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 
 // Compute (delta_min, delta_max) seconds bounds for shifting the
 // currently-selected phase resets by a uniform delta. Same shape as the
-// warp version: nearest non-selected neighbor on each side, intersected,
-// with a kMarkerHitHalfPx-pixels-at-current-zoom visual gap enforced via
-// eps. No trim clamp — phase resets aren't bounded by trim flags during
-// edit. No frame-zero pin either — a phase reset at time 0.0 is legit-
-// imately movable, in contrast to warp marker 0.
+// warp version: absolute bounds only — the selection may shift until its
+// minimum time reaches zero and its maximum reaches total_duration (a
+// phase reset is a point event, so its EOF wall is total_duration
+// exactly, one frame past the warp column's wall; an at-EOF reset is
+// inert at derivation). Neighbors are not consulted; resets may cross
+// and overlap freely and the store reorders after the shift. No trim
+// clamp — phase resets aren't bounded by trim flags during edit. No
+// frame-zero pin either — a phase reset at time 0.0 is legitimately
+// movable, in contrast to warp marker 0.
 std::pair<double, double> GuiPhaseResetMarkersOps::compute_phase_reset_delta_bounds(bool& ok) {
     ok = false;
     const auto& tv = app.phaseresetmarkers.markers();
     if (app.selected_markers.empty()) return {0.0, 0.0};
     const int sr = audio.sample_rate();
     if (sr <= 0) return {0.0, 0.0};
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(tv.size())) return {0.0, 0.0};
+    }
     const double sr_d = static_cast<double>(sr);
-    const double spp  = current_samples_per_pixel(app, audio);
-    const double eps = marker_hit_eps_seconds(spp, sr_d);
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
-    auto bounds = compute_neighbor_walk_bounds(
-        tv, app.selected_markers, eps, total_duration);
+    double min_t =  std::numeric_limits<double>::infinity();
+    double max_t = -std::numeric_limits<double>::infinity();
+    for (int idx : app.selected_markers) {
+        min_t = std::min(min_t, tv[idx].time_seconds);
+        max_t = std::max(max_t, tv[idx].time_seconds);
+    }
     ok = true;
-    return bounds;
+    return {0.0 - min_t, total_duration - max_t};
 }
 
 // Shift every selected phase reset by the clamped delta, exactly — no grid
@@ -166,17 +176,15 @@ bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta
     bool ok = false;
     auto [d_min, d_max] = compute_phase_reset_delta_bounds(ok);
     if (!ok) return false;
-    // Each press consults only the bound in its direction of travel. The
-    // opposite bound can only demand a repair move — the marker already
-    // sits closer than the eps gap to that neighbor, possible because eps
-    // is zoom-dependent — and a one-pixel step in the pressed direction
-    // never worsens that relation, so it is ignored. The directional
-    // bound refuses when there is no room (<= 0) and otherwise caps the
-    // step at the wall, preserving creep-to-the-wall. Consequences: a
-    // nudge never moves against the press, never moves more than one
-    // pixel, and never lands past a neighbor, including the
-    // inverted-bounds cluster case where neighbors sit inside eps on
-    // both sides.
+    // Each press consults only the bound in its direction of travel: it
+    // refuses when there is no room (<= 0) and otherwise caps the step
+    // at the wall, preserving creep-to-the-wall. The bounds are the
+    // absolute range only (zero / total_duration), so the opposite bound
+    // could demand a move only for a reset loaded already outside the
+    // range; ignoring it keeps the guarantees: a nudge never moves
+    // against the press and never moves more than one pixel. Neighbors
+    // are not bounds at all — crossing is legal and the store reorders
+    // below.
     const int direction = (raw_delta > 0.0) ? 1 : -1;
     double delta;
     if (direction > 0) {
@@ -199,6 +207,10 @@ bool GuiPhaseResetMarkersOps::apply_phase_reset_selection_shift(double raw_delta
     }
     if (!any_changed) return false;
     app.phaseresetmarkers.markers_mut() = std::move(proposed);
+    // A uniform shift can carry the selection past non-selected resets;
+    // restore time order and re-point the selection at the moved resets.
+    remap_marker_indices_after_reorder(
+        app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     return true;
 }
 
@@ -233,7 +245,6 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
         const double total_duration =
             static_cast<double>(audio.total_frames()) / sr_d;
-        const double eps = 1.0 / sr_d;
         std::vector<std::pair<int, double>> proposals;
         proposals.reserve(app.selected_markers.size());
         for (int idx : app.selected_markers) {
@@ -252,26 +263,16 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
                 map_target_to_source(q, target_warp_frame_map) / sr_d;
             proposals.emplace_back(idx, t_src_new);
         }
+        // A proposal is refused only when it leaves the absolute range:
+        // below zero or above total_duration (the phase reset EOF wall —
+        // a point event may sit at EOF exactly; an at-EOF reset is inert
+        // at derivation). Crossing a neighbor is legal and goes through
+        // the reorder-and-remap path below; the render boundary owns
+        // degeneracy.
         bool any_changed = false;
         for (const auto& [idx, t_new] : proposals) {
             if (t_new == tv[idx].time_seconds) continue;
-            int prev = idx - 1;
-            while (prev >= 0 && app.selected_markers.count(prev)) --prev;
-            const double lo = (prev >= 0)
-                ? (tv[prev].time_seconds + eps)
-                : eps;
-            int next = idx + 1;
-            const int n = static_cast<int>(tv.size());
-            while (next < n && app.selected_markers.count(next)) ++next;
-            const double hi = (next < n)
-                ? (tv[next].time_seconds - eps)
-                : (total_duration - eps);
-            if (t_new < lo || t_new > hi) {
-                std::fprintf(stderr,
-                    "warptempo_gui: nudge rejected: would collide with a "
-                    "neighbor\n");
-                return;
-            }
+            if (t_new < 0.0 || t_new > total_duration) return;
             any_changed = true;
         }
         if (!any_changed) return;
@@ -284,6 +285,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             if (!m) continue;
             m->time_seconds = t_new;
         }
+        // A nudge may cross a neighbor; restore time order and re-point
+        // the selection at the moved reset before the playhead sync
+        // reads last_selected below.
+        remap_marker_indices_after_reorder(
+            app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
         undo.push_undo_phase_reset(std::move(pre_state), hint_last);
         selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
         undo.recompute_dirty();

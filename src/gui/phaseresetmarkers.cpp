@@ -30,19 +30,22 @@ bool GuiPhaseResetMarkers::save(const std::string& path) const {
 bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
     // Serializer contract: this save performs no ordering validation.
-    // Strict ascent of the input is an ops-layer construction invariant —
-    // gesture eps clamps (drop/drag/shift/nudge) hold far wider than the
-    // millisecond snap radius, the target-view nudge validates snapped
-    // proposals against neighbors before committing, and propagate's paste
-    // erases any exact-equal occupant before inserting. The strict
-    // authoring parser re-enforces ordering at every load, so a
-    // hypothetical future op bug that broke the invariant would surface as
-    // a loud line-numbered parse error on the next load rather than
-    // silently. The render publisher can legitimately produce two resets
-    // on the same millisecond (distinct exact target-frame doubles whose
-    // millisecond timestamps round together); both lines simply serialize
-    // here, and the display sidecar's lenient reader shows them as
-    // overlapping flags.
+    // The store is sorted by construction — ordered insert for drops and
+    // propagate, and every time-mutating gesture (drag commit, shift,
+    // nudge) reorders through the reorder-and-remap path — so rows
+    // serialize in non-decreasing time order. Equal-time rows are legal
+    // (markers may overlap exactly) and load back under the relaxed
+    // parser, which accepts non-decreasing times; only a DECREASING
+    // sequence — impossible from the sorted store, so evidence of a
+    // future op bug — fails the next load with a loud line-numbered
+    // parse error. Degeneracy is refused at the strict render boundary
+    // (build_phase_reset_source_frames collapses exact duplicates;
+    // build_warp_frame_map refuses warp ties), not by this serializer.
+    // The render publisher can likewise produce two resets on the same
+    // millisecond (distinct exact target-frame doubles whose millisecond
+    // timestamps round together); both lines simply serialize here, and
+    // the display sidecar's lenient reader shows them as overlapping
+    // flags.
     std::ostringstream out;
     for (const auto& m : markers_) {
         // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the

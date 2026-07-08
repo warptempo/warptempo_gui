@@ -33,10 +33,11 @@ public:
     // Writes the canonical form to `path`. Atomic: writes to <path>.tmp,
     // fsyncs, then renames. Preserves existing permissions or uses 0644 if
     // the file is new. Returns true on success. Save writes every row with
-    // no dedup or ordering validation; the serializer contract (ops-layer
-    // ordering invariants, the strict-parser backstop, and legitimate
-    // same-millisecond sidecar overlaps) is documented at the static save
-    // overload in phaseresetmarkers.cpp.
+    // no dedup or ordering validation; the serializer contract (the store
+    // is sorted by construction, equal-time rows are legal and reload,
+    // and the strict render boundary — not the serializer — refuses
+    // degeneracy) is documented at the static save overload in
+    // phaseresetmarkers.cpp.
     bool save(const std::string& path) const;
 
     // Static variant for callers that hold a raw GuiPhaseResetMarker vector (e.g.
@@ -48,11 +49,11 @@ public:
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
 
     // Inserts `m` at the position that preserves ascending time_seconds
-    // order. Returns the insertion index. Equal-time collisions are
-    // accepted at insert time (the user may transit through them via
-    // nudge); ops-layer callers (drop/drag/shift/nudge validation,
-    // propagate's erase-before-paste) are what keep durable equal-time
-    // occupants from persisting, not this insert.
+    // order. Returns the insertion index. Equal times are legal —
+    // markers may sit arbitrarily close or coincide exactly — and the
+    // store keeps them ordered: this insert places by lower_bound, and
+    // the time-mutating gestures reorder through the reorder-and-remap
+    // path, so the list is always sorted at rest.
     int insert_marker(GuiPhaseResetMarker m);
 
     // Removes the marker at `index`. No-op if out of range.

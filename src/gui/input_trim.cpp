@@ -51,43 +51,39 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         active_domain_to_source_frame(app, audio, other_active)) / sr_d);
     other_has = true;
 
-    // EOF clamp, mirroring the regular-marker total_duration - eps rule that
-    // drop_marker / drag / nudge enforce. The end bound is held eps off the
-    // source end; the begin bound is held 2*eps, so the autoset gap can
-    // compress to a single eps near EOF without the bounds crossing (begin to
-    // end is one eps, end to EOF is one eps). eps is the same
-    // zoom-based marker spacing epsilon. Clamping by role (begin / end) is
-    // correct regardless of which side seeded the gesture.
-    const double spp       = current_samples_per_pixel(app, audio);
-    const double eps       = marker_hit_eps_seconds(spp, sr_d);
+    // Absolute EOF ceilings: the end bound clamps to total_duration
+    // exactly, the begin bound to one millisecond grid unit below the end
+    // bound (keeping begin < end representable on the stored grid). No
+    // eps margins — a trim window that is authorably tiny renders with
+    // incomplete OLA fades, or refuses as a degenerate window at the
+    // render boundary; both are accepted by ruling. Clamping by role
+    // (begin / end) is correct regardless of which side seeded the
+    // gesture.
     const double total_dur = static_cast<double>(audio.total_frames()) / sr_d;
 
     // Stored-grid invariant: every value written into app.trim.begin_seconds /
     // end_seconds is on the millisecond grid the .settings format persists at,
-    // so an authored bound equals its own reloaded value bit-for-bit. The eps
-    // ceilings above are sub-grid quantities, so a raw clamp to total_dur - eps
-    // would store off the grid and shift on the next save/reload. Snap the
-    // clamped value back onto the grid — but snap-to-nearest can round the
-    // value UP, past the ceiling, which would erase the very eps gap the clamp
-    // exists to hold (end flush against EOF, or begin flush against end). So
-    // when the snap lands above the ceiling, step down one grid unit to the
-    // nearest grid point at or below it rather than rounding upward. Because
-    // the two ceilings sit eps and 2*eps below EOF and eps exceeds the grid
-    // unit for every source in the project's length domain, they floor to
-    // distinct grid points and begin stays strictly below end.
+    // so an authored bound equals its own reloaded value bit-for-bit.
+    // total_dur is generally off the grid, so snap the clamped end value
+    // back onto it — and because snap-to-nearest can round UP past EOF,
+    // step down one grid unit when it does, landing on the nearest grid
+    // point at or below total_dur. Canonical millisecond doubles are not
+    // closed under +-kGrid (binary 0.001 arithmetic drifts by ULPs), so
+    // every stored grid-step result is wrapped in snap_to_timestamp_grid;
+    // snapping a value within ULPs of a grid point returns the canonical
+    // double and cannot jump a full grid unit, so the step semantics are
+    // unchanged.
     constexpr double kGrid = 0.001;
-    const double end_ceiling = total_dur - eps;
-    if (app.trim.end_seconds > end_ceiling) {
-        double v = snap_to_timestamp_grid(end_ceiling);
-        if (v > end_ceiling) v -= kGrid;
+    if (app.trim.end_seconds > total_dur) {
+        double v = snap_to_timestamp_grid(total_dur);
+        if (v > total_dur) v = snap_to_timestamp_grid(v - kGrid);
         app.trim.end_seconds = v;
     }
-    double begin_ceiling = total_dur - 2.0 * eps;
+    double begin_ceiling =
+        snap_to_timestamp_grid(app.trim.end_seconds - kGrid);
     if (begin_ceiling < 0.0) begin_ceiling = 0.0;
     if (app.trim.begin_seconds > begin_ceiling) {
-        double v = snap_to_timestamp_grid(begin_ceiling);
-        if (v > begin_ceiling) v -= kGrid;
-        app.trim.begin_seconds = v;
+        app.trim.begin_seconds = begin_ceiling;
     }
 
     // Snap the playhead onto the bound just set at it. The bound is grid-
@@ -283,23 +279,27 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const int64_t grabbed = app.trim_drag.is_begin ? ob : oe;
         if (grabbed + df < first_vis) df = first_vis - grabbed;
         if (grabbed + df > last_vis)  df = last_vis  - grabbed;
-        // Rigid clamp in the active domain: begin >= 0, end <= live EOF minus
-        // the eps gap, so the end bound never lands flush against the EOF (the
-        // same margin the single-bound drag and the warp markers hold). The
-        // grabbed bound's viewport clamp above is applied first; this validity
-        // clamp wins. eps_frames is the kMarkerHitHalfPx-pixel gap at the
-        // current zoom, in active-domain frames. Only the grabbed bound is
+        // Rigid clamp in the active domain: begin >= 0, end <= live EOF —
+        // the absolute range only; the end bound may land flush against
+        // the EOF. The grabbed bound's viewport clamp above is applied
+        // first; this validity clamp wins. Only the grabbed bound is
         // viewport-clamped; the partner rides the rigid delta to its data
         // limit, as before.
-        const int64_t eps_frames = static_cast<int64_t>(
-            std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
         if (ob + df < 0) df = -ob;
-        if (oe + df > live_total - eps_frames)
-            df = (live_total - eps_frames) - oe;
+        if (oe + df > live_total) df = live_total - oe;
         const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
         const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
         const double nb = snap_to_timestamp_grid(static_cast<double>(nb_src) / sr_d);
-        const double ne = snap_to_timestamp_grid(static_cast<double>(ne_src) / sr_d);
+        double ne = snap_to_timestamp_grid(static_cast<double>(ne_src) / sr_d);
+        // Stored-grid invariant: the snap can round the end bound up past
+        // EOF by a sub-grid amount; step down one grid unit so the stored
+        // value stays at or below total_duration.
+        {
+            const double total_dur =
+                static_cast<double>(total) / sr_d;
+            constexpr double kGrid = 0.001;
+            if (ne > total_dur) ne = snap_to_timestamp_grid(ne - kGrid);
+        }
         if (app.trim.begin_seconds != nb || app.trim.end_seconds != ne) {
             app.trim.begin_seconds = nb;
             app.trim.end_seconds   = ne;
@@ -320,15 +320,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     int64_t src_frame = orig_f +
         static_cast<int64_t>(std::nearbyint(delta_seconds * sr_d));
 
-    // eps_frames is the kMarkerHitHalfPx-pixel gap (at the current zoom) the
-    // trim drag holds off both the EOF and the other bound — the same eps the
-    // warp drag uses (warpmarkers_ops.cpp ~429), so the b/e stems never reach
-    // visual coincidence and the bound never lands flush against the EOF.
-    // Hoisted above the data clamp so the EOF clamp can use it. This is the
-    // trim-internal eps (begin vs end), orthogonal to warp/phase eps.
-    const int64_t eps_frames = static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(kMarkerHitHalfPx) * spp));
-
     // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
@@ -342,34 +333,43 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (src_frame < vp_lo) src_frame = vp_lo;
     if (src_frame > vp_hi) src_frame = vp_hi;
 
-    // Data clamp: 0 at the start, eps short of the EOF. Applied after the
+    // Data clamp: the absolute range only — 0 at the start, EOF at the
+    // end; the bound may land flush against either. Applied after the
     // viewport clamp so trim validity wins when the EOF is on-screen.
     if (src_frame < 0) src_frame = 0;
-    if (src_frame > total - eps_frames) src_frame = total - eps_frames;
-
-    // Clamp against the other bound: the dragged bound stops eps_frames short
-    // of it, the tightest gap two regular marker stems can hold.
-    if (app.trim_drag.is_begin) {
-        if (app.trim.has_end) {
-            const int64_t end_f = static_cast<int64_t>(
-                std::nearbyint(app.trim.end_seconds * sr_d));
-            if (src_frame > end_f - eps_frames) src_frame = end_f - eps_frames;
-            if (src_frame < 0) src_frame = 0;
-        }
-    } else {
-        if (app.trim.has_begin) {
-            const int64_t begin_f = static_cast<int64_t>(
-                std::nearbyint(app.trim.begin_seconds * sr_d));
-            if (src_frame < begin_f + eps_frames) src_frame = begin_f + eps_frames;
-            if (src_frame > total - eps_frames) src_frame = total - eps_frames;
-        }
-    }
+    if (src_frame > total) src_frame = total;
 
     // Single-bound drag: snap the derived seconds the same way the group
     // branch above does, so the change-detection compare and the store
-    // both operate on the grid value the bound will persist at.
-    const double new_seconds =
+    // both operate on the grid value the bound will persist at. Then
+    // apply the grid-quantized ceilings: the end bound clamps to
+    // total_duration (snap-to-nearest can round up past EOF by a
+    // sub-grid amount — step down one grid unit when it does), and the
+    // begin bound to one grid unit below the end bound, keeping
+    // begin < end representable. No eps gaps — an authorably tiny trim
+    // window renders with incomplete OLA fades or refuses as degenerate
+    // at the render boundary, both accepted by ruling.
+    double new_seconds =
         snap_to_timestamp_grid(static_cast<double>(src_frame) / sr_d);
+    constexpr double kGrid = 0.001;
+    if (app.trim_drag.is_begin) {
+        if (app.trim.has_end) {
+            const double begin_ceiling =
+                snap_to_timestamp_grid(app.trim.end_seconds - kGrid);
+            if (new_seconds > begin_ceiling) {
+                new_seconds = (begin_ceiling < 0.0) ? 0.0 : begin_ceiling;
+            }
+        }
+    } else {
+        const double total_dur = static_cast<double>(total) / sr_d;
+        if (new_seconds > total_dur)
+            new_seconds = snap_to_timestamp_grid(new_seconds - kGrid);
+        if (app.trim.has_begin) {
+            const double end_floor =
+                snap_to_timestamp_grid(app.trim.begin_seconds + kGrid);
+            if (new_seconds < end_floor) new_seconds = end_floor;
+        }
+    }
     double& field = app.trim_drag.is_begin ? app.trim.begin_seconds
                                            : app.trim.end_seconds;
     if (field != new_seconds) {

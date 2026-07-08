@@ -48,10 +48,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // the mandatory project anchor and never moves, so refuse index 0 and
     // any effective-time-0 warp marker. Phase resets have no pinned frame-0
     // anchor — the first phase reset marker is optional and freely
-    // repositionable — so the pin is skipped in phase reset view. The
-    // neighbor-bounds clamp below still keeps a left-edge phase reset
-    // strictly after frame 0. Runs before any selection mutation so a
-    // refused drag leaves the selection genuinely unchanged.
+    // repositionable down to time 0 exactly — so the pin is skipped in
+    // phase reset view. Runs before any selection mutation so a refused
+    // drag leaves the selection genuinely unchanged.
     if (!phase_reset) {
         for (int idx : drag_set) {
             if (idx == 0 || t_of(idx) == 0.0) {
@@ -94,50 +93,33 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
             vp_time + static_cast<double>(mouse_x - area.x) * spp / sr_d;
     }
 
-    // Compute scalar delta_min / delta_max from per-marker neighbor
-    // bounds. Correct for both contiguous and non-contiguous drag sets.
-    // eps enforces a 4-pixel visual gap at the current zoom — markers
-    // never stack even at the tightest clamp. When a selected marker
-    // has no neighbor on a side, clamp to [eps, total_duration - eps]
-    // so the drag can't leave the audio range.
-    const double eps = marker_hit_eps_seconds(spp, sr_d);
+    // Compute scalar delta_min / delta_max from the absolute range only:
+    // zero on the left and the column's EOF wall on the right (warp:
+    // total_duration minus one source frame, because build_warp_frame_map
+    // refuses sub-frame segments; phase reset: total_duration exactly —
+    // a point event may sit at EOF). Neighbors do not bound the drag;
+    // the marker may cross them freely, and commit_drag reorders the
+    // store and remaps the held indices.
     const double total_duration =
         static_cast<double>(audio.total_frames()) / sr_d;
+    const double eof_wall =
+        phase_reset ? total_duration : (total_duration - 1.0 / sr_d);
 
     d.delta_min = -std::numeric_limits<double>::infinity();
     d.delta_max =  std::numeric_limits<double>::infinity();
 
     for (size_t k = 0; k < d.dragging_markers.size(); ++k) {
-        const int idx = d.dragging_markers[k];
         const double orig_t = d.original_times[k];
-
-        // Nearest non-dragged neighbor to the left.
-        int prev = idx - 1;
-        while (prev >= 0 && drag_set.count(prev)) --prev;
-        if (prev >= 0) {
-            const double lb = (t_of(prev) + eps) - orig_t;
-            if (lb > d.delta_min) d.delta_min = lb;
-        } else {
-            const double lb = eps - orig_t;
-            if (lb > d.delta_min) d.delta_min = lb;
-        }
-
-        // Nearest non-dragged neighbor to the right.
-        int next = idx + 1;
-        while (next < n && drag_set.count(next)) ++next;
-        if (next < n) {
-            const double ub = (t_of(next) - eps) - orig_t;
-            if (ub < d.delta_max) d.delta_max = ub;
-        } else {
-            const double ub = (total_duration - eps) - orig_t;
-            if (ub < d.delta_max) d.delta_max = ub;
-        }
+        const double lb = 0.0 - orig_t;
+        if (lb > d.delta_min) d.delta_min = lb;
+        const double ub = eof_wall - orig_t;
+        if (ub < d.delta_max) d.delta_max = ub;
     }
 
     // Viewport clamp: keep the grabbed marker within the visible strip so a
     // mouse drag can't push it offscreen, where its precise position would be
     // hidden. Only the grabbed marker (hit) is clamped; co-dragged markers
-    // ride the same scalar delta and stay bound by data / neighbor alone — the
+    // ride the same scalar delta and stay bound by the data range alone — the
     // same way Ctrl+Shift+drag clamps the grabbed bound but lets its partner
     // run to the clip edge. viewport_marker_bounds is active-domain while the
     // delta lives in source seconds, so inverse-translate the edges; the
@@ -300,6 +282,20 @@ void MarkerDragOps::commit_drag() {
                 m->time_seconds = new_t;
             }
         }
+        // The drag may have carried the marker across neighbors; restore
+        // time order and remap the index-shaped state — the selection
+        // (collapsed to the grabbed marker at first motion) follows the
+        // marker to its new slot. The drag state's own held indices are
+        // remapped too, though they are discarded by the wholesale reset
+        // below.
+        if (phase_reset) {
+            remap_marker_indices_after_reorder(
+                app,
+                reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
+        } else {
+            remap_marker_indices_after_reorder(
+                app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
+        }
     }
     std::vector<GuiWarpMarker>    snap_w =
         std::move(app.drag.pre_drag_snapshot);
@@ -315,6 +311,10 @@ void MarkerDragOps::commit_drag() {
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();
+        // A crossing changes store order, and flag pack/elision walks
+        // store order — repaint the top strip so the committed flag
+        // layout replaces the overlay-order one from the last motion.
+        viewport.invalidate_top_strip();
     }
     viewport.invalidate_waveform_area();
     if (reanchor_playhead) {

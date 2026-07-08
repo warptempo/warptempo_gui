@@ -22,6 +22,28 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
+void remap_marker_indices_after_reorder(AppState& app,
+                                        const std::vector<int>& old_to_new) {
+    if (old_to_new.empty()) return;
+    const int n = static_cast<int>(old_to_new.size());
+    auto mapped = [&](int idx) {
+        return (idx >= 0 && idx < n) ? old_to_new[idx] : idx;
+    };
+    std::set<int> remapped;
+    for (int idx : app.selected_markers) remapped.insert(mapped(idx));
+    app.selected_markers = std::move(remapped);
+    app.last_selected_marker = mapped(app.last_selected_marker);
+    if (app.drag.active) {
+        // Pairing between dragging_markers and its parallel time vectors
+        // (original_times / moveable_times) is positional by k, so an
+        // in-place value remap keeps each index bound to its own times.
+        // Nothing relies on ascending order of the remapped indices —
+        // DragOverlay::effective_time scans linearly.
+        for (int& idx : app.drag.dragging_markers) idx = mapped(idx);
+        app.drag.hit_marker = mapped(app.drag.hit_marker);
+    }
+}
+
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
 // references are now explicit arguments. The kMarkerHitHalfPx / flag_font_size_px()
 // constants resolve through app_state.h / paint_handler.h respectively.
@@ -95,7 +117,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
         if (ms >= vp + static_cast<double>(visible)) continue;
         const int m_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
         const int d = std::abs(m_px - click_rel_x);
-        if (d <= kMarkerHitHalfPx && d < best_dist) {
+        // Nearest wins; an exact distance tie (legal now that markers may
+        // overlap exactly) goes to the higher index via <=. The stem
+        // painters walk the store in ascending index order, so the later
+        // equal-time marker paints last and sits visually on top — the
+        // tie-break picks the marker the user sees.
+        if (d <= kMarkerHitHalfPx && d <= best_dist) {
             best_dist = d;
             best_hit  = i;
         }
