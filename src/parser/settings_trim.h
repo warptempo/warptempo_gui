@@ -36,7 +36,8 @@ struct SettingsTrimTabs {
 // with any value but A or B is a hard parse failure the same way.
 // A duplicated key is a hard parse failure, matching the
 // engine-settings reader's rejection of a duplicated canonical key.
-// A tab whose present end is at or below its present begin is also a hard
-// failure, checked once both bounds for that tab are known.
+// Bound ordering is NOT checked: a tab whose end sits at or below its begin
+// loads intact (equal and inverted bounds are legal authored states; the
+// render boundary, validate_trim_frames, owns every trim refusal).
 std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     const std::string& path);

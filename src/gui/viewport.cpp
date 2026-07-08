@@ -48,10 +48,14 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
                                static_cast<double>(sr)));
             end_tgt = source_frame_to_active_domain(app, audio, end_src);
         }
+        // Per-side clamp to the deformed timeline only — no ordering clamp:
+        // inverted bounds pass through as authored, mirroring
+        // compute_trim_samples' contract (consumers must not assume
+        // begin <= end; the render boundary owns validity).
         if (begin_tgt < 0) begin_tgt = 0;
         if (begin_tgt > live_total) begin_tgt = live_total;
+        if (end_tgt < 0) end_tgt = 0;
         if (end_tgt > live_total) end_tgt = live_total;
-        if (end_tgt < begin_tgt) end_tgt = begin_tgt;
         return {begin_tgt, end_tgt};
     }
     return compute_trim_samples(

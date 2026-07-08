@@ -360,13 +360,11 @@ private:
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };
 
-    // Plain x: set the begin bound at the playhead and autoset the end bound
-    // 5 active-seconds away, but only when the end bound is unset — placing
-    // the begin bound across an already-set end bound clears the partner first
-    // so the autoset re-establishes it. Re-press while the playhead sits on
-    // the existing begin bound walks the end bound out another 5 active-seconds
-    // instead of re-deriving the begin bound from the playhead.
-    // Clamped to [0, live EOF] in the active domain.
+    // Plain x: set the begin bound at the playhead (exact double seconds)
+    // and autoset the end bound half of the visible span later. Only the
+    // autoset PARTNER is placement-clamped to [0, live EOF] in the active
+    // domain — a choice of where to put the bound the user did not position,
+    // not a wall (see handle_trim_set_autoset).
     void handle_trim_set_begin_autoset();
 
     // Shift+x: clear both trim bounds unconditionally. Silent no-op when
@@ -402,10 +400,11 @@ private:
     void delete_selected_trim();
 
     // Ctrl+Left / Ctrl+Right on the trim group: nudge the focused bound by
-    // one pixel of time at the current zoom. direction: -1 earlier, +1 later.
-    // The sibling of nudge_selected_markers, sharing its walls-only,
-    // refuse-or-cap directional rule; differs where trim differs by design
-    // (the millisecond grid floor and the partner-bound cannot-coincide gap).
+    // one pixel of time at the current zoom, at full double precision.
+    // direction: -1 earlier, +1 later. The sibling of nudge_selected_markers;
+    // differs where trim differs by design: no walls at all (no partner, no
+    // zero/EOF — the render boundary owns validity), only the 0.0
+    // format-representability floor.
     void nudge_selected_trim(int direction);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.

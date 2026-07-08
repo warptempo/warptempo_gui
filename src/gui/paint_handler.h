@@ -452,10 +452,12 @@ private:
     // paints the begin/end stems) and the flag cache (which paints the b/e
     // chips that cap them). Computing it in one place keeps chip and stem in
     // lockstep — same positions, same has/selected bits — so they always read
-    // as one continuous unit. Positions are translated into the displayed
-    // domain (target-view warp_frame_map from wf_cache.fp_warp_frame_map, or source-frame),
-    // matching the marker stems' coordinate system. Render view forces the
-    // bounds off (trim is a source-view authoring concept).
+    // as one continuous unit. Positions are the AUTHORED per-bound frames —
+    // unordered (bounds may rest inverted) and unclamped (past-EOF is legal)
+    // — translated into the displayed domain (target-view warp_frame_map from
+    // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
+    // stems' coordinate system. Render view forces the bounds off (trim is a
+    // source-view authoring concept).
     struct DisplayedTrim {
         int64_t begin          = 0;
         int64_t end            = 0;
@@ -467,7 +469,9 @@ private:
     DisplayedTrim compute_displayed_trim() const;
 
     // Out-of-trim dim rects in SCREEN coordinates for the current frame, or
-    // an empty result when nothing should dim (no trim, or render view).
+    // an empty result when nothing should dim (no trim, render view, or an
+    // INVERTED trim — begin strictly later than end in the displayed domain
+    // shades nothing; the render boundary's refusal is the signal).
     // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the
     // waveform plate blit, so the dim recolors only the out-of-trim sample
     // pixels (the plate itself is trim-agnostic — see render_waveform).

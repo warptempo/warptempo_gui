@@ -5,6 +5,7 @@
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
+#include "trimmer.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
@@ -891,30 +892,36 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                 1, samples_visible(app, audio) / kTrimEndWheelDivisor);
             const int64_t dlt =
                 (button == GuiMouseButton::WheelUp ? -step : +step) * count;
-            int64_t end_active = source_frame_to_active_domain(app, audio,
-                static_cast<int64_t>(std::nearbyint(app.trim.end_seconds * sr_d)));
-            end_active += dlt;
-            // Absolute bounds only: the end bound may run to the live EOF
-            // exactly, and down to the begin bound. Unlike regular marker
-            // drag, this Ctrl+wheel begin-trim gesture is allowed to move
-            // the paired end bound offscreen.
-            if (end_active < 0) end_active = 0;
-            const int64_t lt = live_total_frames(app, audio);
-            if (end_active > lt) end_active = lt;
-            double v = snap_to_timestamp_grid(static_cast<double>(
-                active_domain_to_source_frame(app, audio, end_active)) / sr_d);
-            // Grid-quantized ceilings, same shape as the trim drag: the
-            // snap can round up past EOF by a sub-grid amount (step down
-            // one grid unit), and the end bound stays one grid unit above
-            // the (grid-stored) begin bound so begin < end stays
-            // representable.
-            constexpr double kGrid = 0.001;
-            const double total_dur =
-                static_cast<double>(audio.total_frames()) / sr_d;
-            if (v > total_dur) v = snap_to_timestamp_grid(v - kGrid);
-            const double end_floor =
-                snap_to_timestamp_grid(app.trim.begin_seconds + kGrid);
-            if (v < end_floor) v = end_floor;
+            // Full-double step, marker-identical target-view math (the
+            // shape of nudge_selected_markers' target branch): project the
+            // stored end seconds through the live target-view map, step in
+            // the target double domain, llrint, inverse-map back at full
+            // precision. Source view is plain seconds arithmetic. No walls
+            // — the end bound crosses the begin bound freely and may run
+            // past EOF (legal in memory and on disk, refused only at
+            // render); the paired bound may also move offscreen. The sole
+            // clamp is the 0.0 format-representability floor: negative
+            // time is unrepresentable in the MM:SS.mmm grammar the
+            // .settings file persists (not a spacing or validity guard).
+            double v;
+            if (app.active_audio_view == 'T') {
+                const auto& target_warp_frame_map =
+                    target_view_warp_frame_map_cached(
+                        app, sr,
+                        static_cast<long>(audio.total_frames())).warp_frame_map;
+                const double t_tgt = map_source_to_target(
+                    std::nearbyint(app.trim.end_seconds * sr_d),
+                    target_warp_frame_map);
+                const double t_tgt_new = t_tgt + static_cast<double>(dlt);
+                const double q = (t_tgt_new < 0.0)
+                    ? 0.0
+                    : static_cast<double>(std::llrint(t_tgt_new));
+                v = map_target_to_source(q, target_warp_frame_map) / sr_d;
+            } else {
+                v = app.trim.end_seconds +
+                    static_cast<double>(dlt) / sr_d;
+            }
+            if (v < 0.0) v = 0.0;
             app.trim.end_seconds = v;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -1051,6 +1058,25 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     } else if (entering_target) {
         prompt.open_error_notice(std::move(resolved.error()));
         return;
+    }
+
+    // Validity gate, entry half, trim column: entering target view with a
+    // set trim that fails validate_trim_frames raises the popup and stays
+    // in source view, exactly like the invalid-map entry refusal above —
+    // target playback must never audition an unrenderable window. The map
+    // handed to the validator is the full trim-off map just built (the same
+    // construction the target-view cache holds). T → S never gates.
+    if (entering_target && (app.trim.has_begin || app.trim.has_end)) {
+        if (auto v = validate_trim_frames(
+                app.trim.has_begin, app.trim.begin_seconds,
+                app.trim.has_end,   app.trim.end_seconds,
+                audio.sample_rate(),
+                static_cast<int64_t>(audio.total_frames()),
+                warp_frame_map);
+            !v) {
+            prompt.open_error_notice(std::move(v.error()));
+            return;
+        }
     }
 
     // Target-view playback is rebound to the rendered target buffer once it is
@@ -1193,10 +1219,30 @@ void GuiInputHandler::enforce_target_view_validity() {
     if (app.prompt.active) return;
     const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
         app, audio.sample_rate(), static_cast<long>(audio.total_frames()));
-    if (c.build_error.empty()) return;
-    // Copy before toggling: the T → S toggle path re-resolves and can
-    // touch the cache the reference points into.
-    const std::string err = c.build_error;
+    // Two kick conditions, checked in order: an invalid marker state (the
+    // cached build error) and — the trim column of the same gate — a set
+    // trim that fails validate_trim_frames against the cached map (the
+    // cache's map IS the full map, built trim-off from the live store), the
+    // live sample rate, and total frames. Either way target playback never
+    // auditions an unrenderable window; the error string is the owner's
+    // verbatim (parser's or trimmer's).
+    std::string err;
+    if (!c.build_error.empty()) {
+        // Copy before toggling: the T → S toggle path re-resolves and can
+        // touch the cache the reference points into.
+        err = c.build_error;
+    } else if (app.trim.has_begin || app.trim.has_end) {
+        if (auto v = validate_trim_frames(
+                app.trim.has_begin, app.trim.begin_seconds,
+                app.trim.has_end,   app.trim.end_seconds,
+                audio.sample_rate(),
+                static_cast<int64_t>(audio.total_frames()),
+                c.warp_frame_map);
+            !v) {
+            err = std::move(v.error());
+        }
+    }
+    if (err.empty()) return;
     handle_active_audio_view_toggle();   // T → S: unconditional, identity
                                          // fallback for the playhead math
     prompt.open_error_notice(err);

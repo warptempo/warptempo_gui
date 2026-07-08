@@ -43,7 +43,9 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
 // consumed only by render_trim_stems to place the two boundary stems. Values
-// match the convention in compute_trim_samples (main.cpp).
+// are the AUTHORED positions from compute_displayed_trim (paint_handler.cpp):
+// per-bound, unordered (bounds may rest inverted), unclamped (past-EOF is
+// legal); each stem is placed independently, so no order is assumed here.
 struct TrimRange {
     int64_t begin;
     int64_t end;

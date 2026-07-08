@@ -76,9 +76,10 @@ bool create_if_missing(const std::filesystem::path& p,
 // Parse `.settings`. Missing file → empty result (all has_* false).
 // Returns false on a file-open failure of an existing file, or on any hard
 // failure from the delegated trim reader (read_settings_trim): a malformed
-// trim timestamp, a duplicate trim key, a duplicate or non-A-or-B
-// active_tab_view, or crossed trim bounds (a tab's present end at or below
-// its present begin). Other per-line view-state errors are skipped, silently
+// trim timestamp, a duplicate trim key, or a duplicate or non-A-or-B
+// active_tab_view. Bound ordering is not checked — equal and inverted trim
+// bounds load intact (the render boundary owns trim validity).
+// Other per-line view-state errors are skipped, silently
 // except font_size, whose bad values get one stderr diagnostic before the
 // default applies. Tab values are stored raw, without range validation — the
 // caller clamps against the current audio file. Engine keys are ignored by

@@ -308,7 +308,10 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     // trimmer's own formula) — so the anchor is that same llrint(T_b) in
     // full-target coordinates and the exact authored begin/end display falls
     // out. Compute only after target_buffer_frames is set so a failed/empty
-    // buffer does not leave a stale anchor.
+    // buffer does not leave a stale anchor. Reads ONLY the begin bound, so
+    // an inverted trim store (legal at rest; the target-view validity gate
+    // kicks to source view within a tick) cannot misanchor it — no ordering
+    // assumption here.
     app.target_buffer_start_frame = 0;
     if (app.trim.has_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {

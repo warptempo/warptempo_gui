@@ -287,10 +287,12 @@ void Selection::cycle_selection(bool forward) {
             if (!has) return;
             const bool in_dir = forward ? (f > ph_f) : (f < ph_f);
             if (!in_dir) return;
-            // Nearer in-direction wins. On a bound-vs-bound tie (only the
-            // degenerate target-view case where compression maps both to one
-            // frame) the group order decides: forward keeps begin (considered
-            // first), backward takes end (>= lets the later-considered win).
+            // Nearer in-direction wins. Crossed bounds are just two stops in
+            // time order — each is weighed at its own frame with no role
+            // ordering. On a bound-vs-bound tie (equal authored bounds, or
+            // target-view compression mapping both to one frame) the group
+            // order decides: forward keeps begin (considered first),
+            // backward takes end (>= lets the later-considered win).
             const bool closer = (trim_sel == 0) ||
                 (forward ? (f < trim_frame) : (f >= trim_frame));
             if (closer) { trim_sel = which; trim_frame = f; }

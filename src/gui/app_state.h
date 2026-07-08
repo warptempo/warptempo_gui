@@ -353,6 +353,20 @@ struct PromptState {
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 
+// Trim store (architect-ruled hardfail model). begin and end are authored
+// NAMED ROLES — no gesture ever reassigns which bound is which — holding
+// full-double source-domain seconds, exactly like marker times (the
+// .settings writer rounds through format_timestamp at save; a saved bound
+// reloads within half a millisecond, accepted). Bounds may cross during any
+// gesture and may REST inverted or equal; equal and inverted states load
+// from .settings and persist back. The render boundary owns validity:
+// validate_trim_frames (trimmer.h) issues every trim refusal — at render
+// dispatch preflight and at the target-view gate — and the GUI informs (the
+// error-notice popup), it never guards. The one absolute floor is 0.0:
+// negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
+// .settings file persists — a format-representability floor, not a validity
+// rule. Past-EOF values are representable, legal in memory and on disk, and
+// refused only at render. Readers must not assume begin <= end.
 struct TrimState {
     double begin_seconds = 0.0;
     double end_seconds   = 0.0;

@@ -235,10 +235,15 @@ GuiRect bottom_lower_row_area(const AppState& a) {
     return GuiRect{0, h - top_y - row_h, w, row_h};
 }
 
-// Resolve the trim region from AppState's settings-side trim fields.
+// Resolve the trim playback/navigation range from AppState's trim fields.
 // Absent has_trim_* falls back to [0, total_frames]. Banker's rounding
-// converts seconds to samples. Clamps to [0, total_frames] and never
-// returns end < begin.
+// converts seconds to samples; each side clamps to [0, total_frames]
+// independently so playback ranges stay inside the buffer. There is NO
+// ordering clamp: trim bounds may rest inverted (begin later than end) and
+// the pair passes through as authored — consumers (the Space gate's
+// cursor-in-[begin,end) check, Home/End via trim_range, the load-time
+// playhead) degrade to a no-op or a per-side position and must not assume
+// begin <= end. The render boundary (validate_trim_frames) owns validity.
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, int sample_rate, long long total_frames) {
     long long begin = 0;
@@ -255,8 +260,8 @@ std::pair<long long, long long> compute_trim_samples(
     }
     if (begin < 0) begin = 0;
     if (begin > total_frames) begin = total_frames;
+    if (end < 0) end = 0;
     if (end > total_frames) end = total_frames;
-    if (end < begin) end = begin;
     return {begin, end};
 }
 

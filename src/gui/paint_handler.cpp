@@ -941,28 +941,36 @@ GuiPaintHandler::compute_displayed_trim() const {
     // positions map through the displayed warp_frame_map (wf_cache.fp_warp_frame_map) — the
     // same coordinate system the marker stems use — which trim does not
     // perturb, so it is stable across a trim drag.
+    //
+    // Positions are the AUTHORED frames, per side, unclamped and unordered
+    // (NOT compute_trim_samples, whose per-side [0, total] clamp serves
+    // playback ranges): stems and chips paint at the authored spot — past
+    // EOF included — and the hit tests (hit_test_trim_boundary/_chip) test
+    // the same authored positions, so paint and pick stay in agreement.
+    // Bounds may rest inverted; this helper is position-only and needs no
+    // order (the dim-rect consumer applies its own inverted-window rule).
     const int sr = audio.sample_rate();
-    std::pair<long long, long long> t;
-    if (rve) {
-        t = {0, audio.total_frames()};
-    } else if (wf_cache.fp_target) {
-        const auto src_trim = compute_trim_samples(
-            app, sr, audio.total_frames());
-        if (!wf_cache.fp_warp_frame_map.empty()) {
-            const long long t0 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.first),
-                    wf_cache.fp_warp_frame_map)));
-            const long long t1 = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<size_t>(src_trim.second),
-                    wf_cache.fp_warp_frame_map)));
-            t = {t0, t1};
-        } else {
-            t = src_trim;
+    const double sr_d = static_cast<double>(sr);
+    std::pair<long long, long long> t{0, audio.total_frames()};
+    if (!rve) {
+        if (app.trim.has_begin) {
+            t.first = static_cast<long long>(
+                std::nearbyint(app.trim.begin_seconds * sr_d));
         }
-    } else {
-        t = compute_trim_samples(app, sr, audio.total_frames());
+        if (app.trim.has_end) {
+            t.second = static_cast<long long>(
+                std::nearbyint(app.trim.end_seconds * sr_d));
+        }
+        if (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty()) {
+            t.first = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<double>(t.first < 0 ? 0 : t.first),
+                    wf_cache.fp_warp_frame_map)));
+            t.second = static_cast<long long>(std::nearbyint(
+                map_source_to_target(
+                    static_cast<double>(t.second < 0 ? 0 : t.second),
+                    wf_cache.fp_warp_frame_map)));
+        }
     }
     out.begin = t.first;
     out.end   = t.second;
@@ -979,6 +987,17 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
     // already mapped through the displayed warp_frame_map in target view.
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
+
+    // Inverted trim does not dim: with both bounds set and begin strictly
+    // later than end (compared here in the displayed domain the rects are
+    // computed in) there is no coherent window to shade, so no dim rects at
+    // all — no negative-width shading, no misleading window. The stems and
+    // chips still paint at their authored positions; the render boundary's
+    // refusal is the user-facing signal. Equal bounds are NOT inverted: the
+    // two rects meet at the shared stem naturally.
+    if (dtrim.has_begin && dtrim.has_end && dtrim.begin > dtrim.end) {
+        return out;
+    }
 
     // LIVE viewport + live samples-per-pixel (NOT wf_cache.fp_*): during a
     // trim drag the viewport is static so this equals the displayed viewport
