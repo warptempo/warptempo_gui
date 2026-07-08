@@ -236,9 +236,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (async_renderer.is_busy()) return true;
 
         // Pre-flight the live store on the GUI thread; an invalid marker
-        // state raises the popup and refuses the dispatch.
+        // state, a trimmed map-format render, or an invalid trim raises the
+        // popup and refuses the dispatch.
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale)) {
+                                   app.engine_settings.scale,
+                                   app.engine_settings.output_format,
+                                   app.trim.has_begin, app.trim.begin_seconds,
+                                   app.trim.has_end, app.trim.end_seconds)) {
             return true;
         }
 
@@ -308,7 +312,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // Pre-flight the live store BEFORE the auto-enqueue so a
             // refused dispatch leaves nothing queued.
             if (!warp_render_preflight(app.warpmarkers.markers(),
-                                       app.engine_settings.scale)) {
+                                       app.engine_settings.scale,
+                                       app.engine_settings.output_format,
+                                       app.trim.has_begin,
+                                       app.trim.begin_seconds,
+                                       app.trim.has_end,
+                                       app.trim.end_seconds)) {
                 return true;
             }
             app.queued_renders.push_back(snapshot_current_queued_render());
@@ -317,14 +326,18 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 "and rendering\n");
         }
 
-        // Pre-flight every queued entry against its own snapshot (markers
-        // + scale — Ctrl+E snapshots may differ from the live store and
-        // from each other). First failure raises the popup and refuses the
-        // whole batch; the queue is left intact so the user can fix and
-        // re-dispatch. Runs before the queue is moved out.
+        // Pre-flight every queued entry against its own snapshot (markers,
+        // scale, output format, and trim — Ctrl+E snapshots may differ from
+        // the live store and from each other). First failure raises the
+        // popup and refuses the whole batch; the queue is left intact so
+        // the user can fix and re-dispatch. Runs before the queue is moved
+        // out.
         for (const auto& q : app.queued_renders) {
             if (!warp_render_preflight(q.warp_markers,
-                                       q.engine_settings.scale)) {
+                                       q.engine_settings.scale,
+                                       q.engine_settings.output_format,
+                                       q.has_trim_begin, q.trim_begin_sec,
+                                       q.has_trim_end, q.trim_end_sec)) {
                 return true;
             }
         }
@@ -422,11 +435,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live store; an invalid marker state refuses the
-        // whole sweep with the popup. Per-cell tempo_base mutations remain
-        // on the async stderr backstop.
+        // Pre-flight the live store; an invalid marker state, a trimmed
+        // map-format render, or an invalid trim refuses the whole sweep
+        // with the popup. Per-cell tempo_base mutations remain on the
+        // async stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale)) {
+                                   app.engine_settings.scale,
+                                   app.engine_settings.output_format,
+                                   app.trim.has_begin, app.trim.begin_seconds,
+                                   app.trim.has_end, app.trim.end_seconds)) {
             return true;
         }
 

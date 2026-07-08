@@ -204,9 +204,9 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // sidecars are a re-timed display SUBSET of the source markers, and the
 // re-timing can produce shapes the strict authoring parser rejects: the
 // mandatory 00:00.000 anchor can be dropped (a trim beginning after zero
-// drops it at the trim-range filter; a trim beginning at zero drops it at
-// the pre-origin filter, since the trimmed deliverable starts about N/2
-// after the trim instant — an untrimmed render keeps it, since the first
+// drops it at the trim-range filter; a marker exactly at the trim begin can
+// round half a sample ahead of the crop origin and drop at the pre-origin
+// filter — an untrimmed render keeps the anchor, since the first
 // map segment's target frame is 0), and a label reference can survive the
 // render window while its definition is trimmed away, arriving orphaned
 // (a definition itself is not bare here — it serializes inline with its

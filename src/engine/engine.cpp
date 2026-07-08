@@ -31,7 +31,6 @@
 #include "limiter.h"
 #include "synthesis.h"
 #include "profile_util.h"
-#include "wav_io.h"
 
 namespace {
 
@@ -56,11 +55,12 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // per column: same strict-ascent predicate, no epsilon band, same loud init
 // refusal. The map simply has two columns (src and tgt) to the reset list's
 // one because the objects' shapes differ, not their treatment. The two
-// init-time hardfails are deliberate and stay even though the writers'
-// contract (build_warp_frame_map, the trimmed-artifact derivation, the
-// parser's phase reset frame map derivation) makes both checks unreachable from
-// program-written inputs: a breach — a hand-edited artifact fed to the
-// engine CLI, or a future writer bug — would otherwise render silently wrong
+// init-time hardfails are deliberate and stay even though the producers'
+// contract (build_warp_frame_map, the parser's phase reset frame map
+// derivation, and the prepost trimmer's translate/filter, which preserves
+// strict ascent on both columns) makes both checks unreachable from
+// program-written inputs: a breach — a producer bug, or a future driver
+// fed hand-edited artifacts — would otherwise render silently wrong
 // deliverable bytes (a misinterpolated map, or resets silently skipped by the
 // forward synthesis cursor). A loud init refusal is the designed response.
 //
@@ -132,18 +132,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
 
-    // "<buffer>" is a log-only sentinel — never pass it to filesystem APIs.
-    // The output writer is gated off on the buffer-output path; the limiter
-    // reads this field only as a string comparison for its verbose gate.
-    audio_stft.output_audio_file       =
-        p.output_buffer ? std::string("<buffer>") : p.output_audio_path;
-    audio_stft.limiter                 = p.limiter;
-    audio_stft.peak_limiter_ceiling_dbfs = p.peak_limiter_ceiling_dbfs;
-    audio_stft.peak_limiter_attack_ms    = p.peak_limiter_attack_ms;
-    audio_stft.peak_limiter_release_ms   = p.peak_limiter_release_ms;
+    audio_stft.limiter         = p.limiter;
+    audio_stft.limiter_verbose = p.limiter_verbose;
 
     if (audio_stft.N % 4 != 0) {
         std::cerr << "Error: N must be divisible by 4.\n";
+        return EngineResult::Failed;
+    }
+
+    // Buffer-out only: the output buffer is the engine's sole sink; encode
+    // lives orchestrator-side in the prepost chain.
+    if (p.output_buffer == nullptr) {
+        std::cerr << "Error: output_buffer is required "
+                     "(the engine is buffer-out only).\n";
         return EngineResult::Failed;
     }
 
@@ -177,22 +178,22 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.init_fftw();
     // Emit cap: the map's last anchor is the engine's single termination
     // owner. Output length is llrint of the last anchor's target on every
-    // path (a trimmed render's map ends at its rounded boundary pair, so the
-    // render ends exactly at the trim boundary); map_source_to_target at the
-    // final node is exactly that node's target, so read it direct. Resolved
-    // here, before the dense schedule is generated, so the output-size
-    // refusals below can reject an implausible render before the schedule's
-    // target-length-proportional reserve is paid.
+    // path — map-extent emission is pure full-render behavior, and a trimmed
+    // render's translated map carries its own closing anchor, so trimmed
+    // renders behave exactly like full renders here; map_source_to_target at
+    // the final node is exactly that node's target, so read it direct.
+    // Resolved here, before the dense schedule is generated.
     const double tgt_end = audio_stft.warp_frame_map.back().tgt_frame;
     audio_stft.emit_sample_cap = static_cast<int64_t>(std::llrint(tgt_end));
     // A sub-half-sample final target rounds to a zero cap, and the synthesis
     // loop reads cap 0 as uncapped — the render would emit the full STFT
     // tail instead of a near-zero-length deliverable. A deliverable of zero
-    // samples is not renderable output, so refuse it here, the engine's
-    // single degenerate refusal. Parser-side trim paths refuse their
-    // degenerate windows before dispatch, so this backstops artifact-driven
-    // renders and authored full maps whose sub-half-sample final target
-    // rounds to zero.
+    // samples is not renderable output, so refuse it here. Like the
+    // strict-ascent validators above, this is a breach tripwire for
+    // hand-edited artifacts, unreachable from program-written input (the
+    // trimmer's closing anchor rounds to at least one sample by its
+    // validated geometry, and full maps carry the source's whole target
+    // extent); a breach would otherwise render silently wrong bytes.
     if (audio_stft.emit_sample_cap <= 0) {
         std::cerr << "Error: render refused: final map target of "
                   << tgt_end
@@ -201,30 +202,10 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         return EngineResult::Failed;
     }
 
-    // synthesize_full buffers the full output before any write, so refuse
-    // implausible allocations and un-finalizable disk shapes here, as soon as
-    // the projected size is known and before any output-proportional cost —
-    // the dense schedule's reserve or the synthesis itself — is paid.
-    auto projected = checked_audio_sample_count(audio_stft.emit_sample_cap,
-                                                audio_stft.channels);
-    if (!projected) {
-        std::cerr << "Error: render refused: " << projected.error() << "\n";
-        audio_stft.cleanup();
-        return EngineResult::Failed;
-    }
-    if (!p.output_buffer) {
-        const WavSampleFormat fmt = audio_stft.limiter
-            ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
-        if (wav_projected_exceeds_riff_limits(
-                fmt, audio_stft.channels,
-                static_cast<uint64_t>(audio_stft.emit_sample_cap))) {
-            std::cerr << "Error: render refused: projected output of "
-                      << audio_stft.emit_sample_cap
-                      << " frames exceeds RIFF 32-bit limits\n";
-            audio_stft.cleanup();
-            return EngineResult::Failed;
-        }
-    }
+    // The projection refusals (implausible allocation, RIFF limits) run
+    // orchestrator-side before the engine is invoked
+    // (validate_render_projection in src/prepost/trimmer.h), preserving the
+    // refuse-before-cost property without the engine knowing encode shapes.
 
     audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
 
@@ -275,34 +256,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                   << "\n";
     }
 
-    // Pass 2: synthesis (clean render). The limiter-on disk path renders into
-    // an in-memory buffer that Pass 3 limits in place; every other path streams
-    // straight to its destination. synthesize_full applies no attenuation, so
-    // the limiter-off disk render is byte-identical to the pre-relocation build.
-    // The limited chain runs on a buffer; the clean (None) disk path streams
-    // float straight to file.
+    // Pass 2: synthesis (clean render) into the caller-owned output buffer.
+    // synthesize_full applies no attenuation, so a limiter-off buffer holds
+    // the clean render exactly.
     const bool limited = audio_stft.limiter;
-    std::vector<float> render_buf;
     auto t_p2_0 = profile::now();
-    if (p.output_buffer) {
-        synthesis.process_to_buffer(audio_stft, p.output_buffer);
-    } else if (limited) {
-        synthesis.process_to_buffer(audio_stft, &render_buf);
-    } else {
-        if (!synthesis.process(audio_stft)) {     // None -> 32-bit float, clean
-            std::cerr << "  ! render failed: output write error '"
-                      << audio_stft.output_audio_file << "'\n";
-            audio_stft.cleanup();
-            return EngineResult::Failed;
-        }
-    }
+    synthesis.process_to_buffer(audio_stft, p.output_buffer);
     auto t_p2_1 = profile::now();
     p2_ms = profile::ms(t_p2_0, t_p2_1);
     std::cout << "  (" << static_cast<long long>(profile::ms(t_p2_0, t_p2_1)) << " ms)\n";
     if (prof) {
-        const std::vector<float>* out_buf = p.output_buffer ? p.output_buffer
-            : (limited ? &render_buf : nullptr);
-        const size_t out_samples = out_buf ? out_buf->size() : 0;
+        const size_t out_samples = p.output_buffer->size();
         const size_t out_frames = (audio_stft.channels > 0)
             ? out_samples / static_cast<size_t>(audio_stft.channels) : 0;
         std::cerr << "[profile] engine_pass name=synthesis ms="
@@ -310,38 +274,28 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                   << " source_frames=" << p.source_audio_frames
                   << " target_frames=" << audio_stft.emit_sample_cap
                   << " channels=" << audio_stft.channels
-                  << " output_buffer=" << (p.output_buffer ? "yes" : "no")
                   << " output_frames=" << out_frames
                   << "\n";
     }
     if (audio_stft.cancellation_observed) {
-        std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+        std::cerr << "[Cancelled]\n";
         audio_stft.cleanup();
         return EngineResult::Cancelled;
     }
 
-    // Pass 3: the limited chain — spectral(-0.3) then peak(0) backstop — applied
-    // in place on whichever buffer Pass 2 filled (disk render or target view).
-    // The None disk path has no Pass 3. The disk render is then written out.
+    // Pass 3: the spectral limiter, applied in place on the emitted buffer.
+    // Limiter-off renders have no Pass 3. The peak stage and the encode both
+    // live orchestrator-side, downstream of the engine.
     if (limited) {
         auto t_p3_0 = profile::now();
-        std::vector<float>& buf = p.output_buffer ? *p.output_buffer : render_buf;
+        std::vector<float>& buf = *p.output_buffer;
         const size_t limiter_input_frames = (audio_stft.channels > 0)
             ? buf.size() / static_cast<size_t>(audio_stft.channels) : 0;
         limiter.process(audio_stft, buf);          // spectral -0.3
         if (audio_stft.cancellation_observed) {
-            std::cerr << "[Cancelled] " << audio_stft.output_audio_file << "\n";
+            std::cerr << "[Cancelled]\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
-        }
-        apply_peak_backstop(audio_stft, buf);      // peak 0 net
-        if (!p.output_buffer) {
-            if (!synthesis.write_render_to_file(audio_stft, render_buf)) {  // plain write
-                std::cerr << "  ! render failed: output write error '"
-                          << audio_stft.output_audio_file << "'\n";
-                audio_stft.cleanup();
-                return EngineResult::Failed;
-            }
         }
         auto t_p3_1 = profile::now();
         p3_ms = profile::ms(t_p3_0, t_p3_1);
@@ -351,7 +305,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                       << p3_ms
                       << " sample_frames=" << limiter_input_frames
                       << " channels=" << audio_stft.channels
-                      << " output_buffer=" << (p.output_buffer ? "yes" : "no")
                       << "\n";
         }
     } else if (prof) {
@@ -366,7 +319,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                   << " P3=" << p3_ms << "\n";
     }
 
-    std::cout << "[Success] " << audio_stft.output_audio_file << "\n";
+    std::cout << "[Success]\n";
 
     audio_stft.cleanup();
     return EngineResult::Success;

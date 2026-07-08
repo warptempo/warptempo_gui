@@ -8,7 +8,8 @@
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
-#include "render_assembly.h"            // render parameter assembly helpers
+#include "trimmer.h"                    // plan_trim, finish_render,
+                                        // validate_render_projection
 #include "render_output_naming.h"       // render_output_directory,
                                         // render_output_stem,
                                         // compose_render_output_paths
@@ -23,6 +24,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -199,36 +201,14 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
-    // --- reject out-of-range trim before it can silently shorten the render,
-    // the same source-aware check validate_trim_frames applies for the GUI and
-    // the parser CLI. Convert with the nearbyint * sample_rate the window
-    // resolver uses: an explicit begin must lie strictly inside the source, an
-    // explicit end at most at the source end. ---
-    {
-        const int64_t begin_src = trim.has_begin
-            ? static_cast<int64_t>(std::nearbyint(
-                  trim.begin_sec * static_cast<double>(sample_rate)))
-            : 0;
-        const int64_t end_src = trim.has_end
-            ? static_cast<int64_t>(std::nearbyint(
-                  trim.end_sec * static_cast<double>(sample_rate)))
-            : total_frames;
-        if (auto v = validate_trim_frames(begin_src, end_src, trim.has_begin,
-                                          trim.has_end, total_frames); !v) {
-            std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
-            return 1;
-        }
-    }
-
-    // --- locked engine geometry (shared with render_pipeline.cpp and
-    // engine_main.cpp via engine_geometry.h) ---
+    // --- locked engine geometry (shared with render_pipeline.cpp via
+    // engine_geometry.h) ---
     const int     N_fft = kN;
     const int     R_s   = kRs;
 
-    // --- full (untrimmed) frame map. The engine always renders the full map;
-    // trim is applied by slicing it, never by an engine window. This is
-    // do_render's full_warp_frame_map: its t_a history from frame 0 is what
-    // keeps a windowed render sample-aligned with the full render. ---
+    // --- full (untrimmed) frame map, do_render's full_warp_frame_map: the
+    // parser knows nothing of trim; a trimmed render hands the engine the
+    // prepost trimmer's translated maps derived from this one below. ---
     auto resolved = resolve_warp_markers_for_render(markers);
     if (!resolved) {
         std::fprintf(stderr, "warptempo_cli: %s\n", resolved.error().c_str());
@@ -244,53 +224,8 @@ int main(int argc, char** argv) {
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*r);
 
-    const TrimSourceWindow trim_window = resolve_trim_source_window(
-        trim.has_begin, trim.begin_sec, trim.has_end, trim.end_sec,
-        sample_rate, total_frames, N_fft);
-    const int64_t trim_begin_src = trim_window.trim_begin_src;
-    const int64_t trim_end_src = trim_window.trim_end_src;
-
-    // --- load source; see resolve_trim_source_window for the frame-0 invariant. ---
-    std::vector<float> src_samples;
-    int src_sr = 0, src_ch = 0;
-    {
-        if (auto r = load_source_range_to_buffer(
-                source_path, trim_window.load_begin_frame,
-                trim_window.load_end_frame, src_samples, src_sr, src_ch); !r) {
-            std::fprintf(stderr, "warptempo_cli: %s\n", r.error().c_str());
-            return 1;
-        }
-    }
-
-    // --- engine params ---
-    EngineParams ep;
-    ep.source_audio_samples = src_samples.data();
-    ep.source_audio_frames  =
-        src_samples.size() / static_cast<size_t>(src_ch);
-    ep.source_sample_rate   = src_sr;
-    ep.source_channels      = src_ch;
-    const std::string staging_output_path = out_path + ".tmp";
-    ep.output_audio_path    = staging_output_path;
-
-    // Trim is a parser-side slice of the full untrimmed map, not an engine
-    // window. With a bound set, hand the engine the trimmed deliverable map,
-    // which ends at its rounded boundary pair; untrimmed, the full map
-    // verbatim (offset 0). Identical to do_render's wav branch. ---
-    const int64_t window_offset_samples = assign_engine_warp_frame_map(
-        ep, full_warp_frame_map, trim.has_begin || trim.has_end,
-        trim_begin_src, trim_end_src, N_fft, R_s);
-    if (window_offset_samples < 0) {
-        std::fprintf(stderr,
-            "warptempo_cli: trim window too short to emit any "
-            "output samples\n");
-        return 1;
-    }
-
-    ep.N            = N_fft;
-    ep.limiter      = es.limiter;
-    // limiter_ceiling_dbfs / peak_* stay at EngineParams defaults — do_render
-    // sets only limiter and inherits the rest.
-
+    // --- full deliverable-form phase reset derivation, built once beside
+    // the full map exactly as do_render builds it. ---
     auto phase_reset_source_frames_r =
         build_phase_reset_source_frames(resets, sample_rate, total_frames);
     if (!phase_reset_source_frames_r) {
@@ -298,15 +233,100 @@ int main(int argc, char** argv) {
                      phase_reset_source_frames_r.error().c_str());
         return 1;
     }
-    assign_engine_phase_reset_frame_map(ep, *phase_reset_source_frames_r);
+    const std::vector<double> full_phase_reset_frame_map =
+        derive_phase_reset_frame_map(*phase_reset_source_frames_r,
+                                     full_warp_frame_map);
 
-    // --- render. The engine writes a sibling staging file and success
-    // publishes it atomically via rename.
+    // --- trim plan. plan_trim validates the authored bounds first (the sole
+    // owner of every trim refusal) and its error string surfaces verbatim. ---
+    std::optional<TrimPlan> trim_plan;
+    if (trim.has_begin || trim.has_end) {
+        auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
+                              trim.has_begin, trim.begin_sec,
+                              trim.has_end, trim.end_sec,
+                              sample_rate, static_cast<int64_t>(total_frames),
+                              N_fft, R_s);
+        if (!plan) {
+            std::fprintf(stderr, "warptempo_cli: %s\n", plan.error().c_str());
+            return 1;
+        }
+        trim_plan = std::move(*plan);
+    }
+
+    // --- load the full source; trimmed renders read an offset+length view
+    // into it, no copy (the GUI's shared buffer supports the same view). ---
+    std::vector<float> src_samples;
+    int src_sr = 0, src_ch = 0;
+    {
+        if (auto lr = load_source_range_to_buffer(
+                source_path, 0, static_cast<size_t>(total_frames),
+                src_samples, src_sr, src_ch); !lr) {
+            std::fprintf(stderr, "warptempo_cli: %s\n", lr.error().c_str());
+            return 1;
+        }
+    }
+
+    // --- engine params. The engine is buffer-out only; the shared
+    // post-engine chain encodes to the staging path below. ---
+    EngineParams ep;
+    ep.source_audio_samples = src_samples.data();
+    ep.source_audio_frames  =
+        src_samples.size() / static_cast<size_t>(src_ch);
+    ep.source_sample_rate   = src_sr;
+    ep.source_channels      = src_ch;
+    if (trim_plan) {
+        ep.source_audio_samples +=
+            static_cast<size_t>(trim_plan->pre.begin_frame) *
+            static_cast<size_t>(src_ch);
+        ep.source_audio_frames =
+            static_cast<size_t>(trim_plan->pre.frames);
+    }
+    std::vector<float> render_buf;
+    ep.output_buffer = &render_buf;
+
+    // Trimmed renders hand the engine the trimmer's translated maps — the
+    // engine renders them wholesale, ends at its map's last anchor, and
+    // stays trim-ignorant. Untrimmed: the full pair verbatim. Identical to
+    // do_render's wav branch.
+    ep.warp_frame_map = trim_plan
+        ? std::move(trim_plan->pre.warp_frame_map)
+        : full_warp_frame_map;
+    ep.phase_reset_frame_map = trim_plan
+        ? std::move(trim_plan->pre.phase_reset_frame_map)
+        : full_phase_reset_frame_map;
+    ep.N            = N_fft;
+    ep.limiter      = es.limiter;
+    // limiter_ceiling_dbfs / tolerance stay at EngineParams defaults —
+    // do_render sets only limiter and inherits the rest.
+
+    // Projection refusal, orchestrator-side before the engine allocates
+    // (refuse-before-cost), same shape as do_render's wav branch.
+    const int64_t engine_output_frames = static_cast<int64_t>(
+        std::llrint(ep.warp_frame_map.back().tgt_frame));
+    const int64_t encoded_frames =
+        trim_plan ? trim_plan->post.samples : engine_output_frames;
+    if (auto v = validate_render_projection(
+            engine_output_frames, encoded_frames, src_ch, ep.limiter,
+            /*encode_to_disk=*/true); !v) {
+        std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
+        return 1;
+    }
+
+    // --- render into the buffer, then run the shared post-engine chain
+    // (crop when trimmed -> peak limiter when limiter=true -> encode to the
+    // sibling staging file); success publishes atomically via rename.
+    const std::string staging_output_path = out_path + ".tmp";
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
-        unlink_silent(staging_output_path);
         std::fprintf(stderr, "warptempo_cli: engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
+        return 1;
+    }
+    if (auto fin = finish_render(render_buf, src_ch, src_sr, ep.limiter,
+                                 trim_plan ? &trim_plan->post : nullptr,
+                                 staging_output_path); !fin) {
+        unlink_silent(staging_output_path);
+        std::fprintf(stderr, "warptempo_cli: %s\n", fin.error().c_str());
         return 1;
     }
 

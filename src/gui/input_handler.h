@@ -267,16 +267,22 @@ private:
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap):
     // resolve_warp_markers_for_render on the sliced `markers`, then
     // build_warp_frame_map with `scale` and the live sample_rate /
-    // total_frames. On failure raises the error-notice popup with the
-    // parser's error string, unmodified, and returns false — the caller
-    // must then refuse to enqueue. Called by every archival render
-    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch per
-    // entry, Ctrl+Alt+I iteration sweep, the BPM sweep); the async
-    // pipeline's stderr failure paths stay as the backstop for per-cell
-    // mutations the pre-flight does not model (no strings are plumbed
-    // through the async callback).
+    // total_frames, then — when a trim bound is set — the map-format
+    // refusal (trim is wav-only, ruled) and validate_trim_frames against
+    // the built map. Each dispatch site passes its own snapshot's output
+    // format and trim. On failure raises the error-notice popup with the
+    // parser's/trimmer's error string, unmodified, and returns false — the
+    // caller must then refuse to enqueue. Called by every archival render
+    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch —
+    // live store and each queued snapshot — Ctrl+Alt+I iteration sweep,
+    // the BPM sweep); the async pipeline's stderr failure paths stay as
+    // the backstop for per-cell mutations the pre-flight does not model
+    // (no strings are plumbed through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
-                               double scale);
+                               double scale,
+                               const std::string& output_format,
+                               bool has_trim_begin, double trim_begin_sec,
+                               bool has_trim_end, double trim_end_sec);
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back

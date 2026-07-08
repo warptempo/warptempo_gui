@@ -84,10 +84,9 @@ struct RenderRequest {
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
-    // counterparts. The render pipeline forwards the active tab's trim to the
-    // trim-window slice, which drives the warp_frame_map/midi_tempo_map
-    // derivation for the trimmed window; the WAV render path applies the same
-    // trim to the engine's synthesis window.
+    // counterparts. Trim is wav-only: the wav arm forwards these bounds to
+    // the prepost trimmer (plan_trim: cut source view, translated maps,
+    // output crop), and the map formats refuse when a bound is set.
     bool   has_trim_begin = false;
     double trim_begin_sec = 0.0;
     bool   has_trim_end   = false;
@@ -96,17 +95,18 @@ struct RenderRequest {
     AuthoringSnapshot authoring;
 
     // Nullable. When non-null and output_format is "wav", do_render routes
-    // the engine to this buffer instead of a staged .wav file. Skips the
+    // the render to this buffer instead of a staged .wav file. Skips the
     // atomic rename, the peak-pyramid sidecar write, and every batch sidecar
     // write (.warpmarkers / .phaseresetmarkers / .rendersettings /
-    // .renderwarpmarkers / .renderphaseresetmarkers). The limited chain
-    // (spectral + peak backstop) runs in place on this buffer whenever the
-    // global `limiter` toggle is on, exactly as on the disk path; on that
-    // limited route, the buffer is quantized to the deliverable PCM_24 lattice
-    // in place after the limited chain. Defaults to nullptr; the existing
-    // wav-to-disk path is taken when null. Reserved for target-view target
-    // rendering; not authoring-facing. Non-wav output_format branches
-    // silently ignore this field.
+    // .renderwarpmarkers / .renderphaseresetmarkers). The post-engine chain
+    // (post_trim crop when trimmed, then the spectral + peak limited chain
+    // whenever the global `limiter` toggle is on, exactly as on the disk
+    // path) runs in place on this buffer; on the limited route, the buffer
+    // is quantized to the deliverable PCM_24 lattice in place after the
+    // chain. Defaults to nullptr; the existing wav-to-disk path is taken
+    // when null. Reserved for target-view target rendering; not
+    // authoring-facing. Non-wav output_format branches silently ignore this
+    // field.
     std::vector<float>* output_buffer = nullptr;
 
     // Batch render output. When `batch_folder` is non-empty, do_render

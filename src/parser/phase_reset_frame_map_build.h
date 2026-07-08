@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstdint>
 #include <expected>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -42,31 +41,24 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
     int64_t total_frames);
 
 // Authored -> engine derivation chain: authored (undisplaced) phase-reset
-// source positions -> the engine's origin-centered query domain, for a given
-// render (full or trim-windowed).
+// source positions -> the engine's origin-centered query domain, always
+// against the FULL map (the parser knows nothing of trim; the prepost
+// trimmer translates and range-filters this chain's output for a trimmed
+// render).
 //
 // The parser is the sole authored-to-engine compiler on both columns.
 // Authoring decisions — the phase reset anticipation offset, exactly like
-// warp's tempo authoring — never live engine-side: the engine and the engine
-// CLI consume only engine-domain inputs, blind to the anticipation
+// warp's tempo authoring — never live engine-side: the engine consumes only
+// engine-domain inputs, blind to the anticipation
 // subtraction, the inverse mapping, and the N/2 query-origin correction
 // applied below. The .phaseresetframemap artifact is the engine-input list
 // this chain derives; the authored-domain record of reset positions is the
 // .phaseresetmarkers file, so each column ends as a markers file (authored
 // domain) plus a frame map (engine domain).
 //
-// Sibling-stage asymmetry record. At the window-restriction stage, the warp
-// slicer (slice_warp_frame_map_to_trim_window) coalesces out-of-window
-// breakpoints into boundary anchors because a map is a connected piecewise
-// function that must stay defined over every output sample, while the
-// phase-reset window verdict (phase_reset_window_target_frame below) drops
-// non-participating points because point events have nothing to coalesce
-// into. One stage later, the engine-handoff siblings
-// assign_engine_warp_frame_map and assign_engine_phase_reset_frame_map are
-// parallel. The derivation itself has no warp sibling at all, because the
-// warp frame map is already the engine's input domain and needs only
-// windowing, while a phase-reset position alone crosses three domains —
-// authored source, to window target, to engine query.
+// The derivation has no warp sibling, because the warp frame map is already
+// the engine's input domain, while a phase-reset position alone crosses
+// three domains — authored source, to deliverable target, to engine query.
 
 // Phase-reset lead-in expressed in synthesis hops, and its integer sample
 // form: the offset-in-hops scaled by the synthesis hop, banker's-rounded to
@@ -79,62 +71,23 @@ constexpr double kPhaseResetOffsetHops = 2.0;
 inline const int64_t phase_reset_offset_samples = static_cast<int64_t>(
     std::nearbyint(kPhaseResetOffsetHops * static_cast<double>(kRs)));
 
-// Window-participation verdict for one authored (undisplaced) phase-reset
-// source position — an exact double source frame. Maps it through the full
-// map to its target image and re-anchors to the rendered window's origin.
-// Returns the window-domain target frame W, or std::nullopt when the reset
-// does not participate in this render: W negative (before the window — the
-// instant precedes the deliverable's first sample) or at or past
-// render_target_end (beyond the deliverable's last sample). The bound is
-// the deliverable map's own final anchor target, compared exactly in the
-// double target domain: trimmed maps carry the integral boundary-pair cap
-// there, the full map carries the exact source-EOF target, so a reset at
-// the trim end or at source EOF drops identically on both forms.
-// Quantization to the engine's integer output length is engine-owned and
-// never enters this verdict. Shared by the engine-input derivation below
-// and the render-view display sidecar writer, so display participation and
-// engine input converge on the same window-bounds verdict.
-std::optional<double> phase_reset_window_target_frame(
-    double source_frame,
-    const std::vector<WarpFrameMapSegment>& full_map,
-    int64_t window_offset_samples,
-    double render_target_end);
-
-// Derive the engine-input phase reset frame map for a given render (full or
-// trim-windowed): each authored source position is taken through the window
-// verdict above, anticipated by phase_reset_offset_samples in the
+// Derive the engine-input phase reset frame map against the deliverable
+// map: each authored (undisplaced) source position — an exact double source
+// frame — is mapped to its target image, bounded by the map's own final
+// anchor target (a reset at or past it lies beyond the deliverable's last
+// sample and drops), anticipated by phase_reset_offset_samples in the
 // target/output domain (with a lead-in dropzone rather than a clamp), and
-// inverse-mapped through engine_map into the engine's origin-centered query
-// domain. The result stays in exact doubles; quantization to the engine's
-// integer query schedule is engine-owned, happening at placement time.
-// Non-participating positions are dropped, so the result can be shorter than
-// the input.
-std::vector<double> derive_phase_reset_frame_map(
-    const std::vector<double>& source_frames,
-    const std::vector<WarpFrameMapSegment>& full_map,
-    const std::vector<WarpFrameMapSegment>& engine_map,
-    int64_t window_offset_samples,
-    double render_target_end);
-
-// Deliverable form: derive the .phaseresetframemap artifact against the
-// exact deliverable map shipped beside it — full_map and engine_map are both
-// the deliverable map, the window offset is zero, and the render bound is
-// the deliverable map's last pair's target, exact. The emitted list is
-// computed against the exact map shipped beside it, so the artifact pair is
-// exactly the engine's input and an engine fed the pair renders that
-// map's geometry exactly. This is the single trimmed derivation everywhere:
-// the in-process trimmed render derives its engine-input list through this
-// same form against the same deliverable map, so the artifact pair and the
-// in-process render coincide by construction. The window verdict against
-// a trimmed deliverable map clamps a pre-window source position to window
-// target zero (map_source_to_target clamps before the first pair) rather
-// than going negative; such a reset still drops, via the anticipation
-// dropzone instead of the negative-target test — same drop set, different
-// test. An empty map yields an empty list (unreachable from program paths:
-// the full-map builder always emits the seed anchor, and every trimmed
-// caller refuses the degenerate stored-zero window — whose map the slicer
-// leaves unbuilt — before deriving; kept so the back() access is
-// unconditionally safe, as in derive_midi_tempo_map).
+// inverse-mapped through the same map into the engine's origin-centered
+// query domain. The result stays in exact doubles; quantization to the
+// engine's integer query schedule is engine-owned, happening at placement
+// time. Non-participating positions are dropped, so the result can be
+// shorter than the input. The .phaseresetframemap artifact is this list
+// derived against the exact map shipped beside it, so the artifact pair is
+// exactly the engine's input, and the in-process render derives its
+// engine-input list through this same form — pair and render coincide by
+// construction. An empty map yields an empty list (unreachable from program
+// paths: the full-map builder always emits the seed anchor; kept so the
+// back() access is unconditionally safe, as in derive_midi_tempo_map).
 std::vector<double> derive_phase_reset_frame_map(
     const std::vector<double>& source_frames,
     const std::vector<WarpFrameMapSegment>& deliverable_map);

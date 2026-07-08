@@ -365,7 +365,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                             ceiling, queue);
 
     if (queue.empty()) {
-        std::cout << "[Pass 3/3] Limiter.......................... 0 peaks, no attenuation required\n";
+        std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
         destroy();
         if (prof) {
             const auto t_total_1 = profile::now();
@@ -683,11 +683,11 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     }
 
     // The [Pass 3/3] header and per-peak residual loop go to stdout. On the
-    // target-view buffer path (output_audio_file == "<buffer>") that would spam
-    // every scrub, so gate both on the disk path.
-    const bool verbose = (stft.output_audio_file != "<buffer>");
+    // target-view buffer path that would spam every scrub, so both are gated
+    // on the caller's limiter_verbose flag (false on the scrub path).
+    const bool verbose = stft.limiter_verbose;
     if (verbose) {
-        std::cout << "[Pass 3/3] Limiter.......................... "
+        std::cout << "[Pass 3/3] Spectral limiter................. "
                   << resolved.size() << " peaks, " << iterations
                   << " iterations, done\n";
 

@@ -146,14 +146,15 @@ struct AudioSTFT {
     // Spectral limiter
     LimiterParams limiter_params;
 
-    // Output path (derived from MD5 of source audio)
-    std::string output_audio_file;
-    // Mirrors EngineParams::limiter. When true, synthesis writes 24-bit PCM
-    // and runs the limited chain; when false, clean 32-bit float.
+    // Mirrors EngineParams::limiter. When true, Pass 3 runs the spectral
+    // limiter in place on the emitted buffer; when false, the buffer holds
+    // clean synthesis. Encode-format decisions (PCM 24 vs float) and the
+    // peak stage live orchestrator-side in the prepost chain.
     bool limiter = false;
-    double peak_limiter_ceiling_dbfs = 0.0;
-    double peak_limiter_attack_ms    = 0.25;
-    double peak_limiter_release_ms   = 0.5;
+    // Mirrors EngineParams::limiter_verbose: gates the spectral limiter's
+    // stdout header and per-peak residual lines (suppressed on the
+    // target-view scrub path).
+    bool limiter_verbose = true;
 
     // Per-synthesis-frame source read schedule, evaluated once in
     // engine.cpp and reused by every pass. source_frame_positions[m] is the

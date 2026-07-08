@@ -6,28 +6,12 @@
 
 class Synthesis {
 public:
-    // Returns true only when the output wav was opened, fully written, and
-    // successfully closed; false means the on-disk file must not be trusted or
-    // published.
-    bool process(AudioSTFT& stft);
-
-    // Sibling of process() that routes OLA output to a caller-owned
-    // interleaved-float vector instead of an on-disk wav. Same OLA driver
-    // (synthesize_full); no file writer, no PeakLimiter. The write_cb appends to
-    // *output_buffer. The vector ends up with exactly emit-cap-bounded
-    // out_frames * channels floats, channel-interleaved within each frame
-    // (same layout the file path emits).
+    // Route OLA output to a caller-owned interleaved-float vector — the
+    // engine's only emission path (buffer-out only; encode lives
+    // orchestrator-side in the prepost chain). Runs synthesize_full with an
+    // append write_cb; the vector ends up with exactly emit-cap-bounded
+    // out_frames * channels floats, channel-interleaved within each frame.
     void process_to_buffer(AudioSTFT& stft, std::vector<float>* output_buffer);
-
-    // Write an already-limited buffer (spectral + peak backstop both applied by
-    // the engine in place) to the output wav. Used by the limiter-on disk path,
-    // where Pass 2 rendered into memory and Pass 3 ran the limited chain on that
-    // buffer. Plain buffer-to-file write — no limiter here. Output format is
-    // 24-bit PCM (matches the limiter-on format decision in process()).
-    // Returns true only when the output wav was opened, fully written, and
-    // successfully closed; false means the on-disk file must not be trusted or
-    // published.
-    bool write_render_to_file(AudioSTFT& stft, const std::vector<float>& render);
 
     // Shared synthesis helper. Runs full OLA synthesis from frame 0. The
     // per-channel mono streams are interleaved after the channel threads join
@@ -46,11 +30,3 @@ public:
         bool show_progress,
         const char* pass_label);
 };
-
-// Apply the peak-limiter backstop to `buf` in place. One-shot process+flush, so
-// it is sample-for-sample identical to the previous streaming application in
-// write_render_to_file. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0
-// dBFS) — a pure clip net above the spectral limiter's -0.3. Called by the
-// engine on whichever buffer (disk render or target-view) the limited chain
-// fills.
-void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf);

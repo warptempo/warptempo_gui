@@ -11,12 +11,11 @@
 #include "render_output_naming.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
-#include "render_assembly.h"
+#include "trimmer.h"
 #include "profile_util.h"
 #include "render_cache.h"
 
 #include "audio_probe.h"
-#include "pcm24.h"
 
 #include <algorithm>
 #include <atomic>
@@ -26,6 +25,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -158,13 +158,9 @@ RenderOutcome do_render(const RenderRequest& req,
         *phase_reset_source_frames_r;
 
     // --- Build the full (untrimmed) frame map from in-memory markers. The
-    // engine always renders its map wholesale: a trimmed wav render slices
-    // this canonical map into the trimmed deliverable map via
-    // assign_engine_warp_frame_map before dispatch, and the trimmed
-    // .warpframemap / .phaseresetframemap / .miditempomap artifacts derive
-    // from that same window —
-    // one trim computation, shared. The inherited t_a history from frame 0
-    // is what makes the windowed render null against the full render.
+    // engine always renders its map wholesale: a trimmed wav render hands it
+    // the prepost trimmer's translated maps (plan_trim below), untrimmed
+    // renders the full pair verbatim; the parser knows nothing of trim.
     // Built here at the probe, beside the phase-reset conversion above: the
     // two authored-time-to-frame conversions are this pipeline's parallel
     // pair. Running it ahead of the fingerprint reuse return below is
@@ -190,6 +186,14 @@ RenderOutcome do_render(const RenderRequest& req,
     }
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*rfull);
+
+    // The full deliverable-form phase reset derivation, built once per
+    // render beside the full map: the untrimmed engine input, the map-format
+    // pair's phase reset column, and plan_trim's translate/filter source are
+    // all this one list.
+    const std::vector<double> full_phase_reset_frame_map =
+        derive_phase_reset_frame_map(phase_reset_source_frames,
+                                     full_warp_frame_map);
 
     // --- Compose the full output-path list. ---
     // One entry per extension of the format, composed co-equally from a
@@ -421,41 +425,49 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
-    const TrimSourceWindow trim_window = resolve_trim_source_window(
-        req.has_trim_begin, req.trim_begin_sec,
-        req.has_trim_end, req.trim_end_sec,
-        sample_rate, total_frames, N_fft);
-
-    // Source-aware trim check. Runs before any window computation, engine
-    // slice, or artifact derivation.
-    if (auto v = validate_trim_frames(
-            trim_window.trim_begin_src, trim_window.trim_end_src,
-            req.has_trim_begin, req.has_trim_end,
-            static_cast<int64_t>(total_frames)); !v) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: %s\n", v.error().c_str());
-        return RenderOutcome::Failed;
+    // Trim plan (wav only; the map formats refuse a trim in their arm
+    // below). plan_trim validates the authored bounds first — the sole owner
+    // of every trim refusal — then derives the source cut, the translated
+    // maps, and the output crop in one computation. The GUI dispatch
+    // preflight already ran the same validation with the popup surface, so
+    // this stderr refusal is the async backstop.
+    const bool trimmed = req.has_trim_begin || req.has_trim_end;
+    std::optional<TrimPlan> trim_plan;
+    if (trimmed && output_format == "wav") {
+        auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
+                              req.has_trim_begin, req.trim_begin_sec,
+                              req.has_trim_end, req.trim_end_sec,
+                              sample_rate, static_cast<int64_t>(total_frames),
+                              N_fft, R_s);
+        if (!plan) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: %s\n", plan.error().c_str());
+            return RenderOutcome::Failed;
+        }
+        trim_plan = std::move(*plan);
     }
 
-    // The engine no longer windows; render-domain sidecars subtract the slice
-    // origin captured in window_offset_samples. 0 when untrimmed. Reuse rungs
-    // need the same value before the engine assembly path runs. The sidecar
-    // writer also needs the trim's cap (0 when untrimmed) for its
-    // window-participation verdict below — the cap is value-identical to the
-    // trimmed deliverable map's boundary-pair target, exactly, so the verdict
-    // bound is the deliverable map's own final anchor target (not the integer
-    // output length assign_engine_phase_reset_frame_map derives from the
-    // map's last anchor).
-    // Only the offset and cap fields are read here; a degenerate stored-zero
-    // window carries no map, which this pre-slice never touches.
-    int64_t window_offset_samples = 0;
-    int64_t trim_emit_sample_cap = 0;
-    if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
-        const WindowedWarpFrameMap w = slice_warp_frame_map_to_trim_window(
-            full_warp_frame_map, trim_window.trim_begin_src,
-            trim_window.trim_end_src, N_fft, R_s);
-        window_offset_samples = w.window_offset_samples;
-        trim_emit_sample_cap = w.emit_sample_cap;
+    // Crop-coordinate anchors for the render-domain display sidecars. The
+    // delivered wav's sample 0 is llrint(T_b) in full-target coordinates and
+    // its length is llrint(T_e) - llrint(T_b) — exactly the post_trim crop —
+    // so a kept feature at source F displays at (tgt(F) - llrint(T_b)) / sr.
+    // Untrimmed, the origin is 0 and the bound is the full map's last anchor
+    // target, exact in the double domain (a reset at source EOF sits exactly
+    // on it and drops, a point event beyond the deliverable's last sample).
+    double sidecar_crop_begin = 0.0;
+    double sidecar_crop_end   = full_warp_frame_map.back().tgt_frame;
+    if (trimmed && output_format == "wav") {
+        const double sr_d = static_cast<double>(sample_rate);
+        const double b_src =
+            req.has_trim_begin ? req.trim_begin_sec * sr_d : 0.0;
+        const double e_src = req.has_trim_end
+            ? req.trim_end_sec * sr_d : static_cast<double>(total_frames);
+        const int64_t crop_begin = std::llrint(
+            map_source_to_target(b_src, full_warp_frame_map));
+        const int64_t crop_end = std::llrint(
+            map_source_to_target(e_src, full_warp_frame_map));
+        sidecar_crop_begin = static_cast<double>(crop_begin);
+        sidecar_crop_end   = static_cast<double>(crop_end - crop_begin);
     }
 
     // Returns false if any attempted display-sidecar write failed (vacuously
@@ -479,15 +491,14 @@ RenderOutcome do_render(const RenderRequest& req,
         // renders, including as an empty file.
         if (output_format == "wav") {
             // Walk the FULL frame map; each emitted render-domain time is the
-            // full-render output sample minus the slice origin. When untrimmed,
-            // window_offset_samples is 0 and this reduces to old behavior.
+            // full-render output sample minus the crop origin. When untrimmed,
+            // sidecar_crop_begin is 0 and this reduces to identity placement.
             const double sr_d = static_cast<double>(sample_rate);
-            // window_offset_samples was computed at slice time. The engine no
-            // longer windows, so there is no engine-side offset to recompute.
 
-            // After head alignment, markers sit on the aligned
-            // feature: a marker at source F displays at tgt(F) - window_offset
-            // with no start-trim term.
+            // Markers sit on the aligned feature: a marker at source F
+            // displays at (tgt(F) - llrint(T_b)) / sr — the crop coordinates,
+            // with no start-trim term (the delivered wav's first sample IS
+            // the authored begin, by the post_trim crop).
 
             // Markers: lockstep walk between req.warp_markers and the real-segment
             // range of full_warp_frame_map (built trim-off, so no synthetic
@@ -496,7 +507,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // consumption, so the lockstep stays in step with
             // full_warp_frame_map's all-segments vector.
             // s.tgt_frame is the full-render target sample; subtracting
-            // window_offset_samples places it on the trimmed wav axis. The
+            // sidecar_crop_begin places it on the trimmed wav axis. The
             // effective-disabled verdict comes from the shared
             // warp_markers_render_keep_mask — the same mask
             // resolve_warp_markers_for_render filters on — so the sidecar's
@@ -529,16 +540,15 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (req.has_trim_end && g.time_seconds > req.trim_end_sec) continue;
 
                 GuiWarpMarker w = g;
-                w.time_seconds  =
-                    (s.tgt_frame - static_cast<double>(window_offset_samples))
-                    / sr_d;
+                w.time_seconds  = (s.tgt_frame - sidecar_crop_begin) / sr_d;
                 // Pre-origin filter: a marker whose render position falls
                 // before the delivered WAV's first sample is not present in
-                // the delivered audio (the trimmed deliverable starts about
-                // N/2 after the trim instant), so it is dropped rather than
-                // pinned at zero. After this drop, the surviving warp times
-                // are strictly ascending doubles by map monotonicity, so the
-                // display sidecar's timestamps are strictly ascending too.
+                // the delivered audio (a marker exactly at the trim begin can
+                // round half a sample ahead of the crop origin), so it is
+                // dropped rather than pinned at zero. After this drop, the
+                // surviving warp times are strictly ascending doubles by map
+                // monotonicity, so the display sidecar's timestamps are
+                // strictly ascending too.
                 if (w.time_seconds < 0.0) continue;
                 sidecar_warp_markers.push_back(std::move(w));
             }
@@ -554,55 +564,41 @@ RenderOutcome do_render(const RenderRequest& req,
             // The render-domain phase-reset sidecar is always written for wav
             // batch renders, including the empty-file form. Surviving resets
             // are forward-mapped from their clicked source time through the
-            // same map and placed at tgt(F) - window_offset by the derivation
-            // chain's own window verdict (phase_reset_window_target_frame in
-            // phase_reset_frame_map_build.h), so a reset sits on the same
-            // musical position in render-view as in source and target views,
-            // expressed as the same exact double the warp loop above uses,
-            // with no intermediate frame rounding. The trim-range filter runs
-            // in authored seconds against the request's trim bounds, ahead of
-            // the window verdict. Drop disabled, out-of-trim, and window
-            // non-participants.
-            //
-            // Render target end for the window verdict: the trim's cap when
-            // the trim set one (value-identical to the trimmed deliverable
-            // map's boundary-pair target, exactly), else the full map's last
-            // target anchor unrounded — the deliverable map's own final
-            // anchor target in both cases, matching the exact bound the
-            // deliverable-form derivation compares against.
-            const double render_target_end_for_sidecars =
-                trim_emit_sample_cap > 0
-                    ? static_cast<double>(trim_emit_sample_cap)
-                    : full_warp_frame_map.back().tgt_frame;
+            // same map and placed at tgt(F) - crop origin — the same crop
+            // coordinates the warp loop above uses, computed inline against
+            // the crop bounds — so a reset sits on the same musical position
+            // in render-view as in source and target views, expressed as an
+            // exact double with no intermediate frame rounding. The
+            // trim-range filter runs in authored seconds against the
+            // request's trim bounds, ahead of the crop-bounds verdict. Drop
+            // disabled, out-of-trim, and crop non-participants: a negative
+            // crop-domain target precedes the deliverable's first sample and
+            // is unrepresentable on its time axis; a target at or past the
+            // crop end lies beyond the deliverable's last sample (a reset
+            // exactly at the trim end, or at source EOF on an untrimmed
+            // render — sidecar_crop_end carries the crop length when trimmed
+            // and the full map's exact final anchor target when not). Resets
+            // dropped only by the derivation's lead-in dropzone (crop-domain
+            // target at or above zero but within phase_reset_offset_samples
+            // of the render start) still display, deliberately: the display
+            // sidecars show every authored marker that exists on the
+            // deliverable's time axis regardless of its engine-side fate,
+            // exactly as the warp sidecar displays markers whose breakpoints
+            // the trimmer's window anchors coalesced away.
             std::vector<GuiPhaseResetMarker> sidecar_phase_resets;
             sidecar_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
                 if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
                 if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
-                // Window-participation verdict, shared with the engine-input
-                // derivation. nullopt drops two classes, both deliberate. A
-                // negative window target is the derivation's before-window
-                // drop: the instant precedes the deliverable's first sample
-                // and is unrepresentable on its time axis. A window target at
-                // or past the deliverable map's final anchor target is the
-                // derivation's final-anchor drop: the instant lies beyond the
-                // deliverable's last sample (a reset exactly at the trim end,
-                // or at source EOF on an untrimmed render), so display
-                // participation converges on the window's own bounds. Resets
-                // dropped only by the derivation's lead-in dropzone (window
-                // target above zero but within phase_reset_offset_samples of
-                // the window start) still display, deliberately: the display
-                // sidecars show every authored marker that exists on the
-                // deliverable's time axis regardless of its engine-side fate,
-                // exactly as the warp sidecar displays markers whose
-                // breakpoints the slicer coalesced into window anchors.
-                const auto window_target = phase_reset_window_target_frame(
-                    t.time_seconds * sr_d, full_warp_frame_map,
-                    window_offset_samples, render_target_end_for_sidecars);
-                if (!window_target) continue;
+                const double crop_target =
+                    map_source_to_target(t.time_seconds * sr_d,
+                                         full_warp_frame_map)
+                    - sidecar_crop_begin;
+                if (crop_target < 0.0) continue;
+                if (crop_target >= sidecar_crop_end) continue;
                 GuiPhaseResetMarker w = t;
-                w.time_seconds = *window_target / sr_d;
+                w.time_seconds = crop_target / sr_d;
                 sidecar_phase_resets.push_back(std::move(w));
             }
             const std::string phase_reset_sidecar_path =
@@ -728,27 +724,41 @@ RenderOutcome do_render(const RenderRequest& req,
                  output_format.c_str(), final_output_path.c_str());
 
     if (output_format == "wav") {
-        const int64_t trim_begin_src = trim_window.trim_begin_src;
-        const int64_t trim_end_src = trim_window.trim_end_src;
-        profile_trim_begin_frame = trim_begin_src;
-        profile_trim_end_frame = trim_end_src;
-        profile_trim_span_frames = trim_end_src - trim_begin_src;
+        // Profiling: the cut the engine will see (the whole source when
+        // untrimmed). stderr-only, no contract.
+        profile_trim_begin_frame =
+            trim_plan ? trim_plan->pre.begin_frame : 0;
+        profile_trim_span_frames =
+            trim_plan ? trim_plan->pre.frames
+                      : static_cast<int64_t>(total_frames);
+        profile_trim_end_frame =
+            profile_trim_begin_frame + profile_trim_span_frames;
         const float* src_sample_data = nullptr;
         size_t src_sample_frames = 0;
         int src_sr = 0;
         int src_ch = 0;
         {
             // Borrow the GUI's shared source buffer; shared ownership keeps
-            // mid-render file swaps safe.
+            // mid-render file swaps safe. Trimmed renders read an
+            // offset+length view into the same buffer (pre_trim's cut), no
+            // copy.
             const auto t_source_load_0 = profile::now();
             // Borrowed samples and the probed file are the same audio: the
             // probe's load-identity hardfail proved the borrowed buffer
-            // decodes the probed bytes, so it covers load_end_frame by
+            // decodes the probed bytes, so it covers the cut view by
             // construction for a well-formed container.
-            src_sample_data = req.source_samples->data();
-            src_sample_frames = trim_window.load_end_frame;
-            src_sr = static_cast<int>(sample_rate);
             src_ch = source_channels_probe;
+            src_sample_data = req.source_samples->data();
+            if (trim_plan) {
+                src_sample_data +=
+                    static_cast<size_t>(trim_plan->pre.begin_frame) *
+                    static_cast<size_t>(src_ch);
+                src_sample_frames =
+                    static_cast<size_t>(trim_plan->pre.frames);
+            } else {
+                src_sample_frames = static_cast<size_t>(total_frames);
+            }
+            src_sr = static_cast<int>(sample_rate);
             if (prof) {
                 const auto t_source_load_1 = profile::now();
                 const unsigned long long bytes =
@@ -796,43 +806,55 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
 
-        // Global limiter toggle. When on, every path (disk trimmed/untrimmed and
-        // the target-view buffer) gets the spectral(-0.3) + peak(0) chain; when
-        // off, no limiter anywhere and disk output is clean 32-bit float.
+        // Global limiter toggle. When on, every path (disk trimmed/untrimmed
+        // and the target-view buffer) gets the spectral(-0.3) + lifted
+        // peak(0) chain; when off, both limiters sit out entirely and disk
+        // output is clean 32-bit float.
 
         EngineParams ep;
         ep.source_audio_samples = src_sample_data;
         ep.source_audio_frames  = src_sample_frames;
         ep.source_sample_rate   = src_sr;
         ep.source_channels      = src_ch;
-        // Output sink: when a caller-owned buffer was supplied, route
-        // synthesis to it (no on-disk staging, no rename, no sidecars).
-        // Otherwise the existing wav-on-disk path with atomic rename runs.
-        if (req.output_buffer) {
-            ep.output_buffer = req.output_buffer;
-        } else {
-            ep.output_audio_path = staging_output_path;
-        }
-        // Trim is a parser-side slice of the full untrimmed map, not an engine
-        // window. When a bound is set, hand the engine the trimmed
-        // deliverable map, which ends at its rounded boundary pair; the
-        // engine renders it wholesale, ends at its last anchor, and stays
-        // trim-ignorant. Untrimmed: the full map verbatim, offset 0.
-        window_offset_samples = assign_engine_warp_frame_map(
-            ep, full_warp_frame_map, req.has_trim_begin || req.has_trim_end,
-            trim_begin_src, trim_end_src, N_fft, R_s);
-        if (window_offset_samples < 0) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: trim window too short to "
-                "emit any output samples\n");
+        // The engine is buffer-out only. When a caller-owned buffer was
+        // supplied (target view), the engine renders straight into it;
+        // otherwise a local buffer takes the emission and the shared
+        // post-engine chain encodes it to the staging path below.
+        std::vector<float> render_buf;
+        std::vector<float>* out_buf =
+            req.output_buffer ? req.output_buffer : &render_buf;
+        ep.output_buffer = out_buf;
+        // The spectral limiter's stdout diagnostics stay on for archival
+        // renders and off for target-view scrubs.
+        ep.limiter_verbose = (req.output_buffer == nullptr);
+        // Trimmed renders hand the engine the trimmer's translated maps —
+        // the engine renders them wholesale, ends at its map's last anchor,
+        // and stays trim-ignorant. Untrimmed: the full pair verbatim.
+        ep.warp_frame_map = trim_plan
+            ? std::move(trim_plan->pre.warp_frame_map)
+            : full_warp_frame_map;
+        ep.phase_reset_frame_map = trim_plan
+            ? std::move(trim_plan->pre.phase_reset_frame_map)
+            : full_phase_reset_frame_map;
+        ep.N                    = N_fft;
+        ep.limiter              = req.engine_settings.limiter;
+
+        // Projection refusal, orchestrator-side before the engine allocates
+        // (refuse-before-cost): the engine's buffered emission is llrint of
+        // its map's last anchor target; the encoded length is the crop.
+        const int64_t engine_output_frames = static_cast<int64_t>(
+            std::llrint(ep.warp_frame_map.back().tgt_frame));
+        const int64_t encoded_frames =
+            trim_plan ? trim_plan->post.samples : engine_output_frames;
+        if (auto v = validate_render_projection(
+                engine_output_frames, encoded_frames, src_ch, ep.limiter,
+                /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
+            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                         v.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        ep.N                    = N_fft;
-        ep.limiter              = req.engine_settings.limiter;
-        const int64_t render_target_frames = assign_engine_phase_reset_frame_map(
-            ep, phase_reset_source_frames);
-        profile_target_frames = render_target_frames;
+        profile_target_frames = encoded_frames;
         profile_target_seconds = ep.source_sample_rate > 0
             ? static_cast<double>(profile_target_frames) /
               static_cast<double>(ep.source_sample_rate)
@@ -865,19 +887,33 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return handle_eng(er);
         }
+
+        // The shared post-engine chain (finish_render, src/prepost/): crop
+        // to the exact authored window when trimmed, peak limiter when
+        // limiter=true, then the pcm24 decision — encode to the staging path
+        // on the disk route, or the in-place PCM_24 snap (limiter-on only,
+        // no encode) on the target-view buffer route. One implementation
+        // shared with warptempo_cli, so the CLI stays byte-identical to the
+        // GUI by construction.
+        if (auto fin = finish_render(
+                *out_buf, src_ch, src_sr, ep.limiter,
+                trim_plan ? &trim_plan->post : nullptr,
+                req.output_buffer ? std::string() : staging_output_path);
+            !fin) {
+            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+                         fin.error().c_str());
+            cleanup_all();
+            return RenderOutcome::Failed;
+        }
         if (req.output_buffer && ep.limiter) {
-            // Target playback auditions the deliverable lattice. A fresh
-            // limited master is snapped to PCM_24 in place before publication,
-            // so fresh renders, cache hits, and archival-artifact loads carry
-            // sample-identical target-view audio. This is one linear scan on
-            // the render worker thread, negligible next to synthesis; the
-            // writer thread then encodes the already-quantized buffer exactly
-            // by the codec's roundtrip identity, so the cache blob decodes
-            // back to these floats. Limiter-off target renders skip this
-            // branch because their float wav deliverable needs no PCM_24 snap.
-            for (float& sample : *req.output_buffer) {
-                sample = pcm24_quantize(sample);
-            }
+            // Target playback auditions the deliverable lattice —
+            // finish_render just snapped the limited buffer to PCM_24 in
+            // place — so fresh renders, cache hits, and archival-artifact
+            // loads carry sample-identical target-view audio: the writer
+            // thread encodes the already-quantized buffer exactly by the
+            // codec's roundtrip identity, so the cache blob decodes back to
+            // these floats. Limiter-off target renders skip the insert as
+            // before.
             const int64_t inserted_frames = src_ch > 0
                 ? static_cast<int64_t>(req.output_buffer->size() /
                                        static_cast<size_t>(src_ch))
@@ -928,55 +964,34 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     } else {
         // Map formats: output_format == "warptempo_maps", "generic_map", or
-        // "midi_map". No engine, no limiter.
+        // "midi_map". No engine, no limiter, and no trim (ruled): trim is a
+        // wav-only render window, never an artifact shape — the map formats
+        // only ever write the FULL maps. The GUI dispatch preflight refuses
+        // a trimmed map-format render with the popup; this stderr refusal is
+        // the async backstop.
         // These exports carry deliverable-relative targets and absolute
         // source frames, so a consumer reads the original source audio
-        // directly — trimmed or not — and no companion audio is written.
-        const bool trimmed = req.has_trim_begin || req.has_trim_end;
-        // Trimmed artifacts derive from the same window the engine renders, so
-        // they describe the trimmed deliverable byte-for-byte; untrimmed renders
-        // write the full maps verbatim. This path runs no engine. The full midi
-        // tempo map is derived here, on the only path that consumes it; the wav
-        // branch never needs it.
+        // directly and no companion audio is written.
+        if (trimmed) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: map formats take no trim; "
+                "clear the trim or render wav\n");
+            cleanup_all();
+            return RenderOutcome::Failed;
+        }
+        // The full midi tempo map is derived here, on the only path that
+        // consumes it; the wav branch never needs it. The phase reset column
+        // is the pipeline's full deliverable-form derivation, computed
+        // against the very map shipped beside it, so the warptempo_maps pair
+        // is self-consistent: an engine fed the pair renders that map's
+        // geometry exactly.
         const std::vector<MidiTempoMapEntry> full_midi_tempo_map =
             derive_midi_tempo_map(full_warp_frame_map, sample_rate);
-        TrimmedArtifactMaps artifacts;
-        if (trimmed) {
-            auto a = derive_trimmed_artifact_maps(
-                full_warp_frame_map, full_midi_tempo_map,
-                phase_reset_source_frames,
-                trim_window.trim_begin_src, trim_window.trim_end_src,
-                N_fft, R_s, sample_rate);
-            if (!a) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             a.error().c_str());
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-            artifacts = std::move(*a);
-        } else {
-            // Untrimmed: the full maps verbatim, with the phase reset column
-            // filled by the same deliverable-form derivation the trimmed path
-            // runs inside derive_trimmed_artifact_maps — here against the
-            // full map, so both cases flow through the identical formula and
-            // the member is always populated.
-            artifacts = TrimmedArtifactMaps{
-                full_warp_frame_map,
-                derive_phase_reset_frame_map(phase_reset_source_frames,
-                                             full_warp_frame_map),
-                full_midi_tempo_map};
-        }
         if (output_format == "warptempo_maps") {
             // The pair: the warp frame map plus the phase reset frame map,
-            // TWO files, together exactly the engine's input. The
-            // phase reset column was derived beside its siblings when
-            // `artifacts` was filled above — the deliverable-form derivation
-            // of the pipeline's already-built source-frame list against
-            // artifacts.warp_frame_map (untrimmed the full map, trimmed
-            // the trimmed deliverable map) — so the window verdict and
-            // anticipation are computed against the very map shipped in
-            // the pair and the two files are self-consistent: an engine
-            // fed the pair renders that map's geometry exactly. Both
+            // TWO files, together exactly the engine's input — the full map
+            // and the full deliverable-form derivation built once for this
+            // render above. Both
             // columns always ship — an empty reset list
             // still writes the empty .phaseresetframemap file, mirroring
             // the marker sidecars' empty-file convention.
@@ -1010,13 +1025,13 @@ RenderOutcome do_render(const RenderRequest& req,
             unlink_silent(phase_reset_final);
             bool staged_ok = true;
             if (auto w = write_warp_frame_map(warp_staging,
-                                              artifacts.warp_frame_map); !w) {
+                                              full_warp_frame_map); !w) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              w.error().c_str());
                 staged_ok = false;
             } else if (auto w2 = write_phase_reset_frame_map(
                            phase_reset_staging,
-                           artifacts.phase_reset_frame_map); !w2) {
+                           full_phase_reset_frame_map); !w2) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              w2.error().c_str());
                 staged_ok = false;
@@ -1057,9 +1072,9 @@ RenderOutcome do_render(const RenderRequest& req,
         } else {
             auto map_write = (output_format == "generic_map")
                 ? write_warp_frame_map(final_output_path,
-                                       artifacts.warp_frame_map)
+                                       full_warp_frame_map)
                 : write_midi_tempo_map(final_output_path,
-                                       artifacts.midi_tempo_map);
+                                       full_midi_tempo_map);
             if (!map_write) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              map_write.error().c_str());
@@ -1068,10 +1083,11 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
         if (prof) {
-            profile_trim_begin_frame = trim_window.trim_begin_src;
-            profile_trim_end_frame = trim_window.trim_end_src;
-            profile_trim_span_frames =
-                profile_trim_end_frame - profile_trim_begin_frame;
+            // Map formats are untrimmed by the refusal above; the profiling
+            // fields carry the whole source.
+            profile_trim_begin_frame = 0;
+            profile_trim_end_frame = static_cast<int64_t>(total_frames);
+            profile_trim_span_frames = profile_trim_end_frame;
             profile_source_channels = source_channels_probe;
             profile_source_sample_rate = static_cast<int>(sample_rate);
         }

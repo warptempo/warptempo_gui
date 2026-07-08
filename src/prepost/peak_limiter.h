@@ -4,9 +4,14 @@
 #include <functional>
 #include <vector>
 
-// Time-domain lookahead peak limiter. Replaces the ffmpeg alimiter
-// subprocess used on trimmed renders, and is reused by the target render
-// path (writes through an in-memory write_cb in that path).
+// Time-domain lookahead peak limiter — the prepost pipeline's final limiting
+// stage, applied to the engine's emitted buffer (after the post_trim crop on
+// trimmed renders) whenever the limiter setting is on. It sits outside the
+// engine: src/engine/ is pure DSP (analysis, PGHI, synthesis, spectral
+// limiter, map-extent emission), and the peak stage runs orchestrator-side
+// through apply_peak_limiter below. It obeys limiter=false: it does not run
+// at all then (its internal hard clipper included), so a clean float render
+// stays an untouched null baseline, trimmed or not.
 //
 // Algorithm: single-stage lookahead with predicted-peak ramp-down and
 // exponential release. Follows ffmpeg alimiter's core shape with shorter
@@ -59,3 +64,21 @@ private:
     // process()/flush() call's worth. Flushed to write_cb once per call.
     std::vector<float> out_accum_;
 };
+
+// The peak stage's parameters: 0.0 dBFS ceiling, 0.25 ms attack, 0.5 ms
+// release — a pure clip net above the spectral limiter's -0.3 dBFS ceiling.
+// They were never settings keys and stay non-settings constants; the single
+// limiter boolean in .settings governs the spectral and peak stages together.
+inline constexpr double kPeakLimiterCeilingDbfs = 0.0;
+inline constexpr double kPeakLimiterAttackMs    = 0.25;
+inline constexpr double kPeakLimiterReleaseMs   = 0.5;
+
+// Apply the peak limiter to an interleaved float buffer in place: one-shot
+// process + flush, length-preserving, sample-for-sample the class's streaming
+// application. Called by the shared post-engine chain (finish_render in
+// trimmer.h) on whichever buffer the render fills — disk render or target
+// view — after the post_trim crop, never before it, so the limiter's envelope
+// sees exactly the delivered samples.
+void apply_peak_limiter(std::vector<float>& buffer, int channels,
+                        int sample_rate, double ceiling_dbfs,
+                        double attack_ms, double release_ms);

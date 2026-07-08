@@ -1,7 +1,5 @@
 #include "synthesis.h"
-#include "peak_limiter.h"
 #include "profile_util.h"
-#include "wav_io.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -17,26 +15,6 @@
 #include <thread>
 #include <vector>
 
-// Apply the peak-limiter backstop to `buf` in place, one-shot process plus
-// flush. Ceiling = stft.peak_limiter_ceiling_dbfs (hardcoded 0 dBFS) - a pure
-// clip net above the spectral limiter's -0.3.
-void apply_peak_backstop(AudioSTFT& stft, std::vector<float>& buf) {
-    const int channels = stft.channels;
-    const size_t total_frames = buf.size() / static_cast<size_t>(channels);
-    PeakLimiter pl(stft.peak_limiter_ceiling_dbfs,
-                   stft.peak_limiter_attack_ms,
-                   stft.peak_limiter_release_ms,
-                   stft.src_info.samplerate, channels);
-    std::vector<float> out;
-    out.reserve(buf.size());
-    auto sink = [&](const float* p, size_t n) {
-        out.insert(out.end(), p, p + n * static_cast<size_t>(channels));
-    };
-    pl.process(buf.data(), total_frames, sink);
-    pl.flush(sink);
-    buf.swap(out);
-}
-
 void Synthesis::synthesize_full(
     AudioSTFT& stft,
     std::function<void(const float*, size_t)> write_cb,
@@ -51,9 +29,9 @@ void Synthesis::synthesize_full(
     const int num_frames = static_cast<int>(fm.size());
     // Synthesis frame window [0, wend): synthesis always runs the whole map,
     // so wend is num_frames on every path. The emit cap truncates the emitted
-    // stream at the map's last anchor target (a trimmed render's map already
-    // ends at its rounded boundary pair); ta_for stays absolute over the full
-    // fm.
+    // stream at the map's last anchor target (a trimmed render's translated
+    // map carries its own closing anchor); ta_for stays absolute over the
+    // full fm.
     const int wend   = num_frames;
     const int wcount = wend;
 
@@ -658,54 +636,6 @@ void Synthesis::synthesize_full(
     }
 }
 
-bool Synthesis::process(AudioSTFT& stft) {
-    // process() is the clean, unlimited disk path only -- the limited chain
-    // writes through write_render_to_file instead, which already hardcodes
-    // Pcm24.
-    auto writer = WavWriter::open_file(stft.output_audio_file,
-                                       WavSampleFormat::Float32,
-                                       stft.src_info.channels,
-                                       stft.src_info.samplerate);
-    if (!writer) {
-        std::cerr << "  ! could not open output '" << stft.output_audio_file
-                  << "': " << writer.error() << "\n";
-        return false;
-    }
-
-    bool write_ok = true;
-    std::string write_error;
-    auto write_to_file = [&writer, &write_ok, &write_error](const float* buf,
-                                                            size_t n_frames) {
-        if (!write_ok) return;
-        auto ok = writer->write_frames(buf, static_cast<int64_t>(n_frames));
-        if (!ok) {
-            write_error = ok.error();
-            write_ok = false;
-        }
-    };
-
-    const std::string pass_label = stft.limiter
-        ? "[Pass 2/3] Synthesis........................ "
-        : "[Pass 2/2] Synthesis........................ ";
-    synthesize_full(stft, write_to_file,
-                    /*show_progress=*/true,
-                    /*pass_label=*/pass_label.c_str());
-    if (!write_ok) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file
-                  << "': " << write_error << "\n";
-        return false;
-    }
-    // The in-tree writer emits no PEAK chunk, so float renders are
-    // byte-reproducible by construction.
-    auto closed = writer->close();
-    if (!closed) {
-        std::cerr << "  ! could not close output '" << stft.output_audio_file
-                  << "': " << closed.error() << "\n";
-        return false;
-    }
-    return true;
-}
-
 void Synthesis::process_to_buffer(AudioSTFT& stft,
                                   std::vector<float>* output_buffer) {
     const int channels = stft.channels;
@@ -715,7 +645,7 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             output_buffer->end(), buf,
             buf + n_frames * static_cast<size_t>(channels));
     };
-    // The limited chain (spectral + peak backstop) runs in the engine after
+    // The spectral limiter (Pass 3, limiter-on) runs in the engine after
     // synthesis, in place on this buffer — process_to_buffer always does the
     // plain append.
     const std::string pass_label = stft.limiter
@@ -724,32 +654,4 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
     synthesize_full(stft, append_to_buffer,
                     /*show_progress=*/true,
                     /*pass_label=*/pass_label.c_str());
-}
-
-bool Synthesis::write_render_to_file(AudioSTFT& stft,
-                                     const std::vector<float>& render) {
-    auto writer = WavWriter::open_file(stft.output_audio_file,
-                                       WavSampleFormat::Pcm24,
-                                       stft.src_info.channels,
-                                       stft.src_info.samplerate);
-    if (!writer) {
-        std::cerr << "  ! could not open output '" << stft.output_audio_file
-                  << "': " << writer.error() << "\n";
-        return false;
-    }
-    const size_t total_frames = render.size() / static_cast<size_t>(stft.channels);
-    auto ok = writer->write_frames(render.data(),
-                                   static_cast<int64_t>(total_frames));
-    if (!ok) {
-        std::cerr << "  ! could not write output '" << stft.output_audio_file
-                  << "': " << ok.error() << "\n";
-        return false;
-    }
-    ok = writer->close();
-    if (!ok) {
-        std::cerr << "  ! could not close output '" << stft.output_audio_file
-                  << "': " << ok.error() << "\n";
-        return false;
-    }
-    return true;
 }

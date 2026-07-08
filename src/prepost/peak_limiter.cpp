@@ -9,6 +9,22 @@ constexpr double kAttFloor = 1e-12;
 
 }  // namespace
 
+void apply_peak_limiter(std::vector<float>& buffer, int channels,
+                        int sample_rate, double ceiling_dbfs,
+                        double attack_ms, double release_ms) {
+    const std::size_t total_frames =
+        buffer.size() / static_cast<std::size_t>(channels);
+    PeakLimiter pl(ceiling_dbfs, attack_ms, release_ms, sample_rate, channels);
+    std::vector<float> out;
+    out.reserve(buffer.size());
+    auto sink = [&](const float* p, std::size_t n) {
+        out.insert(out.end(), p, p + n * static_cast<std::size_t>(channels));
+    };
+    pl.process(buffer.data(), total_frames, sink);
+    pl.flush(sink);
+    buffer.swap(out);
+}
+
 PeakLimiter::PeakLimiter(double ceiling_dbfs,
                          double attack_ms,
                          double release_ms,

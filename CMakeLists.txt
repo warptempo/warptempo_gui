@@ -34,7 +34,11 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  parser: map / file-parse core (no fftw, no GUI, no engine; the shared headers
 #  warp_frame_map.h / phase_reset_frame_map.h / time_format.h live in src/).
 #  engine: PGHI DSP core (needs fftw; reads warp_frame_map.h header-only, no
-#  parser dependency).
+#  parser dependency). Buffer-out only: analysis, PGHI, synthesis, spectral
+#  limiter, map-extent emission.
+#  prepost: the pre-/post-engine stages both render orchestrators share — the
+#  trimmer (plan_trim / apply_post_trim), the lifted peak limiter, and the
+#  post-engine chain (crop -> peak -> encode). Calls audio_io's writers.
 # ============================================================
 set(WARPTEMPO_AUDIO_IO_SOURCES
     src/audio_io/dr_flac_impl.cpp
@@ -58,8 +62,11 @@ set(WARPTEMPO_PARSER_SOURCES
 set(WARPTEMPO_ENGINE_SOURCES
     src/engine/engine.cpp
     src/engine/limiter.cpp
-    src/engine/peak_limiter.cpp
     src/engine/synthesis.cpp
+)
+set(WARPTEMPO_PREPOST_SOURCES
+    src/prepost/trimmer.cpp
+    src/prepost/peak_limiter.cpp
 )
 
 # dr_flac is vendored third-party C. Suppress warnings only on its dedicated
@@ -159,6 +166,7 @@ if(WARPTEMPO_BUILD_GUI)
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
+        ${WARPTEMPO_PREPOST_SOURCES}
         ${WAYLAND_GENERATED_SOURCES}
     )
     target_include_directories(warptempo_gui PRIVATE
@@ -166,6 +174,7 @@ if(WARPTEMPO_BUILD_GUI)
         ${CMAKE_SOURCE_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/src/engine
         ${CMAKE_SOURCE_DIR}/src/audio_io
+        ${CMAKE_SOURCE_DIR}/src/prepost
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
         ${FFTW3_INCLUDE_DIRS}
@@ -203,12 +212,14 @@ if(WARPTEMPO_BUILD_CLI)
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
+        ${WARPTEMPO_PREPOST_SOURCES}
     )
     target_include_directories(warptempo_cli PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/src/engine
         ${CMAKE_SOURCE_DIR}/src/audio_io
+        ${CMAKE_SOURCE_DIR}/src/prepost
         ${FFTW3_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_cli PRIVATE

@@ -204,9 +204,11 @@ void GuiTargetRender::dispatch_render_now() {
         app.trim.has_end,   app.trim.end_seconds);
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
-    // *output_buffer instead. The limited chain (spectral + peak backstop)
-    // runs in place on the buffer whenever the global `limiter` toggle is
-    // on — the target-view preview gets the same limiting as the disk path.
+    // *output_buffer instead. The post-engine chain runs in place on the
+    // buffer: the post_trim crop when a trim bound is set, and the spectral
+    // + peak limited chain whenever the global `limiter` toggle is on — the
+    // target-view preview gets the same cropping and limiting as the disk
+    // path.
     req.output_buffer = &app.target_buffer;
     // The process's single RenderCache (this struct's own member, wired from
     // main.cpp). do_render uses it on this path only to queue the writer-thread
@@ -300,24 +302,24 @@ void GuiTargetRender::complete_successful_buffer() {
 
 void GuiTargetRender::recompute_target_buffer_start_frame() {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
-    // with trim set, to map_source_to_target(trim_begin_frame) against the
-    // full-source warp_frame_map, since the engine rendered only the trim range.
-    // Compute only after target_buffer_frames is set so a failed/empty buffer
-    // does not leave a stale anchor.
+    // with a trim begin set, buffer[0] IS llrint(T_b) by construction — the
+    // post_trim crop cut the render at exactly the authored begin's target
+    // image (T_b = begin_seconds * sr through the map, exact doubles, the
+    // trimmer's own formula) — so the anchor is that same llrint(T_b) in
+    // full-target coordinates and the exact authored begin/end display falls
+    // out. Compute only after target_buffer_frames is set so a failed/empty
+    // buffer does not leave a stale anchor.
     app.target_buffer_start_frame = 0;
     if (app.trim.has_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
-        const int64_t trim_begin_frame = static_cast<int64_t>(
-            std::nearbyint(app.trim.begin_seconds *
-                           static_cast<double>(audio.sample_rate())));
-        const double tgt = map_source_to_target(
-            static_cast<size_t>(trim_begin_frame < 0
-                                ? 0 : trim_begin_frame), target_warp_frame_map);
-        app.target_buffer_start_frame =
-            static_cast<int64_t>(std::nearbyint(tgt));
+        const double begin_source_frame =
+            app.trim.begin_seconds * static_cast<double>(audio.sample_rate());
+        app.target_buffer_start_frame = std::llrint(map_source_to_target(
+            begin_source_frame < 0.0 ? 0.0 : begin_source_frame,
+            target_warp_frame_map));
     }
 }
 
