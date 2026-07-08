@@ -169,6 +169,14 @@ struct GuiInputHandler {
                   GuiInputState mods);
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
+    // Stop all four pointer drag gestures. A marker or trim drag is stopped
+    // before its deferred commit, so live state returns to pre-drag (including
+    // the tracked playhead for a marker drag); scroll and playhead drags just
+    // end where they are. No-op when no drag is active. Callers: the
+    // drag-modal escape hatches in on_key, and the WM-close callback in
+    // main.cpp (both cancel before raising the close / revert prompt).
+    void cancel_active_drags();
+
 private:
     // ActiveBatch holds the run_render_batch state machine. The batch loop
     // used to be synchronous (blocking inside do_render); now each entry is
@@ -285,8 +293,6 @@ private:
     // Routed after the editor modal (which cancels an active edit on Esc
     // first) and before the rest of the key handlers.
     bool handle_escape_cancels(GuiKey key);
-
-    void cancel_active_drags();
 
     // Render-trigger chords: Ctrl+E (queue-add), Ctrl+Alt+R (single render),
     // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iteration sweep),

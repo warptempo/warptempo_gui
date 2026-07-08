@@ -616,7 +616,16 @@ int main(int argc, char** argv) {
 
     gui.set_on_close([&]() {
         // Window-manager close (title-bar X) routes through the unsaved-
-        // work dialog when dirty, same as Ctrl+Q.
+        // work dialog when dirty, same as Ctrl+Q. Cancel any in-flight
+        // pointer drag before the prompt goes up, matching the Ctrl+Q
+        // hatch: while the prompt is up the pointer handlers swallow motion
+        // and release, so a drag left alive would commit on the next motion
+        // if the user dismisses the prompt. cancel_active_drags is a no-op
+        // when no drag is active, so the clean and non-drag close paths are
+        // unaffected. The editor text-selection drag needs no cancel here:
+        // after dismissal its lost-button motion merely finalizes the
+        // selection, a benign finalize rather than a positional commit.
+        input_handler.cancel_active_drags();
         prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
     });
 
