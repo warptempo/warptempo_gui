@@ -19,19 +19,24 @@
 
 namespace text_editor {
 
-// Maximum characters allowed in `pending`. Mirrors the longest valid
-// payload `1.23*1.2345:a.aa` (16 chars). Insertions past this cap are
-// silently swallowed (no red, no flash). Backspace/Delete/cursor moves
-// remain available so an over-cap pending (loaded from a hand-edited
-// file) can be trimmed back to canonical form.
-constexpr int kMaxPendingChars = 16;
+// Maximum characters allowed in `pending`. Sized for the longest valid
+// payload `BASE*SCALE:a.aa` where BASE and SCALE are full doubles in
+// shortest round-trip form — worst case 23 chars each (17 significant
+// digits plus point and exponent, e.g. `2.2250738585072014e-308`):
+// 23 + 1 + 23 + 1 + 4 = 52. Insertions past this cap are silently
+// swallowed (no red, no flash). Backspace/Delete/cursor moves remain
+// available so an over-cap pending (loaded from a hand-edited file) can
+// be trimmed back to canonical form.
+constexpr int kMaxPendingChars = 52;
 // Iteration-mode FlagPayload editing widens the accepted grammar
-// to admit the inline `+[lo, hi]` bracket, so the cap must clear the
-// longest bracketed flag (`9.99+[-99.99, +99.99]*1.2345:a.aa` ≈ 35 chars).
-constexpr int kMaxPendingCharsFlagIter = 40;
-// BPM popup. Cap matches the per-Kind tightening for
-// `<beats>@[<lo>,<hi>]` editing.
-constexpr int kMaxPendingCharsBpm = 13;
+// to admit the inline `+[lo, hi]` bracket (`+[-99.99, +99.99]`, 17 chars
+// with the display space), so the cap is the full-precision payload plus
+// the bracket: 52 + 17 = 69.
+constexpr int kMaxPendingCharsFlagIter = 69;
+// BPM popup. `<beats>@[<lo>,<hi>]`: beats a positive int (up to 10
+// digits), lo/hi full doubles in shortest round-trip form (up to 23 chars
+// each): 10 + 2 + 23 + 1 + 23 + 1 = 60.
+constexpr int kMaxPendingCharsBpm = 60;
 // Settings prompt. Sized for the free-text provenance fields (url, notes),
 // which carry no length limit beyond what the OS imposes on the resulting
 // `.settings` line and filename; 64 was too tight for a typical URL. The

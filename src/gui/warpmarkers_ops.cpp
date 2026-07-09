@@ -56,7 +56,7 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 }
 
 void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
-                                     double base, const std::string& scale) {
+                                     double base, std::optional<double> scale) {
     if (audio.sample_rate() <= 0) return;
     // The authored position is the full-precision frame double as gestured —
     // there is no grid, so there is no snap; the wall check below IS the
@@ -115,7 +115,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     drop_marker(static_cast<double>(src_frame),
-                /*inherit=*/false, /*base=*/1.0, /*scale=*/"");
+                /*inherit=*/false, /*base=*/1.0, /*scale=*/std::nullopt);
 }
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
@@ -127,7 +127,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
 // value, but inserting this marker re-deforms the ref's own segment so the
 // ref's effective value shifts — the new marker would then hold a value the
 // ref no longer carries. A 1.00 owner leaves the ref's segment unchanged.
-// Falls back to base 1.0 / empty scale if there is no prior marker
+// Falls back to base 1.0 / no typed scale if there is no prior marker
 // (possible: the store may be empty or the playhead may sit before the
 // first marker — marker zero is an ordinary, deletable marker).
 void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
@@ -137,8 +137,8 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     const double t = static_cast<double>(src_frame);
     const auto& mv = app.warpmarkers.markers();
     const int prev_idx = find_immediate_prior(mv, t);
-    double      base  = 1.0;
-    std::string scale;
+    double                base = 1.0;
+    std::optional<double> scale;
     if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
         const MarkerEffective eff = marker_effective(
             slice_to_warp_markers(mv), prev_idx);
@@ -294,11 +294,11 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.label_ref.clear();
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;
-            m.tempo_scale    = "1.0000";
+            m.tempo_scale.reset();
         } else if (m.tempo_inherits) {
             const double resolved_tempo =
                 resolve_inherited_tempo(resolved_src, idx);
-            const std::string resolved_scale =
+            const std::optional<double> resolved_scale =
                 resolve_inherited_tempo_scale(resolved_src, idx);
             m.tempo_inherits = false;
             m.tempo_base     = resolved_tempo;
@@ -306,7 +306,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
         } else {
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;
-            m.tempo_scale    = "1.0000";
+            m.tempo_scale.reset();
         }
         changed = true;
     }
@@ -350,11 +350,21 @@ void GuiWarpMarkersOps::toggle_disabled() {
     target_render.trigger();
 }
 
-// Nudge every selected marker by `delta`. Label refs are silently
-// skipped (no tempo to nudge — convert via Ctrl+N first). Pass markers
-// resolve walk-backward to get their starting tempo/scale, then freeze
-// to owning at the nudged value. Owning markers nudge in place.
-// Clamps to [0.01, 9.99]. Only dirties / invalidates on real change.
+// Nudge every selected marker's tempo along the 0.01 grid. Label refs are
+// silently skipped (no tempo to nudge — convert via Ctrl+N first). Pass
+// markers resolve walk-backward to get their starting tempo/scale, then
+// freeze to owning at the nudged value. Owning markers nudge in place.
+// `delta` arrives as a multiple of 0.01 (one per keypress or wheel
+// detent); its sign is the direction of travel. Floors at 0.01, no
+// ceiling. Only dirties / invalidates on real change.
+//
+// Grid rule: wheel/keyboard authoring lives on the 0.01 grid; typed
+// precision is preserved until the wheel touches the value. A value is
+// on-grid exactly when it round-trips its own cent index
+// (v == std::nearbyint(v * 100.0) / 100.0 — no epsilon nudge); on-grid
+// values step exactly 0.01 per notch, off-grid values snap outward to the
+// adjacent gridpoint in the direction of travel (up: floor + 1 cents,
+// down: ceil - 1 cents) on the first notch.
 void GuiWarpMarkersOps::adjust_tempo(double delta) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
@@ -371,8 +381,8 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         GuiWarpMarker& m = proposed[idx];
         if (!m.label_ref.empty()) continue;
-        double      start_tempo;
-        std::string start_scale;
+        double                start_tempo;
+        std::optional<double> start_scale;
         if (m.tempo_inherits) {
             start_tempo = resolve_inherited_tempo(resolved_src, idx);
             start_scale = resolve_inherited_tempo_scale(resolved_src, idx);
@@ -380,9 +390,22 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
             start_tempo = m.tempo_base;
             start_scale = m.tempo_scale;
         }
-        double new_tempo = start_tempo + delta;
-        if (new_tempo < 0.01) new_tempo = 0.01;
-        if (new_tempo > 9.99) new_tempo = 9.99;
+        // Land on the adjacent 0.01 gridpoint in the direction of travel
+        // (see the grid rule in the function comment). The gridpoint index
+        // is computed in cents as a double, so extreme typed magnitudes
+        // cannot overflow an integer type.
+        const double steps = std::nearbyint(delta * 100.0);
+        const double v     = start_tempo;
+        double cents;
+        if (v == std::nearbyint(v * 100.0) / 100.0) {
+            cents = std::nearbyint(v * 100.0) + steps;   // on-grid: exact 0.01 steps
+        } else if (steps > 0.0) {
+            cents = std::floor(v * 100.0) + steps;       // off-grid: snap up first
+        } else {
+            cents = std::ceil(v * 100.0) + steps;        // off-grid: snap down first
+        }
+        if (cents < 1.0) cents = 1.0;                    // floor at 0.01; no ceiling
+        const double new_tempo = cents / 100.0;
         if (!m.tempo_inherits && new_tempo == m.tempo_base) continue;
         m.tempo_inherits = false;
         m.tempo_base     = new_tempo;

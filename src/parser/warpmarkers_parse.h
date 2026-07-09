@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,7 +13,7 @@
 //      (`tempo_base` is the numeric value). `tempo_inherits == true` (a
 //      "pass" marker): the presentation tempo is resolved live by walking
 //      backward through the marker list to the nearest owning marker.
-//      `tempo_base`/`tempo_scale` carry inert defaults (1.0 / "1.0000")
+//      `tempo_base`/`tempo_scale` carry inert defaults (1.0 / nullopt)
 //      that are never read while the marker is inheriting.
 //
 //   2. Label relationship. At most one of `label_def` and `label_ref` is
@@ -31,7 +32,9 @@ struct WarpMarker {
 
     bool        tempo_inherits = false;
     double      tempo_base     = 1.0;
-    std::string tempo_scale;
+    // nullopt: no typed scale (the serializer omits "*scale"; semantically
+    // scale 1). A present value is the authored scale, a full double.
+    std::optional<double> tempo_scale;
 
     std::string label_def;
     std::string label_ref;
@@ -58,8 +61,8 @@ namespace warpmarkers_internal {
 // cross-marker rules (label_def uniqueness, time ordering: non-decreasing
 // at load, degeneracy refused at the render boundary) are the caller's.
 // On `pass`, tempo_base/tempo_scale are
-// populated with inert defaults. Returns the marker on success, or a
-// one-line diagnostic on failure.
+// populated with inert defaults (1.0 / nullopt). Returns the marker on
+// success, or a one-line diagnostic on failure.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line);
 

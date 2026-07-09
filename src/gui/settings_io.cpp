@@ -5,6 +5,7 @@
 #include "render_pipeline.h"
 #include "settings_trim.h"
 #include "frame_format.h"
+#include "value_format.h"
 
 #include <cerrno>
 #include <cmath>
@@ -150,11 +151,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 };
 
 // Append the value of `field` from `es` to `out`, using the same format
-// strings the on-disk template encodes (%.6f for doubles, %d for ints,
-// true|false for the limiter flag, raw string for title / output_format).
+// the on-disk template encodes (padded shortest round-trip at min 4
+// decimals for scale — value_format.h — true|false for the limiter flag,
+// raw string for title / output_format and the provenance fields).
 void append_engine_field_value(std::string& out, const EngineSettings& es,
                                 EngineField field) {
-    char buf[64];
     switch (field) {
         case EngineField::Title:
             out += es.title;
@@ -163,8 +164,7 @@ void append_engine_field_value(std::string& out, const EngineSettings& es,
             out += es.output_format;
             break;
         case EngineField::Scale:
-            std::snprintf(buf, sizeof(buf), "%.6f", es.scale);
-            out += buf;
+            out += format_value_double(es.scale, 4);
             break;
         case EngineField::Bpm:
             // bpm is a descriptor string; emit verbatim, empty when unset.

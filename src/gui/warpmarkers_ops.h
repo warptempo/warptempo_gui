@@ -6,6 +6,7 @@
 #include "undo.h"
 #include "viewport.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,7 +52,7 @@ struct GuiWarpMarkersOps {
           target_render(target_render_) {}
 
     void drop_marker(double time_frame, bool inherit,
-                      double base, const std::string& scale);
+                      double base, std::optional<double> scale);
     void drop_marker_at_playhead();
     void drop_copy_previous_at_playhead();
     void delete_selected_marker();

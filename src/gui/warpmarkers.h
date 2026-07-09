@@ -1,5 +1,6 @@
 #pragma once
 
+#include "value_format.h"
 #include "warpmarkers_parse.h"
 
 #include <cmath>
@@ -33,12 +34,12 @@ struct GuiWarpMarker : WarpMarker {
     // (invariant maintained by the `m` toggle handler). "Committed" is
     // implicit: bpm_beats > 0 means the owner has authored a value (parser
     // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
-    // The value form is "<beats>@[<lo>,<hi>]" with positive integers and
-    // lo <= hi.
-    bool bpm_owner = false;
-    int  bpm_beats = 0;
-    int  bpm_lo    = 0;
-    int  bpm_hi    = 0;
+    // The value form is "<beats>@[<lo>,<hi>]" — beats a positive integer
+    // (metronomes count integer beats), lo/hi positive doubles, lo <= hi.
+    bool   bpm_owner = false;
+    int    bpm_beats = 0;
+    double bpm_lo    = 0.0;
+    double bpm_hi    = 0.0;
 
     // Session-only, set with bpm_owner on the `m`-press two-marker gate.
     // Index of the span's closing marker (the later of the two selected).
@@ -175,18 +176,24 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
     if (!m.bpm_owner || m.bpm_beats == 0) {
         return "[]";
     }
-    char buf[48];
-    std::snprintf(buf, sizeof(buf), "%d@[%d,%d]",
-                  m.bpm_beats, m.bpm_lo, m.bpm_hi);
-    return buf;
+    // lo/hi print as bpm values: plain shortest round-trip form
+    // (min_decimals 0 — "72" stays "72", "72.5" stays "72.5").
+    std::string out = std::to_string(m.bpm_beats);
+    out += "@[";
+    out += format_value_double(m.bpm_lo, 0);
+    out += ',';
+    out += format_value_double(m.bpm_hi, 0);
+    out += ']';
+    return out;
 }
 
-// BPM mode: strict parser for "<beats>@[<lo>,<hi>]". All three
-// values must be positive integers; lo <= hi (degenerate lo=hi is valid);
-// no whitespace, no decimals, no missing fields, no alternate forms. On
+// BPM mode: strict parser for "<beats>@[<lo>,<hi>]". beats must be a
+// positive integer (metronomes count integer beats); lo/hi are positive
+// doubles (parse_value_double strictness) with lo <= hi (degenerate lo=hi
+// is valid); no whitespace, no missing fields, no alternate forms. On
 // failure returns false and leaves out-params unchanged.
 inline bool parse_bpm_bracket(const std::string& s,
-                              int& beats, int& lo, int& hi) {
+                              int& beats, double& lo, double& hi) {
     if (s.empty()) return false;
     const auto at_pos = s.find('@');
     if (at_pos == std::string::npos) return false;
@@ -209,9 +216,7 @@ inline bool parse_bpm_bracket(const std::string& s,
         }
         return !v.empty();
     };
-    if (!digits_only(left) || !digits_only(lo_s) || !digits_only(hi_s)) {
-        return false;
-    }
+    if (!digits_only(left)) return false;
     auto parse_pos_int = [](const std::string& v, int& out) -> bool {
         long long acc = 0;
         for (char c : v) {
@@ -222,10 +227,11 @@ inline bool parse_bpm_bracket(const std::string& s,
         out = static_cast<int>(acc);
         return true;
     };
-    int b = 0, l = 0, h = 0;
-    if (!parse_pos_int(left, b))  return false;
-    if (!parse_pos_int(lo_s, l))  return false;
-    if (!parse_pos_int(hi_s, h))  return false;
+    int    b = 0;
+    double l = 0.0, h = 0.0;
+    if (!parse_pos_int(left, b))                  return false;
+    if (!parse_value_double(lo_s, l) || !(l > 0.0)) return false;
+    if (!parse_value_double(hi_s, h) || !(h > 0.0)) return false;
     if (l > h) return false;
     beats = b;
     lo    = l;

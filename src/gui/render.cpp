@@ -2,6 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "time_format.h"
+#include "value_format.h"
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
@@ -54,12 +55,13 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     if (m.tempo_inherits) {
         text = "pass";
     } else {
-        char tbuf[32];
-        std::snprintf(tbuf, sizeof(tbuf), "%.2f", m.tempo_base);
-        text = tbuf;
-        if (!m.tempo_scale.empty()) {
+        // Padded shortest-round-trip forms (tempo min 2 decimals, scale min
+        // 4) — the flag paints the stored value at full precision, exactly
+        // the serializer's bytes.
+        text = format_value_double(m.tempo_base, 2);
+        if (m.tempo_scale.has_value()) {
             text += "*";
-            text += m.tempo_scale;
+            text += format_value_double(*m.tempo_scale, 4);
         }
     }
     if (!m.label_def.empty()) {
@@ -238,14 +240,13 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
         return flag_text(markers, idx);
     }
     // Eligible owning marker (tempo_inherits == false, no label_ref):
-    // tempo, then the bracket, then optional scale and label.
-    char tbuf[32];
-    std::snprintf(tbuf, sizeof(tbuf), "%.2f", m.tempo_base);
-    std::string text = tbuf;
+    // tempo, then the bracket, then optional scale and label. Values print
+    // in the same padded shortest-round-trip forms as flag_text.
+    std::string text = format_value_double(m.tempo_base, 2);
     text += format_iter_bracket_inline(m);
-    if (!m.tempo_scale.empty()) {
+    if (m.tempo_scale.has_value()) {
         text += "*";
-        text += m.tempo_scale;
+        text += format_value_double(*m.tempo_scale, 4);
     }
     if (!m.label_def.empty()) {
         text += ":";

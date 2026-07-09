@@ -361,7 +361,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->label_ref.clear();
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
-                    m->tempo_scale.clear();
+                    m->tempo_scale.reset();
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the ref marker
@@ -385,7 +385,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->disabled       = false;
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
-                    m->tempo_scale.clear();
+                    m->tempo_scale.reset();
                     m->label_ref.clear();
                     m->label_def.clear();
                     store_changed = true;

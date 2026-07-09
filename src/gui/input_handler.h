@@ -60,14 +60,13 @@ struct BaseTempoScale {
 };
 
 inline std::optional<BaseTempoScale> compute_base_tempo_scale(
-    double duration_seconds, int beats, int target_bpm) {
+    double duration_seconds, int beats, double target_bpm) {
     if (!(duration_seconds > 0.0)) return std::nullopt;
-    if (beats      <= 0) return std::nullopt;
-    if (target_bpm <= 0) return std::nullopt;
+    if (beats <= 0)                return std::nullopt;
+    if (!(target_bpm > 0.0))       return std::nullopt;
 
     const double desired_duration =
-        static_cast<double>(beats) * 60.0 /
-        static_cast<double>(target_bpm);
+        static_cast<double>(beats) * 60.0 / target_bpm;
     if (!std::isfinite(desired_duration) ||
         desired_duration == 0.0) return std::nullopt;
 

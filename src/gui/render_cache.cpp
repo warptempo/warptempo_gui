@@ -123,8 +123,10 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // The fingerprint includes the bytes the current writer would produce for the
 // same inputs. The writer's PCM_24 lattice policy changed, so pre-change
 // sidecars and cache entries must stop matching and re-render under this
-// writer before cmp baselines are refreshed.
-constexpr uint32_t kFingerprintVersion = 2;
+// writer before cmp baselines are refreshed. Version 3: the marker
+// tempo_scale field changed representation (string -> optional double),
+// changing the per-marker byte layout.
+constexpr uint32_t kFingerprintVersion = 3;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -218,7 +220,11 @@ std::vector<uint8_t> render_fingerprint(
         put_f64(fp, m.time_frame);
         put_u8 (fp, m.tempo_inherits ? 1 : 0);
         put_f64(fp, m.tempo_base);
-        put_str(fp, m.tempo_scale);
+        // Optional typed scale: presence flag then the value (0.0 filler
+        // when absent, so an absent scale and a hypothetical 0.0 cannot
+        // collide — 0.0 is unparseable as a typed scale anyway).
+        put_u8 (fp, m.tempo_scale.has_value() ? 1 : 0);
+        put_f64(fp, m.tempo_scale.value_or(0.0));
         put_str(fp, m.label_def);
         put_str(fp, m.label_ref);
         put_u8 (fp, m.disabled ? 1 : 0);

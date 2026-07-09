@@ -2,6 +2,7 @@
 
 #include "frame_format.h"
 #include "parse_text_util.h"
+#include "value_format.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -20,16 +21,35 @@ bool is_valid_label_format(const std::string& s) {
     return std::regex_match(s, re);
 }
 
-// New-format tempo: exactly one integer digit, dot, two decimal digits.
-bool is_valid_tempo_format(const std::string& s) {
-    static const std::regex re("^[0-9]\\.[0-9]{2}$");
-    return std::regex_match(s, re);
-}
-
-// New-format scale: exactly one integer digit, dot, four decimal digits.
-bool is_valid_scale_format(const std::string& s) {
-    static const std::regex re("^[0-9]\\.[0-9]{4}$");
-    return std::regex_match(s, re);
+// Tempo and scale values are full doubles (parse_value_double: whole field
+// consumed, finite, no leading '-') under a strict positivity refusal —
+// zero is parseable but refused with a pointed message; negatives and any
+// other malformed spelling fail the parse itself. Serializers pad the
+// shortest round-trip form (format_value_double: tempo at min 2 decimals,
+// scale at min 4), so historical fixed-decimal sidecars re-serialize
+// byte-identically.
+bool parse_positive_value(const std::string& s, double& out,
+                          const char* what, std::string& error_out) {
+    double v = 0.0;
+    if (!parse_value_double(s, v)) {
+        // parse_value_double rejects a leading '-' outright; a well-formed
+        // negative number is still a positivity violation, not gibberish,
+        // so it gets the same message a typed zero does.
+        double neg_probe = 0.0;
+        if (s.size() > 1 && s.front() == '-' &&
+            parse_value_double(std::string_view(s).substr(1), neg_probe)) {
+            error_out = std::string(what) + " must be positive: " + s;
+        } else {
+            error_out = std::string("invalid ") + what + " value: " + s;
+        }
+        return false;
+    }
+    if (!(v > 0.0)) {
+        error_out = std::string(what) + " must be positive: " + s;
+        return false;
+    }
+    out = v;
+    return true;
 }
 
 // Parse a new-format payload (the part after the pipe) into a partly-
@@ -75,14 +95,14 @@ bool parse_new_payload(const std::string& payload,
         if (payload == "pass") {
             m.tempo_inherits = true;
             m.tempo_base     = 1.0;
-            m.tempo_scale    = "1.0000";
+            m.tempo_scale.reset();
             return true;
         }
         if (is_valid_label_format(payload)) {
             m.label_ref      = payload;
             m.tempo_inherits = false;
             m.tempo_base     = 0.0;
-            m.tempo_scale.clear();
+            m.tempo_scale.reset();
             return true;
         }
         // Tempo (numeric, with optional *scale).
@@ -91,27 +111,21 @@ bool parse_new_payload(const std::string& payload,
             ? payload : payload.substr(0, star);
         const std::string scale_part = (star == std::string::npos)
             ? std::string() : payload.substr(star + 1);
-        if (!is_valid_tempo_format(tempo_part)) {
-            error_out = "tempo must be N.NN format: " + tempo_part;
+        double tempo_v = 0.0;
+        if (!parse_positive_value(tempo_part, tempo_v, "tempo", error_out)) {
             return false;
         }
-        // The grammar admits no sign and no other spelling of zero, so an
-        // exact compare against the zero literal is a total positivity check.
-        if (tempo_part == "0.00") {
-            error_out = "tempo must be positive: 0.00";
-            return false;
-        }
-        if (star != std::string::npos && !is_valid_scale_format(scale_part)) {
-            error_out = "scale must be N.NNNN format: " + scale_part;
-            return false;
-        }
-        if (scale_part == "0.0000") {
-            error_out = "scale must be positive: 0.0000";
-            return false;
+        std::optional<double> scale_v;
+        if (star != std::string::npos) {
+            double sv = 0.0;
+            if (!parse_positive_value(scale_part, sv, "scale", error_out)) {
+                return false;
+            }
+            scale_v = sv;
         }
         m.tempo_inherits = false;
-        m.tempo_base     = std::stod(tempo_part);
-        m.tempo_scale    = scale_part;
+        m.tempo_base     = tempo_v;
+        m.tempo_scale    = scale_v;
         return true;
     }
 
@@ -132,7 +146,7 @@ bool parse_new_payload(const std::string& payload,
     if (tempo_with_scale == "pass") {
         m.tempo_inherits = true;
         m.tempo_base     = 1.0;
-        m.tempo_scale    = "1.0000";
+        m.tempo_scale.reset();
         m.label_def      = label_def;
         return true;
     }
@@ -141,27 +155,21 @@ bool parse_new_payload(const std::string& payload,
         ? tempo_with_scale : tempo_with_scale.substr(0, star);
     const std::string scale_part = (star == std::string::npos)
         ? std::string() : tempo_with_scale.substr(star + 1);
-    if (!is_valid_tempo_format(tempo_part)) {
-        error_out = "tempo must be N.NN format: " + tempo_part;
+    double tempo_v = 0.0;
+    if (!parse_positive_value(tempo_part, tempo_v, "tempo", error_out)) {
         return false;
     }
-    // Same positivity check as the no-colon branch: the zero literal is the
-    // grammar's only non-positive spelling, so the exact compare is total.
-    if (tempo_part == "0.00") {
-        error_out = "tempo must be positive: 0.00";
-        return false;
-    }
-    if (star != std::string::npos && !is_valid_scale_format(scale_part)) {
-        error_out = "scale must be N.NNNN format: " + scale_part;
-        return false;
-    }
-    if (scale_part == "0.0000") {
-        error_out = "scale must be positive: 0.0000";
-        return false;
+    std::optional<double> scale_v;
+    if (star != std::string::npos) {
+        double sv = 0.0;
+        if (!parse_positive_value(scale_part, sv, "scale", error_out)) {
+            return false;
+        }
+        scale_v = sv;
     }
     m.tempo_inherits = false;
-    m.tempo_base     = std::stod(tempo_part);
-    m.tempo_scale    = scale_part;
+    m.tempo_base     = tempo_v;
+    m.tempo_scale    = scale_v;
     m.label_def      = label_def;
     return true;
 }

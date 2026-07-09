@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -27,7 +28,7 @@ struct MarkerForRender {
     // Authored position: an exact source-frame double (see WarpMarker).
     double      time_frame = 0.0;
     double      tempo_base   = 1.0;   // resolved owning tempo; irrelevant for label_ref
-    std::string tempo_scale;           // "" or the numeric string after '*'
+    std::optional<double> tempo_scale; // nullopt or the typed scale after '*'
     std::string label_def;
     std::string label_ref;
 };
@@ -36,16 +37,15 @@ struct MarkerForRender {
 // fed to the render path). See marker_effective() below.
 struct MarkerEffective {
     double      base       = 0.0;   // 0.0 means "could not resolve"
-    std::string scale;              // "" means no typed scale (treated as 1.0)
+    std::optional<double> scale;    // nullopt means no typed scale (treated
+                                    // as 1.0); the label_ref branch always
+                                    // carries the combined multiplier here,
+                                    // unclamped — full double, no display
+                                    // ceiling
     int         source_idx = -1;    // marker this value was taken from; -1
                                     // means no visible source (e.g. a
                                     // first-marker pass resolving to the 1.0
                                     // default)
-    bool scale_saturated = false;   // true when the label_ref branch clamped
-                                    // the displayed combined scale to the
-                                    // 9.9999 typed-field ceiling; display-only,
-                                    // the render's ref handling is delta-based
-                                    // and unaffected
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -146,18 +146,18 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
 // false, not a label reference, and not disabled. Disabled markers are skipped
 // because the engine drops them before resolution, so a disabled marker
-// contributes no tempo downstream. Returns 1.0 (tempo) / "" (scale) if none is
-// found. This is the single canonical inheritance walk: resolve_warp_markers_for_render
+// contributes no tempo downstream. Returns 1.0 (tempo) / nullopt (scale) if
+// none is found. This is the single canonical inheritance walk: resolve_warp_markers_for_render
 // and compute_hover_popup_text both call it, so the popup display always
 // matches the tempo the engine resolves.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
-std::string resolve_inherited_tempo_scale(
+std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index);
 
 // Effective (base, scale, source) a marker resolves to, for display/authoring
 // callers in hover/popup and marker operation paths. base
 // == 0.0 means "could not resolve" (mirrors compute_hover_popup_text's ""
-// guards). scale == "" means no typed scale (treated as 1.0 by callers).
+// guards). scale == nullopt means no typed scale (treated as 1.0 by callers).
 // source_idx names the marker the value is visibly taken from:
 //   owner     -> idx itself (its own tempo_base / tempo_scale).
 //   pass      -> the nearest non-disabled marker strictly before idx (the
@@ -166,10 +166,8 @@ std::string resolve_inherited_tempo_scale(
 //                base/scale are still the fully-resolved owner values via
 //                resolve_inherited_tempo(_scale).
 //   label_ref -> the label-definition marker (def_idx); base/scale are the
-//                def's effective base and the combined "~=" scale — or the
-//                "9.9999" ceiling with scale_saturated set when the combined
-//                value is at or above the typed-field ceiling (displayed
-//                ">=", a lower bound).
+//                def's effective base and the combined "~=" multiplier —
+//                a full double with no display ceiling.
 // A pass immediately after a label_ref is legal; source_idx then names the
 // ref (the visible immediate prior), base/scale still the resolved owner's.
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
@@ -185,14 +183,13 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // inert for a pass or a label_ref — TIME its time_frame). If SOURCE's own
 // resolution is unresolvable (base 0.0), the suffix is dropped entirely and
 // the popup shows just the resolved tempo. Label_ref markers emit
-// "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE at 2 decimals;
-// COMBINED_SCALE = def_scale * multiplier when the def has a typed scale,
-// else multiplier, at 4 decimals; DEF_BASE:LABEL and TIME describe the
-// label-definition marker). When the combined scale saturates at the 9.9999
-// typed-field ceiling the leading "~=" becomes ">=" and COMBINED_SCALE is
-// "9.9999" (a lower bound, not an approximation); the same ">=" prefixes a
-// pass popup's provenance descriptor when its visible immediate prior is a
-// saturated ref. TIME is formatted with format_timestamp
+// "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
+// tempo-like value, min 2 decimals; COMBINED_SCALE = def_scale * multiplier
+// when the def has a typed scale, else multiplier, printed as a scale-like
+// value at min 4 decimals with no ceiling — the "~=" marks an implied,
+// geometry-dependent value, while a pass popup's "=" marks an exact
+// inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
+// marker). TIME is formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
 // Returns "" when the marker does not qualify (owning, missing def,
 // malformed). GUI callers slice their GuiWarpMarker store to WarpMarker

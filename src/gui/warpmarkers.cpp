@@ -2,6 +2,7 @@
 
 #include "frame_format.h"
 #include "settings_io.h"
+#include "value_format.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -57,17 +58,19 @@ bool GuiWarpMarkers::save(const std::string& path,
         //   owning, with scale      → "1.23*1.2345"
         //   def, no scale           → "1.23:a.03"
         //   def, with scale         → "1.23*1.2345:a.03"
+        // Values persist as padded shortest-round-trip doubles
+        // (value_format.h: tempo min 2 decimals, scale min 4), so a saved
+        // store reloads bit-identically and historical fixed-decimal forms
+        // re-serialize byte-for-byte.
         if (!m.label_ref.empty()) {
             out << m.label_ref;
         } else {
             if (m.tempo_inherits) {
                 out << "pass";
             } else {
-                char tbuf[32];
-                std::snprintf(tbuf, sizeof(tbuf), "%.2f", m.tempo_base);
-                out << tbuf;
-                if (!m.tempo_scale.empty()) {
-                    out << '*' << m.tempo_scale;
+                out << format_value_double(m.tempo_base, 2);
+                if (m.tempo_scale.has_value()) {
+                    out << '*' << format_value_double(*m.tempo_scale, 4);
                 }
             }
             if (!m.label_def.empty()) {

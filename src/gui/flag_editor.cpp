@@ -356,7 +356,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     if (parsed.tempo_inherits) {
         m.tempo_inherits = true;
         m.tempo_base     = 1.0;
-        m.tempo_scale    = "1.0000";
+        m.tempo_scale.reset();
         m.label_def      = parsed.label_def;
         m.label_ref.clear();
     } else {
@@ -532,7 +532,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
         return false;
     }
     const std::string& s = app.top_flag_editor.pending;
-    int beats = 0, lo = 0, hi = 0;
+    int    beats = 0;
+    double lo = 0.0, hi = 0.0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         app.top_flag_editor.red = true;
         viewport.invalidate_timestamp_area();

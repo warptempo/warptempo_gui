@@ -6,6 +6,7 @@
 #include "settings_io.h"
 #include "time_format.h"
 #include "trimmer.h"
+#include "value_format.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
@@ -307,17 +308,18 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 }
 
 // Human-readable provenance descriptor for a committed BPM cell,
-// e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats and bpm are
-// integers; the two timestamps are the span's owner and endpoint marker
-// times in display seconds (frame / sample_rate, converted by the caller),
-// formatted via the shared mm:ss.mmm formatter. Stored verbatim in
-// the cell's .rendersettings bpm= field and promoted into .settings on
-// commit.
-static std::string format_bpm_descriptor(int beats, int bpm,
+// e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats is an
+// integer; bpm is a double printed in plain shortest round-trip form
+// ("220" stays "220", "220.5" stays "220.5"); the two timestamps are the
+// span's owner and endpoint marker times in display seconds
+// (frame / sample_rate, converted by the caller), formatted via the shared
+// mm:ss.mmm formatter. Stored verbatim in the cell's .rendersettings bpm=
+// field and promoted into .settings on commit.
+static std::string format_bpm_descriptor(int beats, double bpm,
                                          double start_seconds,
                                          double end_seconds) {
     return std::to_string(beats) + " beats @ " +
-           std::to_string(bpm) + " bpm from " +
+           format_value_double(bpm, 0) + " bpm from " +
            format_timestamp(start_seconds) + " to " +
            format_timestamp(end_seconds);
 }
@@ -367,9 +369,9 @@ bool GuiInputHandler::render_bpm_sweep() {
     }
     if (owner_idx < 0) return false;
     const GuiWarpMarker& owner = base_warp_markers[owner_idx];
-    if (owner.bpm_beats <= 0) return false;
-    if (owner.bpm_lo    <= 0) return false;
-    if (owner.bpm_hi    <= 0) return false;
+    if (owner.bpm_beats <= 0)   return false;
+    if (!(owner.bpm_lo > 0.0))  return false;
+    if (!(owner.bpm_hi > 0.0))  return false;
 
     // Span endpoint is explicit (set on the `m` two-marker span gate).
     const int endpoint_idx = owner.bpm_endpoint;
@@ -385,8 +387,10 @@ bool GuiInputHandler::render_bpm_sweep() {
         static_cast<double>(audio.sample_rate());
     if (!(duration_seconds > 0.0)) return false;
 
-    std::vector<int> bpm_values;
-    for (int b = owner.bpm_lo; b <= owner.bpm_hi; ++b) {
+    // One cell per whole-bpm step from lo up to hi inclusive; fractional
+    // lo keeps its fraction across the walk (72.5, 73.5, ...).
+    std::vector<double> bpm_values;
+    for (double b = owner.bpm_lo; b <= owner.bpm_hi; b += 1.0) {
         bpm_values.push_back(b);
     }
     if (bpm_values.empty()) return false;
@@ -433,45 +437,34 @@ bool GuiInputHandler::render_bpm_sweep() {
     std::vector<RenderRequest> reqs;
     reqs.reserve(bpm_values.size());
     int seq = 1;
-    for (int bpm : bpm_values) {
+    for (double bpm : bpm_values) {
         const auto computed = compute_base_tempo_scale(
             duration_seconds, owner.bpm_beats, bpm);
         if (!computed) {
             std::fprintf(stderr,
                 "warptempo_gui: render-bpm: rejected cell "
-                "bpm=%d (duration=%.6f, beats=%d)\n",
-                bpm, duration_seconds, owner.bpm_beats);
-            continue;
-        }
-
-        // Sweeps outside base tempo 0.50-2.00 fall outside the documented
-        // usage model and can overflow the %.2f N.NN marker grammar this
-        // cell's tempo_base is serialized with (save/reload round-trip
-        // requires exactly one integer digit). Reject the cell rather than
-        // let it corrupt the batch's reloadability; base_tempo is already
-        // round2-quantized above, so these bounds compare exactly.
-        if (computed->base_tempo < 0.50 || computed->base_tempo > 2.00) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-bpm: rejected cell "
-                "bpm=%d base_tempo=%.2f out of range "
-                "[0.50, 2.00] (duration=%.6f, beats=%d)\n",
-                bpm, computed->base_tempo, duration_seconds,
-                owner.bpm_beats);
+                "bpm=%s (duration=%.6f, beats=%d)\n",
+                format_value_double(bpm, 0).c_str(),
+                duration_seconds, owner.bpm_beats);
             continue;
         }
 
         std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
         // Owner: concrete computed base tempo, scale carried in settings.
+        // Any positive base tempo serializes exactly (padded shortest
+        // round-trip form), so no range gate protects the save/reload
+        // round trip; compute_base_tempo_scale's positivity guards are the
+        // only cell filter.
         cell_warp_markers[owner_idx].tempo_inherits = false;
         cell_warp_markers[owner_idx].tempo_base     = computed->base_tempo;
-        cell_warp_markers[owner_idx].tempo_scale.clear();
+        cell_warp_markers[owner_idx].tempo_scale.reset();
         // Span-internal markers pass: their own tempo is subsumed by the
         // owner's span tempo. Disabled span-internal markers stay disabled
         // but also pass (the disabled flag is independent of tempo_inherits).
         for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
             cell_warp_markers[i].tempo_inherits = true;
-            cell_warp_markers[i].tempo_base     = 1.0;       // inert default
-            cell_warp_markers[i].tempo_scale    = "1.0000";  // model's inert scale
+            cell_warp_markers[i].tempo_base     = 1.0;   // inert default
+            cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
             // label_def on a span-internal marker is preserved (refs are
             // excluded from spans by the `m` two-marker span gate, but a def
             // may exist); only the tempo fields are rewritten. Do not touch
@@ -494,12 +487,16 @@ bool GuiInputHandler::render_bpm_sweep() {
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
                       "%0*d", pad_width, seq);
-        char rest_buf[64];
-        std::snprintf(rest_buf, sizeof(rest_buf),
-                      "_%d,%.2f,%.6f",
-                      bpm, computed->base_tempo, computed->scale);
+        // Filename embeds the exact cell values in padded shortest
+        // round-trip form (bpm plain, tempo min 2 decimals, scale min 4),
+        // so the name never rounds away stored precision.
         std::string basename = num_buf;
-        basename += rest_buf;
+        basename += '_';
+        basename += format_value_double(bpm, 0);
+        basename += ',';
+        basename += format_value_double(computed->base_tempo, 2);
+        basename += ',';
+        basename += format_value_double(computed->scale, 4);
 
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,

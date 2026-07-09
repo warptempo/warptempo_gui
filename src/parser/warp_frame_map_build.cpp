@@ -1,5 +1,6 @@
 #include "warp_frame_map_build.h"
-#include "time_format.h"  // format_timestamp
+#include "time_format.h"   // format_timestamp
+#include "value_format.h"  // format_value_double
 
 #include <cstddef>
 #include <cstdio>
@@ -11,16 +12,10 @@
 namespace {
 
 double effective_tempo(const MarkerForRender& m) {
-    // Every producer of tempo_scale writes grammar-shaped numeric text (the
-    // strict parser's N.NNNN form, the inert "1.0000" literal, a copy of an
-    // existing owner's resolved scale, or a %.4f-formatted display scale), so
-    // the parse is total here. A genuinely non-positive product is still
-    // rejected by the callers' tempo <= 0 checks.
-    double v = m.tempo_base;
-    if (!m.tempo_scale.empty()) {
-        v *= std::stod(m.tempo_scale);
-    }
-    return v;
+    // tempo_scale is a typed double (nullopt means no typed scale, i.e.
+    // scale 1). A genuinely non-positive product is still rejected by the
+    // callers' tempo <= 0 checks.
+    return m.tempo_base * m.tempo_scale.value_or(1.0);
 }
 
 // A label definition contributes exactly one thing to its references: the
@@ -153,7 +148,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 
         if (!g.label_ref.empty()) {
             m.tempo_base = 0.0;
-            m.tempo_scale.clear();
+            m.tempo_scale.reset();
         } else if (g.tempo_inherits) {
             const int gi = static_cast<int>(i);
             m.tempo_base  = resolve_inherited_tempo(src, gi);
@@ -195,7 +190,7 @@ double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index
     return 1.0;
 }
 
-std::string resolve_inherited_tempo_scale(
+std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
@@ -203,7 +198,7 @@ std::string resolve_inherited_tempo_scale(
             return m.tempo_scale;
         }
     }
-    return {};
+    return std::nullopt;
 }
 
 MarkerEffective marker_effective(
@@ -272,31 +267,20 @@ MarkerEffective marker_effective(
         if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
-        double      def_base;
-        std::string def_scale_str;
-        bool        def_has_typed_scale;
+        double                def_base;
+        std::optional<double> def_scale;
         if (def.tempo_inherits) {
             // An inheriting definition (a pass) contributes both its resolved
             // base and its resolved scale, mirroring resolve_warp_markers_for_render
             // so the hover multiplier matches the frame map. Both resolvers walk
             // backward from def_idx-1, correctly excluding the pass itself.
-            def_base = resolve_inherited_tempo(mv, def_idx);
-            def_scale_str = resolve_inherited_tempo_scale(mv, def_idx);
-            def_has_typed_scale = !def_scale_str.empty();
+            def_base  = resolve_inherited_tempo(mv, def_idx);
+            def_scale = resolve_inherited_tempo_scale(mv, def_idx);
         } else {
-            def_base = def.tempo_base;
-            def_scale_str = def.tempo_scale;
-            def_has_typed_scale = !def_scale_str.empty();
+            def_base  = def.tempo_base;
+            def_scale = def.tempo_scale;
         }
-        // def_scale_str is either def's own typed scale field or the output of
-        // resolve_inherited_tempo_scale, both grammar-shaped numeric text (the
-        // strict parser's N.NNNN form or a copy of an existing owner's
-        // resolved scale) whenever def_has_typed_scale is true, so the parse
-        // is total here — same argument as effective_tempo above.
-        double def_scale_val = 1.0;
-        if (def_has_typed_scale) {
-            def_scale_val = std::stod(def_scale_str);
-        }
+        const double def_scale_val = def_scale.value_or(1.0);
         const double def_eff_tempo = def_base * def_scale_val;
         if (def_base == 0.0 || def_eff_tempo == 0.0) return r;
 
@@ -305,26 +289,12 @@ MarkerEffective marker_effective(
         //              / (def_base * def_src_dist)
         const double multiplier =
             (lr_src_dist * def_eff_tempo) / (def_base * def_src_dist);
-        const double combined_scale = def_has_typed_scale
+        // The combined multiplier is carried unclamped — values are full
+        // doubles with no display ceiling; the render's ref handling is
+        // delta-based and never reads this.
+        r.scale = def_scale.has_value()
             ? (def_scale_val * multiplier)
             : multiplier;
-
-        // The typed scale grammar caps at 9.9999, so larger implied values
-        // cannot be rendered in the N.NNNN display shape (%.4f of ten or more
-        // overflows the one-integer-digit form). The displayed value saturates
-        // at that ceiling; the render is unaffected because a ref imposes its
-        // definition's target frame delta, not a scale. A combined scale just
-        // below 9.9999 that merely rounds to 9.9999 under %.4f stays
-        // unsaturated — that is ordinary in-domain rounding, not saturation,
-        // and carries no at-least marker.
-        if (combined_scale >= 9.9999) {
-            r.scale           = "9.9999";
-            r.scale_saturated = true;
-        } else {
-            char scale_buf[32];
-            std::snprintf(scale_buf, sizeof(scale_buf), "%.4f", combined_scale);
-            r.scale = scale_buf;
-        }
         r.base       = def_base;
         r.source_idx = def_idx;
         return r;
@@ -350,13 +320,11 @@ std::string compute_hover_popup_text(
         const MarkerEffective eff = marker_effective(mv, idx);
         if (eff.base == 0.0) return "";
 
-        char tbuf[32];
-        std::snprintf(tbuf, sizeof(tbuf), "%.2f", eff.base);
         std::string out = "= ";
-        out += tbuf;
-        if (!eff.scale.empty()) {
+        out += format_value_double(eff.base, 2);
+        if (eff.scale.has_value()) {
             out += "*";
-            out += eff.scale;
+            out += format_value_double(*eff.scale, 4);
         }
 
         // A first-marker pass resolves to the 1.0 default and has no prior
@@ -377,19 +345,13 @@ std::string compute_hover_popup_text(
             marker_effective(mv, eff.source_idx);
         if (src_eff.base == 0.0) return out;
 
-        char sbuf[32];
-        std::snprintf(sbuf, sizeof(sbuf), "%.2f", src_eff.base);
-        // The visible immediate prior can be an enabled label ref whose
-        // combined scale saturated at the 9.9999 display ceiling; the
-        // descriptor then carries the same ">=" lower-bound prefix as that
-        // ref's own popup. The main resolved value above cannot saturate —
-        // passes never inherit through a ref, so eff.scale is always a typed
-        // field string.
-        std::string descriptor = src_eff.scale_saturated ? ">= " : "";
-        descriptor += sbuf;
-        if (!src_eff.scale.empty()) {
+        // The visible immediate prior can be an enabled label ref; its
+        // combined multiplier prints in full like the ref's own popup —
+        // values carry no display ceiling.
+        std::string descriptor = format_value_double(src_eff.base, 2);
+        if (src_eff.scale.has_value()) {
             descriptor += "*";
-            descriptor += src_eff.scale;
+            descriptor += format_value_double(*src_eff.scale, 4);
         }
         out += " (from ";
         out += descriptor;
@@ -403,19 +365,19 @@ std::string compute_hover_popup_text(
         const MarkerEffective eff = marker_effective(mv, idx);
         if (eff.base == 0.0) return "";
 
-        char base_buf[32];
-        std::snprintf(base_buf, sizeof(base_buf), "%.2f", eff.base);
-        // A saturated scale is a lower bound, not an approximation, so the
-        // popup opens with ">=" instead of "~=".
-        std::string out = eff.scale_saturated ? ">= " : "~= ";
-        out += base_buf;
+        const std::string base_text = format_value_double(eff.base, 2);
+        // "~=" marks an implied, geometry-dependent multiplier (contrast the
+        // pass popup's hard "=", an exact inherited literal). The value
+        // prints in full — no display ceiling at any magnitude.
+        std::string out = "~= ";
+        out += base_text;
         out += "*";
-        out += eff.scale;
+        out += format_value_double(eff.scale.value_or(1.0), 4);
 
         // Provenance: "<def_base>:<label>" and the def marker's position.
         const WarpMarker& def = mv[eff.source_idx];
         out += " (from ";
-        out += base_buf;
+        out += base_text;
         out += ":";
         out += m.label_ref;
         out += " @ ";
@@ -463,10 +425,9 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            // The effective product (base times scale) has no ceiling. The
-            // N.NN and N.NNNN limits are typed-field input syntax enforced at
-            // parse and editor commit only; extreme products are the author's
-            // concern.
+            // The effective product (base times scale) has no ceiling —
+            // typed values are full positive doubles; extreme products are
+            // the author's concern.
             // Only a <= 0 product is rejected: the segment arithmetic divides
             // by it, so a zero or negative product divides by zero or flips
             // sign in delta_tgt. That guard is correctness, not form. Typed
@@ -475,7 +436,8 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // unreachable from program-written input, kept deliberately as a
             // loud refusal.
             if (tempo_val <= 0.0) {
-                return std::unexpected("tempo " + std::to_string(tempo_val)
+                return std::unexpected("tempo " +
+                                       format_value_double(tempo_val, 2)
                                        + " <= 0 at marker " + std::to_string(i));
             }
 
@@ -521,9 +483,8 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             }
             const LabelCacheEntry& lbl = lbl_it->second;
             // A label_ref imposes its definition's target duration; there is
-            // no ceiling on the implied stretch multiplier. The N.NNNN syntax
-            // limit applies only to typed scale fields at parse and editor
-            // commit; extreme implied multipliers are the author's concern.
+            // no ceiling on the implied stretch multiplier — extreme implied
+            // multipliers are the author's concern.
             target_frame = tgt_f_prev + lbl.delta_tgt;
         } else {
             double tempo_val = effective_tempo(m);

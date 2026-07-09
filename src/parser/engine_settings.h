@@ -74,7 +74,8 @@ bool validate_engine_setting(const std::string& key,
                              std::string& reason);
 
 // Current on-disk string form of engine `key`'s value in `es`, formatted
-// exactly as the settings writer emits it (%.6f for scale, true/false for
+// exactly as the settings writer emits it (padded shortest round-trip form
+// at min 4 decimals for scale — value_format.h — true/false for
 // limiter, verbatim for the string fields). Returns std::nullopt if `key`
 // is not a canonical engine key; the empty string is a valid result (an
 // unset free-text field). Inverse of validate_engine_setting; used by the

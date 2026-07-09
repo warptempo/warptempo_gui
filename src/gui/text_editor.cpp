@@ -283,9 +283,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::Consumed;
     }
 
-    // Printable insertion (length-capped). BpmBracket gets a tighter cap
-    // than the default: the strict format `<beats>@[<lo>,<hi>]`
-    // tops out at 12 chars, so 13 leaves one char of typo slack.
+    // Printable insertion (length-capped). Each Kind's cap admits its
+    // longest full-precision value form (see the kMaxPendingChars*
+    // comments in text_editor.h).
     // Accept any printable character the keyboard produced. The platform
     // resolved the effective codepoint (shift / layout applied) via
     // xkbcommon; insert it when no Ctrl/Alt is held and it is a printable

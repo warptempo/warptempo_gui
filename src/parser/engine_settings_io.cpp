@@ -1,6 +1,7 @@
 #include "engine_settings.h"
 
 #include "parse_text_util.h"
+#include "value_format.h"
 
 #include <cctype>
 #include <cmath>
@@ -16,22 +17,8 @@ namespace {
 using warptempo_parse::trim_ws;
 
 // Strict value parsers for validate_engine_setting. Each consumes the
-// entire string; trailing garbage, non-finite doubles, and out-of-range
-// integers are rejected.
-
-bool parse_double_strict(const std::string& s, double& out) {
-    if (s.empty()) return false;
-    try {
-        std::size_t pos = 0;
-        const double v = std::stod(s, &pos);
-        if (pos != s.size()) return false;
-        if (!std::isfinite(v)) return false;
-        out = v;
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
+// entire string; trailing garbage and non-finite doubles are rejected
+// (the scale key parses through the shared parse_value_double).
 
 bool parse_bool_strict(const std::string& s, bool& out) {
     if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
@@ -110,39 +97,16 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "scale") {
+        // Full positive double, the same rule as marker tempo/scale values
+        // (parse_value_double strictness plus a > 0 refusal). The writers
+        // persist the padded shortest round-trip form (min 4 decimals), so
+        // any accepted value reloads bit-identically — no serialization
+        // round-trip gate is needed. Extreme magnitudes are the author's
+        // concern; the engine's tripwires remain the backstop for
+        // degenerate geometry.
         double v;
-        if (!parse_double_strict(value, v) || !(v > 0.0)) {
+        if (!parse_value_double(value, v) || !(v > 0.0)) {
             reason = "must be a finite double strictly greater than 0";
-            return false;
-        }
-        // The canonical writers persist scale as %.6f, so a value that does
-        // not round-trip that serialization exactly either fails its own
-        // reload (sub-half-micro values serialize as 0.000000, which the
-        // greater-than-zero check above rejects) or silently changes value
-        // across save and reload. The implied lower bound in the one-micro
-        // class also keeps build_warp_frame_map's target-delta division finite: a
-        // subnormal scale could otherwise drive delta_tgt to inf and emit
-        // non-finite map artifacts as success.
-        char buf[64];
-        const int n = std::snprintf(buf, sizeof(buf), "%.6f", v);
-        double rt;
-        if (n < 0 || static_cast<std::size_t>(n) >= sizeof(buf) ||
-            !parse_double_strict(buf, rt) || rt != v) {
-            reason = "must survive the settings writer's %.6f serialization "
-                     "unchanged (at most six decimal places of precision)";
-            return false;
-        }
-        // Ruled authoring bound: scale must lie in [0.000001, 9.999999]
-        // inclusive, preventing degenerate global tempo scales at authoring
-        // rather than leaving them for the engine to catch. Because the %.6f
-        // round-trip above has already passed, v is exactly representable at
-        // six decimals, so these plain double comparisons against the two
-        // six-decimal literals are exact at the boundaries — no epsilon or
-        // string comparison is needed. This ceiling does not cap label-ref
-        // implied multipliers; the engine's zero-cap dispatch refusal remains
-        // the backstop for ref-implied extreme geometry.
-        if (v < 0.000001 || v > 9.999999) {
-            reason = "must be between 0.000001 and 9.999999";
             return false;
         }
         out.scale = v;
@@ -189,9 +153,9 @@ std::optional<std::string> format_engine_setting_value(
     if (key == "title")         return es.title;
     if (key == "output_format") return es.output_format;
     if (key == "scale") {
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%.6f", es.scale);
-        return std::string(buf);
+        // Scale-like value form: padded shortest round-trip, min 4 decimals
+        // — exactly the bytes the settings writer emits.
+        return format_value_double(es.scale, 4);
     }
     if (key == "bpm")     return es.bpm;
     if (key == "notes")   return es.notes;
