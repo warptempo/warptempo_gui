@@ -197,6 +197,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
+    // Ctrl+C while the tempo hover popup is showing copies the hovered
+    // marker's effective tempo value (the pasteable "base" / "base*scale"
+    // form the flag editor accepts) to the system clipboard, for pasting the
+    // implied value of a pass or label ref into a neighbor's flag editor.
+    // Placed below the prompt gate (line above returns while a modal is up)
+    // and the two editor blocks (which return on their own Ctrl+C, keeping
+    // the editor's copy-selection working while an editor owns input), so
+    // reaching here means neither a modal nor an editor is active. Fires only
+    // while the popup is visible, in which case copy_payload is non-empty.
+    // Ctrl+Alt+C (render-view commit) carries Alt and is unaffected; Ctrl+C
+    // was otherwise unbound globally.
+    if (ctrl && !shift && !alt && key == GuiKeys::C &&
+        app.hover_popup.visible) {
+        gui.clipboard_set_text(app.hover_popup.copy_payload);
+        return;
+    }
+
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
     // flight, swallow every hotkey except the escape hatches — Esc stops

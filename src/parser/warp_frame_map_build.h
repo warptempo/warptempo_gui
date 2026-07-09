@@ -224,11 +224,23 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
 // marker). TIME is formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
+// Both qualifying cases end the readout with " (ctrl+c to copy)", the hint
+// for the hover-copy binding.
 // Returns "" when the marker does not qualify (owning, missing def,
 // malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
 // (slice_to_warp_markers) before calling.
+//
+// When `copy_payload_out` is non-null and the marker qualifies, it receives
+// the pasteable effective value in the exact text the flag editor accepts and
+// the serializer writes: format_value_double(base, 2), plus
+// "*"+format_value_double(scale, 4) when a scale is present (omitted for a
+// pass whose scale is semantically 1, always included for a label ref). No
+// "= "/"~= " prefix, no provenance, no copy hint — just the value. It is the
+// popup text's own value substring, so the two cannot drift. Left untouched
+// when the marker does not qualify (the function returns "" first).
 std::string compute_hover_popup_text(
-    const std::vector<WarpMarker>& mv, int idx, int sample_rate);
+    const std::vector<WarpMarker>& mv, int idx, int sample_rate,
+    std::string* copy_payload_out = nullptr);
 
 // The map artifacts are always the FULL maps — trim is a wav-only render
 // window, never an artifact shape (the map formats refuse when a trim bound

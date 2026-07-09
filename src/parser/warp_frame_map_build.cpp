@@ -362,7 +362,12 @@ MarkerEffective marker_effective(
 }
 
 std::string compute_hover_popup_text(
-    const std::vector<WarpMarker>& mv, int idx, int sample_rate) {
+    const std::vector<WarpMarker>& mv, int idx, int sample_rate,
+    std::string* copy_payload_out) {
+    // Appended to both qualifying readouts as the hover-copy hint; the value
+    // the binding actually copies is copy_payload_out, set from the readout's
+    // own value substring below.
+    static constexpr const char* kCopyHint = " (ctrl+c to copy)";
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
     // sample_rate is display-only: it renders the provenance time as
     // format_timestamp(frame / sample_rate).
@@ -380,13 +385,17 @@ std::string compute_hover_popup_text(
             out += "*";
             out += format_value_double(*eff.scale, 4);
         }
+        // Payload is the value form the flag editor accepts — the readout minus
+        // its "= " prefix (base, plus "*scale" only when a scale is present), so
+        // it can never drift from what the popup shows.
+        if (copy_payload_out) *copy_payload_out = out.substr(2);
 
         // A first-marker pass resolves to the 1.0 default and has no prior
         // marker to attribute, so source_idx stays negative; the popup shows
         // just the resolved tempo ("= 1.00") without a provenance suffix. The
         // same guard covers a pass whose priors are all disabled, should that
         // state be reachable.
-        if (eff.source_idx < 0) return out;
+        if (eff.source_idx < 0) return out + kCopyHint;
 
         // Provenance: the immediate prior marker's own resolved displayed
         // tempo (its base, or base*scale if it carries a typed scale) and its
@@ -397,7 +406,7 @@ std::string compute_hover_popup_text(
         const WarpMarker& src = mv[eff.source_idx];
         const MarkerEffective src_eff =
             marker_effective(mv, eff.source_idx);
-        if (src_eff.base == 0.0) return out;
+        if (src_eff.base == 0.0) return out + kCopyHint;
 
         // The visible immediate prior can be an enabled label ref only on a
         // transiently-unresolved store (at rest that arrangement is the
@@ -414,7 +423,7 @@ std::string compute_hover_popup_text(
         out += " @ ";
         out += format_timestamp(src.time_frame / sr_d);
         out += ")";
-        return out;
+        return out + kCopyHint;
     }
 
     if (!m.label_ref.empty()) {
@@ -429,6 +438,10 @@ std::string compute_hover_popup_text(
         out += base_text;
         out += "*";
         out += format_value_double(eff.scale.value_or(1.0), 4);
+        // Payload is the readout minus its "~= " prefix — the label ref's
+        // implied multiplier is always present, so the scale is always
+        // included, matching the value the flag editor accepts.
+        if (copy_payload_out) *copy_payload_out = out.substr(3);
 
         // Provenance: "<def_base>:<label>" and the def marker's position.
         const WarpMarker& def = mv[eff.source_idx];
@@ -439,7 +452,7 @@ std::string compute_hover_popup_text(
         out += " @ ";
         out += format_timestamp(def.time_frame / sr_d);
         out += ")";
-        return out;
+        return out + kCopyHint;
     }
 
     return "";

@@ -331,6 +331,13 @@ struct HoverPopupState {
     int         marker_index = -1;
     bool        visible      = false;
     std::string cached_text;
+    // The pasteable effective tempo value for the hovered marker, in the exact
+    // form the flag editor accepts (base, plus "*scale" when a scale is
+    // present). Computed alongside cached_text at each rect-entry and copied to
+    // the clipboard by the Ctrl+C hover-copy binding while `visible`. Non-empty
+    // whenever `visible` is true (an empty cached_text means no popup, so the
+    // binding never fires with an unset payload).
+    std::string copy_payload;
 };
 
 // What action triggered the modal prompt; the activate-response dispatch

@@ -460,11 +460,12 @@ void Viewport::recompute_hover_at_cursor() {
         // (paint then skips the readout and keeps the strip clean).
         const bool was_visible = app.hover_popup.visible;
         app.hover_popup.marker_index = hit;
+        app.hover_popup.copy_payload.clear();
         app.hover_popup.cached_text =
             popup_eligible_marker(app, hit)
                 ? compute_hover_popup_text(
                       slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                      audio.sample_rate())
+                      audio.sample_rate(), &app.hover_popup.copy_payload)
                 : std::string();
         app.hover_popup.visible = !app.hover_popup.cached_text.empty();
         if (was_visible || app.hover_popup.visible) invalidate_timestamp_area();
