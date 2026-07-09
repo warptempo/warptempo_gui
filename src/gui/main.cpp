@@ -97,7 +97,11 @@ namespace {
 // previous. kZoomTableSize (in app_state.h) is the size of this table.
 constexpr double kZoomMsPerPixel[] = {
     -1.0,    // [0]  fit-file sentinel
-     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only
+     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only. This value in
+             //      seconds is the marker coincidence window
+             //      (kCoincidenceWindowSeconds, marker_store_validate.h): two
+             //      same-column markers closer than one pixel here cannot be
+             //      picked apart. A change here must change there.
      1.25,   // [2]  2.4 s  — snap level (kSnapZoomLevel)
      2.5,    // [3]  4.8 s
      5.0,    // [4]  9.6 s

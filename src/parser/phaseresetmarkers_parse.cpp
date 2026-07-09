@@ -85,12 +85,14 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // A reset at time zero parses and loads; it is inert at render because
         // the near-start dropzone drops it at derivation.
         //
-        // Load rejects only DECREASING times. Equal-time (and other sub-frame)
-        // markers load deliberately — load stays lenient — but they refuse at
-        // the render boundary: the raw-store rule (marker_store_validate.h)
-        // prohibits two resets under one source frame apart on both columns,
-        // and build_phase_reset_source_frames refuses such a pair as the breach
-        // backstop. Decreasing stays load-fatal as a corruption tripwire — the
+        // Load rejects only DECREASING times. Equal-time (and other closely
+        // spaced) markers load deliberately — load stays lenient — but they
+        // refuse at the render boundary: the raw-store rule
+        // (marker_store_validate.h) prohibits two resets closer than one
+        // deepest-zoom pixel of time on both columns, and
+        // build_phase_reset_source_frames refuses the sub-frame subset of those
+        // pairs as the breach backstop. Decreasing stays load-fatal as a
+        // corruption tripwire — the
         // GUI always saves its time-sorted store, so a decreasing file can only
         // be a hand-edit error or corruption.
         if (last_time >= 0.0 && eff < last_time)

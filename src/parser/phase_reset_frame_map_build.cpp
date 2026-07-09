@@ -19,10 +19,11 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
                 + std::to_string(i));
         }
         // Sub-frame refusal, mirroring the warp column's shape
-        // (build_warp_frame_map's src_frame - src_f_prev < 1.0 check). Stacked
-        // and sub-frame phase resets are prohibited by the raw-store rule
-        // (marker_store_validate.h) on both columns — the GUI cannot let the
-        // user mouse-pick markers under one source frame apart. This
+        // (build_warp_frame_map's src_frame - src_f_prev < 1.0 check). The
+        // raw-store rule (marker_store_validate.h) prohibits same-column markers
+        // closer than one deepest-zoom pixel of time on both columns — a wider
+        // window than this sub-frame check, since the GUI cannot let the user
+        // mouse-pick markers on one pixel column apart. This sub-frame
         // in-function check is the breach backstop for hand-edited input
         // reaching the build directly, past the marker parser and the store's
         // enumerator. Input marker times are non-decreasing (the load parser

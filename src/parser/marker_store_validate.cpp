@@ -10,24 +10,24 @@
 namespace {
 
 // Adjacent-pair coincident grouping over a time-sorted column. A pair is
-// coincident when (t[i+1] - t[i]) * sample_rate < 1.0, the same comparison
-// shape as build_warp_frame_map's sub-frame segment refusal and
-// build_phase_reset_source_frames' sub-frame reset refusal — computed on exact
+// coincident when (t[i+1] - t[i]) < kCoincidenceWindowSeconds — a seconds-domain
+// compare, no sample-rate multiply. The window is one deepest-zoom pixel of
+// time, deliberately WIDER than the owners' sub-frame refusals: markers closer
+// than one pixel cannot be mouse-picked apart at any zoom. Computed on exact
 // doubles with no rounding. Chains of adjacent coincident pairs merge into one
 // group; disabled markers participate (the rule is per-column pickability, not
 // render participation).
 std::vector<std::vector<size_t>> coincident_groups(
-    const std::vector<double>& times, long sample_rate) {
-    const double sr = static_cast<double>(sample_rate);
+    const std::vector<double>& times) {
     std::vector<std::vector<size_t>> groups;
     size_t i = 0;
     while (i + 1 < times.size()) {
-        if ((times[i + 1] - times[i]) * sr < 1.0) {
+        if ((times[i + 1] - times[i]) < kCoincidenceWindowSeconds) {
             std::vector<size_t> group;
             group.push_back(i);
             size_t j = i;
             while (j + 1 < times.size() &&
-                   (times[j + 1] - times[j]) * sr < 1.0) {
+                   (times[j + 1] - times[j]) < kCoincidenceWindowSeconds) {
                 group.push_back(j + 1);
                 ++j;
             }
@@ -69,7 +69,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
         std::vector<double> warp_times;
         warp_times.reserve(warp_markers.size());
         for (const auto& m : warp_markers) warp_times.push_back(m.time_seconds);
-        for (auto& group : coincident_groups(warp_times, sample_rate)) {
+        for (auto& group : coincident_groups(warp_times)) {
             MarkerDefect d;
             d.kind         = MarkerDefectKind::CoincidentGroup;
             d.column       = 'W';
@@ -83,7 +83,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
         std::vector<double> reset_times;
         reset_times.reserve(phase_resets.size());
         for (const auto& m : phase_resets) reset_times.push_back(m.time_seconds);
-        for (auto& group : coincident_groups(reset_times, sample_rate)) {
+        for (auto& group : coincident_groups(reset_times)) {
             MarkerDefect d;
             d.kind         = MarkerDefectKind::CoincidentGroup;
             d.column       = 'P';
