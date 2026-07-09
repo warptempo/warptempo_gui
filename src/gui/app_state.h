@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "marker_store_validate.h"
 #include "render_pipeline.h"
 #include "render.h"
 #include "text_editor.h"
@@ -336,6 +337,12 @@ enum class DialogTrigger {
     REVERT_TO_BLANK,
     PASTE_CONFIRM,
     ERROR_NOTICE,
+    // Forced-choice defect-resolution modal (the commit-time series driven
+    // by GuiInputHandler::open_defect_series). Esc is SWALLOWED rather than
+    // activating the rightmost response — a recorded deviation from the
+    // other prompts' Esc rule — because every offered option mutates or
+    // rewinds authored state and the state must not silently rest invalid.
+    DEFECT_RESOLUTION,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom strip
@@ -351,6 +358,25 @@ struct PromptState {
     std::vector<char>        response_keys;     // lowercase
     std::vector<std::string> response_labels;   // e.g. "[S]ave"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
+};
+
+// Defect-resolution series state (DialogTrigger::DEFECT_RESOLUTION). The
+// series holds only the CURRENT defect; every resolution re-enumerates the
+// stores from scratch (one undo can fix several defects at once), so a
+// stale defect queue cannot exist. `defect` is meaningful only while a
+// marker-defect modal is showing; `trim_defect` marks the trim
+// crossed-or-equal defect instead — it has no MarkerDefect shape (trim is
+// not a marker store). `commit_context` records whether the series was
+// opened by a commit; the coincident-group delete narrows to the touched
+// marker only in that context. `pending_validation` is the commit funnel's
+// once-per-tick flag: set by the history push helpers / do_redo (undo.cpp)
+// and by trim's own history-less commit sites, consumed by
+// GuiInputHandler::run_commit_validation at the top of on_tick.
+struct DefectSeriesState {
+    MarkerDefect defect;
+    bool         trim_defect        = false;
+    bool         commit_context     = false;
+    bool         pending_validation = false;
 };
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
@@ -688,6 +714,10 @@ struct AppState {
     // a centered modal dialog; the same modal semantics now live in the
     // bottom strip.
     PromptState prompt;
+
+    // Defect-resolution series (see DefectSeriesState above). Lives beside
+    // the prompt it drives.
+    DefectSeriesState defect_series;
 
     // Top-flag text editor. Active only when editing a flag rect
     // in warp view. The editor owns the keyboard while active and

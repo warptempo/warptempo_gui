@@ -12,8 +12,10 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
-        // Both are dispatched directly by activate_response; proceed is
-        // not the path they land on.
+    case DialogTrigger::DEFECT_RESOLUTION:
+        // All three are dispatched outside proceed: the first two directly
+        // by activate_response, the defect series by
+        // GuiInputHandler::handle_defect_response.
         break;
     }
 }

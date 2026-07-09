@@ -110,6 +110,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         } else if (key == GuiKeys::Escape) {
             k = '\x1b';
         }
+        // Defect-resolution modal: route the lowercased key to the series'
+        // own dispatcher (which acts only on the offered keys) and swallow
+        // Esc entirely — see the DialogTrigger::DEFECT_RESOLUTION comment
+        // in app_state.h for why this prompt has no Esc response. Ctrl+Q /
+        // Ctrl+W behave like the other non-paste prompts: blocked by the
+        // modal (only 'q'/'w' reach the dispatcher and are not offered);
+        // the unsaved-work flow still protects data afterwards, and an
+        // invalid state saved to disk loads leniently and is caught at
+        // render or target-view entry.
+        if (app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
+            if (k != 0 && k != '\x1b') handle_defect_response(k);
+            return;
+        }
         if (k != 0) {
             for (char rk : app.prompt.response_keys) {
                 if (k == rk) {
@@ -930,6 +943,11 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
+            // Trim commit site (see handle_trim_set_autoset in
+            // input_trim.cpp): each wheel frame's end-bound move is its own
+            // commit, so a move across the begin bound opens the defect
+            // series on the next tick.
+            app.defect_series.pending_validation = true;
             return;
         }
         if (active_view_state(app).read_only) return;

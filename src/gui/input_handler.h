@@ -191,6 +191,33 @@ struct GuiInputHandler {
     // No-op in source view, render-view, blank/loading state.
     void enforce_target_view_validity();
 
+    // Defect-resolution modal series (bodies in input_defect_series.cpp).
+    //
+    // run_commit_validation: the once-per-tick commit funnel check, run from
+    // main.cpp's on_tick immediately before enforce_target_view_validity.
+    // When the pending-validation flag is set (by the history push helpers /
+    // do_redo in undo.cpp and by trim's history-less commit sites) and no
+    // prompt is up and nothing is loading, clears the flag and opens the
+    // series in commit context — so the modal opens on the same beat as the
+    // commit's own repaint, never mid-gesture. While a prompt is already up
+    // the flag is kept for the next tick (the same deferral shape
+    // enforce_target_view_validity uses).
+    void run_commit_validation();
+
+    // open_defect_series: slice the live stores, enumerate marker defects
+    // (both columns; chronological), then — when the marker list is clean —
+    // run the frame-level trim crossed-or-equal check. Fills app.prompt
+    // (DialogTrigger::DEFECT_RESOLUTION) with the current defect and returns
+    // true; when everything is clean, closes any open defect prompt and
+    // returns false.
+    bool open_defect_series(bool commit_context);
+
+    // handle_defect_response: apply the chosen resolution ([U]ndo /
+    // [R]eset / [D]elete per defect kind), then re-open the series with the
+    // same commit-context flag — re-validate from scratch; next defect or
+    // done. Keys not offered by the current defect are swallowed.
+    void handle_defect_response(char k);
+
 private:
     // ActiveBatch holds the run_render_batch state machine. The batch loop
     // used to be synchronous (blocking inside do_render); now each entry is

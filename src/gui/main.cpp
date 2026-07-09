@@ -711,6 +711,13 @@ int main(int argc, char** argv) {
             return;  // loaded state paints on the next tick
         }
 
+        // Commit-time defect validation: when a commit flagged the pending
+        // validation, open the forced-choice defect-resolution series. Runs
+        // immediately before the target-view gate so the modal opens on the
+        // same beat as the commit's own repaint, and so the series (not the
+        // kick-back popup) owns a commit that invalidated target view.
+        input_handler.run_commit_validation();
+
         // Target-view validity kick-back: an invalidating edit made while
         // target view is displayed (delete marker zero, remove a
         // referenced def, ...) flips the view back to source and raises

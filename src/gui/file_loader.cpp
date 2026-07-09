@@ -199,6 +199,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
+    // A fresh load replaces the stores wholesale: drop any pending commit
+    // validation and dismiss an open defect-resolution prompt. Loads do NOT
+    // open the series — load-borne defects wait for render dispatch,
+    // target-view entry, or the next commit.
+    app.defect_series = DefectSeriesState{};
+    if (app.prompt.active &&
+        app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
+        app.prompt.active = false;
+    }
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
@@ -484,6 +493,13 @@ void GuiFileLoader::revert_to_blank() {
     app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
+    // Same reset as load_file: the stores are gone, so the defect series
+    // and its pending flag go with them.
+    app.defect_series = DefectSeriesState{};
+    if (app.prompt.active &&
+        app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
+        app.prompt.active = false;
+    }
     app.drag          = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag     = TrimDragState{};
