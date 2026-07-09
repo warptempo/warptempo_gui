@@ -222,12 +222,6 @@ void append_view_state_block(std::string& out,
     out += '\n';
 }
 
-void append_double_value(std::string& out, double value) {
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%.17g", value);
-    out += buf;
-}
-
 void append_authoring_block(std::string& out,
                             const AuthoringSnapshot& authoring) {
     if (!authoring.valid) return;
@@ -238,14 +232,17 @@ void append_authoring_block(std::string& out,
     out += "active_audio_view=";
     out += authoring.active_audio_view;
     out += '\n';
+    // Trim bounds are authored positions (source-frame doubles); they
+    // serialize through the canonical frame pair in frame_format.h, same as
+    // every other authored position on disk.
     if (authoring.has_trim_begin) {
         out += "trim_begin=";
-        append_double_value(out, authoring.trim_begin_frame);
+        out += format_frame_double(authoring.trim_begin_frame);
         out += '\n';
     }
     if (authoring.has_trim_end) {
         out += "trim_end=";
-        append_double_value(out, authoring.trim_end_frame);
+        out += format_frame_double(authoring.trim_end_frame);
         out += '\n';
     }
     std::snprintf(buf, sizeof(buf), "%d", authoring.zoom_level);
@@ -512,13 +509,13 @@ RendersettingsAuthoring read_rendersettings_authoring(
             }
         } else if (key == "trim_begin") {
             double v;
-            if (parse_double_full(value, v)) {
+            if (parse_frame_double(value, v)) {
                 out.has_trim_begin = true;
                 out.trim_begin_frame = v;
             }
         } else if (key == "trim_end") {
             double v;
-            if (parse_double_full(value, v)) {
+            if (parse_frame_double(value, v)) {
                 out.has_trim_end = true;
                 out.trim_end_frame = v;
             }
