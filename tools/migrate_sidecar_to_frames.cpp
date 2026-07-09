@@ -5,11 +5,14 @@
 // doubles; there is no legacy read path in the GUI, parser, or CLI, so old
 // sidecars fail loudly at load. This standalone tool is the sole conversion
 // route. It rewrites ONLY the time fields of a single file, preserving every
-// other byte, and converts EXACTLY: frames = parse_timestamp(ts) * sample_rate
-// as a double, serialized via format_frame_double (to_chars shortest). That is
-// bit-identical to what the old pipeline computed from the same timestamp, so a
-// post-migration render cmp-nulls byte-exactly against the pre-migration render
-// of the same authoring.
+// other byte, and converts via: frames = nearbyint(parse_timestamp(ts) *
+// sample_rate) — banker's rounding to the nearest whole frame, the same
+// rounding rule the GUI uses everywhere fractional values meet an integer
+// domain — serialized via format_frame_double (to_chars shortest). Migrated
+// positions therefore match the integer frames the GUI's own gestures author.
+// The shift from the exact product is at most half a frame (about 11
+// microseconds at 44.1 kHz), so a render from a migrated file is NOT
+// byte-identical to a pre-migration render of the same authoring, by design.
 //
 // Strictness note: every field that SHOULD convert must parse as a valid
 // timestamp (is_valid_timestamp_format); anything else is a hard error that
@@ -29,6 +32,7 @@
 #include "../src/parser/frame_format.h"
 
 #include <cerrno>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -57,10 +61,12 @@ void usage() {
 // settings trim values carry it as the whole value token.
 constexpr size_t kTimestampLen = 9;
 
-// Convert one timestamp token to its frame-double text. The caller has already
-// confirmed the token is a valid timestamp.
+// Convert one timestamp token to its frame-double text, rounded to the
+// nearest whole frame (banker's rounding, matching every other fractional-to-
+// integer-domain conversion in the project). The caller has already confirmed
+// the token is a valid timestamp.
 std::string convert_timestamp(const std::string& ts, double sample_rate) {
-    return format_frame_double(parse_timestamp(ts) * sample_rate);
+    return format_frame_double(std::nearbyint(parse_timestamp(ts) * sample_rate));
 }
 
 // Split raw file bytes into lines, remembering per line whether a '\n'
