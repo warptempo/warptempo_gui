@@ -329,9 +329,11 @@ struct HoverPopupState {
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
 // applies to the unsaved-work prompts (CLOSE_WINDOW, REVERT_TO_BLANK).
-// ERROR_NOTICE is the dismiss-only error popup (render pre-flight and
-// target-view validity refusals): its text is the parser's own error
-// string, unmodified, and its sole response is acknowledge/dismiss.
+// ERROR_NOTICE is the dismiss-only error popup: the backstop for failures
+// the defect-resolution series does not model, plus the environmental and
+// settings-choice refusals (see GuiPrompt::open_error_notice's caller
+// list). Its text is the owner's own error string, unmodified, and its
+// sole response is acknowledge/dismiss.
 enum class DialogTrigger {
     CLOSE_WINDOW,
     REVERT_TO_BLANK,
@@ -364,13 +366,15 @@ struct PromptState {
 // series holds only the CURRENT defect; every resolution re-enumerates the
 // stores from scratch (one undo can fix several defects at once), so a
 // stale defect queue cannot exist. `defect` is meaningful only while a
-// marker-defect modal is showing; `trim_defect` marks the trim
-// crossed-or-equal defect instead — it has no MarkerDefect shape (trim is
-// not a marker store). `commit_context` records whether the series was
-// opened by a commit; the coincident-group delete narrows to the touched
-// marker only in that context. `pending_validation` is the commit funnel's
-// once-per-tick flag: set by the history push helpers / do_redo (undo.cpp)
-// and by trim's own history-less commit sites, consumed by
+// marker-defect modal is showing; `trim_defect` marks a trim-column defect
+// instead (crossed-or-equal, past-EOF, or a validate_trim_frames refusal)
+// — trim defects have no MarkerDefect shape (trim is not a marker store)
+// and share the single delete-both-bounds resolution. `commit_context`
+// records whether the series was opened by a commit; the coincident-group
+// delete narrows to the touched marker only in that context.
+// `pending_validation` is the commit funnel's once-per-tick flag: set by
+// the history push helpers / do_redo (undo.cpp) and by trim's own
+// history-less commit sites, consumed by
 // GuiInputHandler::run_commit_validation at the top of on_tick.
 struct DefectSeriesState {
     MarkerDefect defect;
@@ -387,19 +391,23 @@ struct DefectSeriesState {
 // each bound to its own absolute walls: begin spans frame 0 to EOF-1 (a
 // begin at or past the source end can never render), end spans frame 0 to
 // EOF exactly (end-at-EOF is valid, so the GUI must be able to represent
-// it). There are NO partner walls — a bound crosses its partner freely
-// during any gesture and may REST inverted or equal; equal and inverted
-// states load from .settings and persist back. The 0.0 floor is now
-// subsumed by the per-bound walls, but it remains the reason the floor
-// exists at all: negative time is unrepresentable in the MM:SS.mmm
-// timestamp grammar the .settings file persists — a format-representability
-// floor, not a validity rule. Past-EOF values are representable and, when
-// LOADED from a hand-edited .settings, stay legal in memory and on disk
-// (the loader is lenient); gestures no longer produce them, and the render
-// boundary refuses them. The render boundary owns validity: validate_trim_
-// frames (trimmer.h) issues every trim refusal — at render dispatch
-// preflight and at the target-view gate — and the GUI informs (the
-// error-notice popup), it never guards. Readers must not assume begin <= end.
+// it) — so past-EOF cannot be gestured. There are NO partner walls — a
+// bound crosses its partner freely during any gesture — but crossed and
+// equal can no longer REST past a commit: the commit funnel's
+// defect-resolution series opens on the offending commit, and its sole
+// trim resolution deletes both bounds. The 0.0 floor is now subsumed by
+// the per-bound walls, but it remains the reason the floor exists at all:
+// negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
+// .settings file persists — a format-representability floor, not a
+// validity rule. Loaded values bypass all of this: the loader stays
+// lenient (trim's corruption tripwire stays deliberately gone — crossed,
+// equal, and past-EOF bounds from a hand-edited .settings load intact and
+// persist back), and the defect series catches them at render dispatch or
+// target-view entry. The render boundary owns validity beneath the
+// series: validate_trim_frames (trimmer.h) issues every trim refusal — at
+// render dispatch preflight and at the target-view gate — and the GUI
+// informs and demands resolution, it never guards a gesture. Readers must
+// not assume begin <= end.
 struct TrimState {
     double begin_seconds = 0.0;
     double end_seconds   = 0.0;
@@ -873,10 +881,6 @@ GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
-// Time-per-pixel of the deepest numeric zoom level
-// (kZoomMsPerPixel[kMinNumericLevel]; the table lives in main.cpp, its
-// single source). The coincidence-notice bin width derives from this.
-double  deepest_zoom_ms_per_pixel();
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so

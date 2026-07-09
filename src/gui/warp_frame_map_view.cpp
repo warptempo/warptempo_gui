@@ -34,7 +34,8 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // frame or two it stays displayed, but it is no longer a silent
     // dead-end: the cache records the error and the target-view validity
     // gate (GuiInputHandler::enforce_target_view_validity) kicks back to
-    // source view with the error-notice popup on the next tick.
+    // source view on the next tick and opens the defect-resolution series
+    // (or the error-notice popup for the non-modeled class).
     if (error_out) error_out->clear();
     auto resolved = resolve_warp_markers_for_render(slice_to_warp_markers(markers));
     if (!resolved) {

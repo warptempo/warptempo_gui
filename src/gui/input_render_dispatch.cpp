@@ -1,5 +1,7 @@
 #include "input_handler.h"
 
+#include "marker_store_validate.h"
+#include "phaseresetmarkers.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "time_format.h"
@@ -22,24 +24,106 @@
 // start_render_batch, dispatch_next_batch_entry, on_batch_entry_complete,
 // render_bpm_sweep). Pure definition move; no body changes.
 
-// Render dispatch pre-flight. Runs the same resolve-then-build pipeline the
-// render worker runs — resolve_warp_markers_for_render (which validates the
-// first-marker render grammar first) then build_warp_frame_map — on the GUI
-// thread, against the marker list a dispatch site is about to enqueue, the
-// scale it will render with, and its snapshot's output format and trim.
-// Marker-count-sized, so cheap. When a trim bound is set it also runs the
-// map-format refusal (trim is wav-only, ruled) and validate_trim_frames
-// against the built map. On failure the error-notice popup is raised with
-// the parser's/trimmer's error string, unmodified, and the site must not
-// enqueue. The async pipeline's existing stderr failure paths remain the
-// backstop for anything the pre-flight does not model (per-cell tempo/scale
-// mutations in the sweep batches); the popup never blocks the render thread
-// and no strings flow through the async callback.
+// Render dispatch pre-flight. Two passes on the GUI thread, both
+// marker-count-sized and cheap.
+//
+// First the raw-store walk: enumerate_marker_store_defects over both marker
+// columns plus the frame-level trim checks (crossed-or-equal, per-bound
+// past-EOF, and — when the marker walk is clean and the live map builds —
+// validate_trim_frames, mirroring open_defect_series' trim column). On any
+// modeled defect a LIVE-store site (`live_store` true, validating
+// app.warpmarkers / app.phaseresetmarkers / app.trim at dispatch time)
+// opens the defect-resolution series — the primary surface; the user
+// resolves and re-triggers the dispatch — while a QUEUED-SNAPSHOT site
+// raises the error-notice popup with the first defect's message verbatim.
+// Either way the dispatch is refused and the site enqueues nothing.
+//
+// When the raw walk is clean, the resolve-then-build chain the render worker
+// runs — resolve_warp_markers_for_render (which validates the first-marker
+// render grammar first) then build_warp_frame_map — runs against the given
+// marker list and scale, plus, when a trim bound is set, the map-format
+// refusal (trim is wav-only, ruled; a settings choice, so it keeps the plain
+// popup) and validate_trim_frames against the built map. This chain is the
+// loud backstop for anything the enumerator does not model (effectively the
+// engine-metadata and non-positive-tempo-product class), surfacing through
+// the error-notice popup with the owner's error string, unmodified. The
+// async pipeline's existing stderr failure paths remain the backstop for
+// what the pre-flight never sees (per-cell tempo/scale mutations in the
+// sweep batches); the popup never blocks the render thread and no strings
+// flow through the async callback.
 bool GuiInputHandler::warp_render_preflight(
-        const std::vector<GuiWarpMarker>& markers, double scale,
+        const std::vector<GuiWarpMarker>& markers,
+        const std::vector<GuiPhaseResetMarker>& phase_resets,
+        bool live_store, double scale,
         const std::string& output_format,
         bool has_trim_begin, double trim_begin_sec,
         bool has_trim_end, double trim_end_sec) {
+    const long sr    = static_cast<long>(audio.sample_rate());
+    const long total = static_cast<long>(audio.total_frames());
+
+    // Raw-store walk: find the first modeled defect (chronological within
+    // the marker walk; trim after). Mirrors open_defect_series' predicate
+    // so a live-store refusal here always has a series to open.
+    std::string first_defect;
+    if (sr > 0 && total > 0) {
+        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
+            slice_to_warp_markers(markers),
+            slice_to_phase_reset_markers(phase_resets), sr, total);
+        if (!defects.empty()) {
+            first_defect = std::move(defects.front().message);
+        }
+        if (first_defect.empty() && (has_trim_begin || has_trim_end)) {
+            const double sr_d = static_cast<double>(sr);
+            const double begin_f = has_trim_begin
+                ? std::nearbyint(trim_begin_sec * sr_d) : 0.0;
+            const double end_f   = has_trim_end
+                ? std::nearbyint(trim_end_sec * sr_d) : 0.0;
+            if (has_trim_begin && has_trim_end && end_f <= begin_f) {
+                first_defect = "trim bounds crossed or equal";
+            } else if ((has_trim_begin &&
+                        begin_f > static_cast<double>(total - 1)) ||
+                       (has_trim_end &&
+                        end_f > static_cast<double>(total))) {
+                first_defect = "trim bound past end of audio";
+            } else if (live_store) {
+                // validate_trim_frames under the series' guard (clean
+                // markers, built map), live store only: the memoized
+                // target-view cache is keyed on the live store, so a
+                // snapshot has no cheap map here — the resolve/build chain
+                // below covers the same class for snapshots through the
+                // same popup a snapshot defect gets anyway.
+                const TargetWarpFrameMapCache& c =
+                    target_view_warp_frame_map_cached(
+                        app, audio.sample_rate(), total);
+                if (c.build_error.empty()) {
+                    if (auto v = validate_trim_frames(
+                            has_trim_begin, trim_begin_sec,
+                            has_trim_end,   trim_end_sec,
+                            sr, static_cast<int64_t>(total),
+                            c.warp_frame_map); !v) {
+                        first_defect = std::move(v.error());
+                    }
+                }
+            }
+        }
+    }
+    if (!first_defect.empty()) {
+        if (live_store) {
+            // Live store: the defect series IS the surface. It
+            // re-enumerates from scratch and walks the defects
+            // chronologically, one modal per defect; a refused dispatch
+            // enqueues nothing, and the user re-triggers the render after
+            // the series resolves (no auto-proceed).
+            open_defect_series(/*commit_context=*/false);
+        } else {
+            // Queued snapshot: a snapshot cannot be fixed by mutating the
+            // live store, and it was gated live at enqueue time, so this
+            // popup is a backstop, not a primary surface.
+            prompt.open_error_notice(std::move(first_defect));
+        }
+        return false;
+    }
+
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers));
     if (!resolved) {
@@ -251,12 +335,17 @@ bool GuiInputHandler::render_bpm_sweep() {
     const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
 
-    // Pre-flight the live store before any cell work: an invalid marker
-    // state (first-marker grammar, dangling label ref, tie), a trimmed
-    // map-format render, or an invalid trim refuses the whole sweep with
+    // Pre-flight before any cell work. This base site validates the LIVE
+    // store at dispatch time — base_warp_markers is a just-taken copy of
+    // app.warpmarkers, and the settings/trim arguments read the live state
+    // directly — so a modeled defect opens the defect-resolution series;
+    // a trimmed map-format render or a non-modeled failure refuses with
     // the popup. Per-cell scale/tempo mutations stay on the async stderr
     // backstop.
-    if (!warp_render_preflight(base_warp_markers, app.engine_settings.scale,
+    if (!warp_render_preflight(base_warp_markers,
+                               app.phaseresetmarkers.markers(),
+                               /*live_store=*/true,
+                               app.engine_settings.scale,
                                app.engine_settings.output_format,
                                app.trim.has_begin, app.trim.begin_seconds,
                                app.trim.has_end, app.trim.end_seconds)) {

@@ -42,12 +42,18 @@ struct GuiPrompt {
     void activate_response(char k);
 
     // Dismiss-only modal error notice in the bottom strip (ERROR_NOTICE).
-    // `text` is displayed verbatim — callers pass the parser's own error
+    // `text` is displayed verbatim — callers pass the owner's own error
     // string, unmodified. While active it is modal exactly like the other
     // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
-    // Callers: the render dispatch pre-flight (invalid warp markers refuse
-    // the render) and the target-view validity gate (entry refusal and
-    // the invalidating-edit kick back to source view).
+    // The defect-resolution modal series (DEFECT_RESOLUTION) is the primary
+    // surface for authoring defects; this popup is the backstop plus the
+    // environmental and settings-choice refusals. Callers: the render
+    // dispatch pre-flight (the resolve/build/trim backstop for failures the
+    // defect enumerator does not model, the map-format-with-trim refusal —
+    // a settings choice, not corruption — and the queued-snapshot backstop)
+    // and the target-view validity gate (entry refusal and the
+    // invalidating-edit kick, both only when the defect series does not
+    // model the failure).
     void open_error_notice(std::string text);
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the

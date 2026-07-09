@@ -37,9 +37,6 @@ void Selection::set_single_selection(int idx) {
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     viewport.invalidate_top_strip();
-    // The bottom-strip coincidence notice keys off last_selected_marker;
-    // repaint it on every selection change so the notice tracks focus.
-    viewport.invalidate_timestamp_area();
     if (had_trim) viewport.invalidate_waveform_area();
 }
 
@@ -57,8 +54,6 @@ void Selection::clear_selection() {
     app.last_sel_group = LastSelGroup::Markers;
 
     viewport.invalidate_top_strip();
-    // Coincidence notice tracks last_selected_marker; see set_single_selection.
-    viewport.invalidate_timestamp_area();
     // Trim stems live in the stem/waveform-area cache, so repaint it when a
     // trim bound was deselected (amber stem returns from kSelected).
     if (had_trim) viewport.invalidate_waveform_area();
@@ -79,8 +74,6 @@ bool Selection::toggle_selection_membership(int idx) {
         added = false;
     }
     viewport.invalidate_top_strip();
-    // Coincidence notice tracks last_selected_marker; see set_single_selection.
-    viewport.invalidate_timestamp_area();
     return added;
 }
 
@@ -147,9 +140,10 @@ void Selection::cycle_selection(bool forward) {
     // The playhead frame is the sole cycle anchor. Strict frame inequalities
     // in the scan below prevent re-landing on the stop we are standing on;
     // markers and trim bounds sharing one active-domain frame are traversed
-    // by the in-group step so every member is Tab-reachable (the tool the
-    // coincidence notice, paint_handler.cpp, points the user at). Disabled
-    // markers are skipped as if absent from the active mode's list.
+    // by the in-group step so every member is Tab-reachable — legal stacks
+    // exist (loaded-but-unresolved states before their defect series runs;
+    // cross-column and trim-on-marker ties, which impair no picking).
+    // Disabled markers are skipped as if absent from the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
 
     // Trim bounds are cycle stops in both marker modes (trim is project-level,

@@ -1,6 +1,8 @@
 #include "input_handler.h"
 
 #include "marker_store_validate.h"
+#include "trimmer.h"
+#include "warp_frame_map_view.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,12 +22,15 @@
 // undo.cpp).
 //
 // The defect predicate is the parser-side enumerate_marker_store_defects
-// over the sliced live stores, plus a map-free frame-level trim check owned
-// here (the trim crossed-or-equal defect has no MarkerDefect shape). The
-// full validate_trim_frames stays render-side: sub-sample target spans and
-// past-EOF loaded bounds are joint properties of trim, markers, and scale —
-// a tempo edit can invalidate them with no trim commit at all — so they are
-// owned by the render preflight and the target-view gate.
+// over the sliced live stores, plus a trim column owned here (trim defects
+// have no MarkerDefect shape). The trim column walks after the last marker
+// defect: the map-free frame-level checks first (crossed-or-equal, per-bound
+// past-EOF), then — only when the marker walk is clean AND the live map
+// builds — the full validate_trim_frames against the memoized target-view
+// map. Guarding validate_trim_frames on a clean marker store is not a gap:
+// when markers are broken their modals run first and trim re-validates on
+// the next pass of the same series. Every trim defect shares the single
+// [D]elete-both-bounds resolution.
 
 namespace {
 
@@ -161,20 +166,52 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             return true;
         }
 
-        // The trim defect walks after the last marker defect — its full
-        // validity is downstream of the marker map. Frame level, not
-        // seconds level, deliberately: this is the same rounding
-        // validate_trim_frames applies, and two bounds under half a
-        // millisecond apart round to the same frame and render as a
-        // zero-span window, so a seconds-level compare would pass a state
-        // the render refuses.
-        if (app.trim.has_begin && app.trim.has_end) {
+        // The trim column walks after the last marker defect — trim's full
+        // validity is downstream of the marker map. The frame-level checks
+        // run first (frame level, not seconds level, deliberately: this is
+        // the same rounding validate_trim_frames applies, and two bounds
+        // under half a millisecond apart round to the same frame and render
+        // as a zero-span window, so a seconds-level compare would pass a
+        // state the render refuses): crossed-or-equal when both bounds are
+        // set, then per-bound past-EOF (a begin whose rounded frame is past
+        // EOF-1 can never render; an end may sit at EOF exactly). When both
+        // pass, the full validate_trim_frames runs against the memoized
+        // target-view map — the FULL trim-off map the render preflight and
+        // target-view gate validate against — but only when that map built
+        // (markers are already clean here; a build failure is the
+        // non-modeled class the render preflight's popup backstops). All
+        // trim defects share the one [D]elete-both-bounds resolution.
+        if (app.trim.has_begin || app.trim.has_end) {
             const double sr_d = static_cast<double>(sr);
-            const double begin_f = std::nearbyint(app.trim.begin_seconds * sr_d);
-            const double end_f   = std::nearbyint(app.trim.end_seconds * sr_d);
-            if (end_f <= begin_f) {
+            const double begin_f = app.trim.has_begin
+                ? std::nearbyint(app.trim.begin_seconds * sr_d) : 0.0;
+            const double end_f   = app.trim.has_end
+                ? std::nearbyint(app.trim.end_seconds * sr_d) : 0.0;
+            std::string trim_msg;
+            if (app.trim.has_begin && app.trim.has_end && end_f <= begin_f) {
+                trim_msg = "trim bounds crossed or equal";
+            } else if ((app.trim.has_begin &&
+                        begin_f > static_cast<double>(total - 1)) ||
+                       (app.trim.has_end &&
+                        end_f > static_cast<double>(total))) {
+                trim_msg = "trim bound past end of audio";
+            } else {
+                const TargetWarpFrameMapCache& c =
+                    target_view_warp_frame_map_cached(
+                        app, audio.sample_rate(), total);
+                if (c.build_error.empty()) {
+                    if (auto v = validate_trim_frames(
+                            app.trim.has_begin, app.trim.begin_seconds,
+                            app.trim.has_end,   app.trim.end_seconds,
+                            sr, static_cast<int64_t>(total),
+                            c.warp_frame_map); !v) {
+                        trim_msg = std::move(v.error());  // trimmer's, verbatim
+                    }
+                }
+            }
+            if (!trim_msg.empty()) {
                 app.prompt.active          = true;
-                app.prompt.text            = "trim bounds crossed or equal";
+                app.prompt.text            = std::move(trim_msg);
                 app.prompt.response_keys   = {'d'};
                 app.prompt.response_labels = {"[D]elete"};
                 app.prompt.trigger         = DialogTrigger::DEFECT_RESOLUTION;

@@ -429,8 +429,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // below). plan_trim validates the authored bounds first — the sole owner
     // of every trim refusal — then derives the source cut, the translated
     // maps, and the output crop in one computation. The GUI dispatch
-    // preflight already ran the same validation with the popup surface, so
-    // this stderr refusal is the async backstop.
+    // preflight already ran the same validation with its modal surface (the
+    // defect series for the live store, the popup for snapshots and the
+    // non-modeled class), so this stderr refusal is the async backstop.
     const bool trimmed = req.has_trim_begin || req.has_trim_end;
     std::optional<TrimPlan> trim_plan;
     if (trimmed && output_format == "wav") {

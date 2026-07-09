@@ -508,88 +508,6 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     cairo_restore(cr);
 }
 
-// -- Coincidence notice ---------------------------------------------------
-
-// Count of markers in the ACTIVE markers view's store sharing the focused
-// marker's deepest-zoom pixel bin, or 0 when there is no focused marker.
-// The status line shows "N coincident markers" when this returns >= 2.
-//
-// Coincidence rule (architect's): two markers are coincident when they land
-// on the same pixel column at the deepest zoom level, computed in the
-// ACTIVE view's domain — source times in source view, map-projected target
-// positions in target view (under a warp the same pair can be coincident in
-// one view and not the other; the notice follows the view being looked at).
-// Positions are binned into buckets one deepest-zoom pixel of time wide
-// (bin_time from deepest_zoom_ms_per_pixel(), single-sourced from the zoom
-// table in main.cpp), anchored at t = 0: floor(t / bin_time) equality.
-// Phase-anchor convention: column boundaries shift with scroll phase, so
-// the deterministic rule is the fixed-origin bin; a pair straddling a bin
-// edge is separable at other scroll phases by definition.
-//
-// This is a notice, not a guard: past the deepest zoom the user cannot
-// mouse-pick or visually separate the group (Tab/Shift+Tab still reaches
-// every member); the system informs, the user corrects. Recomputed on
-// every bottom-strip repaint — selection, marker, and view changes all
-// invalidate the timestamp area already — no timer.
-//
-// Recorded asymmetry: render-view is excluded. Its lists come from files,
-// its domain is render frames (neither the source nor the target domain
-// this rule names), and its store is read-only, so there is nothing to
-// correct.
-static int coincident_marker_count(const AppState& app,
-                                   const GuiAudio& audio) {
-    if (app.render_view.enabled) return 0;
-    const int idx = app.last_selected_marker;
-    if (idx < 0) return 0;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return 0;
-    const double bin_time = deepest_zoom_ms_per_pixel() / 1000.0;
-    if (!(bin_time > 0.0)) return 0;
-
-    // Active-domain position in seconds. Source view: the stored source
-    // time. Target view: forward-project through the memoized target-view
-    // map (empty map — including the invalid state the validity gate is
-    // about to kick — degrades to identity, like every other display path).
-    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
-    if (app.active_audio_view == 'T') {
-        const auto& m = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) tmap = &m;
-    }
-    const double sr_d = static_cast<double>(sr);
-    auto active_domain_seconds = [&](double t_src) -> double {
-        if (!tmap) return t_src;
-        const double f = std::nearbyint(t_src * sr_d);
-        const size_t q = (f < 0.0) ? static_cast<size_t>(0)
-                                   : static_cast<size_t>(f);
-        return map_source_to_target(q, *tmap) / sr_d;
-    };
-    auto bin_of = [&](double t_src) -> long long {
-        return static_cast<long long>(
-            std::floor(active_domain_seconds(t_src) / bin_time));
-    };
-
-    // Both columns: the active markers view picks the store.
-    if (app.active_markers_view == 'P') {
-        const auto& tv = app.phaseresetmarkers.markers();
-        if (idx >= static_cast<int>(tv.size())) return 0;
-        const long long focus_bin = bin_of(tv[idx].time_seconds);
-        int n = 0;
-        for (const auto& m : tv) {
-            if (bin_of(m.time_seconds) == focus_bin) ++n;
-        }
-        return n;
-    }
-    const auto& mv = app.warpmarkers.markers();
-    if (idx >= static_cast<int>(mv.size())) return 0;
-    const long long focus_bin = bin_of(mv[idx].time_seconds);
-    int n = 0;
-    for (const auto& m : mv) {
-        if (bin_of(m.time_seconds) == focus_bin) ++n;
-    }
-    return n;
-}
-
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
@@ -667,18 +585,6 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (app.dirty) {
             assembled += ' ';
             assembled += '*';
-        }
-        // Persistent coincidence notice (see coincident_marker_count
-        // above): shown whenever the focused marker shares its
-        // deepest-zoom pixel bin with at least one other marker of the
-        // active markers view's store.
-        {
-            const int n_coincident = coincident_marker_count(app, audio);
-            if (n_coincident >= 2) {
-                assembled += ' ';
-                assembled += std::to_string(n_coincident);
-                assembled += " coincident markers";
-            }
         }
         if (!app.transient_status_message.empty()) {
             assembled += ' ';

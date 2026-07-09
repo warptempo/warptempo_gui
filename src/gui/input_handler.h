@@ -181,14 +181,18 @@ struct GuiInputHandler {
     // event-loop iteration: while target view is displayed (and render-view
     // is off), consult the memoized target-view map cache; if the last
     // rebuild failed (invalidating edit — first-marker grammar violation,
-    // dangling label ref, tie, ...), toggle back to source view through the
-    // same T→S path bare `t` uses and raise the error-notice popup with the
-    // build error verbatim. The cache rebuild is keyed on the marker-store
-    // generation, so this fires on the first tick after the invalidating
-    // edit — i.e. before/with its first paint — not lazily later. Deferred
-    // (silently, one tick at a time) while another prompt is up; edits are
-    // impossible mid-prompt, so the pending kick survives until dismissal.
-    // No-op in source view, render-view, blank/loading state.
+    // dangling label ref, tie, ...) or a set trim fails validate_trim_frames,
+    // toggle back to source view through the same T→S path bare `t` uses,
+    // then open the defect-resolution series on the modeled defect (the
+    // error-notice popup remains only as the backstop for the non-modeled
+    // class). The cache rebuild is keyed on the marker-store generation, so
+    // this fires on the first tick after the invalidating edit — i.e.
+    // before/with its first paint — not lazily later. Deferred (silently,
+    // one tick at a time) while another prompt is up; edits are impossible
+    // mid-prompt, so the pending kick survives until dismissal —
+    // run_commit_validation runs first on the same tick, so a commit's own
+    // modal wins the beat. No-op in source view, render-view, blank/loading
+    // state.
     void enforce_target_view_validity();
 
     // Defect-resolution modal series (bodies in input_defect_series.cpp).
@@ -206,7 +210,9 @@ struct GuiInputHandler {
 
     // open_defect_series: slice the live stores, enumerate marker defects
     // (both columns; chronological), then — when the marker list is clean —
-    // run the frame-level trim crossed-or-equal check. Fills app.prompt
+    // walk the trim column: the frame-level crossed-or-equal and per-bound
+    // past-EOF checks, then the full validate_trim_frames against the
+    // memoized target-view map when that map builds. Fills app.prompt
     // (DialogTrigger::DEFECT_RESOLUTION) with the current defect and returns
     // true; when everything is clean, closes any open defect prompt and
     // returns false.
@@ -291,21 +297,30 @@ private:
     // values / zero-duration span / no valid cells / renderer busy).
     bool render_bpm_sweep();
 
-    // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap):
-    // resolve_warp_markers_for_render on the sliced `markers`, then
-    // build_warp_frame_map with `scale` and the live sample_rate /
-    // total_frames, then — when a trim bound is set — the map-format
-    // refusal (trim is wav-only, ruled) and validate_trim_frames against
-    // the built map. Each dispatch site passes its own snapshot's output
-    // format and trim. On failure raises the error-notice popup with the
-    // parser's/trimmer's error string, unmodified, and returns false — the
-    // caller must then refuse to enqueue. Called by every archival render
+    // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
+    // First the raw-store walk — enumerate_marker_store_defects over both
+    // given marker lists plus the frame-level trim checks, mirroring
+    // open_defect_series' predicate; on a modeled defect a live-store site
+    // (`live_store` true: `markers` / `phase_resets` / trim are the live
+    // state at dispatch time) opens the defect-resolution series while a
+    // queued-snapshot site raises the popup backstop with the first
+    // defect's message, and the dispatch is refused either way. Then the
+    // backstop chain: resolve_warp_markers_for_render on the sliced
+    // `markers`, build_warp_frame_map with `scale` and the live
+    // sample_rate / total_frames, then — when a trim bound is set — the
+    // map-format refusal (trim is wav-only, ruled; a settings choice, so
+    // it keeps the plain popup) and validate_trim_frames against the built
+    // map, all surfacing through the error-notice popup with the owner's
+    // error string, unmodified. Returns false on any refusal — the caller
+    // must then refuse to enqueue. Called by every archival render
     // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch —
     // live store and each queued snapshot — Ctrl+Alt+I iteration sweep,
     // the BPM sweep); the async pipeline's stderr failure paths stay as
     // the backstop for per-cell mutations the pre-flight does not model
     // (no strings are plumbed through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
+                               const std::vector<GuiPhaseResetMarker>& phase_resets,
+                               bool live_store,
                                double scale,
                                const std::string& output_format,
                                bool has_trim_begin, double trim_begin_sec,

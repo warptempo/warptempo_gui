@@ -51,7 +51,8 @@ struct TargetWarpFrameMapCache {
     // Empty when the last rebuild succeeded; otherwise the
     // resolve_warp_markers_for_render / build_warp_frame_map error string
     // verbatim. Consumed by GuiInputHandler::enforce_target_view_validity
-    // (the target-view kick-back) and shown in the error-notice popup.
+    // (the target-view kick-back), which opens the defect-resolution series
+    // or, for the non-modeled class, the error-notice popup with this text.
     std::string build_error;
 
     // Deformed-timeline length: the source total forward-translated

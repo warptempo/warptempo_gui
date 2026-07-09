@@ -1056,8 +1056,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     //
     // Validity gate, entry half: entering target view (S → T) with a
     // render-invalid marker state (first-marker grammar, dangling label
-    // ref, tie) raises the error-notice popup with the parser's message and
-    // stays in source view — target view is blocked while invalid. Leaving
+    // ref, tie) stays in source view — target view is blocked while
+    // invalid. The defect-resolution series is the surface: it opens on the
+    // modeled defect, the user resolves, and pressing `t` again enters (no
+    // auto-proceed). The error-notice popup remains only for failures the
+    // series does not model — after the enumerator that is effectively the
+    // engine-metadata and non-positive-tempo-product class, unreachable
+    // from program-written input — kept as the loud backstop. Leaving
     // target view (T → S) never gates: the kick-back path
     // (enforce_target_view_validity) rides this same T → S branch while the
     // map is invalid, so the exit falls back to the empty map — identity
@@ -1074,18 +1079,23 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         if (r) {
             warp_frame_map = std::move(*r);
         } else if (entering_target) {
-            prompt.open_error_notice(std::move(r.error()));
+            if (!open_defect_series(/*commit_context=*/false)) {
+                prompt.open_error_notice(std::move(r.error()));
+            }
             return;
         }
     } else if (entering_target) {
-        prompt.open_error_notice(std::move(resolved.error()));
+        if (!open_defect_series(/*commit_context=*/false)) {
+            prompt.open_error_notice(std::move(resolved.error()));
+        }
         return;
     }
 
     // Validity gate, entry half, trim column: entering target view with a
-    // set trim that fails validate_trim_frames raises the popup and stays
-    // in source view, exactly like the invalid-map entry refusal above —
-    // target playback must never audition an unrenderable window. The map
+    // set trim that fails validate_trim_frames stays in source view,
+    // exactly like the invalid-map entry refusal above — target playback
+    // must never audition an unrenderable window. Same surfaces: the
+    // defect series first, the popup as the non-modeled backstop. The map
     // handed to the validator is the full trim-off map just built (the same
     // construction the target-view cache holds). T → S never gates.
     if (entering_target && (app.trim.has_begin || app.trim.has_end)) {
@@ -1096,7 +1106,9 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
                 static_cast<int64_t>(audio.total_frames()),
                 warp_frame_map);
             !v) {
-            prompt.open_error_notice(std::move(v.error()));
+            if (!open_defect_series(/*commit_context=*/false)) {
+                prompt.open_error_notice(std::move(v.error()));
+            }
             return;
         }
     }
@@ -1229,6 +1241,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 // beat as the edit's own repaint, never lazily later. The memoized cache
 // makes the steady-state check a generation compare; the rebuild that
 // actually detects the failure is the one the invalidating edit forces.
+// The kick lands T → S first, THEN the defect-resolution series opens on
+// the modeled defect (the popup remains only for the non-modeled class);
+// run_commit_validation runs earlier on the same tick, so a commit's own
+// modal wins the beat and this gate defers behind it like any prompt.
 void GuiInputHandler::enforce_target_view_validity() {
     if (app.loading || audio.total_frames() <= 0) return;
     if (app.render_view.enabled) return;   // render-view lists come from
@@ -1246,8 +1262,9 @@ void GuiInputHandler::enforce_target_view_validity() {
     // trim that fails validate_trim_frames against the cached map (the
     // cache's map IS the full map, built trim-off from the live store), the
     // live sample rate, and total frames. Either way target playback never
-    // auditions an unrenderable window; the error string is the owner's
-    // verbatim (parser's or trimmer's).
+    // auditions an unrenderable window. The error string is the owner's
+    // verbatim (parser's or trimmer's), consumed only by the popup backstop
+    // when the defect series does not model the failure.
     std::string err;
     if (!c.build_error.empty()) {
         // Copy before toggling: the T → S toggle path re-resolves and can
@@ -1267,5 +1284,10 @@ void GuiInputHandler::enforce_target_view_validity() {
     if (err.empty()) return;
     handle_active_audio_view_toggle();   // T → S: unconditional, identity
                                          // fallback for the playhead math
-    prompt.open_error_notice(err);
+    if (!open_defect_series(/*commit_context=*/false)) {
+        // Backstop for failures the series does not model — effectively
+        // the engine-metadata / non-positive-tempo-product class,
+        // unreachable from program-written input.
+        prompt.open_error_notice(err);
+    }
 }

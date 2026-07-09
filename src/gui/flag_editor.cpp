@@ -286,8 +286,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // Cross-marker check (edit target excluded). A dangling label_ref is
     // deliberately not gated here — ref resolvability is a render verdict
     // (build_warp_frame_map's "label ref has no matching label def",
-    // surfaced by the pre-flight popup and the target-view validity gate);
-    // def uniqueness is a load rule, so the editor still gates it.
+    // surfaced by the defect-resolution series at the commit funnel, render
+    // dispatch, and target-view gate); def uniqueness is a load rule, so
+    // the editor still gates it.
     if (ok && !parsed.label_def.empty()) {
         for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
             if (i == idx) continue;
@@ -300,9 +301,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
     // Removing a label_def whose refs remain is legal: the refs go
     // dangling, keep their `a.NN` payload (so the file still parses),
-    // and are refused at the render boundary — build_warp_frame_map's
-    // dangling-ref error surfaces through the render pre-flight popup and
-    // the target-view validity gate. No editor-side gate; the rename
+    // and are refused at the render boundary — the dangling ref surfaces
+    // through the defect-resolution series at the commit funnel, render
+    // dispatch, and target-view gate. No editor-side gate; the rename
     // cascade below stays, scoped to non-empty new names.
     if (!ok) {
         app.top_flag_editor.red = true;
@@ -316,8 +317,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // the grammar allows — pass, label ref, label def. The rule that the
     // marker at 00:00.000 must be an enabled, tempo-owning numeric marker
     // is validate_first_marker_render_grammar's render-boundary check,
-    // surfaced by the render pre-flight popup and the target-view validity
-    // gate, never by this editor.
+    // surfaced by the defect-resolution series at the commit funnel, render
+    // dispatch, and target-view gate, never by this editor.
 
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[idx];

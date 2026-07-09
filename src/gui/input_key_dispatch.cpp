@@ -235,10 +235,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // contract local.
         if (async_renderer.is_busy()) return true;
 
-        // Pre-flight the live store on the GUI thread; an invalid marker
-        // state, a trimmed map-format render, or an invalid trim raises the
-        // popup and refuses the dispatch.
+        // Pre-flight the live store on the GUI thread: a modeled defect
+        // opens the defect-resolution series; a trimmed map-format render
+        // or a non-modeled failure raises the popup. Either way the
+        // dispatch is refused.
         if (!warp_render_preflight(app.warpmarkers.markers(),
+                                   app.phaseresetmarkers.markers(),
+                                   /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_seconds,
@@ -310,8 +313,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (app.queued_renders.empty()) {
             // Pre-flight the live store BEFORE the auto-enqueue so a
-            // refused dispatch leaves nothing queued.
+            // refused dispatch leaves nothing queued (a modeled defect
+            // opens the defect-resolution series; the rest gets the popup).
             if (!warp_render_preflight(app.warpmarkers.markers(),
+                                       app.phaseresetmarkers.markers(),
+                                       /*live_store=*/true,
                                        app.engine_settings.scale,
                                        app.engine_settings.output_format,
                                        app.trim.has_begin,
@@ -327,13 +333,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         // Pre-flight every queued entry against its own snapshot (markers,
-        // scale, output format, and trim — Ctrl+E snapshots may differ from
-        // the live store and from each other). First failure raises the
-        // popup and refuses the whole batch; the queue is left intact so
-        // the user can fix and re-dispatch. Runs before the queue is moved
-        // out.
+        // phase resets, scale, output format, and trim — Ctrl+E snapshots
+        // may differ from the live store and from each other). A snapshot
+        // cannot be fixed by mutating the live store, so failures surface
+        // through the popup backstop, not the defect series. First failure
+        // refuses the whole batch; the queue is left intact so the user
+        // can fix and re-dispatch. Runs before the queue is moved out.
         for (const auto& q : app.queued_renders) {
             if (!warp_render_preflight(q.warp_markers,
+                                       q.phase_resets,
+                                       /*live_store=*/false,
                                        q.engine_settings.scale,
                                        q.engine_settings.output_format,
                                        q.has_trim_begin, q.trim_begin_sec,
@@ -435,11 +444,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live store; an invalid marker state, a trimmed
-        // map-format render, or an invalid trim refuses the whole sweep
-        // with the popup. Per-cell tempo_base mutations remain on the
-        // async stderr backstop.
+        // Pre-flight the live store: a modeled defect opens the
+        // defect-resolution series and refuses the whole sweep; a trimmed
+        // map-format render or a non-modeled failure refuses with the
+        // popup. Per-cell tempo_base mutations remain on the async stderr
+        // backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
+                                   app.phaseresetmarkers.markers(),
+                                   /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_seconds,

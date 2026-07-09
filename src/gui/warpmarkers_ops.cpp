@@ -279,8 +279,8 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 // The first marker is togglable like any other: the requirement that the
 // marker at 00:00.000 own its tempo is a render-boundary rule
 // (validate_first_marker_render_grammar), and a pass first marker is
-// refused there — via the render pre-flight popup and the target-view
-// validity gate — not at this gesture.
+// refused there — surfaced by the defect-resolution series at the commit
+// funnel, render dispatch, and target-view gate — not at this gesture.
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -336,7 +336,8 @@ void GuiWarpMarkersOps::toggle_disabled() {
     // Any marker may be disabled, including the one at time 0. A disabled
     // first marker violates the first-marker render grammar, which is
     // enforced at the render boundary (validate_first_marker_render_grammar)
-    // via the pre-flight popup and the target-view validity gate, never here.
+    // and surfaced by the defect-resolution series at the commit funnel,
+    // render dispatch, and target-view gate, never here.
     std::vector<GuiWarpMarker> proposed = mv_const;
     const int              hint_last = app.last_selected_marker;
     bool changed = false;
