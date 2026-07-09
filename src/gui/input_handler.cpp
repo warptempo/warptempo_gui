@@ -113,13 +113,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Defect-resolution modal: route the lowercased key to the series'
         // own dispatcher (which acts only on the offered keys) and swallow
         // Esc entirely — see the DialogTrigger::DEFECT_RESOLUTION comment
-        // in app_state.h for why this prompt has no Esc response. Ctrl+Q /
-        // Ctrl+W behave like the other non-paste prompts: blocked by the
-        // modal (only 'q'/'w' reach the dispatcher and are not offered);
-        // the unsaved-work flow still protects data afterwards, and an
-        // invalid state saved to disk loads leniently and is caught at
-        // render or target-view entry.
+        // in app_state.h for why this prompt has no Esc response.
         if (app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
+            // Ctrl+Q / Ctrl+W do not resolve the defect; they open the
+            // close / revert prompt in NO-SAVE form over the parked series.
+            // Suspend the series (commit_context stays on defect_series and
+            // drives both the resume origin and the same defect's
+            // reappearance on cancel), dismiss this modal, and route to the
+            // shared funnel. request_close_or_revert refuses re-entry while
+            // a prompt is active, so the defect prompt is cleared first.
+            if (ctrl && !shift && !alt &&
+                (key == GuiKeys::Q || key == GuiKeys::W)) {
+                app.defect_series.suspended_for_close = true;
+                app.prompt.active = false;
+                viewport.invalidate_all();
+                prompt.request_close_or_revert(
+                    key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
+                                      : DialogTrigger::REVERT_TO_BLANK);
+                return;
+            }
             if (k != 0 && k != '\x1b') handle_defect_response(k);
             return;
         }

@@ -27,8 +27,20 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
     // machinery remains a vector<char> match.
-    app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
+    //
+    // NO-SAVE form when the close was requested out of a suspended defect
+    // series: the store is mid-resolution of a render-invalid state and the
+    // GUI never writes one, so [S]ave is withheld and only [Delete]
+    // (discard-and-proceed) / [Esc] (cancel, resume the series) are
+    // offered. The keys and trigger are otherwise identical, so
+    // activate_response's existing dispatch handles both forms unchanged.
+    if (app.defect_series.suspended_for_close) {
+        app.prompt.response_keys   = {'\x7f', '\x1b'};
+        app.prompt.response_labels = {"[Delete]", "[Esc]"};
+    } else {
+        app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
+        app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
+    }
     app.prompt.trigger         = t;
     viewport.clear_hover_popup();
     viewport.invalidate_all();
@@ -109,6 +121,24 @@ void GuiPrompt::activate_response(char k) {
         if (k == '\x1b') {
             app.prompt.active = false;
             viewport.invalidate_all();
+            // Cancel of a close/revert prompt raised over a suspended defect
+            // series resumes the series: re-queue the once-per-tick funnel
+            // with the origin the series was opened with (derived from
+            // commit_context — Commit-origin series carry it true, so the
+            // coincident-group narrowing is preserved on reopen; a
+            // Load/target-entry series carries it false). run_commit_validation
+            // re-opens on the next tick, re-validating from scratch, so the
+            // same defect reappears — one tick of ordinary-looking UI in
+            // between is acceptable, matching how the funnel already defers.
+            // [U]ndo availability is origin-independent (open_defect_series
+            // offers it purely on the undo_stack-non-empty rule).
+            if (app.defect_series.suspended_for_close) {
+                app.defect_series.pending_validation =
+                    app.defect_series.commit_context
+                        ? PendingValidation::Commit
+                        : PendingValidation::Load;
+                app.defect_series.suspended_for_close = false;
+            }
             return;
         }
         return;

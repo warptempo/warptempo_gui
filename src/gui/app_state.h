@@ -394,11 +394,20 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // the touched marker only in that context. `pending_validation` is the
 // funnel's once-per-tick flag plus its origin (see PendingValidation),
 // consumed by GuiInputHandler::run_commit_validation at the top of
-// on_tick.
+// on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q /
+// Ctrl+W close-or-revert prompt is up over it (the defect modal is
+// dismissed for the duration): it steers open_unsaved to the NO-SAVE
+// form (the store is mid-resolution of a render-invalid state, which the
+// GUI never writes) and, on cancel, is the signal that the series must
+// resume — re-queued through pending_validation with the origin derived
+// from commit_context, so the same defect (and its coincident-group
+// narrowing) reappears. Any wholesale defect_series reset (load, revert)
+// clears it; the resume path clears it explicitly.
 struct DefectSeriesState {
     MarkerDefect      defect;
     TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
     bool              commit_context     = false;
+    bool              suspended_for_close = false;
     PendingValidation pending_validation = PendingValidation::None;
 };
 
