@@ -357,16 +357,23 @@ struct PromptState {
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
 // full-double source-domain seconds, exactly like marker times (the
 // .settings writer rounds through format_timestamp at save; a saved bound
-// reloads within half a millisecond, accepted). Bounds may cross during any
-// gesture and may REST inverted or equal; equal and inverted states load
-// from .settings and persist back. The render boundary owns validity:
-// validate_trim_frames (trimmer.h) issues every trim refusal — at render
-// dispatch preflight and at the target-view gate — and the GUI informs (the
-// error-notice popup), it never guards. The one absolute floor is 0.0:
-// negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
-// .settings file persists — a format-representability floor, not a validity
-// rule. Past-EOF values are representable, legal in memory and on disk, and
-// refused only at render. Readers must not assume begin <= end.
+// reloads within half a millisecond, accepted). Every trim GESTURE clamps
+// each bound to its own absolute walls: begin spans frame 0 to EOF-1 (a
+// begin at or past the source end can never render), end spans frame 0 to
+// EOF exactly (end-at-EOF is valid, so the GUI must be able to represent
+// it). There are NO partner walls — a bound crosses its partner freely
+// during any gesture and may REST inverted or equal; equal and inverted
+// states load from .settings and persist back. The 0.0 floor is now
+// subsumed by the per-bound walls, but it remains the reason the floor
+// exists at all: negative time is unrepresentable in the MM:SS.mmm
+// timestamp grammar the .settings file persists — a format-representability
+// floor, not a validity rule. Past-EOF values are representable and, when
+// LOADED from a hand-edited .settings, stay legal in memory and on disk
+// (the loader is lenient); gestures no longer produce them, and the render
+// boundary refuses them. The render boundary owns validity: validate_trim_
+// frames (trimmer.h) issues every trim refusal — at render dispatch
+// preflight and at the target-view gate — and the GUI informs (the
+// error-notice popup), it never guards. Readers must not assume begin <= end.
 struct TrimState {
     double begin_seconds = 0.0;
     double end_seconds   = 0.0;

@@ -896,13 +896,14 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // shape of nudge_selected_markers' target branch): project the
             // stored end seconds through the live target-view map, step in
             // the target double domain, llrint, inverse-map back at full
-            // precision. Source view is plain seconds arithmetic. No walls
-            // — the end bound crosses the begin bound freely and may run
-            // past EOF (legal in memory and on disk, refused only at
-            // render); the paired bound may also move offscreen. The sole
-            // clamp is the 0.0 format-representability floor: negative
-            // time is unrepresentable in the MM:SS.mmm grammar the
-            // .settings file persists (not a spacing or validity guard).
+            // precision. Source view is plain seconds arithmetic. The end
+            // bound clamps to its own absolute walls — floor 0, ceiling the
+            // end wall at frame EOF exactly (end-at-EOF is a valid render).
+            // There is no partner wall: the end bound crosses the begin
+            // bound freely and the begin bound is untouched here. The 0.0
+            // floor is the walls' lower end, kept for representability —
+            // negative time is unrepresentable in the MM:SS.mmm grammar the
+            // .settings file persists.
             double v;
             if (app.active_audio_view == 'T') {
                 const auto& target_warp_frame_map =
@@ -922,6 +923,9 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                     static_cast<double>(dlt) / sr_d;
             }
             if (v < 0.0) v = 0.0;
+            const double end_wall =
+                static_cast<double>(audio.total_frames()) / sr_d;
+            if (v > end_wall) v = end_wall;
             app.trim.end_seconds = v;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();

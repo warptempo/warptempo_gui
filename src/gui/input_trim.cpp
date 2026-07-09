@@ -8,14 +8,22 @@
 #include <utility>
 
 // Trim gestures (architect-ruled hardfail model; the full ruling sits at the
-// TrimState store in app_state.h): begin and end are authored named roles that
-// may cross during any gesture and rest inverted or equal; no gesture guards
-// against the partner bound, zero-length windows, or EOF. The only absolute
-// clamp is the 0.0 format-representability floor — negative time is
-// unrepresentable in the MM:SS.mmm timestamp grammar the .settings file
-// persists, so nothing negative may be stored; it is not a spacing or
-// validity rule. validate_trim_frames (trimmer.h) owns every trim refusal at
-// the render boundary and the target-view gate.
+// TrimState store in app_state.h): begin and end are authored named roles.
+// Every gesture clamps each bound to its own absolute walls — begin from
+// frame 0 to EOF-1, end from frame 0 to EOF exactly (end-at-EOF is a valid
+// render, so the GUI must represent it). There are no partner walls: a bound
+// crosses its partner freely during any gesture and may rest inverted or
+// equal; no gesture guards against zero-length windows. The per-bound wall
+// split (begin EOF-1 vs end EOF) is a recorded trim-vs-marker asymmetry — it
+// replaces the older no-walls asymmetry, now dead — sitting beside the marker
+// nudges' single EOF wall. The 0.0 floor is subsumed by the walls but remains
+// the reason the floor exists at all: negative time is unrepresentable in the
+// MM:SS.mmm timestamp grammar the .settings file persists — a format-
+// representability floor, not a spacing or validity rule. Past-EOF values
+// stay legal in memory and on disk only when LOADED from a hand-edited
+// .settings (the loader is lenient); gestures no longer store them.
+// validate_trim_frames (trimmer.h) owns every trim refusal at the render
+// boundary and the target-view gate.
 
 namespace {
 // x autoset places the far bound half of the visible span from the near bound:
@@ -42,25 +50,41 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double cand_seconds = static_cast<double>(cand_src) / sr_d;
 
-    const int64_t live_total = live_total_frames(app, audio);
     const int64_t offset =
         dir * std::max<int64_t>(
                   1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
 
+    // Per-bound absolute walls: begin at frame EOF-1, end at frame EOF. side
+    // Begin sets begin here and places End as the partner; side End sets end
+    // and places Begin.
+    const int64_t total = audio.total_frames();
+    const int64_t this_wall_frame  = (side == TrimSide::Begin) ? total - 1 : total;
+    const int64_t other_wall_frame = (side == TrimSide::Begin) ? total : total - 1;
+
     // Store the exact double seconds — trim seconds are full doubles like
     // marker times; the .settings writer rounds through format_timestamp at
     // save time (a saved bound reloads within half a millisecond, accepted).
-    this_seconds = cand_seconds;
+    // Clamp the primary bound to its own wall: the playhead normally sits
+    // inside the walls, so this is cheap insurance at the exact edge, keeping
+    // the autoset consistent with every other trim gesture.
+    double this_sec = cand_seconds;
+    const double this_wall_sec = static_cast<double>(this_wall_frame) / sr_d;
+    if (this_sec < 0.0)           this_sec = 0.0;
+    if (this_sec > this_wall_sec) this_sec = this_wall_sec;
+    this_seconds = this_sec;
     this_has     = true;
     const int64_t this_active =
         source_frame_to_active_domain(app, audio, cand_src);
     int64_t other_active = this_active + offset;
-    // Partner placement clamp: [0, live_total] is where the autoset CHOOSES
-    // to put the far bound — a placement decision for a bound the user did
-    // not position, not a wall against user motion (gestures on either bound
-    // move it freely afterwards).
-    if (other_active < 0)          other_active = 0;
-    if (other_active > live_total) other_active = live_total;
+    // Partner placement clamp: [0, the partner's own wall mapped through
+    // source_frame_to_active_domain] — the same per-bound wall every trim
+    // gesture holds (End partner wall frame EOF, Begin partner wall frame
+    // EOF-1), no longer a placement-only choice. The mapping is monotone, so
+    // the active-domain clamp matches the source-domain wall.
+    const int64_t other_wall_active =
+        source_frame_to_active_domain(app, audio, other_wall_frame);
+    if (other_active < 0)                 other_active = 0;
+    if (other_active > other_wall_active) other_active = other_wall_active;
     other_seconds = static_cast<double>(
         active_domain_to_source_frame(app, audio, other_active)) / sr_d;
     other_has = true;
@@ -255,11 +279,22 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const int64_t grabbed = app.trim_drag.is_begin ? ob : oe;
         if (grabbed + df < first_vis) df = first_vis - grabbed;
         if (grabbed + df > last_vis)  df = last_vis  - grabbed;
-        // Only the grabbed bound is viewport-clamped; the partner rides the
-        // rigid delta wherever that puts it — past EOF included (legal in
-        // memory and on disk, refused only at render). The 0.0 format-
-        // representability floor below is the sole absolute clamp on what
-        // is stored (see the file-head comment).
+        // Wall the rigid delta so BOTH bounds respect their own absolute
+        // walls: floor 0 on each and per-bound ceilings — begin at frame
+        // EOF-1, end at frame EOF — mapped through source_frame_to_active_
+        // domain (monotone, so the active-domain clamp matches the source-
+        // domain wall). Only the grabbed bound is viewport-clamped (above);
+        // this wall clamp binds the partner too, so the partner no longer
+        // slides past EOF under the rigid delta. Crossing stays free (no
+        // partner wall).
+        const int64_t begin_wall_active =
+            source_frame_to_active_domain(app, audio, audio.total_frames() - 1);
+        const int64_t end_wall_active =
+            source_frame_to_active_domain(app, audio, audio.total_frames());
+        if (ob + df < 0)                 df = -ob;
+        if (oe + df < 0)                 df = -oe;
+        if (ob + df > begin_wall_active) df = begin_wall_active - ob;
+        if (oe + df > end_wall_active)   df = end_wall_active - oe;
         const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
         const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
         double nb = static_cast<double>(nb_src) / sr_d;
@@ -299,12 +334,18 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (src_frame < vp_lo) src_frame = vp_lo;
     if (src_frame > vp_hi) src_frame = vp_hi;
 
-    // No partner ceiling/floor and no zero/EOF data clamp: the bound crosses
-    // its partner freely and rests wherever released, past EOF included —
-    // the render boundary owns validity. The stored value is the exact
-    // double seconds; the viewport clamp above keeps src_frame non-negative
-    // (the visible strip starts at or after frame 0), so the 0.0 format-
-    // representability floor holds by construction here.
+    // Structural wall, applied AFTER the viewport clamp so the wall wins
+    // where both bind (matching the marker-drag model where structural walls
+    // compose with the viewport gate): begin clamps to frame EOF-1, end to
+    // frame EOF exactly (end-at-EOF is a valid render). No partner wall — the
+    // bound crosses its partner freely and rests wherever released. The floor
+    // 0 is already held by the viewport clamp (the visible strip starts at or
+    // after frame 0), so the 0.0 format-representability floor holds by
+    // construction here.
+    const int64_t wall_hi = app.trim_drag.is_begin
+        ? audio.total_frames() - 1
+        : audio.total_frames();
+    if (src_frame > wall_hi) src_frame = wall_hi;
     const double new_seconds = static_cast<double>(src_frame) / sr_d;
     double& field = app.trim_drag.is_begin ? app.trim.begin_seconds
                                            : app.trim.end_seconds;
@@ -379,11 +420,12 @@ void GuiInputHandler::delete_selected_trim() {
 // Ctrl+Left / Ctrl+Right on the trim group. The sibling of
 // nudge_selected_markers: one pixel of time per press at full double
 // precision (sub-millisecond at deep zoom, matching the marker nudge's
-// fidelity). No walls at all — the bound crosses its partner freely and may
-// step past EOF; this is a recorded trim-vs-marker asymmetry (marker nudges
-// keep their zero / EOF walls, trim keeps none — the render boundary owns
-// trim validity). The only clamp is the 0.0 format-representability floor
-// (see the file-head comment).
+// fidelity). Each bound clamps to its own absolute walls — begin to frame
+// EOF-1, end to frame EOF (floor 0 on both); this per-bound wall split is
+// the current recorded trim-vs-marker asymmetry (marker nudges keep a single
+// EOF wall, total duration minus one source frame). There is still no
+// partner wall: the bound crosses its partner freely. The render boundary
+// owns trim validity.
 void GuiInputHandler::nudge_selected_trim(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     const int sr = audio.sample_rate();
@@ -437,9 +479,18 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
         proposed = cur + static_cast<double>(direction) * spp / sr_d;
     }
 
-    // 0.0 format-representability floor only — no partner wall, no EOF wall
-    // (see the function-head comment).
-    if (proposed < 0.0) proposed = 0.0;
+    // Per-bound absolute walls (mirroring nudge_selected_markers' EOF wall in
+    // shape — total duration minus one source frame — but clamping, not
+    // refusing): begin walls at frame EOF-1, end at frame EOF exactly. The
+    // wall seconds land on the wall frame by construction (integer frame over
+    // sr). The 0.0 floor is the walls' lower end, kept for representability;
+    // there is still no partner wall (see the function-head comment).
+    const int64_t wall_frame = (which == TrimHit::Begin)
+        ? audio.total_frames() - 1
+        : audio.total_frames();
+    const double wall_seconds = static_cast<double>(wall_frame) / sr_d;
+    if (proposed < 0.0)          proposed = 0.0;
+    if (proposed > wall_seconds) proposed = wall_seconds;
     if (proposed == cur) return;
 
     // Trim is gesture-owned and excluded from undo/redo history (as with every
