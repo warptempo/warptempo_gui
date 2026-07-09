@@ -115,8 +115,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // run to the clip edge. viewport_marker_bounds is active-domain while the
     // delta lives in source seconds, so inverse-translate the edges; the
     // domain map is monotonic, so the source clamp matches the active-pixel
-    // clamp. The grabbed marker is on-screen at grab, so these bounds bracket
-    // delta = 0 and never invert [delta_min, delta_max].
+    // clamp. The grabbed marker is on-screen or within the kMarkerHitHalfPx
+    // halo (up to a few pixels past an edge) at grab: when fully on-screen
+    // these bounds bracket delta = 0; when grabbed just offscreen through the
+    // halo they both sit on one side of 0, so the first motion snaps the item
+    // into the visible strip — that is what makes a blind offscreen-halo grab
+    // self-correcting. vp_lo_src <= vp_hi_src always, so [delta_min, delta_max]
+    // does not invert from this pair.
     {
         const auto vb = viewport_marker_bounds(app, audio);
         const double vp_lo_src = static_cast<double>(

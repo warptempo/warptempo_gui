@@ -56,7 +56,6 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     const int sr = audio.sample_rate();
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
-    const int64_t visible = samples_visible(app, audio);
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
     const bool rv = app.render_view.enabled;
@@ -113,8 +112,13 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        if (ms < vp) continue;
-        if (ms >= vp + static_cast<double>(visible)) continue;
+        // No viewport gate: the kMarkerHitHalfPx halo is the single reach
+        // test, so a stem up to kMarkerHitHalfPx past either strip edge is
+        // grabbable from the nearest onscreen pixels (the mouse is window-
+        // bounded, so the reach is exactly the halo). m_px may be negative or
+        // >= the strip width; the |d| <= kMarkerHitHalfPx test below is the
+        // only reach rule. The arithmetic is int-safe far offscreen for any
+        // in-wall position at every zoom.
         const int m_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
         const int d = std::abs(m_px - click_rel_x);
         // Nearest wins; an exact distance tie (legal now that markers may
@@ -145,7 +149,6 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     const double sr_d = static_cast<double>(sr);
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
-    const int64_t visible = samples_visible(app, audio);
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
@@ -167,8 +170,12 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        if (ms < vp) return kMarkerHitHalfPx + 1;
-        if (ms >= vp + static_cast<double>(visible)) return kMarkerHitHalfPx + 1;
+        // No viewport gate: the kMarkerHitHalfPx halo is the single reach
+        // test, uniform with markers. A bound up to kMarkerHitHalfPx past
+        // either strip edge is grabbable from the nearest onscreen pixels.
+        // The motivating case is the at-EOF end bound, which rests exactly one
+        // pixel past the last visible column at maximum scroll; the gate made
+        // it unreachable. b_px may be negative or >= the strip width.
         const int b_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
         return std::abs(b_px - click_rel_x);
     };
@@ -203,7 +210,6 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (sr <= 0) return TrimHit::None;
     const double sr_d = static_cast<double>(sr);
     const double vp = static_cast<double>(app.viewport_start_sample);
-    const int64_t visible = samples_visible(app, audio);
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
@@ -237,8 +243,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        if (ms < vp) return kMiss;
-        if (ms >= vp + static_cast<double>(visible)) return kMiss;
+        // No viewport pre-gate: a chip whose box is partially visible at a
+        // strip edge hit-tests naturally through the horizontal-containment
+        // check below. A fully offscreen box misses by containment, which is
+        // correct — the stem halo (hit_test_trim_boundary) is the reach path
+        // for those.
         const double x_raw = (ms - vp) / spp;
         const double text_left =
             static_cast<double>(top.x) + std::round(x_raw);

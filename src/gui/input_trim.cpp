@@ -278,7 +278,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // Keep the grabbed bound — and the playhead pinned to it — inside the
         // visible pixel span, matching the playhead's own first/last-visible
         // clamp. Applied before the clip clamp so trim validity (0 / EOF) wins
-        // in the rare case the window is wider than the viewport.
+        // in the rare case the window is wider than the viewport. This also
+        // self-corrects a blind offscreen-halo grab: a bound grabbed up to
+        // kMarkerHitHalfPx past an edge snaps into view on the first motion.
         const GuiRect area = waveform_area(app);
         const int64_t first_vis = app.viewport_start_sample;
         const int64_t last_vis  = app.viewport_start_sample +
@@ -332,9 +334,12 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
     // is already viewport-bound, but a grab a few pixels off the stem can
-    // trail the bound past the edge; this makes the bound itself exact. The
-    // bounds are active-domain while src_frame is source, so inverse-translate
-    // the edges — monotonic, so the source clamp matches the active-pixel one.
+    // trail the bound past the edge; this makes the bound itself exact. This is
+    // also what makes a blind offscreen-halo grab self-correcting: a bound
+    // grabbed up to kMarkerHitHalfPx past an edge snaps into the visible strip
+    // on the first motion. The bounds are active-domain while src_frame is
+    // source, so inverse-translate the edges — monotonic, so the source clamp
+    // matches the active-pixel one.
     const auto vb = viewport_marker_bounds(app, audio);
     const int64_t vp_lo = active_domain_to_source_frame(app, audio, vb.first);
     const int64_t vp_hi = active_domain_to_source_frame(app, audio, vb.second);
