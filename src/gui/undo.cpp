@@ -67,7 +67,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last) {
     // are where every marker commit site funnels. Flag the once-per-tick
     // defect validation (GuiInputHandler::run_commit_validation) instead of
     // editing every call site.
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
@@ -82,7 +82,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     // Commit funnel (see push_undo_warp).
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
@@ -98,7 +98,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     // Commit funnel (see push_undo_warp).
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_settings_undo(SettingsSnapshot pre_state) {
@@ -112,8 +112,12 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     recompute_dirty();
-    // Deliberately NOT a commit-funnel site: settings entries cannot move
-    // marker times, so a settings commit cannot create a marker defect.
+    // Commit funnel (see push_undo_warp). Settings entries cannot move
+    // marker times, but scale participates in the trim target-span
+    // validity (validate_trim_frames runs inside the series' trim column)
+    // and output_format participates in the map-format-with-trim conflict,
+    // so a settings commit can create a walked defect.
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 namespace {
@@ -463,5 +467,5 @@ void Undo::do_redo() {
     // Redo IS a gated commit site, unlike undo just above: it re-applies a
     // commit that may have been the offending one, so the defect modal must
     // re-fire on the re-applied state.
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }

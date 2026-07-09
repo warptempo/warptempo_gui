@@ -200,10 +200,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    // A fresh load replaces the stores wholesale: drop any pending commit
-    // validation and dismiss an open defect-resolution prompt. Loads do NOT
-    // open the series — load-borne defects wait for render dispatch,
-    // target-view entry, or the next commit.
+    // A fresh load replaces the stores wholesale: drop any pending
+    // validation and dismiss an open defect-resolution prompt. This
+    // wholesale reset must run BEFORE the Load-origin pending flag set at
+    // the end of a successful load — order matters, or the reset would
+    // clear the very flag that opens the load-time walk.
     app.defect_series = DefectSeriesState{};
     if (app.prompt.active &&
         app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
@@ -504,6 +505,20 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // above; ensure_ready's is_dirty_=true falls through to trigger().
     // No-op if active_audio_view=='S'.
     target_render.ensure_ready();
+
+    // Load-origin defect walk: a loaded file set with GUI-committable
+    // defects (coincident markers, bad first marker, dangling refs,
+    // crossed trim, a trim bound under a map format) gets its modal walk
+    // on the first tick after the load, not first at render dispatch or
+    // target-view entry — if the GUI would allow the state, the GUI forces
+    // its resolution at the earliest surface, and load is that surface for
+    // file-borne defects. The tick gate (run_commit_validation: prompt not
+    // active, not loading, no gesture in flight) opens the walk; the
+    // wholesale defect_series reset above already ran, so this flag
+    // survives to that tick. A Load-origin series offers no [U]ndo —
+    // history was cleared above. A blank/missing marker file seeds the
+    // default marker and produces no defects, so its walk closes silently.
+    app.defect_series.pending_validation = PendingValidation::Load;
 
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;

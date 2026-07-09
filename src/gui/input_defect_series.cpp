@@ -11,7 +11,8 @@
 #include <vector>
 
 // Forced-choice defect-resolution modal series. A commit that leaves the
-// stores render-invalid opens a modal demanding resolution; after each
+// stores render-invalid — or a source load that carries file-borne,
+// GUI-committable defects — opens a modal demanding resolution; after each
 // choice the state is re-validated from scratch (one undo can fix several
 // defects) and the next modal opens until the stores are clean. Modal
 // resolutions push NO undo history: the offending commit's history entry
@@ -24,13 +25,15 @@
 // The defect predicate is the parser-side enumerate_marker_store_defects
 // over the sliced live stores, plus a trim column owned here (trim defects
 // have no MarkerDefect shape). The trim column walks after the last marker
-// defect: the map-free frame-level check first (crossed-or-equal), then —
-// only when the marker walk is clean AND the live map
-// builds — the full validate_trim_frames against the memoized target-view
-// map. Guarding validate_trim_frames on a clean marker store is not a gap:
-// when markers are broken their modals run first and trim re-validates on
-// the next pass of the same series. Every trim defect shares the single
-// [Delete]-both-bounds resolution.
+// defect: the map-free frame-level check first (crossed-or-equal), then the
+// map-format-with-trim conflict (trim is wav-only), then — only when the
+// marker walk is clean AND the live map builds — the full
+// validate_trim_frames against the memoized target-view map. Guarding
+// validate_trim_frames on a clean marker store is not a gap: when markers
+// are broken their modals run first and trim re-validates on the next pass
+// of the same series. The crossed-or-equal and validate_trim_frames defects
+// share the single [Delete]-both-bounds resolution; the map-format conflict
+// carries its own [U]ndo / [R]eset / [Delete] set (see TrimDefectKind).
 
 namespace {
 
@@ -90,7 +93,8 @@ void erase_column_indices(AppState& app, char column,
 }  // namespace
 
 void GuiInputHandler::run_commit_validation() {
-    if (!app.defect_series.pending_validation) return;
+    if (app.defect_series.pending_validation == PendingValidation::None)
+        return;
     // A prompt already owning the bottom strip means no edit can be in
     // flight (prompts are modal); keep the flag for the next tick rather
     // than clobber the prompt — the same deferral shape
@@ -108,8 +112,13 @@ void GuiInputHandler::run_commit_validation() {
     // Blank state: nothing to validate against; the load path clears the
     // flag, this is just the same-tick backstop.
     if (audio.total_frames() <= 0) return;
-    app.defect_series.pending_validation = false;
-    open_defect_series(/*commit_context=*/true);
+    const PendingValidation origin = app.defect_series.pending_validation;
+    app.defect_series.pending_validation = PendingValidation::None;
+    // Commit context only for Commit-origin series: a Load-origin walk has
+    // no touched marker for the coincident-group narrowing, and it offers
+    // no [U]ndo naturally — the loader clears history, so the
+    // undo_stack-non-empty condition already yields none (no special case).
+    open_defect_series(origin == PendingValidation::Commit);
 }
 
 bool GuiInputHandler::open_defect_series(bool commit_context) {
@@ -129,7 +138,10 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         if (!defects.empty()) {
             MarkerDefect d = std::move(defects.front());
             // [U]ndo is offered exactly when the undo stack is non-empty
-            // and the defect is a marker defect (trim is not in history).
+            // and the defect can be rewound through history: marker
+            // defects (here) and the map-format conflict (a settings-class
+            // entry, below); the delete-both-bounds trim defects cannot
+            // (trim is not in history).
             std::vector<char>        keys;
             std::vector<std::string> labels;
             if (!app.history.undo_stack.empty()) {
@@ -157,8 +169,8 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             app.prompt.response_keys   = std::move(keys);
             app.prompt.response_labels = std::move(labels);
             app.prompt.trigger         = DialogTrigger::DEFECT_RESOLUTION;
-            app.defect_series.defect      = std::move(d);
-            app.defect_series.trim_defect = false;
+            app.defect_series.defect           = std::move(d);
+            app.defect_series.trim_defect_kind = TrimDefectKind::None;
             viewport.clear_hover_popup();
             viewport.invalidate_all();
             return true;
@@ -172,13 +184,19 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // as a zero-span window, so a seconds-level compare would pass a
         // state the render refuses): crossed-or-equal when both bounds are
         // set (past-EOF bounds no longer reach here — the gesture walls and
-        // the load boundary make them unreachable in memory). When that
-        // passes, the full validate_trim_frames runs against the memoized
+        // the load boundary make them unreachable in memory), then the
+        // map-format-with-trim conflict — a cross-domain conflict, not a
+        // settings-validity failure: trim is wav-only (map artifacts are
+        // always the FULL maps), so any set bound under a map format is a
+        // walked defect, same wording as the render refusal. When both
+        // pass, the full validate_trim_frames runs against the memoized
         // target-view map — the FULL trim-off map the render preflight and
         // target-view gate validate against — but only when that map built
         // (markers are already clean here; a build failure is the
-        // non-modeled class the render preflight's popup backstops). All
-        // trim defects share the one [Delete]-both-bounds resolution.
+        // non-modeled class the render preflight's popup backstops). The
+        // crossed-or-equal and validate_trim_frames defects share the one
+        // [Delete]-both-bounds resolution; the map-format conflict carries
+        // [U]ndo / [R]eset / [Delete] (see TrimDefectKind).
         if (app.trim.has_begin || app.trim.has_end) {
             const double sr_d = static_cast<double>(sr);
             const double begin_f = app.trim.has_begin
@@ -186,8 +204,13 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             const double end_f   = app.trim.has_end
                 ? std::nearbyint(app.trim.end_seconds * sr_d) : 0.0;
             std::string trim_msg;
+            TrimDefectKind kind = TrimDefectKind::ClearBounds;
             if (app.trim.has_begin && app.trim.has_end && end_f <= begin_f) {
                 trim_msg = "trim bounds crossed or equal";
+            } else if (app.engine_settings.output_format != "wav") {
+                trim_msg =
+                    "map formats take no trim; clear the trim or render wav";
+                kind = TrimDefectKind::MapFormatConflict;
             } else {
                 const TargetWarpFrameMapCache& c =
                     target_view_warp_frame_map_cached(
@@ -203,13 +226,31 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 }
             }
             if (!trim_msg.empty()) {
+                std::vector<char>        keys;
+                std::vector<std::string> labels;
+                if (kind == TrimDefectKind::MapFormatConflict) {
+                    // [U]ndo on the standard undo_stack-non-empty
+                    // condition: a settings commit that created the
+                    // conflict is an ordinary settings-class entry, so
+                    // do_undo reverts it. [R]eset flips output_format back
+                    // to wav (the trim survives); [Delete] clears both
+                    // bounds (the format survives).
+                    if (!app.history.undo_stack.empty()) {
+                        keys.push_back('u');
+                        labels.push_back("[U]ndo");
+                    }
+                    keys.push_back('r');
+                    labels.push_back("[R]eset");
+                }
+                keys.push_back('\x7f');
+                labels.push_back("[Delete]");
                 app.prompt.active          = true;
                 app.prompt.text            = std::move(trim_msg);
-                app.prompt.response_keys   = {'\x7f'};
-                app.prompt.response_labels = {"[Delete]"};
+                app.prompt.response_keys   = std::move(keys);
+                app.prompt.response_labels = std::move(labels);
                 app.prompt.trigger         = DialogTrigger::DEFECT_RESOLUTION;
-                app.defect_series.defect      = MarkerDefect{};
-                app.defect_series.trim_defect = true;
+                app.defect_series.defect           = MarkerDefect{};
+                app.defect_series.trim_defect_kind = kind;
                 viewport.clear_hover_popup();
                 viewport.invalidate_all();
                 return true;
@@ -219,7 +260,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
 
     // Clean: close the series. Dismiss only our own prompt — another
     // trigger's prompt is never touched from here.
-    app.defect_series.trim_defect = false;
+    app.defect_series.trim_defect_kind = TrimDefectKind::None;
     if (app.prompt.active &&
         app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
         app.prompt.active = false;
@@ -237,12 +278,28 @@ void GuiInputHandler::handle_defect_response(char k) {
                   app.prompt.response_keys.end(), k) ==
         app.prompt.response_keys.end()) return;
 
-    if (app.defect_series.trim_defect) {
+    const TrimDefectKind trim_kind = app.defect_series.trim_defect_kind;
+    if (trim_kind == TrimDefectKind::MapFormatConflict && k == 'u') {
+        // Rewind the settings commit that created the conflict — the same
+        // history-symmetric shape as the marker-defect [U]ndo below.
+        undo.do_undo();
+    } else if (trim_kind == TrimDefectKind::MapFormatConflict && k == 'r') {
+        // [R]eset: flip output_format back to wav directly, NO history
+        // push; the trim survives. Same history-less bookkeeping as the
+        // store-mutating resolutions below (saved_valid = false pins the
+        // dirty flags until the next save rebinds the reference). Repaint
+        // rides the re-validation at the bottom: both its outcomes (next
+        // modal or clean close) invalidate_all.
+        app.engine_settings.output_format = "wav";
+        app.history.saved_valid = false;
+        undo.recompute_dirty();
+    } else if (trim_kind != TrimDefectKind::None) {
         // [Delete]: clear BOTH bounds — the mirror of handle_trim_clear_both
         // / handle_trim_unset (has flags, selection flags, focus char, the
         // same invalidations and target render the unset path emits). Trim
         // is gesture-owned and excluded from undo/dirty, so no history or
-        // dirty bookkeeping here.
+        // dirty bookkeeping here. For the map-format conflict this is the
+        // format-survives arm.
         app.trim.has_begin      = false;
         app.trim.has_end        = false;
         app.trim.begin_seconds  = 0.0;

@@ -115,7 +115,7 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     // rather than in undo.cpp's push funnel): the autoset can place equal
     // bounds at the head or tail edge, where the wall clamps collapse the
     // partner offset onto the primary bound.
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void GuiInputHandler::handle_trim_set_begin_autoset() {
@@ -413,7 +413,7 @@ void GuiInputHandler::commit_trim_drag() {
         // Trim commit site (see handle_trim_set_autoset): the release of a
         // drag that moved a bound is the commit; the modal series opens on
         // the next tick, never mid-gesture.
-        app.defect_series.pending_validation = true;
+        app.defect_series.pending_validation = PendingValidation::Commit;
     } else if (!app.trim_drag.both) {
         // Ctrl+press with no motion is a Ctrl+click: toggle the boundary's
         // selection (additive — coexists with marker selection).
@@ -521,7 +521,7 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     target_render.trigger();
     // Trim commit site (see handle_trim_set_autoset): each nudge press is
     // its own commit, like the marker nudge's per-press history entry.
-    app.defect_series.pending_validation = true;
+    app.defect_series.pending_validation = PendingValidation::Commit;
 
     // No viewport gate, mirroring the marker nudge (drags viewport-clamp the
     // grabbed item; nudges do not). Track the playhead onto the bound through

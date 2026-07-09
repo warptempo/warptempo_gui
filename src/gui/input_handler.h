@@ -197,21 +197,24 @@ struct GuiInputHandler {
 
     // Defect-resolution modal series (bodies in input_defect_series.cpp).
     //
-    // run_commit_validation: the once-per-tick commit funnel check, run from
+    // run_commit_validation: the once-per-tick funnel check, run from
     // main.cpp's on_tick immediately before enforce_target_view_validity.
-    // When the pending-validation flag is set (by the history push helpers /
-    // do_redo in undo.cpp and by trim's history-less commit sites) and no
-    // prompt is up and nothing is loading, clears the flag and opens the
-    // series in commit context — so the modal opens on the same beat as the
-    // commit's own repaint, never mid-gesture. While a prompt is already up
-    // the flag is kept for the next tick (the same deferral shape
+    // When the pending-validation flag is set — Commit origin from the
+    // history push helpers / do_redo in undo.cpp and trim's history-less
+    // commit sites, Load origin from the end of a successful source load —
+    // and no prompt is up and nothing is loading, clears the flag and
+    // opens the series (commit context iff the origin is Commit) — so the
+    // modal opens on the same beat as the commit's or the load's own
+    // repaint, never mid-gesture. While a prompt is already up the flag is
+    // kept for the next tick (the same deferral shape
     // enforce_target_view_validity uses).
     void run_commit_validation();
 
     // open_defect_series: slice the live stores, enumerate marker defects
     // (both columns; chronological), then — when the marker list is clean —
-    // walk the trim column: the frame-level crossed-or-equal check, then the
-    // full validate_trim_frames against the
+    // walk the trim column: the frame-level crossed-or-equal check, the
+    // map-format-with-trim conflict (any set bound under a non-wav
+    // output_format), then the full validate_trim_frames against the
     // memoized target-view map when that map builds. Fills app.prompt
     // (DialogTrigger::DEFECT_RESOLUTION) with the current defect and returns
     // true; when everything is clean, closes any open defect prompt and
@@ -299,18 +302,21 @@ private:
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
     // First the raw-store walk — enumerate_marker_store_defects over both
-    // given marker lists plus the frame-level trim checks, mirroring
-    // open_defect_series' predicate; on a modeled defect a live-store site
-    // (`live_store` true: `markers` / `phase_resets` / trim are the live
-    // state at dispatch time) opens the defect-resolution series while a
-    // queued-snapshot site raises the popup backstop with the first
-    // defect's message, and the dispatch is refused either way. Then the
-    // backstop chain: resolve_warp_markers_for_render on the sliced
-    // `markers`, build_warp_frame_map with `scale` and the live
-    // sample_rate / total_frames, then — when a trim bound is set — the
-    // map-format refusal (trim is wav-only, ruled; a settings choice, so
-    // it keeps the plain popup) and validate_trim_frames against the built
-    // map, all surfacing through the error-notice popup with the owner's
+    // given marker lists plus the trim checks (crossed-or-equal and, live
+    // stores only, the map-format-with-trim conflict and
+    // validate_trim_frames), mirroring open_defect_series' predicate; on a
+    // modeled defect a live-store site (`live_store` true: `markers` /
+    // `phase_resets` / trim are the live state at dispatch time) opens the
+    // defect-resolution series while a queued-snapshot site raises the
+    // popup backstop with the first defect's message, and the dispatch is
+    // refused either way. Then the backstop chain:
+    // resolve_warp_markers_for_render on the sliced `markers`,
+    // build_warp_frame_map with `scale` and the live sample_rate /
+    // total_frames, then — when a trim bound is set — the map-format
+    // refusal (trim is wav-only, ruled; the raw walk routes the live-store
+    // case into the series, so this popup serves queued snapshots and
+    // stays the backstop) and validate_trim_frames against the built map,
+    // all surfacing through the error-notice popup with the owner's
     // error string, unmodified. Returns false on any refusal — the caller
     // must then refuse to enqueue. Called by every archival render
     // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch —

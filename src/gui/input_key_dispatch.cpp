@@ -236,9 +236,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (async_renderer.is_busy()) return true;
 
         // Pre-flight the live store on the GUI thread: a modeled defect
-        // opens the defect-resolution series; a trimmed map-format render
-        // or a non-modeled failure raises the popup. Either way the
-        // dispatch is refused.
+        // (a trimmed map-format render included) opens the
+        // defect-resolution series; a non-modeled failure raises the
+        // popup. Either way the dispatch is refused.
         if (!warp_render_preflight(app.warpmarkers.markers(),
                                    app.phaseresetmarkers.markers(),
                                    /*live_store=*/true,
@@ -444,11 +444,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live store: a modeled defect opens the
-        // defect-resolution series and refuses the whole sweep; a trimmed
-        // map-format render or a non-modeled failure refuses with the
-        // popup. Per-cell tempo_base mutations remain on the async stderr
-        // backstop.
+        // Pre-flight the live store: a modeled defect (a trimmed
+        // map-format render included) opens the defect-resolution series
+        // and refuses the whole sweep; a non-modeled failure refuses with
+        // the popup. Per-cell tempo_base mutations remain on the async
+        // stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
                                    app.phaseresetmarkers.markers(),
                                    /*live_store=*/true,

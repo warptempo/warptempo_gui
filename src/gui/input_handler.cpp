@@ -947,7 +947,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // input_trim.cpp): each wheel frame's end-bound move is its own
             // commit, so a move across the begin bound opens the defect
             // series on the next tick.
-            app.defect_series.pending_validation = true;
+            app.defect_series.pending_validation = PendingValidation::Commit;
             return;
         }
         if (active_view_state(app).read_only) return;

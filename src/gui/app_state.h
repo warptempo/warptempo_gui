@@ -362,25 +362,44 @@ struct PromptState {
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 
+// Origin of a pending defect-series validation (DefectSeriesState below).
+// Commit: the commit funnel — set by the history push helpers / do_redo
+// (undo.cpp) and by trim's history-less commit sites. Load: set at the end
+// of a successful source load (file_loader.cpp), so file-borne defects get
+// their modal walk on the first tick after the load. Consumed by
+// GuiInputHandler::run_commit_validation, which opens the series with
+// commit context iff the origin is Commit; a Load-origin series offers no
+// [U]ndo naturally — the loader clears history, so the
+// undo_stack-non-empty condition already yields none.
+enum class PendingValidation { None, Commit, Load };
+
+// Which trim-column defect the current modal shows. ClearBounds covers
+// crossed-or-equal and every validate_trim_frames refusal — all sharing
+// the single delete-both-bounds resolution. MapFormatConflict is the
+// cross-domain map-format-with-trim conflict (trim is wav-only): its
+// resolutions are [U]ndo / [R]eset (output_format back to wav, trim
+// survives) / [Delete] (both bounds cleared, format survives), so the
+// response handler must tell it apart from the delete-both-bounds-only
+// kinds.
+enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
+
 // Defect-resolution series state (DialogTrigger::DEFECT_RESOLUTION). The
 // series holds only the CURRENT defect; every resolution re-enumerates the
 // stores from scratch (one undo can fix several defects at once), so a
 // stale defect queue cannot exist. `defect` is meaningful only while a
-// marker-defect modal is showing; `trim_defect` marks a trim-column defect
-// instead (crossed-or-equal or a validate_trim_frames refusal)
-// — trim defects have no MarkerDefect shape (trim is not a marker store)
-// and share the single delete-both-bounds resolution. `commit_context`
-// records whether the series was opened by a commit; the coincident-group
-// delete narrows to the touched marker only in that context.
-// `pending_validation` is the commit funnel's once-per-tick flag: set by
-// the history push helpers / do_redo (undo.cpp) and by trim's own
-// history-less commit sites, consumed by
-// GuiInputHandler::run_commit_validation at the top of on_tick.
+// marker-defect modal is showing; a non-None `trim_defect_kind` marks a
+// trim-column defect instead — trim defects have no MarkerDefect shape
+// (trim is not a marker store). `commit_context` records whether the
+// series was opened by a commit; the coincident-group delete narrows to
+// the touched marker only in that context. `pending_validation` is the
+// funnel's once-per-tick flag plus its origin (see PendingValidation),
+// consumed by GuiInputHandler::run_commit_validation at the top of
+// on_tick.
 struct DefectSeriesState {
-    MarkerDefect defect;
-    bool         trim_defect        = false;
-    bool         commit_context     = false;
-    bool         pending_validation = false;
+    MarkerDefect      defect;
+    TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
+    bool              commit_context     = false;
+    PendingValidation pending_validation = PendingValidation::None;
 };
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
@@ -393,16 +412,17 @@ struct DefectSeriesState {
 // EOF exactly (end-at-EOF is valid, so the GUI must be able to represent
 // it) — so past-EOF cannot be gestured. There are NO partner walls — a
 // bound crosses its partner freely during any gesture — but crossed and
-// equal can no longer REST past a commit: the commit funnel's
-// defect-resolution series opens on the offending commit, and its sole
-// trim resolution deletes both bounds. The 0.0 floor is now subsumed by
+// equal can no longer REST past a commit or a load: the funnel's
+// defect-resolution series opens on the offending commit (or on the first
+// tick after a load that carried them), and the delete-both-bounds
+// resolution clears them. The 0.0 floor is now subsumed by
 // the per-bound walls, but it remains the reason the floor exists at all:
 // negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
 // .settings file persists — a format-representability floor, not a
 // validity rule. Loaded values mostly bypass this: the loader stays
 // lenient for crossed and equal bounds (trim's corruption tripwire stays
-// deliberately gone — those load intact and persist back), and the defect
-// series catches them at render dispatch or target-view entry. A past-EOF
+// deliberately gone — those load intact), and the Load-origin defect walk
+// demands their resolution on the first tick after the load. A past-EOF
 // bound is the exception — it is adversarial (the gesture walls make it
 // uncommittable and a .settings applies only to its own audio, so a
 // past-EOF bound means the audio was swapped outside the GUI), hard-failed
