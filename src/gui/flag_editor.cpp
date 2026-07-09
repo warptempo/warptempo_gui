@@ -1,5 +1,7 @@
 #include "flag_editor.h"
 
+#include "frame_format.h"
+
 #include "target_render.h"
 
 #include "audio.h"
@@ -100,16 +102,20 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
 // moved from main.cpp's anonymous namespace into warpmarkers.h alongside
 // effective_disabled, so this TU sees them via #include "warpmarkers.h".
 
-// Build the locked-prefix string for `m` — exactly what the canonical
-// serializer would write before the pipe character, with the pipe
-// included. The editor renders this prefix outside the editable rect
-// (left-anchored at the marker column); the pipe is part of the
-// prefix but visually anchors to the marker line.
+// Build the locked-prefix string for `m`. This is the DISPLAY rendering,
+// not the serializer's bytes: the serializer now writes the frame double
+// (frame_format.h), while the prefix keeps the human-readable MM:SS.mmm
+// form derived as format_timestamp(frame / sample_rate). The editor
+// renders this prefix outside the editable rect (left-anchored at the
+// marker column); the pipe is part of the prefix but visually anchors to
+// the marker line. Because the prefix is display-only, the commit path
+// assembles its parse candidate from the marker's own fields in
+// serializer form rather than from these bytes.
 std::string GuiFlagEditor::build_locked_prefix(const GuiWarpMarker& m) {
     std::string out;
     if (m.disabled) out += '#';
-    // MM:SS.SSS
-    out += format_timestamp(m.time_seconds);
+    const double sr_d = static_cast<double>(audio.sample_rate());
+    out += format_timestamp(sr_d > 0.0 ? m.time_frame / sr_d : 0.0);
     out += '|';
     return out;
 }
@@ -171,10 +177,9 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // the UI in sync with the new editor target.
     selection.set_single_selection(idx);
     {
-        const int sr = audio.sample_rate();
         const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
-            mv[idx].time_seconds * static_cast<double>(sr)));
-        // Target view: marker time_seconds is source-domain; playhead
+            mv[idx].time_frame));
+        // Target view: marker time_frame is source-domain; playhead
         // is active-domain. Forward-translate so the playhead lands on
         // the marker's displayed (target-frame) position.
         const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
@@ -270,8 +275,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    const std::string candidate =
-        app.top_flag_editor.locked_prefix + payload;
+    // Assemble the parse candidate in SERIALIZER form — the locked prefix
+    // is a display rendering (MM:SS.mmm) and no longer the serializer's
+    // bytes, so the position field is rebuilt as the frame double the
+    // canonical line grammar expects. Position and disabled both come from
+    // the marker itself (both live in the locked, uneditable prefix).
+    std::string candidate;
+    if (mv_const[idx].disabled) candidate += '#';
+    candidate += format_frame_double(mv_const[idx].time_frame);
+    candidate += '|';
+    candidate += payload;
 
     GuiWarpMarker parsed;
     std::string err;
@@ -315,7 +328,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     // No first-marker special case: a marker at time 0 accepts any payload
     // the grammar allows — pass, label ref, label def. The rule that the
-    // marker at 00:00.000 must be an enabled, tempo-owning numeric marker
+    // marker at frame 0 must be an enabled, tempo-owning numeric marker
     // is validate_first_marker_render_grammar's render-boundary check,
     // surfaced by the defect-resolution series at the commit funnel, render
     // dispatch, and target-view gate, never by this editor.
@@ -333,7 +346,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     // Time stays locked; preserve it (parse already produced the
     // same value via the locked prefix, but be explicit).
-    const double preserved_time = m.time_seconds;
+    const double preserved_time = m.time_frame;
 
     // Cache-free: typing `pass` writes inert defaults into
     // tempo_base/tempo_scale; typing an explicit tempo writes the
@@ -353,7 +366,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.label_def      = parsed.label_def;
         m.label_ref      = parsed.label_ref;
     }
-    m.time_seconds = preserved_time;
+    m.time_frame = preserved_time;
     // disabled lives in the locked prefix — parse_single_canonical_line
     // populated it; reapply.
     m.disabled      = parsed.disabled;

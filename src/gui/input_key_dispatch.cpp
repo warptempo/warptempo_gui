@@ -185,8 +185,8 @@ void GuiInputHandler::cancel_active_drags() {
         // bounds in orig_begin/orig_end, so restore them before clearing
         // the gesture.
         if (app.trim_drag.moved) {
-            app.trim.begin_seconds = app.trim_drag.orig_begin_seconds;
-            app.trim.end_seconds   = app.trim_drag.orig_end_seconds;
+            app.trim.begin_frame = app.trim_drag.orig_begin_frame;
+            app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
@@ -244,16 +244,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                    /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
-                                   app.trim.has_begin, app.trim.begin_seconds,
-                                   app.trim.has_end, app.trim.end_seconds)) {
+                                   app.trim.has_begin, app.trim.begin_frame,
+                                   app.trim.has_end, app.trim.end_frame)) {
             return true;
         }
 
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
-            app.trim.has_begin, app.trim.begin_seconds,
-            app.trim.has_end,   app.trim.end_seconds);
+            app.trim.has_begin, app.trim.begin_frame,
+            app.trim.has_end,   app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
         // Empty batch_folder/basename selects the source-dir naming
@@ -321,9 +321,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                        app.engine_settings.scale,
                                        app.engine_settings.output_format,
                                        app.trim.has_begin,
-                                       app.trim.begin_seconds,
+                                       app.trim.begin_frame,
                                        app.trim.has_end,
-                                       app.trim.end_seconds)) {
+                                       app.trim.end_frame)) {
                 return true;
             }
             app.queued_renders.push_back(snapshot_current_queued_render());
@@ -345,8 +345,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                        /*live_store=*/false,
                                        q.engine_settings.scale,
                                        q.engine_settings.output_format,
-                                       q.has_trim_begin, q.trim_begin_sec,
-                                       q.has_trim_end, q.trim_end_sec)) {
+                                       q.has_trim_begin, q.trim_begin_frame,
+                                       q.has_trim_end, q.trim_end_frame)) {
                 return true;
             }
         }
@@ -418,7 +418,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
             RenderRequest req = build_render_request(
                 q.source_audio_path, q.warp_markers, q.phase_resets, q.engine_settings,
-                q.has_trim_begin, q.trim_begin_sec, q.has_trim_end, q.trim_end_sec,
+                q.has_trim_begin, q.trim_begin_frame, q.has_trim_end, q.trim_end_frame,
                 batch_folder.string(), num_buf);
             req.authoring = q.authoring;
             attach_shared_render_resources(req);
@@ -454,13 +454,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                    /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
-                                   app.trim.has_begin, app.trim.begin_seconds,
-                                   app.trim.has_end, app.trim.end_seconds)) {
+                                   app.trim.has_begin, app.trim.begin_frame,
+                                   app.trim.has_end, app.trim.end_frame)) {
             return true;
         }
 
         // Snapshot markers in timeline order (the GuiWarpMarkers store is
-        // sorted by time_seconds, with ties legal). For each owning marker
+        // sorted by time_frame, with ties legal). For each owning marker
         // build its per-cell delta list: a single 0.0 when no iter
         // range is authored, otherwise integer-cents enumeration from
         // iter_start to iter_end inclusive. Integer-cents avoids the
@@ -612,8 +612,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             RenderRequest req = build_render_request(
                 app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
                 app.engine_settings,
-                app.trim.has_begin, app.trim.begin_seconds,
-                app.trim.has_end,   app.trim.end_seconds,
+                app.trim.has_begin, app.trim.begin_frame,
+                app.trim.has_end,   app.trim.end_frame,
                 batch_folder.string(), std::move(basename));
             req.authoring = snapshot_current_authoring_state();
             attach_shared_render_resources(req);
@@ -779,12 +779,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         if (has_authoring_block) {
             app.trim.has_begin = authoring.has_trim_begin;
-            app.trim.begin_seconds = authoring.has_trim_begin
-                ? authoring.trim_begin_sec
+            app.trim.begin_frame = authoring.has_trim_begin
+                ? authoring.trim_begin_frame
                 : 0.0;
             app.trim.has_end = authoring.has_trim_end;
-            app.trim.end_seconds = authoring.has_trim_end
-                ? authoring.trim_end_sec
+            app.trim.end_frame = authoring.has_trim_end
+                ? authoring.trim_end_frame
                 : 0.0;
             if (!app.trim.has_begin) app.trim_begin_selected = false;
             if (!app.trim.has_end)   app.trim_end_selected   = false;

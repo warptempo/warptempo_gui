@@ -79,7 +79,7 @@ public:
 
     const std::vector<GuiWarpMarker>&       markers() const { return markers_; }
 
-    // Inserts `m` at the position that preserves ascending time_seconds
+    // Inserts `m` at the position that preserves ascending time_frame
     // order. Returns the insertion index. Equal times are legal —
     // markers may coincide exactly; degeneracy is refused at the render
     // boundary (build_warp_frame_map), not here.
@@ -89,7 +89,7 @@ public:
     void remove_marker(int index);
 
     // Mutable accessor for edits to a single marker in place. A caller
-    // that changes time_seconds must restore order via
+    // that changes time_frame must restore order via
     // reorder_markers_by_time before the store is next read (flag/tempo
     // toggles preserve order trivially). Bumps generation_ on call.
     // Contract is "you may mutate"; a spurious bump (caller read-only)
@@ -100,7 +100,7 @@ public:
         return &markers_[index];
     }
 
-    // Bulk-mutable accessor. The class assumes ascending time_seconds
+    // Bulk-mutable accessor. The class assumes ascending time_frame
     // order (equal times legal); a caller that changes times must restore
     // order via reorder_markers_by_time before the store is next read.
     // Exposed for operations that twiddle a flag across many markers at

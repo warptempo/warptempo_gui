@@ -143,10 +143,10 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
     if (after.size() > before.size()) {
         std::vector<double> before_times;
         before_times.reserve(before.size());
-        for (const auto& m : before) before_times.push_back(m.time_seconds);
+        for (const auto& m : before) before_times.push_back(m.time_frame);
         std::sort(before_times.begin(), before_times.end());
         for (size_t i = 0; i < after.size(); ++i) {
-            const double t = after[i].time_seconds;
+            const double t = after[i].time_frame;
             auto it = std::lower_bound(before_times.begin(),
                                        before_times.end(), t - kEps);
             const bool matched = (it != before_times.end() &&
@@ -159,12 +159,12 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
         if (sr > 0) {
             std::vector<double> after_times;
             after_times.reserve(after.size());
-            for (const auto& m : after) after_times.push_back(m.time_seconds);
+            for (const auto& m : after) after_times.push_back(m.time_frame);
             std::sort(after_times.begin(), after_times.end());
             double rightmost = 0.0;
             bool   any       = false;
             for (const auto& m : before) {
-                const double t = m.time_seconds;
+                const double t = m.time_frame;
                 auto it = std::lower_bound(after_times.begin(),
                                            after_times.end(), t - kEps);
                 const bool matched = (it != after_times.end() &&
@@ -178,8 +178,8 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
                 const double target_time =
                     remove_target_time(before, after_times, rightmost, kEps);
                 const int64_t src_sample = static_cast<int64_t>(
-                    std::nearbyint(target_time * static_cast<double>(sr)));
-                // time_seconds is source-domain; the playhead is active-domain.
+                    std::nearbyint(target_time));
+                // time_frame is source-domain; the playhead is active-domain.
                 // Forward-translate so the playhead lands at the restored
                 // marker's displayed position, mirroring
                 // Selection::sync_playhead_to_last_selected.
@@ -219,7 +219,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
     apply_post_restore_rules_impl(
         app, selection, entry, before, app.warpmarkers.markers(),
         [](const GuiWarpMarker& a, const GuiWarpMarker& b, double kEps) {
-            return std::abs(a.time_seconds - b.time_seconds) > kEps
+            return std::abs(a.time_frame - b.time_frame) > kEps
                 || a.disabled       != b.disabled
                 || a.tempo_inherits != b.tempo_inherits
                 || std::abs(a.tempo_base - b.tempo_base) > kEps
@@ -237,7 +237,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
             double target_time = rightmost;
             const int hi = entry.hint_last_selected;
             if (hi >= 0 && hi < static_cast<int>(bef.size())) {
-                const double ht = bef[hi].time_seconds;
+                const double ht = bef[hi].time_frame;
                 auto it = std::lower_bound(after_times.begin(),
                                            after_times.end(), ht - kEps);
                 const bool matched = (it != after_times.end() &&
@@ -254,7 +254,7 @@ void Undo::apply_post_restore_rules_phase_reset(
     apply_post_restore_rules_impl(
         app, selection, entry, before, app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b, double kEps) {
-            return std::abs(a.time_seconds - b.time_seconds) > kEps
+            return std::abs(a.time_frame - b.time_frame) > kEps
                 || a.disabled != b.disabled;
         },
         [](const std::vector<GuiPhaseResetMarker>&,

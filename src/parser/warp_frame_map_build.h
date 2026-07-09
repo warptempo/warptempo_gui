@@ -24,7 +24,8 @@ struct MidiTempoMapEntry {
 // Disabled markers (and any references to disabled-defined labels) are
 // filtered out BEFORE conversion.
 struct MarkerForRender {
-    double      time_seconds = 0.0;
+    // Authored position: an exact source-frame double (see WarpMarker).
+    double      time_frame = 0.0;
     double      tempo_base   = 1.0;   // resolved owning tempo; irrelevant for label_ref
     std::string tempo_scale;           // "" or the numeric string after '*'
     std::string label_def;
@@ -103,10 +104,10 @@ std::vector<bool> warp_markers_render_keep_mask(
 // RAW marker list, pre-resolution (after resolution a leading pass is
 // indistinguishable from a numeric owner because of resolve_inherited_tempo's
 // 1.0 fallback). Rules: the list must be non-empty; markers[0] must sit at
-// exactly 0.0 seconds, must not be disabled, must not be a pass
+// exactly frame 0, must not be disabled, must not be a pass
 // (tempo_inherits), and must not be a label reference. A label definition on
 // markers[0] is legal. This check is mandatory correctness, not politeness:
-// build_warp_frame_map never reads markers[0].time_seconds — it seeds the
+// build_warp_frame_map never reads markers[0].time_frame — it seeds the
 // map at {0,0} and attributes the opening segment to the first resolved
 // marker wherever it actually sits — so without it a moved, disabled, or
 // pass/ref first marker renders SILENTLY WRONG deliverable bytes rather than
@@ -115,12 +116,13 @@ std::vector<bool> warp_markers_render_keep_mask(
 // resolve_warp_markers_for_render's leading call. Kept public so display-side
 // validity gates can consult the verdict directly without building. On
 // failure the one-line message names the failed rule and, when two or more
-// markers share markers[0].time_seconds exactly, appends a coincident-marker
+// markers share markers[0].time_frame exactly, appends a coincident-marker
 // count with the formatted timestamp so the recovery path (Tab-select,
 // delete one by one, recreate the first marker) is legible from the error
 // alone.
 std::expected<void, std::string>
-validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers);
+validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
+                                     long sample_rate);
 
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
@@ -137,7 +139,8 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers);
 // pipeline and the target view's warp_frame_map recompute go through this single
 // resolver so the visible deformity matches what the engine would emit.
 std::expected<std::vector<MarkerForRender>, std::string>
-resolve_warp_markers_for_render(const std::vector<WarpMarker>& src);
+resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
+                                long sample_rate);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
@@ -169,8 +172,7 @@ std::string resolve_inherited_tempo_scale(
 //                ">=", a lower bound).
 // A pass immediately after a label_ref is legal; source_idx then names the
 // ref (the visible immediate prior), base/scale still the resolved owner's.
-MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
-                                  int idx, int sample_rate);
+MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
 // parser-domain string/math — computes the same resolution the engine uses
@@ -180,7 +182,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv,
 // TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
 // immediate prior marker's own resolved displayed tempo — matching what that
 // marker's own popup or flag shows, not its raw stored fields, which are
-// inert for a pass or a label_ref — TIME its time_seconds). If SOURCE's own
+// inert for a pass or a label_ref — TIME its time_frame). If SOURCE's own
 // resolution is unresolvable (base 0.0), the suffix is dropped entirely and
 // the popup shows just the resolved tempo. Label_ref markers emit
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE at 2 decimals;

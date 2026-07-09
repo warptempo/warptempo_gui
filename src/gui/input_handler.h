@@ -329,8 +329,8 @@ private:
                                bool live_store,
                                double scale,
                                const std::string& output_format,
-                               bool has_trim_begin, double trim_begin_sec,
-                               bool has_trim_end, double trim_end_sec);
+                               bool has_trim_begin, double trim_begin_frame,
+                               bool has_trim_end, double trim_end_frame);
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back
@@ -408,7 +408,7 @@ private:
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };
 
-    // Plain x: set the begin bound at the playhead (exact double seconds)
+    // Plain x: set the begin bound at the playhead (exact frame double)
     // and autoset the end bound half of the visible span later. Only the
     // autoset PARTNER is placement-clamped to [0, live EOF] in the active
     // domain — a choice of where to put the bound the user did not position,
@@ -432,12 +432,12 @@ private:
     void select_trim_boundary(TrimHit which, bool additive);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
-    // mouse_x → source-domain seconds, the single conversion both the drag
-    // anchor (begin) and the live cursor (update) read so they can never
+    // mouse_x → source-domain frame double, the single conversion both the
+    // drag anchor (begin) and the live cursor (update) read so they can never
     // diverge. Returns false (out untouched) when audio/zoom state is unusable.
-    bool trim_mouse_x_to_source_seconds(int mouse_x, double& out_seconds);
+    bool trim_mouse_x_to_source_frame(int mouse_x, double& out_frame);
     // mouse_x → active-domain frame: the cursor-column half of
-    // trim_mouse_x_to_source_seconds, shared with the move-both-bounds drag
+    // trim_mouse_x_to_source_frame, shared with the move-both-bounds drag
     // so the gap is preserved in the domain the user actually sees (active),
     // not source. Returns false (out untouched) when audio/zoom state is
     // unusable.

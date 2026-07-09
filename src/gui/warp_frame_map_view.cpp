@@ -37,7 +37,8 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // source view on the next tick and opens the defect-resolution series
     // (or the error-notice popup for the non-modeled class).
     if (error_out) error_out->clear();
-    auto resolved = resolve_warp_markers_for_render(slice_to_warp_markers(markers));
+    auto resolved = resolve_warp_markers_for_render(
+        slice_to_warp_markers(markers), sample_rate);
     if (!resolved) {
         if (error_out) *error_out = std::move(resolved.error());
         return {};

@@ -3,15 +3,15 @@
 #include <expected>
 #include <string>
 
-// Typed carrier for one tab's trim in the .settings format. Times are seconds,
-// decoded from the on-disk MM:SS.mmm form via parse_timestamp. A has_* of
-// false means the key was absent; the paired _sec field is then left at 0.0
-// and must not be read.
+// Typed carrier for one tab's trim in the .settings format. Positions are
+// exact source-frame doubles, decoded from the on-disk frame-double form via
+// parse_frame_double (frame_format.h). A has_* of false means the key was
+// absent; the paired _frame field is then left at 0.0 and must not be read.
 struct SettingsTrim {
     bool   has_begin = false;
-    double begin_sec = 0.0;
+    double begin_frame = 0.0;
     bool   has_end   = false;
-    double end_sec   = 0.0;
+    double end_frame   = 0.0;
 };
 
 // Two-tab carrier for the per-tab trim keys in the .settings format, plus
@@ -30,10 +30,12 @@ struct SettingsTrimTabs {
 // from the .settings file at `path`.
 // Missing or unopenable file yields an all-false carrier for both tabs.
 // One getline pass; blank, comment, and non-key lines are skipped; each
-// trim value is validated by is_valid_timestamp_format and decoded by
-// parse_timestamp. Missing trim keys are valid, but a present trim key with
-// a malformed timestamp is a hard parse failure; a present active_tab_view
-// with any value but A or B is a hard parse failure the same way.
+// trim value is validated and decoded by parse_frame_double (frame_format.h:
+// finite, non-negative, whole field consumed). Missing trim keys are valid,
+// but a present trim key with a malformed position — including the old
+// MM:SS.mmm timestamp form — is a hard parse failure; a present
+// active_tab_view with any value but A or B is a hard parse failure the
+// same way.
 // A duplicated key is a hard parse failure, matching the
 // engine-settings reader's rejection of a duplicated canonical key.
 // Bound ordering is NOT checked: a tab whose end sits at or below its begin

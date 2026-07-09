@@ -48,7 +48,7 @@ public:
 
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
 
-    // Inserts `m` at the position that preserves ascending time_seconds
+    // Inserts `m` at the position that preserves ascending time_frame
     // order. Returns the insertion index. Equal times are legal —
     // markers may sit arbitrarily close or coincide exactly — and the
     // store keeps them ordered: this insert places by lower_bound, and

@@ -108,13 +108,18 @@ struct UndoEntry {
 struct DragState {
     bool                active = false;
     std::vector<int>    dragging_markers;   // sorted ascending
-    std::vector<double> original_times;     // parallel to dragging_markers
-    // Proposed new times during motion, parallel to dragging_markers.
-    // Written by apply_drag_motion as original_times[k] + delta; consumed
-    // by paint via DragOverlay so the live marker store stays untouched
-    // until commit. Seeded from original_times at begin_drag.
+    // Pre-drag positions, parallel to dragging_markers. Source-frame
+    // doubles (the authored domain), like every position in this struct.
+    std::vector<double> original_times;
+    // Proposed new positions during motion (source-frame doubles), parallel
+    // to dragging_markers. Written by apply_drag_motion as
+    // original_times[k] + delta; consumed by paint via DragOverlay so the
+    // live marker store stays untouched until commit. Seeded from
+    // original_times at begin_drag.
     std::vector<double> moveable_times;
-    double              anchor_mouse_time_seconds = 0.0;
+    // Press position in source-frame doubles; the motion delta
+    // (mouse_frame - anchor) therefore lives in source frames.
+    double              anchor_mouse_time_frame = 0.0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
@@ -150,7 +155,7 @@ struct DragState {
 
 // Drag-time position overlay. Paint sites consult this when a marker
 // index appears in `indices` to read the proposed new time from
-// `times` rather than the live store's time_seconds. The two spans
+// `times` rather than the live store's time_frame. The two spans
 // alias DragState's `dragging_markers` and `moveable_times` — parallel
 // vectors paired positionally by k. The indices are not necessarily in
 // ascending order (a mid-drag store reorder remaps them in place); the
@@ -161,15 +166,15 @@ struct DragOverlay {
     const std::vector<double>* times   = nullptr;
 
     // Returns the overlay time for marker `marker_idx`, or
-    // `fallback_time_seconds` when the index is not in the overlay.
-    // Caller passes the live store's time_seconds as the fallback.
+    // `fallback_time_frame` when the index is not in the overlay.
+    // Caller passes the live store's time_frame as the fallback.
     double effective_time(int marker_idx,
-                          double fallback_time_seconds) const {
-        if (!indices || !times) return fallback_time_seconds;
+                          double fallback_time_frame) const {
+        if (!indices || !times) return fallback_time_frame;
         for (size_t k = 0; k < indices->size(); ++k) {
             if ((*indices)[k] == marker_idx) return (*times)[k];
         }
-        return fallback_time_seconds;
+        return fallback_time_frame;
     }
 };
 
@@ -279,20 +284,22 @@ struct TrimDragState {
     bool active   = false;
     bool is_begin = false;   // which bound the cursor is dragging
     bool moved    = false;   // whether motion actually changed the bound
-    double orig_seconds       = 0.0;  // dragged bound's pre-drag value; base for the drag delta
-    // Press position in source-domain seconds, captured at drag-begin.
+    // Dragged bound's pre-drag value (source-frame double); base for the
+    // drag delta.
+    double orig_frame       = 0.0;
+    // Press position in source-frame doubles, captured at drag-begin.
     // Motion applies the cursor's displacement from here (anchor-relative),
     // matching warp-marker drag — so the bound tracks the grab point with no
-    // initial snap. See DragState::anchor_mouse_time_seconds.
-    double anchor_seconds     = 0.0;
+    // initial snap. See DragState::anchor_mouse_time_frame.
+    double anchor_frame     = 0.0;
 
     // Ctrl+Shift move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
     // as it appears under warp. `is_begin` still records which stem was
     // grabbed (for cosmetic purposes only — both move regardless).
     bool    both                 = false;
-    double  orig_begin_seconds   = 0.0;
-    double  orig_end_seconds     = 0.0;
+    double  orig_begin_frame   = 0.0;
+    double  orig_end_frame     = 0.0;
     int64_t anchor_active_frame  = 0;
 };
 
@@ -413,21 +420,22 @@ struct DefectSeriesState {
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
-// full-double source-domain seconds, exactly like marker times (the
-// .settings writer rounds through format_timestamp at save; a saved bound
-// reloads within half a millisecond, accepted). Every trim GESTURE clamps
-// each bound to its own absolute walls: begin spans frame 0 to EOF-1 (a
-// begin at or past the source end can never render), end spans frame 0 to
-// EOF exactly (end-at-EOF is valid, so the GUI must be able to represent
-// it) — so past-EOF cannot be gestured. There are NO partner walls — a
-// bound crosses its partner freely during any gesture — but crossed and
-// equal can no longer REST past a commit or a load: the funnel's
-// defect-resolution series opens on the offending commit (or on the first
-// tick after a load that carried them), and the delete-both-bounds
-// resolution clears them. The 0.0 floor is now subsumed by
-// the per-bound walls, but it remains the reason the floor exists at all:
-// negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
-// .settings file persists — a format-representability floor, not a
+// full-double source frames, exactly like marker times (the .settings
+// writer persists the exact value via frame_format.h, so a saved bound
+// reloads bit-identically). Every trim GESTURE clamps each bound to its own
+// absolute walls: begin spans frame 0 to EOF-1 (a begin at or past the
+// source end can never render), end spans frame 0 to EOF exactly
+// (end-at-EOF is valid, so the GUI must be able to represent it) — exact
+// frame-double compares, the load guard's own comparison — so past-EOF
+// cannot be gestured. There are NO partner walls — a bound crosses its
+// partner freely during any gesture — but crossed and equal can no longer
+// REST past a commit or a load: the funnel's defect-resolution series opens
+// on the offending commit (or on the first tick after a load that carried
+// them), and the delete-both-bounds resolution clears them. The 0.0 floor
+// is now subsumed by the per-bound walls, but it remains the reason the
+// floor exists at all: a negative position is unrepresentable in the
+// frame-double form the .settings file persists (parse_frame_double
+// rejects negatives as malformed) — a format-representability floor, not a
 // validity rule. Loaded values mostly bypass this: the loader stays
 // lenient for crossed and equal bounds (trim's corruption tripwire stays
 // deliberately gone — those load intact), and the Load-origin defect walk
@@ -442,10 +450,10 @@ struct DefectSeriesState {
 // artifacts — and the GUI informs and demands resolution, it never guards a
 // gesture. Readers must not assume begin <= end.
 struct TrimState {
-    double begin_seconds = 0.0;
-    double end_seconds   = 0.0;
-    bool   has_begin     = false;
-    bool   has_end       = false;
+    double begin_frame = 0.0;   // exact source-frame double
+    double end_frame   = 0.0;   // exact source-frame double
+    bool   has_begin   = false;
+    bool   has_end     = false;
 };
 
 // Navigational bookmark. Holds a snapshot of the three fields that define
@@ -819,9 +827,9 @@ struct AppState {
         std::vector<GuiPhaseResetMarker>  phase_resets;
         EngineSettings              engine_settings;
         bool                        has_trim_begin = false;
-        double                      trim_begin_sec = 0.0;
+        double                      trim_begin_frame = 0.0;  // source frames
         bool                        has_trim_end   = false;
-        double                      trim_end_sec   = 0.0;
+        double                      trim_end_frame   = 0.0;  // source frames
         AuthoringSnapshot           authoring;
     };
     std::vector<QueuedRender> queued_renders;
@@ -923,9 +931,9 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
-// Restore ascending time_seconds order after a mutation that may have
+// Restore ascending time_frame order after a mutation that may have
 // moved markers past their neighbors (shift, nudge, drag commit). The
-// marker stores are always sorted by time_seconds at rest; mutations
+// marker stores are always sorted by time_frame at rest; mutations
 // that change times in place call this immediately after writing.
 // Stable: equal-time markers keep their pre-sort relative order, so
 // ties resolve deterministically. Returns the old-index -> new-index
@@ -934,13 +942,13 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 // path allocation-free). Callers pass the result to
 // remap_marker_indices_after_reorder so every index-shaped piece of
 // state that referenced a moved marker follows it. The marker container
-// is read only through `time_seconds`, so both marker types work.
+// is read only through `time_frame`, so both marker types work.
 template <typename Marker>
 std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
     const int n = static_cast<int>(markers.size());
     bool sorted = true;
     for (int i = 1; i < n; ++i) {
-        if (markers[i - 1].time_seconds > markers[i].time_seconds) {
+        if (markers[i - 1].time_frame > markers[i].time_frame) {
             sorted = false;
             break;
         }
@@ -950,7 +958,7 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
     for (int i = 0; i < n; ++i) order[i] = i;
     std::stable_sort(order.begin(), order.end(),
         [&markers](int a, int b) {
-            return markers[a].time_seconds < markers[b].time_seconds;
+            return markers[a].time_frame < markers[b].time_frame;
         });
     std::vector<Marker> reordered;
     reordered.reserve(n);
@@ -1015,7 +1023,7 @@ int     max_valid_numeric_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
-    const AppState& a, int sample_rate, long long total_frames);
+    const AppState& a, long long total_frames);
 GuiRect timestamp_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
@@ -1092,7 +1100,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 bool popup_eligible_marker(const AppState& app, int idx);
 
 // Sweep-select every marker in the time-ordered `markers` list whose
-// time_seconds falls in [lo_t, hi_t], iterating in travel order (ascending
+// time_frame falls in [lo_t, hi_t] (source-frame doubles, the authored
+// domain), iterating in travel order (ascending
 // indices when `forward`, else descending) so the final last_selected_marker
 // lands on the most recently passed marker. Skips press_marker_idx (preserves
 // the Shift-press toggle non-re-add guarantee) and already-selected indices.
@@ -1100,23 +1109,23 @@ bool popup_eligible_marker(const AppState& app, int idx);
 // anything was added. Shared by the source/target and render-view playhead-drag
 // Shift sweeps (input_handler.cpp / input_render_view.cpp); templated on the
 // vector element type because the two stores hold different marker types that
-// both expose time_seconds. O(log n + added) per call.
+// both expose time_frame. O(log n + added) per call.
 template <typename MarkerVec>
 bool sweep_select_interval(AppState& app, const MarkerVec& markers,
                            double lo_t, double hi_t, bool forward,
                            int press_marker_idx) {
     if (lo_t > hi_t) return false;
-    // First index with time_seconds >= lo_t through the last with
-    // time_seconds <= hi_t (half-open [first, last)).
+    // First index with time_frame >= lo_t through the last with
+    // time_frame <= hi_t (half-open [first, last)).
     const int first = static_cast<int>(
         std::lower_bound(markers.begin(), markers.end(), lo_t,
                          [](const auto& m, double t) {
-                             return m.time_seconds < t;
+                             return m.time_frame < t;
                          }) - markers.begin());
     const int last = static_cast<int>(
         std::upper_bound(markers.begin(), markers.end(), hi_t,
                          [](double t, const auto& m) {
-                             return t < m.time_seconds;
+                             return t < m.time_frame;
                          }) - markers.begin());
     bool changed = false;
     auto add = [&](int idx) {

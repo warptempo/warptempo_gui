@@ -379,16 +379,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // read-only (no marker mutation).
                 if (shift) selection.toggle_selection_membership(hit);
                 else       selection.set_single_selection(hit);
-                const int sr = audio.sample_rate();
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phaseresetmarkers.markers()[hit].time_seconds *
-                        static_cast<double>(sr)));
+                        app.phaseresetmarkers.markers()[hit].time_frame));
                 } else {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.warpmarkers.markers()[hit].time_seconds *
-                        static_cast<double>(sr)));
+                        app.warpmarkers.markers()[hit].time_frame));
                 }
                 const int64_t sample =
                     source_frame_to_active_domain(app, audio, src_sample);
@@ -399,7 +396,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Waveform-area press: start playhead drag gesture.
         {
-            const int sr = audio.sample_rate();
             if (hit >= 0) {
                 // Press on a marker (within 3px).
                 if (!shift) {
@@ -413,12 +409,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phaseresetmarkers.markers()[hit].time_seconds *
-                        static_cast<double>(sr)));
+                        app.phaseresetmarkers.markers()[hit].time_frame));
                 } else {
                     src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.warpmarkers.markers()[hit].time_seconds *
-                        static_cast<double>(sr)));
+                        app.warpmarkers.markers()[hit].time_frame));
                 }
                 const int64_t sample =
                     source_frame_to_active_domain(app, audio, src_sample);
@@ -640,12 +634,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             int64_t src_sample;
             if (app.active_markers_view == 'P') {
                 src_sample = static_cast<int64_t>(std::nearbyint(
-                    app.phaseresetmarkers.markers()[hit].time_seconds *
-                    static_cast<double>(sr)));
+                    app.phaseresetmarkers.markers()[hit].time_frame));
             } else {
                 src_sample = static_cast<int64_t>(std::nearbyint(
-                    app.warpmarkers.markers()[hit].time_seconds *
-                    static_cast<double>(sr)));
+                    app.warpmarkers.markers()[hit].time_frame));
             }
             // Target view: forward-translate the snapped marker's
             // source-frame to active-domain so the playhead lands on
@@ -709,9 +701,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 int64_t lo = active_domain_to_source_frame(app, audio, a);
                 int64_t hi = active_domain_to_source_frame(app, audio, b);
                 if (lo > hi) std::swap(lo, hi);
-                const double sr_d = static_cast<double>(sr);
-                const double lo_t = static_cast<double>(lo) / sr_d;
-                const double hi_t = static_cast<double>(hi) / sr_d;
+                // Sweep endpoints are source-frame doubles, the marker
+                // stores' own domain.
+                const double lo_t = static_cast<double>(lo);
+                const double hi_t = static_cast<double>(hi);
                 const bool swept = (app.active_markers_view == 'P')
                     ? sweep_select_interval(
                           app, app.phaseresetmarkers.markers(),
@@ -776,13 +769,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (sr <= 0) return;
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    const double sr_d = static_cast<double>(sr);
-    // Target view: mouse-x → seconds passes through to_source_frame so
-    // the delta (mouse_time - anchor_mouse_time_seconds) is a source-
-    // seconds value, matching the source-domain anchor begin_drag
-    // captured and the source-domain time_seconds the apply path
+    // Target view: mouse-x → frames passes through to_source_frame so
+    // the delta (mouse_frame - anchor_mouse_time_frame) is a source-
+    // frame value, matching the source-domain anchor begin_drag
+    // captured and the source-domain time_frame the apply path
     // writes into.
-    double mouse_time;
+    double mouse_frame;
     if (app.active_audio_view == 'T') {
         const int64_t mouse_frame_active =
             app.viewport_start_sample +
@@ -790,14 +782,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 static_cast<double>(mouse_x - area.x) * spp));
         const int64_t mouse_frame_src =
             active_domain_to_source_frame(app, audio, mouse_frame_active);
-        mouse_time = static_cast<double>(mouse_frame_src) / sr_d;
+        mouse_frame = static_cast<double>(mouse_frame_src);
     } else {
-        const double vp_time =
-            static_cast<double>(app.viewport_start_sample) / sr_d;
-        mouse_time = vp_time +
-            static_cast<double>(mouse_x - area.x) * spp / sr_d;
+        mouse_frame = static_cast<double>(app.viewport_start_sample) +
+            static_cast<double>(mouse_x - area.x) * spp;
     }
-    marker_drag.apply_drag_motion(mouse_time - app.drag.anchor_mouse_time_seconds);
+    marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
 
     // Track the playhead with the grabbed marker. The hit marker's
     // proposed source-time lives in the drag overlay — under the
@@ -818,7 +808,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (hit_pos >= 0 &&
         static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
         const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
-            app.drag.moveable_times[hit_pos] * sr_d));
+            app.drag.moveable_times[hit_pos]));
         const int64_t ph = (app.active_audio_view == 'T')
             ? to_domain_frame(app, ph_src, app.drag.frozen_warp_frame_map)
             : ph_src;

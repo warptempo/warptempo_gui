@@ -37,16 +37,15 @@ struct GuiPhaseResetMarkersOps {
           playback_lifecycle(playback_lifecycle_),
           target_render(target_render_) {}
 
-    void drop_phase_reset_at_position(double time_seconds);
+    void drop_phase_reset_at_position(double time_frame);
     void drop_phase_reset_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();
     std::pair<double, double> compute_phase_reset_delta_bounds(bool& ok);
-    // Shift every selected phase reset by the clamped delta. Returns whether
-    // a nonzero clamped delta was applied. Unlike the warp sibling
-    // (apply_selection_shift), this does not verify per-reset that the
-    // snapped position changed; a sub-grid delta can apply as a no-op that
-    // still reports true.
+    // Shift every selected phase reset by the clamped delta (source-frame
+    // doubles, full precision — there is no grid). Returns whether any
+    // reset actually moved, mirroring the warp sibling
+    // (apply_selection_shift).
     bool apply_phase_reset_selection_shift(double raw_delta);
     void nudge_selected_phase_resets(int direction);
 };

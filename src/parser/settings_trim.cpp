@@ -1,7 +1,7 @@
 #include "settings_trim.h"
 
+#include "frame_format.h"  // parse_frame_double
 #include "parse_text_util.h"
-#include "time_format.h"   // parse_timestamp
 
 #include <cctype>
 #include <expected>
@@ -45,45 +45,49 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            if (!is_valid_timestamp_format(value)) {
+            double v = 0.0;
+            if (!parse_frame_double(value, v)) {
                 return warptempo_parse::prefix_line_error(
-                    ln, "invalid trim timestamp for " + key + ": '" + value + "'");
+                    ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
             out.tab_a.has_begin = true;
-            out.tab_a.begin_sec = parse_timestamp(value);
+            out.tab_a.begin_frame = v;
         } else if (key == "tab_a_trim_end") {
             if (!seen.insert(key).second) {
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            if (!is_valid_timestamp_format(value)) {
+            double v = 0.0;
+            if (!parse_frame_double(value, v)) {
                 return warptempo_parse::prefix_line_error(
-                    ln, "invalid trim timestamp for " + key + ": '" + value + "'");
+                    ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
             out.tab_a.has_end = true;
-            out.tab_a.end_sec = parse_timestamp(value);
+            out.tab_a.end_frame = v;
         } else if (key == "tab_b_trim_begin") {
             if (!seen.insert(key).second) {
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            if (!is_valid_timestamp_format(value)) {
+            double v = 0.0;
+            if (!parse_frame_double(value, v)) {
                 return warptempo_parse::prefix_line_error(
-                    ln, "invalid trim timestamp for " + key + ": '" + value + "'");
+                    ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
             out.tab_b.has_begin = true;
-            out.tab_b.begin_sec = parse_timestamp(value);
+            out.tab_b.begin_frame = v;
         } else if (key == "tab_b_trim_end") {
             if (!seen.insert(key).second) {
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            if (!is_valid_timestamp_format(value)) {
+            double v = 0.0;
+            if (!parse_frame_double(value, v)) {
                 return warptempo_parse::prefix_line_error(
-                    ln, "invalid trim timestamp for " + key + ": '" + value + "'");
+                    ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
             out.tab_b.has_end = true;
-            out.tab_b.end_sec = parse_timestamp(value);
+            out.tab_b.end_frame = v;
         } else if (key == "active_tab_view") {
             if (!seen.insert(key).second) {
                 return warptempo_parse::prefix_line_error(
@@ -101,7 +105,7 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
     // No per-tab ordering check: equal and inverted bounds (end at or before
     // begin) load intact — trim bounds are authored values the GUI lets rest
     // in any order, and the render boundary (validate_trim_frames) owns every
-    // trim refusal. Syntax stays load-fatal: malformed timestamps, duplicate
-    // keys, and a bad active_tab_view are rejected above.
+    // trim refusal. Syntax stays load-fatal: malformed frame positions,
+    // duplicate keys, and a bad active_tab_view are rejected above.
     return out;
 }

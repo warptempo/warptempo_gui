@@ -25,7 +25,9 @@
 //      label_def markers; a disabled non-label-def is locally disabled
 //      and does not propagate.
 struct WarpMarker {
-    double time_seconds = 0.0;
+    // Authored position: an exact source-frame double, fractional legal.
+    // Serialized via frame_format.h; timestamps are display-only renderings.
+    double time_frame = 0.0;
 
     bool        tempo_inherits = false;
     double      tempo_base     = 1.0;
@@ -42,7 +44,7 @@ struct WarpMarker {
 // line, or an unopenable file, returns a one-line diagnostic (line-tagged
 // where line-specific). An empty file parses to an empty vector, and the
 // first-marker render grammar (an enabled, tempo-owning numeric marker at
-// exactly 00:00.000) is NOT a load rule — it is validated at the render
+// exactly frame 0) is NOT a load rule — it is validated at the render
 // boundary by validate_first_marker_render_grammar (warp_frame_map_build.h),
 // so any state the GUI can save loads back. This is the canonical
 // .warpmarkers reader for both the GUI store and the headless CLI.

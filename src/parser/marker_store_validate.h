@@ -23,7 +23,13 @@
 // hardfail at render. The value is kZoomMsPerPixel[1] (src/gui/main.cpp,
 // 0.625 ms/pixel, the deepest manual zoom) expressed in seconds; single-target
 // software, so the authoring rule pins the number here as the source of truth
-// and the zoom table comment points back.
+// and the zoom table comment points back. Domain split (deliberate): the
+// CONSTANT stays a seconds value because its purpose is pixel pickability and
+// zoom is defined in ms per pixel; the COMPARISON in
+// marker_store_validate.cpp converts once to frames
+// (window_frames = kCoincidenceWindowSeconds * sample_rate) and compares the
+// authored frame doubles exactly, so no seconds representation ever touches
+// the stores.
 inline constexpr double kCoincidenceWindowSeconds = 0.625 / 1000.0;
 //
 // enumerate_marker_store_defects is the shared surface consumed by the CLI
@@ -63,18 +69,22 @@ enum class MarkerDefectKind {
 
 struct MarkerDefect {
     MarkerDefectKind    kind;
-    char                column;        // 'W' warp, 'P' phase reset
-    double              time_seconds;  // chronological anchor
-    std::vector<size_t> indices;       // store indices, ascending
-    std::string         message;       // display string shared by the CLI
-                                       // stderr lines and the GUI modal text
+    char                column;      // 'W' warp, 'P' phase reset
+    double              time_frame;  // chronological anchor (source frames)
+    std::vector<size_t> indices;     // store indices, ascending
+    std::string         message;     // display string shared by the CLI
+                                     // stderr lines and the GUI modal text
 };
 
 // Scan the raw authored marker stores (both columns) and return every
 // render-invalidating authoring defect as a structured, chronologically sorted
 // list. The input lists are time-sorted (the GUI store is sorted at rest and
 // the file parsers hard-fail decreasing times). Messages are lowercase,
-// matching the parser error strings; timestamps go through format_timestamp.
+// matching the parser error strings; embedded times are display renderings
+// via format_timestamp(frame / sample_rate). `sample_rate` converts the
+// coincidence window to frames and formats the message timestamps; it never
+// converts the stored positions themselves.
 std::vector<MarkerDefect> enumerate_marker_store_defects(
     const std::vector<WarpMarker>&       warp_markers,
-    const std::vector<PhaseResetMarker>& phase_resets);
+    const std::vector<PhaseResetMarker>& phase_resets,
+    long sample_rate);

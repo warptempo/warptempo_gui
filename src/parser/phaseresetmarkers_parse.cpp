@@ -1,7 +1,7 @@
 #include "phaseresetmarkers_parse.h"
 
+#include "frame_format.h"
 #include "parse_text_util.h"
-#include "time_format.h"
 
 #include <expected>
 #include <fstream>
@@ -10,13 +10,14 @@ namespace {
 
 using warptempo_parse::strip_bom;
 
-// Parse "[#]MM:SS.mmm" into a PhaseResetMarker. Returns the marker on
+// Parse "[#]<frame double>" into a PhaseResetMarker. Returns the marker on
 // success; on failure, returns a one-line diagnostic. The caller has
 // already rejected any whitespace on the line, so the token reaching here is
 // non-empty and whitespace-free. The canonical grammar is an optional
-// leading '#' meaning disabled, then exactly nine characters forming a valid
-// MM:SS.mmm timestamp and nothing else; anything else fails with the generic
-// timestamp error.
+// leading '#' meaning disabled, then a source-frame double (frame_format.h:
+// finite, non-negative, whole field consumed) and nothing else; anything
+// else — including the old MM:SS.mmm timestamp form — fails with the
+// generic position error.
 std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) {
     PhaseResetMarker out;
 
@@ -26,11 +27,10 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
         token.erase(0, 1);
     }
 
-    if (token.size() != 9 || !is_valid_timestamp_format(token)) {
+    if (!parse_frame_double(token, out.time_frame)) {
         return std::unexpected<std::string>(
-            "expected MM:SS.mmm timestamp: " + token);
+            "expected frame position: " + token);
     }
-    out.time_seconds = parse_timestamp(token);
     return out;
 }
 
@@ -60,13 +60,15 @@ parse_phaseresetmarkers_file(const std::string& path) {
 
         if (raw.empty()) continue;
 
-        // Hash-comment convention: a first-byte '#' that is not followed by a
-        // valid nine-character timestamp marks a comment line and is skipped;
-        // a '#' that does prefix a valid timestamp is a disabled marker and
-        // falls through to the strict parse.
-        if (raw[0] == '#' &&
-            !(raw.size() >= 10 && is_valid_timestamp_format(raw.substr(1, 9)))) {
-            continue;
+        // Hash-comment convention: a first-byte '#' whose remaining text does
+        // not parse as a frame double marks a comment line and is skipped; a
+        // '#' that does prefix a valid frame position is a disabled marker
+        // and falls through to the strict parse.
+        if (raw[0] == '#') {
+            double probe = 0.0;
+            if (!parse_frame_double(std::string_view(raw).substr(1), probe)) {
+                continue;
+            }
         }
 
         // Marker lines are byte-exact canonical: any space, tab, or CR
@@ -81,7 +83,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
-        const double eff = m.time_seconds;
+        const double eff = m.time_frame;
         // A reset at time zero parses and loads; it is inert at render because
         // the near-start dropzone drops it at derivation.
         //
@@ -104,7 +106,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // the render-boundary breach backstop.
         if (last_time >= 0.0 && eff < last_time)
             return fail(line_number,
-                "time_seconds decreasing: " + format_timestamp(eff));
+                "time decreasing: " + format_frame_double(eff));
         last_time = eff;
         markers.push_back(std::move(m));
     }

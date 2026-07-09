@@ -283,7 +283,6 @@ void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
         : current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;
     const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
-    const double sr = static_cast<double>(audio.sample_rate());
 
     // Map selection: same frozen-vs-cached pattern as the debug hit-rects
     // block and hit_test_flag. No map means identity (matching the stem
@@ -303,23 +302,23 @@ void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
     // marker's proposed time through the DragOverlay (same construction as
     // hit_test_flag). A warp-mode drag's indices refer to the warp list, so
     // guard on drag_mode 'P'; otherwise use the live store's time.
-    double eff_time = marker.time_seconds;
+    double eff_time = marker.time_frame;
     if (app.drag.active && app.drag.drag_mode == 'P') {
         DragOverlay ov;
         ov.indices = &app.drag.dragging_markers;
         ov.times   = &app.drag.moveable_times;
-        eff_time = ov.effective_time(idx, marker.time_seconds);
+        eff_time = ov.effective_time(idx, marker.time_frame);
     }
 
     // Paint sample: the exact expression render.cpp's file-local
-    // sec_to_paint_sample uses, so marker and overlay can never disagree.
+    // frame_to_paint_sample uses, so marker and overlay can never disagree.
     double ms;
     if (tmap && !tmap->empty()) {
         const size_t src_frame =
-            static_cast<size_t>(std::nearbyint(eff_time * sr));
+            static_cast<size_t>(std::nearbyint(eff_time));
         ms = std::nearbyint(map_source_to_target(src_frame, *tmap));
     } else {
-        ms = std::nearbyint(eff_time * sr);
+        ms = std::nearbyint(eff_time);
     }
 
     // Columns: right_col uses the same std::round-to-int placement the stem
@@ -853,17 +852,15 @@ GuiPaintHandler::compute_displayed_trim() const {
     // the same authored positions, so paint and pick stay in agreement.
     // Bounds may rest inverted; this helper is position-only and needs no
     // order (the dim-rect consumer applies its own inverted-window rule).
-    const int sr = audio.sample_rate();
-    const double sr_d = static_cast<double>(sr);
     std::pair<long long, long long> t{0, audio.total_frames()};
     if (!rve) {
         if (app.trim.has_begin) {
             t.first = static_cast<long long>(
-                std::nearbyint(app.trim.begin_seconds * sr_d));
+                std::nearbyint(app.trim.begin_frame));
         }
         if (app.trim.has_end) {
             t.second = static_cast<long long>(
-                std::nearbyint(app.trim.end_seconds * sr_d));
+                std::nearbyint(app.trim.end_frame));
         }
         if (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty()) {
             t.first = static_cast<long long>(std::nearbyint(

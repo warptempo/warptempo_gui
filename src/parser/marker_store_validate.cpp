@@ -10,24 +10,26 @@
 namespace {
 
 // Adjacent-pair coincident grouping over a time-sorted column. A pair is
-// coincident when (t[i+1] - t[i]) < kCoincidenceWindowSeconds — a seconds-domain
-// compare, no sample-rate multiply. The window is one deepest-zoom pixel of
+// coincident when (t[i+1] - t[i]) < window_frames, where window_frames is
+// kCoincidenceWindowSeconds converted once to frames by the caller — the
+// stored positions are frame doubles and are compared exactly, with no
+// rounding; only the window constant crosses domains (it is pinned in the
+// zoom table's ms-per-pixel terms). The window is one deepest-zoom pixel of
 // time, deliberately WIDER than the owners' sub-frame refusals: markers closer
-// than one pixel cannot be mouse-picked apart at any zoom. Computed on exact
-// doubles with no rounding. Chains of adjacent coincident pairs merge into one
-// group; disabled markers participate (the rule is per-column pickability, not
-// render participation).
+// than one pixel cannot be mouse-picked apart at any zoom. Chains of adjacent
+// coincident pairs merge into one group; disabled markers participate (the
+// rule is per-column pickability, not render participation).
 std::vector<std::vector<size_t>> coincident_groups(
-    const std::vector<double>& times) {
+    const std::vector<double>& times, double window_frames) {
     std::vector<std::vector<size_t>> groups;
     size_t i = 0;
     while (i + 1 < times.size()) {
-        if ((times[i + 1] - times[i]) < kCoincidenceWindowSeconds) {
+        if ((times[i + 1] - times[i]) < window_frames) {
             std::vector<size_t> group;
             group.push_back(i);
             size_t j = i;
             while (j + 1 < times.size() &&
-                   (times[j + 1] - times[j]) < kCoincidenceWindowSeconds) {
+                   (times[j + 1] - times[j]) < window_frames) {
                 group.push_back(j + 1);
                 ++j;
             }
@@ -44,18 +46,25 @@ std::vector<std::vector<size_t>> coincident_groups(
 
 std::vector<MarkerDefect> enumerate_marker_store_defects(
     const std::vector<WarpMarker>&       warp_markers,
-    const std::vector<PhaseResetMarker>& phase_resets) {
+    const std::vector<PhaseResetMarker>& phase_resets,
+    long sample_rate) {
     std::vector<MarkerDefect> defects;
+    const double sr_d = static_cast<double>(sample_rate);
+    // The one domain crossing: the pickability window (a seconds constant,
+    // zoom-table domain) expressed in frames for the exact frame-double
+    // compares below.
+    const double window_frames = kCoincidenceWindowSeconds * sr_d;
 
     // First-marker grammar (warp only — phase resets carry no tempo, so there
     // is no grammar to anchor). The validator handles the empty list itself,
     // returning its own message; the defect anchors at 0.0 with indices {0}
     // when the list is non-empty, empty otherwise.
-    if (auto v = validate_first_marker_render_grammar(warp_markers); !v) {
+    if (auto v = validate_first_marker_render_grammar(warp_markers,
+                                                      sample_rate); !v) {
         MarkerDefect d;
         d.kind         = MarkerDefectKind::FirstMarkerGrammar;
         d.column       = 'W';
-        d.time_seconds = 0.0;
+        d.time_frame = 0.0;
         if (!warp_markers.empty()) d.indices.push_back(0);
         d.message = std::move(v.error());
         defects.push_back(std::move(d));
@@ -66,28 +75,28 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     {
         std::vector<double> warp_times;
         warp_times.reserve(warp_markers.size());
-        for (const auto& m : warp_markers) warp_times.push_back(m.time_seconds);
-        for (auto& group : coincident_groups(warp_times)) {
+        for (const auto& m : warp_markers) warp_times.push_back(m.time_frame);
+        for (auto& group : coincident_groups(warp_times, window_frames)) {
             MarkerDefect d;
-            d.kind         = MarkerDefectKind::CoincidentGroup;
-            d.column       = 'W';
-            d.time_seconds = warp_times[group.front()];
+            d.kind       = MarkerDefectKind::CoincidentGroup;
+            d.column     = 'W';
+            d.time_frame = warp_times[group.front()];
             d.message = "coincident warp markers at "
-                        + format_timestamp(d.time_seconds);
+                        + format_timestamp(d.time_frame / sr_d);
             d.indices = std::move(group);
             defects.push_back(std::move(d));
         }
 
         std::vector<double> reset_times;
         reset_times.reserve(phase_resets.size());
-        for (const auto& m : phase_resets) reset_times.push_back(m.time_seconds);
-        for (auto& group : coincident_groups(reset_times)) {
+        for (const auto& m : phase_resets) reset_times.push_back(m.time_frame);
+        for (auto& group : coincident_groups(reset_times, window_frames)) {
             MarkerDefect d;
-            d.kind         = MarkerDefectKind::CoincidentGroup;
-            d.column       = 'P';
-            d.time_seconds = reset_times[group.front()];
+            d.kind       = MarkerDefectKind::CoincidentGroup;
+            d.column     = 'P';
+            d.time_frame = reset_times[group.front()];
             d.message = "coincident phase reset markers at "
-                        + format_timestamp(d.time_seconds);
+                        + format_timestamp(d.time_frame / sr_d);
             d.indices = std::move(group);
             defects.push_back(std::move(d));
         }
@@ -115,10 +124,10 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
             MarkerDefect d;
             d.kind         = MarkerDefectKind::DanglingLabelRef;
             d.column       = 'W';
-            d.time_seconds = warp_markers[i].time_seconds;
+            d.time_frame = warp_markers[i].time_frame;
             d.indices.push_back(i);
             d.message = "label reference " + ref + " at "
-                        + format_timestamp(d.time_seconds)
+                        + format_timestamp(d.time_frame / sr_d)
                         + " has no label definition";
             defects.push_back(std::move(d));
         }
@@ -129,8 +138,8 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     // index.
     std::stable_sort(defects.begin(), defects.end(),
         [](const MarkerDefect& a, const MarkerDefect& b) {
-            if (a.time_seconds != b.time_seconds)
-                return a.time_seconds < b.time_seconds;
+            if (a.time_frame != b.time_frame)
+                return a.time_frame < b.time_frame;
             const bool a_first = a.kind == MarkerDefectKind::FirstMarkerGrammar;
             const bool b_first = b.kind == MarkerDefectKind::FirstMarkerGrammar;
             if (a_first != b_first) return a_first;

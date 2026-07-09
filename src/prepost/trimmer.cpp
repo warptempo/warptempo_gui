@@ -11,27 +11,24 @@
 
 namespace {
 
-// Authored bound -> exact double source frame, the
-// build_phase_reset_source_frames convention: seconds * sample rate, no
-// rounding. An unset begin means source frame 0; an unset end means the
-// source end exactly (the caller passes the matching unset_value).
-double bound_source_frame(bool has, double seconds, long sample_rate,
-                          double unset_value) {
-    return has ? seconds * static_cast<double>(sample_rate) : unset_value;
+// Authored bound -> exact double source frame: identity on the has-bound
+// branch — the authored value already is the exact double source frame. An
+// unset begin means source frame 0; an unset end means the source end
+// exactly (the caller passes the matching unset_value).
+double bound_source_frame(bool has, double frame, double unset_value) {
+    return has ? frame : unset_value;
 }
 
 }  // namespace
 
 std::expected<void, std::string> validate_trim_frames(
-        bool has_begin, double begin_seconds,
-        bool has_end,   double end_seconds,
-        long sample_rate, int64_t total_frames,
+        bool has_begin, double begin_frame,
+        bool has_end,   double end_frame,
+        int64_t total_frames,
         const std::vector<WarpFrameMapSegment>& full_warp_frame_map) {
     const double total = static_cast<double>(total_frames);
-    const double b_src = bound_source_frame(has_begin, begin_seconds,
-                                            sample_rate, 0.0);
-    const double e_src = bound_source_frame(has_end, end_seconds,
-                                            sample_rate, total);
+    const double b_src = bound_source_frame(has_begin, begin_frame, 0.0);
+    const double e_src = bound_source_frame(has_end, end_frame, total);
     if (e_src <= b_src) {
         return std::unexpected("trim end at or before trim begin");
     }
@@ -55,13 +52,12 @@ std::expected<void, std::string> validate_trim_frames(
 }
 
 // Trim geometry (architect-confirmed derivation; the null condition binds
-// every choice). Notation: N and R_s from engine_geometry.h; sr = sample
-// rate; total_frames = source length; the full map is the untrimmed warp
-// frame map.
+// every choice). Notation: N and R_s from engine_geometry.h; total_frames =
+// source length; the full map is the untrimmed warp frame map.
 //
-//  1. Authored source positions are exact doubles: b_src = begin_seconds*sr,
-//     e_src = end_seconds*sr, no rounding. Unset begin -> 0; unset end ->
-//     total_frames.
+//  1. Authored source positions are exact doubles: b_src = begin_frame,
+//     e_src = end_frame — the authored bounds themselves, bit-identical.
+//     Unset begin -> 0; unset end -> total_frames.
 //  2. T_b / T_e are their exact double target images through the FULL map.
 //  3. Output origin hop A0 = max(0, floor(T_b / R_s) - 3). The 3 hops
 //     (N/R_s - 1) of pre-roll give full OLA weight at T_b; the pre-roll is
@@ -97,22 +93,20 @@ std::expected<void, std::string> validate_trim_frames(
 std::expected<TrimPlan, std::string> plan_trim(
         const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
         const std::vector<double>& full_phase_reset_frame_map,
-        bool has_begin, double begin_seconds,
-        bool has_end,   double end_seconds,
-        long sample_rate, int64_t total_frames,
+        bool has_begin, double begin_frame,
+        bool has_end,   double end_frame,
+        int64_t total_frames,
         int N, int R_s) {
-    if (auto v = validate_trim_frames(has_begin, begin_seconds,
-                                      has_end, end_seconds,
-                                      sample_rate, total_frames,
+    if (auto v = validate_trim_frames(has_begin, begin_frame,
+                                      has_end, end_frame,
+                                      total_frames,
                                       full_warp_frame_map); !v) {
         return std::unexpected(std::move(v.error()));
     }
 
     const double total = static_cast<double>(total_frames);
-    const double b_src = bound_source_frame(has_begin, begin_seconds,
-                                            sample_rate, 0.0);
-    const double e_src = bound_source_frame(has_end, end_seconds,
-                                            sample_rate, total);
+    const double b_src = bound_source_frame(has_begin, begin_frame, 0.0);
+    const double e_src = bound_source_frame(has_end, end_frame, total);
     const double T_b = map_source_to_target(b_src, full_warp_frame_map);
     const double T_e = map_source_to_target(e_src, full_warp_frame_map);
 
@@ -123,21 +117,23 @@ std::expected<TrimPlan, std::string> plan_trim(
     const int64_t origin_target = A0 * static_cast<int64_t>(R_s);
 
     // Source cut: the origin hop's integer analysis read position at the
-    // head, llrint(e_src) + N of real tail margin at the end.
-    int64_t begin_frame = std::llrint(
+    // head, llrint(e_src) + N of real tail margin at the end. Named
+    // cut_begin/cut_end to keep them distinct from the authored-bound
+    // parameters (begin_frame / end_frame).
+    int64_t cut_begin = std::llrint(
         map_target_to_source(static_cast<double>(origin_target),
                              full_warp_frame_map)
         - static_cast<double>(N) / 2.0);
-    if (begin_frame < 0) begin_frame = 0;
-    int64_t end_frame = std::llrint(e_src) + N;
-    if (end_frame > total_frames) end_frame = total_frames;
+    if (cut_begin < 0) cut_begin = 0;
+    int64_t cut_end = std::llrint(e_src) + N;
+    if (cut_end > total_frames) cut_end = total_frames;
 
     TrimPlan plan;
-    plan.pre.begin_frame = begin_frame;
-    plan.pre.frames      = end_frame - begin_frame;
+    plan.pre.begin_frame = cut_begin;
+    plan.pre.frames      = cut_end - cut_begin;
 
     // Trimmed warp frame map: rigid translation of the full map by
-    // (-begin_frame, -origin_target), seed anchor at target 0, closing
+    // (-cut_begin, -origin_target), seed anchor at target 0, closing
     // anchor at the cut's own EOF pair. The seed anchor is the full map's
     // exact inverse image of the origin target, translated — collinear with
     // its containing segment, so the piecewise function is unchanged
@@ -149,15 +145,15 @@ std::expected<TrimPlan, std::string> plan_trim(
     const double seed_src =
         map_target_to_source(static_cast<double>(origin_target),
                              full_warp_frame_map)
-        - static_cast<double>(begin_frame);
+        - static_cast<double>(cut_begin);
     const double close_src = static_cast<double>(plan.pre.frames);
     const double close_tgt =
-        map_source_to_target(static_cast<double>(end_frame),
+        map_source_to_target(static_cast<double>(cut_end),
                              full_warp_frame_map)
         - static_cast<double>(origin_target);
     tm.push_back(WarpFrameMapSegment{seed_src, 0.0});
     for (const auto& s : full_warp_frame_map) {
-        const double st = s.src_frame - static_cast<double>(begin_frame);
+        const double st = s.src_frame - static_cast<double>(cut_begin);
         const double tt = s.tgt_frame - static_cast<double>(origin_target);
         if (st <= tm.back().src_frame || tt <= tm.back().tgt_frame) continue;
         if (st >= close_src || tt >= close_tgt) continue;
@@ -166,7 +162,7 @@ std::expected<TrimPlan, std::string> plan_trim(
     tm.push_back(WarpFrameMapSegment{close_src, close_tgt});
 
     // Trimmed phase reset frame map: the full deliverable-form derivation
-    // translated by -begin_frame (the engine query domain is source-anchored,
+    // translated by -cut_begin (the engine query domain is source-anchored,
     // so the source translation is the whole re-anchor) and range-filtered.
     //
     // Filter predicate, derived from the binding invariant — every reset
@@ -196,7 +192,7 @@ std::expected<TrimPlan, std::string> plan_trim(
     plan.pre.phase_reset_frame_map.reserve(full_phase_reset_frame_map.size());
     for (const double query : full_phase_reset_frame_map) {
         const double translated =
-            query - static_cast<double>(begin_frame);
+            query - static_cast<double>(cut_begin);
         if (std::llrint(translated) < schedule_origin_read) continue;
         if (translated >= static_cast<double>(plan.pre.frames)) continue;
         plan.pre.phase_reset_frame_map.push_back(translated);

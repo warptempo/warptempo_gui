@@ -1,7 +1,7 @@
 #include "phaseresetmarkers.h"
 
+#include "frame_format.h"
 #include "settings_io.h"
-#include "time_format.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -38,21 +38,21 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
     // parser, which accepts non-decreasing times; only a DECREASING
     // sequence — impossible from the sorted store, so evidence of a
     // future op bug — fails the next load with a loud line-numbered
-    // parse error. Degeneracy is refused at the strict render boundary
-    // (build_phase_reset_source_frames collapses exact duplicates;
-    // build_warp_frame_map refuses warp ties), not by this serializer.
-    // The render publisher can likewise produce two resets on the same
-    // millisecond (distinct exact target-frame doubles whose millisecond
-    // timestamps round together); both lines simply serialize here, and
-    // the display sidecar's lenient reader shows them as overlapping
-    // flags.
+    // parse error. Coincident stacks are legal in the store only until
+    // their commit modal resolves — the commit funnel walks them as
+    // defects — so this serializer never refuses them;
+    // build_phase_reset_source_frames' sub-frame refusal is the breach
+    // backstop for hand-edited input, and build_warp_frame_map refuses
+    // warp ties. Positions persist as shortest-round-trip frame doubles
+    // (frame_format.h), so a saved store reloads bit-identically — the
+    // render publisher's distinct-but-close resets stay distinct on disk.
     std::ostringstream out;
     for (const auto& m : markers_) {
-        // `[#]MM:SS.mmm` only. The `#` disable prefix composes ahead of the
-        // timestamp, exactly as the parser strips it. No mode suffix — the
+        // `[#]<frame double>` only. The `#` disable prefix composes ahead of
+        // the position, exactly as the parser strips it. No mode suffix — the
         // peak/heap/pass model was removed when heap became the sole engine.
         if (m.disabled) out << '#';
-        out << format_timestamp(m.time_seconds) << '\n';
+        out << format_frame_double(m.time_frame) << '\n';
     }
     const std::string data = out.str();
 
@@ -61,10 +61,10 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
 }
 
 int GuiPhaseResetMarkers::insert_marker(GuiPhaseResetMarker m) {
-    const double time = m.time_seconds;
+    const double time = m.time_frame;
     auto it = std::lower_bound(
         markers_.begin(), markers_.end(), time,
-        [](const GuiPhaseResetMarker& a, double t) { return a.time_seconds < t; });
+        [](const GuiPhaseResetMarker& a, double t) { return a.time_frame < t; });
     const int idx = static_cast<int>(it - markers_.begin());
     markers_.insert(it, std::move(m));
     ++generation_;

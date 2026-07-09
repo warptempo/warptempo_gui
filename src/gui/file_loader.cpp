@@ -182,7 +182,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     gui.set_title((title_ec ? path : title_path.string()) +
                   " - warptempo_gui");
 
-    create_if_missing(wm_path, "00:00.000|1.00\n");
+    create_if_missing(wm_path, "0|1.00\n");
     // The empty file is the canonical blank phase reset sidecar: resets have
     // no mandatory first marker, so the seed is empty content, unlike warp's
     // seeded first-marker line.
@@ -221,16 +221,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // trimmed one sees unset trim (playhead at sample 0, not stale begin).
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
-    app.trim.begin_seconds  = 0.0;
-    app.trim.end_seconds    = 0.0;
+    app.trim.begin_frame  = 0.0;
+    app.trim.end_frame    = 0.0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
     app.last_sel_group = LastSelGroup::Markers;
-    // Queued renders snapshot the loaded source's authoring state and the
-    // dispatch loop converts their phase reset times with the loaded
-    // source's sample rate, so entries must not outlive the source they
-    // were queued on.
+    // Queued renders snapshot the loaded source's authoring state against
+    // the loaded source's frame grid, so entries must not outlive the
+    // source they were queued on.
     app.queued_renders.clear();
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
@@ -342,10 +341,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.font_size      = ps.has_font_size ? ps.font_size : 11.0;
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.
-        if (ps.has_tab_a_trim_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_seconds = ps.tab_a_trim_begin; }
-        if (ps.has_tab_a_trim_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_seconds   = ps.tab_a_trim_end; }
-        if (ps.has_tab_b_trim_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_seconds = ps.tab_b_trim_begin; }
-        if (ps.has_tab_b_trim_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_seconds   = ps.tab_b_trim_end; }
+        if (ps.has_tab_a_trim_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = ps.tab_a_trim_begin; }
+        if (ps.has_tab_a_trim_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = ps.tab_a_trim_end; }
+        if (ps.has_tab_b_trim_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = ps.tab_b_trim_begin; }
+        if (ps.has_tab_b_trim_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = ps.tab_b_trim_end; }
         if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
         if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
     }
@@ -412,24 +411,29 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // markers (wall total exactly), then tab A begin (wall total-1), tab A
     // end (wall total), tab B begin, tab B end — first offender only,
     // disabled markers included (a disabled past-EOF marker is equally
-    // unauthorable). The render-boundary EOF refusals downstream stay as
-    // breach backstops for hand-edited maps.
+    // unauthorable). The guard compares the authored domain directly: every
+    // check is an exact frame-double compare against the stored value —
+    // literally the same comparison the gesture walls apply, with no
+    // rounding anywhere — so a legal at-the-wall position always reloads
+    // clean. Embedded times in the messages are display renderings
+    // (format_timestamp(frame / sr)). The render-boundary EOF refusals
+    // downstream stay as breach backstops for hand-edited maps.
     {
         const double sr_d   = static_cast<double>(audio.sample_rate());
         const double totalf = static_cast<double>(audio.total_frames());
         std::string detail;
         for (const auto& m : app.warpmarkers.markers()) {
-            if (m.time_seconds * sr_d > totalf - 1.0) {
+            if (m.time_frame > totalf - 1.0) {
                 detail = "warp marker past end of audio at "
-                         + format_timestamp(m.time_seconds);
+                         + format_timestamp(m.time_frame / sr_d);
                 break;
             }
         }
         if (detail.empty()) {
             for (const auto& m : app.phaseresetmarkers.markers()) {
-                if (m.time_seconds * sr_d > totalf) {
+                if (m.time_frame > totalf) {
                     detail = "phase reset marker past end of audio at "
-                             + format_timestamp(m.time_seconds);
+                             + format_timestamp(m.time_frame / sr_d);
                     break;
                 }
             }
@@ -439,18 +443,16 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 {"tab A", app.tab_a.trim}, {"tab B", app.tab_b.trim},
             };
             for (const auto& [name, t] : tabs) {
-                if (t.has_begin &&
-                    std::nearbyint(t.begin_seconds * sr_d) > totalf - 1.0) {
+                if (t.has_begin && t.begin_frame > totalf - 1.0) {
                     detail = std::string(name)
                              + " trim begin past end of audio at "
-                             + format_timestamp(t.begin_seconds);
+                             + format_timestamp(t.begin_frame / sr_d);
                     break;
                 }
-                if (t.has_end &&
-                    std::nearbyint(t.end_seconds * sr_d) > totalf) {
+                if (t.has_end && t.end_frame > totalf) {
                     detail = std::string(name)
                              + " trim end past end of audio at "
-                             + format_timestamp(t.end_seconds);
+                             + format_timestamp(t.end_frame / sr_d);
                     break;
                 }
             }
@@ -607,8 +609,8 @@ void GuiFileLoader::revert_to_blank() {
     // next load.
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
-    app.trim.begin_seconds  = 0.0;
-    app.trim.end_seconds    = 0.0;
+    app.trim.begin_frame  = 0.0;
+    app.trim.end_frame    = 0.0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
 

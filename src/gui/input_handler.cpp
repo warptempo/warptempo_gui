@@ -461,17 +461,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
         // Paint sample: the same expression the paint helper uses, so marker
         // and jump can never disagree. No map means identity.
-        const double sr = static_cast<double>(audio.sample_rate());
         const auto& map = target_view_warp_frame_map_cached(
             app, static_cast<long>(audio.sample_rate()),
             static_cast<long>(audio.total_frames())).warp_frame_map;
         double ms;
         if (!map.empty()) {
             const size_t src_frame =
-                static_cast<size_t>(std::nearbyint(marker.time_seconds * sr));
+                static_cast<size_t>(std::nearbyint(marker.time_frame));
             ms = std::nearbyint(map_source_to_target(src_frame, map));
         } else {
-            ms = std::nearbyint(marker.time_seconds * sr);
+            ms = std::nearbyint(marker.time_frame);
         }
 
         // Too-zoomed-out gate, the same fixed-width rule as the paint helper
@@ -798,7 +797,6 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
-    const int sr = audio.sample_rate();
     int64_t src_sample = 0;
     if (app.last_sel_group == LastSelGroup::Trim) {
         // The cycle landed on a trim bound. Recenter on its source frame; the
@@ -807,11 +805,11 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         if (app.last_selected_trim == 'B') {
             if (!app.trim.has_begin) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
-                app.trim.begin_seconds * static_cast<double>(sr)));
+                app.trim.begin_frame));
         } else if (app.last_selected_trim == 'E') {
             if (!app.trim.has_end) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
-                app.trim.end_seconds * static_cast<double>(sr)));
+                app.trim.end_frame));
         } else {
             return;
         }
@@ -826,14 +824,14 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
                 : app.phaseresetmarkers.markers();
             if (idx >= static_cast<int>(tv.size())) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
-                tv[idx].time_seconds * static_cast<double>(sr)));
+                tv[idx].time_frame));
         } else {
             const auto& mv = app.render_view.enabled
                 ? app.render_view.warp_markers
                 : app.warpmarkers.markers();
             if (idx >= static_cast<int>(mv.size())) return;
             src_sample = static_cast<int64_t>(std::nearbyint(
-                mv[idx].time_seconds * static_cast<double>(sr)));
+                mv[idx].time_frame));
         }
     }
     // Target view: forward-translate marker's source-frame to active-
@@ -912,23 +910,23 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             app.trim.has_begin && app.trim.has_end) {
             const int sr = audio.sample_rate();
             if (audio.total_frames() <= 0 || sr <= 0) return;
-            const double sr_d = static_cast<double>(sr);
             const int64_t step = std::max<int64_t>(
                 1, samples_visible(app, audio) / kTrimEndWheelDivisor);
             const int64_t dlt =
                 (button == GuiMouseButton::WheelUp ? -step : +step) * count;
             // Full-double step, marker-identical target-view math (the
             // shape of nudge_selected_markers' target branch): project the
-            // stored end seconds through the live target-view map, step in
+            // stored end frame through the live target-view map, step in
             // the target double domain, llrint, inverse-map back at full
-            // precision. Source view is plain seconds arithmetic. The end
+            // precision. Source view is plain frame arithmetic. The end
             // bound clamps to its own absolute walls — floor 0, ceiling the
-            // end wall at frame EOF exactly (end-at-EOF is a valid render).
+            // end wall at frame EOF exactly (end-at-EOF is a valid render);
+            // exact frame-double compares, the load guard's own comparison.
             // There is no partner wall: the end bound crosses the begin
             // bound freely and the begin bound is untouched here. The 0.0
             // floor is the walls' lower end, kept for representability —
-            // negative time is unrepresentable in the MM:SS.mmm grammar the
-            // .settings file persists.
+            // a negative position is unrepresentable in the frame-double
+            // form the .settings file persists.
             double v;
             if (app.active_audio_view == 'T') {
                 const auto& target_warp_frame_map =
@@ -936,22 +934,21 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                         app, sr,
                         static_cast<long>(audio.total_frames())).warp_frame_map;
                 const double t_tgt = map_source_to_target(
-                    std::nearbyint(app.trim.end_seconds * sr_d),
+                    std::nearbyint(app.trim.end_frame),
                     target_warp_frame_map);
                 const double t_tgt_new = t_tgt + static_cast<double>(dlt);
                 const double q = (t_tgt_new < 0.0)
                     ? 0.0
                     : static_cast<double>(std::llrint(t_tgt_new));
-                v = map_target_to_source(q, target_warp_frame_map) / sr_d;
+                v = map_target_to_source(q, target_warp_frame_map);
             } else {
-                v = app.trim.end_seconds +
-                    static_cast<double>(dlt) / sr_d;
+                v = app.trim.end_frame + static_cast<double>(dlt);
             }
             if (v < 0.0) v = 0.0;
             const double end_wall =
-                static_cast<double>(audio.total_frames()) / sr_d;
+                static_cast<double>(audio.total_frames());
             if (v > end_wall) v = end_wall;
-            app.trim.end_seconds = v;
+            app.trim.end_frame = v;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
@@ -1082,7 +1079,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(app.warpmarkers.markers()));
+        slice_to_warp_markers(app.warpmarkers.markers()),
+        audio.sample_rate());
     if (resolved) {
         auto r = build_warp_frame_map(
             *resolved,
@@ -1112,9 +1110,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // construction the target-view cache holds). T → S never gates.
     if (entering_target && (app.trim.has_begin || app.trim.has_end)) {
         if (auto v = validate_trim_frames(
-                app.trim.has_begin, app.trim.begin_seconds,
-                app.trim.has_end,   app.trim.end_seconds,
-                audio.sample_rate(),
+                app.trim.has_begin, app.trim.begin_frame,
+                app.trim.has_end,   app.trim.end_frame,
                 static_cast<int64_t>(audio.total_frames()),
                 warp_frame_map);
             !v) {
@@ -1284,9 +1281,8 @@ void GuiInputHandler::enforce_target_view_validity() {
         err = c.build_error;
     } else if (app.trim.has_begin || app.trim.has_end) {
         if (auto v = validate_trim_frames(
-                app.trim.has_begin, app.trim.begin_seconds,
-                app.trim.has_end,   app.trim.end_seconds,
-                audio.sample_rate(),
+                app.trim.has_begin, app.trim.begin_frame,
+                app.trim.has_end,   app.trim.end_frame,
                 static_cast<int64_t>(audio.total_frames()),
                 c.warp_frame_map);
             !v) {

@@ -25,7 +25,7 @@
 // The defect predicate is the parser-side enumerate_marker_store_defects
 // over the sliced live stores, plus a trim column owned here (trim defects
 // have no MarkerDefect shape). The trim column walks after the last marker
-// defect: the map-free frame-level check first (crossed-or-equal), then the
+// defect: the map-free exact frame check first (crossed-or-equal), then the
 // map-format-with-trim conflict (trim is wav-only), then — only when the
 // marker walk is clean AND the live map builds — the full
 // validate_trim_frames against the memoized target-view map. Guarding
@@ -134,7 +134,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // (see DefectSeriesState).
         std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
             slice_to_warp_markers(app.warpmarkers.markers()),
-            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()));
+            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()), sr);
         if (!defects.empty()) {
             MarkerDefect d = std::move(defects.front());
             // [U]ndo is offered exactly when the undo stack is non-empty
@@ -177,14 +177,12 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         }
 
         // The trim column walks after the last marker defect — trim's full
-        // validity is downstream of the marker map. The frame-level checks
-        // run first (frame level, not seconds level, deliberately: this is
-        // the same rounding validate_trim_frames applies, and two bounds
-        // under half a millisecond apart round to the same frame and render
-        // as a zero-span window, so a seconds-level compare would pass a
-        // state the render refuses): crossed-or-equal when both bounds are
-        // set (past-EOF bounds no longer reach here — the gesture walls and
-        // the load boundary make them unreachable in memory), then the
+        // validity is downstream of the marker map. The map-free check runs
+        // first, as an exact frame-double compare on the authored bounds —
+        // no rounding anywhere, the same e_src <= b_src comparison
+        // validate_trim_frames applies: crossed-or-equal when both bounds
+        // are set (past-EOF bounds no longer reach here — the gesture walls
+        // and the load boundary make them unreachable in memory), then the
         // map-format-with-trim conflict — a cross-domain conflict, not a
         // settings-validity failure: trim is wav-only (map artifacts are
         // always the FULL maps), so any set bound under a map format is a
@@ -198,14 +196,10 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // [Delete]-both-bounds resolution; the map-format conflict carries
         // [U]ndo / [R]eset / [Delete] (see TrimDefectKind).
         if (app.trim.has_begin || app.trim.has_end) {
-            const double sr_d = static_cast<double>(sr);
-            const double begin_f = app.trim.has_begin
-                ? std::nearbyint(app.trim.begin_seconds * sr_d) : 0.0;
-            const double end_f   = app.trim.has_end
-                ? std::nearbyint(app.trim.end_seconds * sr_d) : 0.0;
             std::string trim_msg;
             TrimDefectKind kind = TrimDefectKind::ClearBounds;
-            if (app.trim.has_begin && app.trim.has_end && end_f <= begin_f) {
+            if (app.trim.has_begin && app.trim.has_end &&
+                app.trim.end_frame <= app.trim.begin_frame) {
                 trim_msg = "trim bounds crossed or equal";
             } else if (app.engine_settings.output_format != "wav") {
                 trim_msg =
@@ -217,9 +211,9 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                         app, audio.sample_rate(), total);
                 if (c.build_error.empty()) {
                     if (auto v = validate_trim_frames(
-                            app.trim.has_begin, app.trim.begin_seconds,
-                            app.trim.has_end,   app.trim.end_seconds,
-                            sr, static_cast<int64_t>(total),
+                            app.trim.has_begin, app.trim.begin_frame,
+                            app.trim.has_end,   app.trim.end_frame,
+                            static_cast<int64_t>(total),
                             c.warp_frame_map); !v) {
                         trim_msg = std::move(v.error());  // trimmer's, verbatim
                     }
@@ -302,8 +296,8 @@ void GuiInputHandler::handle_defect_response(char k) {
         // format-survives arm.
         app.trim.has_begin      = false;
         app.trim.has_end        = false;
-        app.trim.begin_seconds  = 0.0;
-        app.trim.end_seconds    = 0.0;
+        app.trim.begin_frame  = 0.0;
+        app.trim.end_frame    = 0.0;
         app.trim_begin_selected = false;
         app.trim_end_selected   = false;
         app.last_selected_trim  = 0;
@@ -381,7 +375,7 @@ void GuiInputHandler::handle_defect_response(char k) {
             // the whole family (empty list, first off zero, disabled,
             // pass, label ref).
             const auto& mv = app.warpmarkers.markers();
-            if (!mv.empty() && mv[0].time_seconds == 0.0) {
+            if (!mv.empty() && mv[0].time_frame == 0.0) {
                 // Rewrite the zero marker in place to the plain default.
                 // Rewriting covers enabling, so there is no separate
                 // [E]nable option. Dropping a def with live refs is fine:
@@ -399,13 +393,13 @@ void GuiInputHandler::handle_defect_response(char k) {
             } else {
                 // Insert the plain default 1.00 marker at 00:00.000 at the
                 // front — the same shape as the missing-file seed at source
-                // load ("00:00.000|1.00", file_loader.cpp). Every other
+                // load ("0|1.00", file_loader.cpp). Every other
                 // marker has time > 0 here, so insert_marker's lower_bound
                 // lands it at index 0; the front insert shifts every warp
                 // index by one, the same index-shaped staleness an erasure
                 // causes, so the same clear applies.
                 GuiWarpMarker nm;
-                nm.time_seconds   = 0.0;
+                nm.time_frame   = 0.0;
                 nm.tempo_inherits = false;
                 nm.tempo_base     = 1.0;
                 app.warpmarkers.insert_marker(std::move(nm));

@@ -11,9 +11,9 @@
 #include <vector>
 
 // Pure parser-domain assembly: phase-reset markers -> absolute source-frame
-// positions. Drops disabled markers; converts time_seconds to an exact double
-// source-frame position (time * sample_rate, no rounding), matching the
-// warp-marker time->frame convention in build_warp_frame_map. Refuses an
+// positions. Drops disabled markers; reads time_frame directly — the authored
+// position already is the exact double source frame, matching the warp-marker
+// convention in build_warp_frame_map. Refuses an
 // enabled reset authored past the source end (strictly greater than
 // total_frames; equal is allowed), the producer-side validation layer parallel
 // to build_warp_frame_map's past-end check on the warp axis: a phase-reset
@@ -44,8 +44,7 @@
 // reset markers carry no inheritance, labels, or references — a timestamp
 // and a disabled flag are the whole grammar.
 std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, long sample_rate,
-    int64_t total_frames);
+    const std::vector<PhaseResetMarker>& markers, int64_t total_frames);
 
 // Authored -> engine derivation chain: authored (undisplaced) phase-reset
 // source positions -> the engine's origin-centered query domain, always

@@ -6,7 +6,6 @@
 #include "phaseresetmarkers.h"
 #include "render.h"
 #include "target_render.h"
-#include "time_format.h"
 #include "warpmarkers.h"
 #include "warpmarkers_ops.h"
 
@@ -28,12 +27,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         : static_cast<int>(app.warpmarkers.markers().size());
     if (hit >= n) return false;
 
-    const double sr_d = static_cast<double>(sr);
     auto t_of = [&](int idx) -> double {
         if (phase_reset) {
-            return app.phaseresetmarkers.markers()[idx].time_seconds;
+            return app.phaseresetmarkers.markers()[idx].time_frame;
         }
-        return app.warpmarkers.markers()[idx].time_seconds;
+        return app.warpmarkers.markers()[idx].time_frame;
     };
 
     // Drag is a single-marker fine-tuning gesture: it always moves only the
@@ -46,7 +44,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 
     // No first-marker pin, either column: every marker is draggable,
     // including a warp marker at time 0. The first-marker grammar
-    // (enabled, tempo-owning numeric marker at exactly 00:00.000) is a
+    // (enabled, tempo-owning numeric marker at exactly frame 0) is a
     // render-boundary rule — validate_first_marker_render_grammar refuses
     // it at render dispatch and at the target-view validity gate — and the
     // default marker created at source load is the recovery tool, so the
@@ -61,11 +59,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         d.original_times.push_back(t_of(idx));
     }
 
-    // Anchor mouse time — computed at mouse_x in the waveform's X axis.
+    // Anchor mouse position — computed at mouse_x in the waveform's X axis.
     // Target view: the press position is in target-domain frames; the
-    // dragged markers' original_times are source-domain seconds. Convert
+    // dragged markers' original_times are source-domain frames. Convert
     // the anchor to source-domain at the boundary so the on_motion delta
-    // (mouse_time - anchor_mouse_time_seconds) lives in source-seconds.
+    // (mouse_frame - anchor_mouse_time_frame) lives in source frames.
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
     if (app.active_audio_view == 'T') {
@@ -75,26 +73,23 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
                 static_cast<double>(mouse_x - area.x) * spp));
         const int64_t anchor_frame_src =
             active_domain_to_source_frame(app, audio, anchor_frame_active);
-        d.anchor_mouse_time_seconds =
-            static_cast<double>(anchor_frame_src) / sr_d;
+        d.anchor_mouse_time_frame = static_cast<double>(anchor_frame_src);
     } else {
-        const double vp_time =
-            static_cast<double>(app.viewport_start_sample) / sr_d;
-        d.anchor_mouse_time_seconds =
-            vp_time + static_cast<double>(mouse_x - area.x) * spp / sr_d;
+        d.anchor_mouse_time_frame =
+            static_cast<double>(app.viewport_start_sample) +
+            static_cast<double>(mouse_x - area.x) * spp;
     }
 
     // Compute scalar delta_min / delta_max from the absolute range only:
     // zero on the left and the column's EOF wall on the right (warp:
-    // total_duration minus one source frame, because build_warp_frame_map
-    // refuses sub-frame segments; phase reset: total_duration exactly —
-    // a point event may sit at EOF). Neighbors do not bound the drag;
+    // total_frames minus one source frame, because build_warp_frame_map
+    // refuses sub-frame segments; phase reset: total_frames exactly —
+    // a point event may sit at EOF). Exact frame compares — the same
+    // comparison the load guard applies. Neighbors do not bound the drag;
     // the marker may cross them freely, and commit_drag reorders the
     // store and remaps the held indices.
-    const double total_duration =
-        static_cast<double>(audio.total_frames()) / sr_d;
-    const double eof_wall =
-        phase_reset ? total_duration : (total_duration - 1.0 / sr_d);
+    const double total = static_cast<double>(audio.total_frames());
+    const double eof_wall = phase_reset ? total : (total - 1.0);
 
     d.delta_min = -std::numeric_limits<double>::infinity();
     d.delta_max =  std::numeric_limits<double>::infinity();
@@ -113,7 +108,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // ride the same scalar delta and stay bound by the data range alone — the
     // same way Ctrl+Shift+drag clamps the grabbed bound but lets its partner
     // run to the clip edge. viewport_marker_bounds is active-domain while the
-    // delta lives in source seconds, so inverse-translate the edges; the
+    // delta lives in source frames, so inverse-translate the edges; the
     // domain map is monotonic, so the source clamp matches the active-pixel
     // clamp. The grabbed marker is on-screen or within the kMarkerHitHalfPx
     // halo (up to a few pixels past an edge) at grab: when fully on-screen
@@ -125,9 +120,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     {
         const auto vb = viewport_marker_bounds(app, audio);
         const double vp_lo_src = static_cast<double>(
-            active_domain_to_source_frame(app, audio, vb.first))  / sr_d;
+            active_domain_to_source_frame(app, audio, vb.first));
         const double vp_hi_src = static_cast<double>(
-            active_domain_to_source_frame(app, audio, vb.second)) / sr_d;
+            active_domain_to_source_frame(app, audio, vb.second));
         const double orig_grabbed = t_of(hit);
         const double vp_lb = vp_lo_src - orig_grabbed;
         const double vp_ub = vp_hi_src - orig_grabbed;
@@ -189,8 +184,10 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        const double new_t =
-            snap_to_timestamp_grid(app.drag.original_times[k] + delta);
+        // Full-precision frame double: mouse-derived fractional frames,
+        // clamped to the walls above. There is no grid, so there is no
+        // snap and no post-snap wall escape.
+        const double new_t = app.drag.original_times[k] + delta;
         if (k >= app.drag.moveable_times.size()) continue;
         if (app.drag.moveable_times[k] == new_t) continue;
         app.drag.moveable_times[k] = new_t;
@@ -223,22 +220,22 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
 // them through the DragOverlay). On commit, walk dragging_markers and
-// assign each marker's time_seconds from moveable_times before pushing
+// assign each marker's time_frame from moveable_times before pushing
 // the pre-drag snapshot onto the undo stack. Symmetric across warp and
 // phase reset: identical statement shape on each side.
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
     // Commit gates on NET change, not on whether motion occurred.
-    // app.drag.moved latches true on the first snapped-position change
-    // during motion and never clears, so a drag that wanders to a new
-    // grid cell and returns to its original snapped position arrives here
-    // with moved == true but zero net change. Pushing an undo entry then
-    // records a snapshot byte-equal to the live store: a no-op history
-    // entry that both undo and redo restore invisibly. original_times and
-    // moveable_times are parallel grid-aligned doubles, so an exact
-    // compare across the dragged markers is the true "did anything move"
-    // test — the same test begin_drag's "if motion landed" note intends.
+    // app.drag.moved latches true on the first position change during
+    // motion and never clears, so a drag that wanders and returns exactly
+    // to its original position arrives here with moved == true but zero
+    // net change. Pushing an undo entry then records a snapshot byte-equal
+    // to the live store: a no-op history entry that both undo and redo
+    // restore invisibly. original_times and moveable_times are parallel
+    // frame doubles, so an exact compare across the dragged markers is the
+    // true "did anything move" test — the same test begin_drag's "if
+    // motion landed" note intends.
     bool net_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
         if (k >= app.drag.moveable_times.size()) continue;
@@ -271,11 +268,11 @@ void MarkerDragOps::commit_drag() {
                 GuiPhaseResetMarker* m =
                     app.phaseresetmarkers.marker_mut(idx);
                 if (!m) continue;
-                m->time_seconds = new_t;
+                m->time_frame = new_t;
             } else {
                 GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
                 if (!m) continue;
-                m->time_seconds = new_t;
+                m->time_frame = new_t;
             }
         }
         // The drag may have carried the marker across neighbors; restore

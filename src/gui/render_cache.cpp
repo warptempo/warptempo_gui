@@ -179,8 +179,8 @@ std::vector<uint8_t> render_fingerprint(
         const std::vector<GuiWarpMarker>& warp_markers,
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         const EngineSettings& s,
-        bool has_trim_begin, double trim_begin_sec,
-        bool has_trim_end,   double trim_end_sec) {
+        bool has_trim_begin, double trim_begin_frame,
+        bool has_trim_end,   double trim_end_frame) {
     std::vector<uint8_t> fp;
     fp.reserve(256 + warp_markers.size() * 64);
 
@@ -203,19 +203,19 @@ std::vector<uint8_t> render_fingerprint(
     put_str(fp, s.cover);
     put_u8 (fp, s.limiter ? 1 : 0);
 
-    // Trim, with the seconds normalized to 0 when the bound is unset so a stale
-    // value behind a false has-bound cannot move the key (the engine ignores
-    // it in that state).
+    // Trim, with the frame values normalized to 0 when the bound is unset so
+    // a stale value behind a false has-bound cannot move the key (the engine
+    // ignores it in that state).
     put_u8 (fp, has_trim_begin ? 1 : 0);
-    put_f64(fp, has_trim_begin ? trim_begin_sec : 0.0);
+    put_f64(fp, has_trim_begin ? trim_begin_frame : 0.0);
     put_u8 (fp, has_trim_end ? 1 : 0);
-    put_f64(fp, has_trim_end ? trim_end_sec : 0.0);
+    put_f64(fp, has_trim_end ? trim_end_frame : 0.0);
 
     // Warp markers: parser-domain base fields only (the GuiWarpMarker session
     // scratch never reaches the engine).
     put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
     for (const auto& m : warp_markers) {
-        put_f64(fp, m.time_seconds);
+        put_f64(fp, m.time_frame);
         put_u8 (fp, m.tempo_inherits ? 1 : 0);
         put_f64(fp, m.tempo_base);
         put_str(fp, m.tempo_scale);
@@ -228,7 +228,7 @@ std::vector<uint8_t> render_fingerprint(
     // because toggling disabled is a real output change.
     put_u32(fp, static_cast<uint32_t>(phase_resets.size()));
     for (const auto& p : phase_resets) {
-        put_f64(fp, p.time_seconds);
+        put_f64(fp, p.time_frame);
         put_u8 (fp, p.disabled ? 1 : 0);
     }
 

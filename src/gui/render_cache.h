@@ -28,8 +28,8 @@ bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 // the full engine settings, and the trim bounds. Mirrors the inputs of
 // build_render_request. GUI-only marker session scratch (iteration / BPM
 // authoring) is intentionally excluded — it never reaches the engine, so two
-// states differing only there must share a key. Trim seconds are normalized to
-// 0 when their bound is unset. Same inputs always produce byte-identical
+// states differing only there must share a key. Trim frame values are
+// normalized to 0 when their bound is unset. Same inputs always produce byte-identical
 // output; the result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
 std::vector<uint8_t> render_fingerprint(
@@ -39,8 +39,8 @@ std::vector<uint8_t> render_fingerprint(
     const std::vector<GuiWarpMarker>& warp_markers,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     const EngineSettings& settings,
-    bool has_trim_begin, double trim_begin_sec,
-    bool has_trim_end,   double trim_end_sec);
+    bool has_trim_begin, double trim_begin_frame,
+    bool has_trim_end,   double trim_end_frame);
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 

@@ -9,8 +9,10 @@
 // engine-internal PhaseResetMarker (stft_container.h, synth_frame/src_frame)
 // is a different, engine-private type and never co-visible with this one.
 struct PhaseResetMarker {
-    double time_seconds  = 0.0;
-    bool   disabled      = false;
+    // Authored position: an exact source-frame double, fractional legal.
+    // Serialized via frame_format.h; timestamps are display-only renderings.
+    double time_frame  = 0.0;
+    bool   disabled    = false;
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on

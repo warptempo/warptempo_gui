@@ -89,7 +89,6 @@ void Selection::sanitize_selection_after_restore(int n) {
 }
 
 void Selection::cycle_selection(bool forward) {
-    const int sr = audio.sample_rate();
     const bool phase_reset = (app.active_markers_view == 'P');
 
     // Render-view cycles the displayed render-domain collections; normal
@@ -118,12 +117,10 @@ void Selection::cycle_selection(bool forward) {
         int64_t src_f;
         if (phase_reset) {
             src_f = static_cast<int64_t>(std::nearbyint(
-                phase_reset_vec[i].time_seconds *
-                static_cast<double>(sr)));
+                phase_reset_vec[i].time_frame));
         } else {
             src_f = static_cast<int64_t>(std::nearbyint(
-                warp_vec[i].time_seconds *
-                static_cast<double>(sr)));
+                warp_vec[i].time_frame));
         }
         return source_frame_to_active_domain(app, audio, src_f);
     };
@@ -149,14 +146,14 @@ void Selection::cycle_selection(bool forward) {
     // Trim bounds are cycle stops in both marker modes (trim is project-level,
     // orthogonal to the marker list) but not in render view, which has no
     // editable trim. Each set bound has one active-domain frame, computed
-    // exactly as the marker frames are (nearbyint of seconds * sr, then
-    // projected to the active domain).
+    // exactly as the marker frames are (nearbyint of the stored frame
+    // double, then projected to the active domain).
     const bool trim_live = !app.render_view.enabled;
     auto bound_frame = [&](char which) -> int64_t {
-        const double sec = (which == 'B') ? app.trim.begin_seconds
-                                          : app.trim.end_seconds;
+        const double frame = (which == 'B') ? app.trim.begin_frame
+                                            : app.trim.end_frame;
         return source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(sec * static_cast<double>(sr))));
+            static_cast<int64_t>(std::nearbyint(frame)));
     };
     const bool    has_b = trim_live && app.trim.has_begin;
     const bool    has_e = trim_live && app.trim.has_end;
@@ -389,14 +386,14 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
         const auto& tv = app.phaseresetmarkers.markers();
         if (last >= static_cast<int>(tv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
-            tv[last].time_seconds * static_cast<double>(sr)));
+            tv[last].time_frame));
     } else {
         const auto& mv = app.warpmarkers.markers();
         if (last >= static_cast<int>(mv.size())) return;
         src_sample = static_cast<int64_t>(std::nearbyint(
-            mv[last].time_seconds * static_cast<double>(sr)));
+            mv[last].time_frame));
     }
-    // Target view: the marker time_seconds is source-domain but the
+    // Target view: the marker time_frame is source-domain but the
     // playhead is active-domain. Forward-translate so the playhead
     // lands at the marker's displayed (target-frame) position.
     const int64_t target_sample =

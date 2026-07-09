@@ -3,7 +3,7 @@
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
 #include "target_render.h"
-#include "time_format.h"
+#include "frame_format.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
@@ -217,16 +217,18 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // already-canonical output and must accommodate the canonical parser, not
 // the reverse. (read_render_view_phaseresetmarkers below shares the
 // display-only-overlay rationale and has its own strict-parser mismatch,
-// the same-millisecond ordering case.)
+// the coincident-stack case the strict path walks as a commit defect.)
 //
 // The on-disk payload after the pipe IS the display string the flag painter
 // shows (flag_text returns label_ref verbatim when set), so the whole payload
 // is stored as label_ref with no payload-grammar parsing, no label resolution,
 // no tempo/scale parsing, and no validation. Tempo fields stay at their
 // defaults and label_def stays empty. Each line: skip blanks; a leading `#`
-// marks the marker disabled; split on the first `|` into timestamp|payload.
-// Lines with no pipe or an unparseable timestamp are skipped individually —
-// a bad line never fails the whole load, since this is display-only.
+// marks the marker disabled; split on the first `|` into position|payload.
+// The position is a frame double on the render's own time axis
+// (frame_format.h). Lines with no pipe or an unparseable position are
+// skipped individually — a bad line never fails the whole load, since this
+// is display-only.
 static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         const std::string& path) {
     std::vector<GuiWarpMarker> out;
@@ -244,9 +246,8 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         const size_t pipe = t.find('|');
         if (pipe == std::string::npos) continue;
         const std::string left = t.substr(0, pipe);
-        if (!is_valid_timestamp_format(left)) continue;
         GuiWarpMarker m;
-        m.time_seconds = parse_timestamp(left);
+        if (!parse_frame_double(left, m.time_frame)) continue;
         m.label_ref    = t.substr(pipe + 1);
         m.disabled     = disabled;
         out.push_back(std::move(m));
@@ -262,19 +263,19 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 // overlay — while the strict authoring parser (parse_phaseresetmarkers_file,
 // reached via GuiPhaseResetMarkers::load) owns every load whose result gets
 // edited, re-saved, or rendered from. The render publisher can legitimately
-// write two resets on the same millisecond, which the strict authoring
-// parser would reject but this reader displays as overlapping flags —
-// exactly the case leniency exists for.
+// write two resets a fraction of a frame apart — a stack the strict path
+// would walk as a commit defect — but this reader simply displays them as
+// overlapping flags; exactly the case leniency exists for.
 //
 // Each line: skip byte-empty lines; a leading `#` marks the marker disabled
-// and is stripped before the timestamp check. The remainder must satisfy
-// is_valid_timestamp_format in full (the regex full-matches the nine-
-// character MM:SS.mmm form, so trailing characters fail it) or the line is
-// skipped individually — no cross-line validation of any kind. Hash
-// semantics fall out naturally and match the strict parser's: hash followed
-// by a valid timestamp is a disabled marker, hash followed by anything else
-// skips as a comment, and garbage without a hash skips instead of erroring —
-// the last is the deliberate lenient difference.
+// and is stripped before the position check. The remainder must parse in
+// full as a frame double (parse_frame_double consumes the whole field, so
+// trailing characters fail it) or the line is skipped individually — no
+// cross-line validation of any kind. Hash semantics fall out naturally and
+// match the strict parser's: hash followed by a valid position is a
+// disabled marker, hash followed by anything else skips as a comment, and
+// garbage without a hash skips instead of erroring — the last is the
+// deliberate lenient difference.
 static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
         const std::string& path) {
     std::vector<GuiPhaseResetMarker> out;
@@ -289,9 +290,8 @@ static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
             disabled = true;
             t.erase(0, 1);
         }
-        if (!is_valid_timestamp_format(t)) continue;
         GuiPhaseResetMarker m;
-        m.time_seconds = parse_timestamp(t);
+        if (!parse_frame_double(t, m.time_frame)) continue;
         m.disabled     = disabled;
         out.push_back(std::move(m));
     }

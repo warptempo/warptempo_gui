@@ -21,14 +21,13 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
     }
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store
-        // source-domain seconds via inverse-translation in
+        // source-frame doubles via inverse-translation in
         // handle_trim_set_autoset) but Home/End needs to land
         // the playhead in the active target-frame domain. Build
         // the live warp_frame_map and forward-translate the source-domain
         // trim boundaries; unset sides fall back to 0 / live total,
         // matching compute_trim_samples' unset-side semantics for
         // S-view.
-        const int sr = audio.sample_rate();
         const int64_t live_total =
             live_total_frames(app, audio);
         if (!app.trim.has_begin && !app.trim.has_end) {
@@ -38,14 +37,12 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         int64_t end_tgt   = live_total;
         if (app.trim.has_begin) {
             const int64_t begin_src = static_cast<int64_t>(
-                std::nearbyint(app.trim.begin_seconds *
-                               static_cast<double>(sr)));
+                std::nearbyint(app.trim.begin_frame));
             begin_tgt = source_frame_to_active_domain(app, audio, begin_src);
         }
         if (app.trim.has_end) {
             const int64_t end_src = static_cast<int64_t>(
-                std::nearbyint(app.trim.end_seconds *
-                               static_cast<double>(sr)));
+                std::nearbyint(app.trim.end_frame));
             end_tgt = source_frame_to_active_domain(app, audio, end_src);
         }
         // Per-side clamp to the deformed timeline only — no ordering clamp:
@@ -58,8 +55,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         if (end_tgt > live_total) end_tgt = live_total;
         return {begin_tgt, end_tgt};
     }
-    return compute_trim_samples(
-        app, audio.sample_rate(), audio.total_frames());
+    return compute_trim_samples(app, audio.total_frames());
 }
 
 int64_t Viewport::trim_begin_sample() const { return trim_range().first; }

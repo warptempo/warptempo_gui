@@ -86,7 +86,7 @@ int64_t to_source_frame(const AppState& app, int64_t domain_frame,
 // identity. Target view: `map_source_to_target`. Used by handlers that
 // need to position the viewport / playhead at a source-domain anchor
 // while in the active domain (e.g. Tab cycling recentering on a marker
-// whose time_seconds is source-domain).
+// whose time_frame is source-domain).
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
                         const std::vector<WarpFrameMapSegment>& warp_frame_map);
 

@@ -1,7 +1,7 @@
 #include "warpmarkers.h"
 
+#include "frame_format.h"
 #include "settings_io.h"
-#include "time_format.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -39,13 +39,15 @@ bool GuiWarpMarkers::save(const std::string& path,
     // impossible from the sorted store, so evidence of a future op bug —
     // fails the next load with a loud line-numbered parse error. Warp
     // ties are refused at the strict render boundary
-    // (build_warp_frame_map), not by this serializer.
+    // (build_warp_frame_map), not by this serializer. Positions persist
+    // as shortest-round-trip frame doubles (frame_format.h), so a saved
+    // store reloads bit-identically.
     std::ostringstream out;
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:
-        //   [#]?MM:SS.SSS|PAYLOAD
+        //   [#]?<frame double>|PAYLOAD
         if (m.disabled) out << '#';
-        out << format_timestamp(m.time_seconds) << '|';
+        out << format_frame_double(m.time_frame) << '|';
 
         // Payload:
         //   label_ref               → "a.42"
@@ -83,8 +85,8 @@ bool GuiWarpMarkers::save(const std::string& path,
 
 int GuiWarpMarkers::insert_marker(GuiWarpMarker m) {
     auto it = std::lower_bound(
-        markers_.begin(), markers_.end(), m.time_seconds,
-        [](const GuiWarpMarker& a, double t) { return a.time_seconds < t; });
+        markers_.begin(), markers_.end(), m.time_frame,
+        [](const GuiWarpMarker& a, double t) { return a.time_frame < t; });
     const int idx = static_cast<int>(it - markers_.begin());
     markers_.insert(it, std::move(m));
     ++generation_;

@@ -69,30 +69,30 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     return text;
 }
 
-// Forward-translate a per-marker effective time (seconds) to the paint-
-// sample position used by the stem, flag, and hit-rect loops. In target
-// view (warp_frame_map non-null/non-empty) the source-frame is rounded with
-// banker's nearbyint and looked up through map_source_to_target, and that
-// lookup is itself rounded with nearbyint; in source view (null/empty
-// warp_frame_map) the result is eff_time * sr rounded to the nearest frame with
-// nearbyint. Both branches return the same integer target/source frame
-// the playhead cursor stores (to_domain_frame applies the same nearbyint),
-// so the stem, chip, hit rect, and playhead share a column in both views.
-// Painting from the fractional map_source_to_target value placed the stem
-// one pixel off the playhead whenever rounding the target frame crossed a
-// pixel-column boundary. Callers that need an integer sample-frame for trim
-// or viewport arithmetic apply their own nearbyint to the returned double;
-// rounding an already-integer-valued double is a no-op.
-static inline double sec_to_paint_sample(
-    double eff_time,
-    double sr,
+// Forward-translate a per-marker effective position (a source-frame
+// double) to the paint-sample position used by the stem, flag, and
+// hit-rect loops. In target view (warp_frame_map non-null/non-empty) the
+// source-frame is rounded with banker's nearbyint and looked up through
+// map_source_to_target, and that lookup is itself rounded with nearbyint;
+// in source view (null/empty warp_frame_map) the result is the frame
+// double rounded with nearbyint. Both branches return the same integer
+// target/source frame the playhead cursor stores (to_domain_frame applies
+// the same nearbyint), so the stem, chip, hit rect, and playhead share a
+// column in both views. Painting from the fractional map_source_to_target
+// value placed the stem one pixel off the playhead whenever rounding the
+// target frame crossed a pixel-column boundary. Callers that need an
+// integer sample-frame for trim or viewport arithmetic apply their own
+// nearbyint to the returned double; rounding an already-integer-valued
+// double is a no-op.
+static inline double frame_to_paint_sample(
+    double eff_frame,
     const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (warp_frame_map && !warp_frame_map->empty()) {
         const size_t src_frame = static_cast<size_t>(
-            std::nearbyint(eff_time * sr));
+            std::nearbyint(eff_frame));
         return std::nearbyint(map_source_to_target(src_frame, *warp_frame_map));
     }
-    return std::nearbyint(eff_time * sr);
+    return std::nearbyint(eff_frame);
 }
 
 // Caller must cairo_surface_flush(ink_plate) before calling. Collect
@@ -164,7 +164,6 @@ void render_marker_stems_impl(
     const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    const double sr = static_cast<double>(sample_rate);
     // Stem emanates from the flag chip's bottom edge (same column as the
     // marker) and runs down to the waveform bottom. The stem is an extension
     // of the flag: its top originates at the chip bottom, not from an
@@ -193,11 +192,11 @@ void render_marker_stems_impl(
         // for forward translation.
         const double eff_time = drag_overlay
             ? drag_overlay->effective_time(
-                  static_cast<int>(i), m.time_seconds)
-            : m.time_seconds;
+                  static_cast<int>(i), m.time_frame)
+            : m.time_frame;
         // Translate per-marker source-frame to target-frame in target view
         // (warp_frame_map non-null/non-empty); identity otherwise.
-        const double ms = sec_to_paint_sample(eff_time, sr, warp_frame_map);
+        const double ms = frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
         const GuiColor c = selected_set.count(static_cast<int>(i)) > 0
@@ -786,7 +785,6 @@ void iterate_visible_flags_impl(
     const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
-    int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     FlagTextFn&& get_flag_text,
@@ -796,7 +794,6 @@ void iterate_visible_flags_impl(
     const double samples_per_pixel = span / static_cast<double>(top_strip_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    const double sr           = static_cast<double>(sample_rate);
     // Place the rect's bottom edge exactly at the flag chip bottom (the
     // single source of truth shared with the stem renderers). The strip
     // bottom is the waveform area top, since the strips are contiguous, so
@@ -839,12 +836,12 @@ void iterate_visible_flags_impl(
         // system for target-view forward translation.
         const double eff_time = drag_overlay
             ? drag_overlay->effective_time(
-                  static_cast<int>(i), m.time_seconds)
-            : m.time_seconds;
+                  static_cast<int>(i), m.time_frame)
+            : m.time_frame;
         // Translate per-marker source-frame to target-frame in target view
         // (warp_frame_map non-null/non-empty); identity otherwise. Pack/elision
         // walk left-to-right against post-translation positions.
-        const double ms = sec_to_paint_sample(eff_time, sr, warp_frame_map);
+        const double ms = frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
         candidates.push_back({static_cast<int>(i), ms});
@@ -974,7 +971,7 @@ void render_flags(cairo_t* cr,
     std::vector<FlagEmit> emits;
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               sample_rate, warp_frame_map, drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         },
@@ -1029,7 +1026,7 @@ void render_one_editor_flag(
 
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               sample_rate, warp_frame_map, drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         },
@@ -1069,7 +1066,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // painted chip and this hit rect are the same rectangle by construction.
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               sample_rate, warp_frame_map, drag_overlay,
+                               warp_frame_map, drag_overlay,
         std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
             const std::string& text) {
@@ -1198,7 +1195,7 @@ void render_phase_reset_flags(cairo_t* cr,
     std::vector<PhaseResetEmit> emits;
     iterate_visible_flags_impl(top_strip_area, phase_resets,
                                viewport_start_sample, viewport_end_sample,
-                               sample_rate, warp_frame_map, drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return phase_reset_flag_text(phase_resets[i]);
         },
@@ -1331,7 +1328,6 @@ double flag_pending_text_left_x(
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * top.w));
-    const double sr = static_cast<double>(audio.sample_rate());
     // Target view: forward-translate the marker's source-frame through a
     // freshly-built target-view warp_frame_map so the visible-range check and
     // x-position math match where render_flags actually paints the flag.
@@ -1341,7 +1337,7 @@ double flag_pending_text_left_x(
     // so a fresh build is correct and app.drag.frozen_warp_frame_map need not be
     // consulted.
     const int64_t src_sample = static_cast<int64_t>(
-        std::nearbyint(mv[marker_idx].time_seconds * sr));
+        std::nearbyint(mv[marker_idx].time_frame));
     double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(

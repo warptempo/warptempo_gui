@@ -14,11 +14,11 @@ class GuiAudio;
 struct GuiWarpMarker;
 struct GuiTargetRender;
 
-// Index of the nearest non-disabled marker strictly before `time_seconds`,
+// Index of the nearest non-disabled marker strictly before `time_frame`,
 // or -1 if none. See the definition in warpmarkers_ops.cpp for the full
 // doc comment (matches the resolver's walk).
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
-                          double time_seconds);
+                          double time_frame);
 
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the selection-shift cluster (nudge /
@@ -50,7 +50,7 @@ struct GuiWarpMarkersOps {
           playback_lifecycle(playback_lifecycle_),
           target_render(target_render_) {}
 
-    void drop_marker(double time_seconds, bool inherit,
+    void drop_marker(double time_frame, bool inherit,
                       double base, const std::string& scale);
     void drop_marker_at_playhead();
     void drop_copy_previous_at_playhead();

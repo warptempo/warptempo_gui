@@ -216,24 +216,29 @@ int main(int argc, char** argv) {
     // both binaries. Checked in order — warp markers (wall total-1), phase
     // reset markers (wall total exactly), then tab A begin (wall total-1),
     // tab A end (wall total), tab B begin, tab B end — first offender only,
-    // disabled markers included. The downstream render-boundary EOF refusals
-    // stay as breach backstops for hand-edited maps. ---
+    // disabled markers included. Every comparison is an exact frame-double
+    // compare against the authored value — literally the same comparison the
+    // GUI gesture walls apply, with no rounding anywhere — so a legal
+    // at-the-wall position always reloads clean. Embedded times in the
+    // messages are display renderings (format_timestamp(frame / sr)). The
+    // downstream render-boundary EOF refusals stay as breach backstops for
+    // hand-edited maps. ---
     {
         const double sr_d   = static_cast<double>(sample_rate);
         const double totalf = static_cast<double>(total_frames);
         std::string detail;
         for (const auto& m : markers) {
-            if (m.time_seconds * sr_d > totalf - 1.0) {
+            if (m.time_frame > totalf - 1.0) {
                 detail = "warp marker past end of audio at "
-                         + format_timestamp(m.time_seconds);
+                         + format_timestamp(m.time_frame / sr_d);
                 break;
             }
         }
         if (detail.empty()) {
             for (const auto& m : resets) {
-                if (m.time_seconds * sr_d > totalf) {
+                if (m.time_frame > totalf) {
                     detail = "phase reset marker past end of audio at "
-                             + format_timestamp(m.time_seconds);
+                             + format_timestamp(m.time_frame / sr_d);
                     break;
                 }
             }
@@ -243,18 +248,16 @@ int main(int argc, char** argv) {
                 {"tab A", trim_tabs.tab_a}, {"tab B", trim_tabs.tab_b},
             };
             for (const auto& [name, t] : tabs) {
-                if (t.has_begin &&
-                    std::nearbyint(t.begin_sec * sr_d) > totalf - 1.0) {
+                if (t.has_begin && t.begin_frame > totalf - 1.0) {
                     detail = std::string(name)
                              + " trim begin past end of audio at "
-                             + format_timestamp(t.begin_sec);
+                             + format_timestamp(t.begin_frame / sr_d);
                     break;
                 }
-                if (t.has_end &&
-                    std::nearbyint(t.end_sec * sr_d) > totalf) {
+                if (t.has_end && t.end_frame > totalf) {
                     detail = std::string(name)
                              + " trim end past end of audio at "
-                             + format_timestamp(t.end_sec);
+                             + format_timestamp(t.end_frame / sr_d);
                     break;
                 }
             }
@@ -273,7 +276,7 @@ int main(int argc, char** argv) {
     // refusals stay untouched as the backstop. ---
     {
         const std::vector<MarkerDefect> defects =
-            enumerate_marker_store_defects(markers, resets);
+            enumerate_marker_store_defects(markers, resets, sample_rate);
         if (!defects.empty()) {
             for (const MarkerDefect& d : defects) {
                 std::fprintf(stderr, "warptempo_cli: %s\n", d.message.c_str());
@@ -290,7 +293,7 @@ int main(int argc, char** argv) {
     // --- full (untrimmed) frame map, do_render's full_warp_frame_map: the
     // parser knows nothing of trim; a trimmed render hands the engine the
     // prepost trimmer's translated maps derived from this one below. ---
-    auto resolved = resolve_warp_markers_for_render(markers);
+    auto resolved = resolve_warp_markers_for_render(markers, sample_rate);
     if (!resolved) {
         std::fprintf(stderr, "warptempo_cli: %s\n", resolved.error().c_str());
         return 1;
@@ -308,7 +311,7 @@ int main(int argc, char** argv) {
     // --- full deliverable-form phase reset derivation, built once beside
     // the full map exactly as do_render builds it. ---
     auto phase_reset_source_frames_r =
-        build_phase_reset_source_frames(resets, sample_rate, total_frames);
+        build_phase_reset_source_frames(resets, total_frames);
     if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_cli: %s\n",
                      phase_reset_source_frames_r.error().c_str());
@@ -323,9 +326,9 @@ int main(int argc, char** argv) {
     std::optional<TrimPlan> trim_plan;
     if (trim.has_begin || trim.has_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
-                              trim.has_begin, trim.begin_sec,
-                              trim.has_end, trim.end_sec,
-                              sample_rate, static_cast<int64_t>(total_frames),
+                              trim.has_begin, trim.begin_frame,
+                              trim.has_end, trim.end_frame,
+                              static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
             std::fprintf(stderr, "warptempo_cli: %s\n", plan.error().c_str());

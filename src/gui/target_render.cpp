@@ -138,8 +138,8 @@ void GuiTargetRender::dispatch_render_now() {
             app.source_audio_path, load_time_identity, audio.sample_rate(),
             app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
             app.engine_settings,
-            app.trim.has_begin, app.trim.begin_seconds,
-            app.trim.has_end,   app.trim.end_seconds);
+            app.trim.has_begin, app.trim.begin_frame,
+            app.trim.has_end,   app.trim.end_frame);
     } else {
         last_fingerprint_.clear();
     }
@@ -200,8 +200,8 @@ void GuiTargetRender::dispatch_render_now() {
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
         app.phaseresetmarkers.markers(), app.engine_settings,
-        app.trim.has_begin, app.trim.begin_seconds,
-        app.trim.has_end,   app.trim.end_seconds);
+        app.trim.has_begin, app.trim.begin_frame,
+        app.trim.has_end,   app.trim.end_frame);
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
@@ -304,8 +304,8 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
     // with a trim begin set, buffer[0] IS llrint(T_b) by construction — the
     // post_trim crop cut the render at exactly the authored begin's target
-    // image (T_b = begin_seconds * sr through the map, exact doubles, the
-    // trimmer's own formula) — so the anchor is that same llrint(T_b) in
+    // image (T_b = the authored begin frame through the map, exact doubles,
+    // the trimmer's own formula) — so the anchor is that same llrint(T_b) in
     // full-target coordinates and the exact authored begin/end display falls
     // out. Compute only after target_buffer_frames is set so a failed/empty
     // buffer does not leave a stale anchor. Reads ONLY the begin bound, so
@@ -318,8 +318,7 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
-        const double begin_source_frame =
-            app.trim.begin_seconds * static_cast<double>(audio.sample_rate());
+        const double begin_source_frame = app.trim.begin_frame;
         app.target_buffer_start_frame = std::llrint(map_source_to_target(
             begin_source_frame < 0.0 ? 0.0 : begin_source_frame,
             target_warp_frame_map));

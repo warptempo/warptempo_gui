@@ -60,8 +60,8 @@ bool GuiInputHandler::warp_render_preflight(
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         bool live_store, double scale,
         const std::string& output_format,
-        bool has_trim_begin, double trim_begin_sec,
-        bool has_trim_end, double trim_end_sec) {
+        bool has_trim_begin, double trim_begin_frame,
+        bool has_trim_end, double trim_end_frame) {
     const long sr    = static_cast<long>(audio.sample_rate());
     const long total = static_cast<long>(audio.total_frames());
 
@@ -72,17 +72,16 @@ bool GuiInputHandler::warp_render_preflight(
     if (sr > 0 && total > 0) {
         std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
             slice_to_warp_markers(markers),
-            slice_to_phase_reset_markers(phase_resets));
+            slice_to_phase_reset_markers(phase_resets), sr);
         if (!defects.empty()) {
             first_defect = std::move(defects.front().message);
         }
         if (first_defect.empty() && (has_trim_begin || has_trim_end)) {
-            const double sr_d = static_cast<double>(sr);
-            const double begin_f = has_trim_begin
-                ? std::nearbyint(trim_begin_sec * sr_d) : 0.0;
-            const double end_f   = has_trim_end
-                ? std::nearbyint(trim_end_sec * sr_d) : 0.0;
-            if (has_trim_begin && has_trim_end && end_f <= begin_f) {
+            // Exact frame-double compare on the authored bounds — no
+            // rounding anywhere, matching validate_trim_frames' own
+            // e_src <= b_src check.
+            if (has_trim_begin && has_trim_end &&
+                trim_end_frame <= trim_begin_frame) {
                 first_defect = "trim bounds crossed or equal";
             } else if (live_store && output_format != "wav") {
                 // Map-format-with-trim conflict: modeled by the series'
@@ -104,9 +103,9 @@ bool GuiInputHandler::warp_render_preflight(
                         app, audio.sample_rate(), total);
                 if (c.build_error.empty()) {
                     if (auto v = validate_trim_frames(
-                            has_trim_begin, trim_begin_sec,
-                            has_trim_end,   trim_end_sec,
-                            sr, static_cast<int64_t>(total),
+                            has_trim_begin, trim_begin_frame,
+                            has_trim_end,   trim_end_frame,
+                            static_cast<int64_t>(total),
                             c.warp_frame_map); !v) {
                         first_defect = std::move(v.error());
                     }
@@ -132,7 +131,7 @@ bool GuiInputHandler::warp_render_preflight(
     }
 
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers));
+        slice_to_warp_markers(markers), sr);
     if (!resolved) {
         prompt.open_error_notice(std::move(resolved.error()));
         return false;
@@ -151,8 +150,7 @@ bool GuiInputHandler::warp_render_preflight(
             return false;
         }
         if (auto v = validate_trim_frames(
-                has_trim_begin, trim_begin_sec, has_trim_end, trim_end_sec,
-                audio.sample_rate(),
+                has_trim_begin, trim_begin_frame, has_trim_end, trim_end_frame,
                 static_cast<int64_t>(audio.total_frames()), *built); !v) {
             prompt.open_error_notice(std::move(v.error()));
             return false;
@@ -167,9 +165,9 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.active_tab        = app.active_tab_view;
     s.active_audio_view = app.active_audio_view;
     s.has_trim_begin    = app.trim.has_begin;
-    s.trim_begin_sec    = app.trim.begin_seconds;
+    s.trim_begin_frame    = app.trim.begin_frame;
     s.has_trim_end      = app.trim.has_end;
-    s.trim_end_sec      = app.trim.end_seconds;
+    s.trim_end_frame      = app.trim.end_frame;
     s.zoom_level        = app.zoom_level;
     s.viewport_start    = app.viewport_start_sample;
     s.playhead          = app.playhead_cursor_sample;
@@ -191,9 +189,9 @@ AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
     q.phase_resets       = app.phaseresetmarkers.markers();
     q.engine_settings    = app.engine_settings;
     q.has_trim_begin     = app.trim.has_begin;
-    q.trim_begin_sec     = app.trim.begin_seconds;
+    q.trim_begin_frame     = app.trim.begin_frame;
     q.has_trim_end       = app.trim.has_end;
-    q.trim_end_sec       = app.trim.end_seconds;
+    q.trim_end_frame       = app.trim.end_frame;
     q.authoring          = snapshot_current_authoring_state();
     return q;
 }
@@ -311,7 +309,8 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // Human-readable provenance descriptor for a committed BPM cell,
 // e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats and bpm are
 // integers; the two timestamps are the span's owner and endpoint marker
-// times, formatted via the shared mm:ss.mmm formatter. Stored verbatim in
+// times in display seconds (frame / sample_rate, converted by the caller),
+// formatted via the shared mm:ss.mmm formatter. Stored verbatim in
 // the cell's .rendersettings bpm= field and promoted into .settings on
 // commit.
 static std::string format_bpm_descriptor(int beats, int bpm,
@@ -354,8 +353,8 @@ bool GuiInputHandler::render_bpm_sweep() {
                                /*live_store=*/true,
                                app.engine_settings.scale,
                                app.engine_settings.output_format,
-                               app.trim.has_begin, app.trim.begin_seconds,
-                               app.trim.has_end, app.trim.end_seconds)) {
+                               app.trim.has_begin, app.trim.begin_frame,
+                               app.trim.has_end, app.trim.end_frame)) {
         return false;
     }
 
@@ -378,8 +377,12 @@ bool GuiInputHandler::render_bpm_sweep() {
         endpoint_idx >= static_cast<int>(base_warp_markers.size())) {
         return false;   // missing or malformed span: no sweep
     }
+    // The span duration is a musical (seconds-domain) quantity — the BPM
+    // math needs beats per minute — so this is a genuine display/physics
+    // conversion, not a persistence one: frames / sample_rate.
     const double duration_seconds =
-        base_warp_markers[endpoint_idx].time_seconds - owner.time_seconds;
+        (base_warp_markers[endpoint_idx].time_frame - owner.time_frame) /
+        static_cast<double>(audio.sample_rate());
     if (!(duration_seconds > 0.0)) return false;
 
     std::vector<int> bpm_values;
@@ -481,9 +484,12 @@ bool GuiInputHandler::render_bpm_sweep() {
         // Provenance descriptor for this cell's .rendersettings; promoted
         // verbatim into .settings on Ctrl+Alt+C commit.
         cell_settings.bpm =
-            format_bpm_descriptor(owner.bpm_beats, bpm,
-                                  owner.time_seconds,
-                                  base_warp_markers[endpoint_idx].time_seconds);
+            format_bpm_descriptor(
+                owner.bpm_beats, bpm,
+                owner.time_frame /
+                    static_cast<double>(audio.sample_rate()),
+                base_warp_markers[endpoint_idx].time_frame /
+                    static_cast<double>(audio.sample_rate()));
 
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
@@ -498,8 +504,8 @@ bool GuiInputHandler::render_bpm_sweep() {
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
             std::move(cell_settings),
-            app.trim.has_begin, app.trim.begin_seconds,
-            app.trim.has_end,   app.trim.end_seconds,
+            app.trim.has_begin, app.trim.begin_frame,
+            app.trim.has_end,   app.trim.end_frame,
         batch_folder.string(), std::move(basename));
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);

@@ -338,16 +338,13 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
             last_sel = hit;
         }
         gui.invalidate_region(0, 0, app.width, app.height);
-        const int sr = audio.sample_rate();
         int64_t sample;
         if (sub_t) {
             sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.phase_resets[hit].time_seconds *
-                static_cast<double>(sr)));
+                app.render_view.phase_resets[hit].time_frame));
         } else {
             sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.warp_markers[hit].time_seconds *
-                static_cast<double>(sr)));
+                app.render_view.warp_markers[hit].time_frame));
         }
         viewport.move_playhead_to(sample);
         // Any waveform-area press starts a
@@ -416,12 +413,10 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
         if (hit >= 0) {
             if (app.active_markers_view == 'P') {
                 new_playhead = static_cast<int64_t>(std::nearbyint(
-                    app.render_view.phase_resets[hit].time_seconds *
-                    static_cast<double>(sr)));
+                    app.render_view.phase_resets[hit].time_frame));
             } else {
                 new_playhead = static_cast<int64_t>(std::nearbyint(
-                    app.render_view.warp_markers[hit].time_seconds *
-                    static_cast<double>(sr)));
+                    app.render_view.warp_markers[hit].time_frame));
             }
         } else {
             int rel = mouse_x - area.x;
@@ -472,9 +467,10 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
                 int64_t a = prev, b = new_playhead;
                 const bool forward = (b >= a);
                 if (!forward) std::swap(a, b);
-                const double sr_d = static_cast<double>(sr);
-                const double lo_t = static_cast<double>(a) / sr_d;
-                const double hi_t = static_cast<double>(b) / sr_d;
+                // Sweep endpoints are frame doubles on the render's own
+                // time axis, the render-view stores' domain.
+                const double lo_t = static_cast<double>(a);
+                const double hi_t = static_cast<double>(b);
                 const bool swept = (app.active_markers_view == 'P')
                     ? sweep_select_interval(
                           app, app.render_view.phase_resets,

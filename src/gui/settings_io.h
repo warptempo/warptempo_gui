@@ -44,15 +44,15 @@ struct ParsedSettings {
     // applies at the call site.
     bool    has_font_size      = false;
     double  font_size          = 11.0;
-    // Per-tab trim keys. Absence means unset.
+    // Per-tab trim keys. Absence means unset. Exact source-frame doubles.
     bool    has_tab_a_trim_begin = false;
-    double  tab_a_trim_begin     = 0.0;   // seconds
+    double  tab_a_trim_begin     = 0.0;   // source frames
     bool    has_tab_a_trim_end   = false;
-    double  tab_a_trim_end       = 0.0;   // seconds
+    double  tab_a_trim_end       = 0.0;   // source frames
     bool    has_tab_b_trim_begin = false;
-    double  tab_b_trim_begin     = 0.0;   // seconds
+    double  tab_b_trim_begin     = 0.0;   // source frames
     bool    has_tab_b_trim_end   = false;
-    double  tab_b_trim_end       = 0.0;   // seconds
+    double  tab_b_trim_end       = 0.0;   // source frames
     // Per-tab read-only flags. Absent → tab defaults to editable.
     bool    has_tab_a_read_only  = false;
     bool    tab_a_read_only      = false;
@@ -76,7 +76,7 @@ bool create_if_missing(const std::filesystem::path& p,
 // Parse `.settings`. Missing file → empty result (all has_* false).
 // Returns false on a file-open failure of an existing file, or on any hard
 // failure from the delegated trim reader (read_settings_trim): a malformed
-// trim timestamp, a duplicate trim key, or a duplicate or non-A-or-B
+// trim frame position, a duplicate trim key, or a duplicate or non-A-or-B
 // active_tab_view. Bound ordering is not checked — equal and inverted trim
 // bounds load intact (the render boundary owns trim validity).
 // Other per-line view-state errors are skipped, silently
@@ -117,9 +117,9 @@ struct RendersettingsAuthoring {
     bool    has_active_audio_view = false;
     char    active_audio_view     = 'S';
     bool    has_trim_begin        = false;
-    double  trim_begin_sec        = 0.0;
+    double  trim_begin_frame      = 0.0;   // source frames
     bool    has_trim_end          = false;
-    double  trim_end_sec          = 0.0;
+    double  trim_end_frame        = 0.0;   // source frames
     bool    has_zoom_level        = false;
     int     zoom_level            = 0;
     bool    has_viewport_start    = false;

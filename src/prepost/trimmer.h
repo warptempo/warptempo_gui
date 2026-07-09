@@ -52,8 +52,8 @@ struct TrimPlan {
 };
 
 // Render-boundary trim validation — the sole owner of every trim refusal.
-// Authored bounds are exact double source frames (seconds * sample rate, no
-// rounding; unset begin is 0, unset end is total_frames). Refusals, in check
+// Authored bounds arrive as exact double source frames (the authored domain
+// itself; unset begin is 0, unset end is total_frames). Refusals, in check
 // order: end at or before begin (e_src <= b_src); begin at or past the source
 // end (b_src >= total_frames); end past the source end (e_src > total_frames);
 // target span rounding below one sample (llrint(T_e) - llrint(T_b) < 1, the
@@ -64,9 +64,9 @@ struct TrimPlan {
 // preflight pops it verbatim, the CLI prints it to stderr). plan_trim calls
 // this first, so callers routing through plan_trim need no separate call.
 std::expected<void, std::string> validate_trim_frames(
-    bool has_begin, double begin_seconds,
-    bool has_end,   double end_seconds,
-    long sample_rate, int64_t total_frames,
+    bool has_begin, double begin_frame,
+    bool has_end,   double end_frame,
+    int64_t total_frames,
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map);
 
 // Compute the trim plan for one render: validates the bounds (above), then
@@ -87,9 +87,9 @@ std::expected<void, std::string> validate_trim_frames(
 std::expected<TrimPlan, std::string> plan_trim(
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
     const std::vector<double>& full_phase_reset_frame_map,
-    bool has_begin, double begin_seconds,
-    bool has_end,   double end_seconds,
-    long sample_rate, int64_t total_frames,
+    bool has_begin, double begin_frame,
+    bool has_end,   double end_frame,
+    int64_t total_frames,
     int N, int R_s);
 
 // Crop the engine's emitted interleaved buffer to the exact authored window:

@@ -58,8 +58,8 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
-                                   bool has_trim_begin, double trim_begin_sec,
-                                   bool has_trim_end,   double trim_end_sec,
+                                   bool has_trim_begin, double trim_begin_frame,
+                                   bool has_trim_end,   double trim_end_frame,
     std::string batch_folder,
     std::string batch_basename) {
     RenderRequest req;
@@ -68,9 +68,9 @@ RenderRequest build_render_request(std::string source_audio_path,
     req.engine_settings    = std::move(engine_settings);
     req.phase_resets       = std::move(phase_resets);
     req.has_trim_begin     = has_trim_begin;
-    req.trim_begin_sec     = trim_begin_sec;
+    req.trim_begin_frame     = trim_begin_frame;
     req.has_trim_end       = has_trim_end;
-    req.trim_end_sec       = trim_end_sec;
+    req.trim_end_frame       = trim_end_frame;
     req.batch_folder       = std::move(batch_folder);
     req.batch_basename     = std::move(batch_basename);
     return req;
@@ -140,15 +140,13 @@ RenderOutcome do_render(const RenderRequest& req,
     profile_source_channels = source_channels_probe;
     profile_source_sample_rate = static_cast<int>(sample_rate);
 
-    // Derived here, at the probe, so the reset frames are always in the frame
-    // domain of the source actually being rendered, symmetric with
-    // build_warp_frame_map's conversion of warp marker seconds; the conversion
-    // also validates the authored reset times against the probed source
-    // length.
+    // Assembled here, at the probe, so the reset frames are always validated
+    // against the probed source length (the authored positions already are
+    // exact source-frame doubles — a sidecar is authored against one audio
+    // file's frame grid).
     auto phase_reset_source_frames_r =
         build_phase_reset_source_frames(
-            slice_to_phase_reset_markers(req.phase_resets), sample_rate,
-            total_frames);
+            slice_to_phase_reset_markers(req.phase_resets), total_frames);
     if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                      phase_reset_source_frames_r.error().c_str());
@@ -161,15 +159,16 @@ RenderOutcome do_render(const RenderRequest& req,
     // engine always renders its map wholesale: a trimmed wav render hands it
     // the prepost trimmer's translated maps (plan_trim below), untrimmed
     // renders the full pair verbatim; the parser knows nothing of trim.
-    // Built here at the probe, beside the phase-reset conversion above: the
-    // two authored-time-to-frame conversions are this pipeline's parallel
+    // Built here at the probe, beside the phase-reset assembly above: the
+    // two authored-position validations are this pipeline's parallel
     // pair. Running it ahead of the fingerprint reuse return below is
     // behavior-neutral — a fingerprint match implies this exact marker set
     // already built successfully when the matching render was produced, so
     // no reuse path can fail here that previously succeeded, and the reuse
     // hit's extra map build is negligible against the pipeline. ---
     auto resolved_warp_markers =
-        resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers));
+        resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
+                                        sample_rate);
     if (!resolved_warp_markers) {
         std::fprintf(stderr,
             "warptempo_gui: render error: %s\n",
@@ -375,8 +374,8 @@ RenderOutcome do_render(const RenderRequest& req,
             req.source_audio_path, source_identity,
             static_cast<int>(sample_rate), req.warp_markers, req.phase_resets,
             req.engine_settings,
-            req.has_trim_begin, req.trim_begin_sec,
-            req.has_trim_end, req.trim_end_sec);
+            req.has_trim_begin, req.trim_begin_frame,
+            req.has_trim_end, req.trim_end_frame);
     }
     // Fingerprint emptiness doubles as a map-format gate on this shared
     // pre-branch path: non-wav formats compute no fingerprint.
@@ -436,9 +435,9 @@ RenderOutcome do_render(const RenderRequest& req,
     std::optional<TrimPlan> trim_plan;
     if (trimmed && output_format == "wav") {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
-                              req.has_trim_begin, req.trim_begin_sec,
-                              req.has_trim_end, req.trim_end_sec,
-                              sample_rate, static_cast<int64_t>(total_frames),
+                              req.has_trim_begin, req.trim_begin_frame,
+                              req.has_trim_end, req.trim_end_frame,
+                              static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
             std::fprintf(stderr,
@@ -451,18 +450,18 @@ RenderOutcome do_render(const RenderRequest& req,
     // Crop-coordinate anchors for the render-domain display sidecars. The
     // delivered wav's sample 0 is llrint(T_b) in full-target coordinates and
     // its length is llrint(T_e) - llrint(T_b) — exactly the post_trim crop —
-    // so a kept feature at source F displays at (tgt(F) - llrint(T_b)) / sr.
+    // so a kept feature at source F displays at tgt(F) - llrint(T_b), a
+    // target-frame double on the deliverable's own frame grid.
     // Untrimmed, the origin is 0 and the bound is the full map's last anchor
     // target, exact in the double domain (a reset at source EOF sits exactly
     // on it and drops, a point event beyond the deliverable's last sample).
     double sidecar_crop_begin = 0.0;
     double sidecar_crop_end   = full_warp_frame_map.back().tgt_frame;
     if (trimmed && output_format == "wav") {
-        const double sr_d = static_cast<double>(sample_rate);
         const double b_src =
-            req.has_trim_begin ? req.trim_begin_sec * sr_d : 0.0;
+            req.has_trim_begin ? req.trim_begin_frame : 0.0;
         const double e_src = req.has_trim_end
-            ? req.trim_end_sec * sr_d : static_cast<double>(total_frames);
+            ? req.trim_end_frame : static_cast<double>(total_frames);
         const int64_t crop_begin = std::llrint(
             map_source_to_target(b_src, full_warp_frame_map));
         const int64_t crop_end = std::llrint(
@@ -491,15 +490,16 @@ RenderOutcome do_render(const RenderRequest& req,
         // the engine. The phase-reset sidecar is always written on wav batch
         // renders, including as an empty file.
         if (output_format == "wav") {
-            // Walk the FULL frame map; each emitted render-domain time is the
-            // full-render output sample minus the crop origin. When untrimmed,
-            // sidecar_crop_begin is 0 and this reduces to identity placement.
-            const double sr_d = static_cast<double>(sample_rate);
+            // Walk the FULL frame map; each emitted render-domain position is
+            // the full-render output sample minus the crop origin. When
+            // untrimmed, sidecar_crop_begin is 0 and this reduces to identity
+            // placement.
 
             // Markers sit on the aligned feature: a marker at source F
-            // displays at (tgt(F) - llrint(T_b)) / sr — the crop coordinates,
-            // with no start-trim term (the delivered wav's first sample IS
-            // the authored begin, by the post_trim crop).
+            // displays at tgt(F) - llrint(T_b) — the crop coordinates, a
+            // frame double on the deliverable's axis, with no start-trim term
+            // (the delivered wav's first sample IS the authored begin, by the
+            // post_trim crop).
 
             // Markers: lockstep walk between req.warp_markers and the real-segment
             // range of full_warp_frame_map (built trim-off, so no synthetic
@@ -535,13 +535,13 @@ RenderOutcome do_render(const RenderRequest& req,
                 ++seg_it;
 
                 // Trim-range filter (inclusive both ends), run in authored
-                // seconds against the request's trim bounds. Gates emission
-                // only; the segment above is already consumed.
-                if (req.has_trim_begin && g.time_seconds < req.trim_begin_sec) continue;
-                if (req.has_trim_end && g.time_seconds > req.trim_end_sec) continue;
+                // source frames against the request's trim bounds. Gates
+                // emission only; the segment above is already consumed.
+                if (req.has_trim_begin && g.time_frame < req.trim_begin_frame) continue;
+                if (req.has_trim_end && g.time_frame > req.trim_end_frame) continue;
 
                 GuiWarpMarker w = g;
-                w.time_seconds  = (s.tgt_frame - sidecar_crop_begin) / sr_d;
+                w.time_frame  = s.tgt_frame - sidecar_crop_begin;
                 // Pre-origin filter: a marker whose render position falls
                 // before the delivered WAV's first sample is not present in
                 // the delivered audio (a marker exactly at the trim begin can
@@ -550,7 +550,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // surviving warp times are strictly ascending doubles by map
                 // monotonicity, so the display sidecar's timestamps are
                 // strictly ascending too.
-                if (w.time_seconds < 0.0) continue;
+                if (w.time_frame < 0.0) continue;
                 sidecar_warp_markers.push_back(std::move(w));
             }
             const std::string warp_sidecar_path =
@@ -569,8 +569,8 @@ RenderOutcome do_render(const RenderRequest& req,
             // coordinates the warp loop above uses, computed inline against
             // the crop bounds — so a reset sits on the same musical position
             // in render-view as in source and target views, expressed as an
-            // exact double with no intermediate frame rounding. The
-            // trim-range filter runs in authored seconds against the
+            // exact double with no intermediate rounding. The
+            // trim-range filter runs in authored source frames against the
             // request's trim bounds, ahead of the crop-bounds verdict. Drop
             // disabled, out-of-trim, and crop non-participants: a negative
             // crop-domain target precedes the deliverable's first sample and
@@ -590,16 +590,16 @@ RenderOutcome do_render(const RenderRequest& req,
             sidecar_phase_resets.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
-                if (req.has_trim_begin && t.time_seconds < req.trim_begin_sec) continue;
-                if (req.has_trim_end && t.time_seconds > req.trim_end_sec) continue;
+                if (req.has_trim_begin && t.time_frame < req.trim_begin_frame) continue;
+                if (req.has_trim_end && t.time_frame > req.trim_end_frame) continue;
                 const double crop_target =
-                    map_source_to_target(t.time_seconds * sr_d,
+                    map_source_to_target(t.time_frame,
                                          full_warp_frame_map)
                     - sidecar_crop_begin;
                 if (crop_target < 0.0) continue;
                 if (crop_target >= sidecar_crop_end) continue;
                 GuiPhaseResetMarker w = t;
-                w.time_seconds = crop_target / sr_d;
+                w.time_frame = crop_target;
                 sidecar_phase_resets.push_back(std::move(w));
             }
             const std::string phase_reset_sidecar_path =

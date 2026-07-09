@@ -1,7 +1,7 @@
 #include "warpmarkers_parse.h"
 
+#include "frame_format.h"
 #include "parse_text_util.h"
-#include "time_format.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -191,22 +191,25 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
         }
     }
 
-    // [#]?  MM:SS.SSS  |  PAYLOAD
+    // [#]?  <frame double>  |  PAYLOAD
     if (!t.empty() && t[0] == '#') {
         out.disabled = true;
         t.erase(0, 1);
     }
 
-    if (t.size() < 9 || !is_valid_timestamp_format(t.substr(0, 9))) {
-        return std::unexpected<std::string>("invalid time format: " + t.substr(0, std::min<size_t>(9, t.size())));
+    const size_t pipe = t.find('|');
+    if (pipe == std::string::npos) {
+        return std::unexpected<std::string>("expected '|' after frame position");
     }
-    out.time_seconds = parse_timestamp(t.substr(0, 9));
-    t.erase(0, 9);
-
-    if (t.empty() || t[0] != '|') {
-        return std::unexpected<std::string>("expected '|' after timestamp");
+    // The position field is a source-frame double (frame_format.h): finite,
+    // non-negative, whole field consumed. Anything else — including the old
+    // MM:SS.mmm timestamp form — is a malformed position and load-fatal.
+    if (!parse_frame_double(std::string_view(t).substr(0, pipe),
+                            out.time_frame)) {
+        return std::unexpected<std::string>("invalid frame position: " +
+                                            t.substr(0, pipe));
     }
-    t.erase(0, 1);
+    t.erase(0, pipe + 1);
 
     std::string err;
     if (!parse_new_payload(t, out, err))
@@ -235,7 +238,7 @@ parse_warpmarkers_file(const std::string& path) {
     // ----- Build markers ---------------------------------------------------
 
     // The first-marker grammar — an enabled, tempo-owning numeric marker at
-    // exactly 00:00.000 — is a render-boundary requirement validated by
+    // exactly frame 0 — is a render-boundary requirement validated by
     // validate_first_marker_render_grammar (warp_frame_map_build.h), not a
     // load rule. Files violating it (a moved, disabled, pass, or label-ref
     // first marker — or no markers at all: an empty file parses to an empty
@@ -260,9 +263,17 @@ parse_warpmarkers_file(const std::string& path) {
             continue;
         }
 
+        // Hash-comment convention: a first-byte '#' whose text up to the
+        // first '|' does not parse as a frame double marks a comment line
+        // and is skipped; a '#' that does prefix a valid frame position is
+        // a disabled marker and falls through to the strict parse.
         bool line_disabled = false;
         if (!t.empty() && t[0] == '#') {
-            if (t.size() >= 10 && is_valid_timestamp_format(t.substr(1, 9))) {
+            const size_t pipe = t.find('|');
+            double probe = 0.0;
+            if (pipe != std::string::npos &&
+                parse_frame_double(std::string_view(t).substr(1, pipe - 1),
+                                   probe)) {
                 line_disabled = true;
                 t.erase(0, 1);
             } else {
@@ -279,8 +290,9 @@ parse_warpmarkers_file(const std::string& path) {
         WarpMarker m = std::move(*parsed);
         if (line_disabled) m.disabled = true;
 
-        // `t.substr(0,9)` is a validated timestamp at this point.
-        const std::string time_raw = t.substr(0, 9);
+        // The validated position field's raw text (everything before the
+        // '|'), echoed verbatim in the decreasing-time diagnostic.
+        const std::string time_raw = t.substr(0, t.find('|'));
 
         // Load rejects only DECREASING times. Equal-time markers load
         // deliberately: the GUI may author them, so the save/reload round
@@ -289,7 +301,7 @@ parse_warpmarkers_file(const std::string& path) {
         // "marker segment < 1 frame" error. Decreasing stays load-fatal as a
         // corruption tripwire — the GUI always saves its time-sorted store,
         // so a decreasing file can only be a hand-edit error or corruption.
-        if (last_time >= 0.0 && m.time_seconds < last_time)
+        if (last_time >= 0.0 && m.time_frame < last_time)
             return fail(line_number,
                 "time decreasing: " + time_raw);
 
@@ -315,7 +327,7 @@ parse_warpmarkers_file(const std::string& path) {
         // cache: their effective tempo is resolved live via walk-backward
         // through the marker list at every read site.
 
-        last_time = m.time_seconds;
+        last_time = m.time_frame;
         markers.push_back(std::move(m));
     }
 

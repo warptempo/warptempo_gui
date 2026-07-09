@@ -4,7 +4,7 @@
 #include "parser/parse_text_util.h"
 #include "render_pipeline.h"
 #include "settings_trim.h"
-#include "time_format.h"
+#include "frame_format.h"
 
 #include <cerrno>
 #include <cmath>
@@ -240,12 +240,12 @@ void append_authoring_block(std::string& out,
     out += '\n';
     if (authoring.has_trim_begin) {
         out += "trim_begin=";
-        append_double_value(out, authoring.trim_begin_sec);
+        append_double_value(out, authoring.trim_begin_frame);
         out += '\n';
     }
     if (authoring.has_trim_end) {
         out += "trim_end=";
-        append_double_value(out, authoring.trim_end_sec);
+        append_double_value(out, authoring.trim_end_frame);
         out += '\n';
     }
     std::snprintf(buf, sizeof(buf), "%d", authoring.zoom_level);
@@ -443,10 +443,10 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
         return false;
     }
     const SettingsTrimTabs& t = *trim_result;
-    out.has_tab_a_trim_begin = t.tab_a.has_begin; out.tab_a_trim_begin = t.tab_a.begin_sec;
-    out.has_tab_a_trim_end   = t.tab_a.has_end;   out.tab_a_trim_end   = t.tab_a.end_sec;
-    out.has_tab_b_trim_begin = t.tab_b.has_begin; out.tab_b_trim_begin = t.tab_b.begin_sec;
-    out.has_tab_b_trim_end   = t.tab_b.has_end;   out.tab_b_trim_end   = t.tab_b.end_sec;
+    out.has_tab_a_trim_begin = t.tab_a.has_begin; out.tab_a_trim_begin = t.tab_a.begin_frame;
+    out.has_tab_a_trim_end   = t.tab_a.has_end;   out.tab_a_trim_end   = t.tab_a.end_frame;
+    out.has_tab_b_trim_begin = t.tab_b.has_begin; out.tab_b_trim_begin = t.tab_b.begin_frame;
+    out.has_tab_b_trim_end   = t.tab_b.has_end;   out.tab_b_trim_end   = t.tab_b.end_frame;
     return true;
 }
 
@@ -514,13 +514,13 @@ RendersettingsAuthoring read_rendersettings_authoring(
             double v;
             if (parse_double_full(value, v)) {
                 out.has_trim_begin = true;
-                out.trim_begin_sec = v;
+                out.trim_begin_frame = v;
             }
         } else if (key == "trim_end") {
             double v;
             if (parse_double_full(value, v)) {
                 out.has_trim_end = true;
-                out.trim_end_sec = v;
+                out.trim_end_frame = v;
             }
         } else if (key == "authoring_zoom") {
             int v;
@@ -689,28 +689,28 @@ bool write_settings_file(
             case SettingKind::TrimBegin_A:
                 if (tab_a.trim.has_begin) {
                     data += desc.key; data += '=';
-                    data += format_timestamp(tab_a.trim.begin_seconds);
+                    data += format_frame_double(tab_a.trim.begin_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimEnd_A:
                 if (tab_a.trim.has_end) {
                     data += desc.key; data += '=';
-                    data += format_timestamp(tab_a.trim.end_seconds);
+                    data += format_frame_double(tab_a.trim.end_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimBegin_B:
                 if (tab_b.trim.has_begin) {
                     data += desc.key; data += '=';
-                    data += format_timestamp(tab_b.trim.begin_seconds);
+                    data += format_frame_double(tab_b.trim.begin_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimEnd_B:
                 if (tab_b.trim.has_end) {
                     data += desc.key; data += '=';
-                    data += format_timestamp(tab_b.trim.end_seconds);
+                    data += format_frame_double(tab_b.trim.end_frame);
                     data += '\n';
                 }
                 break;

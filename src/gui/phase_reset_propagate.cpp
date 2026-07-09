@@ -18,21 +18,23 @@
 
 namespace {
 
-// Boundary guard for near-end bucketing, in seconds. A phase reset
-// within this distance before a section end (or before a section start)
-// is re-homed into the next chronological labeled section by shifting
-// every block's membership window backward by this amount. This is an
-// AUTHORING tolerance — the largest the user ever nudges a destination
-// phase reset off its true section boundary (~2-10 ms typically, never
-// more than ~92 ms) — deliberately NOT tied to the engine N/window size,
-// so a render-setting change cannot shift which section a marker counts
-// toward. Shared membership window across all three propagate actions:
-// copy_from_selection, paste_apply, and paste_state_apply.
+// Boundary guard for near-end bucketing. The CONSTANT stays a seconds
+// value (an authoring tolerance — the largest the user ever nudges a
+// destination phase reset off its true section boundary, ~2-10 ms
+// typically, never more than ~92 ms — deliberately NOT tied to the engine
+// N/window size, so a render-setting change cannot shift which section a
+// marker counts toward); each use converts it once to frames
+// (guard * sample_rate) because block extents and reset positions are
+// source-frame doubles. A phase reset within the guard before a section
+// end (or before a section start) is re-homed into the next chronological
+// labeled section by shifting every block's membership window backward by
+// this amount. Shared membership window across all three propagate
+// actions: copy_from_selection, paste_apply, and paste_state_apply.
 constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
 // One named block resolved from a warp-marker walk. `label` is the
 // owning marker's label name (empty markers don't produce entries);
-// `start` and `end` are absolute seconds from the marker and its
+// `start` and `end` are absolute source frames from the marker and its
 // immediate successor.
 struct DestBlock {
     std::string label;
@@ -56,41 +58,41 @@ std::vector<DestBlock> walk_named_blocks(
         if (i + 1 >= n) break;  // no next marker → no extent
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
-        const double start = mv[i].time_seconds;
-        const double end   = mv[i + 1].time_seconds;
+        const double start = mv[i].time_frame;
+        const double end   = mv[i + 1].time_frame;
         out.push_back(DestBlock{name, start, end});
     }
     return out;
 }
 
 // Format a stop-message timestamp in whichever audio domain the user is
-// currently in. The input is always a source-domain seconds value (warp
-// markers, clipboard blocks, and dest_blocks all live in source seconds).
+// currently in. The input is always a source-frame double (warp markers,
+// clipboard blocks, and dest_blocks all live in source frames); the
+// timestamp is the display rendering, format_timestamp(frame / sr).
 // In source view: identity, labeled " source time". In target view:
 // forward-translate to the active domain via source_frame_to_active_domain,
 // labeled " target time". A degenerate (empty / failed-build) target-view map
 // translates as identity, so the timestamp reads through unchanged but stays
 // labeled " target time", consistent with the identity fallback the rest of
 // the target-view paint uses on an empty map.
-std::string format_domain_timestamp(double source_seconds,
+std::string format_domain_timestamp(double source_frame,
                                     const AppState& app,
                                     const GuiAudio& audio) {
     const int sr = audio.sample_rate();
     const long total = static_cast<long>(audio.total_frames());
     const bool in_target = (app.active_audio_view == 'T');
+    const double sr_d = static_cast<double>(sr);
 
     if (sr <= 0 || total <= 0 || !in_target) {
-        return format_timestamp(source_seconds) +
+        return format_timestamp(sr > 0 ? source_frame / sr_d : 0.0) +
                (in_target ? " target time" : " source time");
     }
 
     const int64_t src_frame =
-        static_cast<int64_t>(std::nearbyint(source_seconds *
-                                            static_cast<double>(sr)));
+        static_cast<int64_t>(std::nearbyint(source_frame));
     const int64_t dom_frame =
         source_frame_to_active_domain(app, audio, src_frame);
-    const double dom_seconds =
-        static_cast<double>(dom_frame) / static_cast<double>(sr);
+    const double dom_seconds = static_cast<double>(dom_frame) / sr_d;
     return format_timestamp(dom_seconds) + " target time";
 }
 
@@ -130,7 +132,10 @@ void PhaseResetPropagate::copy_from_selection() {
             clipboard_blocks.push_back(std::move(cb));
             continue;
         }
-        const double guard = kPhaseResetBoundaryGuardSeconds;
+        // The seconds-domain guard constant, converted once to frames —
+        // block extents and reset positions are source-frame doubles.
+        const double guard = kPhaseResetBoundaryGuardSeconds *
+            static_cast<double>(target_render.audio.sample_rate());
         // Membership window shifts back by the guard so a lead-in phase
         // reset (authored just before this block's owning marker) is
         // captured as part of this block; the fractional anchor stays at
@@ -139,7 +144,7 @@ void PhaseResetPropagate::copy_from_selection() {
         const double lo = b.start - guard;
         const double hi = std::max(lo, b.end - guard);
         for (const auto& t : tv) {
-            const double t_time = t.time_seconds;
+            const double t_time = t.time_frame;
             if (t_time < lo)  continue;
             if (t_time >= hi) continue;
             ClipboardPlacement p;
@@ -228,14 +233,16 @@ void PhaseResetPropagate::paste_apply() {
     // Per-block clear of destination phase resets inside the shifted
     // membership window [start - guard, end - guard). Adjacent matched
     // blocks still tile without gap or overlap because every block's
-    // clear window shifts by the same guard.
-    const double guard = kPhaseResetBoundaryGuardSeconds;
+    // clear window shifts by the same guard (the seconds constant
+    // converted once to frames).
+    const double guard = kPhaseResetBoundaryGuardSeconds *
+        static_cast<double>(target_render.audio.sample_rate());
     for (size_t i = 0; i < matched; ++i) {
         const double lo = dest_blocks[i].start - guard;
         const double hi = std::max(lo, dest_blocks[i].end - guard);
         out.erase(std::remove_if(out.begin(), out.end(),
             [lo, hi](const GuiPhaseResetMarker& m) {
-                return m.time_seconds >= lo && m.time_seconds < hi;
+                return m.time_frame >= lo && m.time_frame < hi;
             }), out.end());
     }
 
@@ -251,19 +258,23 @@ void PhaseResetPropagate::paste_apply() {
     // by a longer destination block, a near-end placement scaled by a
     // shorter one), possibly coinciding exactly with surviving
     // pre-existing resets or with each other (a strongly shrunken block,
-    // or the zero clamp). Coincident resets simply stack: equal times are
-    // legal in the store, insert_marker keeps the in-memory list sorted,
-    // and the parser's exact-duplicate collapse at
-    // build_phase_reset_source_frames owns engine safety while the render
-    // boundary owns everything else.
+    // or the zero clamp). Coincident resets simply stack: they are legal
+    // in the store only until their commit modal resolves — the commit
+    // funnel walks them as defects (this paste is a commit site) — and
+    // insert_marker keeps the in-memory list sorted;
+    // build_phase_reset_source_frames' sub-frame refusal is the breach
+    // backstop for hand-edited input, and the render boundary owns
+    // everything else.
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
         const double dst_dur   = dest_blocks[i].end - dst_start;
         if (dst_dur <= 0.0) continue;
         for (const auto& p : clip_blocks[i].placements) {
             GuiPhaseResetMarker nm;
-            nm.time_seconds = snap_to_timestamp_grid(
-                std::max(0.0, dst_start + p.fractional_position * dst_dur));
+            // Exact rescaled position, full precision — no grid, no snap;
+            // clamped at 0 (the universal no-negative-position rule).
+            nm.time_frame =
+                std::max(0.0, dst_start + p.fractional_position * dst_dur);
             nm.disabled     = p.disabled;
             app.phaseresetmarkers.insert_marker(std::move(nm));
         }
@@ -271,19 +282,21 @@ void PhaseResetPropagate::paste_apply() {
 
     // An undo entry represents a state change, not a gesture. Pasting
     // onto the copy's own anchor reproduces the destination resets byte-
-    // equal (PhaseResetMarker is exactly time_seconds + disabled) — but
+    // equal (PhaseResetMarker is exactly time_frame + disabled) — but
     // only when every placement lands inside the cleared membership
     // windows above; that self-paste is a no-op that pushes nothing and
     // touches no dirty/render state. A placement rescaled OUTSIDE the
     // cleared windows (the lead-in / near-end cases) stacks a duplicate
-    // next to its surviving occupant on self-paste — legal, collapsed to
-    // one event at build_phase_reset_source_frames — so the store
-    // genuinely changes and the undo entry is a real state change.
+    // next to its surviving occupant on self-paste — legal in the store
+    // only until the commit modal walk resolves it (this paste is a
+    // commit site; build_phase_reset_source_frames' sub-frame refusal
+    // stays the breach backstop) — so the store genuinely changes and
+    // the undo entry is a real state change.
     // Compare before pre_state is moved into the push. The stop message
     // and the always-switch-to-P rule below still run.
     bool store_changed = out.size() != pre_state.size();
     for (size_t i = 0; !store_changed && i < out.size(); ++i) {
-        if (out[i].time_seconds != pre_state[i].time_seconds ||
+        if (out[i].time_frame != pre_state[i].time_frame ||
             out[i].disabled     != pre_state[i].disabled) {
             store_changed = true;
         }
@@ -322,10 +335,11 @@ void PhaseResetPropagate::paste_state_apply() {
         walk_named_blocks(mv, anchor, n);
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
-    // Boundary guard in seconds (phase reset time_seconds live in the
-    // source domain on both sides). Fixed authoring tolerance, sample-
-    // rate independent.
-    const double n_seconds = kPhaseResetBoundaryGuardSeconds;
+    // Boundary guard: the seconds-domain authoring tolerance converted
+    // once to frames (phase reset time_frame lives in source frames on
+    // both sides).
+    const double n_guard = kPhaseResetBoundaryGuardSeconds *
+        static_cast<double>(target_render.audio.sample_rate());
 
     // Flat list of every clipboard placement so we can bucket the
     // clipboard side by absolute source_time against block windows,
@@ -372,10 +386,10 @@ void PhaseResetPropagate::paste_state_apply() {
         // past the compared range, the marker falls off — symmetrically
         // on both sides. Clamp hi >= lo so a pathologically tiny block
         // produces an empty window (count 0), not an inverted one.
-        const double dst_lo = dest_blocks[i].start - n_seconds;
-        const double dst_hi = std::max(dst_lo, dest_blocks[i].end - n_seconds);
-        const double src_lo = clip_blocks[i].source_start - n_seconds;
-        const double src_hi = std::max(src_lo, clip_blocks[i].source_end - n_seconds);
+        const double dst_lo = dest_blocks[i].start - n_guard;
+        const double dst_hi = std::max(dst_lo, dest_blocks[i].end - n_guard);
+        const double src_lo = clip_blocks[i].source_start - n_guard;
+        const double src_hi = std::max(src_lo, clip_blocks[i].source_end - n_guard);
 
         // Windowed clipboard placements (migration applied). Globally
         // bucketed by source_time so a near-end placement originally
@@ -393,7 +407,7 @@ void PhaseResetPropagate::paste_state_apply() {
         std::vector<int> dest_indices;
         dest_indices.reserve(windowed_clip.size());
         for (size_t k = 0; k < out.size(); ++k) {
-            const double t = out[k].time_seconds;
+            const double t = out[k].time_frame;
             if (t < dst_lo)  continue;
             if (t >= dst_hi) continue;
             dest_indices.push_back(static_cast<int>(k));

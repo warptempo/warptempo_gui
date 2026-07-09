@@ -33,9 +33,9 @@ struct AuthoringSnapshot {
     char    active_tab        = 'A';
     char    active_audio_view = 'S';
     bool    has_trim_begin    = false;
-    double  trim_begin_sec    = 0.0;
+    double  trim_begin_frame  = 0.0;   // source frames
     bool    has_trim_end      = false;
-    double  trim_end_sec      = 0.0;
+    double  trim_end_frame    = 0.0;   // source frames
     int     zoom_level        = 0;
     int64_t viewport_start    = 0;
     int64_t playhead          = 0;
@@ -88,9 +88,9 @@ struct RenderRequest {
     // the prepost trimmer (plan_trim: cut source view, translated maps,
     // output crop), and the map formats refuse when a bound is set.
     bool   has_trim_begin = false;
-    double trim_begin_sec = 0.0;
+    double trim_begin_frame = 0.0;   // source frames
     bool   has_trim_end   = false;
-    double trim_end_sec   = 0.0;
+    double trim_end_frame   = 0.0;   // source frames
 
     AuthoringSnapshot authoring;
 
@@ -155,17 +155,17 @@ RenderOutcome do_render(const RenderRequest& req,
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,
 // iteration batch, and the target-view buffer render). RenderRequest carries
-// marker times as authored seconds only; do_render derives the engine's
-// source-frame reset list from phase_resets against the probed source's rate —
-// the same late-conversion-at-the-probe shape warp markers already follow
-// through build_warp_frame_map, so the conversion cannot use any rate other
-// than the rendered source's. output_buffer is left at its nullptr default; the
+// marker positions as authored source-frame doubles; do_render validates the
+// engine's reset list against the probed source's length at the probe —
+// the same validate-at-the-probe shape warp markers follow through
+// build_warp_frame_map (a sidecar is authored against one audio file's frame
+// grid). output_buffer is left at its nullptr default; the
 // target-view caller sets it after the call.
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
-                                   bool has_trim_begin, double trim_begin_sec,
-                                   bool has_trim_end,   double trim_end_sec,
+                                   bool has_trim_begin, double trim_begin_frame,
+                                   bool has_trim_end,   double trim_end_frame,
                                    std::string batch_folder = {},
                                    std::string batch_basename = {});

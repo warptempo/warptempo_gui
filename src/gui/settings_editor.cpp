@@ -5,7 +5,6 @@
 #include "settings_io.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "time_format.h"
 #include "undo.h"
 
 #include <cctype>

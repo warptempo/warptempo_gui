@@ -65,7 +65,8 @@ std::vector<bool> warp_markers_render_keep_mask(
 }
 
 std::expected<void, std::string>
-validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers) {
+validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
+                                     long sample_rate) {
     if (markers.empty()) {
         return std::unexpected(std::string(
             "render requires an enabled tempo-owning marker at 00:00.000 "
@@ -75,24 +76,27 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers) {
     // markers coincide at markers[0]'s exact time, a count with the formatted
     // timestamp — the recovery path (Tab-select, delete one by one, recreate
     // the first marker) must be legible from the error alone.
+    // sample_rate is display-only here (format_timestamp(frame / sr) for the
+    // embedded times); every comparison below is an exact frame compare.
+    const double sr_d = static_cast<double>(sample_rate);
     auto fail = [&](const std::string& rule) {
         std::string msg =
             "render requires an enabled tempo-owning marker at 00:00.000 (" +
             rule + ")";
         size_t coincident = 0;
         for (const auto& m : markers) {
-            if (m.time_seconds == markers[0].time_seconds) ++coincident;
+            if (m.time_frame == markers[0].time_frame) ++coincident;
         }
         if (coincident >= 2) {
             msg += "; " + std::to_string(coincident) + " markers coincide at "
-                 + format_timestamp(markers[0].time_seconds);
+                 + format_timestamp(markers[0].time_frame / sr_d);
         }
         return std::unexpected(std::move(msg));
     };
     const WarpMarker& first = markers[0];
-    if (first.time_seconds != 0.0) {
+    if (first.time_frame != 0.0) {
         return fail("first marker is at " +
-                    format_timestamp(first.time_seconds));
+                    format_timestamp(first.time_frame / sr_d));
     }
     // markers[0] is inspected literally: a disabled marker at 00:00.000
     // ahead of an enabled owner hardfails by ruling — the user deletes it or
@@ -112,13 +116,15 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers) {
 }
 
 std::expected<std::vector<MarkerForRender>, std::string>
-resolve_warp_markers_for_render(const std::vector<WarpMarker>& src) {
+resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
+                                long sample_rate) {
 
     // Render grammar first, on the raw pre-resolution list — after
     // resolution a leading pass is indistinguishable from a numeric owner
     // because of resolve_inherited_tempo's 1.0 fallback. Every render path
     // funnels through this resolver, so none can skip the check.
-    if (auto v = validate_first_marker_render_grammar(src); !v) {
+    // sample_rate feeds only the grammar message's display timestamps.
+    if (auto v = validate_first_marker_render_grammar(src, sample_rate); !v) {
         return std::unexpected(std::move(v.error()));
     }
 
@@ -141,7 +147,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src) {
 
         const auto& g = src[i];
         MarkerForRender m;
-        m.time_seconds  = g.time_seconds;
+        m.time_frame  = g.time_frame;
         m.label_def     = g.label_def;
         m.label_ref     = g.label_ref;
 
@@ -201,7 +207,7 @@ std::string resolve_inherited_tempo_scale(
 }
 
 MarkerEffective marker_effective(
-    const std::vector<WarpMarker>& mv, int idx, int sample_rate) {
+    const std::vector<WarpMarker>& mv, int idx) {
     MarkerEffective r;
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return r;
     const WarpMarker& m = mv[idx];
@@ -256,13 +262,13 @@ MarkerEffective marker_effective(
         // running to the end of the source, which this function cannot know
         // without total_frames. No popup is the existing contract for that case.
         if (idx_next < 0 || def_next < 0) return r;
-        const double sr_d = static_cast<double>(sample_rate);
-        if (sr_d <= 0.0) return r;
 
+        // Frame-native segment distances: authored positions already are
+        // exact source-frame doubles, so no sample-rate conversion exists.
         const double lr_src_dist =
-            (mv[idx_next].time_seconds - mv[idx].time_seconds) * sr_d;
+            mv[idx_next].time_frame - mv[idx].time_frame;
         const double def_src_dist =
-            (mv[def_next].time_seconds - mv[def_idx].time_seconds) * sr_d;
+            mv[def_next].time_frame - mv[def_idx].time_frame;
         if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
@@ -334,10 +340,14 @@ MarkerEffective marker_effective(
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
+    // sample_rate is display-only: it renders the provenance time as
+    // format_timestamp(frame / sample_rate).
+    const double sr_d = static_cast<double>(sample_rate);
+    if (sr_d <= 0.0) return "";
     const WarpMarker& m = mv[idx];
 
     if (m.tempo_inherits) {
-        const MarkerEffective eff = marker_effective(mv, idx, sample_rate);
+        const MarkerEffective eff = marker_effective(mv, idx);
         if (eff.base == 0.0) return "";
 
         char tbuf[32];
@@ -358,13 +368,13 @@ std::string compute_hover_popup_text(
 
         // Provenance: the immediate prior marker's own resolved displayed
         // tempo (its base, or base*scale if it carries a typed scale) and its
-        // time_seconds. The prior marker can itself be a pass or a label_ref,
+        // position. The prior marker can itself be a pass or a label_ref,
         // whose stored tempo_base/tempo_scale are inert placeholders, so the
         // descriptor is built from that marker's own resolution rather than
         // its raw fields.
         const WarpMarker& src = mv[eff.source_idx];
         const MarkerEffective src_eff =
-            marker_effective(mv, eff.source_idx, sample_rate);
+            marker_effective(mv, eff.source_idx);
         if (src_eff.base == 0.0) return out;
 
         char sbuf[32];
@@ -384,13 +394,13 @@ std::string compute_hover_popup_text(
         out += " (from ";
         out += descriptor;
         out += " @ ";
-        out += format_timestamp(src.time_seconds);
+        out += format_timestamp(src.time_frame / sr_d);
         out += ")";
         return out;
     }
 
     if (!m.label_ref.empty()) {
-        const MarkerEffective eff = marker_effective(mv, idx, sample_rate);
+        const MarkerEffective eff = marker_effective(mv, idx);
         if (eff.base == 0.0) return "";
 
         char base_buf[32];
@@ -402,14 +412,14 @@ std::string compute_hover_popup_text(
         out += "*";
         out += eff.scale;
 
-        // Provenance: "<def_base>:<label>" and the def marker's time_seconds.
+        // Provenance: "<def_base>:<label>" and the def marker's position.
         const WarpMarker& def = mv[eff.source_idx];
         out += " (from ";
         out += base_buf;
         out += ":";
         out += m.label_ref;
         out += " @ ";
-        out += format_timestamp(def.time_seconds);
+        out += format_timestamp(def.time_frame / sr_d);
         out += ")";
         return out;
     }
@@ -433,8 +443,10 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
     double src_f_prev = 0.0;
 
     for (size_t i = 0; i < markers.size(); ++i) {
+        // Authored positions already are exact source-frame doubles; the next
+        // marker's position is read directly, no sample-rate multiply.
         double src_frame = (i + 1 < markers.size())
-            ? markers[i + 1].time_seconds * static_cast<double>(sample_rate)
+            ? markers[i + 1].time_frame
             : static_cast<double>(total_frames);
 
         if (src_frame > static_cast<double>(total_frames)) {
@@ -486,7 +498,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
     for (size_t i = 0; i < markers.size(); ++i) {
         double src_frame = (i + 1 < markers.size())
-            ? markers[i + 1].time_seconds * static_cast<double>(sample_rate)
+            ? markers[i + 1].time_frame
             : static_cast<double>(total_frames);
 
         const auto& m = markers[i];
