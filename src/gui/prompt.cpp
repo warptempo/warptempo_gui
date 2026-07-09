@@ -152,10 +152,15 @@ void GuiPrompt::cancel_paste_confirmation() {
 }
 
 // Route a close / revert gesture through the prompt when history is
-// dirty; otherwise proceed immediately. Centralizes the decision so
-// Ctrl+Q, Ctrl+W, and the WM-close callback share identical behavior.
+// dirty or a defect series is suspended for this close; otherwise
+// proceed immediately. Centralizes the decision so Ctrl+Q, Ctrl+W, and
+// the WM-close callback share identical behavior. A suspended series is
+// mid-resolution of a render-invalid state — its store can be clean
+// (a load-origin series has app.dirty == false), yet the close must
+// still be confirmed, so open_unsaved's NO-SAVE form ([Delete]/[Esc])
+// runs off suspended_for_close and Esc can resume the series.
 void GuiPrompt::request_close_or_revert(DialogTrigger t) {
     if (app.prompt.active) return; // already gated; ignore re-entry
-    if (app.dirty) open_unsaved(t);
-    else           proceed(t);
+    if (app.dirty || app.defect_series.suspended_for_close) open_unsaved(t);
+    else                                                    proceed(t);
 }
