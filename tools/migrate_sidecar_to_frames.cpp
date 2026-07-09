@@ -5,7 +5,10 @@
 // doubles; there is no legacy read path in the GUI, parser, or CLI, so old
 // sidecars fail loudly at load. This standalone tool is the sole conversion
 // route. It rewrites ONLY the time fields of a single file, preserving every
-// other byte, and converts via: frames = nearbyint(parse_timestamp(ts) *
+// other byte. A legacy time field is an MM:SS.mmm timestamp optionally
+// followed by a signed seconds offset (+S.mmm or -S.mmm, exactly three
+// decimals), applied in seconds before the rounding conversion: effective
+// seconds = parse_timestamp(ts) + offset, frames = nearbyint(effective *
 // sample_rate) — banker's rounding to the nearest whole frame, the same
 // rounding rule the GUI uses everywhere fractional values meet an integer
 // domain — serialized via format_frame_double (to_chars shortest). Migrated
@@ -61,12 +64,50 @@ void usage() {
 // settings trim values carry it as the whole value token.
 constexpr size_t kTimestampLen = 9;
 
-// Convert one timestamp token to its frame-double text, rounded to the
+// A time-field offset is a single token — sign, one or more digits, a dot, and
+// exactly three digits — matching [+-][0-9]+[.][0-9]{3} in full. It follows the
+// nine-character timestamp and must span exactly to the field end, so a partial
+// or over-long form (e.g. "+0.0365") is rejected rather than silently prefix-
+// matched.
+bool is_valid_offset_token(const std::string& s) {
+    static const std::regex re("^[+-][0-9]+\\.[0-9]{3}$");
+    return std::regex_match(s, re);
+}
+
+// Convert one legacy time field to its frame-double text, rounded to the
 // nearest whole frame (banker's rounding, matching every other fractional-to-
-// integer-domain conversion in the project). The caller has already confirmed
-// the token is a valid timestamp.
-std::string convert_timestamp(const std::string& ts, double sample_rate) {
-    return format_frame_double(std::nearbyint(parse_timestamp(ts) * sample_rate));
+// integer-domain conversion in the project). The field is a nine-character
+// MM:SS.mmm timestamp optionally followed by a signed seconds offset that spans
+// exactly to the field end; effective seconds = parse_timestamp(ts) + offset.
+// Shared by the marker and settings converters. Returns true and sets
+// `frame_text` on success; on a hard error returns false and sets `reason` to a
+// short parenthetical detail (no timestamp, a malformed/over-long offset, or a
+// negative effective time — the last refused because parse_frame_double treats
+// negative positions as malformed at load, so the tool must never write one).
+bool convert_time_field(const std::string& field, double sample_rate,
+                        std::string& frame_text, std::string& reason) {
+    // is_valid_timestamp_format matches only exactly nine characters, so a pass
+    // here guarantees field.size() >= 9 and the offset substr below is in range.
+    const std::string ts = field.substr(0, kTimestampLen);
+    if (!is_valid_timestamp_format(ts)) {
+        reason = "malformed timestamp";
+        return false;
+    }
+    double seconds = parse_timestamp(ts);
+    const std::string offset = field.substr(kTimestampLen);
+    if (!offset.empty()) {
+        if (!is_valid_offset_token(offset)) {
+            reason = "malformed offset";
+            return false;
+        }
+        seconds += std::stod(offset);
+    }
+    if (seconds < 0.0) {
+        reason = "negative effective time";
+        return false;
+    }
+    frame_text = format_frame_double(std::nearbyint(seconds * sample_rate));
+    return true;
 }
 
 // Split raw file bytes into lines, remembering per line whether a '\n'
@@ -105,10 +146,11 @@ std::string join_lines(const std::vector<Line>& lines) {
 
 // --- marker columns ---------------------------------------------------------
 //
-// A warpmarkers line is [#]MM:SS.mmm|payload; a phaseresetmarkers line is
-// [#]MM:SS.mmm. Both columns share this converter: everything past the leading
-// timestamp is preserved verbatim, so warp's '|payload' rides through and phase
-// reset (which has no suffix) is the same code with an empty suffix.
+// A warpmarkers line is [#]MM:SS.mmm[offset]|payload; a phaseresetmarkers line
+// is [#]MM:SS.mmm[offset]. Both columns share this converter. The time field
+// runs from the optional '#' to the first '|' (warp's payload separator) or to
+// end of line (phase reset), and carries the timestamp plus an optional offset;
+// warp's '|payload' suffix rides through verbatim.
 //
 // Rules:
 //   - an empty line copies through;
@@ -116,11 +158,13 @@ std::string join_lines(const std::vector<Line>& lines) {
 //     timestamp is a comment line and copies through unchanged;
 //   - a first-byte-'#' line whose following nine characters ARE a valid
 //     timestamp is a disabled marker: convert, keep the '#' and the suffix;
-//   - any other non-empty line must convert its leading nine characters; a
-//     leading field that is not a valid timestamp is a hard error.
+//   - any other non-empty line must convert its time field; a leading field
+//     that is not a valid timestamp, or trailing junk between the timestamp and
+//     the field end that is not a valid offset, is a hard error.
 //
 // Returns true on success (converted or copied), false on a hard error, in
-// which case `error_detail` carries the "line <n>: <content>" detail.
+// which case `error_detail` carries the "line <n>: <content>" detail (with a
+// short single-space parenthetical reason when the field itself is malformed).
 bool convert_marker_line(const Line& in, double sample_rate,
                          int line_number, Line& out, std::string& error_detail) {
     const std::string& s = in.content;
@@ -147,20 +191,33 @@ bool convert_marker_line(const Line& in, double sample_rate,
         return false;
     }
 
-    // Valid leading timestamp: convert it, keep the optional '#' and everything
-    // past the timestamp verbatim (for warp, the '|payload'; for phase reset,
-    // nothing).
-    std::string suffix = s.substr(ts_start + kTimestampLen);
-    out.content = (disabled ? "#" : "") + convert_timestamp(ts, sample_rate) + suffix;
+    // Valid leading timestamp: the time field ends at the first '|' (warp's
+    // payload separator) or at end of line (phase reset). Convert the field
+    // (timestamp plus optional offset) and keep the optional '#' and the
+    // suffix verbatim.
+    const size_t sep = s.find('|', ts_start);
+    const size_t field_end = (sep == std::string::npos) ? s.size() : sep;
+    const std::string field = s.substr(ts_start, field_end - ts_start);
+    const std::string suffix = (sep == std::string::npos) ? "" : s.substr(sep);
+
+    std::string frame_text;
+    std::string reason;
+    if (!convert_time_field(field, sample_rate, frame_text, reason)) {
+        error_detail = "line " + std::to_string(line_number) + ": " + s +
+                       " (" + reason + ")";
+        return false;
+    }
+    out.content = (disabled ? "#" : "") + frame_text + suffix;
     return true;
 }
 
 // --- settings ---------------------------------------------------------------
 //
 // Only the four trim keys carry authored times; every other line copies
-// through byte-identically. A trim key whose value is not a valid timestamp is
-// a hard error. The key/value spelling and all surrounding whitespace are
-// preserved: only the value token itself is rewritten.
+// through byte-identically. A trim key whose value is not a valid time field
+// (a timestamp plus an optional offset) is a hard error. The key/value spelling
+// and all surrounding whitespace are preserved: only the value token itself is
+// rewritten.
 bool is_trim_key(const std::string& key) {
     return key == "tab_a_trim_begin" || key == "tab_a_trim_end" ||
            key == "tab_b_trim_begin" || key == "tab_b_trim_end";
@@ -199,14 +256,16 @@ bool convert_settings_line(const Line& in, double sample_rate, int line_number,
     }
     const size_t tok_e = right.find_last_not_of(" \t\r");
     const std::string token = right.substr(tok_b, tok_e - tok_b + 1);
-    if (!is_valid_timestamp_format(token)) {
-        error_detail = "line " + std::to_string(line_number) + ": " + s;
+    std::string frame_text;
+    std::string reason;
+    if (!convert_time_field(token, sample_rate, frame_text, reason)) {
+        error_detail = "line " + std::to_string(line_number) + ": " + s +
+                       " (" + reason + ")";
         return false;
     }
     const std::string lead = right.substr(0, tok_b);
     const std::string tail = right.substr(tok_e + 1);
-    out.content = s.substr(0, eq + 1) + lead +
-                  convert_timestamp(token, sample_rate) + tail;
+    out.content = s.substr(0, eq + 1) + lead + frame_text + tail;
     return true;
 }
 
