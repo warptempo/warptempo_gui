@@ -219,7 +219,7 @@ struct GuiInputHandler {
     bool open_defect_series(bool commit_context);
 
     // handle_defect_response: apply the chosen resolution ([U]ndo /
-    // [R]eset / [D]elete per defect kind), then re-open the series with the
+    // [R]eset / [Delete] per defect kind), then re-open the series with the
     // same commit-context flag — re-validate from scratch; next defect or
     // done. Keys not offered by the current defect are swallowed.
     void handle_defect_response(char k);

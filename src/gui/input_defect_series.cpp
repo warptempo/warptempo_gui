@@ -30,7 +30,7 @@
 // map. Guarding validate_trim_frames on a clean marker store is not a gap:
 // when markers are broken their modals run first and trim re-validates on
 // the next pass of the same series. Every trim defect shares the single
-// [D]elete-both-bounds resolution.
+// [Delete]-both-bounds resolution.
 
 namespace {
 
@@ -140,14 +140,14 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             switch (d.kind) {
             case MarkerDefectKind::CoincidentGroup:
             case MarkerDefectKind::PastEof:
-                keys.push_back('d');
-                labels.push_back("[D]elete");
+                keys.push_back('\x7f');
+                labels.push_back("[Delete]");
                 break;
             case MarkerDefectKind::DanglingLabelRef:
                 keys.push_back('r');
                 labels.push_back("[R]eset");
-                keys.push_back('d');
-                labels.push_back("[D]elete");
+                keys.push_back('\x7f');
+                labels.push_back("[Delete]");
                 break;
             case MarkerDefectKind::FirstMarkerGrammar:
                 keys.push_back('r');
@@ -180,7 +180,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // target-view gate validate against — but only when that map built
         // (markers are already clean here; a build failure is the
         // non-modeled class the render preflight's popup backstops). All
-        // trim defects share the one [D]elete-both-bounds resolution.
+        // trim defects share the one [Delete]-both-bounds resolution.
         if (app.trim.has_begin || app.trim.has_end) {
             const double sr_d = static_cast<double>(sr);
             const double begin_f = app.trim.has_begin
@@ -212,8 +212,8 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             if (!trim_msg.empty()) {
                 app.prompt.active          = true;
                 app.prompt.text            = std::move(trim_msg);
-                app.prompt.response_keys   = {'d'};
-                app.prompt.response_labels = {"[D]elete"};
+                app.prompt.response_keys   = {'\x7f'};
+                app.prompt.response_labels = {"[Delete]"};
                 app.prompt.trigger         = DialogTrigger::DEFECT_RESOLUTION;
                 app.defect_series.defect      = MarkerDefect{};
                 app.defect_series.trim_defect = true;
@@ -245,7 +245,7 @@ void GuiInputHandler::handle_defect_response(char k) {
         app.prompt.response_keys.end()) return;
 
     if (app.defect_series.trim_defect) {
-        // [D]elete: clear BOTH bounds — the mirror of handle_trim_clear_both
+        // [Delete]: clear BOTH bounds — the mirror of handle_trim_clear_both
         // / handle_trim_unset (has flags, selection flags, focus char, the
         // same invalidations and target render the unset path emits). Trim
         // is gesture-owned and excluded from undo/dirty, so no history or
@@ -330,7 +330,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_scale.clear();
                     store_changed = true;
                 }
-            } else {  // 'd': remove the ref marker
+            } else {  // '\x7f': remove the ref marker
                 erase_column_indices(app, d.column, d.indices);
                 store_changed = true;
             }

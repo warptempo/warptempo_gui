@@ -602,20 +602,18 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 
     // --- Upper row: transient / modal chain. ---
     if (app.prompt.active) {
-        // Plain tier: the prompt text followed by its response
-        // labels, each chained off the measured advance returned
-        // by draw_line so no separate measurement pass is needed.
-        const double label_gap = tab_letter_gap_px() * 2.0;
-        double cursor_x = static_cast<double>(timestamp_pad_x());
-        cursor_x += text_display::draw_line(
-            cr, cursor_x, upper_baseline, app.prompt.text,
-            kText, flag_font_size_px());
-        cursor_x += label_gap;
+        // Plain tier: the prompt text and its response labels assembled
+        // into one string joined by single ' ' characters and drawn in a
+        // single pass. Single space between tokens: two spaces never appear
+        // in GUI output, and modals use exactly one.
+        std::string assembled = app.prompt.text;
         for (const auto& label : app.prompt.response_labels) {
-            cursor_x += text_display::draw_line(
-                cr, cursor_x, upper_baseline, label,
-                kText, flag_font_size_px()) + label_gap;
+            assembled += ' ';
+            assembled += label;
         }
+        text_display::draw_line(
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            assembled, kText, flag_font_size_px());
     } else if (!app.queue_progress_text.empty()) {
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
