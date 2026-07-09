@@ -319,6 +319,42 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
     return r;
 }
 
+// Trim-chip column placement, shared by render_trim_flags (paint) and
+// hit_test_trim_chip (pick) so the painted chip box and the hit rect are the
+// same rectangle even when a bound sits offscreen. `ms` is the bound's mapped
+// sample column (source column, or map_source_to_target in target view — the
+// caller does that translation before calling); `vp` / `spp` are the viewport
+// start and samples-per-pixel; `visible_span` is the viewport width in samples
+// (the caller's own vp+span boundary); `strip_x` / `strip_w` are the top
+// strip's x and width; `glyph_count` sizes the chip box.
+//
+// An in-strip bound places text_left at its integer pixel column
+// (strip_x + round(x_raw)). An OFFSCREEN bound pins its chip inside the strip
+// edge instead of vanishing, so it stays mouse-reachable exactly as marker
+// flags do (the pickability premise in marker_store_validate.h extends to
+// trim): left of the viewport pins the chip's LEFT edge flush to the strip's
+// left edge; at or past the visible end pins the full box (advance + two pads,
+// via flag_chip_rect's own width) flush to the strip's RIGHT edge. Both bounds
+// offscreen the same side share a text_left and thus overlap at that edge; the
+// caller's nearest-column tie-break resolves the press (paint's greedy-pack
+// elision draws just one of the coincident chips, which is visually identical).
+inline double trim_chip_text_left(double ms, double vp, double spp,
+                                  int strip_x, double visible_span,
+                                  int strip_w, size_t glyph_count) {
+    if (ms < vp) {
+        return static_cast<double>(strip_x);
+    }
+    if (ms >= vp + visible_span) {
+        const double pad = flag_pad_x_px();
+        const double advance =
+            static_cast<double>(glyph_count) * monospace_advance();
+        const int w = static_cast<int>(std::round(advance + 2.0 * pad));
+        return static_cast<double>(strip_x + strip_w - w);
+    }
+    const double x_raw = (ms - vp) / spp;
+    return static_cast<double>(strip_x) + std::round(x_raw);
+}
+
 // Stem-cache surface overhang above the waveform top, in pixels. Sized for
 // the TALLER trim stem (whose top reaches the upper-row chip bottom), so the
 // single shared stem-cache surface holds both marker stems (originating at

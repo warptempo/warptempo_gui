@@ -217,16 +217,17 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int kMiss = std::numeric_limits<int>::max();
 
     // Per-bound chip rect, computed exactly as render_trim_flags paints it via
-    // the shared flag_chip_rect helper: text_left at the bound's integer pixel
-    // column (top.x + round(x_raw)), the rect spanning
+    // the shared trim_chip_text_left + flag_chip_rect helpers: text_left at the
+    // bound's integer pixel column (top.x + round(x_raw)) when in-strip, or
+    // pinned inside the strip edge when the bound is offscreen (the paint-and-
+    // pick-agree invariant now includes that pin), the rect spanning
     // [round(text_left), round(text_left) + round(advance + 2*flag_pad_x_px())] —
     // the painted chip's left edge through its right pad, the same horizontal
     // geometry compute_flag_hit_rects derives for regular flags. The vertical band (top_upper_row_area) was checked above, so only
     // horizontal containment is tested here. Returns the bound's distance from
-    // the press to its column when the press is inside the chip (for the
-    // both-hit tie-break), else kMiss.
-    auto chip_dist = [&](double seconds, bool present,
-                         const char* /*glyph*/) -> int {
+    // the press to the chip's left edge when the press is inside the chip (for
+    // the both-hit tie-break), else kMiss.
+    auto chip_dist = [&](double seconds, bool present) -> int {
         if (!present) return kMiss;
         const int64_t src_sample = static_cast<int64_t>(
             std::nearbyint(seconds * sr_d));
@@ -237,11 +238,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        if (ms < vp) return kMiss;
-        if (ms >= vp + static_cast<double>(visible)) return kMiss;
-        const double x_raw = (ms - vp) / spp;
-        const double text_left =
-            static_cast<double>(top.x) + std::round(x_raw);
+        // Column placement (in-strip or edge-pinned when offscreen) is the
+        // shared helper render_trim_flags paints through, so an offscreen
+        // bound's pinned chip hit-tests where it is drawn.
+        const double text_left = trim_chip_text_left(
+            ms, vp, spp, top.x, static_cast<double>(visible), top.w, 1);
         // Width from the cached monospace advance via the shared helper — no
         // scratch-surface measurement (that was the residual edge drift: paint
         // measured on the window surface, hit on a 1x1 scratch surface, and the
@@ -256,11 +257,12 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         return std::abs(mouse_x - rx);
     };
 
-    const int db = chip_dist(app.trim.begin_seconds, app.trim.has_begin, "b");
-    const int de = chip_dist(app.trim.end_seconds,   app.trim.has_end,   "e");
+    const int db = chip_dist(app.trim.begin_seconds, app.trim.has_begin);
+    const int de = chip_dist(app.trim.end_seconds,   app.trim.has_end);
 
-    // Overlapping chips: the renderer elides the right one, but guard the tie
-    // by preferring the bound whose column is nearer the press, mirroring
+    // Overlapping chips (including two bounds pinned to the same offscreen
+    // edge): the renderer elides the right one, but guard the tie by preferring
+    // the bound whose pinned column is nearer the press, mirroring
     // hit_test_trim_boundary.
     if (db != kMiss && de != kMiss) return (db <= de) ? TrimHit::Begin
                                                       : TrimHit::End;
