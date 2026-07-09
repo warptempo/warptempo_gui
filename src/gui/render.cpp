@@ -586,17 +586,15 @@ void render_trim_flags(cairo_t* cr,
         const char* glyph;
     };
     std::vector<TrimChip> chips;
-    // An offscreen bound is no longer skipped: trim_chip_text_left pins its
-    // chip inside the strip edge so the mouse can still reach it (the pinned
-    // chip is the mouse path for an offscreen bound, whose stem paints at its
-    // authored column and so is not there to click). Paint and hit test share
-    // this exact placement via the helper.
     auto add_chip = [&](int64_t frame, bool selected, const char* glyph) {
         const double ms = static_cast<double>(frame);
-        const double text_left = trim_chip_text_left(
-            ms, static_cast<double>(viewport_start_sample),
-            samples_per_pixel, top_strip_area.x, span,
-            top_strip_area.w, std::strlen(glyph));
+        if (ms < static_cast<double>(viewport_start_sample)) return;
+        if (ms >= static_cast<double>(viewport_end_sample)) return;
+        const double x_raw =
+            (ms - static_cast<double>(viewport_start_sample))
+                / samples_per_pixel;
+        const double text_left =
+            static_cast<double>(top_strip_area.x) + std::round(x_raw);
         chips.push_back({text_left, selected, glyph});
     };
     if (has_begin) add_chip(trim.begin, begin_selected, "b");
