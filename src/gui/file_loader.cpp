@@ -7,6 +7,7 @@
 #include "source_sample_cache.h"
 
 #include "warp_frame_map.h"
+#include "time_format.h"
 
 #include "audio_probe.h"
 
@@ -397,6 +398,68 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.last_selected_trim  = parsed_tab.last_selected_trim;
         app.last_sel_group      = parsed_tab.last_sel_group;
         clamp_viewport_start(app, audio);
+    }
+
+    // Adversarial past-EOF guard: hard-fail the load like a corrupt audio
+    // file when any marker or any tab's trim sits past its wall. Such a
+    // position is uncommittable through the GUI (the marker EOF walls and the
+    // per-bound trim walls) and a sidecar applies only to the audio it was
+    // authored against, so a past-EOF position means the audio was swapped
+    // outside the GUI. BOTH tabs' trim is checked — trim is per-tab, and an
+    // inactive-tab bound would otherwise load and go live on the next tab
+    // switch. Checked in order — warp markers (wall total-1), phase reset
+    // markers (wall total exactly), then tab A begin (wall total-1), tab A
+    // end (wall total), tab B begin, tab B end — first offender only,
+    // disabled markers included (a disabled past-EOF marker is equally
+    // unauthorable). The render-boundary EOF refusals downstream stay as
+    // breach backstops for hand-edited maps.
+    {
+        const double sr_d   = static_cast<double>(audio.sample_rate());
+        const double totalf = static_cast<double>(audio.total_frames());
+        std::string detail;
+        for (const auto& m : app.warpmarkers.markers()) {
+            if (m.time_seconds * sr_d > totalf - 1.0) {
+                detail = "warp marker past end of audio at "
+                         + format_timestamp(m.time_seconds);
+                break;
+            }
+        }
+        if (detail.empty()) {
+            for (const auto& m : app.phaseresetmarkers.markers()) {
+                if (m.time_seconds * sr_d > totalf) {
+                    detail = "phase reset marker past end of audio at "
+                             + format_timestamp(m.time_seconds);
+                    break;
+                }
+            }
+        }
+        if (detail.empty()) {
+            const struct { const char* name; const TrimState& t; } tabs[] = {
+                {"tab A", app.tab_a.trim}, {"tab B", app.tab_b.trim},
+            };
+            for (const auto& [name, t] : tabs) {
+                if (t.has_begin &&
+                    std::nearbyint(t.begin_seconds * sr_d) > totalf - 1.0) {
+                    detail = std::string(name)
+                             + " trim begin past end of audio at "
+                             + format_timestamp(t.begin_seconds);
+                    break;
+                }
+                if (t.has_end &&
+                    std::nearbyint(t.end_seconds * sr_d) > totalf) {
+                    detail = std::string(name)
+                             + " trim end past end of audio at "
+                             + format_timestamp(t.end_seconds);
+                    break;
+                }
+            }
+        }
+        if (!detail.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: source load aborted: %s\n", detail.c_str());
+            revert_to_blank();
+            return false;
+        }
     }
 
     // Bring up the audio device bound to the new sample buffer. Init

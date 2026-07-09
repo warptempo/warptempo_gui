@@ -22,9 +22,13 @@
 // test. The two past-end checks are one guard with two instances, kept
 // together by ruling: column symmetry outranks the constructibility
 // argument for removing either side alone. Disabled markers are skipped
-// before the check — only resolved markers
-// are validated, as in build_warp_frame_map — so a disabled past-end reset
-// stays loadable and inert. Ordering: the load parser rejects only
+// before the check — only resolved markers are validated, as in
+// build_warp_frame_map — so this build refuses only enabled past-end resets,
+// as a breach backstop for hand-edited artifacts. A past-end reset is
+// unreachable through the GUI (the gesture wall), and one in a hand-edited
+// sidecar is load-fatal at the orchestrator (GUI file_loader / CLI, disabled
+// markers included) as adversarial input — a reset file applies only to the
+// audio it was authored against. Ordering: the load parser rejects only
 // DECREASING times (equal times load intact), so the input here is
 // non-decreasing; two resets closer than one deepest-zoom pixel of time are
 // prohibited by the raw-store rule (marker_store_validate.h) on both columns —

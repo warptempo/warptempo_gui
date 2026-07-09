@@ -28,8 +28,8 @@
 // marker-count-sized and cheap.
 //
 // First the raw-store walk: enumerate_marker_store_defects over both marker
-// columns plus the frame-level trim checks (crossed-or-equal, per-bound
-// past-EOF, and — when the marker walk is clean and the live map builds —
+// columns plus the frame-level trim checks (crossed-or-equal, and — when the
+// marker walk is clean and the live map builds —
 // validate_trim_frames, mirroring open_defect_series' trim column). On any
 // modeled defect a LIVE-store site (`live_store` true, validating
 // app.warpmarkers / app.phaseresetmarkers / app.trim at dispatch time)
@@ -68,7 +68,7 @@ bool GuiInputHandler::warp_render_preflight(
     if (sr > 0 && total > 0) {
         std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
             slice_to_warp_markers(markers),
-            slice_to_phase_reset_markers(phase_resets), sr, total);
+            slice_to_phase_reset_markers(phase_resets));
         if (!defects.empty()) {
             first_defect = std::move(defects.front().message);
         }
@@ -80,11 +80,6 @@ bool GuiInputHandler::warp_render_preflight(
                 ? std::nearbyint(trim_end_sec * sr_d) : 0.0;
             if (has_trim_begin && has_trim_end && end_f <= begin_f) {
                 first_defect = "trim bounds crossed or equal";
-            } else if ((has_trim_begin &&
-                        begin_f > static_cast<double>(total - 1)) ||
-                       (has_trim_end &&
-                        end_f > static_cast<double>(total))) {
-                first_defect = "trim bound past end of audio";
             } else if (live_store) {
                 // validate_trim_frames under the series' guard (clean
                 // markers, built map), live store only: the memoized

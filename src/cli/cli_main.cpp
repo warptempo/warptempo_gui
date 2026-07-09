@@ -6,6 +6,7 @@
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
 #include "marker_store_validate.h"      // enumerate_marker_store_defects
+#include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -77,8 +78,9 @@ int main(int argc, char** argv) {
     // creates this sidecar on source load, so an absent file is a startup
     // error, not a defaults case. output_format, title, limiter, and the
     // applied trim all come from it. ---
-    EngineSettings es;
-    SettingsTrim   trim;
+    EngineSettings   es;
+    SettingsTrim     trim;
+    SettingsTrimTabs trim_tabs;
     if (!std::filesystem::exists(set_path)) {
         std::fprintf(stderr,
             "warptempo_cli: missing settings file '%s' "
@@ -103,10 +105,12 @@ int main(int argc, char** argv) {
                 tabs_result.error().c_str());
             return 1;
         }
-        // The active tab's trim, matching the GUI, which renders the trim of
+        // Both tabs are kept for the past-EOF guard below; the render applies
+        // the active tab's trim, matching the GUI, which renders the trim of
         // the tab persisted in active_tab_view.
-        const SettingsTrimTabs& tabs = *tabs_result;
-        trim = (tabs.active_tab == 'B') ? tabs.tab_b : tabs.tab_a;
+        trim_tabs = *tabs_result;
+        trim = (trim_tabs.active_tab == 'B') ? trim_tabs.tab_b
+                                             : trim_tabs.tab_a;
     }
 
     // --- engine-only: this CLI renders wav. The map formats
@@ -202,6 +206,65 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
+    // --- adversarial past-EOF guard: refuse the load like a corrupt audio
+    // file when any marker or any tab's trim sits past its wall. Such a
+    // position is uncommittable through the GUI (marker EOF walls, per-bound
+    // trim walls) and a sidecar applies only to the audio it was authored
+    // against, so a past-EOF position means the audio was swapped outside the
+    // GUI. BOTH tabs' trim is checked even though this CLI renders only the
+    // active tab's trim: a file set must be loadable or not, identically in
+    // both binaries. Checked in order — warp markers (wall total-1), phase
+    // reset markers (wall total exactly), then tab A begin (wall total-1),
+    // tab A end (wall total), tab B begin, tab B end — first offender only,
+    // disabled markers included. The downstream render-boundary EOF refusals
+    // stay as breach backstops for hand-edited maps. ---
+    {
+        const double sr_d   = static_cast<double>(sample_rate);
+        const double totalf = static_cast<double>(total_frames);
+        std::string detail;
+        for (const auto& m : markers) {
+            if (m.time_seconds * sr_d > totalf - 1.0) {
+                detail = "warp marker past end of audio at "
+                         + format_timestamp(m.time_seconds);
+                break;
+            }
+        }
+        if (detail.empty()) {
+            for (const auto& m : resets) {
+                if (m.time_seconds * sr_d > totalf) {
+                    detail = "phase reset marker past end of audio at "
+                             + format_timestamp(m.time_seconds);
+                    break;
+                }
+            }
+        }
+        if (detail.empty()) {
+            const struct { const char* name; const SettingsTrim& t; } tabs[] = {
+                {"tab A", trim_tabs.tab_a}, {"tab B", trim_tabs.tab_b},
+            };
+            for (const auto& [name, t] : tabs) {
+                if (t.has_begin &&
+                    std::nearbyint(t.begin_sec * sr_d) > totalf - 1.0) {
+                    detail = std::string(name)
+                             + " trim begin past end of audio at "
+                             + format_timestamp(t.begin_sec);
+                    break;
+                }
+                if (t.has_end &&
+                    std::nearbyint(t.end_sec * sr_d) > totalf) {
+                    detail = std::string(name)
+                             + " trim end past end of audio at "
+                             + format_timestamp(t.end_sec);
+                    break;
+                }
+            }
+        }
+        if (!detail.empty()) {
+            std::fprintf(stderr, "warptempo_cli: %s\n", detail.c_str());
+            return 1;
+        }
+    }
+
     // --- raw-store defect listing: enumerate every render-invalidating
     // authoring defect across both columns and print all of them, one stderr
     // line each, before the single-error render-boundary owners downstream
@@ -210,8 +273,7 @@ int main(int argc, char** argv) {
     // refusals stay untouched as the backstop. ---
     {
         const std::vector<MarkerDefect> defects =
-            enumerate_marker_store_defects(markers, resets,
-                                           sample_rate, total_frames);
+            enumerate_marker_store_defects(markers, resets);
         if (!defects.empty()) {
             for (const MarkerDefect& d : defects) {
                 std::fprintf(stderr, "warptempo_cli: %s\n", d.message.c_str());

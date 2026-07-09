@@ -24,8 +24,8 @@
 // The defect predicate is the parser-side enumerate_marker_store_defects
 // over the sliced live stores, plus a trim column owned here (trim defects
 // have no MarkerDefect shape). The trim column walks after the last marker
-// defect: the map-free frame-level checks first (crossed-or-equal, per-bound
-// past-EOF), then — only when the marker walk is clean AND the live map
+// defect: the map-free frame-level check first (crossed-or-equal), then —
+// only when the marker walk is clean AND the live map
 // builds — the full validate_trim_frames against the memoized target-view
 // map. Guarding validate_trim_frames on a clean marker store is not a gap:
 // when markers are broken their modals run first and trim re-validates on
@@ -125,8 +125,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // (see DefectSeriesState).
         std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
             slice_to_warp_markers(app.warpmarkers.markers()),
-            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
-            sr, total);
+            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()));
         if (!defects.empty()) {
             MarkerDefect d = std::move(defects.front());
             // [U]ndo is offered exactly when the undo stack is non-empty
@@ -139,7 +138,6 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             }
             switch (d.kind) {
             case MarkerDefectKind::CoincidentGroup:
-            case MarkerDefectKind::PastEof:
                 keys.push_back('\x7f');
                 labels.push_back("[Delete]");
                 break;
@@ -173,9 +171,9 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
         // under half a millisecond apart round to the same frame and render
         // as a zero-span window, so a seconds-level compare would pass a
         // state the render refuses): crossed-or-equal when both bounds are
-        // set, then per-bound past-EOF (a begin whose rounded frame is past
-        // EOF-1 can never render; an end may sit at EOF exactly). When both
-        // pass, the full validate_trim_frames runs against the memoized
+        // set (past-EOF bounds no longer reach here — the gesture walls and
+        // the load boundary make them unreachable in memory). When that
+        // passes, the full validate_trim_frames runs against the memoized
         // target-view map — the FULL trim-off map the render preflight and
         // target-view gate validate against — but only when that map built
         // (markers are already clean here; a build failure is the
@@ -190,11 +188,6 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             std::string trim_msg;
             if (app.trim.has_begin && app.trim.has_end && end_f <= begin_f) {
                 trim_msg = "trim bounds crossed or equal";
-            } else if ((app.trim.has_begin &&
-                        begin_f > static_cast<double>(total - 1)) ||
-                       (app.trim.has_end &&
-                        end_f > static_cast<double>(total))) {
-                trim_msg = "trim bound past end of audio";
             } else {
                 const TargetWarpFrameMapCache& c =
                     target_view_warp_frame_map_cached(
@@ -300,16 +293,6 @@ void GuiInputHandler::handle_defect_response(char k) {
             }
             if (!doomed.empty()) {
                 erase_column_indices(app, d.column, doomed);
-                store_changed = true;
-            }
-            break;
-        }
-        case MarkerDefectKind::PastEof: {
-            // Unreachable from gestures (the per-column EOF walls);
-            // reachable from loads, walked by the render / target-view
-            // gate. Handling kept uniform: delete the defect's indices.
-            if (!d.indices.empty()) {
-                erase_column_indices(app, d.column, d.indices);
                 store_changed = true;
             }
             break;

@@ -27,26 +27,37 @@
 inline constexpr double kCoincidenceWindowSeconds = 0.625 / 1000.0;
 //
 // enumerate_marker_store_defects is the shared surface consumed by the CLI
-// listing (which prints every defect) and, later, the GUI modal walk. The
+// listing (which prints every defect) and the GUI modal walk. The
 // render-boundary owners remain the authoritative refusers beneath it:
 // resolve_warp_markers_for_render (via validate_first_marker_render_grammar),
 // build_warp_frame_map, build_phase_reset_source_frames, and
-// validate_trim_frames. The past-end tests and the first-marker call
-// deliberately mirror those owners' exact comparisons — the past-end tests
-// mirror each column's build check, the first-marker call is the same
-// validator — so a state this enumerator reports clean on those predicates is a
-// state the owners accept, and divergence there is a bug. The coincidence
-// predicate is the deliberate exception: it is WIDER than the owners' sub-frame
-// spacing refusals (kCoincidenceWindowSeconds is one deepest-zoom pixel of
-// time, far wider than one source frame), and the width is the safe direction —
-// a raw-clean store still renders (the wider raw rule implies the owners'
-// narrower sub-frame checks pass), while some renderable stores now hardfail by
-// design, because the rule guards mouse-pickability, not the engine.
+// validate_trim_frames. The first-marker call deliberately mirrors that owner's
+// exact comparison — it is the same validator — so a state this enumerator
+// reports clean on it is a state the owner accepts, and divergence there is a
+// bug.
+//
+// Past-EOF is NOT an enumerated defect: a marker past its column's wall is
+// adversarial input — the GUI's gesture walls (marker EOF walls, per-bound trim
+// walls) make it uncommittable, and a marker file applies only to the audio it
+// was authored against, so a past-EOF position means the audio was swapped
+// outside the GUI. It is hard-failed at the load boundary (GUI file_loader /
+// CLI, disabled markers included) like a corrupt audio file. The enumerator
+// therefore only ever sees stores where every position is inside its wall; the
+// render-boundary EOF checks in build_warp_frame_map and
+// build_phase_reset_source_frames remain as breach backstops for hand-edited
+// artifacts.
+//
+// The coincidence predicate is the deliberate exception: it is WIDER than the
+// owners' sub-frame spacing refusals (kCoincidenceWindowSeconds is one
+// deepest-zoom pixel of time, far wider than one source frame), and the width
+// is the safe direction — a raw-clean store still renders (the wider raw rule
+// implies the owners' narrower sub-frame checks pass), while some renderable
+// stores now hardfail by design, because the rule guards mouse-pickability, not
+// the engine.
 
 enum class MarkerDefectKind {
     FirstMarkerGrammar,
     CoincidentGroup,
-    PastEof,
     DanglingLabelRef
 };
 
@@ -66,5 +77,4 @@ struct MarkerDefect {
 // matching the parser error strings; timestamps go through format_timestamp.
 std::vector<MarkerDefect> enumerate_marker_store_defects(
     const std::vector<WarpMarker>&       warp_markers,
-    const std::vector<PhaseResetMarker>& phase_resets,
-    long sample_rate, long total_frames);
+    const std::vector<PhaseResetMarker>& phase_resets);

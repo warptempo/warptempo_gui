@@ -95,6 +95,13 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // corruption tripwire — the
         // GUI always saves its time-sorted store, so a decreasing file can only
         // be a hand-edit error or corruption.
+        //
+        // This parser has no audio duration, so it cannot range-check against
+        // the source end; a past-EOF reset is load-fatal at the orchestrator
+        // (GUI file_loader / CLI), which hard-fails it as adversarial input (a
+        // reset file applies only to the audio it was authored against).
+        // build_phase_reset_source_frames keeps its enabled-past-end refusal as
+        // the render-boundary breach backstop.
         if (last_time >= 0.0 && eff < last_time)
             return fail(line_number,
                 "time_seconds decreasing: " + format_timestamp(eff));

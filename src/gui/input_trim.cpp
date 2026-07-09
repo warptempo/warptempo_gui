@@ -19,11 +19,13 @@
 // nudges' single EOF wall. The 0.0 floor is subsumed by the walls but remains
 // the reason the floor exists at all: negative time is unrepresentable in the
 // MM:SS.mmm timestamp grammar the .settings file persists — a format-
-// representability floor, not a spacing or validity rule. Past-EOF values
-// stay legal in memory and on disk only when LOADED from a hand-edited
-// .settings (the loader is lenient); gestures no longer store them.
-// validate_trim_frames (trimmer.h) owns every trim refusal at the render
-// boundary and the target-view gate.
+// representability floor, not a spacing or validity rule. Past-EOF bounds
+// are unreachable: the gesture walls forbid authoring one, and the load
+// boundary (file_loader / CLI) hard-fails a past-EOF bound in a hand-edited
+// .settings as adversarial input (a .settings applies only to its own
+// audio). validate_trim_frames (trimmer.h) owns every trim refusal at the
+// render boundary and the target-view gate, and stays the breach backstop
+// for hand-edited artifacts.
 
 namespace {
 // x autoset places the far bound half of the visible span from the near bound:

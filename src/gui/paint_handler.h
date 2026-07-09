@@ -453,7 +453,8 @@ private:
     // chips that cap them). Computing it in one place keeps chip and stem in
     // lockstep — same positions, same has/selected bits — so they always read
     // as one continuous unit. Positions are the AUTHORED per-bound frames —
-    // unordered (bounds may rest inverted) and unclamped (past-EOF is legal)
+    // unordered (bounds may rest inverted; past-EOF is load-fatal, so each
+    // bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
     // stems' coordinate system. Render view forces the bounds off (trim is a

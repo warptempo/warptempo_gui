@@ -367,7 +367,7 @@ struct PromptState {
 // stores from scratch (one undo can fix several defects at once), so a
 // stale defect queue cannot exist. `defect` is meaningful only while a
 // marker-defect modal is showing; `trim_defect` marks a trim-column defect
-// instead (crossed-or-equal, past-EOF, or a validate_trim_frames refusal)
+// instead (crossed-or-equal or a validate_trim_frames refusal)
 // — trim defects have no MarkerDefect shape (trim is not a marker store)
 // and share the single delete-both-bounds resolution. `commit_context`
 // records whether the series was opened by a commit; the coincident-group
@@ -399,15 +399,19 @@ struct DefectSeriesState {
 // the per-bound walls, but it remains the reason the floor exists at all:
 // negative time is unrepresentable in the MM:SS.mmm timestamp grammar the
 // .settings file persists — a format-representability floor, not a
-// validity rule. Loaded values bypass all of this: the loader stays
-// lenient (trim's corruption tripwire stays deliberately gone — crossed,
-// equal, and past-EOF bounds from a hand-edited .settings load intact and
-// persist back), and the defect series catches them at render dispatch or
-// target-view entry. The render boundary owns validity beneath the
-// series: validate_trim_frames (trimmer.h) issues every trim refusal — at
-// render dispatch preflight and at the target-view gate — and the GUI
-// informs and demands resolution, it never guards a gesture. Readers must
-// not assume begin <= end.
+// validity rule. Loaded values mostly bypass this: the loader stays
+// lenient for crossed and equal bounds (trim's corruption tripwire stays
+// deliberately gone — those load intact and persist back), and the defect
+// series catches them at render dispatch or target-view entry. A past-EOF
+// bound is the exception — it is adversarial (the gesture walls make it
+// uncommittable and a .settings applies only to its own audio, so a
+// past-EOF bound means the audio was swapped outside the GUI), hard-failed
+// at the load boundary (file_loader / CLI) like a corrupt audio file. The
+// render boundary owns validity beneath the series: validate_trim_frames
+// (trimmer.h) issues every trim refusal — at render dispatch preflight, at
+// the target-view gate, and as the breach backstop for hand-edited
+// artifacts — and the GUI informs and demands resolution, it never guards a
+// gesture. Readers must not assume begin <= end.
 struct TrimState {
     double begin_seconds = 0.0;
     double end_seconds   = 0.0;

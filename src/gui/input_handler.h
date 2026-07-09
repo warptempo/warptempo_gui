@@ -210,8 +210,8 @@ struct GuiInputHandler {
 
     // open_defect_series: slice the live stores, enumerate marker defects
     // (both columns; chronological), then — when the marker list is clean —
-    // walk the trim column: the frame-level crossed-or-equal and per-bound
-    // past-EOF checks, then the full validate_trim_frames against the
+    // walk the trim column: the frame-level crossed-or-equal check, then the
+    // full validate_trim_frames against the
     // memoized target-view map when that map builds. Fills app.prompt
     // (DialogTrigger::DEFECT_RESOLUTION) with the current defect and returns
     // true; when everything is clean, closes any open defect prompt and

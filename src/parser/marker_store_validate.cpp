@@ -44,10 +44,8 @@ std::vector<std::vector<size_t>> coincident_groups(
 
 std::vector<MarkerDefect> enumerate_marker_store_defects(
     const std::vector<WarpMarker>&       warp_markers,
-    const std::vector<PhaseResetMarker>& phase_resets,
-    long sample_rate, long total_frames) {
+    const std::vector<PhaseResetMarker>& phase_resets) {
     std::vector<MarkerDefect> defects;
-    const double sr = static_cast<double>(sample_rate);
 
     // First-marker grammar (warp only — phase resets carry no tempo, so there
     // is no grammar to anchor). The validator handles the empty list itself,
@@ -95,41 +93,11 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
         }
     }
 
-    // Past-EOF, per column, disabled markers included. Warp wall is total
-    // duration minus one source frame (the final segment ends at total_frames
-    // and build_warp_frame_map refuses sub-frame segments); the phase reset
-    // wall is total duration exactly (a point event, inert at derivation),
-    // mirroring build_phase_reset_source_frames' comparison. The render itself
-    // is indifferent to a DISABLED past-EOF marker (resolve drops it before
-    // build sees it), but the raw rule includes disabled markers deliberately:
-    // a past-EOF marker sits outside the paintable strip, so the GUI can offer
-    // no gesture on it and the modal is the only tool.
-    for (size_t i = 0; i < warp_markers.size(); ++i) {
-        if (warp_markers[i].time_seconds * sr
-                > static_cast<double>(total_frames) - 1.0) {
-            MarkerDefect d;
-            d.kind         = MarkerDefectKind::PastEof;
-            d.column       = 'W';
-            d.time_seconds = warp_markers[i].time_seconds;
-            d.indices.push_back(i);
-            d.message = "warp marker past end of audio at "
-                        + format_timestamp(d.time_seconds);
-            defects.push_back(std::move(d));
-        }
-    }
-    for (size_t i = 0; i < phase_resets.size(); ++i) {
-        if (phase_resets[i].time_seconds * sr
-                > static_cast<double>(total_frames)) {
-            MarkerDefect d;
-            d.kind         = MarkerDefectKind::PastEof;
-            d.column       = 'P';
-            d.time_seconds = phase_resets[i].time_seconds;
-            d.indices.push_back(i);
-            d.message = "phase reset marker past end of audio at "
-                        + format_timestamp(d.time_seconds);
-            defects.push_back(std::move(d));
-        }
-    }
+    // Past-EOF is not enumerated here: a marker past its column's wall is
+    // adversarial input, hard-failed at the load boundary (GUI file_loader /
+    // CLI) like a corrupt audio file, so every position this enumerator sees is
+    // inside its wall. build_warp_frame_map and build_phase_reset_source_frames
+    // keep their own EOF refusals as breach backstops for hand-edited artifacts.
 
     // Dangling label refs (warp column only; labels are warp-only, a recorded
     // asymmetry). Collect all non-empty label_def names, then each marker whose
