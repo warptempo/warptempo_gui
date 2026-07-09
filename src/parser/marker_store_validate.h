@@ -35,12 +35,13 @@ inline constexpr double kCoincidenceWindowSeconds = 0.625 / 1000.0;
 // enumerate_marker_store_defects is the shared surface consumed by the CLI
 // listing (which prints every defect) and the GUI modal walk. The
 // render-boundary owners remain the authoritative refusers beneath it:
-// resolve_warp_markers_for_render (via validate_first_marker_render_grammar),
-// build_warp_frame_map, build_phase_reset_source_frames, and
-// validate_trim_frames. The first-marker call deliberately mirrors that owner's
-// exact comparison — it is the same validator — so a state this enumerator
-// reports clean on it is a state the owner accepts, and divergence there is a
-// bug.
+// resolve_warp_markers_for_render (via validate_first_marker_render_grammar
+// and validate_pass_inheritance_source), build_warp_frame_map,
+// build_phase_reset_source_frames, and validate_trim_frames. The first-marker
+// and pass-after-label-ref calls deliberately mirror those owners' exact
+// comparisons — they are the same validators — so a state this enumerator
+// reports clean on them is a state the owners accept, and divergence there is
+// a bug.
 //
 // Past-EOF is NOT an enumerated defect: a marker past its column's wall is
 // adversarial input — the GUI's gesture walls (marker EOF walls, per-bound trim
@@ -64,7 +65,8 @@ inline constexpr double kCoincidenceWindowSeconds = 0.625 / 1000.0;
 enum class MarkerDefectKind {
     FirstMarkerGrammar,
     CoincidentGroup,
-    DanglingLabelRef
+    DanglingLabelRef,
+    PassAfterLabelRef
 };
 
 struct MarkerDefect {

@@ -124,13 +124,42 @@ std::expected<void, std::string>
 validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
                                      long sample_rate);
 
+// Render-boundary check for one marker's pass-inheritance source, operating
+// on the RAW marker list. Trivially passes unless markers[index] is an
+// enabled pass (tempo_inherits, empty label_ref, own disabled flag false —
+// a disabled pass is render-inert and never fires, the same participation
+// rule as the first-marker grammar; the coincidence rule, by contrast,
+// deliberately includes disabled markers). For an enabled pass, walk
+// backward skipping every effectively-disabled marker (own flag, or an
+// enabled ref whose def is disabled — the same cascade
+// warp_markers_render_keep_mask publishes and marker_effective's source_idx
+// walk uses); when the immediate prior surviving marker is an enabled label
+// ref, refuse: the inherited value comes from the nearest true owner (refs
+// are transparent to resolve_inherited_tempo) while the hover provenance
+// names the ref — two disagreeing definitions — so the arrangement misleads
+// and can never rest. A pass with no surviving prior at all passes here
+// (that is the first-marker grammar's territory), and in a pass-pass-ref
+// chain only the pass adjacent to the ref refuses. On failure the one-line
+// message names both positions ("pass marker at <t> inherits from the label
+// ref at <t>", display timestamps). resolve_warp_markers_for_render calls
+// this when materializing each pass, and the defect enumerator mirrors it
+// verbatim (MarkerDefectKind::PassAfterLabelRef) — the same owner/mirror
+// sharing as validate_first_marker_render_grammar. Kept public for that
+// mirror.
+std::expected<void, std::string>
+validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
+                                 size_t index, long sample_rate);
+
 // Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
 // their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
 // is parser-domain and reads no GUI-only fields). Validates the first-marker
 // render grammar first (validate_first_marker_render_grammar above, on the
 // raw pre-resolution list) and returns its message unchanged on failure, so
 // no render path can skip the check — this resolver is the chokepoint every
-// caller passes through before build_warp_frame_map. Filters on
+// caller passes through before build_warp_frame_map. Likewise refuses, when
+// materializing each pass, a pass whose immediate prior surviving marker is
+// an enabled label ref (validate_pass_inheritance_source above, message
+// unchanged). Filters on
 // warp_markers_render_keep_mask above — the participation verdict's single
 // owner — dropping disabled label-definition markers (and thereby all refs
 // to them) and disabled markers generally. The inherit walk-back is applied
@@ -168,8 +197,12 @@ std::optional<double> resolve_inherited_tempo_scale(
 //   label_ref -> the label-definition marker (def_idx); base/scale are the
 //                def's effective base and the combined "~=" multiplier —
 //                a full double with no display ceiling.
-// A pass immediately after a label_ref is legal; source_idx then names the
-// ref (the visible immediate prior), base/scale still the resolved owner's.
+// A pass whose immediate prior surviving marker is an enabled label ref is
+// observable only transiently (at rest the arrangement is a walked commit
+// defect, refused at the render boundary by
+// validate_pass_inheritance_source); on such a transiently-unresolved store
+// source_idx names the ref (the visible immediate prior), base/scale still
+// the resolved owner's.
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure

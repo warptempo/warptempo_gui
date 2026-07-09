@@ -154,6 +154,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 labels.push_back("[Delete]");
                 break;
             case MarkerDefectKind::DanglingLabelRef:
+            case MarkerDefectKind::PassAfterLabelRef:
                 keys.push_back('r');
                 labels.push_back("[R]eset");
                 keys.push_back('\x7f');
@@ -365,6 +366,28 @@ void GuiInputHandler::handle_defect_response(char k) {
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the ref marker
+                erase_column_indices(app, d.column, d.indices);
+                store_changed = true;
+            }
+            break;
+        }
+        case MarkerDefectKind::PassAfterLabelRef: {
+            if (d.indices.empty()) break;
+            const int idx = static_cast<int>(d.indices.front());
+            if (k == 'r') {
+                // [R]eset: convert the pass in place to an owning 1.00
+                // marker with no typed scale — time, label_def, and the
+                // disabled flag untouched (the defect predicate means the
+                // flag is false and label_ref empty here anyway). The next
+                // re-validation surfaces whatever the new arrangement
+                // implies (e.g. the following pass in a chain).
+                if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx)) {
+                    m->tempo_inherits = false;
+                    m->tempo_base     = 1.0;
+                    m->tempo_scale.reset();
+                    store_changed = true;
+                }
+            } else {  // '\x7f': remove the pass marker
                 erase_column_indices(app, d.column, d.indices);
                 store_changed = true;
             }

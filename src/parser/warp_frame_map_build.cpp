@@ -110,6 +110,42 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
     return {};
 }
 
+std::expected<void, std::string>
+validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
+                                 size_t index, long sample_rate) {
+    if (index >= markers.size()) return {};
+    const WarpMarker& m = markers[index];
+    // Only an enabled pass participates: tempo_inherits, no label_ref, own
+    // disabled flag false. A disabled pass is render-inert and never fires —
+    // the same participation rule as the first-marker grammar (the
+    // coincidence rule, by contrast, deliberately includes disabled markers).
+    if (!m.tempo_inherits || !m.label_ref.empty() || m.disabled) return {};
+    // Immediate prior surviving marker: the marker_effectively_disabled
+    // cascade skip, the same walk marker_effective's source_idx uses, so the
+    // marker this check inspects is exactly the one the hover provenance
+    // names.
+    for (size_t i = index; i-- > 0;) {
+        if (marker_effectively_disabled(markers, i)) continue;
+        if (!markers[i].label_ref.empty()) {
+            // A surviving marker with a label_ref is an enabled ref whose
+            // def is enabled (the cascade above already skipped the rest).
+            // sample_rate is display-only: format_timestamp(frame / sr) for
+            // the two embedded times.
+            const double sr_d = static_cast<double>(sample_rate);
+            return std::unexpected(
+                "pass marker at " + format_timestamp(m.time_frame / sr_d)
+                + " inherits from the label ref at "
+                + format_timestamp(markers[i].time_frame / sr_d));
+        }
+        // Surviving owner or pass: clean. In a pass-pass-ref chain only the
+        // pass adjacent to the ref refuses.
+        return {};
+    }
+    // No surviving prior at all: not this defect — that pass is the
+    // first-marker grammar's territory.
+    return {};
+}
+
 std::expected<std::vector<MarkerForRender>, std::string>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                                 long sample_rate) {
@@ -150,6 +186,17 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             m.tempo_base = 0.0;
             m.tempo_scale.reset();
         } else if (g.tempo_inherits) {
+            // A pass whose immediate prior surviving marker is an enabled
+            // label ref can never rest: the inherited value comes from the
+            // nearest true owner (resolve_inherited_tempo treats refs as
+            // transparent) while the hover provenance names the ref — two
+            // disagreeing definitions. The arrangement is a walked commit
+            // defect, refused here at the chokepoint; the enumerator mirrors
+            // this exact check (MarkerDefectKind::PassAfterLabelRef).
+            if (auto v = validate_pass_inheritance_source(src, i,
+                                                          sample_rate); !v) {
+                return std::unexpected(std::move(v.error()));
+            }
             const int gi = static_cast<int>(i);
             m.tempo_base  = resolve_inherited_tempo(src, gi);
             m.tempo_scale = resolve_inherited_tempo_scale(src, gi);
@@ -163,17 +210,24 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 }
 
 // Contract: the backward walk stops only at a non-disabled owner; label
-// refs, passes, and disabled markers are transparent. A pass directly
-// after a label ref therefore legally inherits the nearest owner further
-// back — that arrangement is bad form but accepted everywhere (parse,
-// GUI ops, flag editor), and this resolution is the single source of its
-// meaning across render, warpframemap, miditempomap, and hover. Passes
-// deliberately never inherit through a ref: a ref owns a duration
-// equation, not a rate, and its implied rate depends on segment geometry
-// including the position of the very marker that follows it, so
-// inheriting it would make a pass's tempo drift under unrelated position
-// edits. Pass values must stay literal, grammar-exact owner fields so
-// that freezing a pass (tempo nudge, Ctrl+N) is lossless.
+// refs, passes, and disabled markers are transparent. This skip-ref walk
+// is the total display-time resolution: no geometry enters the resolver,
+// so no cycle is possible, and every marker list — including
+// transiently-unresolved stores (a just-loaded file whose defect series
+// has not walked yet, mid-series states) — resolves to a definite value,
+// the single source of its meaning across render, warpframemap,
+// miditempomap, and hover. The misleading at-rest arrangement the skip
+// once permitted is now impossible: a pass whose immediate prior
+// surviving marker is an enabled label ref is a walked commit defect
+// (validate_pass_inheritance_source, mirrored by the enumerator as
+// PassAfterLabelRef) refused at the render chokepoint, so the skip across
+// a ref can only be observed transiently. Passes deliberately never
+// inherit through a ref: a ref owns a duration equation, not a rate, and
+// its implied rate depends on segment geometry including the position of
+// the very marker that follows it, so inheriting it would make a pass's
+// tempo drift under unrelated position edits. Pass values must stay
+// literal, grammar-exact owner fields so that freezing a pass (tempo
+// nudge, Ctrl+N) is lossless.
 double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
@@ -345,9 +399,11 @@ std::string compute_hover_popup_text(
             marker_effective(mv, eff.source_idx);
         if (src_eff.base == 0.0) return out;
 
-        // The visible immediate prior can be an enabled label ref; its
-        // combined multiplier prints in full like the ref's own popup —
-        // values carry no display ceiling.
+        // The visible immediate prior can be an enabled label ref only on a
+        // transiently-unresolved store (at rest that arrangement is the
+        // walked pass-after-label-ref defect); its combined multiplier then
+        // prints in full like the ref's own popup — values carry no display
+        // ceiling.
         std::string descriptor = format_value_double(src_eff.base, 2);
         if (src_eff.scale.has_value()) {
             descriptor += "*";

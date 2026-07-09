@@ -108,8 +108,9 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     // inside its wall. build_warp_frame_map and build_phase_reset_source_frames
     // keep their own EOF refusals as breach backstops for hand-edited artifacts.
 
-    // Dangling label refs (warp column only; labels are warp-only, a recorded
-    // asymmetry). Collect all non-empty label_def names, then each marker whose
+    // Dangling label refs and pass-after-label-ref (both warp column only;
+    // labels are warp-only, a recorded asymmetry). Dangling refs first:
+    // collect all non-empty label_def names, then each marker whose
     // label_ref is non-empty and names no def is one defect. Duplicate defs are
     // load-fatal upstream; that case does not arise here.
     {
@@ -130,6 +131,27 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
                         + format_timestamp(d.time_frame / sr_d)
                         + " has no label definition";
             defects.push_back(std::move(d));
+        }
+
+        // Pass-after-label-ref: an enabled pass whose immediate prior
+        // surviving marker is an enabled label ref. The predicate is the
+        // owner's own comparison — validate_pass_inheritance_source, the
+        // check resolve_warp_markers_for_render applies when materializing
+        // each pass — called per index like the first-marker mirror above,
+        // so the message text mirrors the render refusal exactly. One defect
+        // per offending pass, anchored at the pass's time with the pass's
+        // index.
+        for (size_t i = 0; i < warp_markers.size(); ++i) {
+            if (auto v = validate_pass_inheritance_source(warp_markers, i,
+                                                          sample_rate); !v) {
+                MarkerDefect d;
+                d.kind       = MarkerDefectKind::PassAfterLabelRef;
+                d.column     = 'W';
+                d.time_frame = warp_markers[i].time_frame;
+                d.indices.push_back(i);
+                d.message = std::move(v.error());
+                defects.push_back(std::move(d));
+            }
         }
     }
 
