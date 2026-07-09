@@ -5,6 +5,7 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
+#include "marker_store_validate.h"      // enumerate_marker_store_defects
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -200,6 +201,24 @@ int main(int argc, char** argv) {
     }
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
+
+    // --- raw-store defect listing: enumerate every render-invalidating
+    // authoring defect across both columns and print all of them, one stderr
+    // line each, before the single-error render-boundary owners downstream
+    // refuse on the first. The CLI is an insurance policy, not an editing
+    // route, so the complete listing is preferred here; the downstream
+    // refusals stay untouched as the backstop. ---
+    {
+        const std::vector<MarkerDefect> defects =
+            enumerate_marker_store_defects(markers, resets,
+                                           sample_rate, total_frames);
+        if (!defects.empty()) {
+            for (const MarkerDefect& d : defects) {
+                std::fprintf(stderr, "warptempo_cli: %s\n", d.message.c_str());
+            }
+            return 1;
+        }
+    }
 
     // --- locked engine geometry (shared with render_pipeline.cpp via
     // engine_geometry.h) ---

@@ -55,6 +55,7 @@ set(WARPTEMPO_PARSER_SOURCES
     src/parser/settings_trim.cpp
     src/parser/warp_frame_map_build.cpp
     src/parser/phase_reset_frame_map_build.cpp
+    src/parser/marker_store_validate.cpp
     src/parser/source_audio_io.cpp
     src/parser/map_output.cpp
     src/parser/render_output_naming.cpp

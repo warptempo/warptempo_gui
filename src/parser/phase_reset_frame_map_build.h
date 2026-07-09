@@ -25,11 +25,13 @@
 // before the check — only resolved markers
 // are validated, as in build_warp_frame_map — so a disabled past-end reset
 // stays loadable and inert. Ordering: the load parser rejects only
-// DECREASING times (equal times load — one authored event), so the input
-// here is non-decreasing; adjacent exact-duplicate frames collapse to one
-// in this build, making the output strictly increasing, and the engine's
-// strict-ascent hardfail still covers raw phaseresetframemap inputs that
-// bypass the marker parser. The
+// DECREASING times (equal times load intact), so the input here is
+// non-decreasing; two resets under one source frame apart are prohibited by
+// the raw-store rule (marker_store_validate.h) on both columns, and this build
+// refuses such a pair as the breach backstop for hand-edited input, so the
+// output is strictly increasing by construction, and the engine's strict-ascent
+// hardfail still covers raw phaseresetframemap inputs that bypass the marker
+// parser. The
 // result is the authored (undisplaced) source-frame intermediate consumed by
 // render-view display and by derive_phase_reset_frame_map below, which
 // compiles it into the engine-domain artifact and engine input. There is no

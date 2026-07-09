@@ -18,17 +18,24 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
                 "phase reset time exceeds source length at marker "
                 + std::to_string(i));
         }
-        // Adjacent exact duplicates collapse to one. Input marker times are
-        // non-decreasing (the load parser rejects decreasing times; the GUI
-        // store is time-sorted), and two enabled markers with exactly equal
-        // times are one authored event, so the collapse makes this output
-        // strictly increasing — which the derivation chain (strictly
+        // Sub-frame refusal, mirroring the warp column's shape
+        // (build_warp_frame_map's src_frame - src_f_prev < 1.0 check). Stacked
+        // and sub-frame phase resets are prohibited by the raw-store rule
+        // (marker_store_validate.h) on both columns — the GUI cannot let the
+        // user mouse-pick markers under one source frame apart. This
+        // in-function check is the breach backstop for hand-edited input
+        // reaching the build directly, past the marker parser and the store's
+        // enumerator. Input marker times are non-decreasing (the load parser
+        // rejects decreasing times; the GUI store is time-sorted), so a pair
+        // this close refuses here; the surviving output stays strictly
+        // increasing by construction, which the derivation chain (strictly
         // monotone map interpolation, constant subtractions, participation
-        // drops) preserves, so the engine's strict-ascent init validator
-        // holds by construction. Exact equality only, no epsilon: two
-        // distinct doubles remain two resets no matter how close — the
-        // engine consumes same-hop placements together by design.
-        if (!out.empty() && src_frame == out.back()) continue;
+        // drops) preserves, so the engine's strict-ascent init validator holds.
+        if (!out.empty() && src_frame - out.back() < 1.0) {
+            return std::unexpected(
+                "phase reset markers under one source frame apart at marker "
+                + std::to_string(i));
+        }
         out.push_back(src_frame);
     }
     return out;
