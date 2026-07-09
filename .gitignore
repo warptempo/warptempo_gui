@@ -19,6 +19,9 @@ tmp/
 docs/references/*.pdf
 docs/welcome_back_template.md
 
+# tools
+tools/build/
+
 # bungee
 adapters/bungee/build/
 adapters/bungee/bungee/
