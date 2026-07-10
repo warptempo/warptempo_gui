@@ -388,7 +388,9 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
 
     if (observed_cancel()) return;
     if (queue.empty()) {
-        std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
+        if (stft.limiter_verbose) {
+            std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
+        }
         destroy();
         if (prof) {
             const auto t_total_1 = profile::now();
