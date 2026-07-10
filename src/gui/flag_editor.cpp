@@ -112,9 +112,10 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
 // effective_disabled, so this TU sees them via #include "warpmarkers.h".
 
 // Build the locked-prefix string for `m`. This is the DISPLAY rendering,
-// not the serializer's bytes: the serializer now writes the frame double
-// (frame_format.h), while the prefix keeps the human-readable MM:SS.mmm
-// form derived as format_timestamp(frame / sample_rate). The editor
+// not the serializer's bytes: the serializer writes the whole-frame
+// position as integer text (frame_format.h), while the prefix keeps the
+// human-readable MM:SS.mmm form derived as
+// format_timestamp(frame / sample_rate). The editor
 // renders this prefix outside the editable rect (left-anchored at the
 // marker column); the pipe is part of the prefix but visually anchors to
 // the marker line. Because the prefix is display-only, the commit path

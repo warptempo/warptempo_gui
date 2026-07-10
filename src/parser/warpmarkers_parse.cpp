@@ -221,9 +221,10 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
     if (pipe == std::string::npos) {
         return std::unexpected<std::string>("expected '|' after frame position");
     }
-    // The position field is a source-frame double (frame_format.h): finite,
-    // non-negative, whole field consumed. Anything else — including the old
-    // MM:SS.mmm timestamp form — is a malformed position and load-fatal.
+    // The position field is an authored source-frame position
+    // (frame_format.h): a whole frame, finite, non-negative, whole field
+    // consumed. Anything else — a fractional value, the old MM:SS.mmm
+    // timestamp form — is a malformed position and load-fatal.
     if (!parse_frame_double(std::string_view(t).substr(0, pipe),
                             out.time_frame)) {
         return std::unexpected<std::string>("invalid frame position: " +

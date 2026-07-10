@@ -232,9 +232,9 @@ void append_authoring_block(std::string& out,
     out += "active_audio_view=";
     out += authoring.active_audio_view;
     out += '\n';
-    // Trim bounds are authored positions (source-frame doubles); they
-    // serialize through the canonical frame pair in frame_format.h, same as
-    // every other authored position on disk.
+    // Trim bounds are authored positions (whole source frames); they
+    // serialize as integer text through the canonical authored pair in
+    // frame_format.h, same as every other authored position on disk.
     if (authoring.has_trim_begin) {
         out += "trim_begin=";
         out += format_frame_double(authoring.trim_begin_frame);

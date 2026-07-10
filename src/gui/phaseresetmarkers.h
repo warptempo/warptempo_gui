@@ -40,11 +40,22 @@ public:
     // phaseresetmarkers.cpp.
     bool save(const std::string& path) const;
 
-    // Static variant for callers that hold a raw GuiPhaseResetMarker vector (e.g.
-    // the render pipeline writing per-render sidecars). Same on-disk format as
-    // the instance method.
+    // Static variant for callers that hold a raw GuiPhaseResetMarker vector
+    // (e.g. the render pipeline writing the authored .phaseresetmarkers copy
+    // beside a batch render). Same on-disk format as the instance method:
+    // authored positions, whole source frames as plain integer text.
     static bool save(const std::string& path,
                      const std::vector<GuiPhaseResetMarker>& markers);
+
+    // Render-display variant for the .renderphaseresetmarkers sidecar.
+    // Identical line grammar, but positions live on the render's own target
+    // axis and are generically fractional, so they serialize as shortest
+    // round-trip doubles (format_render_frame_double) instead of the
+    // authored integer text. Written by the render pipeline, read back only
+    // by render-view's lenient display readers.
+    static bool save_render_display(
+        const std::string& path,
+        const std::vector<GuiPhaseResetMarker>& markers);
 
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
 

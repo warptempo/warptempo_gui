@@ -24,31 +24,36 @@ std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
     return {};
 }
 
-bool GuiWarpMarkers::save(const std::string& path) const {
-    return save(path, markers_);
-}
+namespace {
 
-bool GuiWarpMarkers::save(const std::string& path,
-                      const std::vector<GuiWarpMarker>& markers_) {
-    // Serializer contract: this save performs no ordering validation.
-    // The store is sorted by construction — ordered insert for drops, and
-    // every time-mutating gesture (drag commit, shift, nudge) reorders
-    // through the reorder-and-remap path — so rows serialize in
-    // non-decreasing time order. Equal-time rows are legal (markers may
-    // overlap exactly) and load back under the relaxed parser, which
-    // accepts non-decreasing times; only a DECREASING sequence —
-    // impossible from the sorted store, so evidence of a future op bug —
-    // fails the next load with a loud line-numbered parse error. Warp
-    // ties are refused at the strict render boundary
-    // (build_warp_frame_map), not by this serializer. Positions persist
-    // as shortest-round-trip frame doubles (frame_format.h), so a saved
-    // store reloads bit-identically.
+// One serializer body for both save domains; only the position spelling
+// differs. `format_position` is format_frame_double for authored saves
+// (whole source frames, plain integer text) and format_render_frame_double
+// for the render-display sidecars (fractional target-axis doubles,
+// shortest round-trip text).
+//
+// Serializer contract: this save performs no ordering validation.
+// The store is sorted by construction — ordered insert for drops, and
+// every time-mutating gesture (drag commit, shift, nudge) reorders
+// through the reorder-and-remap path — so rows serialize in
+// non-decreasing time order. Equal-time rows are legal (markers may
+// overlap exactly) and load back under the relaxed parser, which
+// accepts non-decreasing times; only a DECREASING sequence —
+// impossible from the sorted store, so evidence of a future op bug —
+// fails the next load with a loud line-numbered parse error. Warp
+// ties are refused at the strict render boundary
+// (build_warp_frame_map), not by this serializer. Positions persist
+// through the domain's own pair (frame_format.h), so a saved store
+// reloads bit-identically under that domain's parse.
+bool save_impl(const std::string& path,
+               const std::vector<GuiWarpMarker>& markers_,
+               std::string (*format_position)(double)) {
     std::ostringstream out;
     for (const auto& m : markers_) {
         // Canonical new format, no whitespace anywhere on the line:
         //   [#]?<frame double>|PAYLOAD
         if (m.disabled) out << '#';
-        out << format_frame_double(m.time_frame) << '|';
+        out << format_position(m.time_frame) << '|';
 
         // Payload:
         //   label_ref               → "a.42"
@@ -84,6 +89,29 @@ bool GuiWarpMarkers::save(const std::string& path,
 
     // tmp + fsync + rename, preserving the existing file's mode.
     return atomic_write_string_to_path(path, data);
+}
+
+}  // namespace
+
+bool GuiWarpMarkers::save(const std::string& path) const {
+    return save(path, markers_);
+}
+
+bool GuiWarpMarkers::save(const std::string& path,
+                      const std::vector<GuiWarpMarker>& markers_) {
+    // Authored domain: positions are whole source frames, written as plain
+    // integer text (format_frame_double).
+    return save_impl(path, markers_, &format_frame_double);
+}
+
+bool GuiWarpMarkers::save_render_display(
+        const std::string& path,
+        const std::vector<GuiWarpMarker>& markers_) {
+    // Render-display domain (.renderwarpmarkers): positions live on the
+    // render's target axis, generically fractional, written as shortest
+    // round-trip doubles (format_render_frame_double) — NOT the authored
+    // integer grammar.
+    return save_impl(path, markers_, &format_render_frame_double);
 }
 
 int GuiWarpMarkers::insert_marker(GuiWarpMarker m) {

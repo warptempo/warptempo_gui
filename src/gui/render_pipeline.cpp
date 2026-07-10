@@ -296,6 +296,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (!existed) result.created_paths.push_back(path.string());
             };
 
+            // Authored-domain saves: these are the source-domain marker
+            // stores copied beside the batch render, whole-frame positions
+            // as integer text — the same serialization Ctrl+S writes.
             const std::filesystem::path wm_path =
                 bf / (req.batch_basename + ".warpmarkers");
             bool existed = existed_before(wm_path);
@@ -553,9 +556,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (w.time_frame < 0.0) continue;
                 sidecar_warp_markers.push_back(std::move(w));
             }
+            // Render-display domain: positions above are re-timed onto the
+            // deliverable's target axis, generically fractional, so this
+            // sidecar serializes through the render pair
+            // (format_render_frame_double), not the authored integer grammar.
             const std::string warp_sidecar_path =
                 (bf / (req.batch_basename + ".renderwarpmarkers")).string();
-            if (!GuiWarpMarkers::save(warp_sidecar_path, sidecar_warp_markers)) {
+            if (!GuiWarpMarkers::save_render_display(warp_sidecar_path,
+                                                     sidecar_warp_markers)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     warp_sidecar_path.c_str());
@@ -602,10 +610,13 @@ RenderOutcome do_render(const RenderRequest& req,
                 w.time_frame = crop_target;
                 sidecar_phase_resets.push_back(std::move(w));
             }
+            // Render-display domain, same as the warp sidecar above:
+            // fractional target-axis positions through the render pair.
             const std::string phase_reset_sidecar_path =
                 (bf / (req.batch_basename + ".renderphaseresetmarkers"))
                 .string();
-            if (!GuiPhaseResetMarkers::save(phase_reset_sidecar_path, sidecar_phase_resets)) {
+            if (!GuiPhaseResetMarkers::save_render_display(
+                    phase_reset_sidecar_path, sidecar_phase_resets)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     phase_reset_sidecar_path.c_str());

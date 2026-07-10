@@ -4,8 +4,8 @@
 #include <string>
 
 // Typed carrier for one tab's trim in the .settings format. Positions are
-// exact source-frame doubles, decoded from the on-disk frame-double form via
-// parse_frame_double (frame_format.h). A has_* of false means the key was
+// whole source frames held in doubles, decoded from the on-disk integer text
+// via parse_frame_double (frame_format.h). A has_* of false means the key was
 // absent; the paired _frame field is then left at 0.0 and must not be read.
 struct SettingsTrim {
     bool   has_begin = false;
@@ -31,9 +31,10 @@ struct SettingsTrimTabs {
 // Missing or unopenable file yields an all-false carrier for both tabs.
 // One getline pass; blank, comment, and non-key lines are skipped; each
 // trim value is validated and decoded by parse_frame_double (frame_format.h:
-// finite, non-negative, whole field consumed). Missing trim keys are valid,
-// but a present trim key with a malformed position — including the old
-// MM:SS.mmm timestamp form — is a hard parse failure; a present
+// a whole frame, finite, non-negative, whole field consumed). Missing trim
+// keys are valid, but a present trim key with a malformed position — a
+// fractional value, the old MM:SS.mmm timestamp form — is a hard parse
+// failure; a present
 // active_tab_view with any value but A or B is a hard parse failure the
 // same way.
 // A duplicated key is a hard parse failure, matching the

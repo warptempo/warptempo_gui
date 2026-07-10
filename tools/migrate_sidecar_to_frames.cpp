@@ -1,8 +1,8 @@
 // migrate_sidecar_to_frames — convert one legacy MM:SS.mmm sidecar to the
-// source-frame-double authored domain, in place.
+// whole-source-frame authored domain, in place.
 //
-// The authored time domain moved from MM:SS.mmm timestamps to source-frame
-// doubles; there is no legacy read path in the GUI, parser, or CLI, so old
+// The authored time domain moved from MM:SS.mmm timestamps to whole source
+// frames; there is no legacy read path in the GUI, parser, or CLI, so old
 // sidecars fail loudly at load. This standalone tool is the sole conversion
 // route. It rewrites ONLY the time fields of a single file, preserving every
 // other byte. A legacy time field is an MM:SS.mmm timestamp optionally
@@ -11,7 +11,7 @@
 // seconds = parse_timestamp(ts) + offset, frames = nearbyint(effective *
 // sample_rate) — banker's rounding to the nearest whole frame, the same
 // rounding rule the GUI uses everywhere fractional values meet an integer
-// domain — serialized via format_frame_double (to_chars shortest). Migrated
+// domain — serialized via format_frame_double (plain integer text). Migrated
 // positions therefore match the integer frames the GUI's own gestures author.
 // The shift from the exact product is at most half a frame (about 11
 // microseconds at 44.1 kHz), so a render from a migrated file is NOT
@@ -19,10 +19,10 @@
 //
 // Strictness note: every field that SHOULD convert must parse as a valid
 // timestamp (is_valid_timestamp_format); anything else is a hard error that
-// writes nothing. A file whose time fields already hold frame doubles ("44100")
-// does not match the MM:SS.mmm grammar, so a second run refuses cleanly rather
-// than double-converting — the tool is not idempotent by re-parsing but is
-// safe against re-running.
+// writes nothing. A file whose time fields already hold frame positions
+// ("44100") does not match the MM:SS.mmm grammar, so a second run refuses
+// cleanly rather than double-converting — the tool is not idempotent by
+// re-parsing but is safe against re-running.
 //
 // The two conversion helpers are shared with the rest of the tree, never
 // duplicated: parse_timestamp / is_valid_timestamp_format live in
@@ -74,8 +74,8 @@ bool is_valid_offset_token(const std::string& s) {
     return std::regex_match(s, re);
 }
 
-// Convert one legacy time field to its frame-double text, rounded to the
-// nearest whole frame (banker's rounding, matching every other fractional-to-
+// Convert one legacy time field to its whole-frame integer text, rounded to
+// the nearest whole frame (banker's rounding, matching every other fractional-to-
 // integer-domain conversion in the project). The field is a nine-character
 // MM:SS.mmm timestamp optionally followed by a signed seconds offset that spans
 // exactly to the field end; effective seconds = parse_timestamp(ts) + offset.
@@ -186,7 +186,7 @@ bool convert_marker_line(const Line& in, double sample_rate,
         }
         // A non-'#' line that should carry a leading timestamp but does not is
         // a hard error — this is also what refuses a re-run over already
-        // frame-double content.
+        // frame-converted content.
         error_detail = "line " + std::to_string(line_number) + ": " + s;
         return false;
     }

@@ -225,10 +225,12 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // no tempo/scale parsing, and no validation. Tempo fields stay at their
 // defaults and label_def stays empty. Each line: skip blanks; a leading `#`
 // marks the marker disabled; split on the first `|` into position|payload.
-// The position is a frame double on the render's own time axis
-// (frame_format.h). Lines with no pipe or an unparseable position are
-// skipped individually — a bad line never fails the whole load, since this
-// is display-only.
+// The position is a frame double on the render's own time axis, generically
+// fractional, decoded through the render-display pair
+// (parse_render_frame_double, frame_format.h) — the authored parse would
+// refuse the fractional target positions this domain routinely carries.
+// Lines with no pipe or an unparseable position are skipped individually —
+// a bad line never fails the whole load, since this is display-only.
 static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         const std::string& path) {
     std::vector<GuiWarpMarker> out;
@@ -247,7 +249,7 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         if (pipe == std::string::npos) continue;
         const std::string left = t.substr(0, pipe);
         GuiWarpMarker m;
-        if (!parse_frame_double(left, m.time_frame)) continue;
+        if (!parse_render_frame_double(left, m.time_frame)) continue;
         m.label_ref    = t.substr(pipe + 1);
         m.disabled     = disabled;
         out.push_back(std::move(m));
@@ -269,8 +271,10 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 //
 // Each line: skip byte-empty lines; a leading `#` marks the marker disabled
 // and is stripped before the position check. The remainder must parse in
-// full as a frame double (parse_frame_double consumes the whole field, so
-// trailing characters fail it) or the line is skipped individually — no
+// full as a render-display frame double (parse_render_frame_double consumes
+// the whole field, so trailing characters fail it; fractional target
+// positions are this domain's normal shape and parse fine) or the line is
+// skipped individually — no
 // cross-line validation of any kind. Hash semantics fall out naturally and
 // match the strict parser's: hash followed by a valid position is a
 // disabled marker, hash followed by anything else skips as a comment, and
@@ -291,7 +295,7 @@ static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
             t.erase(0, 1);
         }
         GuiPhaseResetMarker m;
-        if (!parse_frame_double(t, m.time_frame)) continue;
+        if (!parse_render_frame_double(t, m.time_frame)) continue;
         m.disabled     = disabled;
         out.push_back(std::move(m));
     }

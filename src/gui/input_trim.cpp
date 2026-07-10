@@ -62,9 +62,10 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int64_t this_wall_frame  = (side == TrimSide::Begin) ? total - 1 : total;
     const int64_t other_wall_frame = (side == TrimSide::Begin) ? total : total - 1;
 
-    // Store the exact frame double — trim bounds are full-double source
-    // frames like marker positions; the .settings writer persists the exact
-    // value (frame_format.h), so a saved bound reloads bit-identically.
+    // Store the exact frame double — trim bounds are whole source frames
+    // held in doubles like marker positions; the .settings writer persists
+    // the exact value as integer text (frame_format.h), so a saved bound
+    // reloads bit-identically.
     // Clamp the primary bound to its own wall: the playhead normally sits
     // inside the walls, so this is cheap insurance at the exact edge, keeping
     // the autoset consistent with every other trim gesture.

@@ -427,9 +427,10 @@ struct DefectSeriesState {
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
-// full-double source frames, exactly like marker times (the .settings
-// writer persists the exact value via frame_format.h, so a saved bound
-// reloads bit-identically). Every trim GESTURE clamps each bound to its own
+// whole source frames in doubles, exactly like marker times (integer-valued
+// by the authored grammar; the .settings writer persists the exact value as
+// integer text via frame_format.h, so a saved bound reloads bit-identically).
+// Every trim GESTURE clamps each bound to its own
 // absolute walls: begin spans frame 0 to EOF-1 (a begin at or past the
 // source end can never render), end spans frame 0 to EOF exactly
 // (end-at-EOF is valid, so the GUI must be able to represent it) — exact
@@ -457,8 +458,8 @@ struct DefectSeriesState {
 // artifacts — and the GUI informs and demands resolution, it never guards a
 // gesture. Readers must not assume begin <= end.
 struct TrimState {
-    double begin_frame = 0.0;   // exact source-frame double
-    double end_frame   = 0.0;   // exact source-frame double
+    double begin_frame = 0.0;   // whole source frame (integer-valued double)
+    double end_frame   = 0.0;   // whole source frame (integer-valued double)
     bool   has_begin   = false;
     bool   has_end     = false;
 };

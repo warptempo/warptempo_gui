@@ -14,10 +14,10 @@ using warptempo_parse::strip_bom;
 // success; on failure, returns a one-line diagnostic. The caller has
 // already rejected any whitespace on the line, so the token reaching here is
 // non-empty and whitespace-free. The canonical grammar is an optional
-// leading '#' meaning disabled, then a source-frame double (frame_format.h:
-// finite, non-negative, whole field consumed) and nothing else; anything
-// else — including the old MM:SS.mmm timestamp form — fails with the
-// generic position error.
+// leading '#' meaning disabled, then an authored source-frame position
+// (frame_format.h: a whole frame, finite, non-negative, whole field
+// consumed) and nothing else; anything else — a fractional value, the old
+// MM:SS.mmm timestamp form — fails with the generic position error.
 std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) {
     PhaseResetMarker out;
 
