@@ -371,11 +371,9 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
-                    // A reset tempo invalidates the iter bracket's
-                    // validation basis, so the whole flag resets — same
-                    // rationale as adjust_tempo's bracket clear.
-                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
-                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
+                    // No iter bracket to clear: a ref is never
+                    // iter-eligible (iter_popup_eligible_marker), so this
+                    // marker cannot carry one.
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the ref marker
@@ -398,11 +396,9 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
-                    // Whole-flag reset: the iter bracket clears with the
-                    // tempo it was validated against (see the
-                    // DanglingLabelRef sibling above).
-                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
-                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
+                    // No iter bracket to clear: a pass is never
+                    // iter-eligible (iter_popup_eligible_marker), so this
+                    // marker cannot carry one.
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the pass marker
@@ -429,9 +425,13 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_scale.reset();
                     m->label_ref.clear();
                     m->label_def.clear();
-                    // Whole-flag reset: the iter bracket clears with the
-                    // tempo it was validated against (see the
-                    // DanglingLabelRef sibling above).
+                    // The one genuine whole-flag iter clear among the
+                    // modal resets: the zero slot can be a disabled OWNING
+                    // marker still carrying a bracket typed while it was
+                    // enabled (refs and passes are never iter-eligible),
+                    // and the reset tempo invalidates that bracket's
+                    // validation basis — same rationale as adjust_tempo's
+                    // bracket clear.
                     m->iter_start = std::numeric_limits<double>::quiet_NaN();
                     m->iter_end   = std::numeric_limits<double>::quiet_NaN();
                     store_changed = true;
