@@ -617,24 +617,45 @@ bool GuiRenderView::refresh_render_view_list() {
     return true;
 }
 
-// Auto-open render-view at the first .wav of the just-finished
-// batch. Mirrors the R-key toggle-on entry sequence in input_
-// handler.cpp, with one substitution: the target index is the
-// first list entry whose batch_folder matches the passed-in
-// batch_folder argument, rather than the entry whose wav_path
-// matches app.render_view.last_path.
+// Show render-view at the first .wav of the just-finished batch. Two
+// outcomes share one body — enumerate the renders/ folder, migrate the
+// prior list's per-entry persisted state by wav_path, and select the first
+// entry whose batch_folder matches the passed-in argument — differing only
+// in the tail:
 //
-// Per the input-handler gatekeeper invariant (S / E / Ctrl+Alt+R /
-// Ctrl+Alt+E / Ctrl+Alt+I are all dropped while render-view is active,
-// and the BPM sweep render fires only from the BPM editor's Enter, which
-// cannot be open in render-view), this method is reachable only when
-// render-view is off. The defensive early-return guards against
-// a future change that breaks the invariant — entering twice
-// would corrupt the existing session.
+//   - Render-view closed: enter it at that entry, mirroring the R-key
+//     toggle-on entry sequence, substituting the batch_folder match for the
+//     last_path match.
+//   - Render-view already open: a parked batch (dispatched during a running
+//     render, then backgrounded by an R-toggle so the user browses old
+//     renders) can pump to completion while the view is up. Refresh the view
+//     in place so it shows what source-view completion would show — the fresh
+//     list, landed on the new batch's first file — instead of the stale
+//     pre-batch list. The live selection is stashed onto the outgoing entry
+//     first (the migration below then carries it into the fresh list), and
+//     the new entry loads through the same load path navigation uses, which
+//     rebinds playback to its wav; the enter/park sequence is skipped because
+//     the view is already up and the source audio already parked.
 void GuiRenderView::auto_open_batch_at_first_file(
         const std::filesystem::path& batch_folder) {
-    if (app.render_view.enabled) return;
     if (app.source_audio_path.empty()) return;
+
+    const bool refreshing_in_place = app.render_view.enabled;
+
+    // In-place refresh: the live selection still sits on the app.* fields, so
+    // capture the outgoing entry's viewport sidecar and stash its selection
+    // onto the active list entry BEFORE the migration below, so the
+    // wav_path-keyed merge carries that just-stashed state into the fresh
+    // list. Mirrors the entry-switch sequence the render-view nav handlers run.
+    if (refreshing_in_place) {
+        if (app.render_view.index >= 0 &&
+            app.render_view.index <
+                static_cast<int>(app.render_view.list.size())) {
+            this->write_rendersettings_for(
+                app.render_view.list[app.render_view.index]);
+        }
+        this->stash_render_view_selection_to_active_entry();
+    }
 
     std::vector<AppState::RenderViewEntry> list =
         this->enumerate_render_view_list();
@@ -645,9 +666,8 @@ void GuiRenderView::auto_open_batch_at_first_file(
     }
 
     // Migrate persisted per-entry state from the prior
-    // app.render_view.list (which survived toggle-off) into the
-    // freshly enumerated list, keyed by wav_path. Same shape as
-    // the R-toggle entry-path migration.
+    // app.render_view.list into the freshly enumerated list, keyed by
+    // wav_path. Same shape as the R-toggle entry-path migration.
     if (!app.render_view.list.empty()) {
         std::map<std::string,
             AppState::RenderViewEntry*> prior;
@@ -676,6 +696,20 @@ void GuiRenderView::auto_open_batch_at_first_file(
             "warptempo_gui: auto-open: batch folder '%s' not found "
             "in render-view list\n",
             batch_folder.string().c_str());
+        return;
+    }
+
+    if (refreshing_in_place) {
+        // View already up, source audio already parked in source_audio_held:
+        // swap in the fresh list and load the new batch's first entry through
+        // the same path navigation uses (it rebinds playback to the new wav
+        // and does not re-park the render as source, since source_audio_held
+        // is non-empty). On the defensive load-failure path fall back to a
+        // clean source-view exit.
+        app.render_view.list = std::move(list);
+        if (!this->load_render_view_at(target)) {
+            this->exit_render_view_and_clear();
+        }
         return;
     }
 

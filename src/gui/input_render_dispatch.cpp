@@ -313,19 +313,19 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 "warptempo_gui: %s: rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
         }
-        // Auto-open render-view at the just-rendered batch's first
-        // file. Gated on a non-cancelled terminal branch that
-        // actually produced at least one .wav on disk; a batch
-        // where every entry returned Failed leaves rendered == 0
-        // and there is nothing to view. Per the render-view
-        // gatekeeper invariant, render-view must be off here:
-        // S / E / Ctrl+Alt+R / Ctrl+Alt+E / Ctrl+Alt+I are all dropped
-        // while render-view is active, and the BPM sweep fires only from
-        // the BPM editor's Enter (which cannot be open in render-view), so
-        // no batch dispatch can reach this terminal branch from inside
-        // render-view. The call runs before finalize_render_run +
-        // reqs.clear so render-view sees the same surrounding
-        // state ordering it would on a manual `r` toggle.
+        // Show render-view at the just-rendered batch's first file. Gated
+        // on a non-cancelled terminal branch that actually produced at
+        // least one .wav on disk; a batch where every entry returned Failed
+        // leaves rendered == 0 and there is nothing to view. Two reachable
+        // states: render-view was off (a batch dispatched and run from
+        // source view), and render-view was already up (a parked batch —
+        // dispatched during a running render, then backgrounded by an
+        // R-toggle — pumps to completion under the open view). auto_open
+        // enters render-view in the first case and refreshes it in place in
+        // the second, landing on the new batch's first file either way. The
+        // call runs before finalize_render_run + reqs.clear so render-view
+        // sees the same surrounding state ordering it would on a manual `r`
+        // toggle.
         const bool success = !cancelled && batch_.rendered > 0;
         if (success) {
             render_view.auto_open_batch_at_first_file(batch_.batch_folder);
