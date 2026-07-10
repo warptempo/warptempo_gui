@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "parser/parse_text_util.h"
+#include "playback_speed_presets.h"
 #include "render_pipeline.h"
 #include "settings_trim.h"
 #include "frame_format.h"
@@ -390,14 +391,29 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             if (value == "A") { out.has_active_tab_view = true; out.active_tab_view = 'A'; }
             else if (value == "B") { out.has_active_tab_view = true; out.active_tab_view = 'B'; }
         } else if (key == "playback_speed") {
-            // Deliberately unbracketed: slow-down is a precision-finetune
-            // tool and stays unbounded below 1, and no upper bound is
-            // worth adding.
+            // playback_speed is preset-vocabulary-only on disk: the GUI
+            // authors it exclusively through the Shift+0..9 presets
+            // (kPlaybackSpeedPresets, the shared source of truth), so any
+            // off-preset value is a state the GUI can never produce —
+            // adversarial by the two-category rule — and aborts the source
+            // load, the same hard-fail shape a malformed engine key produces.
+            // The slow-down presets are the precision-finetune tool.
+            //
+            // Exact float equality against the table is sound: the writer
+            // emits each preset with the same %.6f the reader parses back,
+            // and both the on-disk text and the table literal are the nearest
+            // float of the same short decimal, so parse(write(preset)) equals
+            // the literal bit-for-bit. No tolerance.
             float v;
-            if (parse_float_full(value, v) && v > 0.0f) {
-                out.has_playback_speed = true;
-                out.playback_speed = v;
+            if (!parse_float_full(value, v) || !is_playback_speed_preset(v)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: playback_speed '%s' in '%s' is not a "
+                    "preset speed\n",
+                    value.c_str(), path.c_str());
+                return false;
             }
+            out.has_playback_speed = true;
+            out.playback_speed = v;
         } else if (key == "font_size") {
             // GUI font size in points, strict whole-token double, 6..72
             // inclusive (parse_double_full already rejects non-finite).

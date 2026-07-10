@@ -2,6 +2,7 @@
 
 #include "paint_handler.h"
 #include "phase_reset_frame_map_build.h"  // phase_reset_offset_samples
+#include "playback_speed_presets.h"
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -609,19 +610,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Shift+<digit> selects a playback speed. Shift+0 is 1.00, Shift+1
     // is 0.10, Shift+9 is 0.90. Applies immediately whether or not
     // playback is active — the audio callback picks up the new atomic
-    // on the next buffer.
+    // on the next buffer. Each preset is read from kPlaybackSpeedPresets
+    // (the shared source of truth, indexed by digit), so the dispatch and
+    // the .settings reader's acceptance check can never diverge.
     if (shift && !ctrl && !alt) {
         switch (key) {
-        case GuiKeys::Digit0: playback_lifecycle.set_playback_speed(1.0f); return;
-        case GuiKeys::Digit1: playback_lifecycle.set_playback_speed(0.1f); return;
-        case GuiKeys::Digit2: playback_lifecycle.set_playback_speed(0.2f); return;
-        case GuiKeys::Digit3: playback_lifecycle.set_playback_speed(0.3f); return;
-        case GuiKeys::Digit4: playback_lifecycle.set_playback_speed(0.4f); return;
-        case GuiKeys::Digit5: playback_lifecycle.set_playback_speed(0.5f); return;
-        case GuiKeys::Digit6: playback_lifecycle.set_playback_speed(0.6f); return;
-        case GuiKeys::Digit7: playback_lifecycle.set_playback_speed(0.7f); return;
-        case GuiKeys::Digit8: playback_lifecycle.set_playback_speed(0.8f); return;
-        case GuiKeys::Digit9: playback_lifecycle.set_playback_speed(0.9f); return;
+        case GuiKeys::Digit0: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[0]); return;
+        case GuiKeys::Digit1: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[1]); return;
+        case GuiKeys::Digit2: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[2]); return;
+        case GuiKeys::Digit3: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[3]); return;
+        case GuiKeys::Digit4: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[4]); return;
+        case GuiKeys::Digit5: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[5]); return;
+        case GuiKeys::Digit6: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[6]); return;
+        case GuiKeys::Digit7: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[7]); return;
+        case GuiKeys::Digit8: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[8]); return;
+        case GuiKeys::Digit9: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[9]); return;
         default: break;
         }
     }
