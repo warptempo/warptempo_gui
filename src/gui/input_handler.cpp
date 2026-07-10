@@ -1022,10 +1022,6 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
         // sit at the phase-reset selection's index, which silently corrupted
         // an unrelated warp marker and fired a spurious target render.
         if (app.active_markers_view == 'P') return;
-        // Dismiss an active flag edit so the tempo change is visible.
-        if (text_editor::is_active(app.top_flag_editor)) {
-            handle_top_flag_editor_key(GuiKeys::Escape, GuiInputState{});
-        }
         const double delta =
             (button == GuiMouseButton::WheelUp ? -0.01 : +0.01) *
             static_cast<double>(count);
@@ -1064,10 +1060,15 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // elide or scroll off the edited flag.
     if (text_editor::is_active(app.top_flag_editor)) return;
     if (app.loading || audio.total_frames() <= 0) return;
-    // A wheel event during an active drag is ignored, matching on_button_press.
+    // A wheel event during ANY active drag is ignored, matching
+    // on_button_press and the keyboard's drag-modal gate. The playhead
+    // scrub is included: the keyboard gate swallows every authoring chord
+    // mid-scrub, so the wheel's authoring routes (Ctrl+wheel tempo, the
+    // trim-end move) and viewport changes must not slip through either.
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
     if (app.scroll_drag.active) return;
+    if (app.playhead_drag.active) return;
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
