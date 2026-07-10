@@ -539,10 +539,11 @@ void GuiFlagEditor::wipe_iter_state() {
 // seeds a blank "[]".
 //
 // History-less on purpose: bpm values are session-only with no undo of their
-// own (see commit_bpm_edit), so no undo entry is pushed. A consequence is that
-// marker snapshots captured by OTHER ops still carry the bpm fields, so plain
-// undo of an unrelated edit can restore a wiped bracket — the same accepted
-// residual the iter wipe has, recorded not fixed. Callers own the repaint.
+// own (see commit_bpm_edit), so no undo entry is pushed. Unlike iter state,
+// undo can never resurrect bpm state: the bpm session is modal, so no
+// snapshot-taking op can run while a marker carries live bpm fields, and
+// outside the session every marker is already wiped — every snapshot in
+// history carries default bpm state. Callers own the repaint.
 void GuiFlagEditor::wipe_bpm_state() {
     auto& mv = app.warpmarkers.markers_mut();
     for (auto& m : mv) {

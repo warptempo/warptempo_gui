@@ -17,9 +17,12 @@
 // consumer of an authored position — the marker parsers, the settings trim
 // reader, the serializers, and the CLI — goes through exactly this pair, so
 // persistence round-trips bit-exactly and there is no second representation
-// to disagree with the walls. Fractional, negative, non-finite, or otherwise
-// malformed position text is a state the GUI can never write — adversarial,
-// load-fatal at every consumer. In-memory storage is int64_t throughout, so
+// to disagree with the walls. The on-disk spelling IS the grammar: the plain
+// canonical integer text format_authored_frame writes, or nothing. Fractional,
+// negative, non-finite, or otherwise malformed position text — and equally a
+// non-canonical spelling of an integer value ("44100.0", "6e+05", "0044100")
+// — is a state the GUI can never write: adversarial, load-fatal at every
+// consumer. In-memory storage is int64_t throughout, so
 // a fractional authored position is unrepresentable at rest; every
 // exact-compare wall and validator is a plain integer compare. Timestamps
 // (MM:SS.mmm) are display-only renderings; see time_format.h.
@@ -42,30 +45,30 @@ inline std::string format_authored_frame(int64_t frame) {
     return std::string(buf, res.ptr);
 }
 
-// Text -> authored frame (int64_t). Strict: the whole field must be
-// consumed, and the value must be finite, non-negative, and a whole frame.
-// Rejecting fractional values alongside NaN, inf, negative, empty, and
-// trailing junk is the parser's malformed-position rule — adversarial,
-// load-fatal, the same category as a malformed timestamp used to be. The
-// restriction is on the VALUE, not the spelling: integer-valued forms such
-// as "44100.0" or the historical scientific "6e+05" still parse (and
-// re-serialize as plain integer text) — the field is decoded as a double
-// and converted after the whole-frame check, which is exact far below 2^53.
-// Returns true and sets `out` on success; returns false and leaves `out`
-// untouched on failure.
+// Text -> authored frame (int64_t). Strict: the spelling IS the grammar. A
+// canonical authored position is a plain run of decimal digits — no sign, no
+// decimal point, no exponent, no leading zero unless the field is exactly
+// "0" — which is exactly what format_authored_frame writes. Anything else is
+// adversarial, load-fatal, the same category as a malformed timestamp used to
+// be: fractional or negative text, but equally the formerly-tolerated
+// integer-valued spellings ("44100.0", "6e+05", "+44100", "0044100"), and a
+// digit run so long its value overflows int64 (refused, not wrapped). The
+// value is non-negative by construction (no '-' passes the digit test) and
+// whole (no fractional grammar exists). Returns true and sets `out` on
+// success; returns false and leaves `out` untouched on failure.
 inline bool parse_authored_frame(std::string_view s, int64_t& out) {
     if (s.empty()) return false;
-    // A leading '-' is rejected up front: "-0" would otherwise parse to the
-    // negative-zero double, which compares equal to 0.0 and would slip past
-    // the non-negative check.
-    if (s.front() == '-') return false;
-    double v = 0.0;
+    for (const char c : s) {
+        if (c < '0' || c > '9') return false;
+    }
+    // A leading zero is only canonical as the single-digit field "0".
+    if (s.size() > 1 && s.front() == '0') return false;
+    int64_t v = 0;
     const auto res = std::from_chars(s.data(), s.data() + s.size(), v);
+    // Overflow of an overlong digit run surfaces as a non-empty ec here.
     if (res.ec != std::errc{}) return false;
     if (res.ptr != s.data() + s.size()) return false;
-    if (!std::isfinite(v) || v < 0.0) return false;
-    if (v != std::floor(v)) return false;
-    out = static_cast<int64_t>(v);
+    out = v;
     return true;
 }
 
