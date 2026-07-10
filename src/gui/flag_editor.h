@@ -13,9 +13,8 @@
 struct GuiTargetRender;
 
 // Flag-editor cluster. Covers the top-flag canonical-line editor, the
-// iteration popup editor, the BPM popup editor, the Shift+I/Shift+M bulk
-// clears, and the BPM-mode enter/exit transitions. clear_hover_popup is
-// reached through viewport.
+// iteration popup editor, the BPM popup editor, and the BPM-mode
+// enter/exit transitions. clear_hover_popup is reached through viewport.
 struct GuiFlagEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -41,7 +40,6 @@ struct GuiFlagEditor {
     void exit_top_flag_edit_no_commit();
     void enter_top_flag_edit(int idx, double click_x = -1.0);
     void commit_top_flag_edit();
-    void bulk_clear_iter_values();
     void enter_bpm_edit(int idx, double click_x = -1.0,
                                  double text_left_x = -1.0);
     // Returns true iff the pending buffer parsed and committed (editor
@@ -50,6 +48,11 @@ struct GuiFlagEditor {
     bool commit_bpm_edit();
     void enter_bpm_mode();
     void exit_bpm_mode();
+    // Wipe every marker's session-only iter bracket — the single clear
+    // both iteration-mode exit routes share (the `i` toggle's turning-off
+    // branch and enter_bpm_mode's forced iter-off). Undo entry when
+    // something cleared; callers own the mode flip and repaint.
+    void wipe_iter_state();
 
   private:
     // Shared core for the three "enter editor on idx" flows. The

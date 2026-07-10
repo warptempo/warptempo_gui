@@ -941,19 +941,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             if (turning_on && app.bpm_mode_enabled) {
                 app.bpm_mode_enabled = false;
             }
+            if (!turning_on) {
+                // Turning iteration mode OFF wipes every marker's
+                // session-only iter bracket — exiting the mode is the
+                // clear (wipe_iter_state, shared with enter_bpm_mode's
+                // forced iter-off so the two exit routes cannot drift).
+                // Runs before the flag flips.
+                flag_editor.wipe_iter_state();
+            }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;
             viewport.clear_hover_popup();
-            viewport.invalidate_top_strip();
-        }
-        return true;
-    }
-    // Shift+I: bulk-clear every marker's iter values AND exit
-    // iteration mode in one keystroke ("stop authoring this mode").
-    // Only fires while iteration mode is on; otherwise silent no-op.
-    if (key == GuiKeys::I && !ctrl && shift && !alt) {
-        if (app.active_markers_view == 'W' && app.iteration_mode_enabled) {
-            flag_editor.bulk_clear_iter_values();
-            app.iteration_mode_enabled = false;
             viewport.invalidate_top_strip();
         }
         return true;

@@ -505,13 +505,15 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 }
 
-// Bulk-clear the session-only iter values across all warp markers.
-// Triggered by Shift+I while iteration mode is on. Single undo
-// entry. No-op when no marker carries iter values (avoids a noise
-// entry on the undo stack).
-void GuiFlagEditor::bulk_clear_iter_values() {
-    if (!app.iteration_mode_enabled) return;
-    if (app.active_markers_view != 'W') return;
+// Wipe every marker's session-only iter bracket. The single clear both
+// iteration-mode exit routes share: the `i` toggle's turning-off branch and
+// enter_bpm_mode's forced iter-off — exiting the mode is the clear on every
+// route, so a bracket exists only while the mode paints it on the flags.
+// Pushes one undo entry when something was cleared and no-ops otherwise, so
+// a bracketless exit leaves the undo stack untouched; plain undo is
+// deliberately ungated and may restore a previously accepted bracket set.
+// Callers own the mode-flag flip and the repaint invalidation.
+void GuiFlagEditor::wipe_iter_state() {
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {
@@ -522,13 +524,12 @@ void GuiFlagEditor::bulk_clear_iter_values() {
     }
     if (!any) return;
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
+    const int hint_last = app.last_selected_marker;
     for (auto& m : mv) {
         m.iter_start = std::numeric_limits<double>::quiet_NaN();
         m.iter_end   = std::numeric_limits<double>::quiet_NaN();
     }
     undo.push_undo_warp(std::move(pre_state), hint_last);
-    viewport.invalidate_top_strip();
 }
 
 // Open the bottom-strip BPM editor on `idx`. Seed pending is the
@@ -666,6 +667,12 @@ void GuiFlagEditor::enter_bpm_mode() {
     if (!bpm_popup_eligible_marker(mv_const[owner])) return;
 
     if (app.iteration_mode_enabled) {
+        // Forced iter-off is a mode exit like any other and takes the same
+        // wipe the `i` toggle's turning-off branch runs — otherwise `m`
+        // would smuggle live brackets out of iteration mode invisibly, and
+        // the BPM commit's tempo rewrite would land on markers still
+        // carrying them.
+        wipe_iter_state();
         app.iteration_mode_enabled = false;
     }
 

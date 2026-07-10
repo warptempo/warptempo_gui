@@ -50,7 +50,7 @@
 //     adjust_tempo, clear_trim, nudge_*, jump_*, drop_phase_reset_at_playhead,
 //     toggle_phase_reset_*, detect_phase_resets, clear_all_phase_resets,
 //     enter_*_edit, commit_*_edit, exit_top_flag_edit_no_commit,
-//     bulk_clear_*_values, enter_bpm_mode, exit_bpm_mode,
+//     enter_bpm_mode, exit_bpm_mode,
 //     toggle_active_markers_view, load_render_view_at, restore_source_audio,
 //     stash_render_view_selection_to_active_entry,
 //     enumerate_render_view_list, write_rendersettings_for) were rewritten

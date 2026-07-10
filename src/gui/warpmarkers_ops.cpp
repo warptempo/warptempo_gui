@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <set>
 #include <string>
 #include <utility>
@@ -418,6 +419,20 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         m.tempo_inherits = false;
         m.tempo_base     = new_tempo;
         m.tempo_scale    = start_scale;
+        // A tempo step changes the very base tempo an iteration bracket was
+        // committed against, so it clears this marker's bracket in the same
+        // proposed write — NaN is the identical cleared state a blank marker
+        // holds. Because this rides the same undo entry the tempo change
+        // pushes below (the pre-state snapshot carries the iter fields), one
+        // Ctrl+Z restores tempo and bracket together. Done regardless of
+        // whether iteration mode is currently on: a bracket can only exist
+        // mode-off via an explicit undo restore, and clearing is the safe
+        // direction — silently keeping an invisible bracket under a changed
+        // tempo is exactly the pathway this closes.
+        if (!std::isnan(m.iter_start) || !std::isnan(m.iter_end)) {
+            m.iter_start = std::numeric_limits<double>::quiet_NaN();
+            m.iter_end   = std::numeric_limits<double>::quiet_NaN();
+        }
         changed = true;
     }
     if (!changed) return;
