@@ -495,28 +495,26 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            // Typed values remain full positive doubles with no authored
-            // ceiling, but the builder refuses when the combined product
-            // leaves the finite positive double domain (overflow to inf,
-            // underflow to zero) or a target span degenerates to zero (the
-            // emission chokepoint in pass 2): the map artifact contract —
-            // finite, strictly ascending values on both columns — is
-            // enforced here, at the sole producer, because the map output
-            // formats ship the artifact without any engine pass. The
-            // tempo <= 0 guard is the division-safety backstop for the
-            // resolved base-times-scale value; typed zeros are rejected at
-            // parse and editor commit, so it is unreachable from
-            // program-written input, kept deliberately as a loud refusal.
+            // The bracketed value vocabulary holds every AUTHORED product in
+            // [1/16, 16] with bounded, exact anchors. The sweep batches'
+            // computed per-cell tempo mutations are the one wider route: a
+            // delta can push the product to (kValueMax + kIterDeltaMax) *
+            // kValueMax or drive a cell tempo non-positive, and this builder
+            // is that path's ruled async-stderr backstop — the tempo <= 0
+            // guard is exactly where such a cell refuses. The divisor check
+            // and the finite/strictly-advancing anchor chokepoint in pass 2
+            // are unreachable from authored input; all are kept as loud
+            // refusals guarding the map artifact contract (finite, strictly
+            // ascending values on both columns) at the sole producer, since
+            // the map output formats ship the artifact without any engine
+            // pass.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " +
                                        format_value_double(tempo_val, 2)
                                        + " <= 0 at marker " + std::to_string(i));
             }
-            // The divisor the segment arithmetic actually divides by is the
-            // product against the settings scale; two accepted finite
-            // positive operands can still multiply to inf or underflow to
-            // zero, so the product is validated in its own right before any
-            // division.
+            // The divisor is the product against the settings scale — the
+            // value the division actually uses — refused in its own right.
             const double divisor = tempo_val * scale;
             if (!std::isfinite(divisor) || divisor <= 0.0) {
                 return std::unexpected("tempo-scale product " +
@@ -572,34 +570,22 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             target_frame = tgt_f_prev + lbl.delta_tgt;
         } else {
             double tempo_val = effective_tempo(m);
-            // Same divisor refusal as pass 1. Pass 1 walks every numeric
-            // marker and returns before this pass runs on any offending
-            // product, but the guard sits on the value actually divided by
-            // here, not on pass 1 having run.
+            // Pass 1 already walked every numeric marker and returned first on
+            // any non-positive or non-finite divisor, so the named local here
+            // is the vetted product the segment arithmetic divides by.
             const double divisor = tempo_val * scale;
-            if (!std::isfinite(divisor) || divisor <= 0.0) {
-                return std::unexpected("tempo-scale product " +
-                                       format_value_double(divisor, 0)
-                                       + " is not a positive finite value at marker "
-                                       + std::to_string(i));
-            }
             double delta_src = src_frame - src_f_prev;
             target_frame = tgt_f_prev + (delta_src / divisor);
         }
 
         // Emission chokepoint: every segment flavor converges here (numeric,
         // label ref via the cached delta; passes resolve to numeric owners
-        // before this builder runs). The source column's finite strict
-        // ascent is already guaranteed by pass 1's sub-frame and past-EOF
-        // refusals; the target column is enforced now, because the ascent
-        // arithmetic alone cannot be trusted at the double domain's edges: a
-        // finite positive delta can overflow the accumulated anchor to
-        // infinity (which would PASS a bare ascent comparison — inf is
-        // greater than any finite prior anchor), and a delta that underflows
-        // to zero, or is absorbed by a much larger prior anchor, would emit
-        // an equal-anchor pair the map formats write unrefused. A target
-        // span that vanishes under division is a refusal, not a degenerate
-        // segment.
+        // before this builder runs). The source column's strict ascent is
+        // guaranteed by pass 1's sub-frame and past-EOF refusals; the target
+        // column's finite/strictly-advancing check is the same kept loud
+        // refusal — unreachable while anchors stay bounded and exact under the
+        // bracketed vocabulary, but the map artifact contract is enforced here
+        // at the sole producer.
         if (!std::isfinite(target_frame)) {
             return std::unexpected("target anchor is not finite at marker "
                                    + std::to_string(i));
