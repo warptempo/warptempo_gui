@@ -24,7 +24,11 @@ bool is_valid_label_format(const std::string& s) {
 // Tempo and scale values are full doubles (parse_value_double: whole field
 // consumed, finite, no leading '-') under a strict positivity refusal —
 // zero is parseable but refused with a pointed message; negatives and any
-// other malformed spelling fail the parse itself. Serializers pad the
+// other malformed spelling fail the parse itself — and the authored-value
+// bracket (value_format.h: [kValueMin, kValueMax]). Every GUI input
+// surface enforces the bracket, so an out-of-bracket value on disk is a
+// state the GUI can never produce: adversarial, load-fatal, first error
+// only, exactly like the non-positive refusals. Serializers pad the
 // shortest round-trip form (format_value_double: tempo at min 2 decimals,
 // scale at min 4), so historical fixed-decimal sidecars re-serialize
 // byte-identically.
@@ -46,6 +50,12 @@ bool parse_positive_value(const std::string& s, double& out,
     }
     if (!(v > 0.0)) {
         error_out = std::string(what) + " must be positive: " + s;
+        return false;
+    }
+    if (v < kValueMin || v > kValueMax) {
+        error_out = std::string(what) + " must be within [" +
+                    format_value_double(kValueMin, 2) + ", " +
+                    format_value_double(kValueMax, 2) + "]: " + s;
         return false;
     }
     out = v;

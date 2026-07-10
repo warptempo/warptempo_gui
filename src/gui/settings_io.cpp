@@ -390,6 +390,9 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             if (value == "A") { out.has_active_tab_view = true; out.active_tab_view = 'A'; }
             else if (value == "B") { out.has_active_tab_view = true; out.active_tab_view = 'B'; }
         } else if (key == "playback_speed") {
+            // Deliberately unbracketed: slow-down is a precision-finetune
+            // tool and stays unbounded below 1, and no upper bound is
+            // worth adding.
             float v;
             if (parse_float_full(value, v) && v > 0.0f) {
                 out.has_playback_speed = true;

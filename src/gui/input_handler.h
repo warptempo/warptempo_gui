@@ -18,6 +18,7 @@
 #include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
 #include "undo.h"
+#include "value_format.h"
 #include "viewport.h"
 #include "warp_frame_map.h"
 #include "warpmarkers.h"
@@ -80,6 +81,16 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
         std::nearbyint(ratio * 100.0) / 100.0;
     if (!std::isfinite(base_tempo) ||
         base_tempo == 0.0) return std::nullopt;
+    // Authored-value bracket (value_format.h): a derived base tempo lands
+    // in marker stores and .warpmarkers sidecars exactly like a typed
+    // tempo, so an out-of-bracket derivation refuses here — never clamps,
+    // which would silently mistune the span. The BPM editor commit checks
+    // the bracket's two ends through this refusal (the derivation is
+    // monotone in bpm), and the sweep's per-cell loop rejects any refused
+    // cell to stderr.
+    if (base_tempo < kValueMin || base_tempo > kValueMax) {
+        return std::nullopt;
+    }
 
     const double scale =
         std::nearbyint((ratio / base_tempo) * 1e6) / 1e6;

@@ -394,8 +394,8 @@ bool GuiInputHandler::render_bpm_sweep() {
     // forever. A fractional lo keeps its fraction across the walk
     // (72.5, 73.5, ...). parse_bpm_bracket (warpmarkers.h) — the sole route
     // into bpm_lo/bpm_hi, used by the flag editor commit path — guarantees
-    // both bounds finite positive with lo <= hi, so the count is finite
-    // and >= 1.
+    // both bounds within the bpm bracket [kBpmMin, kBpmMax] with lo <= hi,
+    // so the count is finite and >= 1.
     const double cell_count = std::floor(owner.bpm_hi - owner.bpm_lo) + 1.0;
 
     // Anti-pathology allocation-and-dispatch guard, not a workflow gate: real
@@ -486,10 +486,11 @@ bool GuiInputHandler::render_bpm_sweep() {
 
         std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
         // Owner: concrete computed base tempo, scale carried in settings.
-        // Any positive base tempo serializes exactly (padded shortest
-        // round-trip form), so no range gate protects the save/reload
-        // round trip; compute_base_tempo_scale's positivity guards are the
-        // only cell filter.
+        // compute_base_tempo_scale's positivity and bracket guards are the
+        // cell filter; the BPM editor commit already checked the bracket
+        // at both bracket ends (the derivation is monotone in bpm), so in
+        // practice every cell derives in-bracket and serializes exactly
+        // (padded shortest round-trip form).
         cell_warp_markers[owner_idx].tempo_inherits = false;
         cell_warp_markers[owner_idx].tempo_base     = computed->base_tempo;
         cell_warp_markers[owner_idx].tempo_scale.reset();

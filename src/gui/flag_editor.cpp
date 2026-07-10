@@ -5,6 +5,7 @@
 #include "target_render.h"
 
 #include "audio.h"
+#include "input_handler.h"
 #include "phaseresetmarkers.h"
 #include "render.h"
 #include "text_editor.h"
@@ -51,10 +52,11 @@ bool parse_signed_2dp(const std::string& raw, double& out) {
 // Extract the inline iteration bracket from a flag payload edited
 // under the widened grammar. Searches for the `+[` segment after the
 // tempo token; on match, removes `+[ ... ]` from `payload` and writes the
-// parsed bounds (lo <= hi) to `lo_out`/`hi_out`. The all-zero blank
-// (`+[+0.00, +0.00]`) and an absent bracket both yield NaN (clear). The
-// FlagPayload tempo/scale/label vocabulary never produces a `+`, so `+[`
-// is an unambiguous marker. Returns false on a malformed bracket (caller
+// parsed bounds (lo <= hi, each within [-kIterDeltaMax, kIterDeltaMax])
+// to `lo_out`/`hi_out`. The all-zero blank (`+[+0.00, +0.00]`) and an
+// absent bracket both yield NaN (clear). The FlagPayload
+// tempo/scale/label vocabulary never produces a `+`, so `+[` is an
+// unambiguous marker. Returns false on a malformed bracket (caller
 // red-flashes); true otherwise.
 bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) {
     const double kNaN = std::numeric_limits<double>::quiet_NaN();
@@ -71,6 +73,13 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
     if (!parse_signed_2dp(inner.substr(0, comma), lo)) return false;
     if (!parse_signed_2dp(inner.substr(comma + 1), hi)) return false;
     if (lo > hi) return false;
+    // Iteration deltas live in [-kIterDeltaMax, kIterDeltaMax]
+    // (value_format.h). Bounding here also keeps the sweep's
+    // lround(delta * 100.0) cent products tiny, far from the range where
+    // an overflowing lround would return an unspecified value.
+    if (std::abs(lo) > kIterDeltaMax || std::abs(hi) > kIterDeltaMax) {
+        return false;
+    }
     payload.erase(open, close - open + 1);
     // All-zero blank is the cleared state, not a zero-width sweep.
     if (lo != 0.0 || hi != 0.0) {
@@ -514,7 +523,8 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
 }
 
 // Commit the BPM editor's pending buffer. Strict syntax via
-// parse_bpm_bracket. On parse failure the editor stays open with a red
+// parse_bpm_bracket, then the derived-tempo bracket gate below. On
+// refusal the editor stays open with a red
 // outline and false is returned; on success the parsed values are stored
 // on the marker (the marker is already the BPM owner), the editor closes,
 // and true is returned. No undo entry — BPM values are session-only,
@@ -541,6 +551,39 @@ bool GuiFlagEditor::commit_bpm_edit() {
             "warptempo_gui: bpm edit rejected: invalid syntax: %s\n",
             s.c_str());
         return false;
+    }
+    // Derived-tempo bracket gate. Every sweep cell carries a derived base
+    // tempo into its cell markers and their .warpmarkers sidecar, and the
+    // derivation (compute_base_tempo_scale) is monotone in bpm, so the
+    // bracket's two ends bound every cell: if either end refuses — the
+    // derived base tempo lands outside [kValueMin, kValueMax] — the commit
+    // red-flashes like any invalid editor value. Never clamp: a clamped
+    // derived tempo would silently mistune the span. Gated on a well-formed
+    // span (owner before endpoint, positive duration); without one,
+    // render_bpm_sweep early-bails and derives nothing.
+    {
+        const int endpoint_idx = mv_const[idx].bpm_endpoint;
+        if (audio.sample_rate() > 0 &&
+            endpoint_idx > idx &&
+            endpoint_idx < static_cast<int>(mv_const.size())) {
+            const double duration_seconds =
+                (mv_const[endpoint_idx].time_frame -
+                 mv_const[idx].time_frame) /
+                static_cast<double>(audio.sample_rate());
+            if (duration_seconds > 0.0 &&
+                (!compute_base_tempo_scale(duration_seconds, beats, lo) ||
+                 !compute_base_tempo_scale(duration_seconds, beats, hi))) {
+                app.top_flag_editor.red = true;
+                viewport.invalidate_timestamp_area();
+                std::fprintf(stderr,
+                    "warptempo_gui: bpm edit rejected: derived base tempo "
+                    "outside [%s, %s]: %s\n",
+                    format_value_double(kValueMin, 2).c_str(),
+                    format_value_double(kValueMax, 2).c_str(),
+                    s.c_str());
+                return false;
+            }
+        }
     }
     // Single-owner invariant: clear bpm_owner on every other marker before
     // stamping this one. The toggle handler maintains the invariant on mode

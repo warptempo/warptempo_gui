@@ -598,6 +598,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
             for (size_t k = 0; k < num_dims; ++k) {
                 const int mi = eligible_indices[k];
+                // Per-cell tempo is a computed value, not an authored one,
+                // so it takes no bracket gate: with deltas up to
+                // +-kIterDeltaMax a cell tempo can go non-positive, and
+                // build_warp_frame_map's existing refusal on the async
+                // render path (stderr) is the backstop.
                 cell_warp_markers[mi].tempo_base =
                     base_warp_markers[mi].tempo_base +
                     per_marker_deltas[k][indices[k]];

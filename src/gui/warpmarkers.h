@@ -35,7 +35,8 @@ struct GuiWarpMarker : WarpMarker {
     // implicit: bpm_beats > 0 means the owner has authored a value (parser
     // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
     // The value form is "<beats>@[<lo>,<hi>]" — beats a positive integer
-    // (metronomes count integer beats), lo/hi positive doubles, lo <= hi.
+    // (metronomes count integer beats, capped at kBpmBeatsMax), lo/hi
+    // doubles within the bpm bracket [kBpmMin, kBpmMax], lo <= hi.
     bool   bpm_owner = false;
     int    bpm_beats = 0;
     double bpm_lo    = 0.0;
@@ -188,10 +189,12 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
 }
 
 // BPM mode: strict parser for "<beats>@[<lo>,<hi>]". beats must be a
-// positive integer (metronomes count integer beats); lo/hi are positive
-// doubles (parse_value_double strictness) with lo <= hi (degenerate lo=hi
-// is valid); no whitespace, no missing fields, no alternate forms. On
-// failure returns false and leaves out-params unchanged.
+// positive integer (metronomes count integer beats) capped at
+// kBpmBeatsMax; lo/hi are doubles (parse_value_double strictness) within
+// the bpm bracket [kBpmMin, kBpmMax] (value_format.h) with lo <= hi
+// (degenerate lo=hi is valid); no whitespace, no missing fields, no
+// alternate forms. On failure returns false and leaves out-params
+// unchanged.
 inline bool parse_bpm_bracket(const std::string& s,
                               int& beats, double& lo, double& hi) {
     if (s.empty()) return false;
@@ -221,7 +224,7 @@ inline bool parse_bpm_bracket(const std::string& s,
         long long acc = 0;
         for (char c : v) {
             acc = acc * 10 + (c - '0');
-            if (acc > std::numeric_limits<int>::max()) return false;
+            if (acc > kBpmBeatsMax) return false;
         }
         if (acc <= 0) return false;
         out = static_cast<int>(acc);
@@ -230,8 +233,8 @@ inline bool parse_bpm_bracket(const std::string& s,
     int    b = 0;
     double l = 0.0, h = 0.0;
     if (!parse_pos_int(left, b))                  return false;
-    if (!parse_value_double(lo_s, l) || !(l > 0.0)) return false;
-    if (!parse_value_double(hi_s, h) || !(h > 0.0)) return false;
+    if (!parse_value_double(lo_s, l) || l < kBpmMin || l > kBpmMax) return false;
+    if (!parse_value_double(hi_s, h) || h < kBpmMin || h > kBpmMax) return false;
     if (l > h) return false;
     beats = b;
     lo    = l;

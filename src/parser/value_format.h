@@ -13,6 +13,22 @@
 // codebase: tempo-like values print with min_decimals 2, scale-like values
 // with min_decimals 4, bpm values with min_decimals 0 (plain shortest).
 
+// Authored-value brackets, the single definition of the legal value
+// vocabulary. Normal use is a stretch ratio of roughly 0.60-1.30
+// (averaging about 1.10); the bracket widens that band to the
+// multiplicatively symmetric [0.25, 4.00] (4 = 1/0.25). Absurd magnitudes
+// (1e307 tempos, 2^53 bpm bounds) are adversarial, not use cases: every
+// GUI input surface enforces these bounds — editor red-flash, constructive
+// wheel clamp, derivation refusal — so an out-of-bracket value on disk is
+// a state the GUI can never produce, and it hard-fails the load (stderr,
+// first error only).
+inline constexpr double kValueMin = 0.25;   // tempo, marker scale, settings scale
+inline constexpr double kValueMax = 4.0;
+inline constexpr double kBpmMin   = 10.0;   // bpm bracket bounds
+inline constexpr double kBpmMax   = 400.0;
+inline constexpr int    kBpmBeatsMax  = 9999; // beats stays a positive int, capped
+inline constexpr double kIterDeltaMax = 4.0;  // iteration deltas live in [-4.00, +4.00]
+
 // Value double -> shortest round-trip decimal text (std::to_chars general
 // form), zero-padded so the fraction carries at least `min_decimals`
 // digits (the decimal point is added when absent). Padding keeps the
