@@ -157,10 +157,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         // The BPM editor is a bottom-strip modal owner (like the settings
-        // editor). Mouse input does not interact with it; it is dismissed
-        // only by Enter (commit+render), Esc, or re-pressing M. Swallow the
-        // press so it cannot drive a playhead drag / marker click / or tear
-        // the editor down through the top-strip flag-edit routine below.
+        // editor). Mouse input does not interact with it beyond its own
+        // click-to-cursor region; the session ends only through Esc or the
+        // Enter dispatch path (`m` is just a typed character now). Swallow
+        // the press so it cannot drive a playhead drag / marker click / or
+        // tear the editor down through the top-strip flag-edit routine
+        // below.
         return;
     }
     if (app.loading || audio.total_frames() <= 0) return;

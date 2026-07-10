@@ -728,7 +728,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
         // The sweep is committed to run either way (dispatched, or parked
         // behind the killed render's drain): iteration mode turns off after
-        // fire.
+        // fire, and exiting the mode IS the bracket clear (wipe_iter_state,
+        // the chokepoint every other iter-mode exit runs). Safe here: every
+        // request above carries its own per-cell marker copies, so nothing
+        // dispatched reads the live iter fields.
+        flag_editor.wipe_iter_state();
         app.iteration_mode_enabled = false;
         viewport.invalidate_top_strip();
         return true;
