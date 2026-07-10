@@ -27,8 +27,7 @@ namespace {
 
 // Strict signed two-decimal parse (sign, >=1 integer digit, '.',
 // exactly two fraction digits). Leading/trailing ASCII whitespace is
-// trimmed first so the bracket's `, ` separator round-trips. Lifted from
-// the retired commit_iter_edit lambda.
+// trimmed first so the bracket's `, ` separator round-trips.
 bool parse_signed_2dp(const std::string& raw, double& out) {
     size_t a = 0, b = raw.size();
     while (a < b && std::isspace(static_cast<unsigned char>(raw[a]))) ++a;
