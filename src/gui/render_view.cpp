@@ -17,26 +17,13 @@
 #include <utility>
 #include <vector>
 
-// Render-view cluster. Method bodies are byte-identical to the
-// lambdas they replaced in main.cpp, with these mechanical rewrites:
-//
-//   clear_hover_popup            → viewport.clear_hover_popup
-//   refresh_active_tab_view_from_app  → active_views.refresh_active_tab_view_from_app
-//                                  (the std::function forwarders were retired)
-//   prune_live_selection         → selection.prune_live_selection
-//   rendersettings_path,
-//   write_rendersettings_for,
-//   apply_rendersettings_for,
-//   wav_stat_tuple,
-//   stash_render_view_selection_to_active_entry,
-//   load_render_view_at,
-//   restore_source_audio         → this->method_name (intra-cluster calls)
-//
-// Free function calls (clamp_viewport_start, compute_trim_samples) keep
-// their original spelling — both are declared at file scope in app_state.h.
-// The owned source_audio_held member replaces the same-named local in
-// main(); accesses stay on the bare identifier (resolved as this->
-// source_audio_held).
+// Render-view cluster: batch-folder enumeration, entry load/refresh, the
+// per-entry .rendersettings view-state read/write, and the source-audio
+// park/restore around render-view sessions. Reaches viewport,
+// active_views, and selection through the struct's reference members
+// (clamp_viewport_start and compute_trim_samples are free functions
+// declared in app_state.h); source_audio_held is the parked source buffer
+// while a render's audio is swapped in.
 
 // Enumerate the flat render-view list under <source_parent>/renders/.
 // Returns an empty vector if no source path is set or if the renders root

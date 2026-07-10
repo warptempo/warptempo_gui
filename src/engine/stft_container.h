@@ -184,11 +184,12 @@ struct AudioSTFT {
 
     // Optional cancellation hook. When non-null, synthesize_full checks
     // cancel_flag->load() at the top of every frame iteration; if true, it
-    // sets cancellation_observed and returns early. Limiter::process and
-    // engine.cpp then observe cancellation_observed at pass boundaries and
-    // short-circuit further work. Set by run_warptempo_engine from its
-    // optional parameter — left null for non-GUI callers (e.g. the parser
-    // binary) so existing CLI tools are unaffected.
+    // sets cancellation_observed and returns early. Limiter::process checks
+    // the flag through its pre-queue and per-peak phases the same way, and
+    // engine.cpp re-checks the raw flag alongside cancellation_observed at
+    // every pass boundary and before the Success return. Set by
+    // run_warptempo_engine from its optional parameter — left null by
+    // warptempo_cli, which has no kill semantics.
     const std::atomic<bool>* cancel_flag = nullptr;
     bool cancellation_observed = false;
 

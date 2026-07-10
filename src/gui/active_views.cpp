@@ -3,23 +3,11 @@
 #include <cstdio>
 #include <string>
 
-// Active-views management cluster. Method bodies are byte-identical
-// to the lambdas they replaced in main.cpp, with these mechanical rewrites:
-//
-//   active_view_state,
-//   refresh_active_tab_view_from_app,
-//   switch_active_markers_view_to,
-//   switch_active_tab_view_to            → this->method_name (intra-cluster calls)
-//   prune_live_selection            → selection.prune_live_selection
-//   invalidate_waveform_area        → viewport.invalidate_waveform_area
-//   invalidate_timestamp_area       → viewport.invalidate_timestamp_area
-//   clear_hover_popup               → viewport.clear_hover_popup
-//   stop_playback_if_playing        → playback_lifecycle.stop_playback_if_playing
-//                                     (retired the std::function forwarders)
-//   settings_get                    → free function, takes app explicitly
-//
-// Free function calls (clamp_viewport_start) keep their original spelling —
-// declared at file scope in app_state.h.
+// Active-views management cluster: the W/P marker-view, A/B tab-view, and
+// S/T audio-view switches plus the live/slot view-state sync, reaching
+// selection, viewport, and playback_lifecycle through the struct's
+// reference members (clamp_viewport_start is a free function declared in
+// app_state.h).
 
 // Boundary sync points for the live/slot view-state cache. The live
 // AppState view fields (viewport / zoom / playhead / selection) are the

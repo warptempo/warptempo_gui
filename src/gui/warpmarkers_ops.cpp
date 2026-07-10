@@ -16,24 +16,11 @@
 #include <utility>
 #include <vector>
 
-// Warp-authoring cluster. Method bodies map onto the original main.cpp
-// lambdas via these mechanical rewrites:
-//
-//   push_undo, push_undo_phase_reset,
-//   push_undo_both                 → undo.push_undo*
-//   recompute_dirty                → undo.recompute_dirty
-//   sync_playhead_to_last_selected → selection.sync_playhead_to_last_selected
-//   invalidate_waveform_area       → viewport.invalidate_waveform_area
-//   invalidate_timestamp_area      → viewport.invalidate_timestamp_area
-//   invalidate_top_strip           → viewport.invalidate_top_strip
-//   move_playhead_to               → viewport.move_playhead_to
-//   stop_playback_if_playing       → playback_lifecycle.stop_playback_if_playing
-//   clear_hover_popup              → viewport.clear_hover_popup
-//   resolve_inherited_tempo,
-//   resolve_inherited_tempo_scale,
-//   current_samples_per_pixel,
-//   waveform_area, union_rect,
-//   playhead_invalidate_rect       → free functions, no qualifier change
+// Warp-authoring cluster: marker drop / delete / toggle / nudge / tempo
+// operations on the warp store, reaching undo, selection, viewport, and
+// playback_lifecycle through the struct's reference members; resolver and
+// geometry helpers (resolve_inherited_tempo, current_samples_per_pixel,
+// waveform_area, ...) are free functions.
 
 // Index of the nearest marker strictly before `time_frame` that survives
 // into the render, or -1 if none. Uses the same cascade definition as render

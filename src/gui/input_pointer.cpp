@@ -452,9 +452,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // per pointer frame through on_wheel -> handle_wheel.
 }
 
-// Button-release handler. Verbatim from the lambda at the
-// original main.cpp:1835; commit_drag and set_single_selection are
-// rewritten to direct method calls on warpops / selection respectively.
 void GuiInputHandler::finalize_editor_text_drag() {
     const ActiveEditorText g = active_editor_text(app, audio);
     if (g.valid) {

@@ -5,9 +5,10 @@
 #include <regex>
 #include <string>
 
-// MM:SS.mmm is a DISPLAY-ONLY rendering. Authored positions are source-frame
-// doubles end to end (serialized via frame_format.h); no file format carries
-// timestamps. Display surfaces derive their text as
+// MM:SS.mmm is a DISPLAY-ONLY rendering. Authored positions are whole
+// source frames held in int64_t end to end (serialized as canonical
+// integer text via frame_format.h); no file format carries timestamps.
+// Display surfaces derive their text as
 // format_timestamp(frame / sample_rate).
 
 // Validate "MM:SS.mmm" (minutes and seconds 00-59, three-digit milliseconds).

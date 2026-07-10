@@ -10,10 +10,8 @@ class GuiAudio;
 class GuiPlatform;
 class GuiPlayback;
 
-// Viewport mutators and invalidation helpers, extracted from main.cpp's
-// inline lambdas. The struct holds references to the long-lived state the
-// methods read and write; bodies are byte-identical to the originals modulo
-// `this->` access on the captured references.
+// Viewport mutators and invalidation helpers. The struct holds references
+// to the long-lived state the methods read and write.
 struct Viewport {
     AppState&                       app;
     const GuiAudio&                 audio;
@@ -112,13 +110,12 @@ struct Viewport {
 
     // Reset the hover popup state. If the popup was visible, invalidate
     // the top strip so the next paint erases it. Safe to call from any
-    // path. Promoted from main.cpp's clear_hover_popup lambda.
+    // path.
     void clear_hover_popup();
 
     // Recompute the hover state at the cursor's last on_motion position.
     // Called from viewport mutators (so a scroll/zoom updates which
     // marker is under the cursor) and from the platform tick (so the
-    // dwell-to-visible flip fires after delay). Body promoted from
-    // main.cpp's recompute_hover_at_cursor lambda.
+    // dwell-to-visible flip fires after delay).
     void recompute_hover_at_cursor();
 };

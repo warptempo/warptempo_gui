@@ -13,14 +13,12 @@
 #include <utility>
 #include <vector>
 
-// Render-view input handlers, lifted verbatim from input_handler.cpp's mega
-// event handlers (on_key / on_button_press / on_motion). Each is a cohesive,
-// behavior-preserving extraction of one render-view-only block; the call sites
-// stay in input_handler.cpp and invoke these methods unchanged. The methods are
-// declared on GuiInputHandler in input_handler.h, so this is a pure definition
-// move. Two former file-local helpers they share with the staying code were
-// promoted to headers so both TUs reach them: is_play_pause_key (gui_input.h)
-// and the sweep_select_interval template (app_state.h).
+// Render-view input handlers: the render-view-only blocks of on_key /
+// on_button_press / on_motion, each a GuiInputHandler method declared in
+// input_handler.h and invoked from input_handler.cpp's event entry points.
+// Helpers shared with the source-view paths live in headers both TUs
+// reach: is_play_pause_key (gui_input.h) and the sweep_select_interval
+// template (app_state.h).
 
 // Render-view read-only allowlist as a predicate. While render-view is
 // active only navigation / playback / exit / commit chords are honored;

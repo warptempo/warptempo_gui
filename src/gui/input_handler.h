@@ -35,9 +35,8 @@
 
 struct GuiPaintHandler;
 
-// Keyboard input handler. Owns the on_key callback body extracted
-// verbatim from main.cpp's lambda at the original main.cpp:1588. Lifetime is
-// the same scope as the other operation structs.
+// Keyboard input handler. Owns the on_key callback body; lifetime is the
+// same scope as the other operation structs.
 //
 // Also provides on_button_press / on_button_release as public methods plus
 // the shared wheel handler as a private helper, and on_motion the same way.

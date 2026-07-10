@@ -175,8 +175,8 @@ void PhaseResetPropagate::open_paste_confirmation() {
     playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
     app.prompt.text            =
-        "Paste phase_resets into matching blocks? "
-        "Existing phase_resets in matched ranges will be cleared.";
+        "Paste phase resets into matching blocks? "
+        "Existing phase resets in matched ranges will be cleared.";
     app.prompt.response_keys   = {'y', '\x1b'};
     app.prompt.response_labels = {"[Y]es", "[Esc]"};
     app.prompt.trigger         = DialogTrigger::PASTE_CONFIRM;

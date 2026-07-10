@@ -12,18 +12,9 @@
 #include <utility>
 #include <vector>
 
-// Phase reset authoring cluster. Method bodies map onto the original
-// main.cpp lambdas via these mechanical rewrites:
-//
-//   push_undo*                  → undo.push_undo*
-//   recompute_dirty             → undo.recompute_dirty
-//   sync_playhead_to_last_selected → selection.sync_playhead_to_last_selected
-//   invalidate_waveform_area    → viewport.invalidate_waveform_area
-//   invalidate_timestamp_area   → viewport.invalidate_timestamp_area
-//   invalidate_all              → viewport.invalidate_all
-//   move_playhead_to            → viewport.move_playhead_to
-//   current_samples_per_pixel   → free function
-//   stop_playback_if_playing    → playback_lifecycle.stop_playback_if_playing
+// Phase reset authoring cluster: drop / delete / toggle / detect / clear
+// operations on the phase reset store, reaching undo, selection, viewport,
+// and playback_lifecycle through the struct's reference members.
 
 // Drop a phase reset marker at `time_frame`. Placement is bounded only
 // by the absolute range; arbitrarily close and exactly-coincident drops
@@ -85,7 +76,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) {
             std::fprintf(stderr,
-                "warptempo_gui: phase_reset delete rejected: stale selection index\n");
+                "warptempo_gui: phase reset delete rejected: stale selection index\n");
             return;
         }
     }

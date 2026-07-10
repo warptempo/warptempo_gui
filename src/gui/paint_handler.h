@@ -15,9 +15,7 @@
 class GuiWaveformWorker;
 
 // Paint handler cluster. Owns the on_redraw and on_resize callback
-// bodies, extracted verbatim from main.cpp's lambdas. Bodies use the
-// reference members below in place of the original lambda captures; the
-// only behavior change is the indirection.
+// bodies, reaching shared state through the reference members below.
 //
 // Construction site: main.cpp, after AppState / GuiAudio / GuiPlayback /
 // GuiPlatform / WaveformCache exist. Lifetime is the same scope as the other
@@ -40,16 +38,11 @@ class GuiWaveformWorker;
 
 // -- Constants used by paint code ----------------------------------------
 //
-// Hoisted from main.cpp's anonymous namespace so paint_handler.cpp
-// can reach them. Other constants (kMarkerHitHalfPx, kZoomMsPerPixel)
-// are paint-handler-independent and stay in main.cpp's anonymous namespace;
-// playhead_half_px() now lives in render.h.
-//
-// kProgressBarHeight was deleted with the load progress bar (replaced by a
-// bottom-left "loading..." status during app.loading, painted directly in
-// GuiPaintHandler::on_redraw's loading branch).
-// flag_font_size_px() lives in render.h so render.cpp can reach it without
-// pulling paint_handler.h into the lower-layer include graph.
+// Declared here so paint_handler.cpp can reach them. Other constants
+// (kMarkerHitHalfPx, kZoomMsPerPixel) are paint-handler-independent and
+// live in main.cpp's anonymous namespace; playhead_half_px() lives in
+// render.h. flag_font_size_px() lives in render.h so render.cpp can reach
+// it without pulling paint_handler.h into the lower-layer include graph.
 
 // Timestamp text layout (bottom-left of the status strip). The
 // window-bottom baseline anchor (kTimestampBaselineFromBottom) was replaced

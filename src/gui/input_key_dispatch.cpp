@@ -1,8 +1,7 @@
-// on_key dispatch helpers, lifted verbatim from input_handler.cpp's on_key.
-// Each is a GuiInputHandler method declared in input_handler.h; on_key calls
-// them in sequence (if (handle_X(...)) return;). Grouped here to keep
-// input_handler.cpp focused on the event entry points and the pointer /
-// wheel paths.
+// on_key dispatch helpers. Each is a GuiInputHandler method declared in
+// input_handler.h; on_key calls them in sequence (if (handle_X(...))
+// return;). Grouped here to keep input_handler.cpp focused on the event
+// entry points and the pointer / wheel paths.
 
 #include "input_handler.h"
 

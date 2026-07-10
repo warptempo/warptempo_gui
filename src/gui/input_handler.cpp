@@ -28,40 +28,12 @@
 #include <utility>
 #include <vector>
 
-// Keyboard input handler. Method bodies are byte-identical to the
-// lambdas they replaced in main.cpp (set_on_key at the original main.cpp:1588;
-// run_render_batch at the original main.cpp:1539). The only changes are:
-//
-//   - Capture-by-reference of `app`, `audio`, `gui`, `playback`, `viewport`,
-//     `selection`, `undo`, `warpops`, `phase resets`, `flag_editor`,
-//     `render_view`, `active_views`, `playback_lifecycle`, `save_ops`, `prompt`
-//     is now reference-member access on `this`. The std::function forwarder
-//     pattern (clear_hover_popup, stop_playback_if_playing, save_markers,
-//     request_close_or_revert, prompt_activate_response, toggle_playback,
-//     set_playback_speed) was retired in favor of direct struct method
-//     calls (viewport.clear_hover_popup,
-//     playback_lifecycle.stop_playback_if_playing /
-//     toggle_playback / set_playback_speed, save_ops.save,
-//     prompt.request_close_or_revert / activate_response).
-//   - Forwarder lambdas in main.cpp (do_undo, do_redo, recompute_dirty,
-//     push_undo_both, select_*, clear_selection, set_single_selection,
-//     toggle_selection_membership, move_playhead_*, zoom_*, scroll_viewport,
-//     center_viewport_on_playhead, invalidate_*, trim_*_sample, drop_*,
-//     delete_*, force_delete_*, toggle_inherits/disabled/begin_time/end_time,
-//     adjust_tempo, clear_trim, nudge_*, jump_*, drop_phase_reset_at_playhead,
-//     toggle_phase_reset_*, detect_phase_resets, clear_all_phase_resets,
-//     enter_*_edit, commit_*_edit, exit_top_flag_edit_no_commit,
-//     enter_bpm_mode, exit_bpm_mode,
-//     toggle_active_markers_view, load_render_view_at, restore_source_audio,
-//     stash_render_view_selection_to_active_entry,
-//     enumerate_render_view_list, write_rendersettings_for) were rewritten
-//     to direct method calls on the appropriate operation struct ref.
-//   - Free function calls (do_render, iter_popup_eligible_marker,
-//     effective_disabled, compute_base_tempo_scale, text_editor::*,
-//     std::filesystem::*, std::printf, etc.) keep their original spelling.
-//     compute_base_tempo_scale + BaseTempoScale moved out of main.cpp's
-//     anonymous namespace into input_handler.h so this TU can reach them;
-//     render_bpm_sweep() is the sole caller.
+// Keyboard input handler event entry points (on_key, the pointer handlers,
+// on_wheel), dispatching into the operation structs through the reference
+// members (warpops, phase_resets, flag_editor, render_view, active_views,
+// playback_lifecycle, save_ops, prompt, selection, undo, viewport).
+// compute_base_tempo_scale + BaseTempoScale live in input_handler.h so
+// this TU can reach them; render_bpm_sweep() is the sole caller.
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if constexpr (kDebugPerf) {

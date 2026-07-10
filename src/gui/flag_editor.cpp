@@ -91,25 +91,13 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
 
 } // namespace
 
-// Flag-editor cluster. Method bodies map onto the original main.cpp
-// lambdas via these mechanical rewrites:
-//
-//   push_undo                      → undo.push_undo
-//   recompute_dirty                → undo.recompute_dirty
-//   invalidate_top_strip           → viewport.invalidate_top_strip
-//   invalidate_waveform_area       → viewport.invalidate_waveform_area
-//   invalidate_timestamp_area      → viewport.invalidate_timestamp_area
-//   clear_hover_popup              → viewport.clear_hover_popup
-//   exit_top_flag_edit_no_commit   → this->exit_top_flag_edit_no_commit
-//   build_locked_prefix            → this->build_locked_prefix
-//
-// Free-function calls (text_editor::*, iter_popup_eligible_marker,
-// bpm_popup_eligible_marker, format_iter_bracket_inline,
-// format_bpm_bracket_text, flag_text_for_marker, flag_text_iter,
-// warpmarkers_internal::parse_single_canonical_line, parse_bpm_bracket,
-// effective_disabled) keep their original spelling — the popup helpers
-// moved from main.cpp's anonymous namespace into warpmarkers.h alongside
-// effective_disabled, so this TU sees them via #include "warpmarkers.h".
+// Flag-editor cluster: the top-strip flag editor's enter / commit / exit
+// paths, the iter grammar, and the bpm-bracket editor session, reaching
+// undo and viewport through the struct's reference members. The popup
+// eligibility and flag-text helpers (iter_popup_eligible_marker,
+// bpm_popup_eligible_marker, flag_text_for_marker, ...) live in
+// warpmarkers.h alongside effective_disabled, so this TU sees them via
+// #include "warpmarkers.h".
 
 // Build the locked-prefix string for `m`. This is the DISPLAY rendering,
 // not the serializer's bytes: the serializer writes the whole-frame
