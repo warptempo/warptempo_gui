@@ -237,12 +237,12 @@ void append_authoring_block(std::string& out,
     // frame_format.h, same as every other authored position on disk.
     if (authoring.has_trim_begin) {
         out += "trim_begin=";
-        out += format_frame_double(authoring.trim_begin_frame);
+        out += format_authored_frame(authoring.trim_begin_frame);
         out += '\n';
     }
     if (authoring.has_trim_end) {
         out += "trim_end=";
-        out += format_frame_double(authoring.trim_end_frame);
+        out += format_authored_frame(authoring.trim_end_frame);
         out += '\n';
     }
     std::snprintf(buf, sizeof(buf), "%d", authoring.zoom_level);
@@ -511,14 +511,14 @@ RendersettingsAuthoring read_rendersettings_authoring(
                 out.active_audio_view = 'T';
             }
         } else if (key == "trim_begin") {
-            double v;
-            if (parse_frame_double(value, v)) {
+            int64_t v;
+            if (parse_authored_frame(value, v)) {
                 out.has_trim_begin = true;
                 out.trim_begin_frame = v;
             }
         } else if (key == "trim_end") {
-            double v;
-            if (parse_frame_double(value, v)) {
+            int64_t v;
+            if (parse_authored_frame(value, v)) {
                 out.has_trim_end = true;
                 out.trim_end_frame = v;
             }
@@ -689,28 +689,28 @@ bool write_settings_file(
             case SettingKind::TrimBegin_A:
                 if (tab_a.trim.has_begin) {
                     data += desc.key; data += '=';
-                    data += format_frame_double(tab_a.trim.begin_frame);
+                    data += format_authored_frame(tab_a.trim.begin_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimEnd_A:
                 if (tab_a.trim.has_end) {
                     data += desc.key; data += '=';
-                    data += format_frame_double(tab_a.trim.end_frame);
+                    data += format_authored_frame(tab_a.trim.end_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimBegin_B:
                 if (tab_b.trim.has_begin) {
                     data += desc.key; data += '=';
-                    data += format_frame_double(tab_b.trim.begin_frame);
+                    data += format_authored_frame(tab_b.trim.begin_frame);
                     data += '\n';
                 }
                 break;
             case SettingKind::TrimEnd_B:
                 if (tab_b.trim.has_end) {
                     data += desc.key; data += '=';
-                    data += format_frame_double(tab_b.trim.end_frame);
+                    data += format_authored_frame(tab_b.trim.end_frame);
                     data += '\n';
                 }
                 break;

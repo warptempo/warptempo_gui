@@ -297,8 +297,8 @@ void GuiInputHandler::handle_defect_response(char k) {
         // format-survives arm.
         app.trim.has_begin      = false;
         app.trim.has_end        = false;
-        app.trim.begin_frame  = 0.0;
-        app.trim.end_frame    = 0.0;
+        app.trim.begin_frame  = 0;
+        app.trim.end_frame    = 0;
         app.trim_begin_selected = false;
         app.trim_end_selected   = false;
         app.last_selected_trim  = 0;
@@ -398,7 +398,7 @@ void GuiInputHandler::handle_defect_response(char k) {
             // the whole family (empty list, first off zero, disabled,
             // pass, label ref).
             const auto& mv = app.warpmarkers.markers();
-            if (!mv.empty() && mv[0].time_frame == 0.0) {
+            if (!mv.empty() && mv[0].time_frame == 0) {
                 // Rewrite the zero marker in place to the plain default.
                 // Rewriting covers enabling, so there is no separate
                 // [E]nable option. Dropping a def with live refs is fine:
@@ -422,7 +422,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                 // index by one, the same index-shaped staleness an erasure
                 // causes, so the same clear applies.
                 GuiWarpMarker nm;
-                nm.time_frame   = 0.0;
+                nm.time_frame   = 0;
                 nm.tempo_inherits = false;
                 nm.tempo_base     = 1.0;
                 app.warpmarkers.insert_marker(std::move(nm));

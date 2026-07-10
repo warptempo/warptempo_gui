@@ -701,8 +701,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 int64_t lo = active_domain_to_source_frame(app, audio, a);
                 int64_t hi = active_domain_to_source_frame(app, audio, b);
                 if (lo > hi) std::swap(lo, hi);
-                // Sweep endpoints are source-frame doubles, the marker
-                // stores' own domain.
+                // Sweep endpoints widen to doubles for the interval
+                // compare against the stores' int64 frames.
                 const double lo_t = static_cast<double>(lo);
                 const double hi_t = static_cast<double>(hi);
                 const bool swept = (app.active_markers_view == 'P')

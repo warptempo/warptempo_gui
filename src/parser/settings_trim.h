@@ -1,17 +1,18 @@
 #pragma once
 
+#include <cstdint>
 #include <expected>
 #include <string>
 
 // Typed carrier for one tab's trim in the .settings format. Positions are
-// whole source frames held in doubles, decoded from the on-disk integer text
-// via parse_frame_double (frame_format.h). A has_* of false means the key was
-// absent; the paired _frame field is then left at 0.0 and must not be read.
+// whole source frames held in int64_t, decoded from the on-disk integer text
+// via parse_authored_frame (frame_format.h). A has_* of false means the key
+// was absent; the paired _frame field is then left at 0 and must not be read.
 struct SettingsTrim {
-    bool   has_begin = false;
-    double begin_frame = 0.0;
-    bool   has_end   = false;
-    double end_frame   = 0.0;
+    bool    has_begin = false;
+    int64_t begin_frame = 0;
+    bool    has_end   = false;
+    int64_t end_frame   = 0;
 };
 
 // Two-tab carrier for the per-tab trim keys in the .settings format, plus
@@ -30,11 +31,11 @@ struct SettingsTrimTabs {
 // from the .settings file at `path`.
 // Missing or unopenable file yields an all-false carrier for both tabs.
 // One getline pass; blank, comment, and non-key lines are skipped; each
-// trim value is validated and decoded by parse_frame_double (frame_format.h:
-// a whole frame, finite, non-negative, whole field consumed). Missing trim
-// keys are valid, but a present trim key with a malformed position — a
-// fractional value, the old MM:SS.mmm timestamp form — is a hard parse
-// failure; a present
+// trim value is validated and decoded by parse_authored_frame
+// (frame_format.h: a whole frame, finite, non-negative, whole field
+// consumed). Missing trim keys are valid, but a present trim key with a
+// malformed position — a fractional value, the old MM:SS.mmm timestamp
+// form — is a hard parse failure; a present
 // active_tab_view with any value but A or B is a hard parse failure the
 // same way.
 // A duplicated key is a hard parse failure, matching the

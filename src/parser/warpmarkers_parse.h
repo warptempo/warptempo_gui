@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <expected>
 #include <optional>
 #include <string>
@@ -26,11 +27,12 @@
 //      label_def markers; a disabled non-label-def is locally disabled
 //      and does not propagate.
 struct WarpMarker {
-    // Authored position: a whole source frame held in a double
-    // (integer-valued by grammar — fractional position text is load-fatal;
-    // a follow-up retypes to int64_t). Serialized as plain integer text via
+    // Authored position: a whole source frame held in an int64_t — a
+    // fractional authored position is unrepresentable (fractional position
+    // text is load-fatal, and every gesture commit converts through
+    // snap_authored_frame). Serialized as plain integer text via
     // frame_format.h; timestamps are display-only renderings.
-    double time_frame = 0.0;
+    int64_t time_frame = 0;
 
     bool        tempo_inherits = false;
     double      tempo_base     = 1.0;

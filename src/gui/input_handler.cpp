@@ -483,11 +483,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             static_cast<long>(audio.total_frames())).warp_frame_map;
         double ms;
         if (!map.empty()) {
-            const size_t src_frame =
-                static_cast<size_t>(std::nearbyint(marker.time_frame));
+            const size_t src_frame = static_cast<size_t>(marker.time_frame);
             ms = std::nearbyint(map_source_to_target(src_frame, map));
         } else {
-            ms = std::nearbyint(marker.time_frame);
+            ms = static_cast<double>(marker.time_frame);
         }
 
         // Too-zoomed-out gate, the same fixed-width rule as the paint helper
@@ -821,12 +820,10 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         // trim bound exactly as it does onto a marker.
         if (app.last_selected_trim == 'B') {
             if (!app.trim.has_begin) return;
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.trim.begin_frame));
+            src_sample = app.trim.begin_frame;
         } else if (app.last_selected_trim == 'E') {
             if (!app.trim.has_end) return;
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.trim.end_frame));
+            src_sample = app.trim.end_frame;
         } else {
             return;
         }
@@ -840,15 +837,13 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
                 ? app.render_view.phase_resets
                 : app.phaseresetmarkers.markers();
             if (idx >= static_cast<int>(tv.size())) return;
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                tv[idx].time_frame));
+            src_sample = tv[idx].time_frame;
         } else {
             const auto& mv = app.render_view.enabled
                 ? app.render_view.warp_markers
                 : app.warpmarkers.markers();
             if (idx >= static_cast<int>(mv.size())) return;
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                mv[idx].time_frame));
+            src_sample = mv[idx].time_frame;
         }
     }
     // Target view: forward-translate marker's source-frame to active-
@@ -944,13 +939,13 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // and no sub-column residue accumulates across detents. The
             // end bound clamps to its own absolute walls — floor 0,
             // ceiling the end wall at frame EOF exactly (end-at-EOF is a
-            // valid render); exact frame-double compares, the load
+            // valid render); plain integer compares, the load
             // guard's own comparison, applied AFTER the column snap so
-            // the integer walls win over the pixel grid. There is no
+            // the walls win over the pixel grid. There is no
             // partner wall: the end bound crosses the begin bound freely
-            // and the begin bound is untouched here. The 0.0 floor is the
+            // and the begin bound is untouched here. The zero floor is the
             // walls' lower end, kept for representability — a negative
-            // position is unrepresentable in the frame-double form the
+            // position is unrepresentable in the authored frame form the
             // .settings file persists.
             const int64_t step = std::max<int64_t>(
                 1, samples_visible(app, audio) / kTrimEndWheelDivisor);
@@ -967,12 +962,11 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                       static_cast<long>(audio.total_frames())).warp_frame_map
                 : no_map;
             const int c = painted_column_of_source_frame(
-                app, audio, app.trim.end_frame, map);
-            double v = authored_frame_at_column(
+                app, audio, static_cast<double>(app.trim.end_frame), map);
+            int64_t v = authored_frame_at_column(
                 app, audio, c + static_cast<int>(dcols), map);
-            if (v < 0.0) v = 0.0;
-            const double end_wall =
-                static_cast<double>(audio.total_frames());
+            if (v < 0) v = 0;
+            const int64_t end_wall = audio.total_frames();
             if (v > end_wall) v = end_wall;
             app.trim.end_frame = v;
             viewport.invalidate_waveform_area();
@@ -1072,8 +1066,8 @@ bool GuiInputHandler::apply_editor_clipboard(
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames,
-                           bool has_trim_begin, double trim_begin_frame,
-                           bool has_trim_end,   double trim_end_frame) {
+                           bool has_trim_begin, int64_t trim_begin_frame,
+                           bool has_trim_end,   int64_t trim_end_frame) {
     // Contract and caller list in input_handler.h: this is the shared
     // entry-half validity predicate for target view — the keyboard S → T
     // toggle below and GuiFileLoader::load_file's active_audio_view=T

@@ -12,7 +12,8 @@
 
 // Pure parser-domain assembly: phase-reset markers -> absolute source-frame
 // positions. Drops disabled markers; reads time_frame directly — the authored
-// position already is the exact double source frame, matching the warp-marker
+// position is a whole source frame (int64_t) that widens exactly into the
+// double intermediate, matching the warp-marker
 // convention in build_warp_frame_map. Refuses an
 // enabled reset authored past the source end (strictly greater than
 // total_frames; equal is allowed), the producer-side validation layer parallel

@@ -211,7 +211,7 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
         }
     }
 
-    // [#]?  <frame double>  |  PAYLOAD
+    // [#]?  <frame position>  |  PAYLOAD
     if (!t.empty() && t[0] == '#') {
         out.disabled = true;
         t.erase(0, 1);
@@ -225,8 +225,8 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
     // (frame_format.h): a whole frame, finite, non-negative, whole field
     // consumed. Anything else — a fractional value, the old MM:SS.mmm
     // timestamp form — is a malformed position and load-fatal.
-    if (!parse_frame_double(std::string_view(t).substr(0, pipe),
-                            out.time_frame)) {
+    if (!parse_authored_frame(std::string_view(t).substr(0, pipe),
+                              out.time_frame)) {
         return std::unexpected<std::string>("invalid frame position: " +
                                             t.substr(0, pipe));
     }
@@ -266,7 +266,7 @@ parse_warpmarkers_file(const std::string& path) {
     // vector) load intact so the save/reload round trip can never lock the
     // user out; every render path refuses them with a pointed message
     // instead.
-    double last_time = -1.0;
+    int64_t last_time = -1;
 
     // Track which line first defined each label (for duplicate errors).
     std::set<std::string>      seen_def;
@@ -285,16 +285,16 @@ parse_warpmarkers_file(const std::string& path) {
         }
 
         // Hash-comment convention: a first-byte '#' whose text up to the
-        // first '|' does not parse as a frame double marks a comment line
+        // first '|' does not parse as a frame position marks a comment line
         // and is skipped; a '#' that does prefix a valid frame position is
         // a disabled marker and falls through to the strict parse.
         bool line_disabled = false;
         if (!t.empty() && t[0] == '#') {
             const size_t pipe = t.find('|');
-            double probe = 0.0;
+            int64_t probe = 0;
             if (pipe != std::string::npos &&
-                parse_frame_double(std::string_view(t).substr(1, pipe - 1),
-                                   probe)) {
+                parse_authored_frame(std::string_view(t).substr(1, pipe - 1),
+                                     probe)) {
                 line_disabled = true;
                 t.erase(0, 1);
             } else {
@@ -322,7 +322,7 @@ parse_warpmarkers_file(const std::string& path) {
         // "marker segment < 1 frame" error. Decreasing stays load-fatal as a
         // corruption tripwire — the GUI always saves its time-sorted store,
         // so a decreasing file can only be a hand-edit error or corruption.
-        if (last_time >= 0.0 && m.time_frame < last_time)
+        if (last_time >= 0 && m.time_frame < last_time)
             return fail(line_number,
                 "time decreasing: " + time_raw);
 

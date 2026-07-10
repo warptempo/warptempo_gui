@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
     // both binaries. Checked in order — warp markers (wall total-1), phase
     // reset markers (wall total exactly), then tab A begin (wall total-1),
     // tab A end (wall total), tab B begin, tab B end — first offender only,
-    // disabled markers included. Every comparison is an exact frame-double
+    // disabled markers included. Every comparison is a plain integer
     // compare against the authored value — literally the same comparison the
     // GUI gesture walls apply, with no rounding anywhere — so a legal
     // at-the-wall position always reloads clean. Embedded times in the
@@ -234,11 +234,11 @@ int main(int argc, char** argv) {
     // downstream render-boundary EOF refusals stay as breach backstops for
     // hand-edited maps. ---
     {
-        const double sr_d   = static_cast<double>(sample_rate);
-        const double totalf = static_cast<double>(total_frames);
+        const double  sr_d  = static_cast<double>(sample_rate);
+        const int64_t total = static_cast<int64_t>(total_frames);
         std::string detail;
         for (const auto& m : markers) {
-            if (m.time_frame > totalf - 1.0) {
+            if (m.time_frame > total - 1) {
                 detail = "warp marker past end of audio at "
                          + format_timestamp(m.time_frame / sr_d);
                 break;
@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
         }
         if (detail.empty()) {
             for (const auto& m : resets) {
-                if (m.time_frame > totalf) {
+                if (m.time_frame > total) {
                     detail = "phase reset marker past end of audio at "
                              + format_timestamp(m.time_frame / sr_d);
                     break;
@@ -258,13 +258,13 @@ int main(int argc, char** argv) {
                 {"tab A", trim_tabs.tab_a}, {"tab B", trim_tabs.tab_b},
             };
             for (const auto& [name, t] : tabs) {
-                if (t.has_begin && t.begin_frame > totalf - 1.0) {
+                if (t.has_begin && t.begin_frame > total - 1) {
                     detail = std::string(name)
                              + " trim begin past end of audio at "
                              + format_timestamp(t.begin_frame / sr_d);
                     break;
                 }
-                if (t.has_end && t.end_frame > totalf) {
+                if (t.has_end && t.end_frame > total) {
                     detail = std::string(name)
                              + " trim end past end of audio at "
                              + format_timestamp(t.end_frame / sr_d);

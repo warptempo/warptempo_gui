@@ -228,7 +228,12 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // The position is a frame double on the render's own time axis, generically
 // fractional, decoded through the render-display pair
 // (parse_render_frame_double, frame_format.h) — the authored parse would
-// refuse the fractional target positions this domain routinely carries.
+// refuse the fractional target positions this domain routinely carries. The
+// decoded double then quantizes through snap_authored_frame into the int64
+// time_frame this display store shares with the authored type: every
+// downstream consumer (stem paint, click navigation) already rounded to the
+// nearest whole frame at use, so rounding once at load displays
+// identically; the on-disk sidecar keeps its full fractional precision.
 // Lines with no pipe or an unparseable position are skipped individually —
 // a bad line never fails the whole load, since this is display-only.
 static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
@@ -249,7 +254,9 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         if (pipe == std::string::npos) continue;
         const std::string left = t.substr(0, pipe);
         GuiWarpMarker m;
-        if (!parse_render_frame_double(left, m.time_frame)) continue;
+        double render_frame = 0.0;
+        if (!parse_render_frame_double(left, render_frame)) continue;
+        m.time_frame   = snap_authored_frame(render_frame);
         m.label_ref    = t.substr(pipe + 1);
         m.disabled     = disabled;
         out.push_back(std::move(m));
@@ -274,7 +281,9 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 // full as a render-display frame double (parse_render_frame_double consumes
 // the whole field, so trailing characters fail it; fractional target
 // positions are this domain's normal shape and parse fine) or the line is
-// skipped individually — no
+// skipped individually. The decoded double quantizes through
+// snap_authored_frame into the shared int64 time_frame, same rationale as
+// the warp reader above (paint and navigation already round at use). No
 // cross-line validation of any kind. Hash semantics fall out naturally and
 // match the strict parser's: hash followed by a valid position is a
 // disabled marker, hash followed by anything else skips as a comment, and
@@ -295,7 +304,9 @@ static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
             t.erase(0, 1);
         }
         GuiPhaseResetMarker m;
-        if (!parse_render_frame_double(t, m.time_frame)) continue;
+        double render_frame = 0.0;
+        if (!parse_render_frame_double(t, render_frame)) continue;
+        m.time_frame   = snap_authored_frame(render_frame);
         m.disabled     = disabled;
         out.push_back(std::move(m));
     }

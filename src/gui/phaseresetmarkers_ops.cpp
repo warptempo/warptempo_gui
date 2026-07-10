@@ -38,7 +38,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // frame, so the snap is the uniformity funnel, not a rounding step).
     // The wall check below IS the load guard's comparison, exactly,
     // applied to the snapped value.
-    time_frame = snap_authored_frame(time_frame);
+    const int64_t drop_frame = snap_authored_frame(time_frame);
     // Recorded asymmetry with the warp drop: the EOF bound differs by
     // column for a structural reason. A warp marker needs at least one
     // source frame of segment to its next breakpoint (build_warp_frame_map
@@ -46,12 +46,12 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // of EOF; a phase reset is a point event, so its wall is
     // total_frames exactly — an at-EOF reset is inert at derivation.
     // Reject only when the position lands strictly past EOF.
-    if (time_frame > static_cast<double>(audio.total_frames()))
+    if (drop_frame > audio.total_frames())
         return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
     GuiPhaseResetMarker nm;
-    nm.time_frame = time_frame;
+    nm.time_frame = drop_frame;
     const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
     app.selected_markers.clear();
     app.selected_markers.insert(new_idx);
@@ -62,9 +62,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.invalidate_timestamp_area();
     // Match drop_marker: move playhead to the new phase reset. When
     // dropping at the current playhead, this is a no-op.
-    const int64_t src_sample =
-        static_cast<int64_t>(std::nearbyint(time_frame));
-    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+    const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
     target_render.trigger();
 }
@@ -171,19 +169,19 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         ? target_view_warp_frame_map_cached(
               app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
         : no_map;
-    const double reset_wall = static_cast<double>(audio.total_frames());
-    std::vector<std::pair<int, double>> proposals;
+    const int64_t reset_wall = audio.total_frames();
+    std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
         const int c = painted_column_of_source_frame(
-            app, audio, tv[idx].time_frame, map);
-        double t_new =
+            app, audio, static_cast<double>(tv[idx].time_frame), map);
+        int64_t t_new =
             authored_frame_at_column(app, audio, c + direction, map);
         if (target_view) {
             // All-or-nothing silent refusal outside the absolute range.
-            if (t_new < 0.0 || t_new > reset_wall) return;
+            if (t_new < 0 || t_new > reset_wall) return;
         } else {
-            if (t_new < 0.0)        t_new = 0.0;
+            if (t_new < 0)          t_new = 0;
             if (t_new > reset_wall) t_new = reset_wall;
         }
         proposals.emplace_back(idx, t_new);

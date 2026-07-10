@@ -58,8 +58,8 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
-                                   bool has_trim_begin, double trim_begin_frame,
-                                   bool has_trim_end,   double trim_end_frame,
+                                   bool has_trim_begin, int64_t trim_begin_frame,
+                                   bool has_trim_end,   int64_t trim_end_frame,
     std::string batch_folder,
     std::string batch_basename) {
     RenderRequest req;
@@ -461,10 +461,11 @@ RenderOutcome do_render(const RenderRequest& req,
     double sidecar_crop_begin = 0.0;
     double sidecar_crop_end   = full_warp_frame_map.back().tgt_frame;
     if (trimmed && output_format == "wav") {
-        const double b_src =
-            req.has_trim_begin ? req.trim_begin_frame : 0.0;
+        const double b_src = req.has_trim_begin
+            ? static_cast<double>(req.trim_begin_frame) : 0.0;
         const double e_src = req.has_trim_end
-            ? req.trim_end_frame : static_cast<double>(total_frames);
+            ? static_cast<double>(req.trim_end_frame)
+            : static_cast<double>(total_frames);
         const int64_t crop_begin = std::llrint(
             map_source_to_target(b_src, full_warp_frame_map));
         const int64_t crop_end = std::llrint(
@@ -525,7 +526,13 @@ RenderOutcome do_render(const RenderRequest& req,
 
             auto seg_it = full_warp_frame_map.begin();
             std::vector<GuiWarpMarker> sidecar_warp_markers;
+            // Fractional render-domain positions, parallel to
+            // sidecar_warp_markers. They live outside the marker structs
+            // because the authored time_frame is int64 and cannot represent
+            // the target axis's fractional values.
+            std::vector<double> sidecar_warp_frames;
             sidecar_warp_markers.reserve(req.warp_markers.size());
+            sidecar_warp_frames.reserve(req.warp_markers.size());
             for (size_t mi = 0; mi < req.warp_markers.size(); ++mi) {
                 const GuiWarpMarker& g = req.warp_markers[mi];
                 if (!warp_keep[mi]) continue;
@@ -543,8 +550,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 if (req.has_trim_begin && g.time_frame < req.trim_begin_frame) continue;
                 if (req.has_trim_end && g.time_frame > req.trim_end_frame) continue;
 
-                GuiWarpMarker w = g;
-                w.time_frame  = s.tgt_frame - sidecar_crop_begin;
+                const double render_frame = s.tgt_frame - sidecar_crop_begin;
                 // Pre-origin filter: a marker whose render position falls
                 // before the delivered WAV's first sample is not present in
                 // the delivered audio (a marker exactly at the trim begin can
@@ -553,8 +559,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 // surviving warp times are strictly ascending doubles by map
                 // monotonicity, so the display sidecar's timestamps are
                 // strictly ascending too.
-                if (w.time_frame < 0.0) continue;
-                sidecar_warp_markers.push_back(std::move(w));
+                if (render_frame < 0.0) continue;
+                sidecar_warp_markers.push_back(g);
+                sidecar_warp_frames.push_back(render_frame);
             }
             // Render-display domain: positions above are re-timed onto the
             // deliverable's target axis, generically fractional, so this
@@ -563,7 +570,8 @@ RenderOutcome do_render(const RenderRequest& req,
             const std::string warp_sidecar_path =
                 (bf / (req.batch_basename + ".renderwarpmarkers")).string();
             if (!GuiWarpMarkers::save_render_display(warp_sidecar_path,
-                                                     sidecar_warp_markers)) {
+                                                     sidecar_warp_markers,
+                                                     sidecar_warp_frames)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     warp_sidecar_path.c_str());
@@ -595,20 +603,25 @@ RenderOutcome do_render(const RenderRequest& req,
             // exactly as the warp sidecar displays markers whose breakpoints
             // the trimmer's window anchors coalesced away.
             std::vector<GuiPhaseResetMarker> sidecar_phase_resets;
+            // Fractional render-domain positions, parallel to
+            // sidecar_phase_resets — same shape as the warp sidecar's
+            // parallel vector above.
+            std::vector<double> sidecar_phase_reset_frames;
             sidecar_phase_resets.reserve(req.phase_resets.size());
+            sidecar_phase_reset_frames.reserve(req.phase_resets.size());
             for (const auto& t : req.phase_resets) {
                 if (t.disabled) continue;
                 if (req.has_trim_begin && t.time_frame < req.trim_begin_frame) continue;
                 if (req.has_trim_end && t.time_frame > req.trim_end_frame) continue;
                 const double crop_target =
-                    map_source_to_target(t.time_frame,
-                                         full_warp_frame_map)
+                    map_source_to_target(
+                        static_cast<double>(t.time_frame),
+                        full_warp_frame_map)
                     - sidecar_crop_begin;
                 if (crop_target < 0.0) continue;
                 if (crop_target >= sidecar_crop_end) continue;
-                GuiPhaseResetMarker w = t;
-                w.time_frame = crop_target;
-                sidecar_phase_resets.push_back(std::move(w));
+                sidecar_phase_resets.push_back(t);
+                sidecar_phase_reset_frames.push_back(crop_target);
             }
             // Render-display domain, same as the warp sidecar above:
             // fractional target-axis positions through the render pair.
@@ -616,7 +629,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 (bf / (req.batch_basename + ".renderphaseresetmarkers"))
                 .string();
             if (!GuiPhaseResetMarkers::save_render_display(
-                    phase_reset_sidecar_path, sidecar_phase_resets)) {
+                    phase_reset_sidecar_path, sidecar_phase_resets,
+                    sidecar_phase_reset_frames)) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: write failed for '%s'\n",
                     phase_reset_sidecar_path.c_str());

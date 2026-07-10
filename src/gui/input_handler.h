@@ -123,8 +123,8 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames,
-                           bool has_trim_begin, double trim_begin_frame,
-                           bool has_trim_end,   double trim_end_frame);
+                           bool has_trim_begin, int64_t trim_begin_frame,
+                           bool has_trim_end,   int64_t trim_end_frame);
 
 // -- GuiInputHandler ----------------------------------------------------
 //
@@ -448,7 +448,7 @@ private:
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };
 
-    // Plain x: set the begin bound at the playhead (exact frame double)
+    // Plain x: set the begin bound at the playhead (exact int64 frame)
     // and autoset the end bound half of the visible span later. Only the
     // autoset PARTNER is placement-clamped to [0, live EOF] in the active
     // domain — a choice of where to put the bound the user did not position,

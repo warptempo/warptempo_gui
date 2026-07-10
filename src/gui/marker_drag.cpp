@@ -27,7 +27,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         : static_cast<int>(app.warpmarkers.markers().size());
     if (hit >= n) return false;
 
-    auto t_of = [&](int idx) -> double {
+    auto t_of = [&](int idx) -> int64_t {
         if (phase_reset) {
             return app.phaseresetmarkers.markers()[idx].time_frame;
         }
@@ -95,7 +95,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.delta_max =  std::numeric_limits<double>::infinity();
 
     for (size_t k = 0; k < d.dragging_markers.size(); ++k) {
-        const double orig_t = d.original_times[k];
+        const double orig_t = static_cast<double>(d.original_times[k]);
         const double lb = 0.0 - orig_t;
         if (lb > d.delta_min) d.delta_min = lb;
         const double ub = eof_wall - orig_t;
@@ -123,7 +123,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
             active_domain_to_source_frame(app, audio, vb.first));
         const double vp_hi_src = static_cast<double>(
             active_domain_to_source_frame(app, audio, vb.second));
-        const double orig_grabbed = t_of(hit);
+        const double orig_grabbed = static_cast<double>(t_of(hit));
         const double vp_lb = vp_lo_src - orig_grabbed;
         const double vp_ub = vp_hi_src - orig_grabbed;
         if (vp_lb > d.delta_min) d.delta_min = vp_lb;
@@ -131,9 +131,10 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
 
     d.moved = false;
-    // Seed moveable_times from original_times. apply_drag_motion writes
+    // Seed moveable_times from original_times (int64 frames widening into
+    // the free fractional mid-gesture domain). apply_drag_motion writes
     // moveable_times[k] = original_times[k] + delta on every motion event.
-    d.moveable_times = d.original_times;
+    d.moveable_times.assign(d.original_times.begin(), d.original_times.end());
     // Capture a snapshot of the pre-drag warp_frame_map so paint can route
     // selected-marker positions and target-view waveform through a frozen
     // coordinate system. Both views capture: in source view the segment
@@ -245,25 +246,28 @@ void MarkerDragOps::commit_drag() {
     // integer frames, so the clamp preserves whole-frame values). The
     // visible-strip clamp composed into delta_min/delta_max during
     // motion, as before.
-    const double total    = static_cast<double>(audio.total_frames());
-    const double eof_wall = phase_reset ? total : (total - 1.0);
-    std::vector<double> committed = app.drag.moveable_times;
-    for (size_t k = 0; k < committed.size(); ++k) {
+    const int64_t total    = audio.total_frames();
+    const int64_t eof_wall = phase_reset ? total : (total - 1);
+    std::vector<int64_t> committed;
+    committed.reserve(app.drag.moveable_times.size());
+    for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
+        const double proposed = app.drag.moveable_times[k];
         // Only positions the drag actually moved snap; an untouched
         // position keeps its stored value bit-exact, so a Ctrl+click
         // without motion (and a wander that returns exactly to its
         // origin) commits nothing, as before.
         if (k < app.drag.original_times.size() &&
-            committed[k] == app.drag.original_times[k]) {
+            proposed == static_cast<double>(app.drag.original_times[k])) {
+            committed.push_back(app.drag.original_times[k]);
             continue;
         }
-        double& t = committed[k];
         const int c = painted_column_of_source_frame(
-            app, audio, t, app.drag.frozen_warp_frame_map);
-        t = authored_frame_at_column(app, audio, c,
-                                     app.drag.frozen_warp_frame_map);
-        if (t < 0.0)      t = 0.0;
+            app, audio, proposed, app.drag.frozen_warp_frame_map);
+        int64_t t = authored_frame_at_column(app, audio, c,
+                                             app.drag.frozen_warp_frame_map);
+        if (t < 0)        t = 0;
         if (t > eof_wall) t = eof_wall;
+        committed.push_back(t);
     }
     // Commit gates on NET change, not on whether motion occurred.
     // app.drag.moved latches true on the first position change during
@@ -271,10 +275,11 @@ void MarkerDragOps::commit_drag() {
     // to its original position arrives here with moved == true but zero
     // net change. Pushing an undo entry then records a snapshot byte-equal
     // to the live store: a no-op history entry that both undo and redo
-    // restore invisibly. committed and original_times are parallel frame
-    // doubles, so an exact compare across the dragged markers is the true
-    // "did anything move" test. The compare runs on the SNAPPED values: a
-    // sub-column wander commits nothing, while a whole-frame store keeps
+    // restore invisibly. committed and original_times are parallel int64
+    // frames, so an exact integer compare across the dragged markers is the
+    // true "did anything move" test. The compare runs on the SNAPPED
+    // values: a sub-column wander commits nothing, while the whole-frame
+    // store keeps
     // committed == original exactly when the marker returns to its column.
     bool net_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
@@ -303,7 +308,7 @@ void MarkerDragOps::commit_drag() {
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
             if (k >= committed.size()) continue;
-            const double new_t = committed[k];
+            const int64_t new_t = committed[k];
             if (phase_reset) {
                 GuiPhaseResetMarker* m =
                     app.phaseresetmarkers.marker_mut(idx);

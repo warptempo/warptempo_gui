@@ -12,24 +12,26 @@ namespace {
 // Adjacent-pair coincident grouping over a time-sorted column. A pair is
 // coincident when (t[i+1] - t[i]) < window_frames, where window_frames is
 // kCoincidenceWindowSeconds converted once to frames by the caller — the
-// stored positions are frame doubles and are compared exactly, with no
-// rounding; only the window constant crosses domains (it is pinned in the
+// stored positions are whole int64 frames; their exact integer difference
+// widens to double for the compare, with no rounding; only the window
+// constant crosses domains (it is pinned in the
 // zoom table's ms-per-pixel terms). The window is one deepest-zoom pixel of
 // time, deliberately WIDER than the owners' sub-frame refusals: markers closer
 // than one pixel cannot be mouse-picked apart at any zoom. Chains of adjacent
 // coincident pairs merge into one group; disabled markers participate (the
 // rule is per-column pickability, not render participation).
 std::vector<std::vector<size_t>> coincident_groups(
-    const std::vector<double>& times, double window_frames) {
+    const std::vector<int64_t>& times, double window_frames) {
     std::vector<std::vector<size_t>> groups;
     size_t i = 0;
     while (i + 1 < times.size()) {
-        if ((times[i + 1] - times[i]) < window_frames) {
+        if (static_cast<double>(times[i + 1] - times[i]) < window_frames) {
             std::vector<size_t> group;
             group.push_back(i);
             size_t j = i;
             while (j + 1 < times.size() &&
-                   (times[j + 1] - times[j]) < window_frames) {
+                   static_cast<double>(times[j + 1] - times[j])
+                       < window_frames) {
                 group.push_back(j + 1);
                 ++j;
             }
@@ -51,7 +53,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     std::vector<MarkerDefect> defects;
     const double sr_d = static_cast<double>(sample_rate);
     // The one domain crossing: the pickability window (a seconds constant,
-    // zoom-table domain) expressed in frames for the exact frame-double
+    // zoom-table domain) expressed in frames for the exact integer-difference
     // compares below.
     const double window_frames = kCoincidenceWindowSeconds * sr_d;
 
@@ -64,7 +66,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
         MarkerDefect d;
         d.kind         = MarkerDefectKind::FirstMarkerGrammar;
         d.column       = 'W';
-        d.time_frame = 0.0;
+        d.time_frame = 0;
         if (!warp_markers.empty()) d.indices.push_back(0);
         d.message = std::move(v.error());
         defects.push_back(std::move(d));
@@ -73,7 +75,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     // Coincident groups, per column independently. One defect per group; time
     // is the group's first member's time, indices are all members.
     {
-        std::vector<double> warp_times;
+        std::vector<int64_t> warp_times;
         warp_times.reserve(warp_markers.size());
         for (const auto& m : warp_markers) warp_times.push_back(m.time_frame);
         for (auto& group : coincident_groups(warp_times, window_frames)) {
@@ -87,7 +89,7 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
             defects.push_back(std::move(d));
         }
 
-        std::vector<double> reset_times;
+        std::vector<int64_t> reset_times;
         reset_times.reserve(phase_resets.size());
         for (const auto& m : phase_resets) reset_times.push_back(m.time_frame);
         for (auto& group : coincident_groups(reset_times, window_frames)) {

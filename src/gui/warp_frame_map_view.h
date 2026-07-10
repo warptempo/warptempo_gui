@@ -145,10 +145,10 @@ int painted_column_of_source_frame(
 // 0 — the same quantization the target-view nudges have always applied)
 // and inverse-mapped through `warp_frame_map` at full precision. The
 // result returns through snap_authored_frame, so it is a whole source
-// frame; callers apply their own walls AFTER — the walls win over the
-// pixel grid, and every wall is itself an integer frame, so a
-// wall-clamped commit stays whole. Returns 0.0 when the strip has no
-// width (callers guard the degenerate geometry).
-double authored_frame_at_column(
+// frame in the authored int64 domain; callers apply their own walls
+// AFTER — the walls win over the
+// pixel grid, and every wall is itself an integer frame. Returns 0 when
+// the strip has no width (callers guard the degenerate geometry).
+int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);

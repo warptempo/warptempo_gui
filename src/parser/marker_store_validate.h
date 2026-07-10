@@ -4,6 +4,7 @@
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -28,8 +29,8 @@
 // zoom is defined in ms per pixel; the COMPARISON in
 // marker_store_validate.cpp converts once to frames
 // (window_frames = kCoincidenceWindowSeconds * sample_rate) and compares the
-// authored frame doubles exactly, so no seconds representation ever touches
-// the stores.
+// exact int64 frame difference (widened to double) against it, so no seconds
+// representation ever touches the stores.
 inline constexpr double kCoincidenceWindowSeconds = 0.625 / 1000.0;
 //
 // enumerate_marker_store_defects is the shared surface consumed by the CLI
@@ -72,7 +73,7 @@ enum class MarkerDefectKind {
 struct MarkerDefect {
     MarkerDefectKind    kind;
     char                column;      // 'W' warp, 'P' phase reset
-    double              time_frame;  // chronological anchor (source frames)
+    int64_t             time_frame;  // chronological anchor (source frames)
     std::vector<size_t> indices;     // store indices, ascending
     std::string         message;     // display string shared by the CLI
                                      // stderr lines and the GUI modal text

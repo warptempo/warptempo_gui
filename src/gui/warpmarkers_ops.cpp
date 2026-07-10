@@ -63,7 +63,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // integer-valued playhead frame, so the snap is the uniformity funnel,
     // not a rounding step. The wall check below IS the load guard's
     // comparison, exactly, applied to the snapped value.
-    time_frame = snap_authored_frame(time_frame);
+    const int64_t drop_frame = snap_authored_frame(time_frame);
     // Structural warp wall: a warp marker's segment runs to the next
     // breakpoint (or to total_frames for the last marker), and
     // build_warp_frame_map refuses sub-frame segments, so a warp position
@@ -71,11 +71,11 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // only placement bound — markers may sit arbitrarily close to or
     // exactly on an existing marker; ordering degeneracy is the render
     // boundary's to refuse, not this drop's.
-    if (time_frame > static_cast<double>(audio.total_frames()) - 1.0)
+    if (drop_frame > audio.total_frames() - 1)
         return;
     const auto& mv = app.warpmarkers.markers();
     GuiWarpMarker nm;
-    nm.time_frame    = time_frame;
+    nm.time_frame    = drop_frame;
     nm.tempo_inherits  = inherit;
     nm.tempo_base      = base;
     nm.tempo_scale     = scale;
@@ -96,9 +96,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // Move the playhead to the new marker for consistency with click-
     // to-select behavior. Done last so invalidations in the helper
     // don't double-paint with the ones above.
-    const int64_t src_sample =
-        static_cast<int64_t>(std::nearbyint(time_frame));
-    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+    const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
 
     // Discrete warp_frame_map change while target view is displayed: the plate
@@ -495,20 +493,19 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         ? target_view_warp_frame_map_cached(
               app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
         : no_map;
-    const double warp_wall =
-        static_cast<double>(audio.total_frames()) - 1.0;
-    std::vector<std::pair<int, double>> proposals;
+    const int64_t warp_wall = audio.total_frames() - 1;
+    std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
         const int c = painted_column_of_source_frame(
-            app, audio, mv[idx].time_frame, map);
-        double t_new =
+            app, audio, static_cast<double>(mv[idx].time_frame), map);
+        int64_t t_new =
             authored_frame_at_column(app, audio, c + direction, map);
         if (target_view) {
             // All-or-nothing silent refusal outside the absolute range.
-            if (t_new < 0.0 || t_new > warp_wall) return;
+            if (t_new < 0 || t_new > warp_wall) return;
         } else {
-            if (t_new < 0.0)       t_new = 0.0;
+            if (t_new < 0)         t_new = 0;
             if (t_new > warp_wall) t_new = warp_wall;
         }
         proposals.emplace_back(idx, t_new);

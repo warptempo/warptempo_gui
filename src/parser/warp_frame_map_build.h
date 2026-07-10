@@ -25,8 +25,10 @@ struct MidiTempoMapEntry {
 // Disabled markers (and any references to disabled-defined labels) are
 // filtered out BEFORE conversion.
 struct MarkerForRender {
-    // Authored position: an exact source-frame double (see WarpMarker).
-    double      time_frame = 0.0;
+    // Authored position: a whole source frame in int64_t (see WarpMarker).
+    // Consumers that divide or accumulate convert to double inside their
+    // own arithmetic (exact far below 2^53).
+    int64_t     time_frame = 0;
     double      tempo_base   = 1.0;   // resolved owning tempo; irrelevant for label_ref
     std::optional<double> tempo_scale; // nullopt or the typed scale after '*'
     std::string label_def;

@@ -16,11 +16,11 @@
 // equal; no gesture guards against zero-length windows. The per-bound wall
 // split (begin EOF-1 vs end EOF) is a recorded trim-vs-marker asymmetry — it
 // replaces the older no-walls asymmetry, now dead — sitting beside the marker
-// nudges' single EOF wall. Every wall check is an exact frame-double compare
-// — literally the load guard's comparison. The 0.0 floor is subsumed by the
+// nudges' single EOF wall. Every wall check is a plain integer compare
+// — literally the load guard's comparison. The zero floor is subsumed by the
 // walls but remains the reason the floor exists at all: a negative position
-// is unrepresentable in the frame-double form the .settings file persists
-// (parse_frame_double rejects negatives as malformed) — a format-
+// is unrepresentable in the authored frame form the .settings file persists
+// (parse_authored_frame rejects negatives as malformed) — a format-
 // representability floor, not a spacing or validity rule. Past-EOF bounds
 // are unreachable: the gesture walls forbid authoring one, and the load
 // boundary (file_loader / CLI) hard-fails a past-EOF bound in a hand-edited
@@ -43,10 +43,10 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     const int64_t dir = (side == TrimSide::Begin) ? 1 : -1;
 
-    bool&   this_has    = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
-    double& this_bound  = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
-    bool&   other_has   = (side == TrimSide::Begin) ? app.trim.has_end     : app.trim.has_begin;
-    double& other_bound = (side == TrimSide::Begin) ? app.trim.end_frame   : app.trim.begin_frame;
+    bool&    this_has    = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
+    int64_t& this_bound  = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
+    bool&    other_has   = (side == TrimSide::Begin) ? app.trim.has_end     : app.trim.has_begin;
+    int64_t& other_bound = (side == TrimSide::Begin) ? app.trim.end_frame   : app.trim.begin_frame;
 
     const int64_t cand_src =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
@@ -62,20 +62,18 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const int64_t this_wall_frame  = (side == TrimSide::Begin) ? total - 1 : total;
     const int64_t other_wall_frame = (side == TrimSide::Begin) ? total : total - 1;
 
-    // Store the exact frame double — trim bounds are whole source frames
-    // held in doubles like marker positions; the .settings writer persists
-    // the exact value as integer text (frame_format.h), so a saved bound
-    // reloads bit-identically.
+    // Store the exact frame — trim bounds are whole source frames held in
+    // int64_t like marker positions; the .settings writer persists the exact
+    // value as integer text (frame_format.h), so a saved bound reloads
+    // bit-identically. The playhead is already an int64 frame, so the whole
+    // path is integer arithmetic — no double ever enters.
     // Clamp the primary bound to its own wall: the playhead normally sits
     // inside the walls, so this is cheap insurance at the exact edge, keeping
     // the autoset consistent with every other trim gesture.
-    double this_frame = static_cast<double>(cand_src);
-    const double this_wall = static_cast<double>(this_wall_frame);
-    if (this_frame < 0.0)       this_frame = 0.0;
-    if (this_frame > this_wall) this_frame = this_wall;
-    // Already integer-valued (the playhead is an int64 frame); the
-    // snap_authored_frame funnel is uniformity, not rounding.
-    this_bound = snap_authored_frame(this_frame);
+    int64_t this_frame = cand_src;
+    if (this_frame < 0)               this_frame = 0;
+    if (this_frame > this_wall_frame) this_frame = this_wall_frame;
+    this_bound = this_frame;
     this_has   = true;
     const int64_t this_active =
         source_frame_to_active_domain(app, audio, cand_src);
@@ -89,21 +87,18 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         source_frame_to_active_domain(app, audio, other_wall_frame);
     if (other_active < 0)                 other_active = 0;
     if (other_active > other_wall_active) other_active = other_wall_active;
-    other_bound = snap_authored_frame(static_cast<double>(
-        active_domain_to_source_frame(app, audio, other_active)));
+    other_bound = active_domain_to_source_frame(app, audio, other_active);
     other_has = true;
 
     // Snap the playhead onto the frame of the bound just set at it. The
-    // bound stores an exact frame double, so its rounded frame can differ
+    // bound stores an exact frame, so it can differ
     // from the live playhead sample only in target view via the integer
     // domain round trip. In target view the playback gate maps the
     // playhead against target_buffer_start_frame — this same begin mapped to
     // target frames — so a playhead off the bound's frame can land a sample
     // short of the buffer start and Space reads local < 0 and no-ops.
-    const int64_t this_src =
-        static_cast<int64_t>(std::nearbyint(this_bound));
     app.playhead_cursor_sample =
-        source_frame_to_active_domain(app, audio, this_src);
+        source_frame_to_active_domain(app, audio, this_bound);
 
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
@@ -126,12 +121,12 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
 
 
 void GuiInputHandler::handle_trim_unset(TrimSide side) {
-    bool&   this_has   = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
-    double& this_bound = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
-    bool&   this_sel   = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
+    bool&    this_has   = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
+    int64_t& this_bound = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
+    bool&    this_sel   = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
     if (!this_has) return;
     this_has   = false;
-    this_bound = 0.0;
+    this_bound = 0;
     this_sel     = false;  // an unset bound can't stay selected
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -146,8 +141,8 @@ void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
         app.trim.has_begin      = false;
         app.trim.has_end        = false;
-        app.trim.begin_frame  = 0.0;
-        app.trim.end_frame    = 0.0;
+        app.trim.begin_frame  = 0;
+        app.trim.end_frame    = 0;
         app.trim_begin_selected = false;
         app.trim_end_selected   = false;
         app.last_selected_trim  = 0;
@@ -270,10 +265,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (app.trim_drag.both) {
         int64_t cur_active = 0;
         if (!trim_mouse_x_to_active_frame(mouse_x, cur_active)) return;
-        const int64_t ob = source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(app.trim_drag.orig_begin_frame)));
-        const int64_t oe = source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(app.trim_drag.orig_end_frame)));
+        const int64_t ob = source_frame_to_active_domain(
+            app, audio, app.trim_drag.orig_begin_frame);
+        const int64_t oe = source_frame_to_active_domain(
+            app, audio, app.trim_drag.orig_end_frame);
         int64_t df = cur_active - app.trim_drag.anchor_active_frame;
         // Keep the grabbed bound — and the playhead pinned to it — inside the
         // visible pixel span, matching the playhead's own first/last-visible
@@ -304,20 +299,17 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (oe + df < 0)                 df = -oe;
         if (ob + df > begin_wall_active) df = begin_wall_active - ob;
         if (oe + df > end_wall_active)   df = end_wall_active - oe;
-        const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
-        const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
-        // Already integer-valued (active_domain_to_source_frame rounds);
-        // the snap_authored_frame funnel is uniformity, not rounding.
-        double nb = snap_authored_frame(static_cast<double>(nb_src));
-        double ne = snap_authored_frame(static_cast<double>(ne_src));
-        if (nb < 0.0) nb = 0.0;
-        if (ne < 0.0) ne = 0.0;
+        // active_domain_to_source_frame already lands on whole int64 frames,
+        // so the path stays integer arithmetic end to end.
+        int64_t nb = active_domain_to_source_frame(app, audio, ob + df);
+        int64_t ne = active_domain_to_source_frame(app, audio, oe + df);
+        if (nb < 0) nb = 0;
+        if (ne < 0) ne = 0;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
-            const int64_t grabbed_src = static_cast<int64_t>(
-                std::nearbyint(app.trim_drag.is_begin ? nb : ne));
+            const int64_t grabbed_src = app.trim_drag.is_begin ? nb : ne;
             app.playhead_cursor_sample =
                 source_frame_to_active_domain(app, audio, grabbed_src);
             viewport.invalidate_waveform_area();
@@ -327,11 +319,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     }
 
     // Single-bound: pre-drag frame plus the anchor-relative delta. The
-    // mouse-derived path is integer-frame valued (pixel columns map through
-    // nearbyint), so the stored double is integer-valued by construction.
-    const int64_t orig_f = static_cast<int64_t>(
-        std::nearbyint(app.trim_drag.orig_frame));
-    int64_t src_frame = orig_f +
+    // mouse-derived delta rounds once (nearbyint) into the integer domain;
+    // everything after is int64 arithmetic.
+    int64_t src_frame = app.trim_drag.orig_frame +
         static_cast<int64_t>(std::nearbyint(delta_frames));
 
     // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
@@ -362,12 +352,11 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         ? audio.total_frames() - 1
         : audio.total_frames();
     if (src_frame > wall_hi) src_frame = wall_hi;
-    // Already integer-valued (the pixel-column and clamp math above is
-    // int64 throughout); the snap_authored_frame funnel is uniformity,
-    // not rounding.
-    const double new_frame = snap_authored_frame(static_cast<double>(src_frame));
-    double& field = app.trim_drag.is_begin ? app.trim.begin_frame
-                                           : app.trim.end_frame;
+    // The pixel-column and clamp math above is int64 throughout, so the
+    // committed value is already an authored whole frame.
+    const int64_t new_frame = src_frame;
+    int64_t& field = app.trim_drag.is_begin ? app.trim.begin_frame
+                                            : app.trim.end_frame;
     if (field != new_frame) {
         const bool first_motion = !app.trim_drag.moved;
         field = new_frame;
@@ -400,9 +389,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // begin, so the scanner is inactive and a play reseeks from the
         // cursor. The invalidate_waveform_area below repaints the playhead
         // columns along with the moved trim shading.
-        const int64_t src_sample = static_cast<int64_t>(
-            std::nearbyint(new_frame));
-        const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+        const int64_t sample = source_frame_to_active_domain(app, audio, new_frame);
         app.playhead_cursor_sample = sample;
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -479,9 +466,9 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     // and keeps group Trim.
     select_trim_boundary(which, /*additive=*/false);
 
-    double& field = (which == TrimHit::Begin) ? app.trim.begin_frame
-                                              : app.trim.end_frame;
-    const double cur = field;
+    int64_t& field = (which == TrimHit::Begin) ? app.trim.begin_frame
+                                               : app.trim.end_frame;
+    const int64_t cur = field;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
 
     // Marker-identical pixel anchoring (nudge_selected_markers' exact
@@ -495,21 +482,22 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
         ? target_view_warp_frame_map_cached(
               app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
         : no_map;
-    const int c = painted_column_of_source_frame(app, audio, cur, map);
-    double proposed = authored_frame_at_column(app, audio, c + direction, map);
+    const int c = painted_column_of_source_frame(
+        app, audio, static_cast<double>(cur), map);
+    int64_t proposed = authored_frame_at_column(app, audio, c + direction, map);
 
     // Per-bound absolute walls (mirroring nudge_selected_markers' EOF wall
     // in shape — total frames minus one source frame — but clamping in
     // both views, where the marker nudge refuses in target view): begin
-    // walls at frame EOF-1, end at frame EOF exactly — exact frame-double
+    // walls at frame EOF-1, end at frame EOF exactly — plain integer
     // compares, the load guard's own comparison, applied AFTER the column
-    // snap so the integer walls win over the pixel grid. The 0.0 floor is
+    // snap so the walls win over the pixel grid. The zero floor is
     // the walls' lower end, kept for representability; there is still no
     // partner wall (see the function-head comment).
-    const double wall = (which == TrimHit::Begin)
-        ? static_cast<double>(audio.total_frames() - 1)
-        : static_cast<double>(audio.total_frames());
-    if (proposed < 0.0)  proposed = 0.0;
+    const int64_t wall = (which == TrimHit::Begin)
+        ? audio.total_frames() - 1
+        : audio.total_frames();
+    if (proposed < 0)    proposed = 0;
     if (proposed > wall) proposed = wall;
     if (proposed == cur) return;
 
@@ -529,10 +517,8 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     // grabbed item; nudges do not). Track the playhead onto the bound through
     // move_playhead_to's edge-follow path — at most one pixel of scroll,
     // keeping the bound just inside the edge.
-    const int64_t new_src =
-        static_cast<int64_t>(std::nearbyint(field));
     viewport.move_playhead_to(
-        source_frame_to_active_domain(app, audio, new_src));
+        source_frame_to_active_domain(app, audio, field));
 }
 
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
@@ -558,10 +544,8 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
     // reposition-drag grab and intentionally does not move the playhead,
     // matching the Ctrl+marker reposition. The hit-test that routed here only
     // fires when the boundary exists, so trim_begin/end_frame is set.
-    const double bound = (which == TrimHit::Begin) ? app.trim.begin_frame
-                                                   : app.trim.end_frame;
-    const int64_t src_sample =
-        static_cast<int64_t>(std::nearbyint(bound));
+    const int64_t src_sample = (which == TrimHit::Begin) ? app.trim.begin_frame
+                                                         : app.trim.end_frame;
     const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     viewport.move_playhead_to(sample);
 }

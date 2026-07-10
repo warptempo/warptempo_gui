@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <vector>
@@ -9,12 +10,13 @@
 // engine-internal PhaseResetMarker (stft_container.h, synth_frame/src_frame)
 // is a different, engine-private type and never co-visible with this one.
 struct PhaseResetMarker {
-    // Authored position: a whole source frame held in a double
-    // (integer-valued by grammar — fractional position text is load-fatal;
-    // a follow-up retypes to int64_t). Serialized as plain integer text via
+    // Authored position: a whole source frame held in an int64_t — a
+    // fractional authored position is unrepresentable (fractional position
+    // text is load-fatal, and every gesture commit converts through
+    // snap_authored_frame). Serialized as plain integer text via
     // frame_format.h; timestamps are display-only renderings.
-    double time_frame  = 0.0;
-    bool   disabled    = false;
+    int64_t time_frame  = 0;
+    bool    disabled    = false;
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on

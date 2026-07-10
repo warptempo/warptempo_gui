@@ -51,11 +51,15 @@ public:
     // Identical line grammar, but positions live on the render's own target
     // axis and are generically fractional, so they serialize as shortest
     // round-trip doubles (format_render_frame_double) instead of the
-    // authored integer text. Written by the render pipeline, read back only
-    // by render-view's lenient display readers.
+    // authored integer text. The int64 authored field cannot represent
+    // them, so the caller passes the fractional positions in
+    // `render_frames`, parallel to `markers` (each marker's own time_frame
+    // is ignored; a size mismatch fails the save). Written by the render
+    // pipeline, read back only by render-view's lenient display readers.
     static bool save_render_display(
         const std::string& path,
-        const std::vector<GuiPhaseResetMarker>& markers);
+        const std::vector<GuiPhaseResetMarker>& markers,
+        const std::vector<double>& render_frames);
 
     const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
 

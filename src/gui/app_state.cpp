@@ -60,8 +60,8 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     int best_dist = kMarkerHitHalfPx + 1;
     const bool rv = app.render_view.enabled;
     // In render-view, the visible sub-view's list drives hit-testing. 'P'
-    // reads phase reset time_frame (already source frames; nearbyint to the
-    // integer pixel-mapping domain, matching source-view's branch).
+    // reads phase reset time_frame (whole int64 frames, read directly into
+    // the integer pixel-mapping domain, matching source-view's branch).
     const bool rv_phase_reset = rv && app.active_markers_view == 'P';
     const int n =
         rv_phase_reset
@@ -89,17 +89,13 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     for (int i = 0; i < n; ++i) {
         int64_t src_sample;
         if (rv_phase_reset) {
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.phase_resets[i].time_frame));
+            src_sample = app.render_view.phase_resets[i].time_frame;
         } else if (rv) {
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.warp_markers[i].time_frame));
+            src_sample = app.render_view.warp_markers[i].time_frame;
         } else if (app.active_markers_view == 'P') {
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.phaseresetmarkers.markers()[i].time_frame));
+            src_sample = app.phaseresetmarkers.markers()[i].time_frame;
         } else {
-            src_sample = static_cast<int64_t>(std::nearbyint(
-                app.warpmarkers.markers()[i].time_frame));
+            src_sample = app.warpmarkers.markers()[i].time_frame;
         }
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
@@ -154,10 +150,9 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
         if (!m.empty()) target_warp_frame_map = &m;
     }
 
-    auto bound_dist = [&](double frame, bool present) -> int {
+    auto bound_dist = [&](int64_t frame, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
-        const int64_t src_sample = static_cast<int64_t>(
-            std::nearbyint(frame));
+        const int64_t src_sample = frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
@@ -225,11 +220,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // horizontal containment is tested here. Returns the bound's distance from
     // the press to its column when the press is inside the chip (for the
     // both-hit tie-break), else kMiss.
-    auto chip_dist = [&](double frame, bool present,
+    auto chip_dist = [&](int64_t frame, bool present,
                          const char* /*glyph*/) -> int {
         if (!present) return kMiss;
-        const int64_t src_sample = static_cast<int64_t>(
-            std::nearbyint(frame));
+        const int64_t src_sample = frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)

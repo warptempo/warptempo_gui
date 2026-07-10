@@ -11,8 +11,9 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         if (m.disabled) continue;
-        // The authored position already is the exact double source frame.
-        const double src_frame = m.time_frame;
+        // The authored position is a whole source frame (int64_t); it widens
+        // exactly into the double intermediate the derivation consumes.
+        const double src_frame = static_cast<double>(m.time_frame);
         if (src_frame > static_cast<double>(total_frames)) {
             return std::unexpected(
                 "phase reset time exceeds source length at marker "

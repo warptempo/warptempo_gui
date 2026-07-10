@@ -63,7 +63,7 @@ inline std::string format_value_double(double v, int min_decimals) {
     return s;
 }
 
-// Text -> value double. Strict, the same pattern as parse_frame_double:
+// Text -> value double. Strict, the same pattern as parse_authored_frame:
 // the whole field must be consumed and the value must be finite; empty,
 // NaN, inf, trailing junk, and a leading '-' are rejected (no authored
 // value is negative — grammars that demand strict positivity add their

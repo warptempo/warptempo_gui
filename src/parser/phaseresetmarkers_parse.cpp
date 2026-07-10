@@ -10,7 +10,7 @@ namespace {
 
 using warptempo_parse::strip_bom;
 
-// Parse "[#]<frame double>" into a PhaseResetMarker. Returns the marker on
+// Parse "[#]<frame position>" into a PhaseResetMarker. Returns the marker on
 // success; on failure, returns a one-line diagnostic. The caller has
 // already rejected any whitespace on the line, so the token reaching here is
 // non-empty and whitespace-free. The canonical grammar is an optional
@@ -27,7 +27,7 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
         token.erase(0, 1);
     }
 
-    if (!parse_frame_double(token, out.time_frame)) {
+    if (!parse_authored_frame(token, out.time_frame)) {
         return std::unexpected<std::string>(
             "expected frame position: " + token);
     }
@@ -52,7 +52,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
     }
     if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
-    double last_time = -1.0;
+    int64_t last_time = -1;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
@@ -61,12 +61,12 @@ parse_phaseresetmarkers_file(const std::string& path) {
         if (raw.empty()) continue;
 
         // Hash-comment convention: a first-byte '#' whose remaining text does
-        // not parse as a frame double marks a comment line and is skipped; a
+        // not parse as a frame position marks a comment line and is skipped; a
         // '#' that does prefix a valid frame position is a disabled marker
         // and falls through to the strict parse.
         if (raw[0] == '#') {
-            double probe = 0.0;
-            if (!parse_frame_double(std::string_view(raw).substr(1), probe)) {
+            int64_t probe = 0;
+            if (!parse_authored_frame(std::string_view(raw).substr(1), probe)) {
                 continue;
             }
         }
@@ -83,7 +83,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
-        const double eff = m.time_frame;
+        const int64_t eff = m.time_frame;
         // A reset at time zero parses and loads; it is inert at render because
         // the near-start dropzone drops it at derivation.
         //
@@ -104,9 +104,9 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // reset file applies only to the audio it was authored against).
         // build_phase_reset_source_frames keeps its enabled-past-end refusal as
         // the render-boundary breach backstop.
-        if (last_time >= 0.0 && eff < last_time)
+        if (last_time >= 0 && eff < last_time)
             return fail(line_number,
-                "time decreasing: " + format_frame_double(eff));
+                "time decreasing: " + format_authored_frame(eff));
         last_time = eff;
         markers.push_back(std::move(m));
     }

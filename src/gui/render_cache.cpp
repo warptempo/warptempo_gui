@@ -214,10 +214,13 @@ std::vector<uint8_t> render_fingerprint(
     put_f64(fp, has_trim_end ? trim_end_frame : 0.0);
 
     // Warp markers: parser-domain base fields only (the GuiWarpMarker session
-    // scratch never reaches the engine).
+    // scratch never reaches the engine). Positions are int64 frames widened
+    // to the f64 encoding deliberately — the fingerprint bytes stay
+    // identical to the ones minted when the fields were integer-valued
+    // doubles, so archival sidecars stay valid.
     put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
     for (const auto& m : warp_markers) {
-        put_f64(fp, m.time_frame);
+        put_f64(fp, static_cast<double>(m.time_frame));
         put_u8 (fp, m.tempo_inherits ? 1 : 0);
         put_f64(fp, m.tempo_base);
         // Optional typed scale: presence flag then the value (0.0 filler
@@ -234,7 +237,7 @@ std::vector<uint8_t> render_fingerprint(
     // because toggling disabled is a real output change.
     put_u32(fp, static_cast<uint32_t>(phase_resets.size()));
     for (const auto& p : phase_resets) {
-        put_f64(fp, p.time_frame);
+        put_f64(fp, static_cast<double>(p.time_frame));
         put_u8 (fp, p.disabled ? 1 : 0);
     }
 

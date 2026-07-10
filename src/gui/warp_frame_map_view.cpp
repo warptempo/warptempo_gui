@@ -145,12 +145,12 @@ int painted_column_of_source_frame(
     return static_cast<int>(std::round(x_raw));
 }
 
-double authored_frame_at_column(
+int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map) {
     const GuiRect area = waveform_area(app);
     const double spp = painter_samples_per_pixel(app, audio, area);
-    if (spp <= 0.0) return 0.0;
+    if (spp <= 0.0) return 0;
     const double t_active =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(col) * spp;

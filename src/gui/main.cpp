@@ -240,8 +240,8 @@ GuiRect bottom_lower_row_area(const AppState& a) {
 }
 
 // Resolve the trim playback/navigation range from AppState's trim fields.
-// Absent has_trim_* falls back to [0, total_frames]. Banker's rounding
-// converts the stored frame doubles to integer samples; each side clamps to
+// Absent has_trim_* falls back to [0, total_frames]. The stored bounds are
+// already whole int64 frames; each side clamps to
 // [0, total_frames] independently so playback ranges stay inside the
 // buffer. There is NO
 // ordering clamp: trim bounds may rest inverted (begin later than end) and

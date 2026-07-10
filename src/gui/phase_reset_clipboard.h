@@ -2,6 +2,7 @@
 
 #include "warpmarkers.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -24,15 +25,15 @@ struct ClipboardPlacement {
     // Approximate range (-guard/duration, 1.0). A lead-in reset captured
     // up to the guard before the block start yields a small negative
     // fraction; paste_apply clamps the materialized time to 0.
-    double fractional_position = 0.0;
-    double source_time         = 0.0;  // absolute capture-time source frames
-    bool   disabled            = false;
+    double  fractional_position = 0.0;
+    int64_t source_time         = 0;   // absolute capture-time source frames
+    bool    disabled            = false;
 };
 
 struct ClipboardBlock {
     std::string                     label_name;
-    double                          source_start = 0.0;  // absolute source frames
-    double                          source_end   = 0.0;  // absolute source frames
+    int64_t                         source_start = 0;  // absolute source frames
+    int64_t                         source_end   = 0;  // absolute source frames
     std::vector<ClipboardPlacement> placements;
 };
 

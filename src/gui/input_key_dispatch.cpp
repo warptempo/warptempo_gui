@@ -786,11 +786,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.has_begin = authoring.has_trim_begin;
             app.trim.begin_frame = authoring.has_trim_begin
                 ? authoring.trim_begin_frame
-                : 0.0;
+                : 0;
             app.trim.has_end = authoring.has_trim_end;
             app.trim.end_frame = authoring.has_trim_end
                 ? authoring.trim_end_frame
-                : 0.0;
+                : 0;
             if (!app.trim.has_begin) app.trim_begin_selected = false;
             if (!app.trim.has_end)   app.trim_end_selected   = false;
             if (!app.trim.has_begin && !app.trim.has_end) {

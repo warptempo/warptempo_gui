@@ -232,8 +232,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // trimmed one sees unset trim (playhead at sample 0, not stale begin).
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
-    app.trim.begin_frame  = 0.0;
-    app.trim.end_frame    = 0.0;
+    app.trim.begin_frame  = 0;
+    app.trim.end_frame    = 0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
@@ -423,18 +423,18 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // end (wall total), tab B begin, tab B end — first offender only,
     // disabled markers included (a disabled past-EOF marker is equally
     // unauthorable). The guard compares the authored domain directly: every
-    // check is an exact frame-double compare against the stored value —
+    // check is a plain integer compare against the stored value —
     // literally the same comparison the gesture walls apply, with no
     // rounding anywhere — so a legal at-the-wall position always reloads
     // clean. Embedded times in the messages are display renderings
     // (format_timestamp(frame / sr)). The render-boundary EOF refusals
     // downstream stay as breach backstops for hand-edited maps.
     {
-        const double sr_d   = static_cast<double>(audio.sample_rate());
-        const double totalf = static_cast<double>(audio.total_frames());
+        const double  sr_d  = static_cast<double>(audio.sample_rate());
+        const int64_t total = audio.total_frames();
         std::string detail;
         for (const auto& m : app.warpmarkers.markers()) {
-            if (m.time_frame > totalf - 1.0) {
+            if (m.time_frame > total - 1) {
                 detail = "warp marker past end of audio at "
                          + format_timestamp(m.time_frame / sr_d);
                 break;
@@ -442,7 +442,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
         if (detail.empty()) {
             for (const auto& m : app.phaseresetmarkers.markers()) {
-                if (m.time_frame > totalf) {
+                if (m.time_frame > total) {
                     detail = "phase reset marker past end of audio at "
                              + format_timestamp(m.time_frame / sr_d);
                     break;
@@ -454,13 +454,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 {"tab A", app.tab_a.trim}, {"tab B", app.tab_b.trim},
             };
             for (const auto& [name, t] : tabs) {
-                if (t.has_begin && t.begin_frame > totalf - 1.0) {
+                if (t.has_begin && t.begin_frame > total - 1) {
                     detail = std::string(name)
                              + " trim begin past end of audio at "
                              + format_timestamp(t.begin_frame / sr_d);
                     break;
                 }
-                if (t.has_end && t.end_frame > totalf) {
+                if (t.has_end && t.end_frame > total) {
                     detail = std::string(name)
                              + " trim end past end of audio at "
                              + format_timestamp(t.end_frame / sr_d);
@@ -663,8 +663,8 @@ void GuiFileLoader::revert_to_blank() {
     // next load.
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
-    app.trim.begin_frame  = 0.0;
-    app.trim.end_frame    = 0.0;
+    app.trim.begin_frame  = 0;
+    app.trim.end_frame    = 0;
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
 

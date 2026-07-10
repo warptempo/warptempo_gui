@@ -187,8 +187,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // the UI in sync with the new editor target.
     selection.set_single_selection(idx);
     {
-        const int64_t src_sample = static_cast<int64_t>(std::nearbyint(
-            mv[idx].time_frame));
+        const int64_t src_sample = mv[idx].time_frame;
         // Target view: marker time_frame is source-domain; playhead
         // is active-domain. Forward-translate so the playhead lands on
         // the marker's displayed (target-frame) position.
@@ -287,12 +286,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     // Assemble the parse candidate in SERIALIZER form — the locked prefix
     // is a display rendering (MM:SS.mmm) and no longer the serializer's
-    // bytes, so the position field is rebuilt as the frame double the
+    // bytes, so the position field is rebuilt as the integer frame text the
     // canonical line grammar expects. Position and disabled both come from
     // the marker itself (both live in the locked, uneditable prefix).
     std::string candidate;
     if (mv_const[idx].disabled) candidate += '#';
-    candidate += format_frame_double(mv_const[idx].time_frame);
+    candidate += format_authored_frame(mv_const[idx].time_frame);
     candidate += '|';
     candidate += payload;
 
@@ -356,7 +355,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     // Time stays locked; preserve it (parse already produced the
     // same value via the locked prefix, but be explicit).
-    const double preserved_time = m.time_frame;
+    const int64_t preserved_time = m.time_frame;
 
     // Cache-free: typing `pass` writes inert defaults into
     // tempo_base/tempo_scale; typing an explicit tempo writes the

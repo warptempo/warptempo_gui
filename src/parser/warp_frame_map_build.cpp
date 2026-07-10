@@ -90,7 +90,7 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
         return std::unexpected(std::move(msg));
     };
     const WarpMarker& first = markers[0];
-    if (first.time_frame != 0.0) {
+    if (first.time_frame != 0) {
         return fail("first marker is at " +
                     format_timestamp(first.time_frame / sr_d));
     }
@@ -313,12 +313,13 @@ MarkerEffective marker_effective(
         // without total_frames. No popup is the existing contract for that case.
         if (idx_next < 0 || def_next < 0) return r;
 
-        // Frame-native segment distances: authored positions already are
-        // exact source-frame doubles, so no sample-rate conversion exists.
-        const double lr_src_dist =
-            mv[idx_next].time_frame - mv[idx].time_frame;
-        const double def_src_dist =
-            mv[def_next].time_frame - mv[def_idx].time_frame;
+        // Frame-native segment distances: authored positions are whole
+        // source frames (int64_t), so no sample-rate conversion exists; the
+        // integer differences widen exactly into the double arithmetic.
+        const double lr_src_dist = static_cast<double>(
+            mv[idx_next].time_frame - mv[idx].time_frame);
+        const double def_src_dist = static_cast<double>(
+            mv[def_next].time_frame - mv[def_idx].time_frame);
         if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
@@ -475,10 +476,11 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
     double src_f_prev = 0.0;
 
     for (size_t i = 0; i < markers.size(); ++i) {
-        // Authored positions already are exact source-frame doubles; the next
-        // marker's position is read directly, no sample-rate multiply.
+        // Authored positions are whole source frames (int64_t); the next
+        // marker's position widens exactly into the double map arithmetic,
+        // no sample-rate multiply.
         double src_frame = (i + 1 < markers.size())
-            ? markers[i + 1].time_frame
+            ? static_cast<double>(markers[i + 1].time_frame)
             : static_cast<double>(total_frames);
 
         if (src_frame > static_cast<double>(total_frames)) {
@@ -543,7 +545,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
     for (size_t i = 0; i < markers.size(); ++i) {
         double src_frame = (i + 1 < markers.size())
-            ? markers[i + 1].time_frame
+            ? static_cast<double>(markers[i + 1].time_frame)
             : static_cast<double>(total_frames);
 
         const auto& m = markers[i];

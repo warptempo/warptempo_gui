@@ -11,7 +11,7 @@
 // seconds = parse_timestamp(ts) + offset, frames = nearbyint(effective *
 // sample_rate) — banker's rounding to the nearest whole frame, the same
 // rounding rule the GUI uses everywhere fractional values meet an integer
-// domain — serialized via format_frame_double (plain integer text). Migrated
+// domain — serialized via format_authored_frame (plain integer text). Migrated
 // positions therefore match the integer frames the GUI's own gestures author.
 // The shift from the exact product is at most half a frame (about 11
 // microseconds at 44.1 kHz), so a render from a migrated file is NOT
@@ -26,7 +26,7 @@
 //
 // The two conversion helpers are shared with the rest of the tree, never
 // duplicated: parse_timestamp / is_valid_timestamp_format live in
-// src/time_format.h, format_frame_double in src/parser/frame_format.h.
+// src/time_format.h, format_authored_frame in src/parser/frame_format.h.
 //
 // Ad hoc compile (from tools/):
 //     g++ -std=c++23 -O2 -o migrate_sidecar_to_frames migrate_sidecar_to_frames.cpp
@@ -82,7 +82,8 @@ bool is_valid_offset_token(const std::string& s) {
 // Shared by the marker and settings converters. Returns true and sets
 // `frame_text` on success; on a hard error returns false and sets `reason` to a
 // short parenthetical detail (no timestamp, a malformed/over-long offset, or a
-// negative effective time — the last refused because parse_frame_double treats
+// negative effective time — the last refused because parse_authored_frame
+// treats
 // negative positions as malformed at load, so the tool must never write one).
 bool convert_time_field(const std::string& field, double sample_rate,
                         std::string& frame_text, std::string& reason) {
@@ -106,7 +107,8 @@ bool convert_time_field(const std::string& field, double sample_rate,
         reason = "negative effective time";
         return false;
     }
-    frame_text = format_frame_double(std::nearbyint(seconds * sample_rate));
+    frame_text = format_authored_frame(static_cast<int64_t>(
+        std::nearbyint(seconds * sample_rate)));
     return true;
 }
 

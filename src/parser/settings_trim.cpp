@@ -1,6 +1,6 @@
 #include "settings_trim.h"
 
-#include "frame_format.h"  // parse_frame_double
+#include "frame_format.h"  // parse_authored_frame
 #include "parse_text_util.h"
 
 #include <cctype>
@@ -45,8 +45,8 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            double v = 0.0;
-            if (!parse_frame_double(value, v)) {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
@@ -57,8 +57,8 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            double v = 0.0;
-            if (!parse_frame_double(value, v)) {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
@@ -69,8 +69,8 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            double v = 0.0;
-            if (!parse_frame_double(value, v)) {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }
@@ -81,8 +81,8 @@ std::expected<SettingsTrimTabs, std::string> read_settings_trim(
                 return warptempo_parse::prefix_line_error(
                     ln, "duplicate trim key '" + key + "'");
             }
-            double v = 0.0;
-            if (!parse_frame_double(value, v)) {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v)) {
                 return warptempo_parse::prefix_line_error(
                     ln, "invalid trim frame position for " + key + ": '" + value + "'");
             }

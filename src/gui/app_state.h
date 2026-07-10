@@ -108,14 +108,16 @@ struct UndoEntry {
 struct DragState {
     bool                active = false;
     std::vector<int>    dragging_markers;   // sorted ascending
-    // Pre-drag positions, parallel to dragging_markers. Source-frame
-    // doubles (the authored domain), like every position in this struct.
-    std::vector<double> original_times;
-    // Proposed new positions during motion (source-frame doubles), parallel
+    // Pre-drag positions, parallel to dragging_markers. At-rest copies of
+    // the stores' authored int64 frames.
+    std::vector<int64_t> original_times;
+    // Proposed new positions during motion (source-frame doubles — mid-
+    // gesture positions are free and fractional), parallel
     // to dragging_markers. Written by apply_drag_motion as
     // original_times[k] + delta; consumed by paint via DragOverlay so the
     // live marker store stays untouched until commit. Seeded from
-    // original_times at begin_drag.
+    // original_times at begin_drag; commit converts back to authored
+    // frames through the pixel-anchoring snap.
     std::vector<double> moveable_times;
     // Press position in source-frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in source frames.
@@ -284,9 +286,9 @@ struct TrimDragState {
     bool active   = false;
     bool is_begin = false;   // which bound the cursor is dragging
     bool moved    = false;   // whether motion actually changed the bound
-    // Dragged bound's pre-drag value (source-frame double); base for the
-    // drag delta.
-    double orig_frame       = 0.0;
+    // Dragged bound's pre-drag value (an at-rest copy of the store's
+    // authored int64 frame); base for the drag delta.
+    int64_t orig_frame      = 0;
     // Press position in source-frame doubles, captured at drag-begin.
     // Motion applies the cursor's displacement from here (anchor-relative),
     // matching warp-marker drag — so the bound tracks the grab point with no
@@ -298,8 +300,8 @@ struct TrimDragState {
     // as it appears under warp. `is_begin` still records which stem was
     // grabbed (for cosmetic purposes only — both move regardless).
     bool    both                 = false;
-    double  orig_begin_frame   = 0.0;
-    double  orig_end_frame     = 0.0;
+    int64_t orig_begin_frame   = 0;
+    int64_t orig_end_frame     = 0;
     int64_t anchor_active_frame  = 0;
 };
 
@@ -427,22 +429,22 @@ struct DefectSeriesState {
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
-// whole source frames in doubles, exactly like marker times (integer-valued
-// by the authored grammar; the .settings writer persists the exact value as
+// whole source frames in int64_t, exactly like marker times (a fractional
+// bound is unrepresentable; the .settings writer persists the exact value as
 // integer text via frame_format.h, so a saved bound reloads bit-identically).
 // Every trim GESTURE clamps each bound to its own
 // absolute walls: begin spans frame 0 to EOF-1 (a begin at or past the
 // source end can never render), end spans frame 0 to EOF exactly
-// (end-at-EOF is valid, so the GUI must be able to represent it) — exact
-// frame-double compares, the load guard's own comparison — so past-EOF
+// (end-at-EOF is valid, so the GUI must be able to represent it) — plain
+// integer compares, the load guard's own comparison — so past-EOF
 // cannot be gestured. There are NO partner walls — a bound crosses its
 // partner freely during any gesture — but crossed and equal can no longer
 // REST past a commit or a load: the funnel's defect-resolution series opens
 // on the offending commit (or on the first tick after a load that carried
-// them), and the delete-both-bounds resolution clears them. The 0.0 floor
+// them), and the delete-both-bounds resolution clears them. The zero floor
 // is now subsumed by the per-bound walls, but it remains the reason the
 // floor exists at all: a negative position is unrepresentable in the
-// frame-double form the .settings file persists (parse_frame_double
+// authored frame form the .settings file persists (parse_authored_frame
 // rejects negatives as malformed) — a format-representability floor, not a
 // validity rule. Loaded values mostly bypass this: the loader stays
 // lenient for crossed and equal bounds (trim's corruption tripwire stays
@@ -458,10 +460,10 @@ struct DefectSeriesState {
 // artifacts — and the GUI informs and demands resolution, it never guards a
 // gesture. Readers must not assume begin <= end.
 struct TrimState {
-    double begin_frame = 0.0;   // whole source frame (integer-valued double)
-    double end_frame   = 0.0;   // whole source frame (integer-valued double)
-    bool   has_begin   = false;
-    bool   has_end     = false;
+    int64_t begin_frame = 0;    // whole source frame (int64_t)
+    int64_t end_frame   = 0;    // whole source frame (int64_t)
+    bool    has_begin   = false;
+    bool    has_end     = false;
 };
 
 // Navigational bookmark. Holds a snapshot of the three fields that define
@@ -835,9 +837,9 @@ struct AppState {
         std::vector<GuiPhaseResetMarker>  phase_resets;
         EngineSettings              engine_settings;
         bool                        has_trim_begin = false;
-        double                      trim_begin_frame = 0.0;  // source frames
+        int64_t                     trim_begin_frame = 0;  // source frames
         bool                        has_trim_end   = false;
-        double                      trim_end_frame   = 0.0;  // source frames
+        int64_t                     trim_end_frame   = 0;  // source frames
         AuthoringSnapshot           authoring;
     };
     std::vector<QueuedRender> queued_renders;
@@ -939,20 +941,22 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
-// The ONLY route by which a fractional value becomes an authored position
-// anywhere in the tree: every gesture commit — nudge, drag release, the
+// The ONLY route by which a double becomes an authored position anywhere in
+// the tree: every gesture commit — nudge, drag release, the
 // trim gestures, the trim-end wheel, propagate paste — funnels its final
 // position through this before writing a marker time or trim bound, so
-// every store mutation commits an integer-valued double. Banker's rounding
+// every store mutation commits a whole int64 frame (the field type makes a
+// fractional authored position unrepresentable). Banker's rounding
 // (std::nearbyint under the default rounding mode — the project-wide
-// convention), no epsilon. The ties are real, not theoretical: at 44.1 kHz
+// convention), no epsilon; the cast after nearbyint is exact. The ties are
+// real, not theoretical: at 44.1 kHz
 // the zoom table's frames-per-pixel values are 27.5625, 55.125, 110.25,
 // 220.5, 441, ... (0.625 ms/px deepest, doubling), so at the 5 ms level
 // every odd pixel offset is an exact half-frame tie — banker's rounding
 // debiases them. No other call site may round or cast an authored
 // position on its own.
-inline double snap_authored_frame(double frame) {
-    return std::nearbyint(frame);
+inline int64_t snap_authored_frame(double frame) {
+    return static_cast<int64_t>(std::nearbyint(frame));
 }
 
 // Restore ascending time_frame order after a mutation that may have
@@ -1124,8 +1128,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 bool popup_eligible_marker(const AppState& app, int idx);
 
 // Sweep-select every marker in the time-ordered `markers` list whose
-// time_frame falls in [lo_t, hi_t] (source-frame doubles, the authored
-// domain), iterating in travel order (ascending
+// time_frame falls in [lo_t, hi_t] (double interval bounds; the stored
+// int64 frames widen exactly into the compares), iterating in travel
+// order (ascending
 // indices when `forward`, else descending) so the final last_selected_marker
 // lands on the most recently passed marker. Skips press_marker_idx (preserves
 // the Shift-press toggle non-re-add guarantee) and already-selected indices.

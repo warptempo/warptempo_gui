@@ -25,7 +25,8 @@ namespace {
 // N/window size, so a render-setting change cannot shift which section a
 // marker counts toward); each use converts it once to frames
 // (guard * sample_rate) because block extents and reset positions are
-// source-frame doubles. A phase reset within the guard before a section
+// whole int64 source frames, widened into the double guard-window
+// arithmetic. A phase reset within the guard before a section
 // end (or before a section start) is re-homed into the next chronological
 // labeled section by shifting every block's membership window backward by
 // this amount. Shared membership window across all three propagate
@@ -38,8 +39,8 @@ constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 // immediate successor.
 struct DestBlock {
     std::string label;
-    double      start;
-    double      end;
+    int64_t     start;
+    int64_t     end;
 };
 
 // Walk the warp marker list across [from_idx, to_idx_exclusive),
@@ -58,16 +59,17 @@ std::vector<DestBlock> walk_named_blocks(
         if (i + 1 >= n) break;  // no next marker → no extent
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
-        const double start = mv[i].time_frame;
-        const double end   = mv[i + 1].time_frame;
+        const int64_t start = mv[i].time_frame;
+        const int64_t end   = mv[i + 1].time_frame;
         out.push_back(DestBlock{name, start, end});
     }
     return out;
 }
 
 // Format a stop-message timestamp in whichever audio domain the user is
-// currently in. The input is always a source-frame double (warp markers,
-// clipboard blocks, and dest_blocks all live in source frames); the
+// currently in. The input is a source-frame value (warp markers,
+// clipboard blocks, and dest_blocks all live in whole source frames,
+// widened into this double parameter); the
 // timestamp is the display rendering, format_timestamp(frame / sr).
 // In source view: identity, labeled " source time". In target view:
 // forward-translate to the active domain via source_frame_to_active_domain,
@@ -133,7 +135,8 @@ void PhaseResetPropagate::copy_from_selection() {
             continue;
         }
         // The seconds-domain guard constant, converted once to frames —
-        // block extents and reset positions are source-frame doubles.
+        // block extents and reset positions are whole int64 source frames
+        // widened into the double window math.
         const double guard = kPhaseResetBoundaryGuardSeconds *
             static_cast<double>(target_render.audio.sample_rate());
         // Membership window shifts back by the guard so a lead-in phase
@@ -149,7 +152,7 @@ void PhaseResetPropagate::copy_from_selection() {
             if (t_time >= hi) continue;
             ClipboardPlacement p;
             p.fractional_position = (t_time - b.start) / duration;
-            p.source_time         = t_time;
+            p.source_time         = t.time_frame;
             p.disabled            = t.disabled;
             cb.placements.push_back(p);
         }
@@ -279,7 +282,7 @@ void PhaseResetPropagate::paste_apply() {
             // happens to be on screen would leak incidental view state
             // into authored data. Clamped at 0 after the snap (the
             // universal no-negative-position rule; the wall wins).
-            nm.time_frame = std::max(0.0, snap_authored_frame(
+            nm.time_frame = std::max<int64_t>(0, snap_authored_frame(
                 dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
             app.phaseresetmarkers.insert_marker(std::move(nm));

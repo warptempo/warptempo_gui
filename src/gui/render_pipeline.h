@@ -33,9 +33,9 @@ struct AuthoringSnapshot {
     char    active_tab        = 'A';
     char    active_audio_view = 'S';
     bool    has_trim_begin    = false;
-    double  trim_begin_frame  = 0.0;   // source frames
+    int64_t trim_begin_frame  = 0;     // source frames
     bool    has_trim_end      = false;
-    double  trim_end_frame    = 0.0;   // source frames
+    int64_t trim_end_frame    = 0;     // source frames
     int     zoom_level        = 0;
     int64_t viewport_start    = 0;
     int64_t playhead          = 0;
@@ -87,10 +87,10 @@ struct RenderRequest {
     // counterparts. Trim is wav-only: the wav arm forwards these bounds to
     // the prepost trimmer (plan_trim: cut source view, translated maps,
     // output crop), and the map formats refuse when a bound is set.
-    bool   has_trim_begin = false;
-    double trim_begin_frame = 0.0;   // source frames
-    bool   has_trim_end   = false;
-    double trim_end_frame   = 0.0;   // source frames
+    bool    has_trim_begin = false;
+    int64_t trim_begin_frame = 0;    // source frames
+    bool    has_trim_end   = false;
+    int64_t trim_end_frame   = 0;    // source frames
 
     AuthoringSnapshot authoring;
 
@@ -155,7 +155,7 @@ RenderOutcome do_render(const RenderRequest& req,
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,
 // iteration batch, and the target-view buffer render). RenderRequest carries
-// marker positions as authored source-frame doubles; do_render validates the
+// marker positions as authored int64 source frames; do_render validates the
 // engine's reset list against the probed source's length at the probe —
 // the same validate-at-the-probe shape warp markers follow through
 // build_warp_frame_map (a sidecar is authored against one audio file's frame
@@ -165,7 +165,7 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
-                                   bool has_trim_begin, double trim_begin_frame,
-                                   bool has_trim_end,   double trim_end_frame,
+                                   bool has_trim_begin, int64_t trim_begin_frame,
+                                   bool has_trim_end,   int64_t trim_end_frame,
                                    std::string batch_folder = {},
                                    std::string batch_basename = {});
