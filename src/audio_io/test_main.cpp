@@ -464,6 +464,10 @@ bool test_streamed_unpatched_data_size_fixture()
     // the bytes present; a data size left at zero currently parses as zero
     // frames, and whether to trust those bytes is still an architect question.
     blob.push_back(static_cast<char>(0x7f));
+    // A streamed encoder that leaves the data size at the placeholder leaves
+    // the RIFF size there too; model the real container so the placeholder
+    // sibling in the RIFF-size guard is exercised.
+    patch_u32(blob, 4, 0xffffffffu);
 
     WavInfo info;
     auto out = wav_read_full(bytes_span(blob), &info);

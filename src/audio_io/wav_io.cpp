@@ -182,6 +182,26 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     }
 
     const uint64_t file_size = src.size();
+
+    // The RIFF size counts everything after its own 8-byte header (the WAVE
+    // tag onward), so a spec-conformant container satisfies 8 + riff_size ==
+    // physical file size; the in-tree WavWriter patches exactly this value at
+    // close. A declaration short of or past the physical EOF contradicts the
+    // container and is adversarial input that no in-tree writer can produce, so
+    // it refuses here like the duplicate-chunk and truncated-chunk guards. The
+    // sole tolerated deviation is the 0xffffffff placeholder, the sibling of
+    // the data-chunk streamed-encoder exception below: an encoder that leaves
+    // the data size at the placeholder leaves the RIFF size there too, and
+    // refusing it would kill that ruled data-size salvage. This exception does
+    // NOT broaden into a general RIFF-size tolerance.
+    const uint32_t riff_size = read_u32(u32buf);
+    if (riff_size != 0xffffffffu &&
+        static_cast<uint64_t>(riff_size) + 8 != file_size) {
+        return std::unexpected(
+            "WAV RIFF size contradicts file size (declared " +
+            std::to_string(static_cast<uint64_t>(riff_size) + 8) +
+            " vs physical " + std::to_string(file_size) + ")");
+    }
     bool fmt_seen = false;
     bool data_seen = false;
     WavLayout layout;
