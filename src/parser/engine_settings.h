@@ -74,12 +74,21 @@ bool validate_engine_setting(const std::string& key,
                              EngineSettings& out,
                              std::string& reason);
 
-// Current on-disk string form of engine `key`'s value in `es`, formatted
-// exactly as the settings writer emits it (padded shortest round-trip form
-// at min 4 decimals for scale — value_format.h — true/false for
-// limiter, verbatim for the string fields). Returns std::nullopt if `key`
-// is not a canonical engine key; the empty string is a valid result (an
-// unset free-text field). Inverse of validate_engine_setting; used by the
-// settings prompt's Tab autocomplete.
+// Current on-disk string form of `field`'s value in `es`, formatted exactly
+// as the settings writer emits it (padded shortest round-trip form at min 4
+// decimals for scale — value_format.h — true/false for limiter, verbatim
+// for the string fields). This is the single byte definition for engine
+// field serialization: format_engine_setting_value below delegates to it,
+// and every settings writer (write_settings_file, write_rendersettings,
+// format_default_settings_template) reaches it through kSettingsOrder's
+// typed EngineField rather than re-encoding fields itself.
+std::string format_engine_field_value(const EngineSettings& es,
+                                      EngineField field);
+
+// Current on-disk string form of engine `key`'s value in `es`. Looks up
+// `key`'s EngineField and delegates to format_engine_field_value. Returns
+// std::nullopt if `key` is not a canonical engine key; the empty string is
+// a valid result (an unset free-text field). Inverse of
+// validate_engine_setting; used by the settings prompt's Tab autocomplete.
 std::optional<std::string> format_engine_setting_value(
     const EngineSettings& es, const std::string& key);

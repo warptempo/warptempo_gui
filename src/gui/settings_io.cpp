@@ -4,7 +4,6 @@
 #include "parser/parse_text_util.h"
 #include "render_pipeline.h"
 #include "frame_format.h"
-#include "value_format.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -92,41 +91,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
 
-// Append the value of `field` from `es` to `out`, using the same format
-// the on-disk template encodes (padded shortest round-trip at min 4
-// decimals for scale — value_format.h — true|false for the limiter flag,
-// raw string for title / output_format and the provenance fields).
-void append_engine_field_value(std::string& out, const EngineSettings& es,
-                                EngineField field) {
-    switch (field) {
-        case EngineField::Title:
-            out += es.title;
-            break;
-        case EngineField::OutputFormat:
-            out += es.output_format;
-            break;
-        case EngineField::Scale:
-            out += format_value_double(es.scale, 4);
-            break;
-        case EngineField::Bpm:
-            // bpm is a descriptor string; emit verbatim, empty when unset.
-            out += es.bpm;
-            break;
-        case EngineField::Notes:
-            out += es.notes;
-            break;
-        case EngineField::Url:
-            out += es.url;
-            break;
-        case EngineField::Cover:
-            out += es.cover;
-            break;
-        case EngineField::Limiter:
-            out += es.limiter ? "true" : "false";
-            break;
-    }
-}
-
 // Append the engine block (the eight canonical engine keys, in
 // kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file) to `out`. Shared by write_rendersettings.
@@ -135,7 +99,7 @@ void append_engine_block(std::string& out, const EngineSettings& engine) {
         if (desc.kind != SettingKind::EnginePassthrough) continue;
         out += desc.key;
         out += '=';
-        append_engine_field_value(out, engine, desc.field);
+        out += format_engine_field_value(engine, desc.field);
         out += '\n';
     }
 }
@@ -430,7 +394,7 @@ std::string format_default_settings_template(const std::string& stem) {
         if (desc.kind == SettingKind::EnginePassthrough) {
             s += desc.key;
             s += '=';
-            append_engine_field_value(s, defaults, desc.field);
+            s += format_engine_field_value(defaults, desc.field);
             s += '\n';
         } else if (desc.default_value != nullptr) {
             s += desc.key;
@@ -463,7 +427,7 @@ bool write_settings_file(
             case SettingKind::EnginePassthrough:
                 data += desc.key;
                 data += '=';
-                append_engine_field_value(data, engine, desc.field);
+                data += format_engine_field_value(engine, desc.field);
                 data += '\n';
                 break;
             case SettingKind::ActiveAudioViewChar:

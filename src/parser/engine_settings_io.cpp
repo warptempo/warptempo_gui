@@ -9,16 +9,32 @@
 
 namespace {
 
-// The canonical engine key set. Membership only — order is irrelevant.
-constexpr const char* kEngineKeys[] = {
-    "title", "scale", "bpm", "notes", "url", "cover", "output_format", "limiter",
+// The canonical engine key set, each paired with the typed EngineField it
+// maps to. Order is irrelevant — only membership and the key<->field
+// association matter. Shared by is_canonical_engine_key (membership) and
+// format_engine_setting_value (key-to-field lookup ahead of delegating to
+// format_engine_field_value).
+struct EngineKeyEntry {
+    const char* key;
+    EngineField field;
+};
+
+constexpr EngineKeyEntry kEngineKeys[] = {
+    { "title",         EngineField::Title },
+    { "scale",         EngineField::Scale },
+    { "bpm",           EngineField::Bpm },
+    { "notes",         EngineField::Notes },
+    { "url",           EngineField::Url },
+    { "cover",         EngineField::Cover },
+    { "output_format", EngineField::OutputFormat },
+    { "limiter",       EngineField::Limiter },
 };
 
 } // namespace
 
 bool is_canonical_engine_key(const std::string& key) {
-    for (const char* k : kEngineKeys) {
-        if (key == k) return true;
+    for (const auto& entry : kEngineKeys) {
+        if (key == entry.key) return true;
     }
     return false;
 }
@@ -135,20 +151,45 @@ bool validate_engine_setting(const std::string& key,
     return false;
 }
 
+std::string format_engine_field_value(const EngineSettings& es,
+                                      EngineField field) {
+    std::string out;
+    switch (field) {
+        case EngineField::Title:
+            out = es.title;
+            break;
+        case EngineField::OutputFormat:
+            out = es.output_format;
+            break;
+        case EngineField::Scale:
+            // Scale-like value form: padded shortest round-trip, min 4
+            // decimals — exactly the bytes the settings writer emits.
+            out = format_value_double(es.scale, 4);
+            break;
+        case EngineField::Bpm:
+            out = es.bpm;
+            break;
+        case EngineField::Notes:
+            out = es.notes;
+            break;
+        case EngineField::Url:
+            out = es.url;
+            break;
+        case EngineField::Cover:
+            out = es.cover;
+            break;
+        case EngineField::Limiter:
+            out = es.limiter ? "true" : "false";
+            break;
+    }
+    return out;
+}
+
 std::optional<std::string> format_engine_setting_value(
         const EngineSettings& es, const std::string& key) {
-    if (key == "title")         return es.title;
-    if (key == "output_format") return es.output_format;
-    if (key == "scale") {
-        // Scale-like value form: padded shortest round-trip, min 4 decimals
-        // — exactly the bytes the settings writer emits.
-        return format_value_double(es.scale, 4);
+    for (const auto& entry : kEngineKeys) {
+        if (key == entry.key) return format_engine_field_value(es, entry.field);
     }
-    if (key == "bpm")     return es.bpm;
-    if (key == "notes")   return es.notes;
-    if (key == "url")     return es.url;
-    if (key == "cover")   return es.cover;
-    if (key == "limiter") return std::string(es.limiter ? "true" : "false");
     return std::nullopt;
 }
 
