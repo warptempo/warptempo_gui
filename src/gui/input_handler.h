@@ -91,8 +91,12 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
         return std::nullopt;
     }
 
-    const double scale =
-        std::nearbyint((ratio / base_tempo) * 1e6) / 1e6;
+    // Full-double derived scale, no decimal quantization: the value
+    // serializer is shortest round-trip (value_format.h), so the exact
+    // ratio / base_tempo survives the .settings write bit-identically —
+    // the old 1e-6 grid existed only to keep a fixed-decimal writer and
+    // the in-memory value in agreement, and that writer is gone.
+    const double scale = ratio / base_tempo;
     if (!std::isfinite(scale)) return std::nullopt;
     // Scale bracket (value_format.h): the derived scale is stamped into the
     // cell's .settings exactly like the derived base tempo is stamped into
