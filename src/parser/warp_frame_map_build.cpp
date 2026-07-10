@@ -366,10 +366,15 @@ MarkerEffective marker_effective(
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate,
     std::string* copy_payload_out) {
-    // Appended to both qualifying readouts as the hover-copy hint; the value
-    // the binding actually copies is copy_payload_out, set from the readout's
-    // own value substring below.
-    static constexpr const char* kCopyHint = " (ctrl+c to copy)";
+    // The hover-copy hint. A readout with no provenance carries it as its own
+    // trailing parenthetical (kCopyHint). A readout that already ends in a
+    // "(from ... @ TIME)" provenance parenthetical folds the hint inside that
+    // parenthetical after a comma via kCopyHintJoined, which replaces the
+    // provenance's closing ")". Either way the value the binding actually
+    // copies is copy_payload_out, set from the readout's own value substring
+    // below and independent of the hint's placement.
+    static constexpr const char* kCopyHint       = " (ctrl+c to copy)";
+    static constexpr const char* kCopyHintJoined = ", ctrl+c to copy)";
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
     // sample_rate is display-only: it renders the provenance time as
     // format_timestamp(frame / sample_rate).
@@ -424,8 +429,8 @@ std::string compute_hover_popup_text(
         out += descriptor;
         out += " @ ";
         out += format_timestamp(src.time_frame / sr_d);
-        out += ")";
-        return out + kCopyHint;
+        out += kCopyHintJoined;
+        return out;
     }
 
     if (!m.label_ref.empty()) {
@@ -453,8 +458,8 @@ std::string compute_hover_popup_text(
         out += m.label_ref;
         out += " @ ";
         out += format_timestamp(def.time_frame / sr_d);
-        out += ")";
-        return out + kCopyHint;
+        out += kCopyHintJoined;
+        return out;
     }
 
     return "";

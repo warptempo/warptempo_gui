@@ -226,8 +226,11 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
 // marker). TIME is formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
-// Both qualifying cases end the readout with " (ctrl+c to copy)", the hint
-// for the hover-copy binding.
+// The hover-copy hint is added to every qualifying readout. When the readout
+// carries a provenance parenthetical the hint folds inside it after a comma:
+// "(from SOURCE @ TIME, ctrl+c to copy)". When the readout has no provenance
+// (a first-marker pass, or one whose source is unresolvable) the hint is its
+// own trailing "(ctrl+c to copy)".
 // Returns "" when the marker does not qualify (owning, missing def,
 // malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
 // (slice_to_warp_markers) before calling.
