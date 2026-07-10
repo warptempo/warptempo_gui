@@ -335,6 +335,40 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
+    // Iteration cell-range gate. Every sweep cell mutates this owner's
+    // tempo_base to tempo_base + delta (input_key_dispatch.cpp), and the
+    // deltas run from iter_start to iter_end inclusive, so the two bracket
+    // endpoints bound every cell. If the committed base tempo plus either
+    // bound lands outside the tempo bracket [kTempoMin, kTempoMax], some cell
+    // would render a marker whose tempo cannot re-parse at a later promote
+    // (the strict sidecar parse), so the bracket is refused at its own input
+    // surface — the same red-flash a malformed bracket earns. Per-cell tempos
+    // are computed values guarded only by build_warp_frame_map's refusal on
+    // the async render's stderr backstop; but the bracket TYPED here is
+    // authored input, so an authored bracket whose cells cannot all rest
+    // inside the tempo bracket is caught now. A later tempo change under a
+    // live bracket is deliberately NOT re-gated (iter state is session-only;
+    // build_warp_frame_map's refusals and the strict sidecar parse at promote
+    // remain the backstops). The cleared/blank bracket (NaN bounds) and any
+    // marker the sweep would skip (a pass or label_ref, ineligible per
+    // iter_popup_eligible_marker — the base the sweep reads is tempo_base of
+    // an owning numeric marker) carry no cells, so both skip the check.
+    if (iter_grammar && !std::isnan(iter_lo) && !std::isnan(iter_hi) &&
+        !parsed.tempo_inherits && parsed.label_ref.empty()) {
+        const double base = parsed.tempo_base;
+        if (base + iter_lo < kTempoMin || base + iter_hi > kTempoMax) {
+            app.top_flag_editor.red = true;
+            viewport.invalidate_top_strip();
+            std::fprintf(stderr,
+                "warptempo_gui: edit rejected: iteration bracket cells "
+                "leave the tempo bracket [%s, %s]: %s\n",
+                format_value_double(kTempoMin, 2).c_str(),
+                format_value_double(kTempoMax, 2).c_str(),
+                app.top_flag_editor.pending.c_str());
+            return;
+        }
+    }
+
     // No first-marker special case: a marker at time 0 accepts any payload
     // the grammar allows — pass, label ref, label def. The rule that the
     // marker at frame 0 must be an enabled, tempo-owning numeric marker
