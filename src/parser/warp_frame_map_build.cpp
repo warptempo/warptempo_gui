@@ -343,14 +343,20 @@ MarkerEffective marker_effective(
         // settings.scale cancels in the engine's multiplier expression:
         //   multiplier = (lr_src_dist * def_eff_tempo)
         //              / (def_base * def_src_dist)
+        // which is the geometry distance ratio times def_scale exactly once
+        // (def_eff_tempo = def_base * def_scale, and def_base cancels), so
+        // multiplier IS the displayed scale: base * multiplier equals the
+        // segment's frame-map effective tempo in both scale-presence cases.
+        // Multiplying def_scale in a second time here would square it —
+        // hover/copy would advertise 0.6400 for a 0.8000-scaled definition
+        // over equal distances, and pasting that would author the wrong
+        // tempo.
         const double multiplier =
             (lr_src_dist * def_eff_tempo) / (def_base * def_src_dist);
         // The combined multiplier is carried unclamped — values are full
         // doubles with no display ceiling; the render's ref handling is
         // delta-based and never reads this.
-        r.scale = def_scale.has_value()
-            ? (def_scale_val * multiplier)
-            : multiplier;
+        r.scale = multiplier;
         r.base       = def_base;
         r.source_idx = def_idx;
         return r;
