@@ -412,13 +412,16 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // consumed by GuiInputHandler::run_commit_validation at the top of
 // on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q /
 // Ctrl+W close-or-revert prompt is up over it (the defect modal is
-// dismissed for the duration): it steers open_unsaved to the NO-SAVE
-// form (the store is mid-resolution of a render-invalid state, which the
-// GUI never writes) and, on cancel, is the signal that the series must
+// dismissed for the duration): it makes request_close_or_revert confirm
+// the close even when the store is clean (a load-origin series has
+// app.dirty == false), and, on cancel, is the signal that the series must
 // resume — re-queued through pending_validation with the origin derived
 // from commit_context, so the same defect (and its coincident-group
-// narrowing) reappears. Any wholesale defect_series reset (load, revert)
-// clears it; the resume path clears it explicitly.
+// narrowing) reappears. The close prompt is the ordinary
+// save/discard/cancel form: every state the series can show is a walkable
+// defect, hence load-legal, so a save writes a loadable file that
+// re-walks its series on the next load. Any wholesale defect_series reset
+// (load, revert) clears it; the resume path clears it explicitly.
 struct DefectSeriesState {
     MarkerDefect      defect;
     TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;

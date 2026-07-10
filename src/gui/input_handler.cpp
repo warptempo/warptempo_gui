@@ -115,8 +115,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Esc entirely — see the DialogTrigger::DEFECT_RESOLUTION comment
         // in app_state.h for why this prompt has no Esc response.
         if (app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
+            // Ctrl+S saves and returns to the series unchanged. Every state
+            // the series can be showing is a walkable defect, which is by
+            // construction load-legal: the save writes a file that reloads
+            // and re-walks its own series, so persisting mid-resolution is
+            // safe. This is the plain-Ctrl+S path (save_ops.save); the modal
+            // stays up and the walk continues from where it was.
+            if (ctrl && !shift && !alt && key == GuiKeys::S) {
+                save_ops.save();
+                return;
+            }
             // Ctrl+Q / Ctrl+W do not resolve the defect; they open the
-            // close / revert prompt in NO-SAVE form over the parked series.
+            // close / revert prompt in its normal save/discard/cancel form
+            // over the parked series (walkable defects are load-legal, so the
+            // save option writes a loadable file that re-walks on reload).
             // Suspend the series (commit_context stays on defect_series and
             // drives both the resume origin and the same defect's
             // reappearance on cancel), dismiss this modal, and route to the
