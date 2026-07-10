@@ -361,18 +361,6 @@ enum class DialogTrigger {
     // other prompts' Esc rule — because every offered option mutates or
     // rewinds authored state and the state must not silently rest invalid.
     DEFECT_RESOLUTION,
-    // Forced-choice refusal raised when Ctrl+Alt+C (render view) cannot
-    // promote the displayed render's authoring snapshot because a sidecar
-    // read refused — the .rendersettings engine block, or the .warpmarkers /
-    // .phaseresetmarkers loads (which reject an out-of-bracket computed cell
-    // value). The commit is refused outright: [U]ndo (key 'u') dismisses,
-    // leaving live stores, settings, and the render view untouched; [Delete]
-    // drops the offending render's folder and re-resolves the render list.
-    // Esc behaves as [U]ndo (dismiss), matching the closest non-series
-    // refusal surfaces. Handled by GuiInputHandler::handle_commit_refusal_
-    // response, not GuiPrompt::activate_response, because [Delete] reaches
-    // filesystem removal and the render-list re-resolution.
-    COMMIT_REFUSAL,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom strip

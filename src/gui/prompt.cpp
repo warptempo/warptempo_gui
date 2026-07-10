@@ -13,11 +13,9 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
     case DialogTrigger::DEFECT_RESOLUTION:
-    case DialogTrigger::COMMIT_REFUSAL:
-        // These are dispatched outside proceed: PASTE_CONFIRM / ERROR_NOTICE
-        // directly by activate_response, the defect series by
-        // GuiInputHandler::handle_defect_response, and the commit refusal by
-        // GuiInputHandler::handle_commit_refusal_response.
+        // All three are dispatched outside proceed: the first two directly
+        // by activate_response, the defect series by
+        // GuiInputHandler::handle_defect_response.
         break;
     }
 }

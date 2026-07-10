@@ -267,15 +267,6 @@ struct GuiInputHandler {
     // done. Keys not offered by the current defect are swallowed.
     void handle_defect_response(char k);
 
-    // handle_commit_refusal_response: response dispatch for the
-    // DialogTrigger::COMMIT_REFUSAL modal raised by a refused Ctrl+Alt+C
-    // render-view commit. [U]ndo ('u') and Esc dismiss without touching
-    // anything (the refusal fires before any live-store mutation); [Delete]
-    // removes the offending render's batch folder and re-resolves the render
-    // list — landing on a surviving entry or exiting render view when none
-    // remain. Keys other than u / Esc / Delete are swallowed.
-    void handle_commit_refusal_response(char k);
-
 private:
     // ActiveBatch holds the run_render_batch state machine. The batch loop
     // used to be synchronous (blocking inside do_render); now each entry is
@@ -430,19 +421,6 @@ private:
     // Ctrl+Alt+C (commit displayed render). Returns true if key+mods matched
     // one (on_key then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
-
-    // Open the COMMIT_REFUSAL modal for a refused Ctrl+Alt+C commit. `error`
-    // is the owner's refusal string verbatim; the prompt shows
-    // "commit refused: <error>" with [U]ndo / [Delete] responses.
-    // `batch_folder` is the offending render's folder, stashed for the
-    // [Delete] resolution. Called before any live-store mutation.
-    void open_commit_refusal(std::string error,
-                             std::filesystem::path batch_folder);
-
-    // Offending render's batch folder for a live COMMIT_REFUSAL modal,
-    // captured at open time so [Delete] removes the right folder regardless
-    // of later list re-resolution. Meaningful only while that modal is up.
-    std::filesystem::path commit_refusal_batch_folder_;
 
     // P / I / M letter-key handlers: Ctrl+P-family phase-reset clipboard ops,
     // `p` view toggle, `i` / Shift+I iteration, `m` bpm mode. Returns true if
