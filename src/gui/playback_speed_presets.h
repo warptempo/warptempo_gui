@@ -22,7 +22,8 @@ inline constexpr float kPlaybackSpeedPresets[] = {
 // True iff `v` is bit-exactly one of the preset speeds. Used by the .settings
 // reader to reject any off-preset hand-edited value. Exact float equality is
 // sound: each preset is the nearest float of a short decimal, and the writer
-// emits that same short decimal (%.6f), so parsing the written text back
+// emits that same short decimal (%.1f — every preset is one-decimal), so
+// parsing the written text back
 // yields the identical float — no tolerance is needed or wanted.
 inline bool is_playback_speed_preset(float v) {
     for (const float preset : kPlaybackSpeedPresets) {

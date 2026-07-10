@@ -130,7 +130,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.000000" },
+    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.0" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     // GUI-kind key, NOT an engine key: the single GUI-wide monospace text
     // size in points (pixels = points * 4/3). Valid range 6..72. Like
@@ -400,7 +400,7 @@ bool parse_settings_file(const std::string& path, ParsedSettings& out) {
             // The slow-down presets are the precision-finetune tool.
             //
             // Exact float equality against the table is sound: the writer
-            // emits each preset with the same %.6f the reader parses back,
+            // emits each preset with the same one-decimal %.1f the reader parses back,
             // and both the on-disk text and the table literal are the nearest
             // float of the same short decimal, so parse(write(preset)) equals
             // the literal bit-for-bit. No tolerance.
@@ -681,7 +681,7 @@ bool write_settings_file(
                 data += '\n';
                 break;
             case SettingKind::PlaybackSpeedFloat:
-                std::snprintf(buf, sizeof(buf), "%.6f", playback_speed);
+                std::snprintf(buf, sizeof(buf), "%.1f", playback_speed);
                 data += desc.key;
                 data += '=';
                 data += buf;
