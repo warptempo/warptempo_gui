@@ -51,37 +51,70 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
     }
 }
 
-// Engine-boundary ordering guards. The two validators are fully symmetric
-// per column: same strict-ascent predicate, no epsilon band, same loud init
-// refusal. The map simply has two columns (src and tgt) to the reset list's
-// one because the objects' shapes differ, not their treatment. The two
-// init-time hardfails are deliberate and stay even though the producers'
-// contract (build_warp_frame_map, the parser's phase reset frame map
-// derivation, and the prepost trimmer's translate/filter, which preserves
-// strict ascent on both columns) makes both checks unreachable from
-// program-written inputs: a breach — a producer bug, or a future driver
-// fed hand-edited artifacts — would otherwise render silently wrong
-// deliverable bytes (a misinterpolated map, or resets silently skipped by the
-// forward synthesis cursor). A loud init refusal is the designed response.
+// Engine-boundary input guards. The two validators are fully symmetric
+// per column: same per-entry finiteness predicate, same strict-ascent
+// predicate, no epsilon band, same loud init refusal. The map simply has
+// two columns (src and tgt) to the reset list's one because the objects'
+// shapes differ, not their treatment. These init-time hardfails are
+// deliberate and stay even though the producers' contract
+// (build_warp_frame_map, the parser's phase reset frame map derivation,
+// and the prepost trimmer's translate/filter, which preserves strict
+// ascent on both columns) makes them unreachable from program-written
+// inputs: a breach — a producer bug, or a future driver fed hand-edited
+// artifacts — would otherwise render silently wrong deliverable bytes (a
+// misinterpolated map, or resets silently skipped by the forward
+// synthesis cursor). A loud init refusal is the designed response.
 //
 // Strictness is the right predicate on both lists because the engine
 // validates pre-quantization doubles, and every program path produces
 // strictly increasing ones. Authored marker files load with equal times
-// permitted, but neither column lets a tie reach the engine: strict ascent
-// of the phase reset input is guaranteed by the exact-duplicate collapse in
-// build_phase_reset_source_frames plus the parser's strictly monotone
-// derivation chain (a reset whose anticipation falls before the window
-// start is dropped, not clamped, so at most one survivor can sit exactly at
-// zero and every later survivor is strictly greater), with
-// .phaseresetframemap artifacts written from that same derivation; warp
-// ordering degeneracy is refused at build_warp_frame_map (its sub-frame
-// segment error) before any engine input exists. Equal values here
-// therefore always mean a breach. No epsilon band on either.
+// permitted, but neither column lets a tie reach the engine: strict
+// ascent of the phase reset input is guaranteed by the raw-store
+// coincidence refusal (marker_store_validate.h, at commit and load) plus
+// build_phase_reset_source_frames' sub-frame refusal and the parser's
+// strictly monotone derivation chain (a reset whose anticipation falls
+// before the window start is dropped, not clamped, so at most one
+// survivor can sit exactly at zero and every later survivor is strictly
+// greater), with .phaseresetframemap artifacts written from that same
+// derivation; warp ordering degeneracy is refused at build_warp_frame_map
+// (its sub-frame segment error) before any engine input exists. Equal
+// values here therefore always mean a breach. No epsilon band on either.
+//
+// Finiteness is checked explicitly on EVERY entry — including entry zero,
+// which the ascent loops never inspect — because the ascent comparisons
+// are not finite checks: NaN compares false against everything and would
+// slip through, and a trailing +inf passes ascent (inf is greater than
+// any finite prior). The producers validate finiteness at build time
+// (build_warp_frame_map refuses non-finite tempo-scale divisors and
+// non-finite or non-advancing target anchors at its emission chokepoint;
+// the phase reset derivation maps finite authored positions through that
+// same finite map), so a non-finite entry here likewise always means a
+// breach.
 
-// Validate strict ascent of a (src,tgt) warp_frame_map on both axes. Returns
-// true if OK.
+// Validate the (src,tgt) warp_frame_map: non-empty, finite entries, strict
+// ascent on both axes. Returns true if OK. The empty refusal guards the
+// .back() reads at init (target_total_frames, emit_sample_cap) and the
+// map interpolation in the dense schedule: program paths always emit the
+// {0,0} seed segment, so an empty map means a hand-edited artifact —
+// exactly the breach class these guards exist for. An EMPTY phase reset
+// list, by contrast, stays legal in the sibling validator below (no phase
+// resets is a normal render): the map is the engine's geometry and must
+// have an extent, the reset list is optional point events — arity and
+// role, not treatment asymmetry.
 bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSegment>& map) {
-    for (size_t i = 1; i < map.size(); ++i) {
+    if (map.empty()) {
+        std::cerr << "Error: warp_frame_map is empty (program-written maps "
+                     "always carry the {0,0} seed segment).\n";
+        return false;
+    }
+    for (size_t i = 0; i < map.size(); ++i) {
+        if (!std::isfinite(map[i].src_frame) || !std::isfinite(map[i].tgt_frame)) {
+            std::cerr << "Error: warp_frame_map entry " << i << " is not finite ("
+                      << map[i].src_frame << ", "
+                      << map[i].tgt_frame << ").\n";
+            return false;
+        }
+        if (i == 0) continue;
         if (map[i].src_frame <= map[i - 1].src_frame) {
             std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic src_frame ("
                       << map[i - 1].src_frame << " -> "
@@ -98,10 +131,17 @@ bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSe
     return true;
 }
 
-// Validate the phase reset list is strictly ascending (see the ruling
-// comment above). Returns true if OK.
+// Validate the phase reset list: finite entries, strictly ascending (see
+// the ruling comment above). An empty list is legal — no phase resets is
+// a normal render. Returns true if OK.
 bool validate_phase_reset_frame_map_strictly_ascending(const std::vector<double>& resets) {
-    for (size_t i = 1; i < resets.size(); ++i) {
+    for (size_t i = 0; i < resets.size(); ++i) {
+        if (!std::isfinite(resets[i])) {
+            std::cerr << "Error: phase reset entry " << i << " is not finite ("
+                      << resets[i] << ").\n";
+            return false;
+        }
+        if (i == 0) continue;
         if (resets[i] <= resets[i - 1]) {
             std::cerr << "Error: phase reset entry " << i << " is not strictly ascending ("
                       << resets[i - 1] << " -> "
