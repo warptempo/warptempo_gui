@@ -96,9 +96,13 @@ std::expected<TrimPlan, std::string> plan_trim(
 // Crop the engine's emitted interleaved buffer to the exact authored window:
 // drop post.begin_sample frames from the head and keep post.samples frames.
 // begin_sample / samples are frame counts, applied per-channel on the
-// interleaved buffer.
-void apply_post_trim(std::vector<float>& buffer, int channels,
-                     const PostTrim& post);
+// interleaved buffer. plan_trim's geometry guarantees the engine's emission
+// covers begin_sample + samples (the crop comment there), so a buffer that
+// cannot supply the window means the engine/trimmer extent contract broke —
+// an internal breach, refused loudly (the error fails finish_render) rather
+// than silently zero-padding a manufactured deliverable.
+std::expected<void, std::string> apply_post_trim(
+    std::vector<float>& buffer, int channels, const PostTrim& post);
 
 // Orchestrator-side projection refusal, run before the engine allocates —
 // the refuse-before-cost property: the engine buffers its full emission in

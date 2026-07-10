@@ -208,20 +208,33 @@ std::expected<TrimPlan, std::string> plan_trim(
     return plan;
 }
 
-void apply_post_trim(std::vector<float>& buffer, int channels,
-                     const PostTrim& post) {
+std::expected<void, std::string> apply_post_trim(
+        std::vector<float>& buffer, int channels, const PostTrim& post) {
+    if (channels <= 0 || post.begin_sample < 0 || post.samples < 0) {
+        return std::unexpected(
+            "post-trim crop has an invalid shape (channels=" +
+            std::to_string(channels) + ", begin_sample=" +
+            std::to_string(post.begin_sample) + ", samples=" +
+            std::to_string(post.samples) + ")");
+    }
     const size_t begin = static_cast<size_t>(post.begin_sample) *
                          static_cast<size_t>(channels);
     const size_t count = static_cast<size_t>(post.samples) *
                          static_cast<size_t>(channels);
     // plan_trim's geometry guarantees the engine's emission covers
-    // begin_sample + samples (see the crop comment there), so the clamp and
-    // the zero-fill resize are defensive no-ops on program input.
+    // begin_sample + samples (see the crop comment there). If the buffer
+    // cannot supply that window the extent contract broke; refuse rather
+    // than zero-fill a padded deliverable.
+    if (begin > buffer.size() || count > buffer.size() - begin) {
+        return std::unexpected(
+            "post-trim crop exceeds the engine emission (buffer " +
+            std::to_string(buffer.size()) + " samples, crop needs " +
+            std::to_string(begin) + " + " + std::to_string(count) + ")");
+    }
     buffer.erase(buffer.begin(),
-                 buffer.begin() +
-                     static_cast<std::ptrdiff_t>(
-                         std::min(begin, buffer.size())));
-    buffer.resize(count, 0.0f);
+                 buffer.begin() + static_cast<std::ptrdiff_t>(begin));
+    buffer.resize(count);
+    return {};
 }
 
 std::expected<void, std::string> validate_render_projection(
@@ -254,7 +267,10 @@ std::expected<FinishRenderStatus, std::string> finish_render(
         return cancel_flag && cancel_flag->load();
     };
     if (post_trim) {
-        apply_post_trim(buffer, channels, *post_trim);
+        if (auto cropped = apply_post_trim(buffer, channels, *post_trim);
+            !cropped) {
+            return std::unexpected(cropped.error());
+        }
     }
     if (cancelled()) return FinishRenderStatus::Cancelled;
     if (limiter) {
