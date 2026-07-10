@@ -587,9 +587,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // Trim-boundary drag motion. Handled before the render-view
-    // and marker-drag branches; only ever active in source view (the only
-    // place begin_trim_drag fires). A lost button commits at the current
-    // position, mirroring the marker-drag motion handler.
+    // and marker-drag branches; active in BOTH views (begin_trim_drag has
+    // no view gate, and update_trim_drag / commit_trim_drag carry the
+    // target-view cached-map machinery). A lost button commits at the
+    // current position, mirroring the marker-drag motion handler.
     if (app.trim_drag.active) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {

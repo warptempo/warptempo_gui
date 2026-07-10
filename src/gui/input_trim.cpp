@@ -418,8 +418,13 @@ void GuiInputHandler::commit_trim_drag() {
         // The map is the live cached one, as the trim nudge and trim-end
         // wheel anchor: markers freeze a pre-drag map because a warp drag
         // deforms it, but trim never enters build_target_view_warp_frame_map,
-        // so the live map is stable across the drag and IS the coordinate
-        // system the trim stems painted through. The per-bound absolute walls
+        // so the live map is stable across the drag. The trim stems paint
+        // through the waveform cache's baked map (fp_warp_frame_map), which
+        // can LAG the live cache inside an async waveform-rebuild window
+        // (e.g. a trim grab immediately after a tempo commit); inside that
+        // window stored-equals-shown holds only transiently, converging when
+        // the rebuild lands — the same displayed-vs-live nuance the nudge and
+        // wheel anchors share. The per-bound absolute walls
         // — begin 0..EOF-1, end 0..EOF exactly, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
