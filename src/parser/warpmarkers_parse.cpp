@@ -21,21 +21,63 @@ bool is_valid_label_format(const std::string& s) {
     return std::regex_match(s, re);
 }
 
-// Tempo and scale values are full doubles (parse_value_double: whole field
-// consumed, finite, no leading '-') under a strict positivity refusal —
-// zero is parseable but refused with a pointed message; negatives and any
-// other malformed spelling fail the parse itself — and the authored-value
-// bracket for its kind, passed in by the caller (value_format.h: tempo
-// fields [kTempoMin, kTempoMax], scale fields [kScaleMin, kScaleMax]).
-// Every GUI input surface enforces the bracket, so an out-of-bracket value
-// on disk is a state the GUI can never produce: adversarial, load-fatal,
-// first error only, exactly like the non-positive refusals. Serializers
-// pad the shortest round-trip form (format_value_double: tempo at min 2
-// decimals, scale at min 4), so historical fixed-decimal sidecars
-// re-serialize byte-identically.
+// An authored TEMPO is written in exactly one spelling: N.NN — one or more
+// integer digits, a single dot, and exactly two fraction digits, with no
+// leading zero unless the integer part is exactly "0". Returns true only
+// for that shape (no sign, no exponent, no missing/extra fraction digits).
+// An N.NN spelling is on the 0.01 cent grid and canonical by construction,
+// so no separate grid or round-trip check is needed: every tempo producer
+// (the Ctrl+wheel cents arithmetic, the bpm derivation's nearbyint cents,
+// iteration cells as sums of cent values, the pass/reset 1.00 defaults)
+// lands on that grid, and the min-2 serializer writes exactly N.NN for it.
+bool is_two_decimal_tempo_spelling(const std::string& s) {
+    const size_t dot = s.find('.');
+    if (dot == std::string::npos) return false;                    // dot required
+    if (s.find('.', dot + 1) != std::string::npos) return false;   // exactly one dot
+    const std::string_view int_part(s.data(), dot);
+    const std::string_view frac_part(s.data() + dot + 1, s.size() - dot - 1);
+    if (int_part.empty()) return false;                            // digit before the dot
+    if (frac_part.size() != 2) return false;                       // exactly two fraction digits
+    auto all_digits = [](std::string_view p) {
+        for (char c : p)
+            if (c < '0' || c > '9') return false;
+        return true;
+    };
+    if (!all_digits(int_part) || !all_digits(frac_part)) return false;
+    // No leading zero unless the integer part is exactly "0".
+    if (int_part.size() > 1 && int_part.front() == '0') return false;
+    return true;
+}
+
+// Parse and range-check an authored VALUE with a per-kind spelling rule.
+//
+// TEMPO fields (two_decimal_grammar = true) accept exactly the N.NN
+// spelling (is_two_decimal_tempo_spelling) before the value parse, refusing
+// "1.1", "1.100", "1", scientific forms, and every other spelling with a
+// grammar-naming error. SCALE fields (two_decimal_grammar = false) stay
+// full doubles: parse_value_double (whole field consumed, finite, no
+// leading '-') under a strict positivity refusal — a well-formed negative
+// or typed zero gets a pointed message, other malformed spellings fail the
+// parse. This is a deliberate tempo/scale asymmetry: tempo lives on the
+// 0.01 cent grid at every producer, so its on-disk form is pinned to N.NN,
+// while marker and settings scale remain full doubles (min-4 shortest).
+//
+// Both kinds then apply the authored-value bracket for the kind, passed in
+// by the caller (value_format.h: tempo [kTempoMin, kTempoMax], scale
+// [kScaleMin, kScaleMax]). Every GUI input surface enforces the bracket, so
+// an out-of-bracket value on disk is a state the GUI can never produce:
+// adversarial, load-fatal, first error only, exactly like the non-positive
+// refusals. Serializers pad the shortest round-trip form
+// (format_value_double: tempo at min 2 decimals, scale at min 4), so
+// historical fixed-decimal sidecars re-serialize byte-identically.
 bool parse_positive_value(const std::string& s, double& out,
                           const char* what, double lo, double hi,
+                          bool two_decimal_grammar,
                           std::string& error_out) {
+    if (two_decimal_grammar && !is_two_decimal_tempo_spelling(s)) {
+        error_out = std::string(what) + " must be of the form N.NN: " + s;
+        return false;
+    }
     double v = 0.0;
     if (!parse_value_double(s, v)) {
         // parse_value_double rejects a leading '-' outright; a well-formed
@@ -124,13 +166,13 @@ bool parse_new_payload(const std::string& payload,
         const std::string scale_part = (star == std::string::npos)
             ? std::string() : payload.substr(star + 1);
         double tempo_v = 0.0;
-        if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, error_out)) {
+        if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, /*two_decimal_grammar=*/true, error_out)) {
             return false;
         }
         std::optional<double> scale_v;
         if (star != std::string::npos) {
             double sv = 0.0;
-            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
+            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, /*two_decimal_grammar=*/false, error_out)) {
                 return false;
             }
             scale_v = sv;
@@ -168,13 +210,13 @@ bool parse_new_payload(const std::string& payload,
     const std::string scale_part = (star == std::string::npos)
         ? std::string() : tempo_with_scale.substr(star + 1);
     double tempo_v = 0.0;
-    if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, error_out)) {
+    if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, /*two_decimal_grammar=*/true, error_out)) {
         return false;
     }
     std::optional<double> scale_v;
     if (star != std::string::npos) {
         double sv = 0.0;
-        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
+        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, /*two_decimal_grammar=*/false, error_out)) {
             return false;
         }
         scale_v = sv;

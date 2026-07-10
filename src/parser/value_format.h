@@ -7,11 +7,17 @@
 #include <system_error>
 
 // Serialization of authored VALUES (tempo, scale, bpm bracket bounds, the
-// global settings scale). Values are full doubles; this pair is the single
-// definition of their on-disk and on-screen number form, the value-domain
-// sibling of frame_format.h's position pair. Convention across the
-// codebase: tempo-like values print with min_decimals 2, scale-like values
-// with min_decimals 4, bpm values with min_decimals 0 (plain shortest).
+// global settings scale). Scale, bpm bounds, and the settings scale are
+// full doubles; this pair is the single definition of their on-disk and
+// on-screen number form, the value-domain sibling of frame_format.h's
+// position pair. Convention across the codebase: tempo-like values print
+// with min_decimals 2, scale-like values with min_decimals 4, bpm values
+// with min_decimals 0 (plain shortest). Tempo is the exception on input: it
+// is authored on the 0.01 cent grid at every producer and its on-disk form
+// is pinned to the exact N.NN spelling (the tempo parse in
+// warpmarkers_parse.cpp), so a cent-grid double and this min-2 write agree
+// bit-for-bit — no scale-style full-double input latitude on the tempo
+// field. The min-2 write here is unchanged and canonical for that grid.
 
 // Authored-value brackets, the single definition of the legal value
 // vocabulary. Tempo and scale carry separate brackets. Tempo (marker
