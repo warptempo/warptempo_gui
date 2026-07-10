@@ -4,6 +4,7 @@
 #include "marker_store_validate.h"
 #include "render_pipeline.h"
 #include "render.h"
+#include "settings_file.h"
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
@@ -24,11 +25,10 @@
 
 class GuiAudio;
 
-// Zoom level numbering. kFitFileLevel = 0 ("whole file visible", computed
-// at zoom / resize time, not stored as a fixed ms/pixel). Numeric levels
-// run kMinNumericLevel..kMaxNumericLevel inclusive, each exactly 2x the
-// previous in ms-per-pixel. kZoomTableSize is the size of the table in
-// main.cpp (one sentinel slot at index 0 plus the numeric levels).
+// Zoom level numbering: the range constants (kFitFileLevel,
+// kMinNumericLevel, kMaxNumericLevel) live in settings_file.h — the
+// persisted zoom vocabulary the whole-settings schema enforces in both
+// products — and app_state.h re-exports them through the include above.
 //
 // Bare-digit keys are unbound for zoom: only `0` toggles between fit-file
 // and the snap level, and `C` jumps to snap zoom centered on the playhead.
@@ -36,13 +36,12 @@ class GuiAudio;
 // fit-file (most file possible). kMinNumericLevel is the deepest level
 // continuous manual zoom-in can reach (1.2 s); kSnapZoomLevel is the level
 // every snap/toggle gesture lands on (2.4 s, one step shallower).
-constexpr int kFitFileLevel     = 0;
-constexpr int kMinNumericLevel  = 1;
 constexpr int kSnapZoomLevel    = 2;   // 2.4 s — snap zoom; manual
                                        // zoom-in can go one step deeper to
                                        // kMinNumericLevel (1.2 s)
-constexpr int kMaxNumericLevel  = 10;
-constexpr int kZoomTableSize    = 11;
+// Size of the ms-per-pixel table in main.cpp: one sentinel slot at index 0
+// plus the numeric levels.
+constexpr int kZoomTableSize    = kMaxNumericLevel + 1;
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it

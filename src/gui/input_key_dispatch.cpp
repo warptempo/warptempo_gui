@@ -804,23 +804,27 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // app.render_view.warp_markers / .phase_resets are render-domain display
         // state. Ctrl+Alt+C promotes the render's source-domain authoring
         // sidecars, so every required sidecar is validated and collected
-        // before the first mutation.
+        // before the first mutation. The whole .rendersettings file goes
+        // through the one strict parser (read_rendersettings): a
+        // hand-edited sidecar with ANY malformed line — a broken authoring
+        // field included — aborts here, before the first marker or
+        // AppState mutation, rather than partially restoring (a skipped
+        // trim key would otherwise read as "bound absent" and clear a live
+        // trim). Adversarial input; stderr-only abort.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
         const std::filesystem::path sidecar =
             cur_e.batch_folder / (cur_e.basename + ".rendersettings");
-        const RendersettingsAuthoring authoring =
-            read_rendersettings_authoring(sidecar);
-        const std::expected<EngineSettings, std::string> commit_engine_settings =
-            read_rendersettings_engine_block(sidecar);
-        if (!commit_engine_settings) {
+        const auto rendersettings = read_rendersettings(sidecar);
+        if (!rendersettings) {
             std::fprintf(stderr,
-                "warptempo_gui: commit aborted: rendersettings engine "
-                "block read failed for '%s': %s\n",
+                "warptempo_gui: commit aborted: rendersettings read "
+                "failed for '%s': %s\n",
                 sidecar.string().c_str(),
-                commit_engine_settings.error().c_str());
+                rendersettings.error().c_str());
             return true;
         }
+        const RendersettingsAuthoring& authoring = rendersettings->authoring;
         const bool has_authoring_block =
             authoring.has_active_tab ||
             authoring.has_active_audio_view ||
@@ -889,10 +893,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                        commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
 
-        // Full engine-settings commit. The strict engine block was validated
-        // before marker mutation, so commit can adopt the typed recipe without
-        // degrading to the previous live settings.
-        app.engine_settings = *commit_engine_settings;
+        // Full engine-settings commit. The whole sidecar was validated
+        // before marker mutation, so commit can adopt the typed recipe
+        // without degrading to the previous live settings.
+        app.engine_settings = rendersettings->engine;
 
         const std::filesystem::path src(app.source_audio_path);
         std::filesystem::path src_parent = src.parent_path();

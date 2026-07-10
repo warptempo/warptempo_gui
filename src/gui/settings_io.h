@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
-#include "settings_trim.h"
+#include "settings_file.h"
 
 #include <cstdint>
 #include <expected>
@@ -11,54 +11,10 @@
 struct AuthoringSnapshot;
 struct ViewState;
 
-// Parsed view-state contents of .settings. Engine-key lines are handled
-// separately by read_engine_settings_from_file; this struct carries only
-// the typed view-state fields (per-tab viewport / zoom / playhead / trim,
-// follow, active_audio_view, active_markers_view, active_tab_view,
-// playback_speed, and the GUI-kind font_size).
-struct ParsedSettings {
-    bool    has_tab_a_vp   = false;
-    int64_t tab_a_vp       = 0;
-    bool    has_tab_a_zoom = false;
-    int     tab_a_zoom     = 0;
-    bool    has_tab_a_ph   = false;
-    int64_t tab_a_ph       = 0;
-    bool    has_tab_b_vp   = false;
-    int64_t tab_b_vp       = 0;
-    bool    has_tab_b_zoom = false;
-    int     tab_b_zoom     = 0;
-    bool    has_tab_b_ph   = false;
-    int64_t tab_b_ph       = 0;
-    bool    has_follow         = false;
-    bool    follow             = true;
-    bool    has_active_audio_view  = false;
-    char    active_audio_view      = 'S';
-    bool    has_active_markers_view    = false;
-    char    active_markers_view        = 'W';
-    bool    has_active_tab_view    = false;
-    char    active_tab_view        = 'A';
-    bool    has_playback_speed = false;
-    float   playback_speed     = 1.0f;
-    // GUI font size in points (NOT an engine key). Absent, malformed, or
-    // out-of-range values leave has_font_size false; the default (11)
-    // applies at the call site.
-    bool    has_font_size      = false;
-    double  font_size          = 11.0;
-    // Per-tab trim keys. Absence means unset. Whole int64 source frames.
-    bool    has_tab_a_trim_begin = false;
-    int64_t tab_a_trim_begin     = 0;     // source frames
-    bool    has_tab_a_trim_end   = false;
-    int64_t tab_a_trim_end       = 0;     // source frames
-    bool    has_tab_b_trim_begin = false;
-    int64_t tab_b_trim_begin     = 0;     // source frames
-    bool    has_tab_b_trim_end   = false;
-    int64_t tab_b_trim_end       = 0;     // source frames
-    // Per-tab read-only flags. Absent → tab defaults to editable.
-    bool    has_tab_a_read_only  = false;
-    bool    tab_a_read_only      = false;
-    bool    has_tab_b_read_only  = false;
-    bool    tab_b_read_only      = false;
-};
+// The `.settings` reader is the parser-side whole-file schema
+// (read_settings_file in settings_file.h), shared verbatim with
+// warptempo_cli. This header carries the GUI-only settings surfaces: the
+// writers and the `.rendersettings` schema.
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
@@ -73,44 +29,33 @@ bool atomic_write_string_to_path(const std::string& path,
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
-// Parse `.settings`. Missing file → empty result (all has_* false).
-// Returns false on a file-open failure of an existing file, or on any hard
-// failure from the delegated trim reader (read_settings_trim): a malformed
-// trim frame position, a duplicate trim key, or a duplicate or non-A-or-B
-// active_tab_view. Bound ordering is not checked — equal and inverted trim
-// bounds load intact (the render boundary owns trim validity).
-// Other per-line view-state errors are skipped, silently
-// except font_size, whose bad values get one stderr diagnostic before the
-// default applies. Tab values are stored raw, without range validation — the
-// caller clamps against the current audio file. Engine keys are ignored by
-// this function; they are deserialized separately by
-// read_engine_settings_from_file.
-bool parse_settings_file(const std::string& path, ParsedSettings& out);
+// Whole-file strict schema for `.rendersettings`, the render-pipeline
+// sibling of read_settings_file: one parse validates the complete
+// program-written file and splits it into three projections — the typed
+// engine block, the render-view scratch state, and the optional authoring
+// snapshot. The file is program-written (write_rendersettings /
+// update_rendersettings_view_state), so any violation is adversarial and
+// the FIRST error refuses the whole read: unknown keys, keyless lines,
+// duplicates, malformed values, out-of-range zoom levels, and missing
+// required engine keys. Absent optional keys stay legal (defaults for the
+// view projection, has_ flags for the authoring projection: older or
+// minimal sidecars omit the authoring block, and the view-state-only file
+// update_rendersettings_view_state can leave behind already fails its
+// missing-engine-key check here).
+//
+// The two consumers apply opposite policies on a refused read, matching
+// the marker display sidecars' recorded leniency split: the render-view
+// DISPLAY caller logs once and falls back to defaults (view state is
+// display scratch, never adopted into authoring), while Ctrl+Alt+C
+// promotion aborts before its first marker or AppState mutation — a
+// hand-edited sidecar must never partially restore.
 
-// Tolerant view-state contents of `.rendersettings`. Missing keys are
-// silently defaulted (fit-file zoom for `zoom`, zero for viewport/
-// playhead); malformed values are silent-skipped. Engine-block lines
-// in the same file are skipped — read_rendersettings_engine_block is
-// the strict reader for that side, returning std::expected rather than
-// tolerating malformed input.
 struct RenderViewState {
     int     zoom_level     = 0;   // Filled with kFitFileLevel by the reader.
     int64_t viewport_start = 0;
     int64_t playhead       = 0;
 };
 
-// Tolerant view-state reader. Missing file → fit-file zoom + zero
-// viewport + zero playhead. Engine-block lines and unknown keys are
-// silent-skipped. Same tolerance as the prior
-// GuiRenderView::apply_rendersettings_for.
-RenderViewState read_rendersettings_view_state(
-    const std::filesystem::path& path);
-
-// Tolerant authoring-block reader for .rendersettings. Every field is
-// has_-flagged; missing keys leave their flag false. Older or minimal
-// .rendersettings sidecars may omit the authoring block, and commit skips
-// fields whose has_ flag is false.
-// Malformed values are silent-skipped like the view-state reader.
 struct RendersettingsAuthoring {
     bool    has_active_tab        = false;
     char    active_tab            = 'A';
@@ -128,19 +73,13 @@ struct RendersettingsAuthoring {
     int64_t playhead              = 0;
 };
 
-RendersettingsAuthoring read_rendersettings_authoring(
-    const std::filesystem::path& path);
+struct Rendersettings {
+    EngineSettings          engine;
+    RenderViewState         view;
+    RendersettingsAuthoring authoring;
+};
 
-// Strict engine-block reader for `.rendersettings`. Delegates to
-// read_engine_settings_from_file, so it shares that reader's per-field
-// validator and error semantics exactly. Non-engine lines (the view-state
-// keys and any unknown key) are ignored. A duplicate engine key, an
-// invalid engine value, a missing required key, or an unopenable file
-// yields std::unexpected carrying the underlying reader's reason string
-// for the FIRST such violation encountered (the reader does not continue
-// past it). This function prints nothing; it performs no I/O beyond
-// reading `path`. The caller owns surfacing the reason as a diagnostic.
-std::expected<EngineSettings, std::string> read_rendersettings_engine_block(
+std::expected<Rendersettings, std::string> read_rendersettings(
     const std::filesystem::path& path);
 
 // Full-write of `.rendersettings`: emits the eight canonical engine keys

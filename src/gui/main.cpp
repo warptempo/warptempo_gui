@@ -135,9 +135,9 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 // app_state.h, alongside the Viewport struct.
 
 
-// ParsedSettings + the settings parse / format / write helpers
-// moved to settings_io.{h,cpp} so file_loader.cpp and save_markers can
-// both reach them.
+// The settings format / write helpers live in settings_io.{h,cpp} so
+// file_loader.cpp and save_markers can both reach them; the .settings
+// reader is the parser-side schema (settings_file.h), shared with the CLI.
 
 // WaveformCache was promoted to paint_handler.{h,cpp} so paint_handler.cpp can
 // reach it. The instance is still a local in main() and is passed by reference

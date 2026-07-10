@@ -290,80 +290,86 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.tab_b          = default_tab;
     app.engine_settings = EngineSettings{};
 
-    // Parse .settings (if present) and apply tab values with silent
-    // coerce on out-of-range. Missing file → all keys default. A present
-    // file that fails to open or fails the trim reader's syntax checks
-    // (malformed timestamp, duplicate key, bad active_tab_view — bound
-    // ordering is deliberately unchecked; equal/inverted trim loads intact
-    // and the render boundary refuses instead) aborts the load, same shape
-    // as the strict engine-settings block below: the reader already printed
-    // the specific reason, so only the abort line is added here before
-    // reverting and returning false.
+    // The whole-file strict settings schema (read_settings_file,
+    // settings_file.h), shared verbatim with warptempo_cli so a sidecar set
+    // is loadable in both products or neither. Any schema violation —
+    // unknown key, duplicate, malformed value, off-preset playback_speed,
+    // missing required engine key — aborts the load with the first error,
+    // the same shape as a corrupt audio file: revert the partial load so
+    // the user sees no half-loaded state. On top of the schema, the
+    // context-dependent range rules run here, equally load-fatal: a
+    // viewport, playhead, or zoom the GUI's own clamps could never author
+    // is adversarial exactly like a past-EOF marker (the sidecar was
+    // authored against this audio's frame grid). Trim bound ordering stays
+    // deliberately unchecked — equal/inverted bounds load intact and walk
+    // the defect series; the render boundary owns trim refusals.
     {
-        ParsedSettings ps;
-        if (!parse_settings_file(app.settings_path, ps)) {
+        auto sf_r = read_settings_file(app.settings_path);
+        if (!sf_r) {
             std::fprintf(stderr,
-                "warptempo_gui: source load aborted: invalid settings in '%s'\n",
-                app.settings_path.c_str());
+                "warptempo_gui: source load aborted: invalid settings in "
+                "'%s': %s\n",
+                app.settings_path.c_str(), sf_r.error().c_str());
             revert_to_blank();
             return false;
         }
+        const SettingsFile& sf = *sf_r;
         const int64_t total = audio.total_frames();
-        auto valid_zoom = [](int z) -> bool {
-            if (z == kFitFileLevel) return true;
-            return z >= kMinNumericLevel && z <= kMaxNumericLevel;
+        // The schema already enforced syntax, non-negativity, and the zoom
+        // vocabulary; the audio-relative bounds run here, where the loaded
+        // length is known, mirrored by warptempo_cli's past-EOF guard.
+        std::string range_error;
+        auto apply = [&](const SettingsFileTab& src, ViewState& dst,
+                         const char* tab_name) -> bool {
+            if (src.has_viewport_start) {
+                if (src.viewport_start >= total) {
+                    range_error = std::string(tab_name) +
+                        "_viewport_start is past the end of the audio";
+                    return false;
+                }
+                dst.viewport_start_sample = src.viewport_start;
+            }
+            if (src.has_zoom) {
+                dst.zoom_level = src.zoom;
+            }
+            if (src.has_playhead) {
+                if (src.playhead > total) {
+                    range_error = std::string(tab_name) +
+                        "_playhead_cursor is past the end of the audio";
+                    return false;
+                }
+                dst.playhead_cursor_sample = src.playhead;
+            }
+            return true;
         };
-        auto apply = [&](bool has_vp, int64_t vp,
-                         bool has_zoom, int zoom,
-                         bool has_ph, int64_t ph,
-                         ViewState& dst) {
-            if (has_vp   && vp   >= 0 && vp   <  total)  dst.viewport_start_sample = vp;
-            if (has_zoom && valid_zoom(zoom))            dst.zoom_level            = zoom;
-            if (has_ph   && ph   >= 0 && ph   <= total)  dst.playhead_cursor_sample       = ph;
-        };
-        apply(ps.has_tab_a_vp, ps.tab_a_vp,
-              ps.has_tab_a_zoom, ps.tab_a_zoom,
-              ps.has_tab_a_ph, ps.tab_a_ph, app.tab_a);
-        apply(ps.has_tab_b_vp, ps.tab_b_vp,
-              ps.has_tab_b_zoom, ps.tab_b_zoom,
-              ps.has_tab_b_ph, ps.tab_b_ph, app.tab_b);
-        app.follow_mode    = ps.has_follow         ? ps.follow         : true;
-        app.active_audio_view   = ps.has_active_audio_view   ? ps.active_audio_view   : 'S';
-        app.active_markers_view = ps.has_active_markers_view ? ps.active_markers_view : 'W';
-        app.active_tab_view     = ps.has_active_tab_view     ? ps.active_tab_view     : 'A';
-        app.playback_speed = ps.has_playback_speed ? ps.playback_speed : 1.0f;
+        if (!apply(sf.tab_a, app.tab_a, "tab_a") ||
+            !apply(sf.tab_b, app.tab_b, "tab_b")) {
+            std::fprintf(stderr,
+                "warptempo_gui: source load aborted: invalid settings in "
+                "'%s': %s\n",
+                app.settings_path.c_str(), range_error.c_str());
+            revert_to_blank();
+            return false;
+        }
+        app.engine_settings = sf.engine;
+        app.follow_mode    = sf.has_follow ? sf.follow : true;
+        app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
+        app.active_markers_view = sf.has_active_markers_view ? sf.active_markers_view : 'W';
+        app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
+        app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 1.0f;
         // GUI font size, same application shape as playback_speed: absent
         // key means the default. Loading a source can therefore change the
         // GUI text size mid-session — the same recorded behavior class as
         // playback_speed (see the font_size descriptor in settings_io.cpp).
-        app.font_size      = ps.has_font_size ? ps.font_size : 11.0;
+        app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.
-        if (ps.has_tab_a_trim_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = ps.tab_a_trim_begin; }
-        if (ps.has_tab_a_trim_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = ps.tab_a_trim_end; }
-        if (ps.has_tab_b_trim_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = ps.tab_b_trim_begin; }
-        if (ps.has_tab_b_trim_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = ps.tab_b_trim_end; }
-        if (ps.has_tab_a_read_only) app.tab_a.read_only = ps.tab_a_read_only;
-        if (ps.has_tab_b_read_only) app.tab_b.read_only = ps.tab_b_read_only;
-    }
-
-    // Strict engine-settings deserialization. Non-canonical keys are
-    // ignored (they are GUI-kind, owned by parse_settings_file above); a
-    // duplicate canonical key, an invalid value, or a missing required key
-    // fails the load with the first violation reported. Treat like a
-    // corrupt audio file: revert the partial load and return false so the
-    // user sees no half-loaded state.
-    {
-        auto es = read_engine_settings_from_file(app.settings_path);
-        if (!es) {
-            std::fprintf(stderr,
-                "warptempo_gui: source load aborted: invalid engine "
-                "settings in '%s': %s\n",
-                app.settings_path.c_str(), es.error().c_str());
-            revert_to_blank();
-            return false;
-        }
-        app.engine_settings = std::move(*es);
+        if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }
+        if (sf.tab_a.trim.has_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = sf.tab_a.trim.end_frame; }
+        if (sf.tab_b.trim.has_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = sf.tab_b.trim.begin_frame; }
+        if (sf.tab_b.trim.has_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame; }
+        if (sf.tab_a.has_read_only) app.tab_a.read_only = sf.tab_a.read_only;
+        if (sf.tab_b.has_read_only) app.tab_b.read_only = sf.tab_b.read_only;
     }
     if (app.active_audio_view == 'T' &&
         !target_render.target_view_available()) {

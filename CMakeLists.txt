@@ -52,7 +52,7 @@ set(WARPTEMPO_PARSER_SOURCES
     src/parser/warpmarkers_parse.cpp
     src/parser/phaseresetmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
-    src/parser/settings_trim.cpp
+    src/parser/settings_file.cpp
     src/parser/warp_frame_map_build.cpp
     src/parser/phase_reset_frame_map_build.cpp
     src/parser/marker_store_validate.cpp

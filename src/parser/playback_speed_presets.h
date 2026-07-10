@@ -5,7 +5,10 @@
 // and Shift+1..9 are 0.10..0.90, the slow-down precision-finetune tool.
 // Indexed by the pressed digit, so kPlaybackSpeedPresets[d] is the speed for
 // Shift+d. This table is the single source of truth for both the Shift+digit
-// dispatch and the .settings reader's on-disk acceptance check.
+// dispatch and the .settings schema's on-disk acceptance check. It lives
+// parser-side because the whole-settings schema (settings_file.h) enforces
+// preset membership in BOTH products — a sidecar set is loadable in the GUI
+// and the CLI, or in neither.
 inline constexpr float kPlaybackSpeedPresets[] = {
     1.0f,  // Shift+0
     0.1f,  // Shift+1

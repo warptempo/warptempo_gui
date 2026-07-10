@@ -5,26 +5,9 @@
 
 #include <cctype>
 #include <cmath>
-#include <cstdio>
-#include <expected>
-#include <fstream>
-#include <limits>
-#include <set>
 #include <string>
 
 namespace {
-
-using warptempo_parse::trim_ws;
-
-// Strict value parsers for validate_engine_setting. Each consumes the
-// entire string; trailing garbage and non-finite doubles are rejected
-// (the scale key parses through the shared parse_value_double).
-
-bool parse_bool_strict(const std::string& s, bool& out) {
-    if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
-    if (s == "false" || s == "0" || s == "no"  || s == "off") { out = false; return true; }
-    return false;
-}
 
 // The canonical engine key set. Membership only — order is irrelevant.
 constexpr const char* kEngineKeys[] = {
@@ -141,7 +124,7 @@ bool validate_engine_setting(const std::string& key,
     }
     if (key == "limiter") {
         bool v;
-        if (!parse_bool_strict(value, v)) {
+        if (!warptempo_parse::parse_bool_token(value, v)) {
             reason = "must be one of {true, false, 1, 0, yes, no, on, off}";
             return false;
         }
@@ -169,48 +152,3 @@ std::optional<std::string> format_engine_setting_value(
     return std::nullopt;
 }
 
-std::expected<EngineSettings, std::string> read_engine_settings_from_file(
-        const std::string& path) {
-    EngineSettings es{};
-    std::set<std::string> seen;
-
-    std::ifstream f(path);
-    if (!f) {
-        return std::unexpected("could not open '" + path + "'");
-    }
-    std::string line;
-    bool first_line = true;
-    while (std::getline(f, line)) {
-        if (first_line) {
-            warptempo_parse::strip_bom(line);
-            first_line = false;
-        }
-        const std::string trimmed = trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) continue;
-        const std::string key   = trim_ws(trimmed.substr(0, eq));
-        const std::string value = trim_ws(trimmed.substr(eq + 1));
-        if (key.empty()) continue;
-
-        // Ignore anything that is not a canonical engine key:
-        // view-state keys, legacy keys, typos, foreign keys.
-        if (!is_canonical_engine_key(key)) continue;
-
-        if (!seen.insert(key).second) {
-            return std::unexpected("duplicate key '" + key + "'");
-        }
-        std::string reason;
-        if (!validate_engine_setting(key, value, es, reason)) {
-            return std::unexpected("key '" + key + "' has invalid value '" +
-                                   value + "': " + reason);
-        }
-    }
-
-    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
-        if (seen.count(k) == 0)
-            return std::unexpected(std::string("missing required key '") + k + "'");
-    }
-    return es;
-}

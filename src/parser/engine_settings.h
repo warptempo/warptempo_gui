@@ -62,8 +62,9 @@ std::string default_render_title(const std::string& source_stem);
 // untouched and fills `reason` with a short human constraint string
 // (e.g. "must be one of {wav, warptempo_maps, generic_map, midi_map}").
 // Caller wraps with
-// the surrounding "key 'X' has invalid value 'Y':" prefix. Used by both
-// read_engine_settings_from_file and GuiSettingsEditor::commit.
+// the surrounding "key 'X' has invalid value 'Y':" prefix. Used by the
+// whole-file schema readers (read_settings_file, read_rendersettings) and
+// GuiSettingsEditor::commit.
 //
 // Returns false with reason "unknown engine key" if `key` is not in
 // the canonical engine set — defensible against callers that didn't
@@ -82,15 +83,3 @@ bool validate_engine_setting(const std::string& key,
 // settings prompt's Tab autocomplete.
 std::optional<std::string> format_engine_setting_value(
     const EngineSettings& es, const std::string& key);
-
-// Strict deserializer. Walks `path` looking for canonical engine-key
-// lines and returns the populated typed struct. Lines whose key is not a
-// canonical engine key are ignored (view-state keys, unknown keys, blank
-// and comment lines). Performs no I/O beyond reading `path`: it does not
-// log. On the first violation it encounters (file not openable, duplicate
-// key, invalid value, or — after the scan — a missing required key) it
-// returns std::unexpected carrying that one reason; the caller decides how
-// to surface it. Required keys are title, output_format, scale, limiter;
-// bpm, notes, url, and cover are optional.
-std::expected<EngineSettings, std::string> read_engine_settings_from_file(
-    const std::string& path);

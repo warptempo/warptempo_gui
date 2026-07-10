@@ -2,20 +2,15 @@
 
 #include "app_state.h"
 #include "parser/parse_text_util.h"
-#include "playback_speed_presets.h"
 #include "render_pipeline.h"
-#include "settings_trim.h"
 #include "frame_format.h"
 #include "value_format.h"
 
 #include <cerrno>
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
 #include <fstream>
-#include <limits>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <system_error>
@@ -23,64 +18,11 @@
 
 namespace {
 
-bool parse_int64_full(const std::string& s, int64_t& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const long long v = std::strtoll(s.c_str(), &end, 10);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    out = static_cast<int64_t>(v);
-    return true;
-}
-
-bool parse_int_full(const std::string& s, int& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const long v = std::strtol(s.c_str(), &end, 10);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (v < std::numeric_limits<int>::min() ||
-        v > std::numeric_limits<int>::max()) return false;
-    out = static_cast<int>(v);
-    return true;
-}
-
-bool parse_float_full(const std::string& s, float& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const float v = std::strtof(s.c_str(), &end);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (!std::isfinite(v)) return false;
-    out = v;
-    return true;
-}
-
-bool parse_double_full(const std::string& s, double& out) {
-    if (s.empty()) return false;
-    errno = 0;
-    char* end = nullptr;
-    const double v = std::strtod(s.c_str(), &end);
-    if (errno != 0 || end == s.c_str() || *end != '\0') return false;
-    if (!std::isfinite(v)) return false;
-    out = v;
-    return true;
-}
-
-// Strict whole-token bool parser shared by parse_settings_file (the
-// tab_*_read_only branches). Accepts the canonical truthy/falsy token set.
-
-bool parse_bool_strict(const std::string& s, bool& out) {
-    if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
-    if (s == "false" || s == "0" || s == "no"  || s == "off") { out = false; return true; }
-    return false;
-}
-
 // Canonical .settings layout. One descriptor per line in the file, in
 // the exact order they appear on disk. Shared by
 // format_default_settings_template (template build) and
 // write_settings_file (Ctrl+S). Reading is order-insensitive —
-// parse_settings_file does not consult this list.
+// read_settings_file (the parser-side schema) does not consult this list.
 enum class SettingKind {
     EnginePassthrough,
     ActiveAudioViewChar,
@@ -322,252 +264,140 @@ bool create_if_missing(const std::filesystem::path& p,
     return true;
 }
 
-bool parse_settings_file(const std::string& path, ParsedSettings& out) {
-    out = ParsedSettings{};
-    std::error_code ec;
-    if (!std::filesystem::exists(path, ec) || ec) return true;  // nothing to load
-    std::ifstream f(path);
-    if (!f) return false;
-    std::string line;
-    bool first_line = true;
-    while (std::getline(f, line)) {
-        if (first_line) {
-            warptempo_parse::strip_bom(line);
-            first_line = false;
-        }
-        const std::string trimmed = warptempo_parse::trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) continue;
-        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
-        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
-        if (key.empty()) continue;
-
-        if (key == "tab_a_viewport_start") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_a_vp = true; out.tab_a_vp = v; }
-        } else if (key == "tab_a_zoom") {
-            int v;
-            if (parse_int_full(value, v)) { out.has_tab_a_zoom = true; out.tab_a_zoom = v; }
-        } else if (key == "tab_a_playhead_cursor") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_a_ph = true; out.tab_a_ph = v; }
-        } else if (key == "tab_b_viewport_start") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_b_vp = true; out.tab_b_vp = v; }
-        } else if (key == "tab_b_zoom") {
-            int v;
-            if (parse_int_full(value, v)) { out.has_tab_b_zoom = true; out.tab_b_zoom = v; }
-        } else if (key == "tab_b_playhead_cursor") {
-            int64_t v;
-            if (parse_int64_full(value, v)) { out.has_tab_b_ph = true; out.tab_b_ph = v; }
-        } else if (key == "follow") {
-            std::string lower = value;
-            for (char& c : lower) c = static_cast<char>(
-                std::tolower(static_cast<unsigned char>(c)));
-            if (lower == "true")       { out.has_follow = true; out.follow = true;  }
-            else if (lower == "false") { out.has_follow = true; out.follow = false; }
-            // Any other value: silent-skip; default (true) applies at the call site.
-        } else if (key == "active_audio_view") {
-            // Case-sensitive "S" / "T". Anything else silent-skips like
-            // the active_markers_view parser.
-            if (value == "S") { out.has_active_audio_view = true; out.active_audio_view = 'S'; }
-            else if (value == "T") { out.has_active_audio_view = true; out.active_audio_view = 'T'; }
-        } else if (key == "active_markers_view") {
-            // Case-sensitive "W" / "P". Anything else silent-skips like
-            // the `follow` parser.
-            if (value == "W") { out.has_active_markers_view = true; out.active_markers_view = 'W'; }
-            else if (value == "P") { out.has_active_markers_view = true; out.active_markers_view = 'P'; }
-        } else if (key == "active_tab_view") {
-            // This branch stores the view-state copy of the key; strict
-            // validation is owned by read_settings_trim below, which
-            // hardfails a duplicate key or any value but A or B. Unlike its
-            // active_audio_view and active_markers_view siblings, a
-            // malformed value here is load-fatal rather than skippable:
-            // active_tab_view selects which tab's trim the GUI render and
-            // the headless CLIs apply, so silently defaulting it could
-            // render the wrong window.
-            if (value == "A") { out.has_active_tab_view = true; out.active_tab_view = 'A'; }
-            else if (value == "B") { out.has_active_tab_view = true; out.active_tab_view = 'B'; }
-        } else if (key == "playback_speed") {
-            // playback_speed is preset-vocabulary-only on disk: the GUI
-            // authors it exclusively through the Shift+0..9 presets
-            // (kPlaybackSpeedPresets, the shared source of truth), so any
-            // off-preset value is a state the GUI can never produce —
-            // adversarial by the two-category rule — and aborts the source
-            // load, the same hard-fail shape a malformed engine key produces.
-            // The slow-down presets are the precision-finetune tool.
-            //
-            // Exact float equality against the table is sound: the writer
-            // emits each preset with the same one-decimal %.1f the reader parses back,
-            // and both the on-disk text and the table literal are the nearest
-            // float of the same short decimal, so parse(write(preset)) equals
-            // the literal bit-for-bit. No tolerance.
-            float v;
-            if (!parse_float_full(value, v) || !is_playback_speed_preset(v)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: playback_speed '%s' in '%s' is not a "
-                    "preset speed\n",
-                    value.c_str(), path.c_str());
-                return false;
-            }
-            out.has_playback_speed = true;
-            out.playback_speed = v;
-        } else if (key == "font_size") {
-            // GUI font size in points, strict whole-token double, 6..72
-            // inclusive (parse_double_full already rejects non-finite).
-            // Unlike the sibling `follow` branch, a bad value gets one
-            // diagnostic line rather than a silent skip: font_size is
-            // range-constrained and hand-editable, and silently snapping a
-            // typo to the default would be silently-correcting.
-            double v;
-            if (parse_double_full(value, v) && v >= 6.0 && v <= 72.0) {
-                out.has_font_size = true;
-                out.font_size = v;
-            } else {
-                std::fprintf(stderr,
-                    "warptempo_gui: ignoring font_size='%s' in '%s' "
-                    "(not a number in [6, 72]); default 11 applies\n",
-                    value.c_str(), path.c_str());
-            }
-        } else if (key == "tab_a_read_only") {
-            bool v;
-            if (parse_bool_strict(value, v)) {
-                out.has_tab_a_read_only = true;
-                out.tab_a_read_only     = v;
-            }
-        } else if (key == "tab_b_read_only") {
-            bool v;
-            if (parse_bool_strict(value, v)) {
-                out.has_tab_b_read_only = true;
-                out.tab_b_read_only     = v;
-            }
-        }
-        // Engine keys and unknown keys are silent-skipped here; the strict
-        // engine reader also ignores non-canonical keys.
-    }
-
-    // Per-tab trim bounds: parsed by the parser library's reader so the
-    // parser and render CLIs share one implementation with the GUI.
-    const auto trim_result = read_settings_trim(path);
-    if (!trim_result) {
-        std::fprintf(stderr,
-            "warptempo_gui: trim settings rejected in '%s': %s\n",
-            path.c_str(),
-            trim_result.error().c_str());
-        return false;
-    }
-    const SettingsTrimTabs& t = *trim_result;
-    out.has_tab_a_trim_begin = t.tab_a.has_begin; out.tab_a_trim_begin = t.tab_a.begin_frame;
-    out.has_tab_a_trim_end   = t.tab_a.has_end;   out.tab_a_trim_end   = t.tab_a.end_frame;
-    out.has_tab_b_trim_begin = t.tab_b.has_begin; out.tab_b_trim_begin = t.tab_b.begin_frame;
-    out.has_tab_b_trim_end   = t.tab_b.has_end;   out.tab_b_trim_end   = t.tab_b.end_frame;
-    return true;
-}
-
-RenderViewState read_rendersettings_view_state(
+std::expected<Rendersettings, std::string> read_rendersettings(
         const std::filesystem::path& path) {
-    RenderViewState out;
-    out.zoom_level = kFitFileLevel;
+    Rendersettings out;
+    out.view.zoom_level = kFitFileLevel;
+
     std::ifstream f(path);
-    if (!f) return out;
+    if (!f) {
+        return std::unexpected("could not open '" + path.string() + "'");
+    }
+
+    std::set<std::string> seen;
     std::string line;
+    int ln = 0;
+    auto bad_value = [](int line_no, const std::string& key,
+                        const std::string& value, const std::string& rule) {
+        return warptempo_parse::prefix_line_error(
+            line_no,
+            "key '" + key + "' has invalid value '" + value + "': " + rule);
+    };
+    auto valid_zoom = [](int z) {
+        return z >= kFitFileLevel && z <= kMaxNumericLevel;
+    };
     while (std::getline(f, line)) {
+        ++ln;
+        if (ln == 1) warptempo_parse::strip_bom(line);
         const std::string trimmed = warptempo_parse::trim_ws(line);
         if (trimmed.empty()) continue;
         if (trimmed[0] == '#') continue;
         const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) continue;
+        if (eq == std::string::npos) {
+            return warptempo_parse::prefix_line_error(
+                ln, "not a key=value line");
+        }
         const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
         const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
-        if (key == "viewport_start") {
+        if (key.empty()) {
+            return warptempo_parse::prefix_line_error(ln, "empty key");
+        }
+        if (!seen.insert(key).second) {
+            return warptempo_parse::prefix_line_error(
+                ln, "duplicate key '" + key + "'");
+        }
+
+        if (is_canonical_engine_key(key)) {
+            std::string reason;
+            if (!validate_engine_setting(key, value, out.engine, reason)) {
+                return bad_value(ln, key, value, reason);
+            }
+        } else if (key == "viewport_start") {
             int64_t v;
-            if (parse_int64_full(value, v)) out.viewport_start = v;
+            if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
+                return bad_value(ln, key, value,
+                                 "must be a non-negative integer");
+            }
+            out.view.viewport_start = v;
         } else if (key == "zoom") {
             int v;
-            if (parse_int_full(value, v)) out.zoom_level = v;
+            if (!warptempo_parse::parse_int_strict(value, v) ||
+                !valid_zoom(v)) {
+                return bad_value(ln, key, value, "must be a zoom level");
+            }
+            out.view.zoom_level = v;
         } else if (key == "playhead") {
             int64_t v;
-            if (parse_int64_full(value, v)) out.playhead = v;
-        }
-        // Engine-block lines and unknown keys: silent-skip.
-    }
-    return out;
-}
-
-RendersettingsAuthoring read_rendersettings_authoring(
-        const std::filesystem::path& path) {
-    RendersettingsAuthoring out;
-    std::ifstream f(path);
-    if (!f) return out;
-    std::string line;
-    while (std::getline(f, line)) {
-        const std::string trimmed = warptempo_parse::trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) continue;
-        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
-        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
-        if (key == "active_tab") {
-            if (value == "A") {
-                out.has_active_tab = true;
-                out.active_tab = 'A';
-            } else if (value == "B") {
-                out.has_active_tab = true;
-                out.active_tab = 'B';
+            if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
+                return bad_value(ln, key, value,
+                                 "must be a non-negative integer");
             }
+            out.view.playhead = v;
+        } else if (key == "active_tab") {
+            if (value != "A" && value != "B") {
+                return bad_value(ln, key, value, "must be A or B");
+            }
+            out.authoring.has_active_tab = true;
+            out.authoring.active_tab = value[0];
         } else if (key == "active_audio_view") {
-            if (value == "S") {
-                out.has_active_audio_view = true;
-                out.active_audio_view = 'S';
-            } else if (value == "T") {
-                out.has_active_audio_view = true;
-                out.active_audio_view = 'T';
+            if (value != "S" && value != "T") {
+                return bad_value(ln, key, value, "must be S or T");
             }
+            out.authoring.has_active_audio_view = true;
+            out.authoring.active_audio_view = value[0];
         } else if (key == "trim_begin") {
             int64_t v;
-            if (parse_authored_frame(value, v)) {
-                out.has_trim_begin = true;
-                out.trim_begin_frame = v;
+            if (!parse_authored_frame(value, v)) {
+                return bad_value(ln, key, value,
+                                 "must be a whole source-frame position");
             }
+            out.authoring.has_trim_begin = true;
+            out.authoring.trim_begin_frame = v;
         } else if (key == "trim_end") {
             int64_t v;
-            if (parse_authored_frame(value, v)) {
-                out.has_trim_end = true;
-                out.trim_end_frame = v;
+            if (!parse_authored_frame(value, v)) {
+                return bad_value(ln, key, value,
+                                 "must be a whole source-frame position");
             }
+            out.authoring.has_trim_end = true;
+            out.authoring.trim_end_frame = v;
         } else if (key == "authoring_zoom") {
             int v;
-            if (parse_int_full(value, v)) {
-                out.has_zoom_level = true;
-                out.zoom_level = v;
+            if (!warptempo_parse::parse_int_strict(value, v) ||
+                !valid_zoom(v)) {
+                return bad_value(ln, key, value, "must be a zoom level");
             }
+            out.authoring.has_zoom_level = true;
+            out.authoring.zoom_level = v;
         } else if (key == "authoring_viewport_start") {
             int64_t v;
-            if (parse_int64_full(value, v)) {
-                out.has_viewport_start = true;
-                out.viewport_start = v;
+            if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
+                return bad_value(ln, key, value,
+                                 "must be a non-negative integer");
             }
+            out.authoring.has_viewport_start = true;
+            out.authoring.viewport_start = v;
         } else if (key == "authoring_playhead") {
             int64_t v;
-            if (parse_int64_full(value, v)) {
-                out.has_playhead = true;
-                out.playhead = v;
+            if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
+                return bad_value(ln, key, value,
+                                 "must be a non-negative integer");
             }
+            out.authoring.has_playhead = true;
+            out.authoring.playhead = v;
+        } else {
+            return warptempo_parse::prefix_line_error(
+                ln, "unknown key '" + key + "'");
         }
-        // Engine-block, render-view, and unknown lines: silent-skip.
+    }
+
+    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
+        if (seen.count(k) == 0) {
+            return std::unexpected(
+                std::string("missing required key '") + k + "'");
+        }
     }
     return out;
-}
-
-std::expected<EngineSettings, std::string> read_rendersettings_engine_block(
-        const std::filesystem::path& path) {
-    // Identical semantics to read_engine_settings_from_file: canonical
-    // engine keys are read, while non-canonical keys are silently skipped.
-    // read_rendersettings_view_state is the reader for the view-state side.
-    return read_engine_settings_from_file(path.string());
 }
 
 bool write_rendersettings(const std::filesystem::path& path,

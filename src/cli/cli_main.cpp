@@ -1,7 +1,7 @@
 #include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
-#include "engine_settings.h"            // EngineSettings, read_engine_settings_from_file
-#include "settings_trim.h"              // SettingsTrim, read_settings_trim
+#include "engine_settings.h"            // EngineSettings
+#include "settings_file.h"              // SettingsFile, read_settings_file
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
@@ -78,9 +78,9 @@ int main(int argc, char** argv) {
     // creates this sidecar on source load, so an absent file is a startup
     // error, not a defaults case. output_format, title, limiter, and the
     // applied trim all come from it. ---
-    EngineSettings   es;
-    SettingsTrim     trim;
-    SettingsTrimTabs trim_tabs;
+    EngineSettings es;
+    SettingsFile   sf;
+    SettingsTrim   trim;
     if (!std::filesystem::exists(set_path)) {
         std::fprintf(stderr,
             "warptempo_cli: missing settings file '%s' "
@@ -89,28 +89,25 @@ int main(int argc, char** argv) {
         return 1;
     }
     {
-        auto parsed = read_engine_settings_from_file(set_path);
+        // The whole-file strict schema (settings_file.h), the same reader
+        // the GUI runs at source load: a sidecar set is loadable in both
+        // products or neither, GUI-kind keys included (an off-preset
+        // playback_speed refuses here exactly as it refuses the GUI load).
+        auto parsed = read_settings_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
-                "warptempo_cli: engine settings rejected: %s\n",
-                parsed.error().c_str());
+                "warptempo_cli: settings rejected in '%s': %s\n",
+                set_path.c_str(), parsed.error().c_str());
             return 1;
         }
-        es = *parsed;
-        const auto tabs_result = read_settings_trim(set_path);
-        if (!tabs_result) {
-            std::fprintf(stderr,
-                "warptempo_cli: trim settings rejected in '%s': %s\n",
-                set_path.c_str(),
-                tabs_result.error().c_str());
-            return 1;
-        }
+        sf = std::move(*parsed);
+        es = sf.engine;
         // Both tabs are kept for the past-EOF guard below; the render applies
         // the active tab's trim, matching the GUI, which renders the trim of
         // the tab persisted in active_tab_view.
-        trim_tabs = *tabs_result;
-        trim = (trim_tabs.active_tab == 'B') ? trim_tabs.tab_b
-                                             : trim_tabs.tab_a;
+        const char active_tab =
+            sf.has_active_tab_view ? sf.active_tab_view : 'A';
+        trim = (active_tab == 'B') ? sf.tab_b.trim : sf.tab_a.trim;
     }
 
     // --- engine-only: this CLI renders wav. The map formats
@@ -255,7 +252,7 @@ int main(int argc, char** argv) {
         }
         if (detail.empty()) {
             const struct { const char* name; const SettingsTrim& t; } tabs[] = {
-                {"tab A", trim_tabs.tab_a}, {"tab B", trim_tabs.tab_b},
+                {"tab A", sf.tab_a.trim}, {"tab B", sf.tab_b.trim},
             };
             for (const auto& [name, t] : tabs) {
                 if (t.has_begin && t.begin_frame > total - 1) {
@@ -268,6 +265,28 @@ int main(int argc, char** argv) {
                     detail = std::string(name)
                              + " trim end past end of audio at "
                              + format_timestamp(t.end_frame / sr_d);
+                    break;
+                }
+            }
+        }
+        // View-scratch bounds, mirrored from the GUI's load-time checks so
+        // a sidecar set stays loadable in both products or neither: the CLI
+        // never applies a viewport or playhead, but a value past the audio
+        // is a state the GUI can never author against this source.
+        if (detail.empty()) {
+            const struct { const char* name; const SettingsFileTab& t; }
+            view_tabs[] = {
+                {"tab A", sf.tab_a}, {"tab B", sf.tab_b},
+            };
+            for (const auto& [name, t] : view_tabs) {
+                if (t.has_viewport_start && t.viewport_start >= total) {
+                    detail = std::string(name)
+                             + " viewport start past end of audio";
+                    break;
+                }
+                if (t.has_playhead && t.playhead > total) {
+                    detail = std::string(name)
+                             + " playhead past end of audio";
                     break;
                 }
             }

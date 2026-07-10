@@ -137,22 +137,29 @@ void GuiRenderView::write_rendersettings_for(
         app.playhead_cursor_sample);
 }
 
-// Tolerant parser. Missing / malformed file applies fit-file zoom
-// and zeroed viewport/playhead. Apply order: zoom → viewport →
-// playhead → clamp_viewport_start (zoom drives the spp used by
-// clamp).
+// Display-leniency caller of the strict whole-file parser: a missing or
+// refused .rendersettings logs once and applies the defaults (fit-file
+// zoom, zeroed viewport/playhead). View state here is display scratch and
+// is never adopted into authoring, so falling back is the recorded
+// display-sidecar leniency; the adoption boundary — Ctrl+Alt+C promotion —
+// consumes the same parser and aborts on the same refusal instead. Apply
+// order: zoom → viewport → playhead → clamp_viewport_start (zoom drives
+// the spp used by clamp).
 void GuiRenderView::apply_rendersettings_for(
         const AppState::RenderViewEntry& e) {
-    const RenderViewState vs =
-        read_rendersettings_view_state(this->rendersettings_path(e));
-    int z = vs.zoom_level;
-    // Sanitize zoom — accept kFitFileLevel (=0) or kMinNumericLevel..
-    // kMaxNumericLevel. kFitFileLevel falls inside the [0, kMaxNumericLevel]
-    // range so a single range check suffices.
-    if (z < 0 || z > kMaxNumericLevel) {
-        z = kFitFileLevel;
+    RenderViewState vs;
+    vs.zoom_level = kFitFileLevel;
+    auto rs = read_rendersettings(this->rendersettings_path(e));
+    if (rs) {
+        vs = rs->view;
+    } else {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: rendersettings read failed for "
+            "'%s': %s; applying default view state\n",
+            this->rendersettings_path(e).string().c_str(),
+            rs.error().c_str());
     }
-    app.zoom_level            = z;
+    app.zoom_level            = vs.zoom_level;
     app.viewport_start_sample = vs.viewport_start;
     app.playhead_cursor_sample       = vs.playhead;
     clamp_viewport_start(app, audio);
