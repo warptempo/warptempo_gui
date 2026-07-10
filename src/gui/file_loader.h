@@ -12,6 +12,7 @@
 
 class GuiWaveformWorker;
 struct GuiTargetRender;
+struct GuiPrompt;
 
 // File-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
@@ -61,6 +62,14 @@ struct GuiFileLoader {
           paint_handler(paint_handler_) {}
 
     ~GuiFileLoader();
+
+    // Back-pointer, wired in main.cpp right after GuiPrompt's construction
+    // (GuiPrompt holds a GuiFileLoader&, so it is necessarily built after
+    // this struct). Carries the dismiss-only error notice for a private
+    // cache file opened by mistake. Non-null for the whole run loop: every
+    // load path — the deferred startup load included — runs on ticks, after
+    // the wiring.
+    GuiPrompt* prompt = nullptr;
 
     bool load_file(const std::string& path);
     void revert_to_blank();

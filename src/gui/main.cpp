@@ -539,6 +539,9 @@ int main(int argc, char** argv) {
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
                      phase_reset_propagate, save_ops, playback_lifecycle);
+    // Back-wire the loader's error-notice surface (GuiPrompt holds a
+    // GuiFileLoader&, so the pointer can only be set after both exist).
+    file_loader.prompt = &prompt;
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
                                       target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),

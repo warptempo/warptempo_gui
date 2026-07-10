@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <expected>
 #include <string>
 #include <vector>
 
@@ -21,6 +20,3 @@ bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
                                             const float* samples,
                                             int64_t frames,
                                             int channels);
-
-std::expected<std::string, std::string>
-source_path_for_source_sample_cache(const std::string& cache_path);

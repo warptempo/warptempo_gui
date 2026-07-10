@@ -55,10 +55,6 @@ constexpr int      kNumLevels             = 3;
 constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
 constexpr int      kReductionFactor       = 32;  // 1024/32 = 32; 32768/1024 = 32.
 constexpr float    kQuantScale            = 32767.0f;
-constexpr const char* kSupportedSourceExtensions[] = {
-    ".wav", ".wave", ".flac"
-};
-
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;
 // levels 2 and 3 fold from in-memory int16 buffers and finish in microseconds.
 constexpr float    kLevel1Share           = 0.95f;
@@ -101,106 +97,6 @@ bool stat_size_mtime(const std::string& path, int64_t& size, int64_t& mtime) {
     size  = static_cast<int64_t>(st.st_size);
     mtime = static_cast<int64_t>(st.st_mtime);
     return true;
-}
-
-bool peaks_cache_header_matches_source(const std::string& peaks_path,
-                                       const std::string& source_path) {
-    auto info = audio_probe(source_path);
-    if (!info) return false;
-
-    const int render_channels = std::min(info->channels, 2);
-    if (info->frames <= 0 || render_channels <= 0) return false;
-
-    int64_t src_size = 0, src_mtime = 0;
-    if (!stat_size_mtime(source_path, src_size, src_mtime)) return false;
-
-    FILE* f = std::fopen(peaks_path.c_str(), "rb");
-    if (!f) return false;
-
-    bool ok = false;
-    do {
-        char magic[8];
-        if (std::fread(magic, 1, 8, f) != 8 ||
-            std::memcmp(magic, kCacheMagic, 8) != 0) {
-            break;
-        }
-        uint16_t version = 0, flags = 0;
-        if (std::fread(&version, sizeof(version), 1, f) != 1 ||
-            version != kCacheVersion) {
-            break;
-        }
-        if (std::fread(&flags, sizeof(flags), 1, f) != 1) break;
-        int64_t hdr_size = 0, hdr_mtime = 0;
-        if (std::fread(&hdr_size, sizeof(hdr_size), 1, f) != 1 ||
-            hdr_size != src_size) {
-            break;
-        }
-        if (std::fread(&hdr_mtime, sizeof(hdr_mtime), 1, f) != 1 ||
-            hdr_mtime != src_mtime) {
-            break;
-        }
-        int32_t hdr_sr = 0;
-        if (std::fread(&hdr_sr, sizeof(hdr_sr), 1, f) != 1 ||
-            hdr_sr != info->sample_rate) {
-            break;
-        }
-
-        int64_t hdr_total_frames = 0;
-        uint8_t hdr_rc = 0, hdr_nl = 0;
-        char reserved[6];
-        if (std::fread(&hdr_total_frames, sizeof(hdr_total_frames), 1, f) != 1 ||
-            hdr_total_frames != info->frames) {
-            break;
-        }
-        if (std::fread(&hdr_rc, sizeof(hdr_rc), 1, f) != 1 ||
-            hdr_rc != static_cast<uint8_t>(render_channels)) {
-            break;
-        }
-        if (std::fread(&hdr_nl, sizeof(hdr_nl), 1, f) != 1 ||
-            hdr_nl != static_cast<uint8_t>(kNumLevels)) {
-            break;
-        }
-        if (std::fread(reserved, 1, 6, f) != 6) break;
-
-        int64_t expected_pc[kNumLevels];
-        expected_pc[0] = (info->frames + kStrides[0] - 1) / kStrides[0];
-        for (int L = 1; L < kNumLevels; L++) {
-            expected_pc[L] =
-                (expected_pc[L - 1] + kReductionFactor - 1) / kReductionFactor;
-        }
-
-        uint64_t expected_size = 32 + 16;
-        for (int L = 0; L < kNumLevels; L++) {
-            int32_t hdr_stride = 0;
-            int64_t hdr_pc = 0;
-            if (std::fread(&hdr_stride, sizeof(hdr_stride), 1, f) != 1 ||
-                hdr_stride != kStrides[L]) {
-                break;
-            }
-            if (std::fread(&hdr_pc, sizeof(hdr_pc), 1, f) != 1 ||
-                hdr_pc != expected_pc[L]) {
-                break;
-            }
-            expected_size += 12;
-            const uint64_t level_bytes =
-                static_cast<uint64_t>(render_channels) *
-                static_cast<uint64_t>(hdr_pc) * 2ULL *
-                static_cast<uint64_t>(sizeof(int16_t));
-            if (level_bytes > static_cast<uint64_t>(std::numeric_limits<long>::max()))
-                break;
-            if (std::fseek(f, static_cast<long>(level_bytes), SEEK_CUR) != 0)
-                break;
-            expected_size += level_bytes;
-            if (L == kNumLevels - 1) {
-                std::error_code ec;
-                const auto actual_size = std::filesystem::file_size(peaks_path, ec);
-                ok = !ec && actual_size == expected_size;
-            }
-        }
-    } while (false);
-
-    std::fclose(f);
-    return ok;
 }
 
 void reset_levels(std::array<GuiAudio::PyramidLevel, 3>& levels) {
@@ -744,26 +640,4 @@ bool write_peaks_cache_for_wav(const std::string& wav_path) {
 
 bool is_peaks_cache_path(const std::string& path) {
     return lowercase(std::filesystem::path(path).extension().string()) == ".peaks";
-}
-
-std::expected<std::string, std::string>
-source_path_for_peaks_cache(const std::string& peaks_path_string) {
-    if (!is_peaks_cache_path(peaks_path_string)) {
-        return std::unexpected("not a waveform peaks cache");
-    }
-
-    std::filesystem::path peaks_path(peaks_path_string);
-    std::filesystem::path parent = peaks_path.parent_path();
-    if (parent.empty()) parent = std::filesystem::path(".");
-    const std::string stem = peaks_path.stem().string();
-
-    for (const char* ext : kSupportedSourceExtensions) {
-        const std::filesystem::path candidate = parent / (stem + ext);
-        if (peaks_cache_header_matches_source(peaks_path.string(),
-                                              candidate.string())) {
-            return candidate.string();
-        }
-    }
-
-    return std::unexpected("could not resolve waveform peaks cache owner");
 }

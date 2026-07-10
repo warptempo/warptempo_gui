@@ -320,9 +320,7 @@ bool test_corrupt_oversized_string()
         patch_u32_le(bytes, basename_len_offset, 0xffffffffu);
         if (!write_bytes(cache_path, bytes)) break;
         std::vector<float> out;
-        const auto source_path = source_path_for_source_sample_cache(cache_path);
-        ok = !read_full_source_from_source_sample_cache(path, info, out) &&
-             !source_path.has_value();
+        ok = !read_full_source_from_source_sample_cache(path, info, out);
     } while (false);
     remove_pair(path);
     if (!ok) std::printf("selftest: .samples oversized-string rejection failed\n");
@@ -373,27 +371,6 @@ bool test_corrupt_wrong_version()
     return ok;
 }
 
-bool test_source_path_for_cache()
-{
-    const std::string path = temp_path("source_path_for_cache");
-    remove_pair(path);
-    bool ok = false;
-    do {
-        AudioFileInfo info;
-        if (!create_cache(path, info)) break;
-        const std::string cache_path = cache_path_for(path);
-        auto source_path = source_path_for_source_sample_cache(cache_path);
-        if (!source_path || *source_path != path) break;
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
-        source_path = source_path_for_source_sample_cache(cache_path);
-        ok = !source_path.has_value();
-    } while (false);
-    remove_pair(path);
-    if (!ok) std::printf("selftest: .samples source-path lookup failed\n");
-    return ok;
-}
-
 bool test_is_source_sample_cache_path()
 {
     const bool ok = is_source_sample_cache_path("/tmp/a.samples") &&
@@ -421,6 +398,5 @@ bool run_source_sample_cache_selftest()
            test_corrupt_oversized_string() &&
            test_corrupt_truncated_payload() &&
            test_corrupt_wrong_version() &&
-           test_source_path_for_cache() &&
            test_is_source_sample_cache_path();
 }

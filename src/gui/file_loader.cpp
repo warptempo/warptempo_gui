@@ -1,6 +1,7 @@
 #include "file_loader.h"
 
 #include "input_handler.h"   // validate_target_view_entry (load gate below)
+#include "prompt.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -32,35 +33,21 @@ void GuiFileLoader::join_source_sample_cache_writer() {
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {
-    if (is_source_sample_cache_path(path)) {
-        auto owner = source_path_for_source_sample_cache(path);
-        if (!owner || is_source_sample_cache_path(*owner) ||
-            is_peaks_cache_path(*owner)) {
-            std::fprintf(stderr,
-                "warptempo_gui: '%s' is a private source sample cache; "
-                "open the original source audio file instead.\n",
-                path.c_str());
-            return false;
-        }
-        std::fprintf(stderr,
-            "[warptempo_gui] redirecting private source sample cache %s to %s\n",
-            path.c_str(), owner->c_str());
-        return load_file(*owner);
-    }
-    if (is_peaks_cache_path(path)) {
-        auto owner = source_path_for_peaks_cache(path);
-        if (!owner || is_source_sample_cache_path(*owner) ||
-            is_peaks_cache_path(*owner)) {
-            std::fprintf(stderr,
-                "warptempo_gui: '%s' is a waveform peaks cache; "
-                "open the original source audio file instead.\n",
-                path.c_str());
-            return false;
-        }
-        std::fprintf(stderr,
-            "[warptempo_gui] redirecting waveform peaks cache %s to %s\n",
-            path.c_str(), owner->c_str());
-        return load_file(*owner);
+    // Opening a private cache file is a careless wrong-file slip, so it
+    // refuses loudly at this earliest surface — a dismiss-only notice, no
+    // load. It is never silently redirected to a guessed owner path:
+    // silently doing a different operation than the one requested is
+    // correction, not refusal, and the caches are derived state the user
+    // never legitimately opens.
+    if (is_source_sample_cache_path(path) || is_peaks_cache_path(path)) {
+        const bool samples = is_source_sample_cache_path(path);
+        std::string msg = "'" + path + "' is a " +
+            (samples ? "private source sample cache"
+                     : "waveform peaks cache") +
+            "; open the original source audio file instead.";
+        std::fprintf(stderr, "warptempo_gui: %s\n", msg.c_str());
+        if (prompt) prompt->open_error_notice(std::move(msg));
+        return false;
     }
 
     // Preflight.
