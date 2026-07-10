@@ -229,15 +229,27 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 std::vector<char>        keys;
                 std::vector<std::string> labels;
                 if (kind == TrimDefectKind::MapFormatConflict) {
-                    // [U]ndo on the standard undo_stack-non-empty
-                    // condition: a settings commit that created the
-                    // conflict is an ordinary settings-class entry, so
-                    // do_undo reverts it. [R]eset flips output_format back
-                    // to wav (the trim survives); [Delete] clears both
-                    // bounds (the format survives).
+                    // [U]ndo appears only when the latest history entry is
+                    // the settings commit that created the conflict: a
+                    // settings-class entry ('S') whose captured pre-commit
+                    // output_format is not a map format (i.e. wav), so
+                    // do_undo restores a non-map format and the conflict
+                    // dies. A conflict born of a history-less trim gesture
+                    // (the top entry is unrelated work) or of a map-to-map
+                    // settings edit (the pre-commit output_format is still a
+                    // map format) offers only [R]eset (output_format back to
+                    // wav, the trim survives) and [Delete] (both bounds
+                    // cleared, the format survives). Map-format membership is
+                    // the same != "wav" test the conflict itself is detected
+                    // by above.
                     if (!app.history.undo_stack.empty()) {
-                        keys.push_back('u');
-                        labels.push_back("[U]ndo");
+                        const UndoEntry& top = app.history.undo_stack.back();
+                        if (top.op_mode == 'S' &&
+                            top.settings.engine_settings.output_format ==
+                                "wav") {
+                            keys.push_back('u');
+                            labels.push_back("[U]ndo");
+                        }
                     }
                     keys.push_back('r');
                     labels.push_back("[R]eset");
