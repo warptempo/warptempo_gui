@@ -19,11 +19,14 @@
 #include "marker_drag.h"
 #include "undo.h"
 #include "viewport.h"
+#include "warp_frame_map.h"
+#include "warpmarkers.h"
 #include "warpmarkers_ops.h"
 #include "gui_input.h"
 #include "platform_wayland.h"
 
 #include <cmath>
+#include <expected>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -84,6 +87,28 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 
     return BaseTempoScale{base_tempo, scale, ratio};
 }
+
+// -- Target-view entry validity predicate --------------------------------
+//
+// The single definition of "may this state enter target view", shared by
+// the two entry surfaces: the keyboard S → T toggle
+// (GuiInputHandler::handle_active_audio_view_toggle) and the load-time
+// restore of active_audio_view=T from .settings (GuiFileLoader::load_file).
+// If a keystroke entry would be blocked, a load restore is blocked
+// identically — the predicate changes in one place or not at all.
+//
+// The walk: resolve_warp_markers_for_render over `markers`, then
+// build_warp_frame_map with `scale` (the whole-song map — trim is
+// render-time, not view-time), then — only when a trim bound is set —
+// validate_trim_frames against the full map just built. Failure of any of
+// the three blocks entry. On success the built map is returned so the
+// toggle can reuse it for its viewport/playhead translation (no second
+// build); on failure the first owner's error string is returned verbatim.
+std::expected<std::vector<WarpFrameMapSegment>, std::string>
+validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
+                           double scale, int sample_rate, long total_frames,
+                           bool has_trim_begin, double trim_begin_frame,
+                           bool has_trim_end,   double trim_end_frame);
 
 // -- GuiInputHandler ----------------------------------------------------
 //

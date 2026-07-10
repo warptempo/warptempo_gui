@@ -1060,6 +1060,32 @@ bool GuiInputHandler::apply_editor_clipboard(
     }
 }
 
+std::expected<std::vector<WarpFrameMapSegment>, std::string>
+validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
+                           double scale, int sample_rate, long total_frames,
+                           bool has_trim_begin, double trim_begin_frame,
+                           bool has_trim_end,   double trim_end_frame) {
+    // Contract and caller list in input_handler.h: this is the shared
+    // entry-half validity predicate for target view — the keyboard S → T
+    // toggle below and GuiFileLoader::load_file's active_audio_view=T
+    // restore gate on exactly this walk.
+    auto resolved = resolve_warp_markers_for_render(
+        slice_to_warp_markers(markers), sample_rate);
+    if (!resolved) return std::unexpected(std::move(resolved.error()));
+    auto r = build_warp_frame_map(*resolved, scale, sample_rate, total_frames);
+    if (!r) return std::unexpected(std::move(r.error()));
+    if (has_trim_begin || has_trim_end) {
+        if (auto v = validate_trim_frames(
+                has_trim_begin, trim_begin_frame,
+                has_trim_end,   trim_end_frame,
+                static_cast<int64_t>(total_frames), *r);
+            !v) {
+            return std::unexpected(std::move(v.error()));
+        }
+    }
+    return std::move(*r);
+}
+
 void GuiInputHandler::handle_active_audio_view_toggle() {
     // Audio must be loaded — `t` is a silent no-op in blank state.
     // (The blank/loading guard near the top of on_key already covers
@@ -1082,61 +1108,44 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     //
     // Validity gate, entry half: entering target view (S → T) with a
     // render-invalid marker state (first-marker grammar, dangling label
-    // ref, tie) stays in source view — target view is blocked while
-    // invalid. The defect-resolution series is the surface: it opens on the
-    // modeled defect, the user resolves, and pressing `t` again enters (no
-    // auto-proceed). The error-notice popup remains only for failures the
-    // series does not model — after the enumerator that is effectively the
-    // engine-metadata and non-positive-tempo-product class, unreachable
-    // from program-written input — kept as the loud backstop. Leaving
-    // target view (T → S) never gates: the kick-back path
-    // (enforce_target_view_validity) rides this same T → S branch while the
-    // map is invalid, so the exit falls back to the empty map — identity
-    // translation for the playhead/viewport — and always succeeds.
+    // ref, tie) or a set trim failing validate_trim_frames stays in source
+    // view — target view is blocked while invalid, and target playback
+    // must never audition an unrenderable window. The predicate is
+    // validate_target_view_entry (definition above): resolve, then build,
+    // then — trim bound set — validate_trim_frames against the full
+    // trim-off map just built (the same construction the target-view cache
+    // holds); it returns that map, so entry validation and the translation
+    // map below are one build. GuiFileLoader::load_file gates its
+    // active_audio_view=T restore on the SAME predicate — a load restore
+    // and a keystroke entry block identically. The defect-resolution
+    // series is the surface: it opens on the modeled defect, the user
+    // resolves, and pressing `t` again enters (no auto-proceed). The
+    // error-notice popup remains only for failures the series does not
+    // model — after the enumerator that is effectively the engine-metadata
+    // and non-positive-tempo-product class, unreachable from
+    // program-written input — kept as the loud backstop.
+    //
+    // Leaving target view (T → S) never gates: the trim column is masked
+    // off from the predicate call and a resolve/build failure is ignored —
+    // the kick-back path (enforce_target_view_validity) rides this same
+    // T → S branch while the map is invalid, so the exit falls back to the
+    // empty map — identity translation for the playhead/viewport — and
+    // always succeeds (a valid map with an invalid trim keeps the built
+    // map for the exit translation, exactly as before).
     const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
-    auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(app.warpmarkers.markers()),
-        audio.sample_rate());
-    if (resolved) {
-        auto r = build_warp_frame_map(
-            *resolved,
-            app.engine_settings.scale, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
-        if (r) {
-            warp_frame_map = std::move(*r);
-        } else if (entering_target) {
-            if (!open_defect_series(/*commit_context=*/false)) {
-                prompt.open_error_notice(std::move(r.error()));
-            }
-            return;
-        }
+    auto entry = validate_target_view_entry(
+        app.warpmarkers.markers(), app.engine_settings.scale,
+        audio.sample_rate(), static_cast<long>(audio.total_frames()),
+        entering_target && app.trim.has_begin, app.trim.begin_frame,
+        entering_target && app.trim.has_end,   app.trim.end_frame);
+    if (entry) {
+        warp_frame_map = std::move(*entry);
     } else if (entering_target) {
         if (!open_defect_series(/*commit_context=*/false)) {
-            prompt.open_error_notice(std::move(resolved.error()));
+            prompt.open_error_notice(std::move(entry.error()));
         }
         return;
-    }
-
-    // Validity gate, entry half, trim column: entering target view with a
-    // set trim that fails validate_trim_frames stays in source view,
-    // exactly like the invalid-map entry refusal above — target playback
-    // must never audition an unrenderable window. Same surfaces: the
-    // defect series first, the popup as the non-modeled backstop. The map
-    // handed to the validator is the full trim-off map just built (the same
-    // construction the target-view cache holds). T → S never gates.
-    if (entering_target && (app.trim.has_begin || app.trim.has_end)) {
-        if (auto v = validate_trim_frames(
-                app.trim.has_begin, app.trim.begin_frame,
-                app.trim.has_end,   app.trim.end_frame,
-                static_cast<int64_t>(audio.total_frames()),
-                warp_frame_map);
-            !v) {
-            if (!open_defect_series(/*commit_context=*/false)) {
-                prompt.open_error_notice(std::move(v.error()));
-            }
-            return;
-        }
     }
 
     // Target-view playback is rebound to the rendered target buffer once it is

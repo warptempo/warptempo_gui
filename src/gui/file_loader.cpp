@@ -1,5 +1,6 @@
 #include "file_loader.h"
 
+#include "input_handler.h"   // validate_target_view_entry (load gate below)
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -501,11 +502,54 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // eager preview below, so there is no gap in feedback.
     app.queue_progress_text.clear();
 
-    // If the parsed settings landed us in target view, dispatch a fresh
-    // target render now so the first Space press is ready without a
-    // first-edit wait. The target buffer was cleared by cancel_for_load
-    // above; ensure_ready's is_dirty_=true falls through to trigger().
-    // No-op if active_audio_view=='S'.
+    // Target-view validity gate, load half: restoring active_audio_view=T
+    // from .settings is an entry into target view and is gated by EXACTLY
+    // the predicate that gates a keyboard S → T entry —
+    // validate_target_view_entry (input_handler.h): resolve the loaded warp
+    // store, build the whole-song warp_frame_map with the loaded scale,
+    // and, when the active tab loaded a trim bound, validate_trim_frames
+    // against that map. Every input the walk consumes is in place by this
+    // point: markers (parsed above, default zero-marker seeded), engine
+    // settings (strict block above), and the active tab's trim (tab
+    // activation above). On failure, force source view SILENTLY — no popup
+    // and no series open here: pending_validation = Load (set below) is the
+    // ruled surface and opens the defect-resolution series on the first
+    // tick, now from source view, so no target render of an invalid store
+    // is ever dispatched. The gate mirrors the entry gate ONLY — defects
+    // the entry gate does not block on (coincident markers wider than the
+    // owners' sub-frame refusals, a trim bound under a map format,
+    // dangling-ref states the resolver walks) load intact and the series
+    // handles them. Forcing 'S' intentionally means a later save persists
+    // active_audio_view=S — the same outcome the kick-back gate
+    // (enforce_target_view_validity) produces for an invalidating edit made
+    // in target view; the saved line reflects the view actually shown.
+    if (app.active_audio_view == 'T') {
+        if (!validate_target_view_entry(
+                app.warpmarkers.markers(), app.engine_settings.scale,
+                audio.sample_rate(), static_cast<long>(audio.total_frames()),
+                app.trim.has_begin, app.trim.begin_frame,
+                app.trim.has_end,   app.trim.end_frame)) {
+            app.active_audio_view = 'S';
+            // The tab-activation clamp above ran against the target-domain
+            // total (live_total_frames consults the target map cache while
+            // active_audio_view=='T'); with the view forced back to source
+            // the source total governs, so re-clamp. This matters when the
+            // map builds but the trim fails: the deformed total can exceed
+            // the source total, leaving viewport_start past the
+            // source-domain maximum.
+            clamp_viewport_start(app, audio);
+        }
+    }
+
+    // If the load landed us in target view — the parsed settings said 'T'
+    // AND the loaded state passed the same validity walk that gates a
+    // keyboard S → T entry (the gate above) — dispatch a fresh target
+    // render now so the first Space press is ready without a first-edit
+    // wait. The target buffer was cleared by cancel_for_load above;
+    // ensure_ready's is_dirty_=true falls through to trigger(). No-op if
+    // active_audio_view=='S', including an invalid target-view load just
+    // forced to source view: that path's surface is the load-origin defect
+    // series, and the eager preview waits for a clean `t` entry.
     target_render.ensure_ready();
 
     // Load-origin defect walk: a loaded file set with GUI-committable
