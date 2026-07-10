@@ -327,7 +327,17 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // sees the same surrounding state ordering it would on a manual `r`
         // toggle.
         const bool success = !cancelled && batch_.rendered > 0;
-        if (success) {
+        // Modal-surface guard (architect-ruled SKIP): a completion callback
+        // must never mutate the view stack underneath a modal surface — a
+        // bottom-strip editor or any prompt. Auto-opening render view here
+        // would park the source and swap `audio` under an open bpm/settings
+        // session (a bpm Enter would then sweep FROM the displayed render),
+        // or re-enter the view under a defect series. When a modal is up the
+        // auto-open is skipped outright — the batch is on disk and in the
+        // render list; `r` shows it once the modal closes. No deferral slot:
+        // skip keeps the modal invariant absolute with no new lifecycle.
+        if (success && !modal_bottom_strip_editor_active() &&
+            !app.prompt.active) {
             render_view.auto_open_batch_at_first_file(batch_.batch_folder);
         }
         batch_.active = false;
