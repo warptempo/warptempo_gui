@@ -2,11 +2,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
-#include <fstream>
-#include <optional>
-#include <sstream>
-#include <string>
 #include <vector>
 
 struct WarpFrameMapSegment {
@@ -66,47 +61,8 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
     return last.src_frame + (tgt_frame - last.tgt_frame);
 }
 
-// --- Warp-frame-map file reader (header-only, dependency-free) -------------
-// Inverse of the parser's write_warp_frame_map. It lives here, not in the
-// parser's map_output.cpp, so the engine sources can read the artifact while
-// staying parser-free (no parser sources compiled alongside);
-// read_phase_reset_frame_map (phase_reset_frame_map.h) is the
-// phase-reset-axis sibling. The format is trivial whitespace-separated
-// numeric text, specified at the writer in map_output.cpp; keep this in
-// lockstep with that writer.
-//
-// The reader validates line shape only. Value-domain and ordering conformance
-// is the writer's contract: build_warp_frame_map (map artifacts are always
-// the full map — trim is a wav-only render window, never an artifact shape)
-// emits finite, non-negative, strictly ascending values with a first target
-// of exactly zero by construction. Ordering is not left as an assumed
-// precondition downstream: the engine refuses loudly at init on a frame map
-// or phase reset list that is not strictly ascending (the two
-// validators in src/engine/engine.cpp), so a hand-edited artifact that breaks
-// the ordering contract fails the render instead of producing silently wrong
-// bytes. The reader itself does not police it.
-//
-// .warpframemap: one "src_frame tgt_frame" line per segment (space-separated;
-// the writer emits precise double breakpoints at up to 17 significant digits;
-// a leading 0 0 anchor is present unless dropped at write). Blank /
-// whitespace-only lines are skipped. Any malformed line (non-numeric, missing
-// field, or trailing garbage) fails the whole read (std::nullopt), so a
-// truncated or corrupt file never feeds the engine a partial map. A
-// missing/unopenable file is also std::nullopt.
-inline std::optional<std::vector<WarpFrameMapSegment>>
-read_warp_frame_map(const std::string& path) {
-    std::ifstream in(path);
-    if (!in) return std::nullopt;
-    std::vector<WarpFrameMapSegment> segs;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
-        std::istringstream ls(line);
-        double s = 0.0, t = 0.0;
-        if (!(ls >> s >> t)) return std::nullopt;
-        std::string extra;
-        if (ls >> extra) return std::nullopt;  // trailing garbage
-        segs.push_back(WarpFrameMapSegment{s, t});
-    }
-    return segs;
-}
+// The map artifact WRITERS live in the parser (map_output.cpp), which also
+// specifies the on-disk format. No in-tree target reads the artifacts back
+// — the engine consumes the in-memory maps directly on every product path
+// — so there is no reader here; external consumers parse the trivial
+// whitespace-separated numeric text against the writer's contract.

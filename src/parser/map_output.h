@@ -34,9 +34,8 @@ std::expected<void, std::string> write_midi_tempo_map(
 // input order, at up to 17 significant digits (round-trips an IEEE double
 // exactly, same serialization as write_warp_frame_map; whole-frame values print
 // with no decimal point). The companion to write_warp_frame_map on the
-// phase-reset axis — the engine-input export the GUI emits and an engine
-// consumer reads as-is (read_phase_reset_frame_map in
-// phase_reset_frame_map.h). The caller supplies the already-derived engine
+// phase-reset axis — the engine-input export the GUI emits and an external
+// engine consumer reads as-is. The caller supplies the already-derived engine
 // query-domain positions (derive_phase_reset_frame_map applies the
 // anticipation offset and drops against the map shipped beside the file), so
 // this writer applies no policy: it does not displace, sort, or dedupe.
