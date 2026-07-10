@@ -60,16 +60,12 @@ parse_phaseresetmarkers_file(const std::string& path) {
 
         if (raw.empty()) continue;
 
-        // Hash-comment convention: a first-byte '#' whose remaining text does
-        // not parse as a frame position marks a comment line and is skipped; a
-        // '#' that does prefix a valid frame position is a disabled marker
-        // and falls through to the strict parse.
-        if (raw[0] == '#') {
-            int64_t probe = 0;
-            if (!parse_authored_frame(std::string_view(raw).substr(1), probe)) {
-                continue;
-            }
-        }
+        // '#' marks a disabled marker and nothing else. parse_line below
+        // strips a leading '#', flags the marker disabled, and parses the
+        // remainder as a frame position; a '#' line whose remainder is not a
+        // valid position is a parse error like any other malformed line —
+        // adversarial, load-fatal, first error only. Comment lines are not
+        // part of the grammar.
 
         // Marker lines are byte-exact canonical: any space, tab, or CR
         // anywhere on the line is a hard, line-numbered parse error. The

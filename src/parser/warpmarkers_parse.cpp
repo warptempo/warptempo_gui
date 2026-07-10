@@ -284,36 +284,25 @@ parse_warpmarkers_file(const std::string& path) {
             continue;
         }
 
-        // Hash-comment convention: a first-byte '#' whose text up to the
-        // first '|' does not parse as a frame position marks a comment line
-        // and is skipped; a '#' that does prefix a valid frame position is
-        // a disabled marker and falls through to the strict parse.
-        bool line_disabled = false;
-        if (!t.empty() && t[0] == '#') {
-            const size_t pipe = t.find('|');
-            int64_t probe = 0;
-            if (pipe != std::string::npos &&
-                parse_authored_frame(std::string_view(t).substr(1, pipe - 1),
-                                     probe)) {
-                line_disabled = true;
-                t.erase(0, 1);
-            } else {
-                continue;
-            }
-        }
-        if (t.empty()) {
-            continue;
-        }
-
+        // '#' marks a disabled marker and nothing else. The strict parser
+        // (parse_single_canonical_line) strips a leading '#', flags the
+        // marker disabled, and parses the remainder exactly as an enabled
+        // line would. A '#' line whose position or payload is malformed is a
+        // parse error like any other malformed line — adversarial,
+        // load-fatal, first error only. Comment lines are not part of the
+        // grammar.
         auto parsed = warpmarkers_internal::parse_single_canonical_line(t);
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
         WarpMarker m = std::move(*parsed);
-        if (line_disabled) m.disabled = true;
 
-        // The validated position field's raw text (everything before the
-        // '|'), echoed verbatim in the decreasing-time diagnostic.
-        const std::string time_raw = t.substr(0, t.find('|'));
+        // The validated position field's raw text (everything before the '|',
+        // past any leading '#'), echoed verbatim in the decreasing-time
+        // diagnostic.
+        std::string_view pos_view = t;
+        if (!pos_view.empty() && pos_view.front() == '#')
+            pos_view.remove_prefix(1);
+        const std::string time_raw(pos_view.substr(0, pos_view.find('|')));
 
         // Load rejects only DECREASING times. Equal-time markers load
         // deliberately: the GUI may author them, so the save/reload round
