@@ -593,9 +593,40 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
+        // Cap the Cartesian product before it can overflow or exhaust
+        // memory: each cell is a full archival render, so a real sweep is
+        // tens to hundreds of cells. The per-axis brackets don't bound the
+        // product — a handful of markers each with a wide bracket multiply
+        // into billions of cells, which narrows to a negative int at the
+        // reserve/enumeration site (std::length_error) or exhausts memory
+        // materializing RenderRequests. Accumulate with a CHECKED product
+        // that refuses the instant the running total exceeds the cap, so no
+        // overflow can occur (the cap sits far below any integer boundary).
+        // kMaxIterSweepCells is planner-chosen anti-pathology insurance,
+        // flagged for architect retune.
+        constexpr size_t kMaxIterSweepCells = 10000;
         size_t total_cells = 1;
-        for (const auto& d : per_marker_deltas) total_cells *= d.size();
+        bool over_cap = false;
+        for (const auto& d : per_marker_deltas) {
+            total_cells *= d.size();
+            if (total_cells > kMaxIterSweepCells) { over_cap = true; break; }
+        }
         if (total_cells == 0) return true;
+        if (over_cap) {
+            // Refuse before any allocation, batch-folder creation, request
+            // materialization, or render kill/park. `total_cells` here is an
+            // accurate lower bound on the true product (the running product
+            // already exceeded the cap before every axis was folded in), so
+            // report "more than <cap>" rather than computing the full
+            // product. Iteration mode and the brackets survive for
+            // correction — the wipe-and-exit tail below does not run.
+            prompt.open_error_notice(
+                "Iteration sweep refused: more than " +
+                std::to_string(kMaxIterSweepCells) +
+                " cells (cap " + std::to_string(kMaxIterSweepCells) +
+                "). Narrow the marker brackets and retry.");
+            return true;
+        }
 
         std::filesystem::path src(app.source_audio_path);
         std::filesystem::path src_parent = src.parent_path();
@@ -638,6 +669,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
+        // The cap check above bounds total_cells at kMaxIterSweepCells
+        // (<= 10000), so this narrowing to int is exact — no truncation and
+        // no negative wrap can reach the reserve/enumeration below.
         const int total = static_cast<int>(total_cells);
         int pad_width = 1;
         for (int n = total; n >= 10; n /= 10) ++pad_width;
