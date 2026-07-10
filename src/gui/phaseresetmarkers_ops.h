@@ -41,11 +41,5 @@ struct GuiPhaseResetMarkersOps {
     void drop_phase_reset_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();
-    std::pair<double, double> compute_phase_reset_delta_bounds(bool& ok);
-    // Shift every selected phase reset by the clamped delta (source-frame
-    // doubles, full precision — there is no grid). Returns whether any
-    // reset actually moved, mirroring the warp sibling
-    // (apply_selection_shift).
-    bool apply_phase_reset_selection_shift(double raw_delta);
     void nudge_selected_phase_resets(int direction);
 };

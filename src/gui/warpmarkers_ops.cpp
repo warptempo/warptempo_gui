@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <limits>
 #include <set>
 #include <string>
 #include <utility>
@@ -58,9 +57,13 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
                                      double base, std::optional<double> scale) {
     if (audio.sample_rate() <= 0) return;
-    // The authored position is the full-precision frame double as gestured —
-    // there is no grid, so there is no snap; the wall check below IS the
-    // load guard's comparison, exactly.
+    // Marker creation is a commit: the position funnels through
+    // snap_authored_frame like every other gesture commit, so the stored
+    // value is a whole source frame. Every current caller passes an
+    // integer-valued playhead frame, so the snap is the uniformity funnel,
+    // not a rounding step. The wall check below IS the load guard's
+    // comparison, exactly, applied to the snapped value.
+    time_frame = snap_authored_frame(time_frame);
     // Structural warp wall: a warp marker's segment runs to the next
     // breakpoint (or to total_frames for the last marker), and
     // build_warp_frame_map refuses sub-frame segments, so a warp position
@@ -430,93 +433,38 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
     target_render.trigger();
 }
 
-// Compute (delta_min, delta_max) scalar bounds for shifting the current
-// selection set by a uniform delta. Bounds are absolute only: the
-// selection may shift until its minimum time reaches zero and its
-// maximum reaches the warp EOF wall — total_duration minus one source
-// frame, because build_warp_frame_map refuses sub-frame segments.
-// Neighbors are not consulted; markers may cross and overlap freely and
-// the store reorders after the shift. Trim is purely cosmetic and does
-// not constrain edits. Every marker is movable — the first-marker grammar
-// is a render-boundary rule (validate_first_marker_render_grammar), not a
-// gesture pin. Returns (0, 0) if the selection is empty or stale.
-std::pair<double, double> GuiWarpMarkersOps::compute_selection_delta_bounds(bool& ok) {
-    ok = false;
-    const auto& mv = app.warpmarkers.markers();
-    if (app.selected_markers.empty()) return {0.0, 0.0};
-    if (audio.sample_rate() <= 0) return {0.0, 0.0};
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) return {0.0, 0.0};
-    }
-    const double warp_wall =
-        static_cast<double>(audio.total_frames()) - 1.0;
-    double min_t =  std::numeric_limits<double>::infinity();
-    double max_t = -std::numeric_limits<double>::infinity();
-    for (int idx : app.selected_markers) {
-        min_t = std::min(min_t, mv[idx].time_frame);
-        max_t = std::max(max_t, mv[idx].time_frame);
-    }
-    ok = true;
-    return {0.0 - min_t, warp_wall - max_t};
-}
-
-// Shift every selected marker by the clamped delta, exactly — no grid,
-// no snap; a nudge moves exactly one pixel of time at the current zoom,
-// sub-frame when a pixel is finer than a source frame. Marker positions
-// are full-precision frame doubles in memory AND on disk (frame_format.h
-// round-trips them exactly), so a nudged marker saves and reloads
-// identically. Returns whether any marker actually moved.
-bool GuiWarpMarkersOps::apply_selection_shift(double raw_delta) {
-    bool ok = false;
-    auto [d_min, d_max] = compute_selection_delta_bounds(ok);
-    if (!ok) return false;
-    // Each press consults only the bound in its direction of travel: it
-    // refuses when there is no room (<= 0) and otherwise caps the step
-    // at the wall, preserving creep-to-the-wall. The bounds are the
-    // absolute range only (zero / the warp EOF wall), so the opposite
-    // bound could demand a move only for a marker loaded already outside
-    // the range; ignoring it keeps the guarantees: a nudge never moves
-    // against the press and never moves more than one pixel. Neighbors
-    // are not bounds at all — crossing is legal and the store reorders
-    // below.
-    const int direction = (raw_delta > 0.0) ? 1 : -1;
-    double delta;
-    if (direction > 0) {
-        if (d_max <= 0.0) return false;
-        delta = std::min(raw_delta, d_max);
-    } else {
-        if (d_min >= 0.0) return false;
-        delta = std::max(raw_delta, d_min);
-    }
-    const auto& mv = app.warpmarkers.markers();
-    std::vector<GuiWarpMarker> proposed = mv;
-    bool any_changed = false;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        const double t_old = proposed[idx].time_frame;
-        const double t_new = t_old + delta;
-        if (t_new == t_old) continue;
-        proposed[idx].time_frame = t_new;
-        any_changed = true;
-    }
-    if (!any_changed) return false;
-    app.warpmarkers.markers_mut() = std::move(proposed);
-    // A uniform shift can carry the selection past non-selected markers;
-    // restore time order and re-point the selection at the moved markers.
-    remap_marker_indices_after_reorder(
-        app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-    return true;
-}
-
-// Nudge selected markers by +/- 1 pixel of source time at current zoom.
-// direction: -1 for earlier (up/left), +1 for later (down/right).
+// Nudge the focused marker by exactly one on-screen pixel column per
+// press. direction: -1 for earlier (up/left), +1 for later (down/right).
 //
-// Target view interprets the nudge visually — each selected marker
-// shifts by direction * 1 target-pixel; the resulting source-frame
-// delta per marker depends on the local alpha, so the per-marker
-// shifts diverge. Validation is against the absolute range only
-// (zero / the warp EOF wall); crossing a neighbor is legal and the
-// store reorders. The nudge is all-or-nothing.
+// Pixel-column-anchored: the press reads the marker's currently PAINTED
+// column (painted_column_of_source_frame — the stem painter's own math),
+// targets the adjacent column, takes that column's time (source view:
+// viewport start plus column times samples-per-pixel; target view: the
+// column's target-domain time inverse-mapped through the cached map), and
+// commits it through snap_authored_frame, so the stored value is a whole
+// source frame. The painted move is exactly one column per press,
+// unconditionally: the whole-frame rounding error is bounded by
+// 0.5 / (source frames per target pixel) of a pixel, and with the
+// bracketed value vocabulary (tempo times both scales at least
+// 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor the deepest
+// zoom gives at least 27.5625 / 16 = 1.72 source frames per target
+// pixel, so the error is at most 0.29 px — and each press also always
+// advances at least one whole frame. Rounding each press's step
+// independently would NOT give this guarantee (whole-frame residue on
+// top of an off-grid sub-pixel phase paints occasional 0 or 2 px jumps);
+// anchoring to the column grid re-derives the pixel phase every press,
+// so nothing accumulates.
+//
+// Wall semantics per view are unchanged: target view keeps the
+// all-or-nothing silent refusal when a proposal leaves the absolute
+// range (zero / the warp EOF wall — total_frames minus one source frame,
+// because build_warp_frame_map refuses sub-frame segments); source view
+// keeps the clamp (creep-to-the-wall), so the walls stay exactly
+// reachable by nudge — the walls win over the pixel grid, and every wall
+// is an integer frame, so a wall-clamped commit stays whole. Spacing is
+// not the GUI's concern: crossing a neighbor is legal and goes through
+// the reorder-and-remap path below; the render boundary refuses ordering
+// degeneracy.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Nudges move the playhead (via sync_playhead_to_last_selected).
@@ -529,93 +477,67 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     app.selected_markers.insert(app.last_selected_marker);
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const double spp = current_samples_per_pixel(app, audio);
+    if (current_samples_per_pixel(app, audio) <= 0.0) return;
 
-    if (app.active_audio_view == 'T') {
-        const auto& mv = app.warpmarkers.markers();
-        // Stale-index check only: every marker is nudgeable, including the
-        // one at time 0 (the first-marker grammar is the render boundary's
-        // rule, not a gesture pin).
-        for (int idx : app.selected_markers) {
-            if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
-        }
-        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        // Compute proposed new source-times per selected marker, then
-        // validate against the absolute range only: a proposal is
-        // refused when it falls below zero or above the warp EOF wall
-        // (total_frames minus one source frame — build_warp_frame_map
-        // refuses sub-frame segments). Spacing is not the GUI's concern
-        // at all; crossing a neighbor is legal and goes through the
-        // reorder-and-remap path below, and the render boundary refuses
-        // ordering degeneracy. Under heavy stretch a one-target-pixel
-        // step can be a sub-frame source move; the exact inverse-mapped
-        // value is kept, and when the step leaves the range the designed
-        // response is exactly this all-or-nothing silent refusal.
-        const double warp_wall =
-            static_cast<double>(audio.total_frames()) - 1.0;
-        std::vector<std::pair<int, double>> proposals;
-        proposals.reserve(app.selected_markers.size());
-        for (int idx : app.selected_markers) {
-            const double t_src = mv[idx].time_frame;
-            const double t_tgt = map_source_to_target(
-                static_cast<size_t>(std::nearbyint(t_src)),
-                target_warp_frame_map);
-            const double t_tgt_new = t_tgt +
-                static_cast<double>(direction) * spp;
-            const size_t q = (t_tgt_new < 0.0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(std::llrint(t_tgt_new));
-            // Exact inverse-mapped destination, full precision; the warp
-            // frame map is monotone increasing, so the target-domain
-            // direction is the source-domain direction.
-            const double t_src_new =
-                map_target_to_source(q, target_warp_frame_map);
-            proposals.emplace_back(idx, t_src_new);
-        }
-        bool any_changed = false;
-        std::vector<GuiWarpMarker> proposed = mv;
-        for (const auto& [idx, t_new] : proposals) {
-            if (t_new == mv[idx].time_frame) continue;
-            if (t_new < 0.0 || t_new > warp_wall) return;
-            proposed[idx].time_frame = t_new;
-            any_changed = true;
-        }
-        if (!any_changed) return;
-        std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-        const int              hint_last = app.last_selected_marker;
-        app.warpmarkers.markers_mut() = std::move(proposed);
-        // A nudge may cross a neighbor; restore time order and re-point
-        // the selection at the moved marker before the playhead sync
-        // reads last_selected below.
-        remap_marker_indices_after_reorder(
-            app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-        undo.push_undo_warp(std::move(pre_state), hint_last);
-        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
-        undo.recompute_dirty();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        // Unlike drop and delete, nudge does not route through
-        // kick_waveform_sync: nudges arrive at key-repeat rate, and a
-        // synchronous plate rebuild per repeat would cost up to the plate's
-        // worst-case render time per keypress; the one-frame async lag on
-        // a one-pixel map change is imperceptible.
-        target_render.trigger();
-        return;
+    const auto& mv = app.warpmarkers.markers();
+    // Stale-index check only: every marker is nudgeable, including the
+    // one at time 0 (the first-marker grammar is the render boundary's
+    // rule, not a gesture pin).
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
     }
-
-    // spp is source frames per pixel, already the authored domain: one
-    // nudge step is exactly one pixel of frames.
-    const double delta_frames = static_cast<double>(direction) * spp;
-    if (delta_frames == 0.0) return;
+    // Source view anchors through the identity map (empty list); target
+    // view through the live cached map — the same map the stem painter
+    // reads, so the anchored column is the painted one.
+    const bool target_view = (app.active_audio_view == 'T');
+    const std::vector<WarpFrameMapSegment> no_map;
+    const auto& map = target_view
+        ? target_view_warp_frame_map_cached(
+              app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
+        : no_map;
+    const double warp_wall =
+        static_cast<double>(audio.total_frames()) - 1.0;
+    std::vector<std::pair<int, double>> proposals;
+    proposals.reserve(app.selected_markers.size());
+    for (int idx : app.selected_markers) {
+        const int c = painted_column_of_source_frame(
+            app, audio, mv[idx].time_frame, map);
+        double t_new =
+            authored_frame_at_column(app, audio, c + direction, map);
+        if (target_view) {
+            // All-or-nothing silent refusal outside the absolute range.
+            if (t_new < 0.0 || t_new > warp_wall) return;
+        } else {
+            if (t_new < 0.0)       t_new = 0.0;
+            if (t_new > warp_wall) t_new = warp_wall;
+        }
+        proposals.emplace_back(idx, t_new);
+    }
+    bool any_changed = false;
+    std::vector<GuiWarpMarker> proposed = mv;
+    for (const auto& [idx, t_new] : proposals) {
+        if (t_new == mv[idx].time_frame) continue;
+        proposed[idx].time_frame = t_new;
+        any_changed = true;
+    }
+    if (!any_changed) return;
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
-    if (apply_selection_shift(delta_frames)) {
-        undo.push_undo_warp(std::move(pre_state), hint_last);
-        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
-        undo.recompute_dirty();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        target_render.trigger();
-    }
+    app.warpmarkers.markers_mut() = std::move(proposed);
+    // A nudge may cross a neighbor; restore time order and re-point
+    // the selection at the moved marker before the playhead sync
+    // reads last_selected below.
+    remap_marker_indices_after_reorder(
+        app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
+    undo.push_undo_warp(std::move(pre_state), hint_last);
+    selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
+    undo.recompute_dirty();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    // Unlike drop and delete, nudge does not route through
+    // kick_waveform_sync: nudges arrive at key-repeat rate, and a
+    // synchronous plate rebuild per repeat would cost up to the plate's
+    // worst-case render time per keypress; the one-frame async lag on
+    // a one-pixel map change is imperceptible.
+    target_render.trigger();
 }

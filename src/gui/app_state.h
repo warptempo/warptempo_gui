@@ -938,6 +938,22 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
+// The ONLY route by which a fractional value becomes an authored position
+// anywhere in the tree: every gesture commit — nudge, drag release, the
+// trim gestures, the trim-end wheel, propagate paste — funnels its final
+// position through this before writing a marker time or trim bound, so
+// every store mutation commits an integer-valued double. Banker's rounding
+// (std::nearbyint under the default rounding mode — the project-wide
+// convention), no epsilon. The ties are real, not theoretical: at 44.1 kHz
+// the zoom table's frames-per-pixel values are 27.5625, 55.125, 110.25,
+// 220.5, 441, ... (0.625 ms/px deepest, doubling), so at the 5 ms level
+// every odd pixel offset is an exact half-frame tie — banker's rounding
+// debiases them. No other call site may round or cast an authored
+// position on its own.
+inline double snap_authored_frame(double frame) {
+    return std::nearbyint(frame);
+}
+
 // Restore ascending time_frame order after a mutation that may have
 // moved markers past their neighbors (shift, nudge, drag commit). The
 // marker stores are always sorted by time_frame at rest; mutations

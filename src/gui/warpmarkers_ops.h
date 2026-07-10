@@ -22,11 +22,10 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
-// delete / toggle / adjust) and the selection-shift cluster (nudge /
-// jump-to-playhead and their shared bounds helper). stop_playback_if_playing
-// is reached through playback_lifecycle. The reposition drag is no longer
-// here: it is the one cross-kind gesture and lives in MarkerDragOps in
-// marker_drag.{h,cpp}.
+// delete / toggle / adjust) and the pixel-column-anchored nudge.
+// stop_playback_if_playing is reached through playback_lifecycle. The
+// reposition drag is no longer here: it is the one cross-kind gesture and
+// lives in MarkerDragOps in marker_drag.{h,cpp}.
 struct GuiWarpMarkersOps {
     AppState&             app;
     const GuiAudio&       audio;
@@ -60,7 +59,5 @@ struct GuiWarpMarkersOps {
     void toggle_inherits();
     void toggle_disabled();
     void adjust_tempo(double delta);
-    std::pair<double, double> compute_selection_delta_bounds(bool& ok);
-    bool apply_selection_shift(double raw_delta);
     void nudge_selected_markers(int direction);
 };

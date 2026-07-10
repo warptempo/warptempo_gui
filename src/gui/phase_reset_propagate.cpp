@@ -271,10 +271,16 @@ void PhaseResetPropagate::paste_apply() {
         if (dst_dur <= 0.0) continue;
         for (const auto& p : clip_blocks[i].placements) {
             GuiPhaseResetMarker nm;
-            // Exact rescaled position, full precision — no grid, no snap;
-            // clamped at 0 (the universal no-negative-position rule).
-            nm.time_frame =
-                std::max(0.0, dst_start + p.fractional_position * dst_dur);
+            // The rescaled position commits through snap_authored_frame —
+            // a plain snap to the whole source frame, deliberately WITHOUT
+            // the pixel-column anchoring the nudges / drag commits /
+            // trim-end wheel apply: pasted positions are computed and
+            // view-independent, and quantizing them to whatever viewport
+            // happens to be on screen would leak incidental view state
+            // into authored data. Clamped at 0 after the snap (the
+            // universal no-negative-position rule; the wall wins).
+            nm.time_frame = std::max(0.0, snap_authored_frame(
+                dst_start + p.fractional_position * dst_dur));
             nm.disabled     = p.disabled;
             app.phaseresetmarkers.insert_marker(std::move(nm));
         }

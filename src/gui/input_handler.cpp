@@ -927,40 +927,49 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             app.trim.has_begin && app.trim.has_end) {
             const int sr = audio.sample_rate();
             if (audio.total_frames() <= 0 || sr <= 0) return;
+            const double spp = current_samples_per_pixel(app, audio);
+            if (spp <= 0.0) return;
+            // Pixel-column-anchored end-move, marker-identical to the
+            // nudges (the derivation and the exact-painted-move rationale
+            // live at nudge_selected_markers): read the end bound's
+            // currently painted column, step it by the wheel's
+            // whole-column step, and commit that column's time — source
+            // view: viewport start plus column times samples-per-pixel;
+            // target view: the column's target-domain time inverse-mapped
+            // through the cached map — through snap_authored_frame
+            // (inside authored_frame_at_column), so the stored bound is a
+            // whole source frame. The step keeps its samples_visible /
+            // kTrimEndWheelDivisor magnitude, expressed as whole pixel
+            // columns per detent so each detent's painted move is exact
+            // and no sub-column residue accumulates across detents. The
+            // end bound clamps to its own absolute walls — floor 0,
+            // ceiling the end wall at frame EOF exactly (end-at-EOF is a
+            // valid render); exact frame-double compares, the load
+            // guard's own comparison, applied AFTER the column snap so
+            // the integer walls win over the pixel grid. There is no
+            // partner wall: the end bound crosses the begin bound freely
+            // and the begin bound is untouched here. The 0.0 floor is the
+            // walls' lower end, kept for representability — a negative
+            // position is unrepresentable in the frame-double form the
+            // .settings file persists.
             const int64_t step = std::max<int64_t>(
                 1, samples_visible(app, audio) / kTrimEndWheelDivisor);
-            const int64_t dlt =
-                (button == GuiMouseButton::WheelUp ? -step : +step) * count;
-            // Full-double step, marker-identical target-view math (the
-            // shape of nudge_selected_markers' target branch): project the
-            // stored end frame through the live target-view map, step in
-            // the target double domain, llrint, inverse-map back at full
-            // precision. Source view is plain frame arithmetic. The end
-            // bound clamps to its own absolute walls — floor 0, ceiling the
-            // end wall at frame EOF exactly (end-at-EOF is a valid render);
-            // exact frame-double compares, the load guard's own comparison.
-            // There is no partner wall: the end bound crosses the begin
-            // bound freely and the begin bound is untouched here. The 0.0
-            // floor is the walls' lower end, kept for representability —
-            // a negative position is unrepresentable in the frame-double
-            // form the .settings file persists.
-            double v;
-            if (app.active_audio_view == 'T') {
-                const auto& target_warp_frame_map =
-                    target_view_warp_frame_map_cached(
-                        app, sr,
-                        static_cast<long>(audio.total_frames())).warp_frame_map;
-                const double t_tgt = map_source_to_target(
-                    std::nearbyint(app.trim.end_frame),
-                    target_warp_frame_map);
-                const double t_tgt_new = t_tgt + static_cast<double>(dlt);
-                const double q = (t_tgt_new < 0.0)
-                    ? 0.0
-                    : static_cast<double>(std::llrint(t_tgt_new));
-                v = map_target_to_source(q, target_warp_frame_map);
-            } else {
-                v = app.trim.end_frame + static_cast<double>(dlt);
-            }
+            const int64_t step_cols = std::max<int64_t>(
+                1, static_cast<int64_t>(std::nearbyint(
+                       static_cast<double>(step) / spp)));
+            const int64_t dcols =
+                (button == GuiMouseButton::WheelUp ? -step_cols : +step_cols) *
+                count;
+            const std::vector<WarpFrameMapSegment> no_map;
+            const auto& map = (app.active_audio_view == 'T')
+                ? target_view_warp_frame_map_cached(
+                      app, sr,
+                      static_cast<long>(audio.total_frames())).warp_frame_map
+                : no_map;
+            const int c = painted_column_of_source_frame(
+                app, audio, app.trim.end_frame, map);
+            double v = authored_frame_at_column(
+                app, audio, c + static_cast<int>(dcols), map);
             if (v < 0.0) v = 0.0;
             const double end_wall =
                 static_cast<double>(audio.total_frames());

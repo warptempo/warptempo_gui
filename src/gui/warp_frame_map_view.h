@@ -107,3 +107,48 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
+
+// Pixel-anchoring pair for gesture commits. Every gesture that moves an
+// authored position by pixel columns (the Ctrl+Left/Right nudges on both
+// marker columns and the trim bounds, the Ctrl+wheel trim end-move) or
+// releases one at a pointer position (marker drag commits) anchors to the
+// on-screen column grid through these two helpers: read the item's
+// currently painted column with painted_column_of_source_frame, pick the
+// destination column, and commit authored_frame_at_column of it — which
+// funnels through snap_authored_frame (app_state.h), the single
+// fractional-to-authored route. Anchoring to the column grid re-derives
+// the pixel phase on every gesture, so whole-frame rounding residue can
+// never accumulate on top of an off-grid sub-pixel phase; the painted
+// move is exactly the commanded number of columns, and the stored value
+// is the whole frame the painting already shows.
+//
+// painted_column_of_source_frame: the pixel column (offset from
+// waveform_area(app).x) the stem painters draw `source_frame` at,
+// computed with the painters' own math (render_marker_stems_impl /
+// render_trim_stems): nearbyint the frame; in target view forward-map it
+// through `warp_frame_map` and nearbyint the map output; then divide by
+// the painters' samples-per-pixel — the visible span nearbyint-quantized
+// to whole samples over the strip width — and round with the painters'
+// std::round. `warp_frame_map` is the map the item is painted through:
+// the live cached map at rest, the drag's frozen map at drag commit.
+// Ignored in source view; an empty map in target view falls back to
+// identity, exactly like paint. Returns 0 when the strip has no width
+// (callers guard the degenerate geometry).
+int painted_column_of_source_frame(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map);
+
+// authored_frame_at_column: the authored source-frame value of pixel
+// column `col` under the same coordinate system — active-domain time =
+// viewport start + col * the painters' samples-per-pixel; in target view
+// that time is quantized to an integer target frame (llrint, floored at
+// 0 — the same quantization the target-view nudges have always applied)
+// and inverse-mapped through `warp_frame_map` at full precision. The
+// result returns through snap_authored_frame, so it is a whole source
+// frame; callers apply their own walls AFTER — the walls win over the
+// pixel grid, and every wall is itself an integer frame, so a
+// wall-clamped commit stays whole. Returns 0.0 when the strip has no
+// width (callers guard the degenerate geometry).
+double authored_frame_at_column(
+    const AppState& app, const GuiAudio& audio, int col,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map);

@@ -72,7 +72,9 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     const double this_wall = static_cast<double>(this_wall_frame);
     if (this_frame < 0.0)       this_frame = 0.0;
     if (this_frame > this_wall) this_frame = this_wall;
-    this_bound = this_frame;
+    // Already integer-valued (the playhead is an int64 frame); the
+    // snap_authored_frame funnel is uniformity, not rounding.
+    this_bound = snap_authored_frame(this_frame);
     this_has   = true;
     const int64_t this_active =
         source_frame_to_active_domain(app, audio, cand_src);
@@ -86,8 +88,8 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
         source_frame_to_active_domain(app, audio, other_wall_frame);
     if (other_active < 0)                 other_active = 0;
     if (other_active > other_wall_active) other_active = other_wall_active;
-    other_bound = static_cast<double>(
-        active_domain_to_source_frame(app, audio, other_active));
+    other_bound = snap_authored_frame(static_cast<double>(
+        active_domain_to_source_frame(app, audio, other_active)));
     other_has = true;
 
     // Snap the playhead onto the frame of the bound just set at it. The
@@ -303,8 +305,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (oe + df > end_wall_active)   df = end_wall_active - oe;
         const int64_t nb_src = active_domain_to_source_frame(app, audio, ob + df);
         const int64_t ne_src = active_domain_to_source_frame(app, audio, oe + df);
-        double nb = static_cast<double>(nb_src);
-        double ne = static_cast<double>(ne_src);
+        // Already integer-valued (active_domain_to_source_frame rounds);
+        // the snap_authored_frame funnel is uniformity, not rounding.
+        double nb = snap_authored_frame(static_cast<double>(nb_src));
+        double ne = snap_authored_frame(static_cast<double>(ne_src));
         if (nb < 0.0) nb = 0.0;
         if (ne < 0.0) ne = 0.0;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
@@ -357,7 +361,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         ? audio.total_frames() - 1
         : audio.total_frames();
     if (src_frame > wall_hi) src_frame = wall_hi;
-    const double new_frame = static_cast<double>(src_frame);
+    // Already integer-valued (the pixel-column and clamp math above is
+    // int64 throughout); the snap_authored_frame funnel is uniformity,
+    // not rounding.
+    const double new_frame = snap_authored_frame(static_cast<double>(src_frame));
     double& field = app.trim_drag.is_begin ? app.trim.begin_frame
                                            : app.trim.end_frame;
     if (field != new_frame) {
@@ -433,14 +440,19 @@ void GuiInputHandler::delete_selected_trim() {
 }
 
 // Ctrl+Left / Ctrl+Right on the trim group. The sibling of
-// nudge_selected_markers: one pixel of time per press at full double
-// precision (sub-frame at deep zoom, matching the marker nudge's
-// fidelity). Each bound clamps to its own absolute walls — begin to frame
-// EOF-1, end to frame EOF (floor 0 on both); this per-bound wall split is
-// the current recorded trim-vs-marker asymmetry (marker nudges keep a single
-// EOF wall, total frames minus one source frame). There is still no
-// partner wall: the bound crosses its partner freely. The render boundary
-// owns trim validity.
+// nudge_selected_markers: pixel-column-anchored, exactly one painted
+// column per press — the bound's currently painted column (the trim stem
+// painter's own math) steps to the adjacent column and that column's
+// time commits through snap_authored_frame, so the stored bound is a
+// whole source frame; the one-column-per-press guarantee and its numeric
+// rationale live in the comment at nudge_selected_markers. Each bound
+// clamps to its own absolute walls — begin to frame EOF-1, end to frame
+// EOF (floor 0 on both); this per-bound wall split is the current
+// recorded trim-vs-marker asymmetry (marker nudges keep a single EOF
+// wall, total frames minus one source frame). The integer walls win over
+// the pixel grid, so a wall-clamped press rests exactly on its wall.
+// There is still no partner wall: the bound crosses its partner freely.
+// The render boundary owns trim validity.
 void GuiInputHandler::nudge_selected_trim(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     const int sr = audio.sample_rate();
@@ -469,36 +481,30 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     double& field = (which == TrimHit::Begin) ? app.trim.begin_frame
                                               : app.trim.end_frame;
     const double cur = field;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
+    if (current_samples_per_pixel(app, audio) <= 0.0) return;
 
-    // Step one pixel of time at the current zoom, per view, keeping full
-    // double precision. Target view is marker-identical (the exact shape of
-    // nudge_selected_markers' target branch): project the stored frame
-    // through the live target-view map, step in the target double domain,
-    // llrint, inverse-map back at full precision. Source view is plain
-    // frame arithmetic (spp is source frames per pixel).
-    double proposed;
-    if (app.active_audio_view == 'T') {
-        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        const double t_tgt = map_source_to_target(
-            std::nearbyint(cur), target_warp_frame_map);
-        const double t_tgt_new = t_tgt + static_cast<double>(direction) * spp;
-        const double q = (t_tgt_new < 0.0)
-            ? 0.0
-            : static_cast<double>(std::llrint(t_tgt_new));
-        proposed = map_target_to_source(q, target_warp_frame_map);
-    } else {
-        proposed = cur + static_cast<double>(direction) * spp;
-    }
+    // Marker-identical pixel anchoring (nudge_selected_markers' exact
+    // shape): read the bound's currently painted column, target the
+    // adjacent column, and commit that column's time — source view:
+    // viewport start plus column times samples-per-pixel; target view:
+    // the column's target-domain time inverse-mapped through the cached
+    // map — through snap_authored_frame (inside authored_frame_at_column).
+    const std::vector<WarpFrameMapSegment> no_map;
+    const auto& map = (app.active_audio_view == 'T')
+        ? target_view_warp_frame_map_cached(
+              app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
+        : no_map;
+    const int c = painted_column_of_source_frame(app, audio, cur, map);
+    double proposed = authored_frame_at_column(app, audio, c + direction, map);
 
-    // Per-bound absolute walls (mirroring nudge_selected_markers' EOF wall in
-    // shape — total frames minus one source frame — but clamping, not
-    // refusing): begin walls at frame EOF-1, end at frame EOF exactly —
-    // exact frame-double compares, the load guard's own comparison. The 0.0
-    // floor is the walls' lower end, kept for representability; there is
-    // still no partner wall (see the function-head comment).
+    // Per-bound absolute walls (mirroring nudge_selected_markers' EOF wall
+    // in shape — total frames minus one source frame — but clamping in
+    // both views, where the marker nudge refuses in target view): begin
+    // walls at frame EOF-1, end at frame EOF exactly — exact frame-double
+    // compares, the load guard's own comparison, applied AFTER the column
+    // snap so the integer walls win over the pixel grid. The 0.0 floor is
+    // the walls' lower end, kept for representability; there is still no
+    // partner wall (see the function-head comment).
     const double wall = (which == TrimHit::Begin)
         ? static_cast<double>(audio.total_frames() - 1)
         : static_cast<double>(audio.total_frames());

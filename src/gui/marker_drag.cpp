@@ -185,8 +185,10 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
         // Full-precision frame double: mouse-derived fractional frames,
-        // clamped to the walls above. There is no grid, so there is no
-        // snap and no post-snap wall escape.
+        // clamped to the walls above. Mid-gesture positions are free —
+        // no grid, no snap — so the marker tracks the pointer exactly;
+        // commit_drag snaps the release to its painted column's whole
+        // frame.
         const double new_t = app.drag.original_times[k] + delta;
         if (k >= app.drag.moveable_times.size()) continue;
         if (app.drag.moveable_times[k] == new_t) continue;
@@ -220,26 +222,64 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
 // them through the DragOverlay). On commit, walk dragging_markers and
-// assign each marker's time_frame from moveable_times before pushing
-// the pre-drag snapshot onto the undo stack. Symmetric across warp and
-// phase reset: identical statement shape on each side.
+// assign each marker's time_frame from the column-snapped committed
+// times before pushing the pre-drag snapshot onto the undo stack.
+// Symmetric across warp and phase reset: identical statement shape on
+// each side.
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
+    // Commit-time column snap. Mid-gesture positions stay free and
+    // fractional (apply_drag_motion); only the commit snaps. The released
+    // position is snapped to the time of the pixel column it is PAINTED
+    // at — computed against the drag's frozen map, the exact coordinate
+    // system the overlay painted through — and that column time funnels
+    // through snap_authored_frame (inside authored_frame_at_column), so
+    // the stored value is the whole frame of the shown column: stored
+    // equals shown, in both views at all zoom levels. With an
+    // integer-pixel pointer the column snap is a no-op; with fractional
+    // pointer coordinates (touchpads) it moves the value to the column
+    // painting already shows. The walls win over the grid: the absolute
+    // range (zero / the column's EOF wall) is re-applied after the snap,
+    // so a wall-clamped commit rests exactly on its wall (the walls are
+    // integer frames, so the clamp preserves whole-frame values). The
+    // visible-strip clamp composed into delta_min/delta_max during
+    // motion, as before.
+    const double total    = static_cast<double>(audio.total_frames());
+    const double eof_wall = phase_reset ? total : (total - 1.0);
+    std::vector<double> committed = app.drag.moveable_times;
+    for (size_t k = 0; k < committed.size(); ++k) {
+        // Only positions the drag actually moved snap; an untouched
+        // position keeps its stored value bit-exact, so a Ctrl+click
+        // without motion (and a wander that returns exactly to its
+        // origin) commits nothing, as before.
+        if (k < app.drag.original_times.size() &&
+            committed[k] == app.drag.original_times[k]) {
+            continue;
+        }
+        double& t = committed[k];
+        const int c = painted_column_of_source_frame(
+            app, audio, t, app.drag.frozen_warp_frame_map);
+        t = authored_frame_at_column(app, audio, c,
+                                     app.drag.frozen_warp_frame_map);
+        if (t < 0.0)      t = 0.0;
+        if (t > eof_wall) t = eof_wall;
+    }
     // Commit gates on NET change, not on whether motion occurred.
     // app.drag.moved latches true on the first position change during
     // motion and never clears, so a drag that wanders and returns exactly
     // to its original position arrives here with moved == true but zero
     // net change. Pushing an undo entry then records a snapshot byte-equal
     // to the live store: a no-op history entry that both undo and redo
-    // restore invisibly. original_times and moveable_times are parallel
-    // frame doubles, so an exact compare across the dragged markers is the
-    // true "did anything move" test — the same test begin_drag's "if
-    // motion landed" note intends.
+    // restore invisibly. committed and original_times are parallel frame
+    // doubles, so an exact compare across the dragged markers is the true
+    // "did anything move" test. The compare runs on the SNAPPED values: a
+    // sub-column wander commits nothing, while a whole-frame store keeps
+    // committed == original exactly when the marker returns to its column.
     bool net_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        if (k >= app.drag.moveable_times.size()) continue;
-        if (app.drag.moveable_times[k] != app.drag.original_times[k]) {
+        if (k >= committed.size()) continue;
+        if (committed[k] != app.drag.original_times[k]) {
             net_changed = true;
             break;
         }
@@ -262,8 +302,8 @@ void MarkerDragOps::commit_drag() {
     if (net_changed) {
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
-            if (k >= app.drag.moveable_times.size()) continue;
-            const double new_t = app.drag.moveable_times[k];
+            if (k >= committed.size()) continue;
+            const double new_t = committed[k];
             if (phase_reset) {
                 GuiPhaseResetMarker* m =
                     app.phaseresetmarkers.marker_mut(idx);

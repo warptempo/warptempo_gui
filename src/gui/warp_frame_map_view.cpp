@@ -110,6 +110,63 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
         std::nearbyint(map_source_to_target(q, warp_frame_map)));
 }
 
+namespace {
+// The stem painters' samples-per-pixel: the visible span quantized to
+// whole samples (the vp_end the waveform-cache inputs carry is
+// vp_start + nearbyint(spp * area.w)) divided back over the strip width.
+// Both pixel-anchoring helpers below use this same value in both
+// directions, so a committed column time round-trips to its own column.
+// Returns 0.0 on degenerate geometry (no strip width / no zoom).
+double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
+                                 const GuiRect& area) {
+    if (area.w <= 0) return 0.0;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return 0.0;
+    return std::nearbyint(spp * static_cast<double>(area.w)) /
+           static_cast<double>(area.w);
+}
+}  // namespace
+
+int painted_column_of_source_frame(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
+    const GuiRect area = waveform_area(app);
+    const double spp = painter_samples_per_pixel(app, audio, area);
+    if (spp <= 0.0) return 0;
+    // The painters' exact shape (frame_to_paint_sample in render.cpp):
+    // nearbyint the source frame; in target view forward-map and
+    // nearbyint the map output; then std::round the fractional column.
+    double ms = std::nearbyint(source_frame);
+    if (app.active_audio_view != 'S' && !warp_frame_map.empty()) {
+        ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
+    }
+    const double x_raw =
+        (ms - static_cast<double>(app.viewport_start_sample)) / spp;
+    return static_cast<int>(std::round(x_raw));
+}
+
+double authored_frame_at_column(
+    const AppState& app, const GuiAudio& audio, int col,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
+    const GuiRect area = waveform_area(app);
+    const double spp = painter_samples_per_pixel(app, audio, area);
+    if (spp <= 0.0) return 0.0;
+    const double t_active =
+        static_cast<double>(app.viewport_start_sample) +
+        static_cast<double>(col) * spp;
+    if (app.active_audio_view != 'S' && !warp_frame_map.empty()) {
+        // Quantize the column's target-domain time to an integer target
+        // frame (floored at 0), then inverse-map at full precision; the
+        // map is monotone increasing, so the target-domain direction is
+        // the source-domain direction.
+        const double q = (t_active < 0.0)
+            ? 0.0
+            : static_cast<double>(std::llrint(t_active));
+        return snap_authored_frame(map_target_to_source(q, warp_frame_map));
+    }
+    return snap_authored_frame(t_active);
+}
+
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     if (app.active_audio_view == 'S') return source_frame;
