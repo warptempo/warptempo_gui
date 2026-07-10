@@ -3,6 +3,7 @@
 #include "frame_format.h"
 #include "settings_io.h"
 #include "value_format.h"
+#include "warp_frame_map_build.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -145,18 +146,10 @@ void GuiWarpMarkers::remove_marker(int index) {
 }
 
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
+    // Bounds-guarded GUI face of the ONE cascade definition,
+    // marker_effectively_disabled (warp_frame_map_build.h) — the same
+    // verdict the resolver's keep mask publishes, instantiated over
+    // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;
-    const auto& m = markers[idx];
-    if (m.disabled) return true;
-    if (!m.label_ref.empty()) {
-        // Walk all markers to find the definition. O(N^2) across the list
-        // but N is small (hundreds max).
-        for (const auto& other : markers) {
-            if (!other.label_def.empty() &&
-                other.label_def == m.label_ref) {
-                return other.disabled;
-            }
-        }
-    }
-    return false;
+    return marker_effectively_disabled(markers, static_cast<size_t>(idx));
 }

@@ -86,12 +86,36 @@ std::vector<MidiTempoMapEntry> derive_midi_tempo_map(
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     long sample_rate);
 
+// Single source of truth for "does this raw marker survive into the
+// render list". A marker is silenced either by its own disabled flag or,
+// for an enabled label ref, by the referenced label being defined by a
+// disabled marker — the cascade, because the definition supplies the
+// duration the ref imposes, so a silenced definition leaves the ref with
+// nothing to reproduce. Templated over the marker shape (disabled,
+// label_ref, label_def) so the parser's WarpMarker walks and the GUI's
+// GuiWarpMarker surfaces (paint, selection, hover, nudge) consume the ONE
+// cascade definition without a per-call slice copy — the GUI callers sit
+// inside paint loops. Duplicate label definitions are load-fatal, so "any
+// disabled marker defining the label" and "the defining marker's flag"
+// are the same verdict.
+template <typename MarkerT>
+bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
+    const MarkerT& g = mv[idx];
+    if (g.disabled) return true;
+    if (!g.label_ref.empty()) {
+        for (const auto& d : mv) {
+            if (d.disabled && !d.label_def.empty() &&
+                d.label_def == g.label_ref) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // Per-index render-participation mask over parser-domain markers: keep[i]
-// is true when marker i survives into the render, false when it is dropped.
-// A marker is dropped when it is disabled, or when it is enabled, carries a
-// label_ref, and the referenced label is defined by a disabled marker (the
-// cascade: the definition supplies the duration the ref imposes, so a
-// silenced definition leaves the ref with nothing to reproduce). Single
+// is true when marker i survives into the render, false when it is dropped
+// (the marker_effectively_disabled verdict above, per index). Single
 // owner of the participation verdict: resolve_warp_markers_for_render
 // filters on it and the GUI's render-domain display sidecar writer gates
 // its lockstep segment consumption on it, so display lockstep and the

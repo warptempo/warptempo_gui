@@ -25,29 +25,14 @@ struct LabelCacheEntry {
     double delta_tgt = 0.0;
 };
 
-// Single source of truth for "does this raw marker survive into the render
-// list". A marker is silenced either by its own disabled flag or, for an
-// enabled label ref, by its definition marker being disabled — the cascade,
-// because the definition supplies the duration the ref imposes, so a silenced
-// definition leaves the ref with nothing to reproduce.
-// warp_markers_render_keep_mask publishes this verdict per index (and
+// marker_effectively_disabled (the shared cascade template in
+// warp_frame_map_build.h) is the participation verdict:
+// warp_markers_render_keep_mask publishes it per index (and
 // resolve_warp_markers_for_render filters through that mask), marker_effective
 // measures label-ref segment distances to the next marker that passes it, and
 // the pass-provenance source walk selects the immediate prior marker that
 // passes it, so both the hover multiplier and the hover source attribution
 // track the frame map.
-bool marker_effectively_disabled(const std::vector<WarpMarker>& mv, size_t idx) {
-    const WarpMarker& g = mv[idx];
-    if (g.disabled) return true;
-    if (!g.label_ref.empty()) {
-        for (const auto& d : mv) {
-            if (d.disabled && !d.label_def.empty() && d.label_def == g.label_ref) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
 }  // namespace
 
