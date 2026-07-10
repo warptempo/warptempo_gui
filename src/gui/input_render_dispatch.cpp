@@ -205,9 +205,67 @@ void GuiInputHandler::finalize_render_run() {
     // ordering consistent with the other status-clear paths.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
-    // A target-view edit during this archival render may have queued a
-    // pending target render. Worker is now idle — fire it.
+    // Worker is now idle — pump the deferred work. maybe_dispatch_pending
+    // offers the beat to a parked archival command first (an explicit user
+    // command outranks the derived preview), then to a pending target
+    // render queued by a target-view edit during this run.
     target_render.maybe_dispatch_pending();
+}
+
+void GuiInputHandler::dispatch_single_archival_render(
+        RenderRequest req, std::vector<uint8_t> fingerprint) {
+    app.queue_cancel_requested = false;
+    app.queue_running          = true;
+    app.queue_progress_text    = "rendering...";
+    viewport.clear_hover_popup();
+    viewport.invalidate_timestamp_area();
+    async_renderer.dispatch(std::move(req),
+        [this](RenderOutcome o) {
+            const bool success = (o == RenderOutcome::Success);
+            if (o == RenderOutcome::Cancelled) {
+                std::fprintf(stderr, "warptempo_gui: render cancelled\n");
+            }
+            finalize_render_run();
+            if (success && app.active_audio_view == 'T' &&
+                !target_render.is_updating()) {
+                // ensure_ready() may fill from the shared cache when the
+                // just-rendered fingerprint is already registered, or
+                // render the current target state if the state changed or
+                // a longer-than-RAM-tier entry is still registering on the
+                // writer thread. That miss is benign; if finalize_render_run
+                // just launched a pending target render, leave it alone.
+                target_render.ensure_ready();
+            }
+        });
+    // dispatch() cleared the session fingerprint; re-arm it for this
+    // single-render session so an identical re-dispatch no-ops and a
+    // fingerprint-matching target-preview trigger waits the render out.
+    async_renderer.set_session_fingerprint(std::move(fingerprint));
+}
+
+void GuiInputHandler::kill_running_render_and_park(
+        AppState::PendingArchivalCommand cmd) {
+    async_renderer.request_cancel();
+    app.queue_cancel_requested = true;
+    cmd.armed = true;
+    app.pending_archival = std::move(cmd);
+}
+
+bool GuiInputHandler::dispatch_pending_archival_command() {
+    if (!app.pending_archival.armed) return false;
+    if (async_renderer.is_busy())    return false;
+    AppState::PendingArchivalCommand cmd = std::move(app.pending_archival);
+    app.pending_archival = {};
+    // Every park site fills reqs; an empty slot dispatches nothing and
+    // must report false so the caller's own pending work still runs.
+    if (cmd.reqs.empty()) return false;
+    if (cmd.single) {
+        dispatch_single_archival_render(std::move(cmd.reqs.front()),
+                                        std::move(cmd.fingerprint));
+    } else {
+        start_render_batch(std::move(cmd.reqs), std::move(cmd.batch_label));
+    }
+    return true;
 }
 
 void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
@@ -543,9 +601,19 @@ bool GuiInputHandler::render_bpm_sweep() {
         return false;
     }
 
-    if (async_renderer.is_busy()) return false;
-    start_render_batch(std::move(reqs), "bpm");
-    // Batch fully built and dispatched: every request carries its own moved
+    if (async_renderer.is_busy()) {
+        // A render dispatch kills the running render; a sweep never
+        // matches a session fingerprint, so there is no wait case. Park
+        // the fully built batch for the worker-idle pump.
+        AppState::PendingArchivalCommand cmd;
+        cmd.reqs        = std::move(reqs);
+        cmd.batch_label = "bpm";
+        kill_running_render_and_park(std::move(cmd));
+    } else {
+        start_render_batch(std::move(reqs), "bpm");
+    }
+    // Batch fully built and committed to run (dispatched, or parked behind
+    // the killed render's drain): every request carries its own moved
     // marker snapshot and its cell_settings.bpm descriptor string, so nothing
     // downstream reads the live bpm marker state. Wipe it and close bpm mode
     // together (exit_bpm_mode is the chokepoint — it wipes the state and

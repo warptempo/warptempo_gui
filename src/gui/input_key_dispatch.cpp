@@ -210,6 +210,11 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
     if (key == GuiKeys::Escape && async_renderer.is_busy()) {
         async_renderer.request_cancel();
         app.queue_cancel_requested = true;
+        // Esc means stop rendering: a parked archival command (a dispatch
+        // that killed this render and is waiting out its drain) is
+        // disarmed too, or it would resurrect a render the moment the
+        // cancel lands.
+        app.pending_archival = {};
         return true;
     }
     if (key == GuiKeys::Escape && app.queue_running) {
@@ -221,6 +226,7 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
         // the rare case where queue_running is set but the worker has
         // already cleared — defensive, mirrors the prior behavior.
         app.queue_cancel_requested = true;
+        app.pending_archival = {};
         return true;
     }
     return false;
@@ -295,11 +301,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
-        // Reject overlapping submissions: the dispatcher is single-job.
-        // The GUI's existing serialization (queue_running gate) prevents
-        // this in practice, but a defensive early-return keeps the
-        // contract local.
-        if (async_renderer.is_busy()) return true;
 
         // Pre-flight the live store on the GUI thread: a modeled defect
         // (a trimmed map-format render included) opens the
@@ -315,6 +316,21 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
+        // A render dispatch kills the running render — unless the running
+        // render's fingerprint equals this command's, in which case the
+        // command is a no-op: the worker is already producing exactly this
+        // deliverable. Only a single archival render carries a session
+        // fingerprint (a batch never matches), and an empty would-be
+        // fingerprint (load-identity stat failure) matches nothing.
+        std::vector<uint8_t> fingerprint =
+            compute_live_render_fingerprint(app, audio);
+        if (async_renderer.is_busy() && !fingerprint.empty() &&
+            fingerprint == async_renderer.session_fingerprint()) {
+            return true;
+        }
+
+        // Empty batch_folder/basename selects the source-dir naming
+        // convention inside do_render.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
@@ -322,33 +338,23 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.has_end,   app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
-        // Empty batch_folder/basename selects the source-dir naming
-        // convention inside do_render. The dispatch hands the request to
-        // the worker thread; on_done fires on the GUI thread when the
-        // render finishes (success, failure, or cancel).
-        app.queue_cancel_requested = false;
-        app.queue_running          = true;
-        app.queue_progress_text    = "rendering...";
-        viewport.clear_hover_popup();
-        viewport.invalidate_timestamp_area();
-        async_renderer.dispatch(std::move(req),
-            [this](RenderOutcome o) {
-                const bool success = (o == RenderOutcome::Success);
-                if (o == RenderOutcome::Cancelled) {
-                    std::fprintf(stderr, "warptempo_gui: render cancelled\n");
-                }
-                finalize_render_run();
-                if (success && app.active_audio_view == 'T' &&
-                    !target_render.is_updating()) {
-                    // ensure_ready() may fill from the shared cache when the
-                    // just-rendered fingerprint is already registered, or
-                    // render the current target state if the state changed or
-                    // a longer-than-RAM-tier entry is still registering on the
-                    // writer thread. That miss is benign; if finalize_render_run
-                    // just launched a pending target render, leave it alone.
-                    target_render.ensure_ready();
-                }
-            });
+
+        if (async_renderer.is_busy()) {
+            // Kill the running render and park this command; the
+            // worker-idle pump dispatches it once the cancellation drains.
+            AppState::PendingArchivalCommand cmd;
+            cmd.single      = true;
+            cmd.fingerprint = std::move(fingerprint);
+            cmd.reqs.push_back(std::move(req));
+            kill_running_render_and_park(std::move(cmd));
+            return true;
+        }
+
+        // The dispatch hands the request to the worker thread; on_done
+        // fires on the GUI thread when the render finishes (success,
+        // failure, or cancel).
+        dispatch_single_archival_render(std::move(req),
+                                        std::move(fingerprint));
         return true;
     }
 
@@ -367,13 +373,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // single-shot rendering into the source directory; Ctrl+Alt+E always
     // produces a batch folder under renders/.
     //
-    // Esc between entries drops the remainder. The current render
-    // cannot be interrupted (no mid-engine cancellation); its sidecars
-    // are written if it succeeds, then the loop exits and the rest of
-    // the queue is discarded. The batch folder is left as-is on disk —
-    // partial batches just contain fewer files than the queue had.
+    // Esc (or a killing render dispatch) cancels the current render
+    // cooperatively — the worker observes the cancel flag mid-engine —
+    // and drops the remainder of the batch. The batch folder is left
+    // as-is on disk — partial batches just contain fewer files than the
+    // queue had; renders/ is transient and wiped wholesale at commit.
     // The in-memory queue is cleared after execution whether all
-    // entries ran or Esc cut it short.
+    // entries ran or the run was cut short.
     if (ctrl && alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return true;
@@ -491,7 +497,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             reqs.push_back(std::move(req));
         }
 
-        if (async_renderer.is_busy()) return true;
+        if (async_renderer.is_busy()) {
+            // A render dispatch kills the running render; a queue batch
+            // never matches a session fingerprint, so there is no wait
+            // case. Park the fully built batch for the worker-idle pump.
+            AppState::PendingArchivalCommand cmd;
+            cmd.reqs        = std::move(reqs);
+            cmd.batch_label = "render queue";
+            kill_running_render_and_park(std::move(cmd));
+            return true;
+        }
         start_render_batch(std::move(reqs), "render queue");
         return true;
     }
@@ -700,9 +715,21 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        if (async_renderer.is_busy()) return true;
-        start_render_batch(std::move(reqs), "render iterations");
-        app.iteration_mode_enabled = false;   // iteration sweep turns off after fire
+        if (async_renderer.is_busy()) {
+            // A render dispatch kills the running render; a sweep never
+            // matches a session fingerprint, so there is no wait case.
+            // Park the fully built batch for the worker-idle pump.
+            AppState::PendingArchivalCommand cmd;
+            cmd.reqs        = std::move(reqs);
+            cmd.batch_label = "render iterations";
+            kill_running_render_and_park(std::move(cmd));
+        } else {
+            start_render_batch(std::move(reqs), "render iterations");
+        }
+        // The sweep is committed to run either way (dispatched, or parked
+        // behind the killed render's drain): iteration mode turns off after
+        // fire.
+        app.iteration_mode_enabled = false;
         viewport.invalidate_top_strip();
         return true;
     }
@@ -1206,17 +1233,19 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             // nothing.
             if (flag_editor.commit_bpm_edit()) {
                 // render_bpm_sweep owns the mode teardown on its success
-                // path: after the batch is built and dispatched it wipes the
-                // session-only bpm state and exits bpm mode, so a dispatched
-                // sweep leaves no marker carrying bpm state and the next M on
-                // this marker seeds []. A guard-bail (return false) is an
-                // environmental backstop — renderer busy, batch-folder
-                // creation failure; the stale-endpoint / store-defect
-                // classes are unreachable because the modal bpm session
-                // freezes the store between mode entry and this dispatch.
-                // The commit already closed the editor, and bpm mode is
-                // exactly its editor session, so a bail exits the mode
-                // here — mode-without-editor stays unreachable.
+                // path: after the batch is built and accepted (dispatched,
+                // or parked behind a killed render's drain — a busy worker
+                // no longer bails) it wipes the session-only bpm state and
+                // exits bpm mode, so an accepted sweep leaves no marker
+                // carrying bpm state and the next M on this marker seeds
+                // []. A guard-bail (return false) is an environmental
+                // backstop — batch-folder creation failure, no valid
+                // cells; the stale-endpoint / store-defect classes are
+                // unreachable because the modal bpm session freezes the
+                // store between mode entry and this dispatch. The commit
+                // already closed the editor, and bpm mode is exactly its
+                // editor session, so a bail exits the mode here —
+                // mode-without-editor stays unreachable.
                 if (!render_bpm_sweep()) {
                     flag_editor.exit_bpm_mode();
                 }

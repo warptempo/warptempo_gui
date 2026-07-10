@@ -197,7 +197,15 @@ struct GuiInputHandler {
           prompt(prompt_),
           settings_editor(settings_editor_),
           target_render(target_render_),
-          paint_handler(paint_handler_) {}
+          paint_handler(paint_handler_) {
+        // The worker-idle pump lives on GuiTargetRender (every completion
+        // path funnels through maybe_dispatch_pending) while the parked
+        // archival command's dispatch machinery lives here. Bridge them:
+        // the pump offers each idle beat to the archival slot first
+        // through this hook.
+        target_render.dispatch_pending_archival =
+            [this] { return dispatch_pending_archival_command(); };
+    }
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
@@ -267,6 +275,16 @@ struct GuiInputHandler {
     // done. Keys not offered by the current defect are swallowed.
     void handle_defect_response(char k);
 
+    // Pump half of the kill-and-park dispatch rule, reached through
+    // GuiTargetRender's dispatch_pending_archival hook on every
+    // worker-completion path. Dispatches the parked archival command
+    // (app.pending_archival) when one is armed and the worker is idle: the
+    // Ctrl+Alt+R shape through dispatch_single_archival_render (re-arming
+    // the session fingerprint), a batch through start_render_batch.
+    // Returns true iff a session was started, so the caller leaves its own
+    // pending preview queued behind it.
+    bool dispatch_pending_archival_command();
+
 private:
     // ActiveBatch holds the run_render_batch state machine. The batch loop
     // used to be synchronous (blocking inside do_render); now each entry is
@@ -310,6 +328,28 @@ private:
     // strip. The summary log is the caller's concern.
     void finalize_render_run();
 
+    // Dispatch a single archival render (the Ctrl+Alt+R shape) on an idle
+    // worker: source-directory naming (empty batch_folder/basename inside
+    // do_render), session bookkeeping, and an on_done that finalizes the
+    // run and re-arms target view. `fingerprint` — the command's
+    // deliverable fingerprint, possibly empty on a load-identity stat
+    // failure at build time — becomes the async renderer's session
+    // fingerprint, so an identical re-dispatch no-ops and a
+    // fingerprint-matching target-preview trigger waits the render out
+    // instead of killing it. Caller must have verified the worker is idle.
+    void dispatch_single_archival_render(RenderRequest req,
+                                         std::vector<uint8_t> fingerprint);
+
+    // The busy half of the dispatch rule: kill the running render with the
+    // Esc pair (request_cancel interrupts the current render mid-stream;
+    // queue_cancel_requested stops a batch state machine from advancing
+    // after the cancelled entry's on_done) and park the fully built
+    // command in the one-slot app.pending_archival — a newer command
+    // replaces an older parked one. Cancellation is cooperative: the
+    // worker finishes acknowledging before going idle, so the slot waits
+    // for the completion pump rather than dispatching here.
+    void kill_running_render_and_park(AppState::PendingArchivalCommand cmd);
+
     // Build a QueuedRender from the current live AppState: source path,
     // markers, phase resets, engine settings, and the four trim fields.
     // Shared by the two Ctrl+E / Ctrl+Alt+E enqueue sites so they can't
@@ -335,11 +375,13 @@ private:
     // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
     // gate; it is now fired by Enter in the bottom-strip BPM editor (after
-    // a successful commit). Returns true if a render batch was dispatched;
-    // false on any guard bail (wrong view / mode off / no owner / blank
-    // values / zero-duration span / no valid cells / renderer busy) — the
-    // Enter dispatch exits bpm mode on a bail, since the editor already
-    // closed on commit and the mode is exactly its editor session.
+    // a successful commit). Returns true if the batch was accepted —
+    // dispatched, or (when the worker was busy) parked behind the killed
+    // render's drain via kill_running_render_and_park; false on any guard
+    // bail (wrong view / mode off / no owner / blank values /
+    // zero-duration span / no valid cells / batch-folder creation failure)
+    // — the Enter dispatch exits bpm mode on a bail, since the editor
+    // already closed on commit and the mode is exactly its editor session.
     bool render_bpm_sweep();
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).

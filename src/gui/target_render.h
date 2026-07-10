@@ -8,6 +8,25 @@
 #include "render_pipeline.h"
 #include "viewport.h"
 
+#include <cstdint>
+#include <functional>
+#include <vector>
+
+// The live state's would-be render fingerprint: the same render_fingerprint
+// computation, over the same inputs (source path + load-time identity,
+// sample rate, both marker stores, engine settings, trim), that a dispatch
+// of the current state performs. The identity bytes are the load-time pair
+// (GuiAudio's recorded size/mtime), built only after proving the current
+// disk stat still equals that pair — so a fingerprint can never bind audio
+// for any source other than the loaded buffer, even if a different file
+// with a matching stat is later swapped in at the path. Returns empty on a
+// stat failure or identity mismatch; callers treat empty as "matches
+// nothing" and fall through to their non-reuse path. Shared by the
+// target-view reuse rungs (dispatch_render_now), the preview match-wait
+// (trigger), and the Ctrl+Alt+R no-op/session-fingerprint computation.
+std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
+                                                     const GuiAudio& audio);
+
 // Target-view live target render orchestrator. Owns the cancel-restart
 // dispatch helper called from every output-affecting mutation site (marker
 // edits, phase reset edits, trim hotkeys, settings commits, undo/redo, tab
@@ -59,9 +78,19 @@ struct GuiTargetRender {
     bool target_view_available() const;
 
     // Pumped from finalize_render_run / on_batch_entry_complete /
-    // render on_done. Dispatches the target render if pending_ is
-    // set AND the worker is idle. Idempotent.
+    // render on_done. Offers the worker-idle beat to the parked archival
+    // command first (dispatch_pending_archival below), then dispatches the
+    // target render if pending_ is set AND the worker is still idle.
+    // Idempotent.
     void maybe_dispatch_pending();
+
+    // Installed by GuiInputHandler at construction: dispatches the one-slot
+    // parked archival command (app.pending_archival) when armed and the
+    // worker is idle; returns true iff it dispatched. Consulted at the head
+    // of maybe_dispatch_pending, ahead of the pending preview — rationale
+    // there. Null only before GuiInputHandler exists, when no key input can
+    // have parked a command yet.
+    std::function<bool()> dispatch_pending_archival;
 
     // True iff a target render is currently in flight (worker busy
     // with the target render's request) OR a target-render dispatch is

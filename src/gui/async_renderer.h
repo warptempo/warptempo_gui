@@ -65,6 +65,24 @@ public:
     // handler to decide whether to deliver a cancel.
     bool is_busy() const;
 
+    // Session fingerprint: non-empty exactly while the in-flight job is a
+    // single archival render whose deliverable fingerprint was computable at
+    // dispatch time. dispatch() clears it (so batch entries and target-view
+    // preview renders never carry one) and the single-archival dispatch tail
+    // re-arms it immediately after dispatching; it clears again when the
+    // completion event fires. Read on the GUI thread by the archival command
+    // sites (an equal fingerprint makes a re-dispatch a no-op — the running
+    // render is already producing exactly that deliverable) and by the
+    // target preview's trigger (an equal fingerprint waits the render out
+    // and adopts its output through the reuse rungs instead of killing it).
+    // GUI-thread-only state; the worker never touches it.
+    void set_session_fingerprint(std::vector<uint8_t> fp) {
+        session_fingerprint_ = std::move(fp);
+    }
+    const std::vector<uint8_t>& session_fingerprint() const {
+        return session_fingerprint_;
+    }
+
 private:
     enum class State : int { Idle, Running, CompletionPending };
 
@@ -88,6 +106,9 @@ private:
     // Completion result. Written by the worker just before signal_completion;
     // read by the GUI thread in on_completion_event.
     RenderOutcome last_outcome_ = RenderOutcome::Failed;
+
+    // See set_session_fingerprint(). GUI-thread-only; no locking.
+    std::vector<uint8_t> session_fingerprint_;
 
     int completion_fd_ = -1;
 };

@@ -847,6 +847,33 @@ struct AppState {
     };
     std::vector<QueuedRender> queued_renders;
 
+    // One-slot pending archival render command. An archival dispatch
+    // (Ctrl+Alt+R / Ctrl+Alt+E / the iteration or bpm sweep) that finds the
+    // worker busy kills the running render (the Esc pair: request_cancel +
+    // queue_cancel_requested) and parks its fully built request set here;
+    // the worker-idle pump (GuiTargetRender::maybe_dispatch_pending, via
+    // GuiInputHandler::dispatch_pending_archival_command) dispatches it once
+    // the cooperative cancellation drains — never a synchronous wait on the
+    // GUI thread. A newer command replaces an older parked one wholesale.
+    // Esc during the drain disarms the slot (Esc means stop rendering, and
+    // the parked command would otherwise resurrect a render right after the
+    // cancel lands); a source load drops it (cancel_for_load), since the
+    // requests were built against the torn-down source.
+    struct PendingArchivalCommand {
+        bool armed = false;
+        // Ctrl+Alt+R shape: reqs holds exactly one request, dispatched
+        // through dispatch_single_archival_render with `fingerprint` as the
+        // session fingerprint (possibly empty on a load-identity stat
+        // failure at build time). Batches (armed && !single) go through
+        // start_render_batch with `batch_label` and carry no fingerprint —
+        // a batch session never matches a dispatch.
+        bool                       single = false;
+        std::vector<uint8_t>       fingerprint;
+        std::vector<RenderRequest> reqs;
+        std::string                batch_label;
+    };
+    PendingArchivalCommand pending_archival;
+
     // Phase reset propagate (W-mode Ctrl+P / Ctrl+Alt+P). Single-slot
     // session-only clipboard cleared on app exit. `pending_paste_anchor`
     // is the destination warp-marker index captured when the paste

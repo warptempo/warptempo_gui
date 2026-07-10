@@ -54,6 +54,11 @@ void GuiAsyncRenderer::dispatch(RenderRequest req, DoneCallback on_done) {
         return;
     }
 
+    // A new session starts with no fingerprint: only the single-archival
+    // dispatch tail re-arms it after this call, so batch entries and
+    // target-view preview renders never carry one.
+    session_fingerprint_.clear();
+
     {
         std::lock_guard<std::mutex> lk(mtx_);
         pending_req_ = std::move(req);
@@ -65,6 +70,11 @@ void GuiAsyncRenderer::dispatch(RenderRequest req, DoneCallback on_done) {
 }
 
 void GuiAsyncRenderer::request_cancel() {
+    // A cancel-requested session will not complete its deliverable, so it
+    // no longer counts as "already producing" anything: drop the session
+    // fingerprint so no dispatch or preview trigger can match-wait on a
+    // doomed render during its cooperative drain.
+    session_fingerprint_.clear();
     cancel_flag_.store(true);
 }
 
@@ -118,6 +128,10 @@ void GuiAsyncRenderer::on_completion_event() {
     }
 
     const RenderOutcome outcome = last_outcome_;
+    // The session is over; whatever fingerprint it carried no longer names
+    // a running render. Cleared before on_done so any dispatch made from
+    // inside the callback starts from a clean slate.
+    session_fingerprint_.clear();
     DoneCallback cb;
     {
         std::lock_guard<std::mutex> lk(mtx_);

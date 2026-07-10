@@ -9,6 +9,28 @@
 #include <cstdio>
 #include <utility>
 
+std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
+                                                     const GuiAudio& audio) {
+    // The fingerprint's identity bytes are the load-time pair (GuiAudio's
+    // recorded size/mtime), built only after proving the current disk stat
+    // still equals that pair — see the declaration for the full rationale.
+    RenderFileIdentity source_identity;
+    if (stat_file_identity(app.source_audio_path, source_identity) &&
+        source_identity.size == audio.source_load_size() &&
+        source_identity.mtime == audio.source_load_mtime()) {
+        RenderFileIdentity load_time_identity;
+        load_time_identity.size  = audio.source_load_size();
+        load_time_identity.mtime = audio.source_load_mtime();
+        return render_fingerprint(
+            app.source_audio_path, load_time_identity, audio.sample_rate(),
+            app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+            app.engine_settings,
+            app.trim.has_begin, app.trim.begin_frame,
+            app.trim.has_end,   app.trim.end_frame);
+    }
+    return {};
+}
+
 bool GuiTargetRender::target_view_available() const {
     return app.engine_settings.output_format == "wav";
 }
@@ -46,18 +68,38 @@ void GuiTargetRender::trigger() {
         app.playhead_scanner_sample = app.playhead_cursor_sample;
     }
 
-    // Cancel a running archival batch (Ctrl+Alt+R / Ctrl+Alt+E /
-    // Ctrl+Alt+I / BPM-sweep). The batch state machine consults
-    // queue_cancel_requested at on_batch_entry_complete time and
-    // finalizes instead of dispatching the next entry, so setting it
-    // here is enough — no need to touch queued_renders, whose entries
-    // a running batch has already moved into batch_.reqs.
-    //
-    // Must NOT clear app.queued_renders here: that queue holds pending
-    // Ctrl+E snapshots, accumulated independently of the live target
-    // preview, and has to survive the authoring edits (this trigger())
-    // made between Ctrl+E presses.
-    app.queue_cancel_requested = true;
+    // Match-wait: a running single archival render whose session
+    // fingerprint equals this preview's would-be dispatch is already
+    // synthesizing exactly the audio the preview needs. Leave it running
+    // and just stay pending_ — the worker-idle pump
+    // (maybe_dispatch_pending → dispatch_render_now) adopts the finished
+    // deliverable through the cache/artifact reuse rungs with no second
+    // synthesis. Batch sessions and preview renders carry no session
+    // fingerprint, so they never match; a stat/identity failure yields an
+    // empty would-be fingerprint here, which also never matches — both
+    // fall through to the kill. The fingerprint inputs are identical at
+    // trigger time and at the eventual dispatch: any input change between
+    // the two re-runs trigger(), which re-decides.
+    const bool match_wait =
+        async_renderer.is_busy() &&
+        !async_renderer.session_fingerprint().empty() &&
+        compute_live_render_fingerprint(app, audio) ==
+            async_renderer.session_fingerprint();
+
+    if (!match_wait) {
+        // Kill a running archival batch (Ctrl+Alt+R / Ctrl+Alt+E /
+        // Ctrl+Alt+I / BPM-sweep). The batch state machine consults
+        // queue_cancel_requested at on_batch_entry_complete time and
+        // finalizes instead of dispatching the next entry, so setting it
+        // here is enough — no need to touch queued_renders, whose entries
+        // a running batch has already moved into batch_.reqs.
+        //
+        // Must NOT clear app.queued_renders here: that queue holds pending
+        // Ctrl+E snapshots, accumulated independently of the live target
+        // preview, and has to survive the authoring edits (this trigger())
+        // made between Ctrl+E presses.
+        app.queue_cancel_requested = true;
+    }
 
     // Surface the target-render status through queue_progress_text.
     // "rendering..." (archival) and "updating..." (target render) share
@@ -67,9 +109,12 @@ void GuiTargetRender::trigger() {
 
     pending_ = true;
     if (async_renderer.is_busy()) {
-        // Worker is mid-render. Cancel; the existing on_done path will
-        // call maybe_dispatch_pending() once the worker exits.
-        async_renderer.request_cancel();
+        if (!match_wait) {
+            // Worker is mid-render on some other output. Cancel; the
+            // existing on_done path will call maybe_dispatch_pending()
+            // once the worker exits.
+            async_renderer.request_cancel();
+        }
         return;
     }
     // Worker is idle. Dispatch immediately.
@@ -77,8 +122,15 @@ void GuiTargetRender::trigger() {
 }
 
 void GuiTargetRender::maybe_dispatch_pending() {
-    if (!pending_)                  return;
     if (async_renderer.is_busy())   return;
+    // The one-slot parked archival command dispatches ahead of the pending
+    // preview: an explicit user command outranks a derived preview. The
+    // preview stays pending_ behind the new session — the same
+    // defer-behind-a-busy-worker shape as always — and re-derives, or
+    // adopts the new session's output through the reuse rungs, when that
+    // session ends and re-pumps this method.
+    if (dispatch_pending_archival && dispatch_pending_archival()) return;
+    if (!pending_)                  return;
     if (!target_view_available()) {
         pending_ = false;
         return;
@@ -119,30 +171,13 @@ void GuiTargetRender::dispatch_render_now() {
     // hits decode the exact codec roundtrip of those samples, and archival
     // artifact loads decode the same deliverable.
     //
-    // The fingerprint's identity bytes are the load-time pair (GuiAudio's
-    // recorded size/mtime), built only after proving the current disk stat
-    // still equals that pair — so a reuse hit can never bind audio for any
-    // source other than the loaded buffer, even if a different file with a
-    // matching stat is later swapped in at the path. On stat failure or
-    // identity mismatch the fingerprint clears, both reuse rungs miss, and
+    // The identity-proving computation lives in
+    // compute_live_render_fingerprint (shared with the preview match-wait
+    // and the Ctrl+Alt+R session fingerprint). On stat failure or identity
+    // mismatch the fingerprint comes back empty, both reuse rungs miss, and
     // the flow falls through to dispatch, where do_render's source-changed
     // check refuses the render (that refusal owns the stderr diagnostic).
-    RenderFileIdentity source_identity;
-    if (stat_file_identity(app.source_audio_path, source_identity) &&
-        source_identity.size == audio.source_load_size() &&
-        source_identity.mtime == audio.source_load_mtime()) {
-        RenderFileIdentity load_time_identity;
-        load_time_identity.size  = audio.source_load_size();
-        load_time_identity.mtime = audio.source_load_mtime();
-        last_fingerprint_ = render_fingerprint(
-            app.source_audio_path, load_time_identity, audio.sample_rate(),
-            app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
-            app.engine_settings,
-            app.trim.has_begin, app.trim.begin_frame,
-            app.trim.has_end,   app.trim.end_frame);
-    } else {
-        last_fingerprint_.clear();
-    }
+    last_fingerprint_ = compute_live_render_fingerprint(app, audio);
 
     if (!last_fingerprint_.empty() &&
         render_cache.lookup(last_fingerprint_, audio.channels(),
@@ -443,6 +478,10 @@ void GuiTargetRender::cancel_for_load() {
     // busy archival render, clearing the pending bit aborts the queued
     // dispatch before maybe_dispatch_pending() can fire it.
     pending_ = false;
+    // Same for a parked archival command: its requests were built against
+    // the source being torn down, so drop the slot before the pump can
+    // dispatch it against the new load.
+    app.pending_archival = {};
 
     if (in_flight_) {
         // Worker is mid-target-render, writing into target_buffer. Do NOT
