@@ -42,6 +42,18 @@ inline constexpr double kBpmMax   = 400.0;
 inline constexpr int    kBpmBeatsMax  = 9999; // beats stays a positive int, capped
 inline constexpr double kIterDeltaMax = 4.0;  // iteration deltas live in [-4.00, +4.00]
 
+// Cent count (an integer-valued double) -> the tempo double its N.NN
+// spelling parses to. IEEE division is correctly rounded, so cents / 100.0
+// IS the double nearest the exact centesimal value — bit-identical to what
+// strtod/from_chars produce for the same value's N.NN text. Every tempo
+// producer that computes on the integer cent grid (the Ctrl+wheel step, the
+// bpm derivation, the iteration sweep's per-cell base + delta) makes its
+// final grid-to-double conversion through this helper, and does its
+// ARITHMETIC in cents first: adding two tempo doubles directly (0.28 + 0.01)
+// can land on the neighbor of the parse-canonical double, producing a value
+// the strict N.NN tempo grammar then refuses to re-load.
+inline double tempo_from_cents(double cents) { return cents / 100.0; }
+
 // Value double -> shortest round-trip decimal text (std::to_chars general
 // form), zero-padded so the fraction carries at least `min_decimals`
 // digits (the decimal point is added when absent). Padding keeps the

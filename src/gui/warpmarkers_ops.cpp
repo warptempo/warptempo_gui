@@ -414,7 +414,7 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         // guard is needed: every restable value is in-bracket, so the cent
         // product v * 100.0 cannot leave the finite double domain.
         cents = std::clamp(cents, kTempoMin * 100.0, kTempoMax * 100.0);
-        const double new_tempo = cents / 100.0;
+        const double new_tempo = tempo_from_cents(cents);
         if (!m.tempo_inherits && new_tempo == m.tempo_base) continue;
         m.tempo_inherits = false;
         m.tempo_base     = new_tempo;

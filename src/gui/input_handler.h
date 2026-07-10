@@ -52,11 +52,12 @@ struct GuiPaintHandler;
 // for that span, and a target BPM, return the (base_tempo, scale) pair the
 // engine needs so that one cell of the BPM sweep renders at exactly the
 // target tempo. base_tempo rounds to 2 decimals via banker's rounding
-// (std::nearbyint with FE_TONEAREST); scale rounds to 6 decimals the same
-// way. The bash-script port uses an epsilon nudge before rounding to work
-// around shell-level numerics — that nudge does not apply in C++ and is
-// intentionally omitted here. The C++ port may diverge from the bash script
-// on tie cases; this is documented behavior.
+// (std::nearbyint with FE_TONEAREST); scale stays full double precision
+// (the shortest round-trip serializer keeps in-memory and on-disk values
+// bit-identical). The bash-script port uses an epsilon nudge before
+// rounding to work around shell-level numerics — that nudge does not apply
+// in C++ and is intentionally omitted here. The C++ port may diverge from
+// the bash script on tie cases; this is documented behavior.
 struct BaseTempoScale {
     double base_tempo;
     double scale;
@@ -78,7 +79,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     if (!std::isfinite(ratio)) return std::nullopt;
 
     const double base_tempo =
-        std::nearbyint(ratio * 100.0) / 100.0;
+        tempo_from_cents(std::nearbyint(ratio * 100.0));
     if (!std::isfinite(base_tempo) ||
         base_tempo == 0.0) return std::nullopt;
     // Tempo bracket (value_format.h): a derived base tempo lands in marker

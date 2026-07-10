@@ -542,16 +542,18 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // Snapshot markers in timeline order (the GuiWarpMarkers store is
         // sorted by time_frame, with ties legal). For each owning marker
-        // build its per-cell delta list: a single 0.0 when no iter
-        // range is authored, otherwise integer-cents enumeration from
-        // iter_start to iter_end inclusive. Integer-cents avoids the
-        // float-accumulation drift a naive `for (d=start; d<=end;
-        // d+=0.01)` would suffer across many steps.
+        // build its per-cell delta list IN INTEGER CENTS: a single 0 when
+        // no iter range is authored, otherwise integer-cents enumeration
+        // from iter_start to iter_end inclusive. The deltas stay integer
+        // cents all the way through the per-cell base + delta addition —
+        // adding tempo doubles instead (0.28 + 0.01) can land one ulp off
+        // the parse-canonical double, and the batch writer would then emit
+        // a sidecar the strict N.NN tempo grammar refuses at promote.
         const std::vector<GuiWarpMarker> base_warp_markers =
             app.warpmarkers.markers();
-        std::vector<int>                 eligible_indices;
-        std::vector<std::vector<double>> per_marker_deltas;
-        std::vector<bool>                is_swept;
+        std::vector<int>              eligible_indices;
+        std::vector<std::vector<int>> per_marker_delta_cents;
+        std::vector<bool>             is_swept;
         for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
             const GuiWarpMarker& m = base_warp_markers[i];
             if (!iter_popup_eligible_marker(m)) continue;
@@ -559,7 +561,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             const bool swept =
                 !std::isnan(m.iter_start) && !std::isnan(m.iter_end);
             is_swept.push_back(swept);
-            std::vector<double> deltas;
+            std::vector<int> delta_cents;
             if (swept) {
                 const int start_cents = static_cast<int>(
                     std::lround(m.iter_start * 100.0));
@@ -569,17 +571,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 // hand-edit of memory could violate it. Treat that as
                 // no sweep rather than producing zero cells.
                 if (start_cents > end_cents) {
-                    deltas.push_back(0.0);
+                    delta_cents.push_back(0);
                     is_swept.back() = false;
                 } else {
                     for (int c = start_cents; c <= end_cents; ++c) {
-                        deltas.push_back(static_cast<double>(c) / 100.0);
+                        delta_cents.push_back(c);
                     }
                 }
             } else {
-                deltas.push_back(0.0);
+                delta_cents.push_back(0);
             }
-            per_marker_deltas.push_back(std::move(deltas));
+            per_marker_delta_cents.push_back(std::move(delta_cents));
         }
 
         bool any_swept = false;
@@ -607,7 +609,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         constexpr size_t kMaxIterSweepCells = 10000;
         size_t total_cells = 1;
         bool over_cap = false;
-        for (const auto& d : per_marker_deltas) {
+        for (const auto& d : per_marker_delta_cents) {
             total_cells *= d.size();
             if (total_cells > kMaxIterSweepCells) { over_cap = true; break; }
         }
@@ -687,7 +689,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // current cell coordinate along the k-th eligible marker
         // (timeline order). Rightmost dimension increments fastest:
         // consecutive cells differ in the last marker's delta first.
-        const size_t num_dims = per_marker_deltas.size();
+        const size_t num_dims = per_marker_delta_cents.size();
         std::vector<size_t> indices(num_dims, 0);
 
         std::vector<RenderRequest> reqs;
@@ -696,7 +698,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             std::string delta_csv;
             for (size_t k = 0; k < num_dims; ++k) {
                 if (!is_swept[k]) continue;
-                const double d = per_marker_deltas[k][indices[k]];
+                const double d =
+                    tempo_from_cents(per_marker_delta_cents[k][indices[k]]);
                 char dbuf[16];
                 std::snprintf(dbuf, sizeof(dbuf), "%+0.2f", d);
                 if (!delta_csv.empty()) delta_csv += ',';
@@ -717,10 +720,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 // so it takes no bracket gate: with deltas up to
                 // +-kIterDeltaMax a cell tempo can go non-positive, and
                 // build_warp_frame_map's existing refusal on the async
-                // render path (stderr) is the backstop.
-                cell_warp_markers[mi].tempo_base =
-                    base_warp_markers[mi].tempo_base +
-                    per_marker_deltas[k][indices[k]];
+                // render path (stderr) is the backstop. The base is on the
+                // cent grid (every tempo producer is), so lround recovers
+                // its exact cent index and the base + delta sum happens in
+                // integer cents — tempo_from_cents then yields exactly the
+                // double the cell sidecar's N.NN spelling re-parses to,
+                // keeping Ctrl+Alt+C promotion closed under the grammar.
+                const long base_cents = std::lround(
+                    base_warp_markers[mi].tempo_base * 100.0);
+                cell_warp_markers[mi].tempo_base = tempo_from_cents(
+                    static_cast<double>(base_cents) +
+                    per_marker_delta_cents[k][indices[k]]);
                 // The engine doesn't consume iter values; clear them
                 // so the request is quiet.
                 cell_warp_markers[mi].iter_start =
@@ -744,7 +754,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // the loop exits before that's read.
             for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
                 ++indices[k];
-                if (indices[k] < per_marker_deltas[k].size()) break;
+                if (indices[k] < per_marker_delta_cents[k].size()) break;
                 indices[k] = 0;
             }
         }

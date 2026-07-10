@@ -28,8 +28,10 @@ bool is_valid_label_format(const std::string& s) {
 // An N.NN spelling is on the 0.01 cent grid and canonical by construction,
 // so no separate grid or round-trip check is needed: every tempo producer
 // (the Ctrl+wheel cents arithmetic, the bpm derivation's nearbyint cents,
-// iteration cells as sums of cent values, the pass/reset 1.00 defaults)
-// lands on that grid, and the min-2 serializer writes exactly N.NN for it.
+// iteration cells summed in integer cents, the pass/reset 1.00 defaults)
+// computes in cents and converts once through tempo_from_cents
+// (value_format.h), landing exactly on that grid, and the min-2 serializer
+// writes exactly N.NN for it.
 bool is_two_decimal_tempo_spelling(const std::string& s) {
     const size_t dot = s.find('.');
     if (dot == std::string::npos) return false;                    // dot required
