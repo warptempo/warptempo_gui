@@ -223,22 +223,24 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // shows (flag_text returns label_ref verbatim when set), so the whole payload
 // is stored as label_ref with no payload-grammar parsing, no label resolution,
 // no tempo/scale parsing, and no validation. Tempo fields stay at their
-// defaults and label_def stays empty. Each line: skip blanks; a leading `#`
-// marks the marker disabled; split on the first `|` into position|payload.
-// The position is a frame double on the render's own time axis, generically
-// fractional, decoded through the render-display pair
-// (parse_render_frame_double, frame_format.h) — the authored parse would
-// refuse the fractional target positions this domain routinely carries. The
-// decoded double then quantizes through snap_authored_frame into the int64
-// time_frame this display store shares with the authored type: every
-// downstream consumer (stem paint, click navigation) already rounded to the
-// nearest whole frame at use, so rounding once at load displays
-// identically; the on-disk sidecar keeps its full fractional precision.
-// Lines with no pipe or an unparseable position are skipped individually —
-// a bad line never fails the whole load, since this is display-only. This
-// hash handling deliberately DIVERGES from the strict authoring parser, which
-// hard-fails a '#' line whose position or payload is malformed; here such a
-// line is skipped, not an error.
+// defaults and label_def stays empty. Each line: skip blanks; split on the
+// first `|` into position|payload. The position is a frame double on the
+// render's own time axis, generically fractional, decoded through the
+// render-display pair (parse_render_frame_double, frame_format.h) — the
+// authored parse would refuse the fractional target positions this domain
+// routinely carries. The decoded double then quantizes through
+// snap_authored_frame into the int64 time_frame this display store shares
+// with the authored type: every downstream consumer (stem paint, click
+// navigation) already rounded to the nearest whole frame at use, so rounding
+// once at load displays identically; the on-disk sidecar keeps its full
+// fractional precision. Lines with no pipe or an unparseable position are
+// skipped individually — a bad line never fails the whole load, since this is
+// display-only. The render-display grammar has no disabled rows: the sidecar
+// writer filters every effectively-disabled marker out before serializing
+// (the render keep mask), so the rows built here always carry the struct
+// default disabled = false, and a leading '#' can appear only on a
+// hand-edited line, where it simply fails the position parse and is skipped
+// like any other junk — no special-casing.
 static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
         const std::string& path) {
     std::vector<GuiWarpMarker> out;
@@ -247,21 +249,14 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
     std::string line;
     while (std::getline(f, line)) {
         if (line.empty()) continue;
-        std::string t = line;
-        bool disabled = false;
-        if (t[0] == '#') {
-            disabled = true;
-            t.erase(0, 1);
-        }
-        const size_t pipe = t.find('|');
+        const size_t pipe = line.find('|');
         if (pipe == std::string::npos) continue;
-        const std::string left = t.substr(0, pipe);
+        const std::string left = line.substr(0, pipe);
         GuiWarpMarker m;
         double render_frame = 0.0;
         if (!parse_render_frame_double(left, render_frame)) continue;
         m.time_frame   = snap_authored_frame(render_frame);
-        m.label_ref    = t.substr(pipe + 1);
-        m.disabled     = disabled;
+        m.label_ref    = line.substr(pipe + 1);
         out.push_back(std::move(m));
     }
     return out;
@@ -279,21 +274,18 @@ static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
 // would walk as a commit defect — but this reader simply displays them as
 // overlapping flags; exactly the case leniency exists for.
 //
-// Each line: skip byte-empty lines; a leading `#` marks the marker disabled
-// and is stripped before the position check. The remainder must parse in
-// full as a render-display frame double (parse_render_frame_double consumes
-// the whole field, so trailing characters fail it; fractional target
-// positions are this domain's normal shape and parse fine) or the line is
-// skipped individually. The decoded double quantizes through
-// snap_authored_frame into the shared int64 time_frame, same rationale as
-// the warp reader above (paint and navigation already round at use). No
-// cross-line validation of any kind. Hash semantics here deliberately DIVERGE
-// from the strict authoring parser: the strict parser hard-fails a '#' line
-// whose remainder is not a valid position (there a '#' line is a disabled
-// marker or it is load-fatal), while this display-only reader skips such a
-// line individually — hash followed by a valid position is a disabled marker,
-// hash followed by anything else is skipped, and garbage without a hash is
-// skipped instead of erroring. Leniency is the point: a bad line costs one
+// Each line: skip byte-empty lines; the whole line must parse in full as a
+// render-display frame double (parse_render_frame_double consumes the whole
+// field, so trailing characters fail it; fractional target positions are this
+// domain's normal shape and parse fine) or the line is skipped individually.
+// The decoded double quantizes through snap_authored_frame into the shared
+// int64 time_frame, same rationale as the warp reader above (paint and
+// navigation already round at use). No cross-line validation of any kind. The
+// render-display grammar has no disabled rows: the sidecar writer drops every
+// disabled reset before serializing, so the rows built here always carry the
+// struct default disabled = false, and a leading '#' can appear only on a
+// hand-edited line, where it fails the position parse and is skipped like any
+// other junk — no special-casing. Leniency is the point: a bad line costs one
 // flag, never the whole overlay.
 static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
         const std::string& path) {
@@ -303,17 +295,10 @@ static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
     std::string line;
     while (std::getline(f, line)) {
         if (line.empty()) continue;
-        std::string t = line;
-        bool disabled = false;
-        if (t[0] == '#') {
-            disabled = true;
-            t.erase(0, 1);
-        }
         GuiPhaseResetMarker m;
         double render_frame = 0.0;
-        if (!parse_render_frame_double(t, render_frame)) continue;
+        if (!parse_render_frame_double(line, render_frame)) continue;
         m.time_frame   = snap_authored_frame(render_frame);
-        m.disabled     = disabled;
         out.push_back(std::move(m));
     }
     return out;
