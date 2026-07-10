@@ -247,6 +247,22 @@ RenderOutcome do_render(const RenderRequest& req,
         unlink_silent(staging_output_path);
     };
 
+    // Cancellation gate for the orchestrator-side phases. The engine
+    // observes the same flag internally; these checks cover everything
+    // around it — the reuse rungs, the post-engine chain, the map writes,
+    // and every final-name publication — so an Esc (or a superseding
+    // dispatch) that lands after the engine's last internal check can never
+    // publish a deliverable, fingerprint, or cache entry as Success. A
+    // cancelled return unlinks the staging file; nothing has landed under a
+    // final name at any gated point.
+    auto cancel_requested = [&]() {
+        return cancel_flag && cancel_flag->load();
+    };
+    auto cancelled_outcome = [&]() -> RenderOutcome {
+        cleanup_all();
+        return RenderOutcome::Cancelled;
+    };
+
     auto remove_created_commit_sidecars =
         [](const std::vector<std::string>& paths) {
             for (const std::string& path : paths) {
@@ -380,6 +396,7 @@ RenderOutcome do_render(const RenderRequest& req,
             req.has_trim_begin, req.trim_begin_frame,
             req.has_trim_end, req.trim_end_frame);
     }
+    if (cancel_requested()) return cancelled_outcome();
     // Fingerprint emptiness doubles as a map-format gate on this shared
     // pre-branch path: non-wav formats compute no fingerprint.
     if (!req.output_buffer && !fingerprint.empty() &&
@@ -699,6 +716,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // source-load or engine work; an empty fingerprint (non-wav formats
     // compute no fingerprint) skips both exactly as it already skips the
     // up-to-date check above.
+    if (cancel_requested()) return cancelled_outcome();
     if (!req.output_buffer && !fingerprint.empty()) {
         // Rung: project artifact candidate. A batch entry whose fixed
         // archival sibling already holds a validated artifact for this
@@ -913,6 +931,7 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return handle_eng(er);
         }
+        if (cancel_requested()) return cancelled_outcome();
 
         // The shared post-engine chain (finish_render, src/prepost/): crop
         // to the exact authored window when trimmed, peak limiter when
@@ -920,17 +939,20 @@ RenderOutcome do_render(const RenderRequest& req,
         // on the disk route, or the in-place PCM_24 snap (limiter-on only,
         // no encode) on the target-view buffer route. One implementation
         // shared with warptempo_cli, so the CLI stays byte-identical to the
-        // GUI by construction.
-        if (auto fin = finish_render(
-                *out_buf, src_ch, src_sr, ep.limiter,
-                trim_plan ? &trim_plan->post : nullptr,
-                req.output_buffer ? std::string() : staging_output_path);
-            !fin) {
+        // GUI by construction (the CLI passes no cancel flag, so its chain
+        // always completes).
+        auto fin = finish_render(
+            *out_buf, src_ch, src_sr, ep.limiter,
+            trim_plan ? &trim_plan->post : nullptr,
+            req.output_buffer ? std::string() : staging_output_path,
+            cancel_flag);
+        if (!fin) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                          fin.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
         }
+        if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
         if (req.output_buffer && ep.limiter) {
             // Target playback auditions the deliverable lattice —
             // finish_render just snapped the limited buffer to PCM_24 in
@@ -956,6 +978,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // Atomic publish: staging → final. Buffer path skips this — the
         // synthesised audio already landed in *req.output_buffer.
         if (!req.output_buffer) {
+            if (cancel_requested()) return cancelled_outcome();
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (ec) {
@@ -1005,6 +1028,7 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
+        if (cancel_requested()) return cancelled_outcome();
         // The full midi tempo map is derived here, on the only path that
         // consumes it; the wav branch never needs it. The phase reset column
         // is the pipeline's full deliverable-form derivation, computed

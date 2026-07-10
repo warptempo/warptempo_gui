@@ -245,17 +245,23 @@ std::expected<void, std::string> validate_render_projection(
     return {};
 }
 
-std::expected<void, std::string> finish_render(
+std::expected<FinishRenderStatus, std::string> finish_render(
         std::vector<float>& buffer, int channels, int sample_rate,
         bool limiter, const PostTrim* post_trim,
-        const std::string& output_wav_path) {
+        const std::string& output_wav_path,
+        const std::atomic<bool>* cancel_flag) {
+    const auto cancelled = [&]() {
+        return cancel_flag && cancel_flag->load();
+    };
     if (post_trim) {
         apply_post_trim(buffer, channels, *post_trim);
     }
+    if (cancelled()) return FinishRenderStatus::Cancelled;
     if (limiter) {
         apply_peak_limiter(buffer, channels, sample_rate,
                            kPeakLimiterCeilingDbfs, kPeakLimiterAttackMs,
                            kPeakLimiterReleaseMs);
+        if (cancelled()) return FinishRenderStatus::Cancelled;
     }
     if (output_wav_path.empty()) {
         // Buffer route (target view). Target playback auditions the
@@ -269,7 +275,7 @@ std::expected<void, std::string> finish_render(
                 sample = pcm24_quantize(sample);
             }
         }
-        return {};
+        return FinishRenderStatus::Completed;
     }
     const WavSampleFormat fmt =
         limiter ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
@@ -289,5 +295,5 @@ std::expected<void, std::string> finish_render(
         return std::unexpected("could not close output '" + output_wav_path +
                                "': " + closed.error());
     }
-    return {};
+    return FinishRenderStatus::Completed;
 }

@@ -2,6 +2,7 @@
 
 #include "warp_frame_map.h"  // WarpFrameMapSegment, map_source_to_target/_target_to_source
 
+#include <atomic>
 #include <cstdint>
 #include <expected>
 #include <string>
@@ -126,9 +127,18 @@ std::expected<void, std::string> validate_render_projection(
 //                              buffer to the deliverable PCM 24 lattice in
 //                              place (limiter-on only), no encode, and hand
 //                              the buffer back to the caller as-is.
-// Returns {} on success, else the failure message (open/write/close detail);
-// callers add their own context prefix.
-std::expected<void, std::string> finish_render(
+// Optional cancellation hook, the post-engine sibling of the engine's own
+// flag: when non-null, the chain checks it at stage boundaries (before the
+// peak limiter, before the pcm24 snap or encode) and returns Cancelled
+// without publishing further work — a killed session must not spend seconds
+// finishing a deliverable nobody will adopt. Null (the CLI, which has no
+// kill semantics) always completes. On Cancelled the buffer may hold a
+// partially processed state; callers discard it.
+// Returns the completion status on success, else the failure message
+// (open/write/close detail); callers add their own context prefix.
+enum class FinishRenderStatus { Completed, Cancelled };
+std::expected<FinishRenderStatus, std::string> finish_render(
     std::vector<float>& buffer, int channels, int sample_rate,
     bool limiter, const PostTrim* post_trim,
-    const std::string& output_wav_path);
+    const std::string& output_wav_path,
+    const std::atomic<bool>* cancel_flag = nullptr);

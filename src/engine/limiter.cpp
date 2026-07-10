@@ -292,6 +292,27 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         fftw_free(inv_in);  fftw_free(inv_out);
     };
 
+    // Cancellation observation for the pre-queue phases (forward STFT,
+    // initial rescan, peak detection): a kill that lands during the initial
+    // analysis — or on a signal with no peaks at all — must not let the
+    // limiter run out and the engine return Success. The queue loop below
+    // keeps its own check with iteration-count reporting.
+    auto observed_cancel = [&]() -> bool {
+        if (!(stft.cancel_flag && stft.cancel_flag->load())) return false;
+        stft.cancellation_observed = true;
+        destroy();
+        if (prof) {
+            const auto t_total_1 = profile::now();
+            std::cerr << "[profile] limiter_summary ms="
+                      << profile::ms(t_total_0, t_total_1)
+                      << " sample_frames=" << render_frames
+                      << " channels=" << channels
+                      << " peak_count=0 iteration_count=0"
+                      << " active=yes outcome=cancelled\n";
+        }
+        return true;
+    };
+
     // pre/post framing. Front-pad N_lim zeros; the kept render occupies pre
     // [valid_lo, valid_hi). num_frames_lim covers up to the last kept sample so
     // all four COLA contributions exist across the whole kept region.
@@ -330,6 +351,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::vector<std::complex<float>> cached_spectra(
         static_cast<size_t>(num_frames_lim) * channels * K_lim);
     for (int m = 0; m < num_frames_lim; ++m) {
+        if (observed_cancel()) return;
         const int64_t fs = static_cast<int64_t>(m) * R_s_lim;
         for (int ch = 0; ch < channels; ++ch) {
             for (int n = 0; n < N_lim; ++n)
@@ -364,6 +386,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         find_peaks_in_range(meas_ola.data(), valid_lo, valid_hi, channels, ch,
                             ceiling, queue);
 
+    if (observed_cancel()) return;
     if (queue.empty()) {
         std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
         destroy();

@@ -317,7 +317,15 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                   << " output_frames=" << out_frames
                   << "\n";
     }
-    if (audio_stft.cancellation_observed) {
+    // Pass boundaries check the raw flag alongside cancellation_observed: a
+    // kill that lands after a pass's last internal check must still stop the
+    // render here rather than letting the remaining passes run to a Success
+    // return the dispatcher already abandoned.
+    auto cancel_pending = [&]() {
+        return audio_stft.cancellation_observed ||
+               (audio_stft.cancel_flag && audio_stft.cancel_flag->load());
+    };
+    if (cancel_pending()) {
         std::cerr << "[Cancelled]\n";
         audio_stft.cleanup();
         return EngineResult::Cancelled;
@@ -332,7 +340,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         const size_t limiter_input_frames = (audio_stft.channels > 0)
             ? buf.size() / static_cast<size_t>(audio_stft.channels) : 0;
         limiter.process(audio_stft, buf);          // spectral -0.3
-        if (audio_stft.cancellation_observed) {
+        if (cancel_pending()) {
             std::cerr << "[Cancelled]\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
@@ -359,6 +367,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                   << " P3=" << p3_ms << "\n";
     }
 
+    if (cancel_pending()) {
+        std::cerr << "[Cancelled]\n";
+        audio_stft.cleanup();
+        return EngineResult::Cancelled;
+    }
     std::cout << "[Success]\n";
 
     audio_stft.cleanup();
