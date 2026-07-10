@@ -4,6 +4,7 @@
 #include "file_loader.h"
 #include "phase_reset_propagate.h"
 #include "platform_wayland.h"
+#include "playback_lifecycle.h"
 #include "save_ops.h"
 #include "viewport.h"
 
@@ -18,25 +19,28 @@
 // through viewport. file_loader, viewport, phase_reset_propagate,
 // and gui are reached directly.
 struct GuiPrompt {
-    AppState&            app;
-    GuiPlatform&         gui;
-    Viewport&            viewport;
-    GuiFileLoader&       file_loader;
-    PhaseResetPropagate& phase_reset_propagate;
-    GuiSaveOps&          save_ops;
+    AppState&             app;
+    GuiPlatform&          gui;
+    Viewport&             viewport;
+    GuiFileLoader&        file_loader;
+    PhaseResetPropagate&  phase_reset_propagate;
+    GuiSaveOps&           save_ops;
+    GuiPlaybackLifecycle& playback_lifecycle;
 
-    GuiPrompt(AppState&            app_,
-              GuiPlatform&         gui_,
-              Viewport&            viewport_,
-              GuiFileLoader&       file_loader_,
-              PhaseResetPropagate& phase_reset_propagate_,
-              GuiSaveOps&          save_ops_)
+    GuiPrompt(AppState&             app_,
+              GuiPlatform&          gui_,
+              Viewport&             viewport_,
+              GuiFileLoader&        file_loader_,
+              PhaseResetPropagate&  phase_reset_propagate_,
+              GuiSaveOps&           save_ops_,
+              GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_),
           gui(gui_),
           viewport(viewport_),
           file_loader(file_loader_),
           phase_reset_propagate(phase_reset_propagate_),
-          save_ops(save_ops_) {}
+          save_ops(save_ops_),
+          playback_lifecycle(playback_lifecycle_) {}
 
     void request_close_or_revert(DialogTrigger t);
     void activate_response(char k);

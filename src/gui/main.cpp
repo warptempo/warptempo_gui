@@ -534,10 +534,11 @@ int main(int argc, char** argv) {
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
-                                              target_render, active_views);
+                                              target_render, active_views,
+                                              playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
-                     phase_reset_propagate, save_ops);
+                     phase_reset_propagate, save_ops, playback_lifecycle);
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
                                       target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),

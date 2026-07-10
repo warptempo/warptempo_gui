@@ -21,6 +21,9 @@ void GuiPrompt::proceed(DialogTrigger t) {
 }
 
 void GuiPrompt::open_unsaved(DialogTrigger t) {
+    // A modal surface is opening: stop playback. Space is swallowed while
+    // the prompt is up, so playback cannot restart until it closes.
+    playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
     app.prompt.text            = "Save unsaved changes?";
     // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
@@ -52,6 +55,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // Modal like every other prompt while active: the pointer handlers
 // swallow mouse events and on_key routes only the response key.
 void GuiPrompt::open_error_notice(std::string text) {
+    // A modal surface is opening: stop playback (same rule as every other
+    // prompt open).
+    playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
     app.prompt.text            = std::move(text);
     app.prompt.response_keys   = {'\x1b'};

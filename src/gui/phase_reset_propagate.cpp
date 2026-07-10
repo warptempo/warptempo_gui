@@ -170,6 +170,9 @@ void PhaseResetPropagate::open_paste_confirmation() {
     if (anchor < 0 || anchor >= n) return;
 
     app.pending_paste_anchor   = anchor;
+    // A modal surface is opening: stop playback. Space is swallowed while
+    // the prompt is up, so playback cannot restart until it closes.
+    playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
     app.prompt.text            =
         "Paste phase_resets into matching blocks? "

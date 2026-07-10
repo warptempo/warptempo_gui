@@ -130,6 +130,72 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_trim_set || is_trim_clear || is_delete);
 }
 
+// Modal bottom-strip editor predicate. Modal surfaces are bottom-strip
+// surfaces: the two bottom-strip editors — the settings editor and the bpm
+// editor (top_flag_editor reused with Kind::BpmBracket, painted in the
+// bottom strip) — and the prompts (which own input through their own gates
+// in on_key and the pointer handlers). The top-strip flag editor
+// (Kind::FlagPayload, the iter grammar included) is deliberately NOT modal:
+// it stays red-flash-or-exit-without-commit, and every command punches
+// through it unchanged.
+bool GuiInputHandler::modal_bottom_strip_editor_active() const {
+    return text_editor::is_active(app.settings_editor) ||
+           (text_editor::is_active(app.top_flag_editor) &&
+            app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
+}
+
+// Bottom-strip modal-editor key gate, the sibling of
+// read_only_key_blocked's allowlist shape. True when key+mods is not on
+// the allowlist and should be dropped. While a bottom-strip editor is open
+// the user can reach the editor itself, Esc (exit), Ctrl+S (save; the
+// editor stays open), and Ctrl+Q / Ctrl+W (close / revert routing) —
+// nothing else: Space-as-playback, zoom, mode toggles, tab switches,
+// undo/redo, and the marker / trim chords all drop here. "The editor
+// itself" mirrors text_editor::handle_key's consumption exactly — Escape
+// and Enter unconditionally, Ctrl+A/C/X/V (select-all + clipboard;
+// handle_key tests only Ctrl, so the Shift/Alt variants mirror through),
+// the cursor and editing keys Left / Right / Home / End / BackSpace /
+// Delete under any modifiers, and printable insertion (no Ctrl/Alt, ASCII
+// codepoint; Space lands in the buffer as a typed character, not as
+// playback) — plus the settings editor's own bare-Tab value autocomplete
+// (handle_settings_editor_key intercepts it before handle_key; the bpm
+// editor has no Tab route, so bare Tab drops while it is open). Admitted
+// keys flow into the existing editor routing unchanged, so the only
+// NotConsumed keys that can reach the editors' command tails are the three
+// allowlisted chords.
+bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
+                                               GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    const bool is_esc    = (key == GuiKeys::Escape);
+    const bool is_commit =
+        (key == GuiKeys::Return || key == GuiKeys::KpEnter);
+    const bool is_editor_ctrl_chord =
+        (ctrl && (key == GuiKeys::A || key == GuiKeys::C ||
+                  key == GuiKeys::X || key == GuiKeys::V));
+    const bool is_editor_motion_or_edit =
+        (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::Home || key == GuiKeys::End ||
+         key == GuiKeys::BackSpace || key == GuiKeys::Delete);
+    const bool is_printable =
+        (!ctrl && !alt &&
+         mods.codepoint >= 0x20 && mods.codepoint <= 0x7e);
+    const bool is_settings_autocomplete =
+        (text_editor::is_active(app.settings_editor) &&
+         key == GuiKeys::Tab && !ctrl && !shift && !alt);
+    const bool is_save =
+        (ctrl && !shift && !alt && key == GuiKeys::S);
+    const bool is_ctrl_q =
+        (ctrl && !shift && !alt && key == GuiKeys::Q);
+    const bool is_ctrl_w =
+        (ctrl && !shift && !alt && key == GuiKeys::W);
+    return !(is_esc || is_commit || is_editor_ctrl_chord ||
+             is_editor_motion_or_edit || is_printable ||
+             is_settings_autocomplete ||
+             is_save || is_ctrl_q || is_ctrl_w);
+}
+
 // Esc-cancel handlers for in-flight operations. See the declaration in
 // input_handler.h for routing order.
 bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
@@ -943,6 +1009,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // BPM mode off; toggling iter OFF leaves BPM untouched.
             // Forced bpm-off routes through the exit_bpm_mode chokepoint so
             // it wipes the session-only bpm state like any other mode exit.
+            // Backstop only: bpm mode is exactly its modal editor session
+            // now, and the modal key gate drops `i` while that editor is
+            // open, so this branch has no reachable path.
             const bool turning_on = !app.iteration_mode_enabled;
             if (turning_on && app.bpm_mode_enabled) {
                 flag_editor.exit_bpm_mode();
@@ -963,25 +1032,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // `m` (no modifiers): open the BPM editor on the earlier of two
-    // selected markers that define an explicit span, or — if BPM mode is
-    // already on — toggle it (and the editor) off. Warp view only; silent
+    // selected markers that define an explicit span. Warp view only; silent
     // no-op in phase reset view. Mutual exclusion with iter mode is handled
     // inside enter_bpm_mode. The gate requires exactly two selected markers
     // with no label_ref anywhere in the span; any other selection is a
-    // silent no-op.
+    // silent no-op. There is no toggle-off branch: the bpm editor is a
+    // modal bottom-strip surface, so while it is open `m` never reaches
+    // this dispatch — it is just a typed character the bracket grammar
+    // rejects — and bpm mode never rests without its editor (the mode's
+    // only exits are the editor's own: Esc, and Enter's dispatch tail).
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
-        if (app.bpm_mode_enabled) {
-            // Re-press: editor and mode go down together.
-            if (text_editor::is_active(app.top_flag_editor) &&
-                app.top_flag_editor.kind ==
-                    text_editor::Kind::BpmBracket) {
-                flag_editor.exit_top_flag_edit_no_commit();
-            }
-            flag_editor.exit_bpm_mode();
-            viewport.invalidate_timestamp_area();
-            return true;
-        }
         // Two-marker span gate. Exactly two markers must be selected; the
         // earlier owns, the later closes the span. Neither endpoint nor any
         // span-internal marker may be a label_ref — commit rewrites every
@@ -1014,6 +1075,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             mvw[owner].bpm_endpoint = endpoint;
         }
         const std::set<int> span_selection = app.selected_markers;
+        // The bpm editor is a modal bottom-strip surface: stop playback at
+        // its open. Space is inside the modal blocked set, so playback
+        // cannot restart until the editor closes.
+        playback_lifecycle.stop_playback_if_playing();
         flag_editor.enter_bpm_edit(owner);
         bool restored = false;
         for (int s : span_selection) {
@@ -1144,11 +1209,23 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 // path: after the batch is built and dispatched it wipes the
                 // session-only bpm state and exits bpm mode, so a dispatched
                 // sweep leaves no marker carrying bpm state and the next M on
-                // this marker seeds []. A guard-bail (return false, e.g. a
-                // defect series opened or the renderer is busy) dispatches
-                // nothing and leaves the committed values and the mode in
-                // place for correction.
-                render_bpm_sweep();
+                // this marker seeds []. A guard-bail (return false) is an
+                // environmental backstop — renderer busy, batch-folder
+                // creation failure; the stale-endpoint / store-defect
+                // classes are unreachable because the modal bpm session
+                // freezes the store between mode entry and this dispatch.
+                // The commit already closed the editor, and bpm mode is
+                // exactly its editor session, so a bail exits the mode
+                // here — mode-without-editor stays unreachable.
+                if (!render_bpm_sweep()) {
+                    flag_editor.exit_bpm_mode();
+                }
+            } else if (!text_editor::is_active(app.top_flag_editor)) {
+                // commit_bpm_edit closed the editor without committing
+                // (the invalid-target backstop): take the mode down with
+                // it. A red-flash refusal leaves the editor open and
+                // deliberately does not land here.
+                flag_editor.exit_bpm_mode();
             }
         } else {
             flag_editor.commit_top_flag_edit();
@@ -1184,20 +1261,37 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             viewport.invalidate_top_strip();
         return true;
     }
-    // NotConsumed: the editor does not own this key, so it is a command.
+    // NotConsumed: the editor does not own this key. The two kinds split
+    // here. The bpm editor is a modal bottom-strip surface: the on_key
+    // gate (modal_editor_key_blocked) admits only its own keys plus Esc,
+    // Ctrl+S, and Ctrl+Q/W, so a NotConsumed key is one of those three
+    // chords. Ctrl+S saves with the editor (and the bpm session) left
+    // open — save is not an exit; Esc and Enter are the mode's only
+    // exits. Ctrl+Q/W tear the editor and the mode down together
+    // (mode-without-editor stays unreachable) and fall through so the
+    // global dispatch runs the close / revert routing. Anything else is
+    // swallowed as a backstop.
+    if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+        if (mods.ctrl && !mods.shift && !mods.alt && key == GuiKeys::S) {
+            save_ops.save();
+            return true;
+        }
+        if (mods.ctrl && !mods.shift && !mods.alt &&
+            (key == GuiKeys::Q || key == GuiKeys::W)) {
+            flag_editor.exit_top_flag_edit_no_commit();
+            flag_editor.exit_bpm_mode();
+            return false;  // let on_key run the close / revert routing
+        }
+        return true;  // modal: swallow
+    }
+    // Top-strip flag editor (deliberately non-modal): the key is a command.
     // Cancel the edit (Esc-discard: no commit, no validation), using the
     // same teardown Esc uses, then fall through (no return) so the key
     // reaches the global command dispatch below and runs. This is how every
     // command (Ctrl+Q/W/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, Ctrl+E, ...) works
     // mid-edit: exit first, then the command. No command list — the editor
     // owns only its editing keymap and everything else punches through.
-    if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        flag_editor.exit_top_flag_edit_no_commit();
-        flag_editor.exit_bpm_mode();
-        viewport.invalidate_timestamp_area();
-    } else {
-        flag_editor.exit_top_flag_edit_no_commit();
-    }
+    flag_editor.exit_top_flag_edit_no_commit();
     return false;  // not the editor's key — let on_key run the command
 }
 
@@ -1234,8 +1328,21 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         viewport.invalidate_timestamp_area();
         return true;
     }
-    // NotConsumed: a command. Cancel the settings edit (Esc-discard) and
-    // fall through so the global dispatch runs the command.
-    settings_editor.exit_no_commit();
-    return false;  // not the editor's key — let on_key run the command
+    // NotConsumed: the settings editor is a modal bottom-strip surface —
+    // the on_key gate (modal_editor_key_blocked) admits only its own keys
+    // plus Esc, Ctrl+S, and Ctrl+Q/W, so a NotConsumed key is one of those
+    // three chords. Ctrl+S saves with the editor left open (save is not an
+    // exit); Ctrl+Q/W discard the edit (Esc-discard) and fall through so
+    // the global dispatch runs the close / revert routing. Anything else
+    // is swallowed as a backstop.
+    if (ctrl && !shift && !alt && key == GuiKeys::S) {
+        save_ops.save();
+        return true;
+    }
+    if (ctrl && !shift && !alt &&
+        (key == GuiKeys::Q || key == GuiKeys::W)) {
+        settings_editor.exit_no_commit();
+        return false;  // let on_key run the close / revert routing
+    }
+    return true;  // modal: swallow
 }

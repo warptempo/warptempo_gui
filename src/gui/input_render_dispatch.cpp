@@ -349,7 +349,10 @@ bool GuiInputHandler::render_bpm_sweep() {
     // directly — so a modeled defect (a trimmed map-format render
     // included) opens the defect-resolution series; a non-modeled failure
     // refuses with the popup. Per-cell scale/tempo mutations stay on the
-    // async stderr backstop.
+    // async stderr backstop. The bpm editor session is modal — nothing can
+    // mutate the stores, settings, or trim between mode entry and this
+    // dispatch, and the entry state rested through the commit-validation
+    // funnel — so a store defect here is a backstop, not a reachable path.
     if (!warp_render_preflight(base_warp_markers,
                                app.phaseresetmarkers.markers(),
                                /*live_store=*/true,
@@ -549,8 +552,10 @@ bool GuiInputHandler::render_bpm_sweep() {
     // repaints both strips). Wiping while the mode stayed on would leave an
     // ownerless bpm mode painting a blank bracket with no owner to re-edit;
     // the sweep is the end of the workflow, and re-sweeping re-selects a span
-    // anyway. Runs only on this dispatched path — every guard bail returns
-    // false above and leaves the bpm state untouched.
+    // anyway. Every guard bail above returns false and leaves the bpm state
+    // untouched here — the Enter dispatch (handle_top_flag_editor_key) then
+    // exits the mode itself, since the editor already closed on commit and
+    // bpm mode is exactly its editor session.
     flag_editor.exit_bpm_mode();
     return true;
 }

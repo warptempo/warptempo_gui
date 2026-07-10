@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app_state.h"
+#include "playback_lifecycle.h"
 #include "undo.h"
 #include "viewport.h"
 
@@ -26,12 +27,17 @@ struct PhaseResetPropagate {
     // GuiActiveViews — keeping the dependency here covers both with one
     // wiring.
     GuiActiveViews&     active_views;
+    // The paste-confirm prompt is a modal surface; its open stops playback
+    // through this lifecycle handle.
+    GuiPlaybackLifecycle& playback_lifecycle;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
                         GuiTargetRender& target_render_,
-                        GuiActiveViews& active_views_)
+                        GuiActiveViews& active_views_,
+                        GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_), viewport(viewport_), undo(undo_),
-          target_render(target_render_), active_views(active_views_) {}
+          target_render(target_render_), active_views(active_views_),
+          playback_lifecycle(playback_lifecycle_) {}
 
     // Ctrl+P copy. Caller has already verified W-mode + exactly two
     // warp markers selected. Replaces the clipboard with the named

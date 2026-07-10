@@ -165,6 +165,10 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 labels.push_back("[R]eset");
                 break;
             }
+            // A modal surface is opening: stop playback. Space is swallowed
+            // while the prompt is up, so playback cannot restart until the
+            // series closes.
+            playback_lifecycle.stop_playback_if_playing();
             app.prompt.active          = true;
             app.prompt.text            = d.message;  // enumerator's, verbatim
             app.prompt.response_keys   = std::move(keys);
@@ -239,6 +243,9 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 }
                 keys.push_back('\x7f');
                 labels.push_back("[Delete]");
+                // A modal surface is opening: stop playback (same rule as
+                // the marker-defect open above).
+                playback_lifecycle.stop_playback_if_playing();
                 app.prompt.active          = true;
                 app.prompt.text            = std::move(trim_msg);
                 app.prompt.response_keys   = std::move(keys);

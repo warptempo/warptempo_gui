@@ -337,7 +337,9 @@ private:
     // gate; it is now fired by Enter in the bottom-strip BPM editor (after
     // a successful commit). Returns true if a render batch was dispatched;
     // false on any guard bail (wrong view / mode off / no owner / blank
-    // values / zero-duration span / no valid cells / renderer busy).
+    // values / zero-duration span / no valid cells / renderer busy) — the
+    // Enter dispatch exits bpm mode on a bail, since the editor already
+    // closed on commit and the mode is exactly its editor session.
     bool render_bpm_sweep();
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
@@ -437,12 +439,21 @@ private:
     void handle_plain_bare_keys(GuiKey key);
 
     // Routes a key to the active top-flag editor. Returns true if the editor
-    // consumed it (on_key then returns); false if the key is a command, in
-    // which case the edit is cancelled here and on_key runs the command.
+    // consumed it (on_key then returns); false if the key is a command that
+    // must run. The two kinds differ at the command tail: the top-strip
+    // flag editor (non-modal) cancels the edit and lets every command fall
+    // through, while the bpm editor (a modal bottom-strip surface) reaches
+    // the tail only for the three chords the on_key modal gate admits
+    // beyond its own keys — Ctrl+S runs the save with the editor left
+    // open, Ctrl+Q/W tear the editor and bpm mode down together and fall
+    // through to the close / revert routing, and anything else swallows.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
-    // Routes a key to the active settings-prompt editor. Same consumed/command
-    // contract as handle_top_flag_editor_key.
+    // Routes a key to the active settings-prompt editor. Same
+    // consumed/command contract as handle_top_flag_editor_key's modal
+    // (bpm) tail: Ctrl+S saves with the editor left open, Ctrl+Q/W discard
+    // the edit and fall through, everything else the editor does not
+    // consume swallows.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
     // Side-parameterized helpers shared by the trim entry points below.
@@ -521,6 +532,17 @@ private:
     // close-prompt keys honored in a read-only source tab — i.e. should be
     // dropped. Sibling of render_view_key_blocked.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
+
+    // Bottom-strip modal-editor predicate + key gate (bodies in
+    // input_key_dispatch.cpp). Modal surfaces are bottom-strip surfaces —
+    // the two bottom-strip editors (settings editor, bpm bracket editor)
+    // and the prompts; the top-strip flag editor is deliberately non-modal.
+    // The gate is the sibling of read_only_key_blocked's allowlist shape:
+    // true when key+mods should be dropped while a bottom-strip editor is
+    // open (admits only the keys the active editor consumes, Esc, Ctrl+S,
+    // and Ctrl+Q/W).
+    bool modal_bottom_strip_editor_active() const;
+    bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
     // handle_render_view_toggle: the bare-R enter/exit handler. Returns false
     // if the chord is not bare R (caller falls through); otherwise performs

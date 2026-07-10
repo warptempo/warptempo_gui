@@ -180,6 +180,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // revert prompt opens) exactly as with no drag in flight.
     }
 
+    // Bottom-strip modal-editor gate. Modal surfaces are bottom-strip
+    // surfaces — the two bottom-strip editors (the settings editor and the
+    // bpm bracket editor) and the prompts (gated above); the top-strip
+    // flag editor is deliberately non-modal. While a bottom-strip editor
+    // is open, only the keys the editor itself consumes plus Esc, Ctrl+S,
+    // and Ctrl+Q/W get through (modal_editor_key_blocked); everything
+    // else — playback, navigation, zoom, mode toggles, tab switches,
+    // undo/redo, marker / trim chords — drops here, so no authoring or
+    // view change can happen while the editor is up. Admitted keys route
+    // through the editor blocks below. Sits after the text-drag gate so an
+    // in-flight editor selection drag keeps owning the keyboard exactly as
+    // before.
+    if (modal_bottom_strip_editor_active() &&
+        modal_editor_key_blocked(key, mods)) {
+        return;
+    }
+
     // The top-flag editor owns the keyboard while active. Routes here
     // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
     // first; Esc with no active edit falls through to the rest.
@@ -743,7 +760,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // `:` opens the settings prompt in the bottom strip. Keyboard-only
     // (no click analogue). The active-editor block at the top of on_key
     // routes subsequent keystrokes; opening here just primes the State.
+    // The settings editor is a modal bottom-strip surface: stop playback
+    // at its open. Space is inside the modal blocked set, so playback
+    // cannot restart until the editor closes.
     if (key == GuiKeys::Semicolon && shift && !ctrl && !alt) {
+        playback_lifecycle.stop_playback_if_playing();
         settings_editor.open();
         return;
     }
