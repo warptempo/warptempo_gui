@@ -14,16 +14,23 @@
 // with min_decimals 4, bpm values with min_decimals 0 (plain shortest).
 
 // Authored-value brackets, the single definition of the legal value
-// vocabulary. Normal use is a stretch ratio of roughly 0.60-1.30
-// (averaging about 1.10); the bracket widens that band to the
-// multiplicatively symmetric [0.25, 4.00] (4 = 1/0.25). Absurd magnitudes
-// (1e307 tempos, 2^53 bpm bounds) are adversarial, not use cases: every
-// GUI input surface enforces these bounds — editor red-flash, constructive
-// wheel clamp, derivation refusal — so an out-of-bracket value on disk is
-// a state the GUI can never produce, and it hard-fails the load (stderr,
-// first error only).
-inline constexpr double kValueMin = 0.25;   // tempo, marker scale, settings scale
-inline constexpr double kValueMax = 4.0;
+// vocabulary. Tempo and scale carry separate brackets. Tempo (marker
+// tempo, sweep-derived base tempo) spans the multiplicatively symmetric
+// [0.25, 4.00] (4 = 1/0.25). Scale — both the per-marker tempo scale and
+// the global settings scale — is tighter: [0.50, 2.0000] (2 = 1/0.5),
+// multiplicatively symmetric around 1, because realistic scale trims sit
+// near 1 (roughly 0.8-1.2). Scale's floor, together with tempo's floor,
+// bounds the resolved tempo-scale product below by 0.25 * 0.5 * 0.5 = 1/16
+// — the bound the target-view whole-frame nudge guarantee is computed
+// from. Absurd magnitudes (1e307 tempos, 2^53 bpm bounds) are adversarial,
+// not use cases: every GUI input surface enforces these bounds — editor
+// red-flash, constructive wheel clamp, derivation refusal — so an
+// out-of-bracket value on disk is a state the GUI can never produce, and
+// it hard-fails the load (stderr, first error only).
+inline constexpr double kTempoMin = 0.25;   // marker tempo, derived base tempo
+inline constexpr double kTempoMax = 4.0;
+inline constexpr double kScaleMin = 0.5;    // marker scale, settings scale
+inline constexpr double kScaleMax = 2.0;
 inline constexpr double kBpmMin   = 10.0;   // bpm bracket bounds
 inline constexpr double kBpmMax   = 400.0;
 inline constexpr int    kBpmBeatsMax  = 9999; // beats stays a positive int, capped

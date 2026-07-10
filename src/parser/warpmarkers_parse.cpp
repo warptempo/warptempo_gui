@@ -25,15 +25,17 @@ bool is_valid_label_format(const std::string& s) {
 // consumed, finite, no leading '-') under a strict positivity refusal —
 // zero is parseable but refused with a pointed message; negatives and any
 // other malformed spelling fail the parse itself — and the authored-value
-// bracket (value_format.h: [kValueMin, kValueMax]). Every GUI input
-// surface enforces the bracket, so an out-of-bracket value on disk is a
-// state the GUI can never produce: adversarial, load-fatal, first error
-// only, exactly like the non-positive refusals. Serializers pad the
-// shortest round-trip form (format_value_double: tempo at min 2 decimals,
-// scale at min 4), so historical fixed-decimal sidecars re-serialize
-// byte-identically.
+// bracket for its kind, passed in by the caller (value_format.h: tempo
+// fields [kTempoMin, kTempoMax], scale fields [kScaleMin, kScaleMax]).
+// Every GUI input surface enforces the bracket, so an out-of-bracket value
+// on disk is a state the GUI can never produce: adversarial, load-fatal,
+// first error only, exactly like the non-positive refusals. Serializers
+// pad the shortest round-trip form (format_value_double: tempo at min 2
+// decimals, scale at min 4), so historical fixed-decimal sidecars
+// re-serialize byte-identically.
 bool parse_positive_value(const std::string& s, double& out,
-                          const char* what, std::string& error_out) {
+                          const char* what, double lo, double hi,
+                          std::string& error_out) {
     double v = 0.0;
     if (!parse_value_double(s, v)) {
         // parse_value_double rejects a leading '-' outright; a well-formed
@@ -52,10 +54,10 @@ bool parse_positive_value(const std::string& s, double& out,
         error_out = std::string(what) + " must be positive: " + s;
         return false;
     }
-    if (v < kValueMin || v > kValueMax) {
+    if (v < lo || v > hi) {
         error_out = std::string(what) + " must be within [" +
-                    format_value_double(kValueMin, 2) + ", " +
-                    format_value_double(kValueMax, 2) + "]: " + s;
+                    format_value_double(lo, 2) + ", " +
+                    format_value_double(hi, 2) + "]: " + s;
         return false;
     }
     out = v;
@@ -122,13 +124,13 @@ bool parse_new_payload(const std::string& payload,
         const std::string scale_part = (star == std::string::npos)
             ? std::string() : payload.substr(star + 1);
         double tempo_v = 0.0;
-        if (!parse_positive_value(tempo_part, tempo_v, "tempo", error_out)) {
+        if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, error_out)) {
             return false;
         }
         std::optional<double> scale_v;
         if (star != std::string::npos) {
             double sv = 0.0;
-            if (!parse_positive_value(scale_part, sv, "scale", error_out)) {
+            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
                 return false;
             }
             scale_v = sv;
@@ -166,13 +168,13 @@ bool parse_new_payload(const std::string& payload,
     const std::string scale_part = (star == std::string::npos)
         ? std::string() : tempo_with_scale.substr(star + 1);
     double tempo_v = 0.0;
-    if (!parse_positive_value(tempo_part, tempo_v, "tempo", error_out)) {
+    if (!parse_positive_value(tempo_part, tempo_v, "tempo", kTempoMin, kTempoMax, error_out)) {
         return false;
     }
     std::optional<double> scale_v;
     if (star != std::string::npos) {
         double sv = 0.0;
-        if (!parse_positive_value(scale_part, sv, "scale", error_out)) {
+        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
             return false;
         }
         scale_v = sv;

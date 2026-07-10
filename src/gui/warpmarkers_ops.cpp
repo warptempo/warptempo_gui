@@ -356,7 +356,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // freeze to owning at the nudged value. Owning markers nudge in place.
 // `delta` arrives as a multiple of 0.01 (one per keypress or wheel
 // detent); its sign is the direction of travel. The landed gridpoint is
-// clamped into the authored-value bracket [kValueMin, kValueMax]
+// clamped into the tempo bracket [kTempoMin, kTempoMax]
 // (value_format.h). Only dirties / invalidates on real change.
 //
 // Grid rule: wheel/keyboard authoring lives on the 0.01 grid; typed
@@ -408,10 +408,10 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         // Constructive clamp into the authored-value bracket, the same
         // convention font_size uses: the wheel walks to the bracket edge
         // and stops there, rather than refusing. Both edges are exact in
-        // cents (kValueMin*100 = 25, kValueMax*100 = 400). No finiteness
+        // cents (kTempoMin*100 = 25, kTempoMax*100 = 400). No finiteness
         // guard is needed: every restable value is in-bracket, so the cent
         // product v * 100.0 cannot leave the finite double domain.
-        cents = std::clamp(cents, kValueMin * 100.0, kValueMax * 100.0);
+        cents = std::clamp(cents, kTempoMin * 100.0, kTempoMax * 100.0);
         const double new_tempo = cents / 100.0;
         if (!m.tempo_inherits && new_tempo == m.tempo_base) continue;
         m.tempo_inherits = false;

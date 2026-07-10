@@ -81,20 +81,25 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
         std::nearbyint(ratio * 100.0) / 100.0;
     if (!std::isfinite(base_tempo) ||
         base_tempo == 0.0) return std::nullopt;
-    // Authored-value bracket (value_format.h): a derived base tempo lands
-    // in marker stores and .warpmarkers sidecars exactly like a typed
-    // tempo, so an out-of-bracket derivation refuses here — never clamps,
-    // which would silently mistune the span. The BPM editor commit checks
-    // the bracket's two ends through this refusal (the derivation is
-    // monotone in bpm), and the sweep's per-cell loop rejects any refused
-    // cell to stderr.
-    if (base_tempo < kValueMin || base_tempo > kValueMax) {
+    // Tempo bracket (value_format.h): a derived base tempo lands in marker
+    // stores and .warpmarkers sidecars exactly like a typed tempo, so an
+    // out-of-bracket derivation refuses here — never clamps, which would
+    // silently mistune the span. The BPM editor commit checks the bracket's
+    // two ends through this refusal (the derivation is monotone in bpm),
+    // and the sweep's per-cell loop rejects any refused cell to stderr.
+    if (base_tempo < kTempoMin || base_tempo > kTempoMax) {
         return std::nullopt;
     }
 
     const double scale =
         std::nearbyint((ratio / base_tempo) * 1e6) / 1e6;
     if (!std::isfinite(scale)) return std::nullopt;
+    // Scale bracket (value_format.h): the derived scale is stamped into the
+    // cell's .settings exactly like the derived base tempo is stamped into
+    // its markers, so an out-of-bracket scale refuses here for the same
+    // reason — never clamps. Without this it could rest in a .settings the
+    // GUI could never author.
+    if (scale < kScaleMin || scale > kScaleMax) return std::nullopt;
 
     return BaseTempoScale{base_tempo, scale, ratio};
 }

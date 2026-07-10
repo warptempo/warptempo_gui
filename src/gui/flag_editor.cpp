@@ -552,13 +552,14 @@ bool GuiFlagEditor::commit_bpm_edit() {
             s.c_str());
         return false;
     }
-    // Derived-tempo bracket gate. Every sweep cell carries a derived base
-    // tempo into its cell markers and their .warpmarkers sidecar, and the
-    // derivation (compute_base_tempo_scale) is monotone in bpm, so the
-    // bracket's two ends bound every cell: if either end refuses — the
-    // derived base tempo lands outside [kValueMin, kValueMax] — the commit
+    // Derived-value bracket gate. Every sweep cell carries a derived base
+    // tempo into its cell markers and a derived scale into its cell
+    // .settings, and the derivation (compute_base_tempo_scale) is monotone
+    // in bpm, so the bracket ends bound every cell: if either endpoint bpm
+    // refuses — the derived base tempo lands outside [kTempoMin, kTempoMax]
+    // or the derived scale outside [kScaleMin, kScaleMax] — the commit
     // red-flashes like any invalid editor value. Never clamp: a clamped
-    // derived tempo would silently mistune the span. Gated on a well-formed
+    // derivation would silently mistune the span. Gated on a well-formed
     // span (owner before endpoint, positive duration); without one,
     // render_bpm_sweep early-bails and derives nothing.
     {
@@ -576,10 +577,13 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 app.top_flag_editor.red = true;
                 viewport.invalidate_timestamp_area();
                 std::fprintf(stderr,
-                    "warptempo_gui: bpm edit rejected: derived base tempo "
-                    "outside [%s, %s]: %s\n",
-                    format_value_double(kValueMin, 2).c_str(),
-                    format_value_double(kValueMax, 2).c_str(),
+                    "warptempo_gui: bpm edit rejected: derived tempo or "
+                    "scale outside its bracket (tempo [%s, %s], scale "
+                    "[%s, %s]): %s\n",
+                    format_value_double(kTempoMin, 2).c_str(),
+                    format_value_double(kTempoMax, 2).c_str(),
+                    format_value_double(kScaleMin, 4).c_str(),
+                    format_value_double(kScaleMax, 4).c_str(),
                     s.c_str());
                 return false;
             }

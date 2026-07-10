@@ -97,20 +97,20 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "scale") {
-        // Full positive double, the same rule as marker tempo/scale values
+        // Full positive double, the same rule as a marker scale value
         // (parse_value_double strictness plus a > 0 refusal), bounded by
-        // the shared authored-value bracket (value_format.h). The writers
-        // persist the padded shortest round-trip form (min 4 decimals), so
-        // any accepted value reloads bit-identically — no serialization
-        // round-trip gate is needed. This single validator serves both
-        // boundaries: a malformed .settings aborts the load, an editor
-        // commit red-flashes.
+        // the scale bracket (value_format.h: [kScaleMin, kScaleMax]). The
+        // writers persist the padded shortest round-trip form (min 4
+        // decimals), so any accepted value reloads bit-identically — no
+        // serialization round-trip gate is needed. This single validator
+        // serves both boundaries: a malformed .settings aborts the load, an
+        // editor commit red-flashes.
         double v;
         if (!parse_value_double(value, v) || !(v > 0.0) ||
-            v < kValueMin || v > kValueMax) {
+            v < kScaleMin || v > kScaleMax) {
             reason = "must be a finite double within [" +
-                     format_value_double(kValueMin, 2) + ", " +
-                     format_value_double(kValueMax, 2) + "]";
+                     format_value_double(kScaleMin, 4) + ", " +
+                     format_value_double(kScaleMax, 4) + "]";
             return false;
         }
         out.scale = v;

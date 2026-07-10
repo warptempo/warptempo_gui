@@ -495,11 +495,12 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            // The bracketed value vocabulary holds every AUTHORED product in
-            // [1/16, 16] with bounded, exact anchors. The sweep batches'
-            // computed per-cell tempo mutations are the one wider route: a
-            // delta can push the product to (kValueMax + kIterDeltaMax) *
-            // kValueMax or drive a cell tempo non-positive, and this builder
+            // The bracketed value vocabulary holds every AUTHORED product
+            // (tempo * marker scale) in [1/8, 8] with bounded, exact
+            // anchors. The sweep batches' computed per-cell tempo mutations
+            // are the one wider route: a delta can push the product to
+            // (kTempoMax + kIterDeltaMax) * kScaleMax or drive a cell tempo
+            // non-positive, and this builder
             // is that path's ruled async-stderr backstop — the tempo <= 0
             // guard is exactly where such a cell refuses. The divisor check
             // and the finite/strictly-advancing anchor chokepoint in pass 2
