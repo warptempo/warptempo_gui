@@ -125,66 +125,63 @@ namespace {
 // Shared post-restore selection + playhead rule for both marker lists. After a
 // marker swap, classify before -> after as add / remove / same-count and set
 // the selection (and, where appropriate, the playhead) to the touched markers.
-// `fields_differ` is the same-count in-place-edit predicate; `remove_target_time`
-// chooses the playhead target among the removed markers (warp refines toward the
-// op's subject, phase-reset takes the rightmost).
-template <class M, class FieldsDiffer, class RemoveTargetTime>
+// `fields_differ` is the same-count in-place-edit predicate;
+// `remove_target_frame` chooses the playhead target among the removed markers
+// (warp refines toward the op's subject, phase-reset takes the rightmost).
+// Authored times are whole int64 source frames, so matching is EXACT integer
+// multiset consumption — no epsilon, no double widening, no re-rounding — and
+// multiplicity-aware: when one of two exactly coincident markers is
+// added/removed, each before-row match consumes exactly one after-row, so the
+// touched member of the tie is still identified.
+template <class M, class FieldsDiffer, class RemoveTargetFrame>
 void apply_post_restore_rules_impl(AppState& app, Selection& selection,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
                                    FieldsDiffer  fields_differ,
-                                   RemoveTargetTime remove_target_time) {
-    constexpr double kEps = 1e-9;
-
+                                   RemoveTargetFrame remove_target_frame) {
     std::set<int> target_set;
     bool want_playhead_jump = false;
 
     if (after.size() > before.size()) {
-        std::vector<double> before_times;
-        before_times.reserve(before.size());
-        for (const auto& m : before) before_times.push_back(m.time_frame);
-        std::sort(before_times.begin(), before_times.end());
+        std::multiset<int64_t> before_frames;
+        for (const auto& m : before) before_frames.insert(m.time_frame);
         for (size_t i = 0; i < after.size(); ++i) {
-            const double t = after[i].time_frame;
-            auto it = std::lower_bound(before_times.begin(),
-                                       before_times.end(), t - kEps);
-            const bool matched = (it != before_times.end() &&
-                                  std::abs(*it - t) < kEps);
-            if (!matched) target_set.insert(static_cast<int>(i));
+            auto it = before_frames.find(after[i].time_frame);
+            if (it != before_frames.end()) {
+                before_frames.erase(it);  // consume: one match per row
+            } else {
+                target_set.insert(static_cast<int>(i));
+            }
         }
         want_playhead_jump = !target_set.empty();
     } else if (after.size() < before.size()) {
         const int sr = selection.audio.sample_rate();
         if (sr > 0) {
-            std::vector<double> after_times;
-            after_times.reserve(after.size());
-            for (const auto& m : after) after_times.push_back(m.time_frame);
-            std::sort(after_times.begin(), after_times.end());
-            double rightmost = 0.0;
-            bool   any       = false;
-            for (const auto& m : before) {
-                const double t = m.time_frame;
-                auto it = std::lower_bound(after_times.begin(),
-                                           after_times.end(), t - kEps);
-                const bool matched = (it != after_times.end() &&
-                                      std::abs(*it - t) < kEps);
-                if (!matched && (!any || t > rightmost)) {
-                    rightmost = t;
-                    any       = true;
+            std::multiset<int64_t> after_frames;
+            for (const auto& m : after) after_frames.insert(m.time_frame);
+            std::vector<size_t> removed;  // indices into `before`
+            for (size_t i = 0; i < before.size(); ++i) {
+                auto it = after_frames.find(before[i].time_frame);
+                if (it != after_frames.end()) {
+                    after_frames.erase(it);  // consume: one match per row
+                } else {
+                    removed.push_back(i);
                 }
             }
-            if (any) {
-                const double target_time =
-                    remove_target_time(before, after_times, rightmost, kEps);
-                const int64_t src_sample = static_cast<int64_t>(
-                    std::nearbyint(target_time));
+            if (!removed.empty()) {
+                int64_t rightmost = before[removed.front()].time_frame;
+                for (const size_t i : removed) {
+                    rightmost = std::max(rightmost, before[i].time_frame);
+                }
+                const int64_t src_frame =
+                    remove_target_frame(before, removed, rightmost);
                 // time_frame is source-domain; the playhead is active-domain.
                 // Forward-translate so the playhead lands at the restored
                 // marker's displayed position, mirroring
                 // Selection::sync_playhead_to_last_selected.
                 const int64_t target_sample = source_frame_to_active_domain(
-                    app, selection.audio, src_sample);
+                    app, selection.audio, src_frame);
                 selection.jump_playhead_to(target_sample);
             }
         }
@@ -193,7 +190,7 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
         return;
     } else {  // same count: flag any in-place edit
         for (size_t i = 0; i < after.size(); ++i) {
-            if (fields_differ(after[i], before[i], kEps))
+            if (fields_differ(after[i], before[i]))
                 target_set.insert(static_cast<int>(i));
         }
         want_playhead_jump = !target_set.empty();
@@ -218,33 +215,27 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     apply_post_restore_rules_impl(
         app, selection, entry, before, app.warpmarkers.markers(),
-        [](const GuiWarpMarker& a, const GuiWarpMarker& b, double kEps) {
-            return std::abs(a.time_frame - b.time_frame) > kEps
+        [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
+            return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
                 || a.tempo_inherits != b.tempo_inherits
-                || std::abs(a.tempo_base - b.tempo_base) > kEps
+                || a.tempo_base     != b.tempo_base
                 || a.tempo_scale    != b.tempo_scale
                 || a.label_def      != b.label_def
                 || a.label_ref      != b.label_ref;
         },
         [&entry](const std::vector<GuiWarpMarker>& bef,
-                 const std::vector<double>& after_times,
-                 double rightmost, double kEps) {
+                 const std::vector<size_t>& removed,
+                 int64_t rightmost) {
             // Prefer the op's subject when it is itself one of the removed
             // markers, so a cascaded label_def force-delete lands the playhead
             // on the def rather than the rightmost-in-time ref the cascade
             // pulled in.
-            double target_time = rightmost;
             const int hi = entry.hint_last_selected;
-            if (hi >= 0 && hi < static_cast<int>(bef.size())) {
-                const double ht = bef[hi].time_frame;
-                auto it = std::lower_bound(after_times.begin(),
-                                           after_times.end(), ht - kEps);
-                const bool matched = (it != after_times.end() &&
-                                      std::abs(*it - ht) < kEps);
-                if (!matched) target_time = ht;
+            for (const size_t i : removed) {
+                if (static_cast<int>(i) == hi) return bef[i].time_frame;
             }
-            return target_time;
+            return rightmost;
         });
 }
 
@@ -253,12 +244,12 @@ void Undo::apply_post_restore_rules_phase_reset(
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
         app, selection, entry, before, app.phaseresetmarkers.markers(),
-        [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b, double kEps) {
-            return std::abs(a.time_frame - b.time_frame) > kEps
-                || a.disabled != b.disabled;
+        [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
+            return a.time_frame != b.time_frame
+                || a.disabled   != b.disabled;
         },
         [](const std::vector<GuiPhaseResetMarker>&,
-           const std::vector<double>&, double rightmost, double) {
+           const std::vector<size_t>&, int64_t rightmost) {
             return rightmost;
         });
 }

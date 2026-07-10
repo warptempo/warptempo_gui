@@ -127,8 +127,8 @@ void PhaseResetPropagate::copy_from_selection() {
     for (const auto& b : src_blocks) {
         ClipboardBlock cb;
         cb.label_name   = b.label;
-        cb.source_start = b.start;
-        cb.source_end   = b.end;
+        cb.source_start_frame = b.start;
+        cb.source_end_frame   = b.end;
         const double duration = b.end - b.start;
         if (duration <= 0.0) {
             clipboard_blocks.push_back(std::move(cb));
@@ -152,7 +152,7 @@ void PhaseResetPropagate::copy_from_selection() {
             if (t_time >= hi) continue;
             ClipboardPlacement p;
             p.fractional_position = (t_time - b.start) / duration;
-            p.source_time         = t.time_frame;
+            p.source_frame         = t.time_frame;
             p.disabled            = t.disabled;
             cb.placements.push_back(p);
         }
@@ -354,17 +354,17 @@ void PhaseResetPropagate::paste_state_apply() {
         static_cast<double>(target_render.audio.sample_rate());
 
     // Flat list of every clipboard placement so we can bucket the
-    // clipboard side by absolute source_time against block windows,
+    // clipboard side by absolute source_frame against block windows,
     // mirroring the destination-side bucketing. Capture produces
     // block-ordered, within-block-time-ordered placements, so a flat
-    // concatenation is already source_time-ordered; sort defensively.
+    // concatenation is already source_frame-ordered; sort defensively.
     std::vector<const ClipboardPlacement*> all_placements;
     for (const auto& cb : clip_blocks)
         for (const auto& p : cb.placements)
             all_placements.push_back(&p);
     std::sort(all_placements.begin(), all_placements.end(),
         [](const ClipboardPlacement* a, const ClipboardPlacement* b) {
-            return a->source_time < b->source_time;
+            return a->source_frame < b->source_frame;
         });
 
     // Snapshot pre-state up front; we commit a single undo entry only
@@ -400,16 +400,16 @@ void PhaseResetPropagate::paste_state_apply() {
         // produces an empty window (count 0), not an inverted one.
         const double dst_lo = dest_blocks[i].start - n_guard;
         const double dst_hi = std::max(dst_lo, dest_blocks[i].end - n_guard);
-        const double src_lo = clip_blocks[i].source_start - n_guard;
-        const double src_hi = std::max(src_lo, clip_blocks[i].source_end - n_guard);
+        const double src_lo = clip_blocks[i].source_start_frame - n_guard;
+        const double src_hi = std::max(src_lo, clip_blocks[i].source_end_frame - n_guard);
 
         // Windowed clipboard placements (migration applied). Globally
-        // bucketed by source_time so a near-end placement originally
+        // bucketed by source_frame so a near-end placement originally
         // captured under block i-1 lands in block i's window when i-1
         // and i are adjacent labeled blocks.
         std::vector<const ClipboardPlacement*> windowed_clip;
         for (const auto* p : all_placements) {
-            const double t = p->source_time;
+            const double t = p->source_frame;
             if (t < src_lo)  continue;
             if (t >= src_hi) continue;
             windowed_clip.push_back(p);

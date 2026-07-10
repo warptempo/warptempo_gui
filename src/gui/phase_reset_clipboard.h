@@ -14,7 +14,7 @@
 // destination's actual durations. Single-slot, in-memory only — never
 // persisted to any sidecar, cleared on app exit.
 
-// `source_time`, `source_start`, and `source_end` carry absolute source-
+// `source_frame`, `source_start_frame`, and `source_end_frame` carry absolute source-
 // domain geometry so paste_state_apply can apply a boundary-aware count
 // using the same N-sample guard on both clipboard and destination sides.
 // paste_apply materializes every placement at its fractional_position
@@ -26,14 +26,14 @@ struct ClipboardPlacement {
     // up to the guard before the block start yields a small negative
     // fraction; paste_apply clamps the materialized time to 0.
     double  fractional_position = 0.0;
-    int64_t source_time         = 0;   // absolute capture-time source frames
+    int64_t source_frame         = 0;   // absolute capture-time source frames
     bool    disabled            = false;
 };
 
 struct ClipboardBlock {
     std::string                     label_name;
-    int64_t                         source_start = 0;  // absolute source frames
-    int64_t                         source_end   = 0;  // absolute source frames
+    int64_t                         source_start_frame = 0;  // absolute source frames
+    int64_t                         source_end_frame   = 0;  // absolute source frames
     std::vector<ClipboardPlacement> placements;
 };
 
