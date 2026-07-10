@@ -577,6 +577,15 @@ RenderOutcome do_render(const RenderRequest& req,
                 // monotonicity, so the display sidecar's timestamps are
                 // strictly ascending too.
                 if (render_frame < 0.0) continue;
+                // Crop-end filter, the mirror of the phase-reset writer's
+                // below: a marker exactly at the trim end maps to the
+                // one-past-last render frame — the delivered window is
+                // half-open [begin, end) — so it has no position on the
+                // deliverable's time axis and is dropped, not painted one
+                // sample past the WAV. Untrimmed this never fires: markers
+                // wall at EOF-1, strictly inside the map's final anchor
+                // target.
+                if (render_frame >= sidecar_crop_end) continue;
                 sidecar_warp_markers.push_back(g);
                 sidecar_warp_frames.push_back(render_frame);
             }
