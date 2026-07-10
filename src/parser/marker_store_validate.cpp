@@ -176,3 +176,39 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
 
     return defects;
 }
+
+std::optional<std::string> first_past_eof_wall_defect(
+        const std::vector<WarpMarker>&       warp_markers,
+        const std::vector<PhaseResetMarker>& phase_resets,
+        const SettingsTrim& tab_a_trim,
+        const SettingsTrim& tab_b_trim,
+        int64_t total_frames,
+        long    sample_rate) {
+    const double sr_d = static_cast<double>(sample_rate);
+    for (const auto& m : warp_markers) {
+        if (m.time_frame > total_frames - 1) {
+            return "warp marker past end of audio at " +
+                   format_timestamp(m.time_frame / sr_d);
+        }
+    }
+    for (const auto& m : phase_resets) {
+        if (m.time_frame > total_frames) {
+            return "phase reset marker past end of audio at " +
+                   format_timestamp(m.time_frame / sr_d);
+        }
+    }
+    const struct { const char* name; const SettingsTrim& t; } tabs[] = {
+        {"tab A", tab_a_trim}, {"tab B", tab_b_trim},
+    };
+    for (const auto& [name, t] : tabs) {
+        if (t.has_begin && t.begin_frame > total_frames - 1) {
+            return std::string(name) + " trim begin past end of audio at " +
+                   format_timestamp(t.begin_frame / sr_d);
+        }
+        if (t.has_end && t.end_frame > total_frames) {
+            return std::string(name) + " trim end past end of audio at " +
+                   format_timestamp(t.end_frame / sr_d);
+        }
+    }
+    return std::nullopt;
+}

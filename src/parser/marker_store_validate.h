@@ -2,9 +2,11 @@
 
 #include "warpmarkers_parse.h"        // WarpMarker
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker
+#include "settings_file.h"            // SettingsTrim
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -91,3 +93,23 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
     const std::vector<WarpMarker>&       warp_markers,
     const std::vector<PhaseResetMarker>& phase_resets,
     long sample_rate);
+
+// The adversarial past-EOF load guard (see the past-EOF paragraph above),
+// shared by GUI file_loader and CLI so the six wall checks can never
+// drift: warp markers (wall total-1), phase reset markers (wall total
+// exactly), then tab A trim begin (wall total-1), tab A end (wall total),
+// tab B begin, tab B end — first offender only, disabled markers
+// included. Every check is a plain integer compare against the stored
+// value — literally the same comparison the gesture walls apply, no
+// rounding anywhere — so a legal at-the-wall position always passes.
+// Returns the first violation's detail string (embedded times are display
+// renderings via format_timestamp(frame / sample_rate)); callers add
+// their own product prefix. std::nullopt when every position is inside
+// its wall.
+std::optional<std::string> first_past_eof_wall_defect(
+    const std::vector<WarpMarker>&       warp_markers,
+    const std::vector<PhaseResetMarker>& phase_resets,
+    const SettingsTrim& tab_a_trim,
+    const SettingsTrim& tab_b_trim,
+    int64_t total_frames,
+    long    sample_rate);

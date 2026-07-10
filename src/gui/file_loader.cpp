@@ -411,59 +411,28 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // authored against, so a past-EOF position means the audio was swapped
     // outside the GUI. BOTH tabs' trim is checked — trim is per-tab, and an
     // inactive-tab bound would otherwise load and go live on the next tab
-    // switch. Checked in order — warp markers (wall total-1), phase reset
-    // markers (wall total exactly), then tab A begin (wall total-1), tab A
-    // end (wall total), tab B begin, tab B end — first offender only,
-    // disabled markers included (a disabled past-EOF marker is equally
-    // unauthorable). The guard compares the authored domain directly: every
-    // check is a plain integer compare against the stored value —
-    // literally the same comparison the gesture walls apply, with no
-    // rounding anywhere — so a legal at-the-wall position always reloads
-    // clean. Embedded times in the messages are display renderings
-    // (format_timestamp(frame / sr)). The render-boundary EOF refusals
-    // downstream stay as breach backstops for hand-edited maps.
+    // switch. The six wall comparisons live in first_past_eof_wall_defect
+    // (marker_store_validate.h), the one implementation the CLI runs too —
+    // a file set is loadable or not, the same in both binaries. The
+    // render-boundary EOF refusals downstream stay as breach backstops for
+    // hand-edited maps.
     {
-        const double  sr_d  = static_cast<double>(audio.sample_rate());
-        const int64_t total = audio.total_frames();
-        std::string detail;
-        for (const auto& m : app.warpmarkers.markers()) {
-            if (m.time_frame > total - 1) {
-                detail = "warp marker past end of audio at "
-                         + format_timestamp(m.time_frame / sr_d);
-                break;
-            }
-        }
-        if (detail.empty()) {
-            for (const auto& m : app.phaseresetmarkers.markers()) {
-                if (m.time_frame > total) {
-                    detail = "phase reset marker past end of audio at "
-                             + format_timestamp(m.time_frame / sr_d);
-                    break;
-                }
-            }
-        }
-        if (detail.empty()) {
-            const struct { const char* name; const TrimState& t; } tabs[] = {
-                {"tab A", app.tab_a.trim}, {"tab B", app.tab_b.trim},
-            };
-            for (const auto& [name, t] : tabs) {
-                if (t.has_begin && t.begin_frame > total - 1) {
-                    detail = std::string(name)
-                             + " trim begin past end of audio at "
-                             + format_timestamp(t.begin_frame / sr_d);
-                    break;
-                }
-                if (t.has_end && t.end_frame > total) {
-                    detail = std::string(name)
-                             + " trim end past end of audio at "
-                             + format_timestamp(t.end_frame / sr_d);
-                    break;
-                }
-            }
-        }
-        if (!detail.empty()) {
+        auto trim_of = [](const TrimState& t) {
+            SettingsTrim s;
+            s.has_begin   = t.has_begin;
+            s.begin_frame = t.begin_frame;
+            s.has_end     = t.has_end;
+            s.end_frame   = t.end_frame;
+            return s;
+        };
+        const auto detail = first_past_eof_wall_defect(
+            slice_to_warp_markers(app.warpmarkers.markers()),
+            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
+            trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
+            audio.total_frames(), audio.sample_rate());
+        if (detail) {
             std::fprintf(stderr,
-                "warptempo_gui: source load aborted: %s\n", detail.c_str());
+                "warptempo_gui: source load aborted: %s\n", detail->c_str());
             revert_to_blank();
             return false;
         }
