@@ -226,37 +226,63 @@ int main(int argc, char** argv) {
     // maps. ---
     {
         const int64_t total = static_cast<int64_t>(total_frames);
-        std::string detail;
         if (auto wall = first_past_eof_wall_defect(
                 markers, resets, sf.tab_a.trim, sf.tab_b.trim,
                 total, sample_rate)) {
-            detail = std::move(*wall);
+            std::fprintf(stderr, "warptempo_cli: %s\n", wall->c_str());
+            return 1;
         }
-        // View-scratch bounds, mirrored from the GUI's load-time checks so
-        // a sidecar set stays loadable in both products or neither: the CLI
-        // never applies a viewport or playhead, but a value past the audio
-        // is a state the GUI can never author against this source.
-        if (detail.empty()) {
-            const struct { const char* name; const SettingsFileTab& t; }
-            view_tabs[] = {
-                {"tab A", sf.tab_a}, {"tab B", sf.tab_b},
-            };
-            for (const auto& [name, t] : view_tabs) {
-                if (t.has_viewport_start && t.viewport_start >= total) {
-                    detail = std::string(name)
-                             + " viewport start past end of audio";
-                    break;
-                }
-                if (t.has_playhead && t.playhead > total) {
-                    detail = std::string(name)
-                             + " playhead past end of audio";
-                    break;
-                }
+    }
+
+    // --- persisted view-scratch range guard, the same shared validator the
+    // GUI load runs (first_view_range_defect, marker_store_validate.h) so a
+    // sidecar set stays loadable in both products or neither. The CLI never
+    // applies a viewport or playhead, but persisted view positions live in
+    // the persisted active_audio_view's domain — while 'T' the GUI's live
+    // view fields carry target-frame values, so 'S' or absent walls at the
+    // source total and 'T' walls at the built warp frame map's deformed
+    // target total (a slowing map legitimately persists positions past the
+    // source total). The 'T' total mirrors the GUI runtime's
+    // target_view_warp_frame_map_cached tgt_total_frames math
+    // (warp_frame_map_view.cpp) exactly, over the same resolve-then-build
+    // the render performs below — built early here for the check only, the
+    // render's own build and its refusal messages stay untouched. When the
+    // map cannot build (the marker store carries walkable defects, which
+    // load intact by design) the check is SKIPPED entirely, matching the
+    // GUI's skip: the defect listing below and the render-boundary owners
+    // refuse then. ---
+    {
+        const int64_t total = static_cast<int64_t>(total_frames);
+        bool    run_view_check = true;
+        int64_t domain_total   = total;
+        const char persisted_audio_view =
+            sf.has_active_audio_view ? sf.active_audio_view : 'S';
+        if (persisted_audio_view == 'T') {
+            auto view_resolved =
+                resolve_warp_markers_for_render(markers, sample_rate);
+            if (!view_resolved) {
+                run_view_check = false;
+            } else if (auto view_map = build_warp_frame_map(
+                           *view_resolved, es.scale, sample_rate,
+                           total_frames);
+                       !view_map) {
+                run_view_check = false;
+            } else if (view_map->empty()) {
+                domain_total = total;
+            } else {
+                const double t = map_source_to_target(
+                    static_cast<double>(total_frames < 0 ? 0 : total_frames),
+                    *view_map);
+                const int64_t tt = static_cast<int64_t>(std::nearbyint(t));
+                domain_total = tt > 0 ? tt : total;
             }
         }
-        if (!detail.empty()) {
-            std::fprintf(stderr, "warptempo_cli: %s\n", detail.c_str());
-            return 1;
+        if (run_view_check) {
+            if (auto detail = first_view_range_defect(
+                    sf.tab_a, sf.tab_b, domain_total)) {
+                std::fprintf(stderr, "warptempo_cli: %s\n", detail->c_str());
+                return 1;
+            }
         }
     }
 

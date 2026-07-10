@@ -113,3 +113,30 @@ std::optional<std::string> first_past_eof_wall_defect(
     const SettingsTrim& tab_b_trim,
     int64_t total_frames,
     long    sample_rate);
+
+// Persisted view-scratch range guard, shared by GUI file_loader and CLI so
+// the four wall checks can never drift: tab A viewport start (refuses at or
+// past the domain total — a viewport starting on the total's frame shows
+// nothing), tab A playhead (refuses strictly past the domain total — the
+// playhead may rest on the end exactly), then tab B likewise — first
+// offender only, absent keys skipped.
+//
+// Persisted viewport/playhead positions live in the persisted
+// active_audio_view's domain: while 'T' the live view fields carry
+// target-frame values and the S/T toggle translates BOTH tabs together, so
+// the domain is global to the file and a Ctrl+S from target view under a
+// slowing map legitimately writes positions past the SOURCE total. The
+// caller therefore selects and passes the domain total: 'S' or absent is
+// the source total; 'T' is the deformed target total of the warp frame map
+// built from the loaded markers and scale (each product computes it with
+// the same math its runtime clamps use). When 'T' is persisted but the map
+// cannot build — the marker store carries walkable defects, which load
+// intact by design — the caller SKIPS this check entirely: there is no
+// target total to wall against, and the runtime viewport clamps own the
+// values then. Returns the first violation's detail string; callers add
+// their own product prefix. std::nullopt when every present position is
+// inside the domain.
+std::optional<std::string> first_view_range_defect(
+    const SettingsFileTab& tab_a,
+    const SettingsFileTab& tab_b,
+    int64_t domain_total_frames);

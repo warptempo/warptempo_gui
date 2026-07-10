@@ -297,10 +297,17 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // missing required engine key — aborts the load with the first error,
     // the same shape as a corrupt audio file: revert the partial load so
     // the user sees no half-loaded state. On top of the schema, the
-    // context-dependent range rules run here, equally load-fatal: a
-    // viewport, playhead, or zoom the GUI's own clamps could never author
-    // is adversarial exactly like a past-EOF marker (the sidecar was
-    // authored against this audio's frame grid). Trim bound ordering stays
+    // context-dependent viewport/playhead range rules run at the end of
+    // this block, equally load-fatal. Persisted view positions live in the
+    // persisted active_audio_view's domain — while 'T' the live view fields
+    // carry target-frame values and the S/T toggle translates BOTH tabs
+    // together, so the domain is global to the file — and the wall is that
+    // domain's total: 'S' or absent walls at the source total; 'T' walls at
+    // the built warp frame map's deformed target total, which a slowing map
+    // legitimately puts past the source total (Ctrl+S from target view
+    // writes such values). A position past its own domain's total is
+    // adversarial exactly like a past-EOF marker (the sidecar was authored
+    // against this audio's frame grid). Trim bound ordering stays
     // deliberately unchecked — equal/inverted bounds load intact and walk
     // the defect series; the render boundary owns trim refusals.
     {
@@ -314,43 +321,24 @@ bool GuiFileLoader::load_file(const std::string& path) {
             return false;
         }
         const SettingsFile& sf = *sf_r;
-        const int64_t total = audio.total_frames();
         // The schema already enforced syntax, non-negativity, and the zoom
-        // vocabulary; the audio-relative bounds run here, where the loaded
-        // length is known, mirrored by warptempo_cli's past-EOF guard.
-        std::string range_error;
-        auto apply = [&](const SettingsFileTab& src, ViewState& dst,
-                         const char* tab_name) -> bool {
+        // vocabulary; the per-tab view scratch applies verbatim here. The
+        // audio-relative viewport/playhead bounds run at the end of this
+        // block instead, because the 'T' domain total needs the warp frame
+        // map built from the loaded markers and the adopted scale.
+        auto apply = [&](const SettingsFileTab& src, ViewState& dst) {
             if (src.has_viewport_start) {
-                if (src.viewport_start >= total) {
-                    range_error = std::string(tab_name) +
-                        "_viewport_start is past the end of the audio";
-                    return false;
-                }
                 dst.viewport_start_sample = src.viewport_start;
             }
             if (src.has_zoom) {
                 dst.zoom_level = src.zoom;
             }
             if (src.has_playhead) {
-                if (src.playhead > total) {
-                    range_error = std::string(tab_name) +
-                        "_playhead_cursor is past the end of the audio";
-                    return false;
-                }
                 dst.playhead_cursor_sample = src.playhead;
             }
-            return true;
         };
-        if (!apply(sf.tab_a, app.tab_a, "tab_a") ||
-            !apply(sf.tab_b, app.tab_b, "tab_b")) {
-            std::fprintf(stderr,
-                "warptempo_gui: source load aborted: invalid settings in "
-                "'%s': %s\n",
-                app.settings_path.c_str(), range_error.c_str());
-            revert_to_blank();
-            return false;
-        }
+        apply(sf.tab_a, app.tab_a);
+        apply(sf.tab_b, app.tab_b);
         app.engine_settings = sf.engine;
         app.follow_mode    = sf.has_follow ? sf.follow : true;
         app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
@@ -370,6 +358,50 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (sf.tab_b.trim.has_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame; }
         if (sf.tab_a.has_read_only) app.tab_a.read_only = sf.tab_a.read_only;
         if (sf.tab_b.has_read_only) app.tab_b.read_only = sf.tab_b.read_only;
+
+        // Deferred audio-relative viewport/playhead validation — the domain
+        // rule from the block comment above, one shared implementation with
+        // warptempo_cli (first_view_range_defect, marker_store_validate.h)
+        // so a sidecar set is loadable in both products or neither. The
+        // domain total: the source total for 'S'; for 'T' the memoized
+        // target-view cache's tgt_total_frames — EXACTLY the value
+        // live_total_frames feeds the runtime viewport clamps and zoom
+        // bounds, so the load-time wall and the runtime domain always agree
+        // (the markers and engine scale the cache derives from are both in
+        // place by this point). When 'T' is persisted but the map cannot
+        // build (the marker store carries walkable defects, which load
+        // intact by design), SKIP this validation entirely: there is no
+        // target total to wall against, refusing would lock out a
+        // legitimately saved session whose sidecar was later hand-edited
+        // into a walkable state, and the runtime viewport clamps plus the
+        // target-view validity gates (validate_target_view_entry below,
+        // enforce_target_view_validity per tick) own the values then.
+        {
+            bool    run_view_check = true;
+            int64_t domain_total   = audio.total_frames();
+            if (app.active_audio_view == 'T') {
+                const TargetWarpFrameMapCache& c =
+                    target_view_warp_frame_map_cached(
+                        app, audio.sample_rate(),
+                        static_cast<long>(audio.total_frames()));
+                if (!c.build_error.empty()) {
+                    run_view_check = false;
+                } else {
+                    domain_total = c.tgt_total_frames;
+                }
+            }
+            if (run_view_check) {
+                if (auto detail = first_view_range_defect(
+                        sf.tab_a, sf.tab_b, domain_total)) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: source load aborted: invalid "
+                        "settings in '%s': %s\n",
+                        app.settings_path.c_str(), detail->c_str());
+                    revert_to_blank();
+                    return false;
+                }
+            }
+        }
     }
     if (app.active_audio_view == 'T' &&
         !target_render.target_view_available()) {
