@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -370,6 +371,11 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
+                    // A reset tempo invalidates the iter bracket's
+                    // validation basis, so the whole flag resets — same
+                    // rationale as adjust_tempo's bracket clear.
+                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
+                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the ref marker
@@ -392,6 +398,11 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_inherits = false;
                     m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
+                    // Whole-flag reset: the iter bracket clears with the
+                    // tempo it was validated against (see the
+                    // DanglingLabelRef sibling above).
+                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
+                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
                     store_changed = true;
                 }
             } else {  // '\x7f': remove the pass marker
@@ -418,6 +429,11 @@ void GuiInputHandler::handle_defect_response(char k) {
                     m->tempo_scale.reset();
                     m->label_ref.clear();
                     m->label_def.clear();
+                    // Whole-flag reset: the iter bracket clears with the
+                    // tempo it was validated against (see the
+                    // DanglingLabelRef sibling above).
+                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
+                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
                     store_changed = true;
                 }
             } else {
