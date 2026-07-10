@@ -206,6 +206,16 @@ int main(int argc, char** argv) {
     const long sample_rate  = info->sample_rate;
     const long total_frames = static_cast<long>(info->frames);
 
+    // Rates below 44.1k are out of scope by ruling, and the whole-frame gesture
+    // pixel guarantees assume the 44100 floor (higher rates only widen the margins).
+    if (sample_rate < 44100) {
+        std::fprintf(stderr,
+            "warptempo_cli: source load failed for '%s': sample rate %ld is "
+            "below the 44100 floor\n",
+            source_path.c_str(), sample_rate);
+        return 1;
+    }
+
     // --- adversarial past-EOF guard: refuse the load like a corrupt audio
     // file when any marker or any tab's trim sits past its wall. Such a
     // position is uncommittable through the GUI (marker EOF walls, per-bound

@@ -73,6 +73,16 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
+    // Rates below 44.1k are out of scope by ruling, and the whole-frame gesture
+    // pixel guarantees assume the 44100 floor (higher rates only widen the margins).
+    if (source_info->sample_rate < 44100) {
+        std::fprintf(stderr,
+            "warptempo_gui: source load failed for '%s': sample rate %d is "
+            "below the 44100 floor\n",
+            path.c_str(), source_info->sample_rate);
+        return false;
+    }
+
     // Stop and tear down the audio device before the sample buffer it
     // borrows is replaced. Playing into a freed buffer would crash the
     // audio thread. Order (stop → shutdown → load → init) is fixed.
