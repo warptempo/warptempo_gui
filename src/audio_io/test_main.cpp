@@ -275,8 +275,11 @@ bool test_data_before_fmt_overrun_fails_cleanly()
     append_u32(blob, 100);
     finalize_riff_size(blob);
 
+    // An ordinary declared size extending past EOF is refused outright —
+    // only the 0xffffffff streamed placeholder gets the clamp-to-present
+    // tolerance (test_streamed_unpatched_data_size_fixture).
     auto out = wav_read_full(bytes_span(blob));
-    if (out || out.error() != "WAV fmt chunk not found") {
+    if (out || out.error() != "WAV chunk extends past end of file") {
         std::cout << "selftest: data-before-fmt overrun failure mismatch";
         if (!out) std::cout << ": " << out.error();
         std::cout << "\n";

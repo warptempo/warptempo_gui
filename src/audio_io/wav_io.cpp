@@ -6,6 +6,7 @@
 #include <array>
 #include <bit>
 #include <cerrno>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -198,20 +199,27 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         uint64_t chunk_payload_size = chunk_size;
         bool stop_after_chunk = false;
         if (chunk_payload_size > file_size - payload) {
-            if (fourcc_eq(id, "data")) {
-                // Streamed encoders may leave the data size unpatched; trust
-                // the bytes present, clamped to whole frames.
+            if (fourcc_eq(id, "data") && chunk_size == 0xffffffffu) {
+                // The single recognized streamed-encoder exception: a data
+                // size left at the 0xffffffff placeholder. Trust the bytes
+                // present, clamped to whole frames. Any OTHER declaration
+                // extending past EOF is an ordinary truncated or corrupted
+                // file — adversarial input — and refuses rather than being
+                // silently salvaged as a shorter recording.
                 chunk_payload_size = file_size - payload;
                 if (layout.block_align != 0) {
                     chunk_payload_size -= chunk_payload_size % layout.block_align;
                 }
                 stop_after_chunk = true;
             } else {
-                break;
+                return std::unexpected("WAV chunk extends past end of file");
             }
         }
 
         if (fourcc_eq(id, "fmt ")) {
+            if (fmt_seen) {
+                return std::unexpected("duplicate WAV fmt chunk");
+            }
             if (chunk_payload_size < 16) {
                 return std::unexpected("WAV fmt chunk is too short");
             }
@@ -270,6 +278,9 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             }
             fmt_seen = true;
         } else if (fourcc_eq(id, "data")) {
+            if (data_seen) {
+                return std::unexpected("duplicate WAV data chunk");
+            }
             layout.data_offset = payload;
             layout.data_size = chunk_payload_size;
             data_seen = true;
@@ -294,7 +305,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     return layout;
 }
 
-void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+bool decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                         int64_t samples, float* out);
 
 std::expected<std::vector<float>, std::string>
@@ -338,12 +349,20 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
         return std::unexpected("truncated WAV data");
     }
 
-    decode_wav_samples(raw.data(), layout.info.format,
-                       static_cast<int64_t>(*sample_count), out.data());
+    if (!decode_wav_samples(raw.data(), layout.info.format,
+                            static_cast<int64_t>(*sample_count), out.data())) {
+        return std::unexpected("non-finite sample in Float32 WAV data");
+    }
     return out;
 }
 
-void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+// Returns false when a Float32 payload carries a non-finite sample (NaN or
+// infinity). Downstream those diverge silently — NaN zeros on the limited
+// path, infinity reaches llrint outside its domain, limiter-off writes them
+// back to the deliverable — so the read boundary rejects them once, as
+// adversarial input, before any sample enters the source buffer. PCM
+// payloads decode every bit pattern to a finite value by construction.
+bool decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                         int64_t samples, float* out)
 {
     size_t rp = 0;
@@ -367,10 +386,12 @@ void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                               (static_cast<uint32_t>(raw[rp + 3]) << 24);
             float v;
             std::memcpy(&v, &bits32, sizeof(v));
+            if (!std::isfinite(v)) return false;
             out[static_cast<size_t>(i)] = v;
             rp += 4;
         }
     }
+    return true;
 }
 
 std::expected<ByteSource, std::string> memory_source(std::span<const char> bytes)
@@ -577,8 +598,10 @@ std::expected<int64_t, std::string> WavReader::read_frames(float* out,
         scratch_.size()) {
         return std::unexpected("truncated WAV data");
     }
-    decode_wav_samples(scratch_.data(), info_.format,
-                       to_read * info_.channels, out);
+    if (!decode_wav_samples(scratch_.data(), info_.format,
+                            to_read * info_.channels, out)) {
+        return std::unexpected("non-finite sample in Float32 WAV data");
+    }
     cursor_frame_ += to_read;
     return to_read;
 }
@@ -732,6 +755,13 @@ std::expected<void, std::string> WavWriter::write_frames(
         scratch_.resize(static_cast<size_t>(bytes));
         size_t wp = 0;
         for (uint64_t i = 0; i < samples; ++i) {
+            // Breach guard: nothing program-generated is non-finite (the
+            // read boundary rejects non-finite sources), so a NaN or
+            // infinity here means an internal contract broke — refuse
+            // loudly rather than silently normalizing it into the lattice.
+            if (!std::isfinite(interleaved[i])) {
+                return std::unexpected("non-finite sample in PCM 24 write");
+            }
             const uint32_t code =
                 static_cast<uint32_t>(pcm24_code_from_float(interleaved[i]));
             scratch_[wp++] = static_cast<unsigned char>(code & 0xff);
