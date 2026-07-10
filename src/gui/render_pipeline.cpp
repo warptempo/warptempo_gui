@@ -237,10 +237,12 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    // Staging path used by the wav engine path's atomic rename. Text-file
-    // formats write final_output_path directly, except the warptempo_maps
-    // pair, which stages both of its files (path + ".tmp") so a half pair
-    // never lands.
+    // Staging path (final path plus ".tmp") for the atomic rename used by the
+    // wav engine path, the reuse rungs, and the single-file map formats
+    // (generic_map, midi_map): every publication writes staging first, gates
+    // on cancel, then renames to the final name, so a cancel never lands a
+    // partial file under a final name. The warptempo_maps pair stages both of
+    // its files under their own ".tmp" names for the same reason.
     const std::string staging_output_path = final_output_path + ".tmp";
 
     auto cleanup_all = [&]() {
@@ -741,6 +743,11 @@ RenderOutcome do_render(const RenderRequest& req,
             std::filesystem::copy_file(
                 artifact_candidate, staging_output_path,
                 std::filesystem::copy_options::overwrite_existing, ec);
+            // The copy above is a potentially long byte copy; a cancel that
+            // lands during it must not publish. Re-check between the copy and
+            // the rename to the final name — the staging file is not yet under
+            // a final name, and cancelled_outcome unlinks it.
+            if (!ec && cancel_requested()) return cancelled_outcome();
             if (!ec) {
                 std::filesystem::rename(staging_output_path, final_output_path, ec);
             }
@@ -760,6 +767,12 @@ RenderOutcome do_render(const RenderRequest& req,
         if (req.render_cache->publish_wav(fingerprint, source_channels_probe,
                                           static_cast<int>(sample_rate),
                                           staging_output_path)) {
+            // publish_wav did a potentially large byte write or disk copy to
+            // the staging path; a cancel that lands during it must not
+            // publish. Re-check between publish_wav and the rename to the
+            // final name — the staging file is not yet under a final name, and
+            // cancelled_outcome unlinks it.
+            if (cancel_requested()) return cancelled_outcome();
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (!ec) {
@@ -1065,28 +1078,28 @@ RenderOutcome do_render(const RenderRequest& req,
             const std::string phase_reset_final = output_paths.back().string();
             const std::string warp_staging = warp_final + ".tmp";
             const std::string phase_reset_staging = phase_reset_final + ".tmp";
-            // Delete-first, all-or-nothing publish: the old pair's two finals
-            // are unlinked before any new byte becomes visible under a final
-            // name; only then are both staging files written and rename-
-            // published, warp first, phase reset second. Once this sequence
-            // begins the old pair is forfeited, and from that point every
-            // possible interruption — an in-process write or rename failure,
-            // or process death at any instant — leaves at most one column
-            // present on disk, so an engine consumer refuses loudly at init
-            // on the missing column. A mixed-generation pair (a fresh warp map beside
-            // a phase reset list derived against a different warp map) can no
-            // longer exist: the stale finals are gone before the first new byte
-            // lands under a final name. In-process the arms still tidy up — a
-            // staging-write failure unlinks both stagings, and a second-rename
-            // failure pulls back the just-published warp final. The cost is
-            // that a failed or interrupted publish destroys the previous pair;
-            // that is accepted, because the pair regenerates from the authored
-            // sources with a single re-run, and a loud refusal beats a silent
-            // wrong render. The single-file formats below stay direct writes: a
-            // lone artifact has no cross-generation sibling to mix with.
-            // Forfeit the old pair up front:
-            unlink_silent(warp_final);
-            unlink_silent(phase_reset_final);
+            // Stage-first, gate, forfeit, publish: both staging files are
+            // written to their ".tmp" names FIRST, before any old final is
+            // touched. A staging-write failure or a cancel landing during the
+            // stage now leaves the old pair fully intact — both stale finals
+            // are still present, so a consumer reading them mid-render sees a
+            // consistent previous generation, not a half pair. Only after both
+            // stagings exist and the cancel gate has passed are the two old
+            // finals unlinked (the old pair forfeited) and the stagings
+            // rename-published, warp first, phase reset second. Between the two
+            // renames there is deliberately no cancel check: once the first
+            // rename lands, completing the pair beats leaving a half pair — the
+            // same accepted-tail spirit as the post-WAV-rename attestations.
+            // The forfeit window is thus just the two renames; a cancel or a
+            // staging failure before it leaves the old pair untouched. The
+            // mixed-generation invariant still holds: staging writes are not
+            // final names, so the stale finals are gone before the first new
+            // byte becomes visible UNDER A FINAL NAME. If a rename or process
+            // death strikes inside the two-rename window, at most one column is
+            // present, so an engine consumer refuses loudly at init on the
+            // missing column. In-process the arms still tidy up — a staging-
+            // write failure unlinks both stagings, and a second-rename failure
+            // pulls back the just-published warp final.
             bool staged_ok = true;
             if (auto w = write_warp_frame_map(warp_staging,
                                               full_warp_frame_map); !w) {
@@ -1106,6 +1119,17 @@ RenderOutcome do_render(const RenderRequest& req,
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
+            // Both stagings are on disk; a cancel here still publishes nothing
+            // and leaves the old pair intact. Past this gate the forfeit
+            // begins.
+            if (cancel_requested()) {
+                unlink_silent(warp_staging);
+                unlink_silent(phase_reset_staging);
+                return cancelled_outcome();
+            }
+            // Forfeit the old pair, then publish:
+            unlink_silent(warp_final);
+            unlink_silent(phase_reset_final);
             std::error_code ec;
             std::filesystem::rename(warp_staging, warp_final, ec);
             if (ec) {
@@ -1134,14 +1158,30 @@ RenderOutcome do_render(const RenderRequest& req,
                 return RenderOutcome::Failed;
             }
         } else {
+            // Single-file map formats: stage to staging_output_path (the
+            // final path plus ".tmp", covered by cleanup_all) so a cancel
+            // landing during the write publishes nothing. Write staging,
+            // re-check the cancel flag, then rename to the final name.
             auto map_write = (output_format == "generic_map")
-                ? write_warp_frame_map(final_output_path,
+                ? write_warp_frame_map(staging_output_path,
                                        full_warp_frame_map)
-                : write_midi_tempo_map(final_output_path,
+                : write_midi_tempo_map(staging_output_path,
                                        full_midi_tempo_map);
             if (!map_write) {
                 std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                              map_write.error().c_str());
+                cleanup_all();
+                return RenderOutcome::Failed;
+            }
+            if (cancel_requested()) return cancelled_outcome();
+            std::error_code ec;
+            std::filesystem::rename(staging_output_path, final_output_path, ec);
+            if (ec) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: rename failed for '%s' -> "
+                    "'%s': %s\n",
+                    staging_output_path.c_str(), final_output_path.c_str(),
+                    ec.message().c_str());
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
