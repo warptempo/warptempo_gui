@@ -300,7 +300,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (ob + df > begin_wall_active) df = begin_wall_active - ob;
         if (oe + df > end_wall_active)   df = end_wall_active - oe;
         // active_domain_to_source_frame already lands on whole int64 frames,
-        // so the path stays integer arithmetic end to end.
+        // so the path stays integer arithmetic end to end. These are
+        // mid-gesture tracking values; the release in commit_trim_drag snaps
+        // each moved bound to its painted column's authored time.
         int64_t nb = active_domain_to_source_frame(app, audio, ob + df);
         int64_t ne = active_domain_to_source_frame(app, audio, oe + df);
         if (nb < 0) nb = 0;
@@ -352,8 +354,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         ? audio.total_frames() - 1
         : audio.total_frames();
     if (src_frame > wall_hi) src_frame = wall_hi;
-    // The pixel-column and clamp math above is int64 throughout, so the
-    // committed value is already an authored whole frame.
+    // Mid-gesture tracking value: int64 throughout (the store cannot hold a
+    // fractional frame), but pointer-derived, not column-canonical — the
+    // release in commit_trim_drag snaps a moved bound to its painted
+    // column's authored time, superseding this value.
     const int64_t new_frame = src_frame;
     int64_t& field = app.trim_drag.is_begin ? app.trim.begin_frame
                                             : app.trim.end_frame;
@@ -399,6 +403,63 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
 void GuiInputHandler::commit_trim_drag() {
     if (!app.trim_drag.active) return;
     if (app.trim_drag.moved) {
+        // Release-time column snap, the marker commit_drag shape: each bound
+        // the drag actually MOVED snaps to the time of the pixel column it is
+        // painted at — the stem painter's own math via
+        // painted_column_of_source_frame / authored_frame_at_column (which
+        // funnels through snap_authored_frame) — so the stored value is the
+        // whole frame of the shown column: stored equals shown, in both views
+        // at all zooms. An untouched bound keeps its stored value bit-exact
+        // (commit_drag's moved-only rule); on a rigid two-bound drag each
+        // moved bound anchors to its OWN painted column independently, so the
+        // pair's span may deform by up to one frame at release — the same
+        // accepted behavior multi-marker drags have (the constant-gap phrasing
+        // at TrimDragState describes the mid-gesture active-domain motion).
+        // The map is the live cached one, as the trim nudge and trim-end
+        // wheel anchor: markers freeze a pre-drag map because a warp drag
+        // deforms it, but trim never enters build_target_view_warp_frame_map,
+        // so the live map is stable across the drag and IS the coordinate
+        // system the trim stems painted through. The per-bound absolute walls
+        // — begin 0..EOF-1, end 0..EOF exactly, plain integer compares —
+        // re-apply AFTER the snap so the walls win over the pixel grid and a
+        // wall-clamped release rests exactly on its wall. Degenerate paint
+        // geometry (no strip width / zoom, unloaded audio) skips the snap and
+        // keeps the tracked value: trim has no undo, so routing a bound
+        // through the helpers' 0-fallback would be unrecoverable.
+        const int sr = audio.sample_rate();
+        if (sr > 0 && audio.total_frames() > 0 &&
+            current_samples_per_pixel(app, audio) > 0.0) {
+            const std::vector<WarpFrameMapSegment> no_map;
+            const auto& map = (app.active_audio_view == 'T')
+                ? target_view_warp_frame_map_cached(
+                      app, sr,
+                      static_cast<long>(audio.total_frames())).warp_frame_map
+                : no_map;
+            const auto snap_moved_bound = [&](int64_t& field, int64_t orig,
+                                              int64_t wall) {
+                if (field == orig) return;  // untouched: bit-exact, no snap
+                const int c = painted_column_of_source_frame(
+                    app, audio, static_cast<double>(field), map);
+                int64_t v = authored_frame_at_column(app, audio, c, map);
+                if (v < 0)    v = 0;
+                if (v > wall) v = wall;
+                field = v;
+            };
+            snap_moved_bound(app.trim.begin_frame,
+                             app.trim_drag.orig_begin_frame,
+                             audio.total_frames() - 1);
+            snap_moved_bound(app.trim.end_frame,
+                             app.trim_drag.orig_end_frame,
+                             audio.total_frames());
+            // Keep the playhead pinned to the grabbed bound across the snap,
+            // exactly as the motion handler pinned it all drag: a direct set
+            // (no move_playhead_to, so no scroll), recomputing the same value
+            // when the snap was a no-op.
+            const int64_t grabbed_src = app.trim_drag.is_begin
+                ? app.trim.begin_frame : app.trim.end_frame;
+            app.playhead_cursor_sample =
+                source_frame_to_active_domain(app, audio, grabbed_src);
+        }
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
