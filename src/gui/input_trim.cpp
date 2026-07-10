@@ -321,10 +321,13 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     }
 
     // Single-bound: pre-drag frame plus the anchor-relative delta. The
-    // mouse-derived delta rounds once (nearbyint) into the integer domain;
-    // everything after is int64 arithmetic.
+    // mouse-derived delta rounds once into the integer domain through
+    // snap_authored_frame — the value lands in an authored store field
+    // below, so the conversion goes through the single double-to-authored
+    // chokepoint like every other authored write; everything after is
+    // int64 arithmetic.
     int64_t src_frame = app.trim_drag.orig_frame +
-        static_cast<int64_t>(std::nearbyint(delta_frames));
+        snap_authored_frame(delta_frames);
 
     // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
     // through the last fully-visible pixel) so the drag can't push it
