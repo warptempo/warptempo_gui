@@ -25,12 +25,18 @@
 // Absent optional keys are legal (has_* stays false; callers apply their
 // defaults): older sidecars carry fewer keys and remain loadable.
 //
-// Context-dependent range rules stay caller-side ON TOP of this schema:
-// viewport/playhead bounds against the loaded audio and the zoom-level
-// range are GUI-domain knowledge, checked load-fatally by the GUI after
-// this reader accepts the syntax. Trim bound ordering is deliberately NOT
-// checked anywhere at load — equal and inverted bounds are legal authored
-// states the defect series walks; the render boundary owns trim refusals.
+// This schema owns the zoom-level range too: a zoom outside
+// kFitFileLevel..kMaxNumericLevel is refused here in both products. What
+// stays caller-side, ON TOP of this schema, is the audio-relative range:
+// viewport/playhead positions need the loaded source's frame count, which
+// this reader never sees. Both loaders (GUI file_loader and CLI) run that
+// check load-fatally after this reader accepts the syntax, through the one
+// shared first_view_range_defect (marker_store_validate.h) against the
+// persisted active_audio_view's domain total — the source total for 'S' or
+// absent, the deformed target total for 'T' (skipped when the map cannot
+// build). Trim bound ordering is deliberately NOT checked anywhere at load —
+// equal and inverted bounds are legal authored states the defect series
+// walks; the render boundary owns trim refusals.
 
 // The persisted zoom-level vocabulary, enforced by this schema in both
 // products. kFitFileLevel = 0 ("whole file visible", computed at zoom /

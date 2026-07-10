@@ -51,13 +51,25 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Preflight.
+    // Preflight. Print the probe owner's diagnostic verbatim in the unified
+    // shape: a malformed but recognized WAV/FLAC (duplicate chunk, truncated
+    // header, non-finite Float32) must not be misread as an unsupported
+    // format. The convert-once acquisition hint applies only when the magic
+    // matched no container at all (kUnknownAudioMagicError), so it is
+    // appended in that one case.
     auto source_info = audio_probe(path);
     if (!source_info) {
-        std::fprintf(stderr,
-            "warptempo_gui: unsupported source format for '%s': inputs are native FLAC or WAV "
-            "(convert once at acquisition, e.g. with ffmpeg or opusdec, and load the converted file)\n",
-            path.c_str());
+        if (source_info.error() == kUnknownAudioMagicError) {
+            std::fprintf(stderr,
+                "warptempo_gui: source open failed for '%s': %s; inputs are "
+                "native FLAC or WAV, so convert once at acquisition (e.g. with "
+                "ffmpeg or opusdec) and load the converted file\n",
+                path.c_str(), source_info.error().c_str());
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: source open failed for '%s': %s\n",
+                path.c_str(), source_info.error().c_str());
+        }
         return false;
     }
 

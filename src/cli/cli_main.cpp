@@ -209,10 +209,14 @@ int main(int argc, char** argv) {
     }
 
     // --- source sample rate / total frames ---
+    // Print the probe owner's diagnostic verbatim in the unified shape. The
+    // CLI is insurance-only; per the non-adversarial rubric it gets the owner
+    // detail with NO convert-once friendliness hint (that hint is GUI-side).
     auto info = audio_probe(source_path);
     if (!info) {
         std::fprintf(stderr,
-            "warptempo_cli: could not open source '%s'\n", source_path.c_str());
+            "warptempo_cli: source open failed for '%s': %s\n",
+            source_path.c_str(), info.error().c_str());
         return 1;
     }
     const long sample_rate  = info->sample_rate;

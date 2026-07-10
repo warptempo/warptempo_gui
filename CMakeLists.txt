@@ -32,7 +32,7 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  audio_io: in-tree audio container/codec boundary (dr_flac vendored for FLAC
 #  decode only; container probing and WAV handling are in-tree).
 #  parser: map / file-parse core (no fftw, no GUI, no engine; the shared headers
-#  warp_frame_map.h / phase_reset_frame_map.h / time_format.h live in src/).
+#  warp_frame_map.h and time_format.h live in src/).
 #  engine: PGHI DSP core (needs fftw; reads warp_frame_map.h header-only, no
 #  parser dependency). Buffer-out only: analysis, PGHI, synthesis, spectral
 #  limiter, map-extent emission.

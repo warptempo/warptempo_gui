@@ -63,5 +63,5 @@ audio_probe(const std::string& path)
         return out;
     }
 
-    return std::unexpected("unknown audio file magic");
+    return std::unexpected(std::string(kUnknownAudioMagicError));
 }

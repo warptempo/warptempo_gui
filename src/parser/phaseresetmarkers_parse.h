@@ -20,9 +20,12 @@ struct PhaseResetMarker {
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on
-// success; an empty or comment-only file yields an empty vector. On the first
-// malformed line, or an unopenable file, returns a one-line diagnostic
-// (line-tagged where line-specific). Canonical reader for the GUI store and the
-// headless CLI.
+// success; an empty file — no lines, or only blank lines (which are skipped) —
+// yields an empty vector. A leading '#' is the disabled-marker prefix, NOT a
+// comment: a '#' line whose remainder is not a valid frame position is
+// load-fatal like any other malformed line (there is no comment concept in the
+// grammar). On the first malformed line, or an unopenable file, returns a
+// one-line diagnostic (line-tagged where line-specific). Canonical reader for
+// the GUI store and the headless CLI.
 std::expected<std::vector<PhaseResetMarker>, std::string>
 parse_phaseresetmarkers_file(const std::string& path);

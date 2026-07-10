@@ -348,25 +348,33 @@ parse_warpmarkers_file(const std::string& path) {
             pos_view.remove_prefix(1);
         const std::string time_raw(pos_view.substr(0, pos_view.find('|')));
 
-        // Load rejects only DECREASING times. Equal-time markers load
-        // deliberately: the GUI may author them, so the save/reload round
-        // trip must never lock the user out; ordering degeneracy is a render
-        // boundary verdict now, refused by build_warp_frame_map's existing
-        // "marker segment < 1 frame" error. Decreasing stays load-fatal as a
+        // Load rejects only DECREASING times. Equal-time (and other closely
+        // spaced) markers load deliberately: the GUI may author them, so the
+        // save/reload round trip must never lock the user out. Coincidence is
+        // a render-boundary verdict now — the shared raw-store enumerator
+        // (enumerate_marker_store_defects, marker_store_validate.h) reports
+        // any two same-column markers under one deepest-zoom pixel of time
+        // apart, which the GUI walks as forced modals and the CLI lists to
+        // stderr; build_warp_frame_map's narrower "marker segment < 1 frame"
+        // error stays the render backstop. Decreasing stays load-fatal as a
         // corruption tripwire — the GUI always saves its time-sorted store,
         // so a decreasing file can only be a hand-edit error or corruption.
         if (last_time >= 0 && m.time_frame < last_time)
             return fail(line_number,
                 "time decreasing: " + time_raw);
 
-        // Cross-marker validation. A pass following a label ref is
-        // deliberately accepted: the resolver inherits from the nearest
-        // owner on the backward walk, skipping label refs and disabled
-        // markers, deterministically. Bad form is the author's concern,
-        // not a parse error. A label reference without a matching
-        // definition is likewise authorable now (the GUI permits deleting
-        // a definition its refs outlive), loads intact, and is refused at
-        // the render boundary by build_warp_frame_map.
+        // Cross-marker validation. A pass following a label ref loads
+        // intact — the GUI may author it and the save/reload round trip must
+        // never lock the user out — but it is render-invalid: the resolver
+        // would inherit from the nearest true owner (backward walk, skipping
+        // label refs and disabled markers) while the ref names a different
+        // provenance, so validate_pass_inheritance_source owns the refusal
+        // and the shared enumerator (enumerate_marker_store_defects) reports
+        // it for the GUI modal walk / CLI listing. A label reference without
+        // a matching definition is likewise authorable now (the GUI permits
+        // deleting a definition its refs outlive), loads intact, is
+        // enumerated as a dangling ref, and is refused at the render boundary
+        // by build_warp_frame_map.
         if (!m.label_def.empty()) {
             if (seen_def.count(m.label_def))
                 return fail(line_number,
