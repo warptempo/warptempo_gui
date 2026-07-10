@@ -53,6 +53,9 @@ struct GuiFlagEditor {
     // branch and enter_bpm_mode's forced iter-off). Undo entry when
     // something cleared; callers own the mode flip and repaint.
     void wipe_iter_state();
+    // Wipe every marker's session-only bpm state (owner flag, beats,
+    // bracket bounds, endpoint). History-less; callers own the repaint.
+    void wipe_bpm_state();
 
   private:
     // Shared core for the three "enter editor on idx" flows. The

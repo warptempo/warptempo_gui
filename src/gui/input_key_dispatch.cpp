@@ -760,11 +760,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             src_parent / "renders";
 
         // Committing a render is a wholesale authoring reset. Clear every
-        // marker's session-only iteration values and turn off both sweep
-        // modes' visibility. BPM values were already consumed when the sweep
-        // that produced this render fired.
+        // marker's session-only iteration and bpm state and turn off both
+        // sweep modes' visibility. A bpm sweep already wiped its state on
+        // dispatch, but the reset wipes unconditionally so a render committed
+        // from any path leaves no session-only state behind.
         // No separate undo entry: the commit pushes its own cross-file undo
-        // and wipes renders/; iter values are session-only, never serialized.
+        // and wipes renders/; iter and bpm values are session-only, never
+        // serialized (wipe_bpm_state is history-less by design). A full-window
+        // repaint at the tail covers both strips the wipes touch.
         {
             auto& mv = app.warpmarkers.markers_mut();
             for (auto& m : mv) {
@@ -772,6 +775,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 m.iter_end   = std::numeric_limits<double>::quiet_NaN();
             }
         }
+        flag_editor.wipe_bpm_state();
         app.iteration_mode_enabled = false;
         app.bpm_mode_enabled       = false;
 
@@ -937,9 +941,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         if (app.active_markers_view == 'W') {
             // Mutual exclusion. Toggling iter ON forces
             // BPM mode off; toggling iter OFF leaves BPM untouched.
+            // Forced bpm-off routes through the exit_bpm_mode chokepoint so
+            // it wipes the session-only bpm state like any other mode exit.
             const bool turning_on = !app.iteration_mode_enabled;
             if (turning_on && app.bpm_mode_enabled) {
-                app.bpm_mode_enabled = false;
+                flag_editor.exit_bpm_mode();
             }
             if (!turning_on) {
                 // Turning iteration mode OFF wipes every marker's
@@ -1134,26 +1140,15 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             // parse failure leaves the editor open (red) and renders
             // nothing.
             if (flag_editor.commit_bpm_edit()) {
-                // Ordering is load-bearing: render_bpm_sweep early-bails
-                // on !bpm_mode_enabled, so the sweep MUST fire before
-                // exit_bpm_mode clears the flag. Then close out the mode
-                // and repaint the bottom strip without the editor.
+                // render_bpm_sweep owns the mode teardown on its success
+                // path: after the batch is built and dispatched it wipes the
+                // session-only bpm state and exits bpm mode, so a dispatched
+                // sweep leaves no marker carrying bpm state and the next M on
+                // this marker seeds []. A guard-bail (return false, e.g. a
+                // defect series opened or the renderer is busy) dispatches
+                // nothing and leaves the committed values and the mode in
+                // place for correction.
                 render_bpm_sweep();
-                flag_editor.exit_bpm_mode();
-                // The fired sweep consumes its values. The
-                // render already snapshotted the owner into its
-                // RenderRequest, so clearing here doesn't disturb it.
-                // Next M on this marker seeds [].
-                auto& mv = app.warpmarkers.markers_mut();
-                for (auto& m : mv) {
-                    if (m.bpm_owner) {
-                        m.bpm_owner = false;
-                        m.bpm_beats = 0;
-                        m.bpm_lo    = 0;
-                        m.bpm_hi    = 0;
-                    }
-                }
-                viewport.invalidate_timestamp_area();
             }
         } else {
             flag_editor.commit_top_flag_edit();

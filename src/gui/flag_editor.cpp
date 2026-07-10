@@ -532,6 +532,28 @@ void GuiFlagEditor::wipe_iter_state() {
     undo.push_undo_warp(std::move(pre_state), hint_last);
 }
 
+// Wipe every marker's session-only bpm state — owner flag, beats, bracket
+// bounds, and span endpoint back to their defaults. Runs on every bpm-mode
+// exit (the single chokepoint exit_bpm_mode) and after a sweep dispatches, so
+// a bracket exists only while the mode is live; re-entering bpm mode always
+// seeds a blank "[]".
+//
+// History-less on purpose: bpm values are session-only with no undo of their
+// own (see commit_bpm_edit), so no undo entry is pushed. A consequence is that
+// marker snapshots captured by OTHER ops still carry the bpm fields, so plain
+// undo of an unrelated edit can restore a wiped bracket — the same accepted
+// residual the iter wipe has, recorded not fixed. Callers own the repaint.
+void GuiFlagEditor::wipe_bpm_state() {
+    auto& mv = app.warpmarkers.markers_mut();
+    for (auto& m : mv) {
+        m.bpm_owner    = false;
+        m.bpm_beats    = 0;
+        m.bpm_lo       = 0.0;
+        m.bpm_hi       = 0.0;
+        m.bpm_endpoint = -1;
+    }
+}
+
 // Open the bottom-strip BPM editor on `idx`. Seed pending is the
 // current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
@@ -651,8 +673,9 @@ bool GuiFlagEditor::commit_bpm_edit() {
 
 // Full mode-on transition for BPM mode. Validates the activation gate, toggles
 // iter mode off if active, maintains the single-owner invariant, and marks the
-// earlier of the two selected markers as the BPM owner (preserving prior
-// values when re-toggling on the same owner), then flips the mode flag. The
+// earlier of the two selected markers as the BPM owner (mode exit wipes the
+// bpm state, so a fresh entry always seeds a blank bracket), then flips the
+// mode flag. The
 // span endpoint is now explicit — supplied by the `m` handler and recorded on
 // the owner's bpm_endpoint — so this no longer auto-selects an endpoint cue.
 // The `m` handler calls this and then opens the bottom-strip BPM editor on the
@@ -689,9 +712,9 @@ void GuiFlagEditor::enter_bpm_mode() {
     }
     // Tag owner with bpm_owner=true if not already set. Sentinel-zero
     // values stay zero; format_bpm_bracket_text renders "[]" for that
-    // state, which seeds the bottom-strip editor. Re-toggling on the same
-    // owner preserves any previously-committed values (the flag stays true
-    // and the values aren't touched).
+    // state, which seeds the bottom-strip editor. Every prior mode exit
+    // wiped the bpm state, so a fresh entry always finds an untagged owner
+    // and seeds a blank bracket.
     if (!mv[owner].bpm_owner) {
         mv[owner].bpm_owner = true;
         mv[owner].bpm_beats          = 0;
@@ -704,8 +727,14 @@ void GuiFlagEditor::enter_bpm_mode() {
     viewport.invalidate_top_strip();
 }
 
+// The single bpm-mode-off chokepoint: every route that turns bpm mode off
+// funnels here. Wipes the session-only bpm state (mode exit IS the clear, so
+// no marker carries bpm state once the mode is down) and repaints both the
+// top strip and the bottom strip the bpm editor drew on.
 void GuiFlagEditor::exit_bpm_mode() {
     if (!app.bpm_mode_enabled) return;
     app.bpm_mode_enabled = false;
+    wipe_bpm_state();
     viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
 }

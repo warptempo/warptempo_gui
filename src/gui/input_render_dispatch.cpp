@@ -542,5 +542,15 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     if (async_renderer.is_busy()) return false;
     start_render_batch(std::move(reqs), "bpm");
+    // Batch fully built and dispatched: every request carries its own moved
+    // marker snapshot and its cell_settings.bpm descriptor string, so nothing
+    // downstream reads the live bpm marker state. Wipe it and close bpm mode
+    // together (exit_bpm_mode is the chokepoint — it wipes the state and
+    // repaints both strips). Wiping while the mode stayed on would leave an
+    // ownerless bpm mode painting a blank bracket with no owner to re-edit;
+    // the sweep is the end of the workflow, and re-sweeping re-selects a span
+    // anyway. Runs only on this dispatched path — every guard bail returns
+    // false above and leaves the bpm state untouched.
+    flag_editor.exit_bpm_mode();
     return true;
 }
