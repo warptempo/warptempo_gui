@@ -2,6 +2,7 @@
 
 #include "input_handler.h"   // validate_target_view_entry (load gate below)
 #include "prompt.h"
+#include "render_output_naming.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -321,6 +322,24 @@ bool GuiFileLoader::load_file(const std::string& path) {
             return false;
         }
         const SettingsFile& sf = *sf_r;
+        // Source-clobber guard, adversarial and load-fatal: a hand-edited
+        // sidecar whose title/output_format composes a render output path onto
+        // the source audio itself would overwrite the source at render time.
+        // The GUI editor refuses this at commit, so the state is
+        // GUI-uncommittable; refuse the hand-edited file here at load, the
+        // earliest boundary, in the same abort-and-revert shape as the other
+        // adversarial settings refusals. The shared predicate matches the
+        // editor's composition exactly (single-render source-sibling paths).
+        if (auto collision =
+                render_output_source_collision(sf.engine,
+                                               app.source_audio_path)) {
+            std::fprintf(stderr,
+                "warptempo_gui: source load aborted: settings in '%s' would "
+                "make the render output '%s' overwrite the source audio file\n",
+                app.settings_path.c_str(), collision->string().c_str());
+            revert_to_blank();
+            return false;
+        }
         // The schema already enforced syntax, non-negativity, and the zoom
         // vocabulary; the per-tab view scratch applies verbatim here. The
         // audio-relative viewport/playhead bounds run at the end of this

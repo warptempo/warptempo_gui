@@ -110,6 +110,21 @@ int main(int argc, char** argv) {
         trim = (active_tab == 'B') ? sf.tab_b.trim : sf.tab_a.trim;
     }
 
+    // --- source-clobber guard, adversarial and load-fatal: a hand-edited
+    // sidecar whose title/output_format composes a render output path onto the
+    // source audio itself would overwrite the source. The GUI editor refuses
+    // this at commit and the GUI loader refuses the hand-edited file at load;
+    // refuse it here too, first-error and stderr-only, so a file set is
+    // loadable in both products or neither. The shared predicate matches the
+    // GUI's composition exactly. ---
+    if (auto collision = render_output_source_collision(es, source_path)) {
+        std::fprintf(stderr,
+            "warptempo_cli: settings in '%s' would make the render output '%s' "
+            "overwrite the source audio file\n",
+            set_path.c_str(), collision->string().c_str());
+        return 1;
+    }
+
     // --- engine-only: this CLI renders wav. The map formats
     // (warptempo_maps/generic_map/midi_map) are produced by the GUI (the
     // engine never runs for those). ---

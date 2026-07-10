@@ -1,5 +1,7 @@
 #include "render_output_naming.h"
 
+#include <system_error>
+
 std::vector<std::string> render_output_extensions(
     const std::string& output_format) {
     if (output_format == "warptempo_maps")
@@ -36,4 +38,24 @@ std::vector<std::filesystem::path> compose_render_output_paths(
     for (const std::string& ext : render_output_extensions(output_format))
         paths.push_back(dir / (stem + ext));
     return paths;
+}
+
+std::optional<std::filesystem::path> render_output_source_collision(
+    const EngineSettings& es,
+    const std::string& source_audio_path) {
+    if (source_audio_path.empty()) return std::nullopt;
+    const std::filesystem::path src(source_audio_path);
+    const std::string source_stem =
+        std::filesystem::path(source_audio_path).stem().string();
+    for (const std::filesystem::path& out : compose_render_output_paths(
+             render_output_directory(source_audio_path),
+             render_output_stem(es, source_stem),
+             es.output_format)) {
+        std::error_code ec;
+        if (std::filesystem::equivalent(out, src, ec)
+            || out.lexically_normal() == src.lexically_normal()) {
+            return out;
+        }
+    }
+    return std::nullopt;
 }

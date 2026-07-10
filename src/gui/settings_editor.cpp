@@ -153,37 +153,21 @@ void GuiSettingsEditor::commit() {
     // Source-clobber guard. The single-render output lands beside the source
     // (the wav deliverable named by title, the map artifacts by the source
     // stem — render_output_stem); an edit that makes any of the format's
-    // output paths resolve to the source file itself would
-    // overwrite the source on the next Ctrl+Alt+R. Every path of the
-    // format is checked — the warptempo_maps pair's second file is covered
-    // by the same refusal. Refuse it here so the colliding value never
+    // output paths resolve to the source file itself would overwrite the
+    // source on the next Ctrl+Alt+R. The shared predicate composes and checks
+    // every path of the format — the warptempo_maps pair's second file is
+    // covered by the same refusal. Refuse it here so the colliding value never
     // reaches app.engine_settings.
-    if (!app.source_audio_path.empty()) {
-        const std::filesystem::path src(app.source_audio_path);
-        for (const std::filesystem::path& out :
-             compose_render_output_paths(
-                 render_output_directory(app.source_audio_path),
-                 render_output_stem(
-                     candidate,
-                     std::filesystem::path(app.source_audio_path)
-                         .stem()
-                         .string()),
-                 candidate.output_format)) {
-            std::error_code ec;
-            const bool same =
-                std::filesystem::equivalent(out, src, ec)
-                || out.lexically_normal() == src.lexically_normal();
-            if (same) {
-                app.settings_editor.red = true;
-                viewport.invalidate_timestamp_area();
-                std::fprintf(stderr,
-                    "warptempo_gui: settings edit rejected: this would make the "
-                    "render output overwrite the source file (%s); choose a "
-                    "different title or output_format\n",
-                    src.filename().string().c_str());
-                return;
-            }
-        }
+    if (render_output_source_collision(candidate, app.source_audio_path)) {
+        app.settings_editor.red = true;
+        viewport.invalidate_timestamp_area();
+        std::fprintf(stderr,
+            "warptempo_gui: settings edit rejected: this would make the "
+            "render output overwrite the source file (%s); choose a "
+            "different title or output_format\n",
+            std::filesystem::path(app.source_audio_path)
+                .filename().string().c_str());
+        return;
     }
 
     SettingsSnapshot pre = capture_current_settings(app);

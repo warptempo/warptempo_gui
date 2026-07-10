@@ -3,6 +3,7 @@
 #include "engine_settings.h"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -50,3 +51,25 @@ std::vector<std::filesystem::path> compose_render_output_paths(
     const std::filesystem::path& dir,
     const std::string& stem,
     const std::string& output_format);
+
+// Source-clobber guard. The render output must never overwrite the source
+// audio itself. Composes the single-render source-sibling output paths exactly
+// as a render dispatch does (compose_render_output_paths over
+// render_output_directory / render_output_stem) and returns the first output
+// path that resolves to the source, or nullopt when none collide. Every path
+// of the format is checked, so the warptempo_maps pair's second file is
+// covered too. std::filesystem::equivalent is an inode match that only
+// succeeds when both paths exist, so the lexically_normal comparison is the
+// fallback that catches the not-yet-written output that will land on the
+// source. An empty source path yields nullopt.
+//
+// Three callers refuse a collision at their own boundary: the settings editor
+// at commit (the colliding state is GUI-uncommittable), the GUI and
+// warptempo_cli loaders at load (a hand-edited sidecar composing the output
+// onto the source is adversarial — refused first-error, stderr-only, in both
+// products so a file set is loadable in both or neither), and the render
+// worker as the breach backstop. The worker composes batch-folder paths too
+// and keeps its own exists-gated check.
+std::optional<std::filesystem::path> render_output_source_collision(
+    const EngineSettings& es,
+    const std::string& source_audio_path);
