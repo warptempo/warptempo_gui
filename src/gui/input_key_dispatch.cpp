@@ -673,11 +673,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const std::expected<EngineSettings, std::string> commit_engine_settings =
             read_rendersettings_engine_block(sidecar);
         if (!commit_engine_settings) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: rendersettings engine "
-                "block read failed for '%s': %s\n",
-                sidecar.string().c_str(),
-                commit_engine_settings.error().c_str());
+            open_commit_refusal(commit_engine_settings.error(),
+                                cur_e.batch_folder);
             return true;
         }
         const bool has_authoring_block =
@@ -696,10 +693,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             GuiWarpMarkers m;
             auto r = m.load(wm.string());
             if (!r) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: load failed for '%s': "
-                    "%s\n",
-                    wm.string().c_str(), r.error().c_str());
+                open_commit_refusal(r.error(), cur_e.batch_folder);
                 return true;
             }
             src_warp = m.markers();
@@ -710,10 +704,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             GuiPhaseResetMarkers t;
             auto r = t.load(tm.string());
             if (!r) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: load failed for '%s': "
-                    "%s\n",
-                    tm.string().c_str(), r.error().c_str());
+                open_commit_refusal(r.error(), cur_e.batch_folder);
                 return true;
             }
             src_phase_resets = t.markers();
@@ -857,6 +848,64 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
     return false;
+}
+
+// Raise the forced-choice refusal for a Ctrl+Alt+C commit whose sidecar read
+// refused. The refusal fires before any live-store mutation, so the prompt
+// opens with nothing to roll back — [U]ndo and Esc simply dismiss. The
+// offending render's batch folder is stashed for the [Delete] resolution.
+void GuiInputHandler::open_commit_refusal(std::string error,
+                                          std::filesystem::path batch_folder) {
+    commit_refusal_batch_folder_ = std::move(batch_folder);
+    app.prompt.active          = true;
+    app.prompt.text            = "commit refused: " + error;
+    app.prompt.response_keys   = {'u', '\x7f'};
+    app.prompt.response_labels = {"[U]ndo", "[Delete]"};
+    app.prompt.trigger         = DialogTrigger::COMMIT_REFUSAL;
+    viewport.clear_hover_popup();
+    viewport.invalidate_all();
+}
+
+// Response dispatch for the COMMIT_REFUSAL modal. [U]ndo and Esc dismiss with
+// no side effects; [Delete] removes the offending render's batch folder and
+// re-resolves the render list, landing on a surviving entry or exiting render
+// view when none remain. Keys other than u / Esc / Delete are swallowed.
+void GuiInputHandler::handle_commit_refusal_response(char k) {
+    if (!app.prompt.active ||
+        app.prompt.trigger != DialogTrigger::COMMIT_REFUSAL) return;
+
+    // '\x1b' = Esc (dismiss, identical to [U]ndo), '\x7f' = Delete.
+    if (k == 'u' || k == '\x1b') {
+        app.prompt.active = false;
+        viewport.invalidate_all();
+        return;
+    }
+    if (k != '\x7f') return;  // swallow everything else
+
+    // [Delete]: drop the offending render's folder, then re-resolve the list
+    // through the same deleted-entry tolerance the navigation handlers use.
+    // The current entry's rendersettings are deliberately NOT written back
+    // (that would resurrect the folder just removed).
+    app.prompt.active = false;
+    std::error_code ec;
+    std::filesystem::remove_all(commit_refusal_batch_folder_, ec);
+    if (ec) {
+        std::fprintf(stderr,
+            "warptempo_gui: commit refusal: wipe failed for '%s': %s\n",
+            commit_refusal_batch_folder_.string().c_str(),
+            ec.message().c_str());
+    }
+    commit_refusal_batch_folder_.clear();
+
+    if (!render_view.refresh_render_view_list()) {
+        // Renders folder is now empty — exit render view gracefully.
+        render_view.exit_render_view_and_clear();
+    } else {
+        // refresh_render_view_list re-resolves the index onto the closest
+        // surviving entry; load it into the active audio.
+        render_view.load_render_view_at(app.render_view.index);
+    }
+    viewport.invalidate_all();
 }
 
 // P / I / M letter-key handlers. See the declaration for the chord list.

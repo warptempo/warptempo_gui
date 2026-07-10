@@ -135,6 +135,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             if (k != 0 && k != '\x1b') handle_defect_response(k);
             return;
         }
+        // Commit-refusal modal (a refused Ctrl+Alt+C render-view commit):
+        // route the response through the handler because [Delete] reaches
+        // filesystem removal and the render-list re-resolution. Esc is passed
+        // through (it dismisses, like [U]ndo). Ctrl+Q / Ctrl+W are NOT
+        // intercepted — as with the other non-series refusal prompts they map
+        // to 'q' / 'w', which the handler ignores, so the prompt stays modal.
+        if (app.prompt.trigger == DialogTrigger::COMMIT_REFUSAL) {
+            if (k != 0) handle_commit_refusal_response(k);
+            return;
+        }
         if (k != 0) {
             for (char rk : app.prompt.response_keys) {
                 if (k == rk) {
