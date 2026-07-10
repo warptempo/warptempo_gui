@@ -803,13 +803,23 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // app.render_view.warp_markers / .phase_resets are render-domain display
         // state. Ctrl+Alt+C promotes the render's source-domain authoring
         // sidecars, so every required sidecar is validated and collected
-        // before the first mutation. The whole .rendersettings file goes
-        // through the one strict parser (read_rendersettings): a
-        // hand-edited sidecar with ANY malformed line — a broken authoring
-        // field included — aborts here, before the first marker or
-        // AppState mutation, rather than partially restoring (a skipped
-        // trim key would otherwise read as "bound absent" and clear a live
-        // trim). Adversarial input; stderr-only abort.
+        // before the first mutation. The pre-mutation validation set, in
+        // order: (1) the whole .rendersettings file through the one strict
+        // parser (read_rendersettings) — a hand-edited sidecar with ANY
+        // malformed line, a broken authoring field included, aborts rather
+        // than partially restoring (a skipped trim key would otherwise
+        // read as "bound absent" and clear a live trim); (2) both marker
+        // sidecars through their strict loaders; (3) the source-load
+        // adversarial guards over the assembled candidate — past-EOF
+        // walls (first_past_eof_wall_defect), authoring viewport/playhead
+        // range in the restored view's domain (first_view_range_defect),
+        // and the target-view/output-format compatibility rule. Any
+        // failure aborts to stderr, first error only, before any mutation
+        // of markers, history, settings, trim, view state, or renders/.
+        // Walkable, GUI-committable defects (coincident markers, dangling
+        // refs, equal/inverted trim, first-marker grammar) are deliberately
+        // NOT gated here: they adopt and walk the commit series like any
+        // other commit. Adversarial input; stderr-only abort.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
         const std::filesystem::path sidecar =
@@ -834,9 +844,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             authoring.has_playhead;
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_phase_resets;
+        const std::filesystem::path wm =
+            cur_e.batch_folder / (cur_e.basename + ".warpmarkers");
+        const std::filesystem::path tm =
+            cur_e.batch_folder / (cur_e.basename + ".phaseresetmarkers");
         {
-            const std::filesystem::path wm =
-                cur_e.batch_folder / (cur_e.basename + ".warpmarkers");
             GuiWarpMarkers m;
             auto r = m.load(wm.string());
             if (!r) {
@@ -849,8 +861,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             src_warp = m.markers();
         }
         {
-            const std::filesystem::path tm = cur_e.batch_folder /
-                (cur_e.basename + ".phaseresetmarkers");
             GuiPhaseResetMarkers t;
             auto r = t.load(tm.string());
             if (!r) {
@@ -861,6 +871,152 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 return true;
             }
             src_phase_resets = t.markers();
+        }
+
+        // The complete candidate is collected. The routing values below are
+        // the ones the application code further down actually uses, computed
+        // here (pre-mutation they read the same live state): the commit tab
+        // receives the authoring trim and viewport/playhead (the tab switch
+        // at the application site happens before those restores, so the live
+        // fields they write belong to the commit tab), and absent authoring
+        // keys leave the corresponding live state in place.
+        const char commit_tab =
+            authoring.has_active_tab ? authoring.active_tab
+                                     : app.active_tab_view;
+        const char restored_audio_view =
+            authoring.has_active_audio_view ? authoring.active_audio_view
+                                            : app.active_audio_view;
+        const int64_t total_frames = audio.total_frames();
+        const long    sample_rate  = audio.sample_rate();
+
+        // Source-load adversarial guard 1: past-EOF walls, the same shared
+        // implementation the GUI load and warptempo_cli run
+        // (first_past_eof_wall_defect, marker_store_validate.h). A canonical
+        // position past its wall is uncommittable through the GUI's gesture
+        // walls and past-EOF is not an enumerated walkable defect, so an
+        // adopted offender could only be repaired by downstream backstops —
+        // hand fabrication, hard-fail. One call per candidate file so the
+        // message names the offending sidecar; the call order (warp markers,
+        // phase resets, trim) is the validator's own internal order, so the
+        // first offender reported matches the single-call composite.
+        {
+            const std::vector<WarpMarker> cand_warp =
+                slice_to_warp_markers(src_warp);
+            const std::vector<PhaseResetMarker> cand_resets =
+                slice_to_phase_reset_markers(src_phase_resets);
+            if (auto detail = first_past_eof_wall_defect(
+                    cand_warp, {}, SettingsTrim{}, SettingsTrim{},
+                    total_frames, sample_rate)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: commit aborted: past-EOF wall defect "
+                    "for '%s': %s\n",
+                    wm.string().c_str(), detail->c_str());
+                return true;
+            }
+            if (auto detail = first_past_eof_wall_defect(
+                    {}, cand_resets, SettingsTrim{}, SettingsTrim{},
+                    total_frames, sample_rate)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: commit aborted: past-EOF wall defect "
+                    "for '%s': %s\n",
+                    tm.string().c_str(), detail->c_str());
+                return true;
+            }
+            // The authoring block carries at most one trim, applied to the
+            // commit tab (an authoring block without trim keys clears that
+            // tab's trim — nothing to wall then; without an authoring block
+            // the live trim is untouched). The other tab's slot is empty:
+            // its live trim survives the commit and was already walled at
+            // source load against this same audio.
+            SettingsTrim cand_trim;
+            if (has_authoring_block) {
+                cand_trim.has_begin   = authoring.has_trim_begin;
+                cand_trim.begin_frame = authoring.trim_begin_frame;
+                cand_trim.has_end     = authoring.has_trim_end;
+                cand_trim.end_frame   = authoring.trim_end_frame;
+            }
+            if (auto detail = first_past_eof_wall_defect(
+                    {}, {},
+                    commit_tab == 'B' ? SettingsTrim{} : cand_trim,
+                    commit_tab == 'B' ? cand_trim : SettingsTrim{},
+                    total_frames, sample_rate)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: commit aborted: past-EOF wall defect "
+                    "for '%s': %s\n",
+                    sidecar.string().c_str(), detail->c_str());
+                return true;
+            }
+        }
+
+        // Source-load adversarial guard 2: authoring viewport/playhead
+        // range in the restored view's domain, the same shared validator
+        // the GUI load and warptempo_cli run (first_view_range_defect,
+        // marker_store_validate.h). The domain total: the source total for
+        // a restored 'S' view; for 'T' the deformed target total of the
+        // warp frame map built from the CANDIDATE markers and the CANDIDATE
+        // engine scale — the map the restored session would actually clamp
+        // against — via the same resolve-then-build and total math the
+        // runtime cache uses (build_target_view_warp_frame_map,
+        // warp_frame_map_view.cpp). When 'T' is restored but that map
+        // cannot build, SKIP the check entirely, the source loader's own
+        // load-lenient policy: walkable-defect stores load intact by
+        // design, there is no target total to wall against, and the
+        // runtime viewport clamps own the values then.
+        if (authoring.has_viewport_start || authoring.has_playhead) {
+            bool    run_view_check = true;
+            int64_t domain_total   = total_frames;
+            if (restored_audio_view == 'T') {
+                std::string build_error;
+                const std::vector<WarpFrameMapSegment> cand_map =
+                    build_target_view_warp_frame_map(
+                        src_warp, rendersettings->engine.scale,
+                        static_cast<int>(sample_rate),
+                        static_cast<long>(total_frames), &build_error);
+                if (!build_error.empty()) {
+                    run_view_check = false;
+                } else if (!cand_map.empty()) {
+                    const double t = map_source_to_target(
+                        static_cast<double>(total_frames), cand_map);
+                    const int64_t tt =
+                        static_cast<int64_t>(std::nearbyint(t));
+                    if (tt > 0) domain_total = tt;
+                }
+            }
+            if (run_view_check) {
+                SettingsFileTab cand_view;
+                cand_view.has_viewport_start = authoring.has_viewport_start;
+                cand_view.viewport_start     = authoring.viewport_start;
+                cand_view.has_playhead       = authoring.has_playhead;
+                cand_view.playhead           = authoring.playhead;
+                if (auto detail = first_view_range_defect(
+                        commit_tab == 'B' ? SettingsFileTab{} : cand_view,
+                        commit_tab == 'B' ? cand_view : SettingsFileTab{},
+                        domain_total)) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: commit aborted: view range defect "
+                        "for '%s': %s\n",
+                        sidecar.string().c_str(), detail->c_str());
+                    return true;
+                }
+            }
+        }
+
+        // Source-load adversarial guard 3: target-view/output-format
+        // compatibility, the same rule the source loader applies. Target
+        // view is available only under output_format=wav
+        // (GuiTargetRender::target_view_available), and a settings commit
+        // that makes it unavailable leaves target view immediately
+        // (settings_editor.cpp), so a state RESTING in 'T' under a map
+        // format is GUI-unproducible. Tested against the effective
+        // restored view: the authoring block's value, or the live view an
+        // absent key leaves in place.
+        if (restored_audio_view == 'T' &&
+            rendersettings->engine.output_format != "wav") {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: invalid authoring view for "
+                "'%s': active_audio_view=T requires output_format=wav\n",
+                sidecar.string().c_str());
+            return true;
         }
 
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
@@ -884,8 +1040,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             clear_marker_slots(app.tab_b);
         }
 
-        const char commit_tab =
-            authoring.has_active_tab ? authoring.active_tab : app.active_tab_view;
         // Attribute the entry to the mode the commit was performed in so undo/redo restore the user's context and interpret post-restore hints against that marker store.
         const char commit_marker_mode = app.active_markers_view;
         undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
