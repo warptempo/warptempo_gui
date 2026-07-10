@@ -831,34 +831,6 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
 
-        // The fingerprint names the load identity, which the probe's hardfail
-        // proved still matched the on-disk file at dispatch. This re-check
-        // compares the post-render stat against that same identity: if the
-        // source was replaced mid-render, the association between the borrowed
-        // samples and the fingerprint can no longer be proven, so publish the
-        // render without one. A rename-replace that lands mid-render can skip
-        // the fingerprint of a still-consistent render; the cost is one
-        // re-render, in the safe direction. Reuse rungs above are deliberately
-        // unguarded because they publish audio and fingerprint that were
-        // created together, so their association holds regardless of what the
-        // file does afterward. fingerprint is always non-empty here — the wav
-        // arm computes it unconditionally and nothing clears it before this
-        // point — so the clear below is the only producer of an empty
-        // fingerprint on the wav path.
-        {
-            RenderFileIdentity now_identity;
-            if (!stat_file_identity(req.source_audio_path, now_identity) ||
-                now_identity.size != source_identity.size ||
-                now_identity.mtime != source_identity.mtime) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: source identity changed "
-                    "during render; skipping fingerprint and cache publication "
-                    "for '%s'\n",
-                    final_output_path.c_str());
-                fingerprint.clear();
-            }
-        }
-
         // Global limiter toggle. When on, every path (disk trimmed/untrimmed
         // and the target-view buffer) gets the spectral(-0.3) + lifted
         // peak(0) chain; when off, both limiters sit out entirely and disk
@@ -962,6 +934,39 @@ RenderOutcome do_render(const RenderRequest& req,
             return RenderOutcome::Failed;
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
+
+        // The fingerprint names the load identity, which the probe's hardfail
+        // proved still matched the on-disk file at dispatch. This re-check
+        // runs POST-render, immediately ahead of every cache/fingerprint
+        // publication below (the buffer route's master-floats insert, the
+        // disk route's cache insert and fingerprint sidecar), comparing the
+        // now-stat against that same identity: if the source was replaced
+        // at any point up to here — synthesis and the post-engine chain
+        // included — the association between the borrowed samples and the
+        // fingerprint can no longer be proven, so publish the render
+        // without one. A rename-replace that lands mid-render can skip
+        // the fingerprint of a still-consistent render; the cost is one
+        // re-render, in the safe direction. Reuse rungs above are deliberately
+        // unguarded because they publish audio and fingerprint that were
+        // created together, so their association holds regardless of what the
+        // file does afterward. fingerprint is always non-empty here — the wav
+        // arm computes it unconditionally and nothing clears it before this
+        // point — so the clear below is the only producer of an empty
+        // fingerprint on the wav path.
+        {
+            RenderFileIdentity now_identity;
+            if (!stat_file_identity(req.source_audio_path, now_identity) ||
+                now_identity.size != source_identity.size ||
+                now_identity.mtime != source_identity.mtime) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: source identity changed "
+                    "during render; skipping fingerprint and cache publication "
+                    "for '%s'\n",
+                    final_output_path.c_str());
+                fingerprint.clear();
+            }
+        }
+
         if (req.output_buffer && ep.limiter) {
             // Target playback auditions the deliverable lattice —
             // finish_render just snapped the limited buffer to PCM_24 in
