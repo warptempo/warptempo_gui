@@ -20,6 +20,10 @@ using warptempo_parse::parse_int_strict;
 using warptempo_parse::prefix_line_error;
 using warptempo_parse::trim_ws;
 
+}  // namespace
+
+namespace warptempo_settings {
+
 std::unexpected<std::string> bad_value(int ln, const std::string& key,
                                        const std::string& value,
                                        const std::string& rule) {
@@ -27,21 +31,12 @@ std::unexpected<std::string> bad_value(int ln, const std::string& key,
         ln, "key '" + key + "' has invalid value '" + value + "': " + rule);
 }
 
-}  // namespace
-
-std::expected<SettingsFile, std::string> read_settings_file(
-        const std::string& path) {
-    SettingsFile out;
-
-    std::ifstream f(path);
-    if (!f) {
-        return std::unexpected("could not open '" + path + "'");
-    }
-
+std::expected<void, std::string> scan_settings_file(
+        std::istream& in, const SettingsLineFn& on_pair) {
     std::set<std::string> seen;
     std::string line;
     int ln = 0;
-    while (std::getline(f, line)) {
+    while (std::getline(in, line)) {
         ++ln;
         if (ln == 1) warptempo_parse::strip_bom(line);
         const std::string trimmed = trim_ws(line);
@@ -59,15 +54,52 @@ std::expected<SettingsFile, std::string> read_settings_file(
         if (!seen.insert(key).second) {
             return prefix_line_error(ln, "duplicate key '" + key + "'");
         }
+        auto r = on_pair(ln, key, value);
+        if (!r) return std::unexpected(std::move(r.error()));
+    }
 
-        // Engine keys route through the single per-(key, value) validator
-        // shared with the editor-commit boundary.
-        if (is_canonical_engine_key(key)) {
-            std::string reason;
-            if (!validate_engine_setting(key, value, out.engine, reason)) {
-                return bad_value(ln, key, value, reason);
-            }
-            continue;
+    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
+        if (seen.count(k) == 0) {
+            return std::unexpected(
+                std::string("missing required key '") + k + "'");
+        }
+    }
+    return {};
+}
+
+std::optional<std::expected<void, std::string>> try_engine_key(
+        int ln, const std::string& key, const std::string& value,
+        EngineSettings& engine) {
+    if (!is_canonical_engine_key(key)) return std::nullopt;
+    // Engine keys route through the single per-(key, value) validator
+    // shared with the editor-commit boundary.
+    std::string reason;
+    if (!validate_engine_setting(key, value, engine, reason)) {
+        return std::expected<void, std::string>(bad_value(ln, key, value, reason));
+    }
+    return std::expected<void, std::string>{};
+}
+
+}  // namespace warptempo_settings
+
+std::expected<SettingsFile, std::string> read_settings_file(
+        const std::string& path) {
+    SettingsFile out;
+
+    std::ifstream f(path);
+    if (!f) {
+        return std::unexpected("could not open '" + path + "'");
+    }
+
+    auto scan = warptempo_settings::scan_settings_file(
+        f, [&out](int ln, const std::string& key,
+                  const std::string& value)
+                  -> std::expected<void, std::string> {
+        using warptempo_settings::bad_value;
+
+        if (auto e = warptempo_settings::try_engine_key(ln, key, value,
+                                                        out.engine)) {
+            return *e;
         }
 
         // A per-tab key prefix selects the tab; the suffix selects the
@@ -188,13 +220,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
         } else {
             return prefix_line_error(ln, "unknown key '" + key + "'");
         }
-    }
-
-    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
-        if (seen.count(k) == 0) {
-            return std::unexpected(
-                std::string("missing required key '") + k + "'");
-        }
-    }
+        return {};
+    });
+    if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }

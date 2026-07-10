@@ -39,9 +39,7 @@ bool create_if_missing(const std::filesystem::path& p,
 // duplicates, malformed values, out-of-range zoom levels, and missing
 // required engine keys. Absent optional keys stay legal (defaults for the
 // view projection, has_ flags for the authoring projection: older or
-// minimal sidecars omit the authoring block, and the view-state-only file
-// update_rendersettings_view_state can leave behind already fails its
-// missing-engine-key check here).
+// minimal sidecars omit the authoring block).
 //
 // The two consumers apply opposite policies on a refused read, matching
 // the marker display sidecars' recorded leniency split: the render-view
@@ -95,15 +93,17 @@ bool write_rendersettings(const std::filesystem::path& path,
                           int64_t playhead,
                           const AuthoringSnapshot& authoring);
 
-// View-state-only update of `.rendersettings`: read-modify-write.
-// Preserves every non-view-state line in its existing order (the
-// engine block + any unknown lines), replaces the three view-state
-// lines (or appends them if absent) at the file's tail. Atomic via
+// View-state-only update of `.rendersettings`: strict read-modify-write.
+// Strict-reads the existing file through read_rendersettings, then
+// re-serializes it canonically (engine block, the fresh view-state block,
+// the parsed authoring block) via write_rendersettings. Atomic via
 // tmp + fsync + rename.
 //
-// If the file is missing, emits a view-state-only file (no engine
-// block) after logging once — a later strict engine-block read on
-// the same path will fail its missing-required-key checks.
+// Any read failure — a missing file included — refuses the update: one
+// stderr line and a false return, no write. The file is program-written,
+// so a refused read means adversarial or absent bytes this mutation
+// boundary will not perpetuate or manufacture; the display-leniency ruling
+// covers the DISPLAY reader only. Callers already tolerate false.
 bool update_rendersettings_view_state(const std::filesystem::path& path,
                                        int64_t viewport_start,
                                        int     zoom_level,

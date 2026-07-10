@@ -4,6 +4,9 @@
 
 #include <cstdint>
 #include <expected>
+#include <functional>
+#include <istream>
+#include <optional>
 #include <string>
 
 // Whole-file strict schema for the `.settings` sidecar — the single owner
@@ -93,3 +96,41 @@ struct SettingsFile {
 // "line N: " prefix where a line is at fault; callers add the path context.
 std::expected<SettingsFile, std::string> read_settings_file(
     const std::string& path);
+
+// Shared strict line scanner for the settings-format sidecars. Both
+// whole-file readers — read_settings_file (`.settings`) and read_rendersettings
+// (`.rendersettings`, GUI-side) — build on this: it owns the one lexical
+// contract they hold in common, while each reader keeps its own distinct
+// per-key vocabulary and validation arms. The two files' error strings are
+// byte-identical because they share these functions.
+namespace warptempo_settings {
+
+// Build the "key 'K' has invalid value 'V': RULE" refusal, line-prefixed.
+std::unexpected<std::string> bad_value(int ln, const std::string& key,
+                                       const std::string& value,
+                                       const std::string& rule);
+
+// Per-meaningful-line callback: given the 1-based line number, key, and
+// value, either accept (`return {};`) or refuse (`return bad_value(...)` /
+// `return warptempo_parse::prefix_line_error(...)`).
+using SettingsLineFn = std::function<std::expected<void, std::string>(
+    int ln, const std::string& key, const std::string& value)>;
+
+// Scan `in` under the shared lexical contract — BOM strip on line 1,
+// whitespace trim, blank and '#' comment skip, first-'=' split, empty-key
+// and keyless-line refusal, duplicate-key refusal against a seen set — and
+// invoke `on_pair` once per meaningful line. After the loop, enforce the
+// four required engine keys (title, output_format, scale, limiter). Returns
+// the first error (lexical, callback, or missing-required-key), or success.
+std::expected<void, std::string> scan_settings_file(std::istream& in,
+                                                    const SettingsLineFn& on_pair);
+
+// Shared engine-key arm. If `key` is a canonical engine key, validate
+// (key, value) into `engine` and return the outcome (`{}` on accept, a
+// bad_value refusal otherwise). If `key` is not an engine key, returns
+// std::nullopt so the caller falls through to its own per-key arms.
+std::optional<std::expected<void, std::string>> try_engine_key(
+    int ln, const std::string& key, const std::string& value,
+    EngineSettings& engine);
+
+}  // namespace warptempo_settings

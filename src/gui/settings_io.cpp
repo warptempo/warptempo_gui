@@ -10,7 +10,6 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <fstream>
-#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <system_error>
@@ -274,44 +273,18 @@ std::expected<Rendersettings, std::string> read_rendersettings(
         return std::unexpected("could not open '" + path.string() + "'");
     }
 
-    std::set<std::string> seen;
-    std::string line;
-    int ln = 0;
-    auto bad_value = [](int line_no, const std::string& key,
-                        const std::string& value, const std::string& rule) {
-        return warptempo_parse::prefix_line_error(
-            line_no,
-            "key '" + key + "' has invalid value '" + value + "': " + rule);
-    };
     auto valid_zoom = [](int z) {
         return z >= kFitFileLevel && z <= kMaxNumericLevel;
     };
-    while (std::getline(f, line)) {
-        ++ln;
-        if (ln == 1) warptempo_parse::strip_bom(line);
-        const std::string trimmed = warptempo_parse::trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
-        if (eq == std::string::npos) {
-            return warptempo_parse::prefix_line_error(
-                ln, "not a key=value line");
-        }
-        const std::string key   = warptempo_parse::trim_ws(trimmed.substr(0, eq));
-        const std::string value = warptempo_parse::trim_ws(trimmed.substr(eq + 1));
-        if (key.empty()) {
-            return warptempo_parse::prefix_line_error(ln, "empty key");
-        }
-        if (!seen.insert(key).second) {
-            return warptempo_parse::prefix_line_error(
-                ln, "duplicate key '" + key + "'");
-        }
+    auto scan = warptempo_settings::scan_settings_file(
+        f, [&out, &valid_zoom](int ln, const std::string& key,
+                               const std::string& value)
+                               -> std::expected<void, std::string> {
+        using warptempo_settings::bad_value;
 
-        if (is_canonical_engine_key(key)) {
-            std::string reason;
-            if (!validate_engine_setting(key, value, out.engine, reason)) {
-                return bad_value(ln, key, value, reason);
-            }
+        if (auto e = warptempo_settings::try_engine_key(ln, key, value,
+                                                        out.engine)) {
+            return *e;
         } else if (key == "viewport_start") {
             int64_t v;
             if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
@@ -389,14 +362,9 @@ std::expected<Rendersettings, std::string> read_rendersettings(
             return warptempo_parse::prefix_line_error(
                 ln, "unknown key '" + key + "'");
         }
-    }
-
-    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
-        if (seen.count(k) == 0) {
-            return std::unexpected(
-                std::string("missing required key '") + k + "'");
-        }
-    }
+        return {};
+    });
+    if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }
 
@@ -417,35 +385,41 @@ bool update_rendersettings_view_state(const std::filesystem::path& path,
                                        int64_t viewport_start,
                                        int     zoom_level,
                                        int64_t playhead) {
-    // Read-modify-write: keep every line whose key isn't one of the
-    // three view-state keys, then append the fresh view-state block
-    // at the tail. Preserves the engine block and any unknown lines
-    // in their existing on-disk order.
-    std::string data;
-    std::ifstream f(path);
-    if (f) {
-        std::string line;
-        while (std::getline(f, line)) {
-            const std::string trimmed = warptempo_parse::trim_ws(line);
-            std::string key;
-            const size_t eq = trimmed.find('=');
-            if (eq != std::string::npos) {
-                key = warptempo_parse::trim_ws(trimmed.substr(0, eq));
-            }
-            if (key == "viewport_start" || key == "zoom" ||
-                key == "playhead") {
-                continue;
-            }
-            data += line;
-            data += '\n';
-        }
-    } else {
+    // Strict read-modify-write. The file is program-written, so any parse
+    // failure — a missing file included — is adversarial at this mutation
+    // boundary: refuse the update with one stderr line rather than
+    // perpetuate malformed bytes or manufacture a view-state-only file. The
+    // recorded display-leniency split covers the DISPLAY reader's fallback
+    // only, never a mutating write. On success, re-serialize the whole file
+    // canonically from the parsed struct with the fresh view state; a
+    // strict-parsed program-written file has no unknown lines or comments
+    // to lose, so the engine and authoring blocks round-trip byte-identical.
+    auto rs = read_rendersettings(path);
+    if (!rs) {
         std::fprintf(stderr,
-            "warptempo_gui: render-view: rendersettings missing at '%s'; "
-            "writing view-state-only file\n", path.string().c_str());
+            "warptempo_gui: render-view: view-state update refused for "
+            "'%s': %s\n", path.string().c_str(), rs.error().c_str());
+        return false;
     }
-    append_view_state_block(data, viewport_start, zoom_level, playhead);
-    return atomic_write_string_to_path(path.string(), data);
+
+    const RendersettingsAuthoring& a = rs->authoring;
+    AuthoringSnapshot authoring;
+    authoring.valid = a.has_active_tab || a.has_active_audio_view ||
+                      a.has_trim_begin || a.has_trim_end ||
+                      a.has_zoom_level || a.has_viewport_start ||
+                      a.has_playhead;
+    authoring.active_tab        = a.active_tab;
+    authoring.active_audio_view = a.active_audio_view;
+    authoring.has_trim_begin    = a.has_trim_begin;
+    authoring.trim_begin_frame  = a.trim_begin_frame;
+    authoring.has_trim_end      = a.has_trim_end;
+    authoring.trim_end_frame    = a.trim_end_frame;
+    authoring.zoom_level        = a.zoom_level;
+    authoring.viewport_start    = a.viewport_start;
+    authoring.playhead          = a.playhead;
+
+    return write_rendersettings(path, rs->engine, viewport_start,
+                                zoom_level, playhead, authoring);
 }
 
 std::string format_default_settings_template(const std::string& stem) {
