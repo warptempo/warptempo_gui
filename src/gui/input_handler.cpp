@@ -1055,10 +1055,12 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         app.last_input_event_time = std::chrono::steady_clock::now();
     }
     if (app.prompt.active) return;
-    if (text_editor::is_active(app.settings_editor)) return;
-    // All three text editors are wheel-modal: viewport changes mid-edit can
-    // elide or scroll off the edited flag.
-    if (text_editor::is_active(app.top_flag_editor)) return;
+    // Only the bottom-strip modal surfaces swallow the wheel (the settings
+    // editor and the BpmBracket reuse of top_flag_editor, the same predicate
+    // the keyboard gate uses). The top-strip flag editor is deliberately
+    // NOT modal — commands punch through it on the keyboard, so wheel zoom,
+    // Alt+wheel pan, and Ctrl+wheel authoring punch through it too.
+    if (modal_bottom_strip_editor_active()) return;
     if (app.loading || audio.total_frames() <= 0) return;
     // A wheel event during ANY active drag is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The playhead
