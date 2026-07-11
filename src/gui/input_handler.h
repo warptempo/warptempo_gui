@@ -301,6 +301,15 @@ struct GuiInputHandler {
     bool dispatch_archival_render_if_idle(RenderRequest req,
                                           std::vector<uint8_t> fingerprint);
 
+    // The Esc-cancel body itself, key-free: cancel the running archival
+    // session (worker cancel flag + batch finalize sentinel) and disarm the
+    // parked archival command. Called by handle_escape_cancels and by
+    // GuiFileLoader's cancel_archival_render hook (main.cpp back-wire) —
+    // reverting to blank discards the source, so a session rendering it
+    // gets exactly the Esc semantics. Returns true when there was a
+    // session to cancel.
+    bool cancel_archival_session();
+
 private:
     // ActiveBatch holds the run_render_batch state machine. Each entry is
     // dispatched onto GuiAsyncRenderer and the next entry fires from the

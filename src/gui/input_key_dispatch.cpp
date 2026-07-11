@@ -187,28 +187,30 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
              is_save || is_ctrl_q || is_ctrl_w);
 }
 
-// Esc-cancel handlers for in-flight operations. See the declaration in
-// input_handler.h for routing order.
-bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
-    // Esc during a render-in-flight requests cancellation. Two effects:
-    //   1. async_renderer.request_cancel() sets the worker's cancel flag,
-    //      which do_render passes through to the engine.
-    //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
-    //      finalizes the batch instead of dispatching the next entry.
-    // Both are needed: (1) interrupts the current render mid-stream;
-    // (2) stops the batch state machine from advancing after the
-    // cancelled render's on_done fires.
-    if (key == GuiKeys::Escape && async_renderer.is_busy()) {
+// The Esc-cancel semantics as a callable body, shared by the Esc key
+// handler below and GuiFileLoader's cancel_archival_render hook
+// (revert_to_blank discards the source, so a session rendering it must
+// receive the same cancellation Esc would deliver). Requesting
+// cancellation has two effects:
+//   1. async_renderer.request_cancel() sets the worker's cancel flag,
+//      which do_render passes through to the engine.
+//   2. app.queue_cancel_requested = true so that on_batch_entry_complete
+//      finalizes the batch instead of dispatching the next entry.
+// Both are needed: (1) interrupts the current render mid-stream;
+// (2) stops the batch state machine from advancing after the
+// cancelled render's on_done fires.
+bool GuiInputHandler::cancel_archival_session() {
+    if (async_renderer.is_busy()) {
         async_renderer.request_cancel();
         app.queue_cancel_requested = true;
-        // Esc means stop rendering: a parked archival command (a dispatch
-        // that killed this render and is waiting out its drain) is
-        // disarmed too, or it would resurrect a render the moment the
+        // Cancel means stop rendering: a parked archival command (a
+        // dispatch that killed this render and is waiting out its drain)
+        // is disarmed too, or it would resurrect a render the moment the
         // cancel lands.
         app.pending_archival = {};
         return true;
     }
-    if (key == GuiKeys::Escape && app.queue_running) {
+    if (app.queue_running) {
         // Render-state housekeeping flag survives a frame past the
         // worker's actual completion (worker_state_ transitions
         // Running -> CompletionPending while is_busy() still returns
@@ -221,6 +223,13 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
         return true;
     }
     return false;
+}
+
+// Esc-cancel handlers for in-flight operations. See the declaration in
+// input_handler.h for routing order.
+bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
+    if (key != GuiKeys::Escape) return false;
+    return cancel_archival_session();
 }
 
 // Esc during a pointer drag stops the gesture. Marker and trim drags

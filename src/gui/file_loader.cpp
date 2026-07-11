@@ -618,12 +618,30 @@ bool GuiFileLoader::load_file(const std::string& path) {
 }
 
 void GuiFileLoader::revert_to_blank() {
-    // The source is being discarded: tear down any live render-view
-    // state FIRST, while the source audio still exists — the teardown
-    // rebinds playback to the source buffer before freeing the entry
-    // buffer, and it must run ahead of playback.shutdown and the audio
-    // replacement below. Null only before main.cpp wires it, when no
-    // render view can exist yet.
+    // The source is being discarded: an archival render or batch still
+    // synthesizing it gets the Esc-cancel semantics (worker cancel flag,
+    // batch finalize sentinel, parked-command disarm) before anything else
+    // is torn down. Cancellation is asynchronous and the revert does NOT
+    // wait it out: the worker owns the old source buffer through the
+    // RenderRequest's shared_ptr (safe across file loads mid-render, per
+    // the contract at RenderRequest::source_samples), the batch machine
+    // finalizes via queue_cancel_requested at on_batch_entry_complete,
+    // and the terminal auto-open requires a non-cancelled batch, so the
+    // dead session can never open render view over the blank state. The
+    // post-cancel completion path (on_batch_entry_complete →
+    // dispatch_next_batch_entry's cancelled branch → finalize_render_run →
+    // maybe_dispatch_pending) reads only its own batch_ fields and the
+    // flags cancelled here — pending_archival is disarmed and the pending
+    // preview is cleared by cancel_for_load below, so nothing re-dispatches
+    // against the discarded audio. Null only before main.cpp wires it,
+    // when no render can be running yet.
+    if (cancel_archival_render) cancel_archival_render();
+
+    // Tear down any live render-view state next, while the source audio
+    // still exists — the teardown rebinds playback to the source buffer
+    // before freeing the entry buffer, and it must run ahead of
+    // playback.shutdown and the audio replacement below. Null only before
+    // main.cpp wires it, when no render view can exist yet.
     if (abandon_render_view) abandon_render_view();
 
     // Stop the audio thread before the sample buffer it borrows goes

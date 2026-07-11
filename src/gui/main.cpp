@@ -558,6 +558,17 @@ int main(int argc, char** argv) {
             return input_handler.dispatch_archival_render_if_idle(
                 std::move(req), std::move(fingerprint));
         };
+    // Back-wire the loader's archival-session cancel (same
+    // post-construction shape). revert_to_blank calls it before any
+    // teardown: the revert discards the source, so an archival session
+    // rendering it must receive the Esc-cancel semantics — otherwise the
+    // session keeps running against the discarded project and blank state
+    // stays trapped behind queue_running (Esc never reaches the cancel in
+    // blank state, and the drop-accept predicate refuses every new source
+    // while queue_running is set). cancel_archival_session is the same
+    // body Esc's handle_escape_cancels runs.
+    file_loader.cancel_archival_render =
+        [&input_handler]() { input_handler.cancel_archival_session(); };
 
     // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
     // requests the new waveform immediately rather than waiting for the next

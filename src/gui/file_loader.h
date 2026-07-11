@@ -84,6 +84,19 @@ struct GuiFileLoader {
     // not its primary guard.
     std::function<void()> abandon_render_view;
 
+    // Archival-session cancel hook, wired in main.cpp after
+    // GuiInputHandler's construction (the same post-construction back-wire
+    // shape as `prompt` and `abandon_render_view`). Bound to
+    // GuiInputHandler::cancel_archival_session, the body behind Esc's
+    // render-cancel semantics. revert_to_blank calls it first: the revert
+    // discards the source, and an archival session still rendering that
+    // source must receive the Esc-cancel semantics — otherwise the session
+    // keeps running against a discarded project, and blank state stays
+    // trapped behind app.queue_running (the blank-state key path handles
+    // only Ctrl+Q, so Esc cannot reach the cancel, and the drop-accept
+    // predicate refuses every new source while queue_running is set).
+    std::function<void()> cancel_archival_render;
+
     bool load_file(const std::string& path);
     void revert_to_blank();
     void load_then_drain(std::string path);
