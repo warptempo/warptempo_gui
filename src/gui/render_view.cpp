@@ -646,6 +646,9 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view.snapshot_trim_begin_frame = recipe_trim.begin_frame;
     app.render_view.snapshot_has_trim_end     = recipe_trim.has_end;
     app.render_view.snapshot_trim_end_frame   = recipe_trim.end_frame;
+    // The commit tab this entry is browsed under, stashed for the Ctrl+Alt+C
+    // routing re-attestation (the key rides outside the render fingerprint).
+    app.render_view.snapshot_commit_tab = settings->active_tab_view;
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
@@ -864,6 +867,7 @@ void GuiRenderView::abandon_render_view() {
     app.render_view.snapshot_trim_begin_frame = 0;
     app.render_view.snapshot_has_trim_end = false;
     app.render_view.snapshot_trim_end_frame = 0;
+    app.render_view.snapshot_commit_tab = 'A';
 
     // The displayed domain changed (the entry's axis is gone): bump the
     // audio identity counter so the waveform / stem / flag caches
@@ -1055,5 +1059,6 @@ void GuiRenderView::exit_render_view_and_clear() {
     app.render_view.snapshot_trim_begin_frame = 0;
     app.render_view.snapshot_has_trim_end = false;
     app.render_view.snapshot_trim_end_frame = 0;
+    app.render_view.snapshot_commit_tab = 'A';
     app.render_view.index             = -1;
 }

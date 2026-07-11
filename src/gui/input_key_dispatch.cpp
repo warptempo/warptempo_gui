@@ -973,7 +973,43 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
-        // Source-load adversarial guard 3: the source-clobber refusal, the
+        // Source-load adversarial guard 3: routing-field re-attestation. The
+        // two routing keys — active_audio_view and active_tab_view — ride
+        // OUTSIDE guard 5's render fingerprint (the per-entry browse autosaves
+        // rewrite the same .settings file, so the fingerprint deliberately
+        // excludes browse-only view keys), yet they steer this commit:
+        // active_audio_view asserts the entry is a target-view state, and
+        // active_tab_view (commit_tab above) names the tab whose recipe trim
+        // and view band the mutation below adopts. Both are pinned by the
+        // dispatch writer (active_audio_view=T always; the commit tab fixed at
+        // dispatch) and never rewritten on an entry by any GUI path, so a
+        // snapshot whose routing changed underneath the display is hand
+        // fabrication — the fingerprint cannot catch it, so the pair gets its
+        // own exact-match attestation against display-time state, aborting
+        // before the first mutation.
+        //
+        // active_audio_view: the mirror of the load guard
+        // (load_render_view_at); an entry snapshot is a target-view state by
+        // the dispatch writer's construction.
+        if (settings->active_audio_view != 'T') {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: invalid snapshot for '%s': "
+                "settings must carry active_audio_view=T\n",
+                sidecar.string().c_str());
+            return true;
+        }
+        // active_tab_view: the entry was loaded and browsed under the commit
+        // tab stashed at display (render_view.snapshot_commit_tab); a routing
+        // change underneath the display is adversarial.
+        if (settings->active_tab_view != app.render_view.snapshot_commit_tab) {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: invalid snapshot for '%s': "
+                "active_tab_view changed underneath the displayed render\n",
+                sidecar.string().c_str());
+            return true;
+        }
+
+        // Source-load adversarial guard 4: the source-clobber refusal, the
         // same shared predicate the GUI load, warptempo_cli load, and the
         // settings editor commit run (render_output_source_collision,
         // render_output_naming.h), with the render worker as the breach
@@ -991,7 +1027,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
-        // Source-load adversarial guard 4: snapshot re-attestation. Commit
+        // Source-load adversarial guard 5: snapshot re-attestation. Commit
         // promotes THE DISPLAYED RENDER, but the sidecars are mutable files
         // read fresh above — between display and commit they must still attest
         // to the wav on screen. Recompute the fingerprint from the re-read

@@ -950,7 +950,15 @@ struct AppState {
         // state only, never editable: the trim display surfaces map them
         // through the snapshot map to paint the rendered window's dim and
         // bounds. sample_rate stays the source's (equal to the render's by
-        // construction, verified at entry decode).
+        // construction, verified at entry decode). snapshot_commit_tab is
+        // the entry's active_tab_view captured at load — the commit tab the
+        // entry was browsed under. Ctrl+Alt+C re-reads the .settings fresh
+        // and compares its active_tab_view against this stash: the routing
+        // keys (active_tab_view, active_audio_view) ride OUTSIDE the render
+        // fingerprint (browse autosaves rewrite the same file), so the
+        // fingerprint check cannot catch a routing change underneath the
+        // display; this exact-match attestation does. Cleared to 'A' beside
+        // the other snapshot fields at every clear site.
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
         int64_t                          entry_domain_begin = 0;
         int64_t                          snapshot_display_total = 0;
@@ -958,6 +966,7 @@ struct AppState {
         int64_t                          snapshot_trim_begin_frame = 0;
         bool                             snapshot_has_trim_end = false;
         int64_t                          snapshot_trim_end_frame = 0;
+        char                             snapshot_commit_tab = 'A';
     };
     RenderViewContext render_view;
 };
