@@ -811,9 +811,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
         const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
             app.drag.moveable_times[hit_pos]));
-        const int64_t ph = (app.active_audio_view == 'T')
+        int64_t ph = (app.active_audio_view == 'T')
             ? to_domain_frame(app, ph_src, app.drag.frozen_warp_frame_map)
             : ph_src;
+        // Playhead domain clamp, mirroring move_playhead_to (the ruling
+        // lives there). With both marker walls at total - 1 the source-view
+        // value is already in domain; this closes the target-view case
+        // where to_domain_frame of a wall-resting marker rounds to the
+        // target total.
+        const int64_t live_total = live_total_frames(app, audio);
+        if (ph < 0) ph = 0;
+        if (live_total > 0 && ph >= live_total) ph = live_total - 1;
         if (ph != app.playhead_cursor_sample) {
             const double old_px = playhead_pixel_x(app, audio);
             app.playhead_cursor_sample = ph;

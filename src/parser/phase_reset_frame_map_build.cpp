@@ -15,8 +15,14 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
         if (m.disabled) continue;
         // The authored position is a whole source frame (int64_t); it widens
         // exactly into the double intermediate the derivation consumes.
+        // The wall is total - 1, the same compare as the gesture sites and
+        // the load guard: both marker columns share the warp column's wall
+        // (a reset in the last source frame has nothing left to re-ground,
+        // and total-1 keeps every marker inside the playhead's [0, total-1]
+        // domain). A reset at exactly total frames — previously legal — is
+        // adversarial and refuses here as the breach backstop.
         const double src_frame = static_cast<double>(m.time_frame);
-        if (src_frame > static_cast<double>(total_frames)) {
+        if (src_frame > static_cast<double>(total_frames - 1)) {
             return std::unexpected(
                 "phase reset time exceeds source length at marker "
                 + std::to_string(i));
@@ -85,10 +91,12 @@ std::vector<double> derive_phase_reset_frame_map(
         const std::vector<WarpFrameMapSegment>& deliverable_map) {
     if (deliverable_map.empty()) return {};
     // Bound: the deliverable map's own final anchor target, compared exactly
-    // in the double target domain — a reset at source EOF sits exactly on it
-    // and drops (a point event beyond the deliverable's last sample).
-    // Quantization to the engine's integer output length never enters this
-    // verdict.
+    // in the double target domain — a reset whose target image lands at or
+    // past the deliverable's last sample has nothing to protect and drops.
+    // (Program-written input can no longer reach the bound itself: both
+    // marker columns wall at total - 1, so only a hand-edited artifact puts
+    // a reset on the final anchor.) Quantization to the engine's integer
+    // output length never enters this verdict.
     const double render_target_end = deliverable_map.back().tgt_frame;
     std::vector<double> out;
     out.reserve(source_frames.size());

@@ -238,6 +238,9 @@ void GuiInputHandler::cancel_active_drags() {
         // did track the playhead onto the grabbed marker's proposed
         // position, so restore the pre-drag playhead captured at
         // begin_drag before resetting, then repaint the committed positions.
+        // Deliberately unclamped: this restores a previously-resting value,
+        // already inside the playhead's [0, total - 1] domain
+        // (move_playhead_to holds the ruling).
         app.playhead_cursor_sample = app.drag.pre_drag_playhead_sample;
         if (playback.is_playing()) playback.resync_predictor();
         app.drag = DragState{};
@@ -1127,6 +1130,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
             app.zoom_level = authoring->zoom_level;
             app.viewport_start_sample = authoring->viewport_start;
+            // Deliberately unclamped: persisted view scratch, validated
+            // pre-mutation by the promotion's first_view_range_defect-shape
+            // guard; playhead == total stays load-legal and the runtime
+            // clamp (move_playhead_to) owns the value at first use.
             app.playhead_cursor_sample = authoring->playhead;
             if (!app.playhead_scanner_active) {
                 app.playhead_scanner_sample = authoring->playhead;

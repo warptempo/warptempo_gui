@@ -271,6 +271,7 @@ void PhaseResetPropagate::paste_apply() {
     // build_phase_reset_source_frames' sub-frame refusal is the breach
     // backstop for hand-edited input, and the render boundary owns
     // everything else.
+    const int64_t reset_wall = target_render.audio.total_frames() - 1;
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
         const double dst_dur   = dest_blocks[i].end - dst_start;
@@ -283,10 +284,14 @@ void PhaseResetPropagate::paste_apply() {
             // trim-end wheel apply: pasted positions are computed and
             // view-independent, and quantizing them to whatever viewport
             // happens to be on screen would leak incidental view state
-            // into authored data. Clamped at 0 after the snap (the
-            // universal no-negative-position rule; the wall wins).
-            nm.time_frame = std::max<int64_t>(0, snap_authored_frame(
-                dst_start + p.fractional_position * dst_dur));
+            // into authored data. Clamped after the snap to the column's
+            // absolute range — 0 (the universal no-negative-position rule)
+            // and the marker EOF wall, total - 1, the single wall both
+            // marker columns share; the walls win. The upper clamp is
+            // insurance: destination blocks end at warp markers, which
+            // themselves wall at total - 1.
+            nm.time_frame = std::clamp<int64_t>(snap_authored_frame(
+                dst_start + p.fractional_position * dst_dur), 0, reset_wall);
             nm.disabled     = p.disabled;
             app.phaseresetmarkers.insert_marker(std::move(nm));
         }

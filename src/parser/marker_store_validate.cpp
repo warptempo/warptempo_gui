@@ -191,8 +191,18 @@ std::optional<std::string> first_past_eof_wall_defect(
                    format_timestamp(m.time_frame / sr_d);
         }
     }
+    // Phase reset wall: total - 1, identical to the warp compare above —
+    // the per-column marker wall split (warp total-1, phase reset total) is
+    // retired. Warp walls at total-1 structurally (build_warp_frame_map
+    // refuses sub-frame segments); phase reset walls at total-1 by ruling:
+    // a reset in the last source frame has nothing left to re-ground, and
+    // total-1 keeps every marker inside the playhead's [0, total-1] domain
+    // so marker gestures and playhead syncs agree exactly. A stored reset
+    // at exactly total frames — previously legal — is now adversarial
+    // load-fatal in both products (two-category rule); the position is
+    // musically meaningless and there is deliberately no migration.
     for (const auto& m : phase_resets) {
-        if (m.time_frame > total_frames) {
+        if (m.time_frame > total_frames - 1) {
             return "phase reset marker past end of audio at " +
                    format_timestamp(m.time_frame / sr_d);
         }
@@ -219,7 +229,10 @@ std::optional<std::string> first_view_range_defect(
         int64_t domain_total_frames) {
     // The comparisons are the historical load walls verbatim: viewport
     // start at or past the total refuses, playhead strictly past the total
-    // refuses. The caller passes the persisted active_audio_view's domain
+    // refuses. playhead == total remains load-legal (files written before
+    // the marker walls pulled in; view scratch is display state, and the
+    // runtime clamp owns the value at first use).
+    // The caller passes the persisted active_audio_view's domain
     // total (see the header comment); no timestamp is rendered because the
     // positions are view scratch, not authored times, and under 'T' a
     // frame-over-sample-rate rendering would name a time on the deformed

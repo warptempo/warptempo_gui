@@ -81,15 +81,18 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
 
     // Compute scalar delta_min / delta_max from the absolute range only:
-    // zero on the left and the column's EOF wall on the right (warp:
-    // total_frames minus one source frame, because build_warp_frame_map
-    // refuses sub-frame segments; phase reset: total_frames exactly —
-    // a point event may sit at EOF). Exact frame compares — the same
-    // comparison the load guard applies. Neighbors do not bound the drag;
-    // the marker may cross them freely, and commit_drag reorders the
-    // store and remaps the held indices.
+    // zero on the left and the marker EOF wall on the right — total_frames
+    // minus one source frame for BOTH columns (the per-column split, warp
+    // total-1 vs phase reset total, is retired: warp is structural,
+    // build_warp_frame_map refuses sub-frame segments; phase reset walls at
+    // total-1 by ruling — a reset in the last source frame has nothing left
+    // to re-ground, and total-1 keeps every marker inside the playhead's
+    // [0, total-1] domain). Exact frame compares — the same comparison the
+    // load guard applies. Neighbors do not bound the drag; the marker may
+    // cross them freely, and commit_drag reorders the store and remaps the
+    // held indices.
     const double total = static_cast<double>(audio.total_frames());
-    const double eof_wall = phase_reset ? total : (total - 1.0);
+    const double eof_wall = total - 1.0;
 
     d.delta_min = -std::numeric_limits<double>::infinity();
     d.delta_max =  std::numeric_limits<double>::infinity();
@@ -245,13 +248,14 @@ void MarkerDragOps::commit_drag() {
     // integer-pixel pointer the column snap is a no-op; with fractional
     // pointer coordinates (touchpads) it moves the value to the column
     // painting already shows. The walls win over the grid: the absolute
-    // range (zero / the column's EOF wall) is re-applied after the snap,
-    // so a wall-clamped commit rests exactly on its wall (the walls are
-    // integer frames, so the clamp preserves whole-frame values). The
+    // range (zero / the marker EOF wall, total - 1 for both columns — the
+    // per-column split is retired, see begin_drag) is re-applied after the
+    // snap, so a wall-clamped commit rests exactly on its wall (the walls
+    // are integer frames, so the clamp preserves whole-frame values). The
     // visible-strip clamp composed into delta_min/delta_max during
     // motion, as before.
     const int64_t total    = audio.total_frames();
-    const int64_t eof_wall = phase_reset ? total : (total - 1);
+    const int64_t eof_wall = total - 1;
     std::vector<int64_t> committed;
     committed.reserve(app.drag.moveable_times.size());
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {

@@ -98,6 +98,16 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit in
 // the dim region.
+//
+// Playhead domain ruling (the chokepoint statement): the playhead rests
+// in [0, total - 1] of its LIVE view's domain, everywhere, after any
+// gesture. Every playhead sync route mirrors this exact clamp (same
+// live_total_frames read) — jump_playhead_to, Tab recentering, the trim
+// pins, the marker-drag tracking, and the S/T + target-buffer domain
+// re-expressions. Both marker columns wall at total - 1, so a sync onto
+// a marker is in-domain by construction; trim end is the one legal
+// endpoint at total (an exclusive bound), and a sync onto it
+// deliberately rests the playhead at total - 1.
 void Viewport::move_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     if (new_sample < 0) new_sample = 0;

@@ -760,7 +760,20 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     // domain (target-frame) so the playhead lands on the marker's
     // displayed position; the viewport recenter below also uses this
     // target-frame value via center_viewport_on_playhead.
-    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+    int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+    // Playhead domain clamp: Tab mirrors move_playhead_to exactly (same
+    // live_total_frames read; the domain ruling lives there), so Tab and
+    // bare Left/Right — which route through move_playhead_to's clamp —
+    // cannot disagree about the same endpoint. In render view
+    // live_total_frames returns the loaded render's own total (its 'T'
+    // branch requires !render_view.enabled), so render-domain display
+    // positions clamp against the same total the arrow keys use. Tab onto
+    // trim end — legal at total — rests at total - 1.
+    {
+        const int64_t live_total = live_total_frames(app, audio);
+        if (sample < 0) sample = 0;
+        if (live_total > 0 && sample >= live_total) sample = live_total - 1;
+    }
 
     playback_lifecycle.stop_playback_if_playing();
 
@@ -1128,6 +1141,24 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // zero on the next tab activation anyway, so the shifted value is
     // harmless. The active tab's own slot is left stale on purpose — it
     // resyncs at the next stash boundary.
+    // Playhead domain clamp on the domain flip, both tabs, applied to each
+    // translated value BEFORE its viewport delta / anchor math is computed
+    // from it: a nearbyint of a translated in-domain playhead can land
+    // exactly on the destination total (e.g. a playhead parked on the last
+    // frame). The destination total is the post-flip live_total_frames —
+    // active_audio_view flipped above, so this is exactly the total the
+    // subsequent viewport math (current_samples_per_pixel,
+    // clamp_viewport_start) reads; move_playhead_to holds the domain
+    // ruling ([0, total - 1]). Both tabs live in the one global domain, so
+    // one total clamps both.
+    const int64_t dest_total = live_total_frames(app, audio);
+    const auto clamp_dest = [dest_total](int64_t s) -> int64_t {
+        if (s < 0) return 0;
+        if (dest_total > 0 && s >= dest_total) return dest_total - 1;
+        return s;
+    };
+    new_playhead = clamp_dest(new_playhead);
+
     {
         ViewState& other = (app.active_tab_view == 'B') ? app.tab_a : app.tab_b;
 
@@ -1140,7 +1171,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         };
 
         const int64_t other_old_ph = other.playhead_cursor_sample;
-        const int64_t other_new_ph = xlate(other_old_ph);
+        const int64_t other_new_ph = clamp_dest(xlate(other_old_ph));
         other.playhead_cursor_sample = other_new_ph;
         other.viewport_start_sample += (other_new_ph - other_old_ph);
     }

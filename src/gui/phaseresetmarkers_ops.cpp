@@ -30,14 +30,14 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // The wall check below IS the load guard's comparison, exactly,
     // applied to the snapped value.
     const int64_t drop_frame = snap_authored_frame(time_frame);
-    // Recorded asymmetry with the warp drop: the EOF bound differs by
-    // column for a structural reason. A warp marker needs at least one
-    // source frame of segment to its next breakpoint (build_warp_frame_map
-    // refuses sub-frame segments), so warp positions stop one frame short
-    // of EOF; a phase reset is a point event, so its wall is
-    // total_frames exactly — an at-EOF reset is inert at derivation.
-    // Reject only when the position lands strictly past EOF.
-    if (drop_frame > audio.total_frames())
+    // Both marker columns share the warp column's EOF wall, total - 1 (the
+    // old per-column split — warp total-1, phase reset total — is retired).
+    // Warp stops one frame short structurally (build_warp_frame_map refuses
+    // sub-frame segments); phase reset stops one frame short by ruling: a
+    // reset in the last source frame has nothing left to re-ground, and
+    // total-1 keeps every marker inside the playhead's [0, total-1] domain
+    // so marker gestures and playhead syncs agree exactly.
+    if (drop_frame > audio.total_frames() - 1)
         return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
@@ -125,10 +125,11 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // and the committed value is a whole source frame.
 //
 // Wall semantics per view are unchanged, against this column's absolute
-// range (zero / total_frames — the phase reset EOF wall: a point event
-// may sit at EOF exactly, where it is inert at derivation): target view
-// keeps the all-or-nothing silent refusal, source view keeps the clamp
-// (creep-to-the-wall), and the integer walls win over the pixel grid.
+// range (zero / total_frames - 1 — the single marker EOF wall both
+// columns now share; see drop_phase_reset_at_position for the ruling):
+// target view keeps the all-or-nothing silent refusal, source view keeps
+// the clamp (creep-to-the-wall), and the integer walls win over the
+// pixel grid.
 // Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below; the render boundary owns degeneracy.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
@@ -160,7 +161,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         ? target_view_warp_frame_map_cached(
               app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
         : no_map;
-    const int64_t reset_wall = audio.total_frames();
+    const int64_t reset_wall = audio.total_frames() - 1;
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {

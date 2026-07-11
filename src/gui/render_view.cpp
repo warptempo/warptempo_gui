@@ -148,6 +148,9 @@ void GuiRenderView::apply_rendersettings_for(
     }
     app.zoom_level            = vs.zoom_level;
     app.viewport_start_sample = vs.viewport_start;
+    // Deliberately unclamped: persisted display scratch under the recorded
+    // display-sidecar leniency; the runtime clamp (move_playhead_to) owns
+    // the value at first use.
     app.playhead_cursor_sample       = vs.playhead;
     clamp_viewport_start(app, audio);
 }
@@ -493,6 +496,9 @@ void GuiRenderView::restore_source_audio() {
     const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     app.viewport_start_sample = t.viewport_start_sample;
     app.zoom_level            = t.zoom_level;
+    // Deliberately unclamped: restores the authoring snapshot stashed at
+    // render-view entry — a previously-resting value in the authoring
+    // domain (move_playhead_to owns the value at first use).
     app.playhead_cursor_sample       = t.playhead_cursor_sample;
     // Load the matching-mode slot into the
     // live pair. Live pair held render-view selection while

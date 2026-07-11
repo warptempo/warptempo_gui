@@ -428,10 +428,22 @@ void GuiTargetRender::leave_target_view() {
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
 
+    // Playhead domain clamp on the T -> S re-express, both tabs, applied to
+    // each translated value BEFORE its viewport delta is computed from it:
+    // a nearbyint of an inverse-mapped in-domain playhead can land exactly
+    // on the source total. The destination domain is source, so the total
+    // is audio.total_frames() — exactly what live_total_frames returns once
+    // active_audio_view flips to 'S' below, i.e. the total the subsequent
+    // viewport math reads; move_playhead_to holds the domain ruling
+    // ([0, total - 1]). Both tabs live in the one global domain.
+    const int64_t dest_total = audio.total_frames();
     const auto to_source = [&](int64_t s) -> int64_t {
         const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
-        return static_cast<int64_t>(
+        int64_t r = static_cast<int64_t>(
             std::nearbyint(map_target_to_source(q, target_warp_frame_map)));
+        if (r < 0) r = 0;
+        if (dest_total > 0 && r >= dest_total) r = dest_total - 1;
+        return r;
     };
 
     const int64_t new_playhead = to_source(app.playhead_cursor_sample);

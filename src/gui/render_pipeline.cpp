@@ -483,8 +483,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // so a kept feature at source F displays at tgt(F) - llrint(T_b), a
     // target-frame double on the deliverable's own frame grid.
     // Untrimmed, the origin is 0 and the bound is the full map's last anchor
-    // target, exact in the double domain (a reset at source EOF sits exactly
-    // on it and drops, a point event beyond the deliverable's last sample).
+    // target, exact in the double domain (a reset whose target image lands
+    // at or past it drops from the deliverable — see the render-end verdict
+    // in derive_phase_reset_frame_map; the marker walls at total - 1 keep
+    // program-written resets off the bound itself).
     double sidecar_crop_begin = 0.0;
     double sidecar_crop_end   = full_warp_frame_map.back().tgt_frame;
     if (trimmed && output_format == "wav") {
@@ -628,9 +630,11 @@ RenderOutcome do_render(const RenderRequest& req,
             // crop-domain target precedes the deliverable's first sample and
             // is unrepresentable on its time axis; a target at or past the
             // crop end lies beyond the deliverable's last sample (a reset
-            // exactly at the trim end, or at source EOF on an untrimmed
-            // render — sidecar_crop_end carries the crop length when trimmed
-            // and the full map's exact final anchor target when not). The
+            // exactly at the trim end — sidecar_crop_end carries the crop
+            // length when trimmed and the full map's exact final anchor
+            // target when not; untrimmed the verdict never fires from
+            // program-written stores, since both marker columns wall at
+            // EOF-1, strictly inside the final anchor). The
             // display sidecars show every authored marker that exists on the
             // deliverable's time axis regardless of its engine-side fate — a
             // reset just inside the trim window whose query position precedes

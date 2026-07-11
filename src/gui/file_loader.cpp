@@ -287,6 +287,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // otherwise sample 0. Must happen after marker parse so the trim
     // range reflects the on-disk state. Scroll the viewport so the
     // playhead is visible rather than lurking off the left edge.
+    // Deliberately unclamped: trim begin walls at total - 1 (load-fatal
+    // past it), so the value is inside the playhead's [0, total - 1]
+    // domain by construction (move_playhead_to holds the ruling).
     app.playhead_cursor_sample = viewport.trim_begin_sample();
     if (app.zoom_level != kFitFileLevel) {
         app.viewport_start_sample = app.playhead_cursor_sample;
@@ -365,6 +368,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 dst.zoom_level = src.zoom;
             }
             if (src.has_playhead) {
+                // Deliberately unclamped: persisted view scratch, validated
+                // by first_view_range_defect below; playhead == total stays
+                // load-legal (pre-wall files) and the runtime clamp
+                // (move_playhead_to) owns the value at first use.
                 dst.playhead_cursor_sample = src.playhead;
             }
         };
@@ -458,6 +465,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
                                       ? app.tab_b : app.tab_a;
         app.viewport_start_sample = parsed_tab.viewport_start_sample;
         app.zoom_level            = parsed_tab.zoom_level;
+        // Deliberately unclamped: persisted view scratch, validated by
+        // first_view_range_defect below; playhead == total stays load-legal
+        // (pre-wall files) and the runtime clamp (move_playhead_to) owns
+        // the value at first use.
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         app.trim                = parsed_tab.trim;
         app.trim_begin_selected = parsed_tab.trim_begin_selected;

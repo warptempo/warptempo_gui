@@ -96,9 +96,13 @@ std::vector<MarkerDefect> enumerate_marker_store_defects(
 
 // The adversarial past-EOF load guard (see the past-EOF paragraph above),
 // shared by GUI file_loader and CLI so the six wall checks can never
-// drift: warp markers (wall total-1), phase reset markers (wall total
-// exactly), then tab A trim begin (wall total-1), tab A end (wall total),
-// tab B begin, tab B end — first offender only, disabled markers
+// drift: warp markers (wall total-1), phase reset markers (wall total-1,
+// the same wall — the old per-column marker split is retired; both
+// columns stay inside the playhead's [0, total-1] domain), then tab A
+// trim begin (wall total-1), tab A end (wall total exactly — the
+// surviving trim-vs-marker asymmetry, an exclusive bound expressing the
+// half-open [begin, end) render window), tab B begin, tab B end — first
+// offender only, disabled markers
 // included. Every check is a plain integer compare against the stored
 // value — literally the same comparison the gesture walls apply, no
 // rounding anywhere — so a legal at-the-wall position always passes.

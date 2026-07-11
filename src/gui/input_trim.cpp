@@ -97,8 +97,15 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     // playhead against target_buffer_start_frame — this same begin mapped to
     // target frames — so a playhead off the bound's frame can land a sample
     // short of the buffer start and Space reads local < 0 and no-ops.
-    app.playhead_cursor_sample =
-        source_frame_to_active_domain(app, audio, this_bound);
+    // Playhead domain clamp, mirroring move_playhead_to (the domain ruling
+    // lives there): a pin onto trim end at total rests at total - 1.
+    {
+        int64_t pin = source_frame_to_active_domain(app, audio, this_bound);
+        const int64_t live_total = live_total_frames(app, audio);
+        if (pin < 0) pin = 0;
+        if (live_total > 0 && pin >= live_total) pin = live_total - 1;
+        app.playhead_cursor_sample = pin;
+    }
 
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
@@ -312,8 +319,14 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
             const int64_t grabbed_src = app.trim_drag.is_begin ? nb : ne;
-            app.playhead_cursor_sample =
-                source_frame_to_active_domain(app, audio, grabbed_src);
+            // Playhead domain clamp, mirroring move_playhead_to (the
+            // ruling lives there): a grabbed end riding at total pins the
+            // playhead to total - 1.
+            int64_t pin = source_frame_to_active_domain(app, audio, grabbed_src);
+            const int64_t live_total = live_total_frames(app, audio);
+            if (pin < 0) pin = 0;
+            if (live_total > 0 && pin >= live_total) pin = live_total - 1;
+            app.playhead_cursor_sample = pin;
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
         }
@@ -396,7 +409,13 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // begin, so the scanner is inactive and a play reseeks from the
         // cursor. The invalidate_waveform_area below repaints the playhead
         // columns along with the moved trim shading.
-        const int64_t sample = source_frame_to_active_domain(app, audio, new_frame);
+        // Playhead domain clamp, mirroring move_playhead_to (the ruling
+        // lives there): an end dragged to total pins the playhead to
+        // total - 1.
+        int64_t sample = source_frame_to_active_domain(app, audio, new_frame);
+        const int64_t live_total = live_total_frames(app, audio);
+        if (sample < 0) sample = 0;
+        if (live_total > 0 && sample >= live_total) sample = live_total - 1;
         app.playhead_cursor_sample = sample;
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -462,11 +481,17 @@ void GuiInputHandler::commit_trim_drag() {
             // Keep the playhead pinned to the grabbed bound across the snap,
             // exactly as the motion handler pinned it all drag: a direct set
             // (no move_playhead_to, so no scroll), recomputing the same value
-            // when the snap was a no-op.
+            // when the snap was a no-op. Playhead domain clamp, mirroring
+            // move_playhead_to (the ruling lives there): trim end is legal
+            // at total — an exclusive bound — so a commit releasing the end
+            // on the total deliberately rests the playhead at total - 1.
             const int64_t grabbed_src = app.trim_drag.is_begin
                 ? app.trim.begin_frame : app.trim.end_frame;
-            app.playhead_cursor_sample =
-                source_frame_to_active_domain(app, audio, grabbed_src);
+            int64_t pin = source_frame_to_active_domain(app, audio, grabbed_src);
+            const int64_t live_total = live_total_frames(app, audio);
+            if (pin < 0) pin = 0;
+            if (live_total > 0 && pin >= live_total) pin = live_total - 1;
+            app.playhead_cursor_sample = pin;
         }
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
