@@ -260,9 +260,11 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
 // caller invokes this and returns. Left-click on a marker line (waveform) or a
 // flag rect (top strip) toggles selection and jumps the playhead; left-click
 // elsewhere positions the playhead (with playback stop) and clears the
-// selection unless Shift is held. Drag-create and top-strip playhead movement
-// are silent no-ops so the read-only marker-state invariant is preserved.
-// Recomputes the cheap geometry it needs; derives `shift` from `mods`.
+// selection unless Shift is held. In P sub-view the top-strip click hits the
+// snapshot's phase-reset chips through hit_test_flag, the same as a W flag
+// click. Drag-create and top-strip playhead movement are silent no-ops so the
+// read-only marker-state invariant is preserved. Recomputes the cheap geometry
+// it needs; derives `shift` from `mods`.
 void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
                                                int y, bool inside_top,
                                                bool inside_waveform,
@@ -272,11 +274,6 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
     // Wheel events arrive via on_wheel (coalesced per pointer frame), not
     // here; a stray wheel button is caught by the Left-only gate below.
     if (button != GuiMouseButton::Left) return;
-    // In phase reset sub-view, top-strip clicks
-    // are silent no-ops (phase resets have no flag rects). Bail
-    // before hit-testing so we don't attempt selection bookkeeping
-    // on a non-existent flag pack.
-    if (app.active_markers_view == 'P' && inside_top) return;
     // Top-strip clicks stop playback first: they can open the iter/
     // bpm/flag editors and continuing audio during text editing is
     // the wrong default. Waveform clicks keep playback alive — the
@@ -377,9 +374,9 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
 // Render-view motion handler with playhead-drag snap support: when a drag is
 // in flight, snap the playhead to the visible sub-view's markers (3px epsilon),
 // matching source-view's gesture, with Shift sweep-select across the dragged
-// interval. Otherwise run hover-popup detection against render_view.warp_markers
-// (suppressed in phase reset sub-view because hit_test_flag short-circuits to
-// -1). Fully terminating; the on_motion caller returns after it.
+// interval. Otherwise clear any hover popup: render view is read-only display
+// with no hover popups (see the tail comment). Fully terminating; the on_motion
+// caller returns after it.
 void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
                                                 GuiInputState mods) {
     if (app.playhead_drag.active) {

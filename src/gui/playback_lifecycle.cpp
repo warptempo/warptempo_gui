@@ -144,18 +144,35 @@ void GuiPlaybackLifecycle::toggle_playback() {
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
 // stop-and-restart visual glitch. Mirrors toggle_playback's range policy
-// (target view against the bound buffer's [domain_begin(), domain_end());
-// source/render-view direct trim_end_sample()) but is always-on rather than
-// toggling. `sample` is a paint-domain coordinate, the same domain playback's
-// public API speaks in every view. Called from the press and motion handlers
-// during a playhead-drag when playback was alive at press time. Out-of-range
-// positions in target view fall back to stop — in-range-only semantics. No
-// follow-scroll at the reseek site: the user's click is a positional intent
-// that takes precedence over visual centering (unlike Space's
-// start-of-listening).
+// (target view and render view against the bound buffer's
+// [domain_begin(), domain_end()); source view direct trim_end_sample()) but is
+// always-on rather than toggling. `sample` is a paint-domain coordinate, the
+// same domain playback's public API speaks in every view. Called from the press
+// and motion handlers during a playhead-drag when playback was alive at press
+// time. Out-of-range positions in target and render view fall back to stop —
+// in-range-only semantics. No follow-scroll at the reseek site: the user's
+// click is a positional intent that takes precedence over visual centering
+// (unlike Space's start-of-listening).
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T' && !app.render_view.enabled) {
         if (app.target_buffer_frames <= 0) { playback.stop(); return; }
+        if (sample < playback.domain_begin() ||
+            sample >= playback.domain_end()) {
+            playback.stop();
+            return;
+        }
+        playback.play(sample, playback.domain_end());
+        return;
+    }
+    if (app.render_view.enabled) {
+        // The audio device is bound to the entry wav, which covers exactly the
+        // rendered window on the displayed target axis (verified at entry
+        // load); [domain_begin(), domain_end()) is that window. The displayed
+        // timeline is the FULL deformed axis, so a click can land outside the
+        // window (a trimmed entry dims the head/tail). Space outside the window
+        // is a deliberate no-op, and the live reseek matches it by stopping —
+        // in-range-only semantics, the same rule as target view. This
+        // supersedes the interim resume-at-window-origin behavior.
         if (sample < playback.domain_begin() ||
             sample >= playback.domain_end()) {
             playback.stop();

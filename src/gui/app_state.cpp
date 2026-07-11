@@ -268,12 +268,6 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
-    // Render-view's phase reset sub-view paints no flags; short-circuit to
-    // no-hit so click and hover paths see a bare top strip.
-    if (app.render_view.enabled &&
-        app.active_markers_view == 'P') {
-        return -1;
-    }
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     const double spp = current_samples_per_pixel(app, audio);
@@ -309,7 +303,16 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay = &drag_overlay_storage;
     }
     std::vector<FlagHitRect> rects;
-    if (app.render_view.enabled) {
+    if (app.render_view.enabled && app.active_markers_view == 'P') {
+        // Render-view P sub-view: hit-test the snapshot's phase-reset chips
+        // over the same tmap_arg the Render arm derived. The phase-reset rect
+        // builder has no iteration parameter (iteration is warp-only), so this
+        // mirrors the live 'P' branch's call shape.
+        rects = compute_phase_reset_flag_hit_rects(
+            top, app.render_view.phase_resets,
+            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
+            tmap_arg, drag_overlay);
+    } else if (app.render_view.enabled) {
         rects = compute_flag_hit_rects(
             top, app.render_view.warp_markers,
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
