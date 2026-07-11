@@ -23,26 +23,19 @@
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
 
-// Authoring-state snapshot captured at dispatch time, written into the
-// batch entry's .rendersettings so Ctrl+Alt+C can restore the exact
-// state that produced the render. The trim fields duplicate the
-// request's own trim on purpose: the request trim feeds the engine,
-// this block feeds the sidecar, and keeping the sidecar block
-// self-contained keeps the reader trivial. The session prefs
-// (active_markers_view, playback_speed, follow, font_size) ride along
-// so the per-entry .settings can be written with the session's real
-// values rather than invented defaults.
+// Authoring-state snapshot captured at dispatch time. Sole consumer: the
+// per-entry `.settings` writer inside do_render, which composes the
+// standard whole-file schema from these fields (the commit tab's trim and
+// identity plus the session prefs) so Ctrl+Alt+C can adopt the entry with
+// plain load semantics. The trim fields duplicate the request's own trim
+// on purpose: the request trim feeds the engine, this block feeds the
+// sidecar, and keeping the block self-contained keeps the writer trivial.
 struct AuthoringSnapshot {
-    bool    valid             = false;  // false: write no authoring block
     char    active_tab        = 'A';
-    char    active_audio_view = 'S';
     bool    has_trim_begin    = false;
     int64_t trim_begin_frame  = 0;     // source frames
     bool    has_trim_end      = false;
     int64_t trim_end_frame    = 0;     // source frames
-    int     zoom_level        = 0;
-    int64_t viewport_start    = 0;
-    int64_t playhead          = 0;
 
     // Dispatch-time session prefs the standard .settings schema needs and
     // the request does not otherwise carry. Types match the AppState fields
@@ -86,11 +79,9 @@ struct RenderRequest {
     // Full phase reset store snapshot. Batch source-domain sidecar payload:
     // when batch_folder is set, this list is written verbatim as
     // `<batch_folder>/<batch_basename>.phaseresetmarkers`, including the
-    // empty-file form for an empty list.
-    // A second sidecar `<batch_basename>.renderphaseresetmarkers` carries
-    // display resets warped into render-domain frame coordinates. The
-    // single-phase reset sidecar path used by the immediate Ctrl+Alt+R
-    // render branch does not read this field for sidecar emission.
+    // empty-file form for an empty list. The single-phase reset sidecar
+    // path used by the immediate Ctrl+Alt+R render branch does not read
+    // this field for sidecar emission.
     std::vector<GuiPhaseResetMarker> phase_resets;
 
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
@@ -108,9 +99,8 @@ struct RenderRequest {
 
     // Nullable. When non-null and output_format is "wav", do_render routes
     // the render to this buffer instead of a staged .wav file. Skips the
-    // atomic rename, the peak-pyramid sidecar write, and every batch sidecar
-    // write (.warpmarkers / .phaseresetmarkers / .rendersettings /
-    // .renderwarpmarkers / .renderphaseresetmarkers). The post-engine chain
+    // atomic rename and every batch sidecar write (.warpmarkers /
+    // .phaseresetmarkers / .settings). The post-engine chain
     // (post_trim crop when trimmed, then the spectral + peak limited chain
     // whenever the global `limiter` toggle is on, exactly as on the disk
     // path) runs in place on this buffer; on the limited route, the buffer
@@ -128,16 +118,15 @@ struct RenderRequest {
     // sibling lands beside it — .miditempomap for midi_map)
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
-    // and `.rendersettings` sidecars in the same folder. For wav renders,
-    // those sidecars are commit-critical to success; `.peaks`,
-    // `.fingerprint`, and render-domain marker sidecars are optional
-    // display/cache artifacts.
+    // and (wav only) `.settings` sidecars in the same folder. For wav
+    // renders, those sidecars are commit-critical to success;
+    // `.fingerprint` is an optional cache artifact.
     // The folder must already exist; do_render does not create it. When
     // `batch_folder` is empty, do_render uses the
     // source-directory title/limiter-prefix naming used by the
-    // immediate Ctrl+Alt+R path. Sibling wav publishes still emit `.peaks`
-    // and `.fingerprint` sidecars; batch-only render-view sidecars are not
-    // written on the sibling path.
+    // immediate Ctrl+Alt+R path. Sibling wav publishes still emit the
+    // `.fingerprint` sidecar; batch-only sidecars are not written on the
+    // sibling path.
     std::string batch_folder;
     std::string batch_basename;
 
@@ -149,26 +138,19 @@ struct RenderRequest {
     RenderCache* render_cache = nullptr;
 };
 
-// Render-domain display positions for one wav render: every authored marker
-// and phase reset that exists on the deliverable's time axis, re-timed onto
-// that axis (crop coordinates, generically fractional). One derivation, two
-// consumers, so the two can never drift: do_render serializes this result
-// verbatim into the .renderwarpmarkers / .renderphaseresetmarkers display
-// sidecars, and render view derives the same result live from an entry's
-// snapshot set (.warpmarkers / .phaseresetmarkers / .settings) to build its
-// display stores. The fractional positions live in the parallel double
-// vectors because the authored time_frame is int64 and cannot represent the
-// target axis's fractional values; the marker structs carry the
-// non-position fields (payload, flags) unchanged.
+// Render view's display derivation for one wav render: the authored markers
+// and phase resets that exist on the deliverable's time axis, keep-filtered
+// against the render's participation verdicts, plus the crop geometry.
+// Sole consumer: render view's entry loader, which derives this live from
+// an entry's snapshot set (.warpmarkers / .phaseresetmarkers / .settings)
+// to build its display stores — the kept structs carry their AUTHORED
+// time_frame unchanged, and every display consumer translates them through
+// the snapshot map minus the crop origin at use.
 struct RenderDisplayPositions {
-    // Kept warp markers, in store order, plus their fractional
-    // render-domain positions (parallel vectors).
+    // Kept warp markers, in store order.
     std::vector<GuiWarpMarker> warp_markers;
-    std::vector<double>        warp_frames;
-    // Kept phase resets plus their fractional render-domain positions
-    // (parallel vectors), same shape as the warp pair.
+    // Kept phase resets, same shape as the warp column.
     std::vector<GuiPhaseResetMarker> phase_resets;
-    std::vector<double>              phase_reset_frames;
     // Crop origin in full-target coordinates (0 when untrimmed) and the
     // exclusive end bound on the deliverable's own axis (the crop length
     // when trimmed; the full map's last anchor target when not).

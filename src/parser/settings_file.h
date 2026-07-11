@@ -103,12 +103,10 @@ struct SettingsFile {
 std::expected<SettingsFile, std::string> read_settings_file(
     const std::string& path);
 
-// Shared strict line scanner for the settings-format sidecars. Both
-// whole-file readers — read_settings_file (`.settings`) and read_rendersettings
-// (`.rendersettings`, GUI-side) — build on this: it owns the one lexical
-// contract they hold in common, while each reader keeps its own distinct
-// per-key vocabulary and validation arms. The two files' error strings are
-// byte-identical because they share these functions.
+// Strict line scanner for the settings format. The whole-file reader —
+// read_settings_file (`.settings`) — builds on this: it owns the lexical
+// contract, while the reader keeps the per-key vocabulary and validation
+// arms.
 namespace warptempo_settings {
 
 // Build the "key 'K' has invalid value 'V': RULE" refusal, line-prefixed.

@@ -1,7 +1,6 @@
 #include "settings_io.h"
 
 #include "app_state.h"
-#include "render_pipeline.h"
 #include "frame_format.h"
 
 #include <cerrno>
@@ -89,87 +88,12 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
 
-// Append the engine block (the eight canonical engine keys, in
-// kSettingsOrder order, byte-identical to the engine block of
-// write_settings_file) to `out`. Shared by write_rendersettings.
-void append_engine_block(std::string& out, const EngineSettings& engine) {
-    for (const auto& desc : kSettingsOrder) {
-        if (desc.kind != SettingKind::EnginePassthrough) continue;
-        out += desc.key;
-        out += '=';
-        out += format_engine_field_value(engine, desc.field);
-        out += '\n';
-    }
-}
-
-// Append the three view-state keys (bare names, canonical order) to
-// `out`. Consumed by write_rendersettings.
-void append_view_state_block(std::string& out,
-                              int64_t viewport_start,
-                              int     zoom_level,
-                              int64_t playhead) {
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(viewport_start));
-    out += "viewport_start=";
-    out += buf;
-    out += '\n';
-    std::snprintf(buf, sizeof(buf), "%d", zoom_level);
-    out += "zoom=";
-    out += buf;
-    out += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(playhead));
-    out += "playhead=";
-    out += buf;
-    out += '\n';
-}
-
-void append_authoring_block(std::string& out,
-                            const AuthoringSnapshot& authoring) {
-    if (!authoring.valid) return;
-    char buf[64];
-    out += "active_tab=";
-    out += authoring.active_tab;
-    out += '\n';
-    out += "active_audio_view=";
-    out += authoring.active_audio_view;
-    out += '\n';
-    // Trim bounds are authored positions (whole source frames); they
-    // serialize as integer text through the canonical authored pair in
-    // frame_format.h, same as every other authored position on disk.
-    if (authoring.has_trim_begin) {
-        out += "trim_begin=";
-        out += format_authored_frame(authoring.trim_begin_frame);
-        out += '\n';
-    }
-    if (authoring.has_trim_end) {
-        out += "trim_end=";
-        out += format_authored_frame(authoring.trim_end_frame);
-        out += '\n';
-    }
-    std::snprintf(buf, sizeof(buf), "%d", authoring.zoom_level);
-    out += "authoring_zoom=";
-    out += buf;
-    out += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(authoring.viewport_start));
-    out += "authoring_viewport_start=";
-    out += buf;
-    out += '\n';
-    std::snprintf(buf, sizeof(buf), "%lld",
-                  static_cast<long long>(authoring.playhead));
-    out += "authoring_playhead=";
-    out += buf;
-    out += '\n';
-}
-
 } // namespace
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Shared by
-// write_rendersettings, write_settings_file (and through it
-// update_settings_view_state), and the warp/phase-reset marker writers.
+// write_settings_file (and through it update_settings_view_state) and the
+// warp/phase-reset marker writers.
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data) {
     mode_t mode = 0644;
@@ -222,19 +146,6 @@ bool create_if_missing(const std::filesystem::path& p,
         return false;
     }
     return true;
-}
-
-bool write_rendersettings(const std::filesystem::path& path,
-                           const EngineSettings& engine,
-                           int64_t viewport_start,
-                           int     zoom_level,
-                           int64_t playhead,
-                           const AuthoringSnapshot& authoring) {
-    std::string data;
-    append_engine_block(data, engine);
-    append_view_state_block(data, viewport_start, zoom_level, playhead);
-    append_authoring_block(data, authoring);
-    return atomic_write_string_to_path(path.string(), data);
 }
 
 bool update_settings_view_state(const std::filesystem::path& path,

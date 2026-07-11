@@ -25,13 +25,6 @@ std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& p
 
 namespace {
 
-// One serializer body for both save domains; only the position spelling
-// differs. `format_position` is a per-row callable (row index + marker):
-// authored saves format the marker's own int64 time_frame as plain integer
-// text (format_authored_frame); the render-display sidecars format a
-// caller-supplied parallel vector of fractional target-axis doubles
-// (format_render_frame_double) — the authored field cannot represent them.
-//
 // Serializer contract: this save performs no ordering validation.
 // The store is sorted by construction — ordered insert for drops and
 // propagate, and every time-mutating gesture (drag commit, shift,
@@ -46,14 +39,11 @@ namespace {
 // defects — so this serializer never refuses them;
 // build_phase_reset_source_frames' sub-frame refusal is the breach
 // backstop for hand-edited input, and build_warp_frame_map refuses
-// warp ties. Positions persist through the domain's own pair
-// (frame_format.h), so a saved store reloads bit-identically under
-// that domain's parse — in the render-display domain the publisher's
-// distinct-but-close fractional resets stay distinct on disk.
-template <typename FormatPosition>
+// warp ties. Positions are authored whole source frames and persist
+// through the authored pair (frame_format.h), so a saved store
+// reloads bit-identically under the authored parse.
 bool save_impl(const std::string& path,
-               const std::vector<GuiPhaseResetMarker>& markers_,
-               FormatPosition format_position) {
+               const std::vector<GuiPhaseResetMarker>& markers_) {
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
@@ -62,7 +52,7 @@ bool save_impl(const std::string& path,
         // heap is the sole engine, so there is no peak/heap/pass mode to
         // record.
         if (m.disabled) out << '#';
-        out << format_position(i, m) << '\n';
+        out << format_authored_frame(m.time_frame) << '\n';
     }
     const std::string data = out.str();
 
@@ -80,28 +70,7 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
                          const std::vector<GuiPhaseResetMarker>& markers_) {
     // Authored domain: positions are whole source frames (int64), written
     // as plain integer text (format_authored_frame).
-    return save_impl(path, markers_,
-                     [](size_t, const GuiPhaseResetMarker& m) {
-                         return format_authored_frame(m.time_frame);
-                     });
-}
-
-bool GuiPhaseResetMarkers::save_render_display(
-        const std::string& path,
-        const std::vector<GuiPhaseResetMarker>& markers_,
-        const std::vector<double>& render_frames) {
-    // Render-display domain (.renderphaseresetmarkers): positions live on
-    // the render's target axis, generically fractional, written as shortest
-    // round-trip doubles (format_render_frame_double) — NOT the authored
-    // integer grammar. The int64 authored field cannot hold them, so the
-    // caller supplies the fractional positions in `render_frames`, parallel
-    // to `markers_` (asserted by the size guard); each marker's own
-    // time_frame is ignored here.
-    if (render_frames.size() != markers_.size()) return false;
-    return save_impl(path, markers_,
-                     [&render_frames](size_t i, const GuiPhaseResetMarker&) {
-                         return format_render_frame_double(render_frames[i]);
-                     });
+    return save_impl(path, markers_);
 }
 
 int GuiPhaseResetMarkers::insert_marker(GuiPhaseResetMarker m) {

@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <string>
 
-struct AuthoringSnapshot;
 struct ViewState;
 
 // The `.settings` reader is the parser-side whole-file schema
@@ -18,7 +17,7 @@ struct ViewState;
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
 // failure, removing the partial `.tmp` first. Shared by the .settings,
-// .rendersettings, .warpmarkers, and .phaseresetmarkers writers.
+// .warpmarkers, and .phaseresetmarkers writers.
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data);
 
@@ -27,23 +26,6 @@ bool atomic_write_string_to_path(const std::string& path,
 // non-fatal — the audio load still proceeds.
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
-
-// Full-write of `.rendersettings`: emits the eight canonical engine keys
-// (in kSettingsOrder order, byte-identical to the engine block of
-// write_settings_file), then the three render-view scratch keys
-// (viewport_start, zoom, playhead), then the authoring block when
-// authoring.valid. Atomic via tmp + fsync + rename. Called by the render
-// pipeline at render time. The file has no in-product reader anymore —
-// Ctrl+Alt+C commit and render-view display both read the entry's
-// standard `.settings` snapshot (read_settings_file /
-// update_settings_view_state below) — so this writer survives only until
-// the writer-deletion step retires the sidecar.
-bool write_rendersettings(const std::filesystem::path& path,
-                          const EngineSettings& engine,
-                          int64_t viewport_start,
-                          int     zoom_level,
-                          int64_t playhead,
-                          const AuthoringSnapshot& authoring);
 
 // View-state-only update of a `.settings` file: strict read-modify-write,
 // the per-entry autosave render view runs at its navigation/exit

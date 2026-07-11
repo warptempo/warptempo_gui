@@ -61,7 +61,7 @@ std::string default_render_title(const std::string& source_stem);
 // (e.g. "must be one of {wav, warptempo_maps, generic_map, midi_map}").
 // Caller wraps with
 // the surrounding "key 'X' has invalid value 'Y':" prefix. Used by the
-// whole-file schema readers (read_settings_file, read_rendersettings) and
+// whole-file schema reader (read_settings_file) and
 // GuiSettingsEditor::commit.
 //
 // Returns false with reason "unknown engine key" if `key` is not in
@@ -77,7 +77,7 @@ bool validate_engine_setting(const std::string& key,
 // decimals for scale — value_format.h — true/false for limiter, verbatim
 // for the string fields). This is the single byte definition for engine
 // field serialization: format_engine_setting_value below delegates to it,
-// and every settings writer (write_settings_file, write_rendersettings,
+// and every settings writer (write_settings_file,
 // format_default_settings_template) reaches it through kSettingsOrder's
 // typed EngineField rather than re-encoding fields itself.
 std::string format_engine_field_value(const EngineSettings& es,

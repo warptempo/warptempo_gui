@@ -288,9 +288,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // from settings. Does not consult the in-memory queue; empty
     // batch_folder/batch_basename selects the source-directory naming
     // convention inside do_render. A successful sibling wav publish emits
-    // the .peaks pyramid and .fingerprint sidecar, but not batch-only
-    // render-view sidecars (.warpmarkers / .phaseresetmarkers /
-    // .rendersettings / .renderwarpmarkers / .renderphaseresetmarkers).
+    // the .fingerprint sidecar, but not batch-only sidecars
+    // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
@@ -354,7 +353,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
     // Ctrl+Alt+E: render the in-memory queue as one batch. Each wav
     // queued entry produces a sibling .wav plus commit-critical
-    // .warpmarkers, .phaseresetmarkers, and .rendersettings sidecars inside
+    // .warpmarkers, .phaseresetmarkers, and .settings sidecars inside
     // a fresh batch folder
     // `<source_parent>/renders/<index>_render_all_in_queue/`.
     // The index is one greater than the highest pre-existing batch index

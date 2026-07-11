@@ -604,7 +604,7 @@ private:
     // handle_render_view_toggle: the bare-R enter/exit handler. Returns false
     // if the chord is not bare R (caller falls through); otherwise performs
     // the enter (enumerate, migrate persisted selection, load) or exit (stash
-    // rendersettings + selection, restore source, clear render-view state)
+    // entry view state + selection, restore source, clear render-view state)
     // and returns true.
     bool handle_render_view_toggle(GuiKey key, GuiInputState mods);
 

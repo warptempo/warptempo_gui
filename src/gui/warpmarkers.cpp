@@ -27,13 +27,6 @@ std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
 
 namespace {
 
-// One serializer body for both save domains; only the position spelling
-// differs. `format_position` is a per-row callable (row index + marker):
-// authored saves format the marker's own int64 time_frame as plain integer
-// text (format_authored_frame); the render-display sidecars format a
-// caller-supplied parallel vector of fractional target-axis doubles
-// (format_render_frame_double) — the authored field cannot represent them.
-//
 // Serializer contract: this save performs no ordering validation.
 // The store is sorted by construction — ordered insert for drops, and
 // every time-mutating gesture (drag commit, shift, nudge) reorders
@@ -44,20 +37,19 @@ namespace {
 // impossible from the sorted store, so evidence of a future op bug —
 // fails the next load with a loud line-numbered parse error. Warp
 // ties are refused at the strict render boundary
-// (build_warp_frame_map), not by this serializer. Positions persist
-// through the domain's own pair (frame_format.h), so a saved store
-// reloads bit-identically under that domain's parse.
-template <typename FormatPosition>
+// (build_warp_frame_map), not by this serializer. Positions are authored
+// whole source frames and persist through the authored pair
+// (frame_format.h), so a saved store reloads bit-identically under the
+// authored parse.
 bool save_impl(const std::string& path,
-               const std::vector<GuiWarpMarker>& markers_,
-               FormatPosition format_position) {
+               const std::vector<GuiWarpMarker>& markers_) {
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
         // Canonical new format, no whitespace anywhere on the line:
         //   [#]?<frame position>|PAYLOAD
         if (m.disabled) out << '#';
-        out << format_position(i, m) << '|';
+        out << format_authored_frame(m.time_frame) << '|';
 
         // Payload:
         //   label_ref               → "a.42"
@@ -105,28 +97,7 @@ bool GuiWarpMarkers::save(const std::string& path,
                       const std::vector<GuiWarpMarker>& markers_) {
     // Authored domain: positions are whole source frames (int64), written
     // as plain integer text (format_authored_frame).
-    return save_impl(path, markers_,
-                     [](size_t, const GuiWarpMarker& m) {
-                         return format_authored_frame(m.time_frame);
-                     });
-}
-
-bool GuiWarpMarkers::save_render_display(
-        const std::string& path,
-        const std::vector<GuiWarpMarker>& markers_,
-        const std::vector<double>& render_frames) {
-    // Render-display domain (.renderwarpmarkers): positions live on the
-    // render's target axis, generically fractional, written as shortest
-    // round-trip doubles (format_render_frame_double) — NOT the authored
-    // integer grammar. The int64 authored field cannot hold them, so the
-    // caller supplies the fractional positions in `render_frames`, parallel
-    // to `markers_` (asserted by the size guard); each marker's own
-    // time_frame is ignored here.
-    if (render_frames.size() != markers_.size()) return false;
-    return save_impl(path, markers_,
-                     [&render_frames](size_t i, const GuiWarpMarker&) {
-                         return format_render_frame_double(render_frames[i]);
-                     });
+    return save_impl(path, markers_);
 }
 
 int GuiWarpMarkers::insert_marker(GuiWarpMarker m) {

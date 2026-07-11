@@ -68,7 +68,7 @@ std::vector<std::filesystem::path> compose_render_output_paths(
 // and the warptempo_cli loader at load (a hand-edited sidecar composing the
 // output onto the source is adversarial — refused first-error, stderr-only, in
 // both products so a file set is loadable in both or neither), and the
-// Ctrl+Alt+C promotion pre-mutation guard (a hand-edited .rendersettings that
+// Ctrl+Alt+C commit pre-mutation guard (a hand-edited entry .settings that
 // composes onto the source aborts before the first marker or AppState
 // mutation). Separately, the render worker is the breach backstop: it composes
 // batch-folder paths too and keeps its own exists-gated check.

@@ -191,9 +191,9 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // path's current stat, so both name the source audio.
 //
 // req.authoring reproduces the entry's own snapshot from its parsed
-// .settings, so the republished .rendersettings authoring block matches
-// what the entry carried. The republished .settings view keys reset to the
-// dispatch writer's browse defaults — acceptable, the entry was stale.
+// .settings, so the republished per-entry .settings carries what the entry
+// carried. Its view keys reset to the dispatch writer's browse defaults —
+// acceptable, the entry was stale.
 static RenderRequest build_entry_rebuild_request(
         const AppState& app,
         const AppState::RenderViewEntry& e,
@@ -215,16 +215,11 @@ static RenderRequest build_entry_rebuild_request(
     req.source_total_frames = source_audio.total_frames();
     req.source_load_size    = source_audio.source_load_size();
     req.source_load_mtime   = source_audio.source_load_mtime();
-    req.authoring.valid             = true;
     req.authoring.active_tab        = settings.active_tab_view;
-    req.authoring.active_audio_view = settings.active_audio_view;
     req.authoring.has_trim_begin    = recipe_trim.has_begin;
     req.authoring.trim_begin_frame  = recipe_trim.begin_frame;
     req.authoring.has_trim_end      = recipe_trim.has_end;
     req.authoring.trim_end_frame    = recipe_trim.end_frame;
-    req.authoring.zoom_level        = commit_tab.zoom;
-    req.authoring.viewport_start    = commit_tab.viewport_start;
-    req.authoring.playhead          = commit_tab.playhead;
     req.authoring.active_markers_view = settings.active_markers_view;
     req.authoring.playback_speed      = settings.playback_speed;
     req.authoring.follow              = settings.follow;
@@ -241,9 +236,7 @@ static RenderRequest build_entry_rebuild_request(
 // past-EOF wall defect, or a snapshot whose map cannot rebuild — is
 // adversarial: one stderr line, first error only, the entry refuses to
 // display (return false, prior state preserved). Display positions derive
-// live from the snapshot through derive_render_display_positions — the same
-// helper the pipeline's display-sidecar writer serializes — so the
-// displayed positions are exactly what the old display sidecars carried.
+// live from the snapshot through derive_render_display_positions.
 // Computes F_begin/F_end against the source sr/total. Stops playback
 // before installing the entry buffer and rebinds the device to it.
 //
@@ -485,15 +478,13 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Keep-filter the display stores through the SAME helper the pipeline's
-    // display-sidecar writer serializes. The KEPT marker structs carry
-    // their AUTHORED time_frame unchanged — render view no longer bakes
+    // Keep-filter the display stores through derive_render_display_positions
+    // (this loader is its sole consumer). The KEPT marker structs carry
+    // their AUTHORED time_frame unchanged — render view bakes no
     // quantized render-domain positions into the stores; it translates
     // live through the snapshot map below, exactly as target view
-    // translates through the live map. (The helper's parallel fractional
-    // render-domain vectors still serve the .render* display-sidecar
-    // writer; here only the keep-filtering and the crop origin are
-    // consumed.) Displayed pixels are unchanged: the old baked position
+    // translates through the live map. Displayed pixels are unchanged
+    // from the baked era: the old baked position
     // was snap_authored_frame(tgt(F) - crop_begin) computed at load; the
     // new one is nearbyint(tgt(F)) - crop_begin computed at use, and
     // crop_begin is an integer-valued double (an llrint result), so

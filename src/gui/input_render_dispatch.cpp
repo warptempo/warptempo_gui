@@ -162,16 +162,11 @@ bool GuiInputHandler::warp_render_preflight(
 
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     AuthoringSnapshot s;
-    s.valid             = true;
     s.active_tab        = app.active_tab_view;
-    s.active_audio_view = app.active_audio_view;
     s.has_trim_begin    = app.trim.has_begin;
     s.trim_begin_frame    = app.trim.begin_frame;
     s.has_trim_end      = app.trim.has_end;
     s.trim_end_frame      = app.trim.end_frame;
-    s.zoom_level        = app.zoom_level;
-    s.viewport_start    = app.viewport_start_sample;
-    s.playhead          = app.playhead_cursor_sample;
     // Session prefs the per-entry .settings writer needs, captured live at
     // dispatch so the file carries the session's real values.
     s.active_markers_view = app.active_markers_view;
@@ -408,8 +403,8 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // ("220" stays "220", "220.5" stays "220.5"); the two timestamps are the
 // span's owner and endpoint marker times in display seconds
 // (frame / sample_rate, converted by the caller), formatted via the shared
-// mm:ss.mmm formatter. Stored verbatim in the cell's .rendersettings bpm=
-// field and promoted into .settings on commit.
+// mm:ss.mmm formatter. Stored verbatim in the cell's per-entry .settings
+// bpm= field and promoted into the source .settings on commit.
 static std::string format_bpm_descriptor(int beats, double bpm,
                                          double start_seconds,
                                          double end_seconds) {
@@ -422,9 +417,9 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
 // (base_tempo, scale) per cell and rendering one .wav per cell into
 // `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell engine
-// values land in the `.rendersettings` sidecar's engine block (written by
-// do_render); Ctrl+Alt+C reads only the scale field back when committing a BPM
-// cell. The substantive difference from the iter render handler is per-cell
+// values land in the per-entry `.settings` sidecar's engine block (written
+// by do_render); Ctrl+Alt+C adopts them when committing a BPM cell. The
+// substantive difference from the iter render handler is per-cell
 // mutation of cell_settings.scale, in addition to per-cell marker mutation.
 // Returns true iff a batch was dispatched; every guard bail returns false.
 // Body is the former Ctrl+Alt+M block verbatim, minus the keystroke gate.
@@ -586,8 +581,8 @@ bool GuiInputHandler::render_bpm_sweep() {
 
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
-        // Provenance descriptor for this cell's .rendersettings; promoted
-        // verbatim into .settings on Ctrl+Alt+C commit.
+        // Provenance descriptor for this cell's per-entry .settings;
+        // promoted verbatim into the source .settings on Ctrl+Alt+C commit.
         cell_settings.bpm =
             format_bpm_descriptor(
                 owner.bpm_beats, bpm,

@@ -480,8 +480,8 @@ struct TrimState {
 // The same struct is reused by RenderViewEntry::state to carry
 // per-render persisted view-state across render-view exit/enter and
 // batch-nav. Render-view entries leave the viewport/zoom/playhead fields
-// at default (those still flow through the live AppState fields
-// and the .rendersettings sidecar).
+// at default (those flow through the live AppState fields and the
+// per-entry .settings autosave).
 struct ViewState {
     int64_t viewport_start_sample      = 0;
     int     zoom_level                 = 0;
@@ -896,8 +896,8 @@ struct AppState {
         // when the wav still has the same (size, mtime) as when stashed;
         // mismatch on reload drops them silently. The viewport/zoom/
         // playhead fields on `state` are unused — render-view's
-        // viewport state continues to flow through the live AppState
-        // fields and the .rendersettings sidecar.
+        // viewport state flows through the live AppState fields and the
+        // per-entry .settings autosave.
         ViewState state;
 
         // Stat-tuple key for selection validity. Captured when stashed,

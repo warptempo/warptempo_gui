@@ -80,20 +80,6 @@ public:
     static bool save(const std::string& path,
                      const std::vector<GuiWarpMarker>& markers);
 
-    // Render-display variant for the .renderwarpmarkers sidecar. Identical
-    // line grammar, but positions live on the render's own target axis and
-    // are generically fractional, so they serialize as shortest round-trip
-    // doubles (format_render_frame_double) instead of the authored integer
-    // text. The int64 authored field cannot represent them, so the caller
-    // passes the fractional positions in `render_frames`, parallel to
-    // `markers` (each marker's own time_frame is ignored; a size mismatch
-    // fails the save). Written by the render pipeline; nothing reads the
-    // file back — render view derives the same positions live through
-    // derive_render_display_positions (render_pipeline.h).
-    static bool save_render_display(const std::string& path,
-                                    const std::vector<GuiWarpMarker>& markers,
-                                    const std::vector<double>& render_frames);
-
     const std::vector<GuiWarpMarker>&       markers() const { return markers_; }
 
     // Inserts `m` at the position that preserves ascending time_frame

@@ -594,50 +594,6 @@ std::pair<float,float> GuiAudio::get_peak_range(int channel,
     return { dequantize_i16(qlo), dequantize_i16(qhi) };
 }
 
-bool write_peaks_cache_for_wav(const std::string& wav_path) {
-    auto reader = AudioReader::open(wav_path);
-    if (!reader) {
-        std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
-            wav_path.c_str(), reader.error().c_str());
-        return false;
-    }
-    const AudioFileInfo& info = reader->info();
-    const int     channels        = info.channels;
-    const int     sample_rate     = info.sample_rate;
-    const int64_t claimed_frames  = info.frames;
-    const int     render_channels = std::min(channels, 2);
-
-    if (claimed_frames <= 0 || render_channels <= 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: empty audio\n",
-            wav_path.c_str());
-        return false;
-    }
-
-    int64_t actual_frames = 0;
-    auto audio_reader_iter = [&](float* out, int64_t want) -> int64_t {
-        auto n = reader->read_frames(out, want);
-        if (!n || *n <= 0) return 0;
-        actual_frames += *n;
-        return *n;
-    };
-
-    std::array<GuiAudio::PyramidLevel, 3> levels;
-    build_pyramid_streaming(audio_reader_iter, claimed_frames, channels,
-                            render_channels, /*on_progress=*/{}, levels);
-
-    if (actual_frames <= 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: no frames read\n",
-            wav_path.c_str());
-        return false;
-    }
-
-    return write_cache_to_disk(wav_path, actual_frames, render_channels,
-                               sample_rate, levels);
-}
-
 bool is_peaks_cache_path(const std::string& path) {
     return lowercase(std::filesystem::path(path).extension().string()) == ".peaks";
 }

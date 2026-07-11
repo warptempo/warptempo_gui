@@ -3,7 +3,6 @@
 #include "engine/engine.h"
 #include "engine/engine_geometry.h"
 #include "app_state.h"
-#include "audio.h"
 #include "render.h"
 #include "phaseresetmarkers.h"
 #include "map_output.h"
@@ -54,11 +53,11 @@ struct CommitCriticalSidecars {
 
 }  // namespace
 
-// The single render-domain display-position derivation (declared in
-// render_pipeline.h): do_render's display-sidecar writers serialize this
-// result verbatim, and render view's entry loader derives the same result
-// live from an entry's snapshot set, so the written sidecars and the
-// displayed positions can never drift.
+// Render view's display derivation (declared in render_pipeline.h): the
+// entry loader derives this live from an entry's snapshot set — its sole
+// consumer — keep-filtering the authored stores against the render's
+// participation verdicts and computing the crop geometry the display
+// context translates through.
 //
 // Crop-coordinate anchors. The delivered wav's sample 0 is llrint(T_b) in
 // full-target coordinates and its length is llrint(T_e) - llrint(T_b) —
@@ -93,9 +92,11 @@ RenderDisplayPositions derive_render_display_positions(
         out.crop_end   = static_cast<double>(crop_end - crop_begin);
     }
 
-    // Walk the FULL frame map; each emitted render-domain position is the
-    // full-render output sample minus the crop origin. When untrimmed,
-    // crop_begin is 0 and this reduces to identity placement.
+    // Walk the FULL frame map; each kept item's render-domain position —
+    // the value the crop-bounds verdicts run on, and the position render
+    // view displays it at — is the full-render output sample minus the
+    // crop origin. When untrimmed, crop_begin is 0 and this reduces to
+    // identity placement.
 
     // Markers sit on the aligned feature: a marker at source F displays at
     // tgt(F) - llrint(T_b) — the crop coordinates, a frame double on the
@@ -121,7 +122,6 @@ RenderDisplayPositions derive_render_display_positions(
 
     auto seg_it = full_warp_frame_map.begin();
     out.warp_markers.reserve(warp_markers.size());
-    out.warp_frames.reserve(warp_markers.size());
     for (size_t mi = 0; mi < warp_markers.size(); ++mi) {
         const GuiWarpMarker& g = warp_markers[mi];
         if (!warp_keep[mi]) continue;
@@ -157,7 +157,6 @@ RenderDisplayPositions derive_render_display_positions(
         // target.
         if (render_frame >= out.crop_end) continue;
         out.warp_markers.push_back(g);
-        out.warp_frames.push_back(render_frame);
     }
 
     // Phase resets: surviving resets are forward-mapped from their clicked
@@ -181,7 +180,6 @@ RenderDisplayPositions derive_render_display_positions(
     // precedes it still displays, exactly as the warp loop keeps markers
     // whose breakpoints the trimmer's window anchors coalesced away.
     out.phase_resets.reserve(phase_resets.size());
-    out.phase_reset_frames.reserve(phase_resets.size());
     for (const auto& t : phase_resets) {
         if (t.disabled) continue;
         if (has_trim_begin && t.time_frame < trim_begin_frame) continue;
@@ -194,7 +192,6 @@ RenderDisplayPositions derive_render_display_positions(
         if (crop_target < 0.0) continue;
         if (crop_target >= out.crop_end) continue;
         out.phase_resets.push_back(t);
-        out.phase_reset_frames.push_back(crop_target);
     }
     return out;
 }
@@ -491,25 +488,6 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             note_created(tm_path, existed);
 
-            // `.rendersettings` sidecar: the canonical engine block, the
-            // render-view scratch defaults, and the optional dispatch-time
-            // authoring snapshot. No in-product reader remains (Ctrl+Alt+C
-            // commit adopts the entry's standard `.settings` snapshot
-            // below); the write survives only until the writer-deletion
-            // step retires the sidecar.
-            const std::filesystem::path rs_path =
-                bf / (req.batch_basename + ".rendersettings");
-            existed = existed_before(rs_path);
-            if (!write_rendersettings(rs_path, req.engine_settings,
-                                      /*viewport_start=*/0,
-                                      /*zoom_level=*/kFitFileLevel,
-                                      /*playhead=*/0,
-                                      req.authoring)) {
-                note_failure(rs_path);
-                return result;
-            }
-            note_created(rs_path, existed);
-
             // `.settings` sidecar: the SAME standard whole-file schema a
             // source carries, so a later campaign step can display the entry
             // as a read-only target-view snapshot and Ctrl+Alt+C can adopt it
@@ -626,36 +604,10 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        // A fingerprint match only proves the wav and commit-critical
-        // sidecars are current; it says nothing about the render-domain
-        // display sidecars published beside batch renders. Batch
-        // renders publish those, so a missing one here means an earlier
-        // publish limped through a warning-only display-sidecar failure (or
-        // the file was deleted by hand) — refuse the reuse rather than
-        // report up to date with stale or absent display state. One-off
-        // renders never produce display sidecars, so they are exempt.
-        if (batch_render) {
-            const std::filesystem::path bf(req.batch_folder);
-            const std::filesystem::path warp_sidecar_path =
-                bf / (req.batch_basename + ".renderwarpmarkers");
-            const std::filesystem::path phase_reset_sidecar_path =
-                bf / (req.batch_basename + ".renderphaseresetmarkers");
-            std::error_code warp_sidecar_ec;
-            std::error_code phase_reset_sidecar_ec;
-            const bool warp_sidecar_exists = std::filesystem::exists(warp_sidecar_path, warp_sidecar_ec);
-            const bool phase_reset_sidecar_exists = std::filesystem::exists(phase_reset_sidecar_path, phase_reset_sidecar_ec);
-            if (!warp_sidecar_exists || !phase_reset_sidecar_exists) {
-                const std::filesystem::path& missing =
-                    !warp_sidecar_exists ? warp_sidecar_path : phase_reset_sidecar_path;
-                std::fprintf(stderr,
-                    "warptempo_gui: render reuse refused, missing display "
-                    "sidecar: %s\n",
-                    missing.string().c_str());
-                remove_created_commit_sidecars(sidecars.created_paths);
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-        }
+        // The fingerprint plus the commit-critical sidecars just
+        // (re)published above are the whole reuse condition: render view
+        // derives its display live from the snapshot set, so there is
+        // nothing else the entry needs on disk.
         return finish_success("reused_up_to_date");
     }
 
@@ -682,90 +634,16 @@ RenderOutcome do_render(const RenderRequest& req,
         trim_plan = std::move(*plan);
     }
 
-    // Returns false if any attempted display-sidecar write failed (vacuously
-    // true when the batch/wav conditions skip the writes). The wav publish
-    // path uses that to withhold the fingerprint attestation.
-    auto publish_render_domain_sidecars = [&]() -> bool {
-        if (!batch_render || req.output_buffer) return true;
-
-        bool all_ok = true;
-        const std::filesystem::path bf(req.batch_folder);
-
-        // Render-domain sidecars (.renderwarpmarkers / .renderphaseresetmarkers).
-        // Nothing reads these back any more — render view derives its
-        // display positions live from the entry's snapshot set through the
-        // same derive_render_display_positions the serialization below
-        // consumes — but they are still written, byte-identical, until a
-        // later step retires the writers. The source-domain pair above
-        // stays authoritative for Ctrl+Alt+C commit and Ctrl+S authoring
-        // saves. Only wav renders produce these — the map formats
-        // (warptempo_maps, generic_map, midi_map) skip the engine. The
-        // phase-reset sidecar is always written on wav batch renders,
-        // including as an empty file.
-        if (output_format == "wav") {
-            // The one shared derivation (rationale at its definition
-            // above): kept markers/resets with their fractional
-            // render-domain positions in parallel vectors.
-            const RenderDisplayPositions display =
-                derive_render_display_positions(
-                    req.warp_markers, req.phase_resets, full_warp_frame_map,
-                    req.has_trim_begin, req.trim_begin_frame,
-                    req.has_trim_end, req.trim_end_frame,
-                    static_cast<int64_t>(total_frames));
-
-            // Render-display domain: positions are re-timed onto the
-            // deliverable's target axis, generically fractional, so this
-            // sidecar serializes through the render pair
-            // (format_render_frame_double), not the authored integer grammar.
-            const std::string warp_sidecar_path =
-                (bf / (req.batch_basename + ".renderwarpmarkers")).string();
-            if (!GuiWarpMarkers::save_render_display(warp_sidecar_path,
-                                                     display.warp_markers,
-                                                     display.warp_frames)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: write failed for '%s'\n",
-                    warp_sidecar_path.c_str());
-                all_ok = false;
-            }
-
-            // Render-display domain, same as the warp sidecar above:
-            // fractional target-axis positions through the render pair.
-            const std::string phase_reset_sidecar_path =
-                (bf / (req.batch_basename + ".renderphaseresetmarkers"))
-                .string();
-            if (!GuiPhaseResetMarkers::save_render_display(
-                    phase_reset_sidecar_path, display.phase_resets,
-                    display.phase_reset_frames)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: write failed for '%s'\n",
-                    phase_reset_sidecar_path.c_str());
-                all_ok = false;
-            }
-        }
-        return all_ok;
-    };
-
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
-    // artifacts: .fingerprint, .peaks, and display sidecars are warning-only.
-    // Ctrl+Alt+E batch wavs are committable artifact sets: wav plus
-    // source-domain .warpmarkers, source-domain .phaseresetmarkers
-    // (including the empty-file form), and .rendersettings. Those
-    // commit-critical sidecars must publish before the wav is reported as
-    // successful. The .peaks cache and the render-domain display sidecars
-    // (.renderwarpmarkers / .renderphaseresetmarkers) publish next, and
-    // .fingerprint is written last of all: it is the attestation that the
-    // full artifact set, peaks and display sidecars included, is complete,
-    // so a fingerprint match on a later render implies those files exist.
-    // If the peaks or display-sidecar writes fail, the render still succeeds
-    // (the wav and commit-critical sidecars are intact) but the fingerprint
-    // is withheld so the attestation stays truthful: a later matching render
-    // finds no fingerprint and regenerates, rather than matching an
-    // incomplete set. The fingerprint-match reuse path above still refuses a
-    // match whose display sidecars are missing rather than silently
-    // reporting up to date — that covers fingerprints published before a
-    // sidecar was deleted out from under them. Process
-    // death after the wav rename lands on disk but before those sidecars
-    // finish can leave an orphan wav that render-view enumerates and offers;
+    // artifacts: .fingerprint is warning-only. Ctrl+Alt+E batch wavs are
+    // committable artifact sets: wav plus source-domain .warpmarkers,
+    // source-domain .phaseresetmarkers (including the empty-file form), and
+    // .settings. Those commit-critical sidecars must publish before the wav
+    // is reported as successful. .fingerprint is written last of all: it is
+    // the attestation that the artifact set is complete, so a fingerprint
+    // match on a later render implies those files exist. Process death
+    // after the wav rename lands on disk but before those sidecars finish
+    // can leave an orphan wav that render-view enumerates and offers;
     // Ctrl+Alt+C's validate-before-mutate path refuses that entry cleanly.
     // That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
@@ -777,19 +655,10 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        const bool peaks_ok = write_peaks_cache_for_wav(final_output_path);
-        const bool display_ok = publish_render_domain_sidecars();
-        if (!peaks_ok || !display_ok) {
-            std::fprintf(stderr,
-                "warptempo_gui: fingerprint withheld for %s: %s write "
-                "failed\n",
-                final_output_path.c_str(),
-                !peaks_ok ? "peaks cache" : "display sidecar");
-        } else if (
-            // An empty fingerprint here means the mid-render identity
-            // re-check cleared it (mid-render source replacement); write no
-            // attestation then.
-            !fingerprint.empty() &&
+        // An empty fingerprint here means the mid-render identity re-check
+        // cleared it (mid-render source replacement); write no attestation
+        // then.
+        if (!fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
                 "warptempo_gui: fingerprint sidecar write skipped for %s\n",
@@ -1289,7 +1158,6 @@ RenderOutcome do_render(const RenderRequest& req,
     // source-domain phase-reset companion as an empty file when the list is
     // empty.
     publish_commit_critical_batch_sidecars(/*hard_fail=*/false);
-    publish_render_domain_sidecars();
 
     cleanup_all();
     return finish_success("success");
