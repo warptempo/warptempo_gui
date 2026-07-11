@@ -27,7 +27,7 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  archive. The duplicated object code across binaries is accepted deliberately:
 #  a single source text per list makes drift between products impossible, which
 #  is what matters — not the packaging. The GUI is canonical and warptempo_cli
-#  is the insurance render path; both draw the same three lists.
+#  is the insurance render path; both draw the same four lists.
 #
 #  audio_io: in-tree audio container/codec boundary (dr_flac vendored for FLAC
 #  decode only; container probing and WAV handling are in-tree).

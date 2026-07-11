@@ -103,8 +103,8 @@ RenderOutcome do_render(const RenderRequest& req,
     auto src_info = audio_probe(req.source_audio_path);
     if (!src_info) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: open failed for '%s'\n",
-            req.source_audio_path.c_str());
+            "warptempo_gui: render error: open failed for '%s': %s\n",
+            req.source_audio_path.c_str(), src_info.error().c_str());
         return RenderOutcome::Failed;
     }
 

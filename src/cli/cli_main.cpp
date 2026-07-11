@@ -40,16 +40,16 @@ void unlink_silent(const std::string& path) {
 void usage(const char* argv0) {
     std::fprintf(stderr,
         "usage: %s <source-audio>\n"
-        "  Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
-        "  and <source-stem>.settings beside the source audio (all three are\n"
-        "  required; the GUI creates them on source load) and writes the\n"
-        "  warped wav the GUI would render for the same project, at the same\n"
-        "  path: title-named beside the source (<title>.wav, or\n"
-        "  limiter=false;<title>.wav when the settings limiter is off). Runs\n"
-        "  the full PGHI engine; output_format must be wav (this CLI renders\n"
-        "  wav only; the GUI produces warptempo_maps/generic_map/midi_map). The\n"
-        "  trim applied is the active tab's (the persisted active_tab_view\n"
-        "  key), matching the GUI.\n",
+        " Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
+        " and <source-stem>.settings beside the source audio (all three are\n"
+        " required; the GUI creates them on source load) and writes the\n"
+        " warped wav the GUI would render for the same project, at the same\n"
+        " path: title-named beside the source (<title>.wav, or\n"
+        " limiter=false;<title>.wav when the settings limiter is off). Runs\n"
+        " the full PGHI engine; output_format must be wav (this CLI renders\n"
+        " wav only; the GUI produces warptempo_maps/generic_map/midi_map). The\n"
+        " trim applied is the active tab's (the persisted active_tab_view\n"
+        " key), matching the GUI.\n",
         argv0);
 }
 

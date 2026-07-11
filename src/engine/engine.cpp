@@ -47,7 +47,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
         fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
     } else {
-        std::cerr << "  ! fftw_init_threads failed; FFTW will run single-threaded.\n";
+        std::cerr << "! fftw_init_threads failed; FFTW will run single-threaded.\n";
     }
 }
 
