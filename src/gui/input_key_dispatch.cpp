@@ -563,16 +563,20 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                     std::lround(m.iter_start * 100.0));
                 const int end_cents = static_cast<int>(
                     std::lround(m.iter_end * 100.0));
-                // The bracket commit enforces start <= end, but a stray
-                // hand-edit of memory could violate it. Treat that as
-                // no sweep rather than producing zero cells.
+                // The editor commit enforces start <= end and the bracket is
+                // session-only (wiped on mode exit), so an inverted bracket
+                // here is an internal breach — refuse the dispatch loudly and
+                // enqueue nothing, repairing no iter state (the state is
+                // evidence; the bracket lifecycle owns wiping). Pre-mutation:
+                // nothing above has touched app state or the queue.
                 if (start_cents > end_cents) {
-                    delta_cents.push_back(0);
-                    is_swept.back() = false;
-                } else {
-                    for (int c = start_cents; c <= end_cents; ++c) {
-                        delta_cents.push_back(c);
-                    }
+                    std::fprintf(stderr,
+                        "warptempo_gui: render-iterations refused: marker %d "
+                        "iter bracket start exceeds end\n", i);
+                    return true;
+                }
+                for (int c = start_cents; c <= end_cents; ++c) {
+                    delta_cents.push_back(c);
                 }
             } else {
                 delta_cents.push_back(0);
