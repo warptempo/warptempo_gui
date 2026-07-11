@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -164,15 +165,19 @@ public:
     // on the encode; routing to the RAM or disk tier happens after the encode
     // under the usual mutex. A lookup that lands before the encode finishes
     // misses benignly and re-renders. Encode failure drops the entry with one
-    // stderr line. cancel_flag (nullable) is the dispatching render's cancel
-    // flag: if it is set once the previous writer has been joined — before
-    // anything becomes externally observable — the job is dropped, so a
-    // killed session never publishes cache state.
+    // stderr line. cancel_token (nullable) is the dispatching render's
+    // per-dispatch session cancel token — created fresh per dispatch and
+    // never reset, so it stays truthful across later dispatches. It travels
+    // in the writer job: the job is dropped silently when the token is set,
+    // either once the previous writer has been joined (before the writer
+    // thread launches) or at the writer thread's post-encode re-check
+    // (before anything becomes externally observable).
     void insert_master_floats(const std::vector<uint8_t>& fingerprint,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,
                               int64_t frame_count,
-                              const std::atomic<bool>* cancel_flag);
+                              std::shared_ptr<const std::atomic<bool>>
+                                  cancel_token);
 
 private:
     struct WriterJob;
@@ -195,8 +200,7 @@ private:
                     int channels, int sample_rate);
     bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                      const std::vector<char>& blob, int64_t frame_count);
-    void start_writer_job(WriterJob job,
-                          const std::atomic<bool>* cancel_flag = nullptr);
+    void start_writer_job(WriterJob job);
     void evict_ram_until(uint64_t target_max);
     void evict_disk_until(uint64_t target_max);
     void sweep_orphans();

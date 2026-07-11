@@ -580,6 +580,10 @@ struct RenderCache::WriterJob {
     int64_t frame_count = 0;
     bool prof = false;
     profile::Clock::time_point t0{};
+    // EncodeMasterThenRoute only: the dispatching render's per-dispatch
+    // session cancel token (never reset after creation, so a load of it
+    // names exactly that session). Null for WriteBlobToDisk jobs.
+    std::shared_ptr<const std::atomic<bool>> cancel_token;
 };
 
 void RenderCache::insert(const std::vector<uint8_t>& fp,
@@ -616,11 +620,12 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     insert_disk(h, fp, blob, frame_count);
 }
 
-void RenderCache::insert_master_floats(const std::vector<uint8_t>& fp,
-                                       const std::vector<float>& samples,
-                                       int channels, int sample_rate,
-                                       int64_t frame_count,
-                                       const std::atomic<bool>* cancel_flag) {
+void RenderCache::insert_master_floats(
+        const std::vector<uint8_t>& fp,
+        const std::vector<float>& samples,
+        int channels, int sample_rate,
+        int64_t frame_count,
+        std::shared_ptr<const std::atomic<bool>> cancel_token) {
     if (!enabled_) {
         return;
     }
@@ -644,7 +649,8 @@ void RenderCache::insert_master_floats(const std::vector<uint8_t>& fp,
     job.frame_count = frame_count;
     job.prof = profile::enabled();
     job.t0 = job.prof ? profile::now() : profile::Clock::time_point{};
-    start_writer_job(std::move(job), cancel_flag);
+    job.cancel_token = std::move(cancel_token);
+    start_writer_job(std::move(job));
 }
 
 bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
@@ -702,16 +708,18 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     return true;
 }
 
-void RenderCache::start_writer_job(WriterJob job,
-                                   const std::atomic<bool>* cancel_flag) {
+void RenderCache::start_writer_job(WriterJob job) {
     join_writer();
 
     // Drop the job if the dispatching render was cancelled while we waited
     // on the previous writer. The check sits after the potentially long
     // join and before anything becomes externally observable — the disk
-    // index mutation below and the writer thread launch — so a killed
-    // session never publishes cache state.
-    if (cancel_flag && cancel_flag->load()) {
+    // index mutation below and the writer thread launch. A cancel can still
+    // land between this load and the thread start; the writer thread's
+    // post-encode re-check of the same job token catches that window, so
+    // the two checks together keep a killed session from publishing cache
+    // state.
+    if (job.cancel_token && job.cancel_token->load()) {
         return;
     }
 
@@ -770,6 +778,20 @@ void RenderCache::start_writer_job(WriterJob job,
             job.samples.clear();
             job.samples.shrink_to_fit();
             job.blob = std::move(encoded);
+
+            // Post-encode cancellation re-check, before anything publishes:
+            // the RAM insert, the disk-index mutation, and the pair write
+            // all come after this point. The token is created per dispatch
+            // and never reset, so this load names exactly the dispatching
+            // session; a cancel landing anywhere before this point —
+            // including the window between the handoff's pre-launch check
+            // and this thread's start — drops the entry silently
+            // (consistent with the pre-launch drop), and a cancel landing
+            // after it completes the write, which is the accepted
+            // late-cancel tail, now bounded by this check.
+            if (job.cancel_token && job.cancel_token->load()) {
+                return;
+            }
 
             const uint64_t bytes = static_cast<uint64_t>(job.blob.size());
             const int64_t ram_tier_frames =

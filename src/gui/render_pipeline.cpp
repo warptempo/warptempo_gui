@@ -77,7 +77,10 @@ RenderRequest build_render_request(std::string source_audio_path,
 }
 
 RenderOutcome do_render(const RenderRequest& req,
-                        const std::atomic<bool>* cancel_flag) {
+                        std::shared_ptr<const std::atomic<bool>> cancel_token) {
+    // Raw view for the pipeline body; the owning token itself travels only
+    // into insert_master_floats, whose writer thread outlives this call.
+    const std::atomic<bool>* cancel_flag = cancel_token.get();
     const bool prof = profile::enabled();
     const auto t_render_0 = profile::now();
     double source_read_ms = 0.0;
@@ -250,15 +253,17 @@ RenderOutcome do_render(const RenderRequest& req,
     };
 
     // Cancellation gate for the orchestrator-side phases. The engine
-    // observes the same flag internally; these checks cover everything
+    // observes the same token internally; these checks cover everything
     // around it — the reuse rungs, the post-engine chain, the map writes,
     // and every final-name publication — so an Esc (or a superseding
     // dispatch) that lands after the engine's last internal check can never
     // publish a deliverable, fingerprint, or cache entry as Success. A
     // cancelled return unlinks the staging file; nothing has landed under a
     // final name at any gated point. The buffer route gates twice: the
-    // cache prep threads the flag into insert_master_floats (the writer
-    // job is dropped, before it goes live, when the flag is set), and a
+    // cache prep threads the OWNING cancel_token into insert_master_floats
+    // — the token is per-dispatch and never reset, so the writer thread's
+    // own loads of it (the pre-launch drop and the post-encode re-check)
+    // name exactly this session even after later dispatches — and a
     // final buffer-route check ahead of finish_success keeps a cancelled
     // target render from ever reporting Success with an abandoned buffer.
     auto cancel_requested = [&]() {
@@ -999,7 +1004,7 @@ RenderOutcome do_render(const RenderRequest& req,
             if (!fingerprint.empty() && inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
-                    inserted_frames, cancel_flag);
+                    inserted_frames, cancel_token);
             }
         }
 

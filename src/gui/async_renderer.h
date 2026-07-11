@@ -5,6 +5,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -35,21 +36,24 @@ public:
 
     // Stop the worker thread and close the eventfd. Idempotent. Safe to call
     // even if init() failed; safe to call from the destructor. Blocks until
-    // the worker has exited — if a job is in flight, sets cancel_flag first
-    // so the worker exits at the next frame boundary.
+    // the worker has exited — if a job is in flight, sets the session cancel
+    // token first so the worker exits at the next frame boundary.
     void shutdown();
 
     // The eventfd the platform layer polls for completion. -1 before init().
     int completion_fd() const { return completion_fd_; }
 
     // Dispatch a render job. Asserts the worker is idle (no job in flight).
-    // Resets cancel_flag, stores req and on_done in the job slot, transitions
-    // worker_state_ Idle -> Running, notifies the cv. Returns immediately.
+    // Creates a fresh session cancel token (the previous session's token is
+    // never reset, so any writer thread still holding a copy keeps a truthful
+    // view of its own session's cancellation), stores req and on_done in the
+    // job slot, transitions worker_state_ Idle -> Running, notifies the cv.
+    // Returns immediately.
     void dispatch(RenderRequest req, DoneCallback on_done);
 
-    // Request cancellation of the in-flight job. Sets cancel_flag; the
-    // worker passes it through do_render, where the engine observes it during
-    // synthesis. No-op if no job is in flight.
+    // Request cancellation of the in-flight job. Sets the current session's
+    // cancel token; the worker passes its copy through do_render, where the
+    // engine observes it during synthesis. No-op if no job is in flight.
     void request_cancel();
 
     // Called by the platform layer when the completion eventfd fires.
@@ -94,7 +98,18 @@ private:
     std::condition_variable cv_;
 
     std::atomic<int>     state_{static_cast<int>(State::Idle)};
-    std::atomic<bool>    cancel_flag_{false};
+    // Per-dispatch cancellation token. dispatch() replaces it with a fresh
+    // token for each session and old tokens are NEVER reset, so a copy held
+    // by an asynchronous consumer (do_render, and through it the render
+    // cache's writer thread) names exactly its own dispatching session: it
+    // can neither read false after a later dispatch's reset nor mistake a
+    // later session's cancel for its own. Ownership: the shared_ptr member
+    // itself is written only on the GUI thread (dispatch, under mtx_); the
+    // worker's copy, taken under the same mutex in worker_loop, is the only
+    // cross-thread read. The pointee atomic is written by request_cancel /
+    // shutdown and read anywhere.
+    std::shared_ptr<std::atomic<bool>> session_cancel_ =
+        std::make_shared<std::atomic<bool>>(false);
     std::atomic<bool>    stop_worker_{false};
 
     // Job slot. Written by the GUI thread at dispatch (state Idle->Running);

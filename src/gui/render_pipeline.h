@@ -18,7 +18,7 @@
 //   - Failed:    early-return error path (warp-frame-map build, engine/render,
 //                output write/publish, or rename); diagnostics already on
 //                stderr.
-//   - Cancelled: cancel_flag was observed mid-pipeline; partial output
+//   - Cancelled: the cancel token was observed mid-pipeline; partial output
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
 
@@ -141,11 +141,15 @@ struct RenderRequest {
 // errors out, or is cancelled). All progress / error reporting goes to
 // stderr. Returns RenderOutcome — Success on a complete render (including
 // the rename-into-place of the staged output); Failed on every early-return
-// failure path; Cancelled if `cancel_flag` (when non-null) was observed set
-// inside the engine. The queue walker uses the outcome to count successes and
-// to detect mid-render cancellation.
+// failure path; Cancelled if `cancel_token` (when non-null) was observed set
+// inside the engine. The token is GuiAsyncRenderer's per-dispatch session
+// cancel token: created fresh for each dispatch and never reset, so it names
+// exactly this render's session even when a copy outlives the render (the
+// cache writer thread holds one). The queue walker uses the outcome to count
+// successes and to detect mid-render cancellation.
 RenderOutcome do_render(const RenderRequest& req,
-                        const std::atomic<bool>* cancel_flag = nullptr);
+                        std::shared_ptr<const std::atomic<bool>> cancel_token =
+                            nullptr);
 
 // Output-path composition (render_output_extensions / render_output_stem /
 // compose_render_output_paths) lives parser-side in render_output_naming.h so

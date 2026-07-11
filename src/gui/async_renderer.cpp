@@ -29,7 +29,7 @@ bool GuiAsyncRenderer::init() {
 void GuiAsyncRenderer::shutdown() {
     if (worker_.joinable()) {
         // If a job is in flight, raise cancel so the worker exits promptly.
-        cancel_flag_.store(true);
+        session_cancel_->store(true);
         {
             std::lock_guard<std::mutex> lk(mtx_);
             stop_worker_.store(true);
@@ -63,7 +63,10 @@ void GuiAsyncRenderer::dispatch(RenderRequest req, DoneCallback on_done) {
         std::lock_guard<std::mutex> lk(mtx_);
         pending_req_ = std::move(req);
         on_done_     = std::move(on_done);
-        cancel_flag_.store(false);
+        // Fresh per-session token; the old one is never reset, so any writer
+        // thread still holding a copy keeps a stable, truthful view of its
+        // own session's cancellation.
+        session_cancel_ = std::make_shared<std::atomic<bool>>(false);
         state_.store(static_cast<int>(State::Running));
     }
     cv_.notify_one();
@@ -75,7 +78,12 @@ void GuiAsyncRenderer::request_cancel() {
     // fingerprint so no dispatch or preview trigger can match-wait on a
     // doomed render during its cooperative drain.
     session_fingerprint_.clear();
-    cancel_flag_.store(true);
+    // When this fires during CompletionPending (render already finished,
+    // completion event not yet consumed), setting the token can at most drop
+    // that completed session's still-running cache insert — a benign cache
+    // miss, in the safe direction; the deliverable itself has already
+    // published or been refused by the pipeline's own gates.
+    session_cancel_->store(true);
 }
 
 bool GuiAsyncRenderer::is_busy() const {
@@ -87,6 +95,7 @@ bool GuiAsyncRenderer::is_busy() const {
 void GuiAsyncRenderer::worker_loop() {
     while (true) {
         RenderRequest req;
+        std::shared_ptr<const std::atomic<bool>> cancel_token;
         {
             std::unique_lock<std::mutex> lk(mtx_);
             cv_.wait(lk, [this]() {
@@ -99,10 +108,15 @@ void GuiAsyncRenderer::worker_loop() {
             }
             req = std::move(*pending_req_);
             pending_req_.reset();
+            // Copy this session's cancel token under the same lock that
+            // took the request; see the member comment for the ownership
+            // rule (GUI thread writes the member, this is the only
+            // cross-thread read).
+            cancel_token = session_cancel_;
         }
 
         // Execute the render synchronously on this worker thread.
-        RenderOutcome outcome = do_render(req, &cancel_flag_);
+        RenderOutcome outcome = do_render(req, std::move(cancel_token));
         last_outcome_ = outcome;
 
         state_.store(static_cast<int>(State::CompletionPending));
