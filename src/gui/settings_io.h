@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 struct AuthoringSnapshot;
@@ -37,9 +38,14 @@ bool create_if_missing(const std::filesystem::path& p,
 // update_rendersettings_view_state), so any violation is adversarial and
 // the FIRST error refuses the whole read: unknown keys, keyless lines,
 // duplicates, malformed values, out-of-range zoom levels, and missing
-// required engine keys. Absent optional keys stay legal (defaults for the
-// view projection, has_ flags for the authoring projection: older or
-// minimal sidecars omit the authoring block).
+// required engine keys. Absent optional keys stay legal: the view
+// projection defaults, and the authoring projection is none-or-all on its
+// five core keys — either the whole block is present (engaged optional) or
+// the whole block is absent (nullopt, the old-sidecar compatibility case).
+// The two trim keys are independently optional but legal only inside an
+// existing block; a partial core block or an orphan trim key with no core
+// block is GUI-unproducible, hence adversarial: a first-error whole-file
+// refusal, not display leniency.
 //
 // The two consumers apply opposite policies on a refused read, matching
 // the marker display sidecars' recorded leniency split: the render-view
@@ -54,27 +60,27 @@ struct RenderViewState {
     int64_t playhead       = 0;
 };
 
+// A complete authoring block. Present only as an engaged optional on
+// Rendersettings, so the five core members (active_tab, active_audio_view,
+// zoom_level, viewport_start, playhead) are always meaningful — the block
+// is none-or-all on them. Only the two trim keys stay individually optional
+// within the block (a render with no trim omits them).
 struct RendersettingsAuthoring {
-    bool    has_active_tab        = false;
     char    active_tab            = 'A';
-    bool    has_active_audio_view = false;
     char    active_audio_view     = 'S';
     bool    has_trim_begin        = false;
     int64_t trim_begin_frame      = 0;     // source frames
     bool    has_trim_end          = false;
     int64_t trim_end_frame        = 0;     // source frames
-    bool    has_zoom_level        = false;
     int     zoom_level            = 0;
-    bool    has_viewport_start    = false;
     int64_t viewport_start        = 0;
-    bool    has_playhead          = false;
     int64_t playhead              = 0;
 };
 
 struct Rendersettings {
-    EngineSettings          engine;
-    RenderViewState         view;
-    RendersettingsAuthoring authoring;
+    EngineSettings                         engine;
+    RenderViewState                        view;
+    std::optional<RendersettingsAuthoring> authoring;
 };
 
 std::expected<Rendersettings, std::string> read_rendersettings(

@@ -237,13 +237,27 @@ std::expected<Rendersettings, std::string> read_rendersettings(
         return std::unexpected("could not open '" + path.string() + "'");
     }
 
+    // The authoring block is none-or-all on its five core keys. Scan into a
+    // working struct plus a presence flag per authoring key, then decide the
+    // block's shape once at the tail: all five core keys engage the optional,
+    // none of them (and no orphan trim key) yields nullopt, anything else is
+    // an adversarial partial block and refuses the whole read.
+    RendersettingsAuthoring work;
+    bool has_active_tab        = false;
+    bool has_active_audio_view = false;
+    bool has_zoom_level        = false;
+    bool has_viewport_start    = false;
+    bool has_playhead          = false;
+    // First trim key seen in file order, for the orphan-trim refusal message.
+    std::string first_trim_key;
+
     auto valid_zoom = [](int z) {
         return z >= kFitFileLevel && z <= kMaxNumericLevel;
     };
     auto scan = warptempo_settings::scan_settings_file(
-        f, [&out, &valid_zoom](int ln, const std::string& key,
-                               const std::string& value)
-                               -> std::expected<void, std::string> {
+        f, [&](int ln, const std::string& key,
+               const std::string& value)
+               -> std::expected<void, std::string> {
         using warptempo_settings::bad_value;
 
         if (auto e = warptempo_settings::try_engine_key(ln, key, value,
@@ -274,54 +288,56 @@ std::expected<Rendersettings, std::string> read_rendersettings(
             if (value != "A" && value != "B") {
                 return bad_value(ln, key, value, "must be A or B");
             }
-            out.authoring.has_active_tab = true;
-            out.authoring.active_tab = value[0];
+            has_active_tab = true;
+            work.active_tab = value[0];
         } else if (key == "active_audio_view") {
             if (value != "S" && value != "T") {
                 return bad_value(ln, key, value, "must be S or T");
             }
-            out.authoring.has_active_audio_view = true;
-            out.authoring.active_audio_view = value[0];
+            has_active_audio_view = true;
+            work.active_audio_view = value[0];
         } else if (key == "trim_begin") {
             int64_t v;
             if (!parse_authored_frame(value, v)) {
                 return bad_value(ln, key, value,
                                  "must be a whole source-frame position");
             }
-            out.authoring.has_trim_begin = true;
-            out.authoring.trim_begin_frame = v;
+            work.has_trim_begin = true;
+            work.trim_begin_frame = v;
+            if (first_trim_key.empty()) first_trim_key = "trim_begin";
         } else if (key == "trim_end") {
             int64_t v;
             if (!parse_authored_frame(value, v)) {
                 return bad_value(ln, key, value,
                                  "must be a whole source-frame position");
             }
-            out.authoring.has_trim_end = true;
-            out.authoring.trim_end_frame = v;
+            work.has_trim_end = true;
+            work.trim_end_frame = v;
+            if (first_trim_key.empty()) first_trim_key = "trim_end";
         } else if (key == "authoring_zoom") {
             int v;
             if (!warptempo_parse::parse_int_strict(value, v) ||
                 !valid_zoom(v)) {
                 return bad_value(ln, key, value, "must be a zoom level");
             }
-            out.authoring.has_zoom_level = true;
-            out.authoring.zoom_level = v;
+            has_zoom_level = true;
+            work.zoom_level = v;
         } else if (key == "authoring_viewport_start") {
             int64_t v;
             if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
                 return bad_value(ln, key, value,
                                  "must be a non-negative integer");
             }
-            out.authoring.has_viewport_start = true;
-            out.authoring.viewport_start = v;
+            has_viewport_start = true;
+            work.viewport_start = v;
         } else if (key == "authoring_playhead") {
             int64_t v;
             if (!warptempo_parse::parse_int64_strict(value, v) || v < 0) {
                 return bad_value(ln, key, value,
                                  "must be a non-negative integer");
             }
-            out.authoring.has_playhead = true;
-            out.authoring.playhead = v;
+            has_playhead = true;
+            work.playhead = v;
         } else {
             return warptempo_parse::prefix_line_error(
                 ln, "unknown key '" + key + "'");
@@ -329,6 +345,34 @@ std::expected<Rendersettings, std::string> read_rendersettings(
         return {};
     });
     if (!scan) return std::unexpected(std::move(scan.error()));
+
+    // Tail check: the block is none-or-all on the five core keys. Count them
+    // in the writer's emission order so a partial block names the first
+    // missing core key; a trim key with no core block is an orphan and names
+    // the trim key. Both shapes are GUI-unproducible, hence adversarial.
+    const int core_present = static_cast<int>(has_active_tab) +
+                             static_cast<int>(has_active_audio_view) +
+                             static_cast<int>(has_zoom_level) +
+                             static_cast<int>(has_viewport_start) +
+                             static_cast<int>(has_playhead);
+    if (core_present == 5) {
+        out.authoring = work;
+    } else if (core_present == 0 && !work.has_trim_begin &&
+               !work.has_trim_end) {
+        // Fully absent block: the old-sidecar compatibility case.
+    } else if (core_present == 0) {
+        return std::unexpected("'" + first_trim_key +
+                               "' requires the authoring block");
+    } else {
+        const char* missing =
+            !has_active_tab        ? "active_tab" :
+            !has_active_audio_view ? "active_audio_view" :
+            !has_zoom_level        ? "authoring_zoom" :
+            !has_viewport_start    ? "authoring_viewport_start" :
+                                     "authoring_playhead";
+        return std::unexpected(std::string(
+            "authoring block is incomplete: missing '") + missing + "'");
+    }
     return out;
 }
 
@@ -366,21 +410,23 @@ bool update_rendersettings_view_state(const std::filesystem::path& path,
         return false;
     }
 
-    const RendersettingsAuthoring& a = rs->authoring;
+    // The authoring block is none-or-all: an engaged optional restores the
+    // whole block, an absent one leaves the snapshot invalid so
+    // write_rendersettings emits no block (matching the file just read).
     AuthoringSnapshot authoring;
-    authoring.valid = a.has_active_tab || a.has_active_audio_view ||
-                      a.has_trim_begin || a.has_trim_end ||
-                      a.has_zoom_level || a.has_viewport_start ||
-                      a.has_playhead;
-    authoring.active_tab        = a.active_tab;
-    authoring.active_audio_view = a.active_audio_view;
-    authoring.has_trim_begin    = a.has_trim_begin;
-    authoring.trim_begin_frame  = a.trim_begin_frame;
-    authoring.has_trim_end      = a.has_trim_end;
-    authoring.trim_end_frame    = a.trim_end_frame;
-    authoring.zoom_level        = a.zoom_level;
-    authoring.viewport_start    = a.viewport_start;
-    authoring.playhead          = a.playhead;
+    authoring.valid = rs->authoring.has_value();
+    if (rs->authoring) {
+        const RendersettingsAuthoring& a = *rs->authoring;
+        authoring.active_tab        = a.active_tab;
+        authoring.active_audio_view = a.active_audio_view;
+        authoring.has_trim_begin    = a.has_trim_begin;
+        authoring.trim_begin_frame  = a.trim_begin_frame;
+        authoring.has_trim_end      = a.has_trim_end;
+        authoring.trim_end_frame    = a.trim_end_frame;
+        authoring.zoom_level        = a.zoom_level;
+        authoring.viewport_start    = a.viewport_start;
+        authoring.playhead          = a.playhead;
+    }
 
     return write_rendersettings(path, rs->engine, viewport_start,
                                 zoom_level, playhead, authoring);

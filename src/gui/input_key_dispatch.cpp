@@ -834,15 +834,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 rendersettings.error().c_str());
             return true;
         }
-        const RendersettingsAuthoring& authoring = rendersettings->authoring;
-        const bool has_authoring_block =
-            authoring.has_active_tab ||
-            authoring.has_active_audio_view ||
-            authoring.has_trim_begin ||
-            authoring.has_trim_end ||
-            authoring.has_zoom_level ||
-            authoring.has_viewport_start ||
-            authoring.has_playhead;
+        // The authoring block is none-or-all: an engaged optional restores
+        // the whole block wholesale, an absent one leaves every live
+        // authoring field in place. The two trim keys stay individually
+        // optional within an engaged block. The empty fallback keeps the
+        // reference valid when the block is absent; every application site
+        // gates on has_authoring_block, so its default fields are never read.
+        const bool has_authoring_block = rendersettings->authoring.has_value();
+        const RendersettingsAuthoring empty_authoring{};
+        const RendersettingsAuthoring& authoring =
+            has_authoring_block ? *rendersettings->authoring
+                                : empty_authoring;
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_phase_resets;
         const std::filesystem::path wm =
@@ -879,14 +881,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // here (pre-mutation they read the same live state): the commit tab
         // receives the authoring trim and viewport/playhead (the tab switch
         // at the application site happens before those restores, so the live
-        // fields they write belong to the commit tab), and absent authoring
-        // keys leave the corresponding live state in place.
+        // fields they write belong to the commit tab), and an absent
+        // authoring block leaves the live state in place wholesale.
         const char commit_tab =
-            authoring.has_active_tab ? authoring.active_tab
-                                     : app.active_tab_view;
+            has_authoring_block ? authoring.active_tab
+                                : app.active_tab_view;
         const char restored_audio_view =
-            authoring.has_active_audio_view ? authoring.active_audio_view
-                                            : app.active_audio_view;
+            has_authoring_block ? authoring.active_audio_view
+                                : app.active_audio_view;
         const int64_t total_frames = audio.total_frames();
         const long    sample_rate  = audio.sample_rate();
 
@@ -963,7 +965,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // load-lenient policy: walkable-defect stores load intact by
         // design, there is no target total to wall against, and the
         // runtime viewport clamps own the values then.
-        if (authoring.has_viewport_start || authoring.has_playhead) {
+        if (has_authoring_block) {
             bool    run_view_check = true;
             int64_t domain_total   = total_frames;
             if (restored_audio_view == 'T') {
@@ -985,9 +987,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
             if (run_view_check) {
                 SettingsFileTab cand_view;
-                cand_view.has_viewport_start = authoring.has_viewport_start;
+                cand_view.has_viewport_start = true;
                 cand_view.viewport_start     = authoring.viewport_start;
-                cand_view.has_playhead       = authoring.has_playhead;
+                cand_view.has_playhead       = true;
                 cand_view.playhead           = authoring.playhead;
                 if (auto detail = first_view_range_defect(
                         commit_tab == 'B' ? SettingsFileTab{} : cand_view,
@@ -1098,7 +1100,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         render_view.restore_source_audio();
 
-        if (authoring.has_active_tab &&
+        if (has_authoring_block &&
             authoring.active_tab != app.active_tab_view) {
             active_views.switch_active_tab_view_to(authoring.active_tab);
         }
@@ -1119,25 +1121,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        if (authoring.has_active_audio_view &&
+        if (has_authoring_block &&
             authoring.active_audio_view == 'S' &&
             app.active_audio_view == 'T') {
             app.active_audio_view = 'S';
             target_render.rebind_to_source();
-        } else if (authoring.has_active_audio_view &&
+        } else if (has_authoring_block &&
                    authoring.active_audio_view == 'T') {
             app.active_audio_view = 'T';
         }
 
-        if (authoring.has_zoom_level &&
+        if (has_authoring_block &&
             authoring.zoom_level >= kFitFileLevel &&
             authoring.zoom_level <= kMaxNumericLevel) {
             app.zoom_level = authoring.zoom_level;
         }
-        if (authoring.has_viewport_start) {
+        if (has_authoring_block) {
             app.viewport_start_sample = authoring.viewport_start;
         }
-        if (authoring.has_playhead) {
+        if (has_authoring_block) {
             app.playhead_cursor_sample = authoring.playhead;
             if (!app.playhead_scanner_active) {
                 app.playhead_scanner_sample = authoring.playhead;
