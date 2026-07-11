@@ -199,15 +199,24 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
 // Both are needed: (1) interrupts the current render mid-stream;
 // (2) stops the batch state machine from advancing after the
 // cancelled render's on_done fires.
+// Cancel also disarms both parked slots that the worker-idle pump would
+// otherwise resurrect: the parked archival command (app.pending_archival)
+// and the parked target preview (GuiTargetRender::pending_, cleared via
+// cancel_in_flight_update).
 bool GuiInputHandler::cancel_archival_session() {
     if (async_renderer.is_busy()) {
         async_renderer.request_cancel();
         app.queue_cancel_requested = true;
         // Cancel means stop rendering: a parked archival command (a
         // dispatch that killed this render and is waiting out its drain)
-        // is disarmed too, or it would resurrect a render the moment the
-        // cancel lands.
+        // AND a parked target preview are both disarmed, or the
+        // worker-idle pump (finalize_render_run to maybe_dispatch_pending)
+        // would resurrect a render the moment the cancel lands. The
+        // preview slot is cleared through cancel_in_flight_update, which
+        // also covers the updating... progress text and the case where
+        // the busy render is the preview's own.
         app.pending_archival = {};
+        target_render.cancel_in_flight_update();
         return true;
     }
     if (app.queue_running) {
@@ -218,8 +227,11 @@ bool GuiInputHandler::cancel_archival_session() {
         // is_busy() branch above covers that window. This branch is
         // the rare case where queue_running is set but the worker has
         // already cleared — defensive, mirrors the prior behavior.
+        // Both parked slots are disarmed here too, same pump-resurrection
+        // reason as the is_busy() branch.
         app.queue_cancel_requested = true;
         app.pending_archival = {};
+        target_render.cancel_in_flight_update();
         return true;
     }
     return false;
