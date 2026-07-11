@@ -181,9 +181,9 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         render_view.restore_source_audio();
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
+        app.render_view.snapshot_warp_frame_map.clear();
+        app.render_view.snapshot_crop_begin = 0;
         app.render_view.index             = -1;
-        app.render_view.src_F_begin       = 0;
-        app.render_view.src_F_end         = 0;
     }
     return true;
 }
@@ -336,13 +336,18 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
             last_sel = hit;
         }
         gui.invalidate_region(0, 0, app.width, app.height);
+        // The stores hold AUTHORED frames; the playhead lives on the
+        // render's displayed axis, so forward-translate through the
+        // display context (snapshot map minus crop origin).
         int64_t sample;
         if (sub_t) {
-            sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.phase_resets[hit].time_frame));
+            sample = source_frame_to_active_domain(
+                app, audio,
+                app.render_view.phase_resets[hit].time_frame);
         } else {
-            sample = static_cast<int64_t>(std::nearbyint(
-                app.render_view.warp_markers[hit].time_frame));
+            sample = source_frame_to_active_domain(
+                app, audio,
+                app.render_view.warp_markers[hit].time_frame);
         }
         viewport.move_playhead_to(sample);
         // Any waveform-area press starts a
@@ -409,12 +414,16 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
         const int hit = hit_test_marker_line(app, audio, mouse_x);
         int64_t new_playhead;
         if (hit >= 0) {
+            // Authored-domain store position -> displayed axis, the same
+            // translation the press handler applies.
             if (app.active_markers_view == 'P') {
-                new_playhead = static_cast<int64_t>(std::nearbyint(
-                    app.render_view.phase_resets[hit].time_frame));
+                new_playhead = source_frame_to_active_domain(
+                    app, audio,
+                    app.render_view.phase_resets[hit].time_frame);
             } else {
-                new_playhead = static_cast<int64_t>(std::nearbyint(
-                    app.render_view.warp_markers[hit].time_frame));
+                new_playhead = source_frame_to_active_domain(
+                    app, audio,
+                    app.render_view.warp_markers[hit].time_frame);
             }
         } else {
             int rel = mouse_x - area.x;
@@ -457,18 +466,22 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
             }
             // Interval sweep: add every marker the playhead PASSED
             // since the last motion event (point-sampling skipped
-            // markers at fast pointer speeds). Render-view positions
-            // are already in the display domain — identity interval,
-            // no map translation.
+            // markers at fast pointer speeds). The stores hold AUTHORED
+            // positions, so inverse-translate the displayed interval
+            // endpoints through the display context (add the crop
+            // origin, inverse-map through the snapshot map) — the same
+            // shape source view's target arm uses — so the interval
+            // compare runs in the stores' own domain.
             const int64_t prev = app.playhead_drag.last_swept_sample;
             if (prev >= 0 && new_playhead != prev) {
                 int64_t a = prev, b = new_playhead;
                 const bool forward = (b >= a);
                 if (!forward) std::swap(a, b);
-                // Sweep endpoints are frame doubles on the render's own
-                // time axis, the render-view stores' domain.
-                const double lo_t = static_cast<double>(a);
-                const double hi_t = static_cast<double>(b);
+                int64_t lo = active_domain_to_source_frame(app, audio, a);
+                int64_t hi = active_domain_to_source_frame(app, audio, b);
+                if (lo > hi) std::swap(lo, hi);
+                const double lo_t = static_cast<double>(lo);
+                const double hi_t = static_cast<double>(hi);
                 const bool swept = (app.active_markers_view == 'P')
                     ? sweep_select_interval(
                           app, app.render_view.phase_resets,

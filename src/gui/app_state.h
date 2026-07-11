@@ -919,20 +919,24 @@ struct AppState {
         std::string last_path;
         std::vector<RenderViewEntry> list;
         int                          index = -1;     // -1 = unset
-        // The current render's display markers + phase resets, derived at
-        // entry load from the sibling snapshot set (`<basename>.warpmarkers`
-        // / `.phaseresetmarkers` / `.settings`) through
-        // derive_render_display_positions and quantized once through
-        // snap_authored_frame onto the render's own frame axis.
+        // The current render's display markers + phase resets: the KEPT
+        // display subset from derive_render_display_positions (entry load
+        // reads the sibling snapshot set `<basename>.warpmarkers` /
+        // `.phaseresetmarkers` / `.settings`), with time_frame at the
+        // AUTHORED whole-frame values. Render view is a display DOMAIN:
+        // every consumer translates these positions live through the
+        // display context (the snapshot map below minus the crop origin),
+        // exactly as target view translates through the live map.
         std::vector<GuiWarpMarker>       warp_markers;
         std::vector<GuiPhaseResetMarker>    phase_resets;
-        // Source-frame mapping of the current render: F_begin..F_end (source
-        // sample-rate frames) is what the render's full audio covers. When the
-        // render's warpmarkers carry no `b=` flag, F_begin is 0; when it carries
-        // no `e=` flag, F_end is the source's total_frames. Used by the render
-        // -view waveform mapping and the timestamp readout.
-        int64_t                      src_F_begin = 0;
-        int64_t                      src_F_end   = 0;
+        // Snapshot display geometry: built once from the entry's snapshot
+        // at load (read-only view — no invalidation), cleared wherever the
+        // display stores above are cleared. The Render display context
+        // (active_display_context) aliases it. snapshot_crop_begin is
+        // llrint(T_b) of the snapshot map — the delivered wav's sample 0
+        // in full-target coordinates; 0 untrimmed.
+        std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
+        int64_t                          snapshot_crop_begin = 0;
         // Source audio's sample rate / total frames at the time render-view
         // was entered. Cached so timestamp computation and trim resolution
         // don't have to peek at the swapped-out source GuiAudio.

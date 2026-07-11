@@ -741,8 +741,9 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         const int idx = app.last_selected_marker;
         if (idx < 0) return;
         if (app.active_markers_view == 'P') {
-            // Render-view recenters on the displayed render-domain phase
-            // resets; authoring recenters on the live store.
+            // Render-view recenters on the render_view display stores
+            // (authored-domain positions); authoring recenters on the
+            // live store.
             const auto& tv = app.render_view.enabled
                 ? app.render_view.phase_resets
                 : app.phaseresetmarkers.markers();
@@ -756,10 +757,11 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
             src_sample = mv[idx].time_frame;
         }
     }
-    // Target view: forward-translate marker's source-frame to active-
-    // domain (target-frame) so the playhead lands on the marker's
+    // Mapped views: forward-translate the marker's source-frame through
+    // the display context (target view's live map; render view's snapshot
+    // map minus crop origin) so the playhead lands on the marker's
     // displayed position; the viewport recenter below also uses this
-    // target-frame value via center_viewport_on_playhead.
+    // displayed value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     // Playhead domain clamp: Tab mirrors move_playhead_to exactly — both
     // read live_total_frames, which reports the active display context's

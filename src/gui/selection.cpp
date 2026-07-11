@@ -91,10 +91,11 @@ void Selection::sanitize_selection_after_restore(int n) {
 void Selection::cycle_selection(bool forward) {
     const bool phase_reset = (app.active_markers_view == 'P');
 
-    // Render-view cycles the displayed render-domain collections; normal
-    // authoring cycles the live authoring stores. Mirrors the branch in
-    // prune_live_selection. Bind const refs once so the count, frame_of,
-    // and is_disabled reads below all index the same vectors.
+    // Render-view cycles the displayed entry's authored-domain snapshot
+    // collections; normal authoring cycles the live authoring stores.
+    // Mirrors the branch in prune_live_selection. Bind const refs once so
+    // the count, frame_of, and is_disabled reads below all index the same
+    // vectors.
     const std::vector<GuiWarpMarker>& warp_vec =
         app.render_view.enabled ? app.render_view.warp_markers
                                 : app.warpmarkers.markers();
@@ -110,8 +111,9 @@ void Selection::cycle_selection(bool forward) {
     // [0, n), so n == 0 simply yields no marker candidate.
 
     // Helper to read frame-of-index in the active domain. Source view:
-    // marker source-frame == active-domain frame (identity). Target view:
-    // forward-translate to active-domain so frame_of values are
+    // marker source-frame == active-domain frame (identity). Target and
+    // render view: forward-translate through the display context (live
+    // map, or snapshot map minus crop origin) so frame_of values are
     // comparable to playhead_cursor_sample / viewport_start_sample below.
     auto frame_of = [&](int i) -> int64_t {
         int64_t src_f;

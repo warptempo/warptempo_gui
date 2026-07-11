@@ -172,19 +172,24 @@ const GuiDisplayContext& active_display_context(const AppState& app,
     static GuiDisplayContext ctx;
     static const std::vector<WarpFrameMapSegment> kIdentityMap;
     if (app.render_view.enabled) {
-        // Render view translates IDENTITY, whatever active_audio_view
-        // says: render view displays a flat rendered wav whose positions
-        // (the render_view display stores) are already in the displayed
-        // domain, while the target map describes the AUTHORING source's
-        // deformation — the flag persists as 'T' through render view, so
-        // the TargetLive arm below is reached only when render view is
-        // off. Translating here would also rebuild the target-map cache
-        // against the render audio's totals, which is never meaningful.
-        // A dedicated Render domain kind lands when render view rebuilds
-        // onto an authored-domain snapshot context; this arm is where it
-        // will plug in.
-        ctx.domain = GuiDisplayDomain::Source;
-        ctx.warp_frame_map = &kIdentityMap;
+        // Render view is a display DOMAIN, whatever active_audio_view
+        // says: the render_view display stores hold the AUTHORED-domain
+        // snapshot subset, and the translation is the entry's snapshot
+        // map minus its crop origin — exactly as target view translates
+        // through the live map. (This supersedes the earlier identity
+        // ruling here: the stores were render-domain then, so translating
+        // would have double-warped; they are authored-domain now, so
+        // translation is correct.) The flag can persist as 'T' or 'S'
+        // through render view — the TargetLive arm below is reached only
+        // when render view is off, and the live target-map cache is never
+        // consulted here. With no entry loaded the snapshot member is
+        // empty and the stores are empty, so nothing translates while the
+        // map pointer stays valid. domain_total_frames stays the
+        // displayed wav's own total for now — the audio decouple moves
+        // the total context-side.
+        ctx.domain = GuiDisplayDomain::Render;
+        ctx.warp_frame_map = &app.render_view.snapshot_warp_frame_map;
+        ctx.display_offset = app.render_view.snapshot_crop_begin;
         ctx.domain_total_frames = audio.total_frames();
     } else if (app.active_audio_view == 'T') {
         // Live target view: the memoized target-view map is the
@@ -196,6 +201,7 @@ const GuiDisplayContext& active_display_context(const AppState& app,
             static_cast<long>(audio.total_frames()));
         ctx.domain = GuiDisplayDomain::TargetLive;
         ctx.warp_frame_map = &c.warp_frame_map;
+        ctx.display_offset = 0;
         ctx.domain_total_frames = (c.tgt_total_frames > 0)
             ? c.tgt_total_frames
             : audio.total_frames();
@@ -203,6 +209,7 @@ const GuiDisplayContext& active_display_context(const AppState& app,
         // Source view: identity, source total.
         ctx.domain = GuiDisplayDomain::Source;
         ctx.warp_frame_map = &kIdentityMap;
+        ctx.display_offset = 0;
         ctx.domain_total_frames = audio.total_frames();
     }
     ctx.sample_rate = audio.sample_rate();
@@ -210,19 +217,41 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 }
 
 // Translate through the active display context. A Source-domain context
-// is identity outright; a TargetLive context routes through
-// to_domain_frame / to_source_frame, whose empty-map path (the
-// unbuildable-target fallthrough) is itself identity.
+// is identity outright; the mapped domains (TargetLive, Render) inline
+// the map math of to_domain_frame / to_source_frame and then apply the
+// context's display offset — forward subtracts it after the map lookup,
+// inverse adds it back before inverse-mapping. Inlining, not routing
+// through the two primitives, is deliberate: their 'S' short-circuit
+// reads app.active_audio_view, which can legitimately be 'S' while
+// render view displays, and would skip the snapshot map; the context's
+// DOMAIN, not the raw flag, decides here. The primitives themselves and
+// their explicit-map callers (the drag's frozen-map sites) are
+// untouched. TargetLive is bit-identical to the old routed path: its arm
+// is only reached with the flag at 'T' (no short-circuit) and its offset
+// is 0. The empty-map path (the unbuildable-target fallthrough, and
+// render view with no entry loaded) stays identity —
+// map_source_to_target / map_target_to_source are identity on an empty
+// map, and the offset is 0 whenever the map is empty.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     if (ctx.domain == GuiDisplayDomain::Source) return source_frame;
-    return to_domain_frame(app, source_frame, *ctx.warp_frame_map);
+    const size_t q = (source_frame < 0)
+        ? static_cast<size_t>(0)
+        : static_cast<size_t>(source_frame);
+    return static_cast<int64_t>(
+               std::nearbyint(map_source_to_target(q, *ctx.warp_frame_map))) -
+           ctx.display_offset;
 }
 
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     if (ctx.domain == GuiDisplayDomain::Source) return domain_frame;
-    return to_source_frame(app, domain_frame, *ctx.warp_frame_map);
+    const int64_t shifted = domain_frame + ctx.display_offset;
+    const size_t q = (shifted < 0)
+        ? static_cast<size_t>(0)
+        : static_cast<size_t>(shifted);
+    return static_cast<int64_t>(
+        std::nearbyint(map_target_to_source(q, *ctx.warp_frame_map)));
 }

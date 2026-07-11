@@ -878,10 +878,21 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // Target-view stems consume the displayed warp_frame_map (the one baked
     // into the live waveform pixels), not a freshly-built one — keeps
     // stem positions consistent with the displayed waveform during the
-    // worker's rebuild window.
+    // worker's rebuild window. Render-view stems translate the
+    // authored-domain display stores through the entry's snapshot map
+    // minus the crop origin; the snapshot is immutable while displayed
+    // and every entry load bumps audio_generation (fp_audio_gen), so the
+    // existing fingerprint already keys it — no new field. The
+    // drag-frozen override cannot occur here: drags are gated out of
+    // render view.
     const std::vector<WarpFrameMapSegment>* tmap_arg =
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
+    int64_t display_offset = 0;
+    if (rve && !app.render_view.snapshot_warp_frame_map.empty()) {
+        tmap_arg = &app.render_view.snapshot_warp_frame_map;
+        display_offset = app.render_view.snapshot_crop_begin;
+    }
 
     // Drag overlay: pass through only when a drag is live. During a
     // drag the fingerprint mismatches every tick on the drag-overlay
@@ -917,7 +928,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             ccr, local_area, list,
             vp_start, vp_end, sr,
             app.selected_markers, tmap_arg, drag_overlay,
-            wf_cache.surface);
+            wf_cache.surface, display_offset);
     } else {
         const auto& list = rve
             ? app.render_view.warp_markers
@@ -926,7 +937,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
             ccr, local_area, list,
             vp_start, vp_end, sr,
             app.selected_markers, tmap_arg, drag_overlay,
-            wf_cache.surface);
+            wf_cache.surface, display_offset);
     }
 
     cairo_destroy(ccr);
@@ -1085,6 +1096,16 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
 
+    // Render-view flags translate through the entry's snapshot map minus
+    // the crop origin, mirroring the stem cache (same immutable-snapshot /
+    // audio_gen fingerprint argument; drags cannot occur in render view).
+    const std::vector<WarpFrameMapSegment>* rv_tmap_arg = nullptr;
+    int64_t rv_display_offset = 0;
+    if (rve && !app.render_view.snapshot_warp_frame_map.empty()) {
+        rv_tmap_arg = &app.render_view.snapshot_warp_frame_map;
+        rv_display_offset = app.render_view.snapshot_crop_begin;
+    }
+
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (app.drag.active) {
@@ -1108,8 +1129,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                 vp_start, vp_end, sr,
                 flag_font_size_px(),
                 app.selected_markers,
-                nullptr,
-                drag_overlay);
+                rv_tmap_arg,
+                drag_overlay,
+                rv_display_offset);
         } else {
             render_flags(ccr, local_top_strip,
                          app.render_view.warp_markers,
@@ -1117,8 +1139,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                          flag_font_size_px(),
                          app.selected_markers,
                          cache_overlay,
-                         nullptr,
-                         drag_overlay);
+                         rv_tmap_arg,
+                         drag_overlay,
+                         /*iteration_on=*/false,
+                         rv_display_offset);
         }
     } else if (mv == 'P') {
         render_phase_reset_flags(

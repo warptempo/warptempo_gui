@@ -90,14 +90,17 @@ int64_t to_source_frame(const AppState& app, int64_t domain_frame,
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
                         const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
-// Convenience wrappers that own the view-check and the cached map build for the
-// common case: translating a single coordinate between the source-frame domain
-// and the active-domain using the LIVE target-view map. Source view: identity,
-// no map built. Target view: routes through the memoized
-// target_view_warp_frame_map_cached, so even repeated calls (e.g. inside a loop) cost
-// only a cache-key comparison after the first build. Use these at every input /
-// playhead boundary that currently reads target_view_warp_frame_map_cached
-// solely to feed one to_domain_frame / to_source_frame.
+// Convenience wrappers that own the domain-check and the map selection for the
+// common case: translating a single coordinate between the stores' domain and
+// the active display domain through the active display context. Source view:
+// identity, no map built. Target view: the memoized
+// target_view_warp_frame_map_cached, so even repeated calls (e.g. inside a
+// loop) cost only a cache-key comparison after the first build. Render view:
+// the displayed entry's snapshot map, shifted by the context's display offset
+// (the crop origin) — forward subtracts it after the map lookup, inverse adds
+// it before. Use these at every input / playhead boundary that currently reads
+// target_view_warp_frame_map_cached solely to feed one to_domain_frame /
+// to_source_frame.
 //
 // NOT for sites translating against a non-live map — a drag's
 // app.drag.frozen_warp_frame_map, or a proposed (pre-commit) marker list. Those keep

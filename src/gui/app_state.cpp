@@ -59,9 +59,9 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
     const bool rv = app.render_view.enabled;
-    // In render-view, the visible sub-view's list drives hit-testing. 'P'
-    // reads phase reset time_frame (whole int64 frames, read directly into
-    // the integer pixel-mapping domain, matching source-view's branch).
+    // In render-view, the visible sub-view's list drives hit-testing (the
+    // stores hold AUTHORED whole int64 frames; the context translation
+    // below carries them onto the render's displayed axis).
     const bool rv_phase_reset = rv && app.active_markers_view == 'P';
     const int n =
         rv_phase_reset
@@ -71,14 +71,17 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : (app.active_markers_view == 'P')
                     ? static_cast<int>(app.phaseresetmarkers.markers().size())
                     : static_cast<int>(app.warpmarkers.markers().size());
-    // Target view paints marker stems at map_source_to_target
+    // The mapped views paint marker stems at map_source_to_target
     // translated positions; the hit test must walk the same warp_frame_map so
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
     // The active display context owns the composite view rule: its map is
-    // empty (identity) in source view, in render view, and when the
-    // target map cannot build.
+    // the live target map in target view, the entry's snapshot map in
+    // render view, and empty (identity) in source view or when the
+    // target map cannot build. The context's display offset (the render
+    // crop origin; 0 in the other domains) shifts the mapped position
+    // onto the displayed axis — one shared subtraction below.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -100,6 +103,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
+        ms -= static_cast<double>(ctx.display_offset);
         // No viewport gate: the kMarkerHitHalfPx halo is the single reach
         // test, so a stem up to kMarkerHitHalfPx past either strip edge is
         // grabbable from the nearest onscreen pixels (the mouse is window-
@@ -274,15 +278,19 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
         static_cast<int64_t>(std::nearbyint(spp * area.w));
-    // Target view's flags paint at translated positions
+    // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
     // must walk the same warp_frame_map. The active display context is the
-    // base (its map is empty — identity — in source view and render view);
+    // base (its map is empty — identity — in source view); in target view
     // the drag-frozen map is a paint-regime override of the context's
     // translation map so hit-rect positions match the frozen-coord paint
-    // (the paint surfaces carry the same override).
+    // (the paint surfaces carry the same override). In render view the
+    // context supplies the entry's snapshot map plus the crop-origin
+    // display offset; the drag-frozen override cannot occur there —
+    // drags are gated out of render view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
+    int64_t display_offset = 0;
     if (ctx.domain == GuiDisplayDomain::TargetLive) {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
@@ -290,6 +298,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         } else if (!ctx.warp_frame_map->empty()) {
             tmap_arg = ctx.warp_frame_map;
         }
+    } else if (ctx.domain == GuiDisplayDomain::Render) {
+        if (!ctx.warp_frame_map->empty()) tmap_arg = ctx.warp_frame_map;
+        display_offset = ctx.display_offset;
     }
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
@@ -303,7 +314,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         rects = compute_flag_hit_rects(
             top, app.render_view.warp_markers,
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
-            nullptr, drag_overlay);
+            tmap_arg, drag_overlay, /*iteration_on=*/false,
+            display_offset);
     } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             top, app.phaseresetmarkers.markers(),

@@ -451,10 +451,13 @@ void render_playhead(cairo_t* cr,
 // kMarker; marker stems do not dim — only the out-of-trim sample pixels
 // dim, via on_redraw's ATOP overlay (see kWaveformDimmed). The global
 // out-of-trim dim was retired and it stays retired for stems.
-// `warp_frame_map` (default null) shifts marker positioning into the target-frame
-// domain when target view is active: each marker's source-frame position is
-// run through `map_source_to_target` before viewport clipping and column
-// placement. Null warp_frame_map = identity.
+// `warp_frame_map` (default null) shifts marker positioning into the mapped
+// display domain (target view's live map, render view's snapshot map): each
+// marker's source-frame position is run through `map_source_to_target` before
+// viewport clipping and column placement. Null warp_frame_map = identity.
+// `display_offset` (default 0) is the Render display context's crop origin,
+// subtracted after the map rounding — zero in source and target views, so
+// every existing caller is unchanged.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
@@ -464,7 +467,8 @@ void render_markers(cairo_t* cr,
                     const std::set<int>& selected_set,
                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                     const DragOverlay* drag_overlay = nullptr,
-                    cairo_surface_t* ink_plate = nullptr);
+                    cairo_surface_t* ink_plate = nullptr,
+                    int64_t display_offset = 0);
 
 // Draws the trim begin/end boundary stems. Each set bound (gated by
 // `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
@@ -553,11 +557,13 @@ struct FlagEditorOverlay {
 // Disabled markers render identically to enabled markers in the top strip;
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
-// `warp_frame_map`: same target-frame translation as render_markers. The greedy
-// pack and elision still walk left-to-right, so in target view the pack
-// rule is applied against post-translation positions (a region the warp_frame_map
-// stretches may un-elide flags that were elided in source view; a region
-// the warp_frame_map compresses may elide flags that were visible there).
+// `warp_frame_map` / `display_offset`: same displayed-axis translation as
+// render_markers (map, then minus the render crop offset — 0 outside render
+// view). The greedy pack and elision still walk left-to-right, so in the
+// mapped views the pack rule is applied against post-translation positions
+// (a region the warp_frame_map stretches may un-elide flags that were elided
+// in source view; a region the warp_frame_map compresses may elide flags
+// that were visible there).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   const std::vector<GuiWarpMarker>& markers,
@@ -569,7 +575,8 @@ void render_flags(cairo_t* cr,
                   const FlagEditorOverlay& editor = {},
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  bool iteration_on = false);
+                  bool iteration_on = false,
+                  int64_t display_offset = 0);
 
 // Paints ONE flag — the FlagPayload-editor target — with the
 // live pending text, selection swap, and blinking cursor. Same greedy-
@@ -603,11 +610,12 @@ void render_one_editor_flag(
 // caller uses these for hit-testing. No cairo context is needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
-// `warp_frame_map` parameter mirrors render_flags so the two stay in sync. In
-// target view the flags paint at translated positions, so this helper is
-// called with a non-null warp_frame_map and the hit-rects walk the same map (see
-// app_state's hit-test path). In source and render view it is null and
-// positions are untranslated.
+// `warp_frame_map` / `display_offset` mirror render_flags so the two stay in
+// sync. In target view the flags paint at translated positions, so this
+// helper is called with a non-null warp_frame_map and the hit-rects walk the
+// same map (see app_state's hit-test path); in render view it walks the
+// entry's snapshot map with the crop-origin offset. In source view it is
+// null / 0 and positions are untranslated.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     const std::vector<GuiWarpMarker>& markers,
@@ -617,7 +625,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr,
-    bool iteration_on = false);
+    bool iteration_on = false,
+    int64_t display_offset = 0);
 
 // Phase reset marker analogues. Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
@@ -632,7 +641,8 @@ void render_phaseresetmarkers(cairo_t* cr,
                               const std::set<int>& selected_set,
                               const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                               const DragOverlay* drag_overlay = nullptr,
-                              cairo_surface_t* ink_plate = nullptr);
+                              cairo_surface_t* ink_plate = nullptr,
+                              int64_t display_offset = 0);
 
 // The phase-reset chip is an invariable single `p` (heap is the sole
 // engine, so there is no peak/heap/pass phase model to distinguish). Two
@@ -648,7 +658,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                            const DragOverlay* drag_overlay = nullptr);
+                            const DragOverlay* drag_overlay = nullptr,
+                            int64_t display_offset = 0);
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
@@ -658,7 +669,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     int sample_rate,
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
+    const DragOverlay* drag_overlay = nullptr,
+    int64_t display_offset = 0);
 
 // Returns the text that render_flags would draw for `markers[idx]`. Used
 // by the GUI text editor to seed the editable payload (the on-screen rect

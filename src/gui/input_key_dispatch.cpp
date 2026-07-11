@@ -801,10 +801,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (!app.render_view.enabled) return true;
         if (app.render_view.index < 0) return true;
 
-        // app.render_view.warp_markers / .phase_resets are render-domain display
-        // state. Ctrl+Alt+C promotes the render's source-domain authoring
-        // sidecars, so every required sidecar is validated and collected
-        // before the first mutation. The pre-mutation validation set, in
+        // app.render_view.warp_markers / .phase_resets are display state
+        // (the kept subset, authored-domain positions). Ctrl+Alt+C
+        // promotes the render's source-domain authoring sidecars, so
+        // every required sidecar is validated and collected before the
+        // first mutation. The pre-mutation validation set, in
         // order: (1) the whole .rendersettings file through the one strict
         // parser (read_rendersettings) — a hand-edited sidecar with ANY
         // malformed line, a broken authoring field included, aborts rather
@@ -1162,9 +1163,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.render_view.list.clear();
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
+        app.render_view.snapshot_warp_frame_map.clear();
+        app.render_view.snapshot_crop_begin = 0;
         app.render_view.index             = -1;
-        app.render_view.src_F_begin       = 0;
-        app.render_view.src_F_end         = 0;
         app.render_view.last_path.clear();
 
         std::error_code ec;

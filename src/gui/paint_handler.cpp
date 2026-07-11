@@ -454,8 +454,15 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
     const std::vector<WarpFrameMapSegment>* dbg_tmap_arg = nullptr;
-    if (!app.render_view.enabled &&
-        app.active_audio_view == 'T') {
+    int64_t dbg_display_offset = 0;
+    if (app.render_view.enabled) {
+        // Render view: the entry's snapshot map minus the crop origin,
+        // mirroring hit_test_flag's Render arm (no drag-frozen override —
+        // drags are gated out of render view).
+        if (!app.render_view.snapshot_warp_frame_map.empty())
+            dbg_tmap_arg = &app.render_view.snapshot_warp_frame_map;
+        dbg_display_offset = app.render_view.snapshot_crop_begin;
+    } else if (app.active_audio_view == 'T') {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
                 dbg_tmap_arg = &app.drag.frozen_warp_frame_map;
@@ -479,7 +486,8 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         dbg_rects = compute_flag_hit_rects(
             top_strip, app.render_view.warp_markers,
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
-            nullptr, dbg_drag);
+            dbg_tmap_arg, dbg_drag, /*iteration_on=*/false,
+            dbg_display_offset);
     } else if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
             top_strip, app.phaseresetmarkers.markers(),

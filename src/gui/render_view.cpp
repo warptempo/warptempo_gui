@@ -11,6 +11,7 @@
 #include "warpmarkers.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <map>
@@ -389,7 +390,7 @@ bool GuiRenderView::load_render_view_at(int index) {
             wm_path.string().c_str(), full_map_r.error().c_str());
         return false;
     }
-    const std::vector<WarpFrameMapSegment> full_warp_frame_map =
+    std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*full_map_r);
 
     if (recipe_trim.has_begin || recipe_trim.has_end) {
@@ -467,19 +468,21 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Derive the display positions through the SAME helper the pipeline's
-    // display-sidecar writer serializes, then quantize each fractional
-    // position once through snap_authored_frame into the int64 time_frame
-    // the display stores share with the authored type (paint and click
-    // navigation already round to whole frames at use). Displayed values
-    // are identical to what the retired render-domain display-sidecar
-    // readers produced: the helper computes the same doubles the writer
-    // serialized, the serializer is shortest round-trip (the parse
-    // returned the exact double), and this is the
-    // same snap the readers applied — while the non-position display
-    // surface, the flag text, recomputes byte-identically from the carried
-    // marker fields (flag_text's payload branches mirror the serializer's,
-    // and the old readers displayed that serialized payload verbatim).
+    // Keep-filter the display stores through the SAME helper the pipeline's
+    // display-sidecar writer serializes. The KEPT marker structs carry
+    // their AUTHORED time_frame unchanged — render view no longer bakes
+    // quantized render-domain positions into the stores; it translates
+    // live through the snapshot map below, exactly as target view
+    // translates through the live map. (The helper's parallel fractional
+    // render-domain vectors still serve the .render* display-sidecar
+    // writer; here only the keep-filtering and the crop origin are
+    // consumed.) Displayed pixels are unchanged: the old baked position
+    // was snap_authored_frame(tgt(F) - crop_begin) computed at load; the
+    // new one is nearbyint(tgt(F)) - crop_begin computed at use, and
+    // crop_begin is an integer-valued double (an llrint result), so
+    // banker's rounding commutes with the integer translation —
+    // nearbyint(x - k) == nearbyint(x) - k for integer k — and the two
+    // are identical.
     RenderDisplayPositions display = derive_render_display_positions(
         snapshot_warp, snapshot_phase_resets, full_warp_frame_map,
         recipe_trim.has_begin, recipe_trim.begin_frame,
@@ -487,16 +490,8 @@ bool GuiRenderView::load_render_view_at(int index) {
         source_total_frames);
     std::vector<GuiWarpMarker> loaded_warp =
         std::move(display.warp_markers);
-    for (size_t i = 0; i < loaded_warp.size(); ++i) {
-        loaded_warp[i].time_frame =
-            snap_authored_frame(display.warp_frames[i]);
-    }
     std::vector<GuiPhaseResetMarker> loaded_phase_resets =
         std::move(display.phase_resets);
-    for (size_t i = 0; i < loaded_phase_resets.size(); ++i) {
-        loaded_phase_resets[i].time_frame =
-            snap_authored_frame(display.phase_reset_frames[i]);
-    }
 
     playback.stop();
     playback.shutdown();
@@ -517,12 +512,17 @@ bool GuiRenderView::load_render_view_at(int index) {
     audio = std::move(next);
     app.audio_generation++;
 
-    // Render-view has no trim — the rendered audio is already trimmed.
-    app.render_view.src_F_begin = 0;
-    app.render_view.src_F_end   = app.render_view.src_total;
-
     app.render_view.warp_markers           = std::move(loaded_warp);
     app.render_view.phase_resets        = std::move(loaded_phase_resets);
+    // Snapshot display geometry for the Render display context: the FULL
+    // map this entry's authored positions translate through, plus the
+    // crop origin llrint(T_b) (an exact int64 recovery — the helper's
+    // crop_begin is an llrint result carried as a double; 0 untrimmed).
+    // Built once here, immutable while displayed; cleared beside the
+    // display stores at every clear site.
+    app.render_view.snapshot_warp_frame_map = std::move(full_warp_frame_map);
+    app.render_view.snapshot_crop_begin =
+        std::llrint(display.crop_begin);
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
@@ -869,7 +869,7 @@ void GuiRenderView::exit_render_view_and_clear() {
     this->restore_source_audio();
     app.render_view.warp_markers.clear();
     app.render_view.phase_resets.clear();
+    app.render_view.snapshot_warp_frame_map.clear();
+    app.render_view.snapshot_crop_begin = 0;
     app.render_view.index             = -1;
-    app.render_view.src_F_begin       = 0;
-    app.render_view.src_F_end         = 0;
 }
