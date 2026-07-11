@@ -134,6 +134,19 @@ struct GuiRenderView {
     // (renders/ folder emptied externally).
     void exit_render_view_and_clear();
 
+    // Clear exactly the snapshot-context fields of the RenderViewContext:
+    // the display marker/reset vectors, the snapshot warp frame map, the
+    // entry domain begin, the snapshot display total, the snapshot trim
+    // bounds, and the snapshot commit tab (reset to 'A'). Deliberately does
+    // NOT touch enabled, list, index, or last_path — those are selection and
+    // lifecycle state whose handling legitimately differs per exit, so each
+    // clear site keeps its own lines for them. Exists so a new snapshot field
+    // gets ONE clear site instead of four hand-maintained lists (which had
+    // already drifted on snapshot_commit_tab); the app_state.h declaration
+    // comment promising every snapshot field is cleared at every clear site
+    // is made true by routing all four exits through this method.
+    void clear_snapshot_context();
+
     // Show the first .wav of the just-rendered batch. Called from
     // GuiInputHandler::dispatch_next_batch_entry's terminal success
     // branch after a batch finishes uncancelled with at least one

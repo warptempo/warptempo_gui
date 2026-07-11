@@ -831,29 +831,37 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // promotes the render's source-domain snapshot sidecars, so
         // every required sidecar is validated and collected before the
         // first mutation. The pre-mutation validation set, in order:
-        // (1) the whole `.settings` snapshot through the one strict
-        // whole-file schema (read_settings_file, the same read
-        // load_render_view_at runs) — a hand-edited sidecar with ANY
-        // malformed line aborts rather than partially restoring (an
-        // absent trim key would otherwise read as "bound absent" and
-        // clear a live trim); (2) both marker sidecars through their
-        // strict loaders; (3) the source-load adversarial guards over the
-        // assembled candidate — past-EOF walls
-        // (first_past_eof_wall_defect), the target-view/output-format
-        // compatibility rule, and the source-clobber refusal; and (4) the
-        // snapshot re-attestation — the recipe re-read here must still
+        // (1) the display-identity attestation — the selected entry must be
+        // the displayed render, attested against last_path (the pre-nav
+        // refresh can clamp index onto a surviving entry when the displayed
+        // wav vanished from disk, so identity is pinned before any downstream
+        // guard validates the wrong entry against its own consistent sidecars;
+        // only a successful entry load stamps last_path); (2) the whole
+        // `.settings` snapshot through the one strict whole-file schema
+        // (read_settings_file, the same read load_render_view_at runs) — a
+        // hand-edited sidecar with ANY malformed line aborts rather than
+        // partially restoring (an absent trim key would otherwise read as
+        // "bound absent" and clear a live trim); (3) both marker sidecars
+        // through their strict loaders; then the source-load adversarial
+        // guards over the assembled candidate — (4) the past-EOF walls
+        // (first_past_eof_wall_defect), (5) the target-view/output-format
+        // rule, (6) the routing-field re-attestation (active_audio_view and
+        // active_tab_view, which ride outside the fingerprint yet steer the
+        // commit), (7) the source-clobber refusal, and (8) the snapshot
+        // fingerprint re-attestation — the recipe re-read here must still
         // fingerprint to the displayed wav's .fingerprint, so the sidecars
         // cannot have been edited underneath the entry between display and
-        // commit. The wall / format / collision guards ahead of it stay as
-        // defense in depth even though a matching fingerprint transitively
-        // covers the marker and engine fields (they name the offending
-        // sidecar precisely, and run without a .fingerprint present). Any
-        // failure aborts to stderr, first error only, before any mutation
-        // of markers, history, settings, trim, view state, or renders/.
-        // Walkable, GUI-committable defects (coincident markers, dangling
-        // refs, equal/inverted trim, first-marker grammar) are deliberately
-        // NOT gated here: they adopt and walk the commit series like any
-        // other commit. Adversarial input; stderr-only abort.
+        // commit. The wall / format / collision guards stay as defense in
+        // depth even though a matching fingerprint transitively covers the
+        // marker and engine fields (they name the offending sidecar precisely,
+        // and run without a .fingerprint present); the routing pair rides
+        // outside the fingerprint, so its guard is load-bearing rather than
+        // redundant. Any failure aborts to stderr, first error only, before
+        // any mutation of markers, history, settings, trim, view state, or
+        // renders/. Walkable, GUI-committable defects (coincident markers,
+        // dangling refs, equal/inverted trim, first-marker grammar) are
+        // deliberately NOT gated here: they adopt and walk the commit series
+        // like any other commit. Adversarial input; stderr-only abort.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
         // Ahead of (1): commit promotes THE DISPLAYED RENDER, but the
@@ -1228,15 +1236,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         target_render.trigger();
 
         app.render_view.list.clear();
-        app.render_view.warp_markers.clear();
-        app.render_view.phase_resets.clear();
-        app.render_view.snapshot_warp_frame_map.clear();
-        app.render_view.entry_domain_begin = 0;
-        app.render_view.snapshot_display_total = 0;
-        app.render_view.snapshot_has_trim_begin = false;
-        app.render_view.snapshot_trim_begin_frame = 0;
-        app.render_view.snapshot_has_trim_end = false;
-        app.render_view.snapshot_trim_end_frame = 0;
+        render_view.clear_snapshot_context();
         app.render_view.index             = -1;
         app.render_view.last_path.clear();
 

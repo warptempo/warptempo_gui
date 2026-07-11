@@ -171,15 +171,7 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // into the freshly enumerated list.
         render_view.autosave_active_entry();
         render_view.restore_source_view();
-        app.render_view.warp_markers.clear();
-        app.render_view.phase_resets.clear();
-        app.render_view.snapshot_warp_frame_map.clear();
-        app.render_view.entry_domain_begin = 0;
-        app.render_view.snapshot_display_total = 0;
-        app.render_view.snapshot_has_trim_begin = false;
-        app.render_view.snapshot_trim_begin_frame = 0;
-        app.render_view.snapshot_has_trim_end = false;
-        app.render_view.snapshot_trim_end_frame = 0;
+        render_view.clear_snapshot_context();
         app.render_view.index             = -1;
     }
     return true;

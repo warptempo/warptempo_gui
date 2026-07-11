@@ -839,6 +839,24 @@ void GuiRenderView::restore_source_view() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
+// Clear exactly the snapshot-context fields of the RenderViewContext. See
+// the declaration: one clear site for the snapshot state so a new snapshot
+// field is cleared everywhere by adding a single line here, and the
+// app_state.h promise that every snapshot field is cleared beside the others
+// at every clear site holds because all four exits call this.
+void GuiRenderView::clear_snapshot_context() {
+    app.render_view.warp_markers.clear();
+    app.render_view.phase_resets.clear();
+    app.render_view.snapshot_warp_frame_map.clear();
+    app.render_view.entry_domain_begin = 0;
+    app.render_view.snapshot_display_total = 0;
+    app.render_view.snapshot_has_trim_begin = false;
+    app.render_view.snapshot_trim_begin_frame = 0;
+    app.render_view.snapshot_has_trim_end = false;
+    app.render_view.snapshot_trim_end_frame = 0;
+    app.render_view.snapshot_commit_tab = 'A';
+}
+
 // The abandon arm of the render-view exit pair: restore_source_view
 // restores the stashed source view for an ordinary exit;
 // abandon_render_view tears down when the source itself is being
@@ -873,16 +891,7 @@ void GuiRenderView::abandon_render_view() {
     app.render_view.list.clear();
     app.render_view.index = -1;
     app.render_view.last_path.clear();
-    app.render_view.warp_markers.clear();
-    app.render_view.phase_resets.clear();
-    app.render_view.snapshot_warp_frame_map.clear();
-    app.render_view.entry_domain_begin = 0;
-    app.render_view.snapshot_display_total = 0;
-    app.render_view.snapshot_has_trim_begin = false;
-    app.render_view.snapshot_trim_begin_frame = 0;
-    app.render_view.snapshot_has_trim_end = false;
-    app.render_view.snapshot_trim_end_frame = 0;
-    app.render_view.snapshot_commit_tab = 'A';
+    this->clear_snapshot_context();
 
     // The displayed domain changed (the entry's axis is gone): bump the
     // audio identity counter so the waveform / stem / flag caches
@@ -1065,15 +1074,6 @@ void GuiRenderView::auto_open_batch_at_first_file(
 // performed before calling refresh_render_view_list.
 void GuiRenderView::exit_render_view_and_clear() {
     this->restore_source_view();
-    app.render_view.warp_markers.clear();
-    app.render_view.phase_resets.clear();
-    app.render_view.snapshot_warp_frame_map.clear();
-    app.render_view.entry_domain_begin = 0;
-    app.render_view.snapshot_display_total = 0;
-    app.render_view.snapshot_has_trim_begin = false;
-    app.render_view.snapshot_trim_begin_frame = 0;
-    app.render_view.snapshot_has_trim_end = false;
-    app.render_view.snapshot_trim_end_frame = 0;
-    app.render_view.snapshot_commit_tab = 'A';
+    this->clear_snapshot_context();
     app.render_view.index             = -1;
 }
