@@ -828,16 +828,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
         // The authoring block is none-or-all: an engaged optional restores
-        // the whole block wholesale, an absent one leaves every live
-        // authoring field in place. The two trim keys stay individually
-        // optional within an engaged block. The empty fallback keeps the
-        // reference valid when the block is absent; every application site
-        // gates on has_authoring_block, so its default fields are never read.
-        const bool has_authoring_block = rendersettings->authoring.has_value();
-        const RendersettingsAuthoring empty_authoring{};
-        const RendersettingsAuthoring& authoring =
-            has_authoring_block ? *rendersettings->authoring
-                                : empty_authoring;
+        // the whole block wholesale (its five core members applied
+        // unconditionally), an absent one leaves every live authoring field
+        // in place. The two trim keys stay individually optional within an
+        // engaged block. The optional itself is the branch — a non-null
+        // pointer means engaged; there is no default-constructed fallback
+        // object and no parallel flag shadowing the optional's state.
+        const RendersettingsAuthoring* const authoring =
+            rendersettings->authoring ? &*rendersettings->authoring : nullptr;
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_phase_resets;
         const std::filesystem::path wm =
@@ -877,11 +875,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // fields they write belong to the commit tab), and an absent
         // authoring block leaves the live state in place wholesale.
         const char commit_tab =
-            has_authoring_block ? authoring.active_tab
-                                : app.active_tab_view;
+            authoring ? authoring->active_tab
+                      : app.active_tab_view;
         const char restored_audio_view =
-            has_authoring_block ? authoring.active_audio_view
-                                : app.active_audio_view;
+            authoring ? authoring->active_audio_view
+                      : app.active_audio_view;
         const int64_t total_frames = audio.total_frames();
         const long    sample_rate  = audio.sample_rate();
 
@@ -925,11 +923,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // its live trim survives the commit and was already walled at
             // source load against this same audio.
             SettingsTrim cand_trim;
-            if (has_authoring_block) {
-                cand_trim.has_begin   = authoring.has_trim_begin;
-                cand_trim.begin_frame = authoring.trim_begin_frame;
-                cand_trim.has_end     = authoring.has_trim_end;
-                cand_trim.end_frame   = authoring.trim_end_frame;
+            if (authoring) {
+                cand_trim.has_begin   = authoring->has_trim_begin;
+                cand_trim.begin_frame = authoring->trim_begin_frame;
+                cand_trim.has_end     = authoring->has_trim_end;
+                cand_trim.end_frame   = authoring->trim_end_frame;
             }
             if (auto detail = first_past_eof_wall_defect(
                     {}, {},
@@ -958,7 +956,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // load-lenient policy: walkable-defect stores load intact by
         // design, there is no target total to wall against, and the
         // runtime viewport clamps own the values then.
-        if (has_authoring_block) {
+        if (authoring) {
             bool    run_view_check = true;
             int64_t domain_total   = total_frames;
             if (restored_audio_view == 'T') {
@@ -978,9 +976,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             if (run_view_check) {
                 SettingsFileTab cand_view;
                 cand_view.has_viewport_start = true;
-                cand_view.viewport_start     = authoring.viewport_start;
+                cand_view.viewport_start     = authoring->viewport_start;
                 cand_view.has_playhead       = true;
-                cand_view.playhead           = authoring.playhead;
+                cand_view.playhead           = authoring->playhead;
                 if (auto detail = first_view_range_defect(
                         commit_tab == 'B' ? SettingsFileTab{} : cand_view,
                         commit_tab == 'B' ? cand_view : SettingsFileTab{},
@@ -1090,49 +1088,48 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         render_view.restore_source_audio();
 
-        if (has_authoring_block &&
-            authoring.active_tab != app.active_tab_view) {
-            active_views.switch_active_tab_view_to(authoring.active_tab);
-        }
+        // An engaged authoring block restores its five core members
+        // wholesale: active_tab, active_audio_view, zoom_level,
+        // viewport_start, and playhead are applied unconditionally (the two
+        // trim keys stay individually optional within the block). zoom_level
+        // is assigned directly: an engaged optional can only carry a value
+        // the strict zoom arm in read_rendersettings already accepted, so a
+        // range re-check here would be unreachable, and were the
+        // parser/consumer contract ever to drift the drift must fail visibly
+        // rather than silently omit one restored field. An absent block
+        // leaves every live authoring field in place.
+        if (authoring) {
+            if (authoring->active_tab != app.active_tab_view) {
+                active_views.switch_active_tab_view_to(authoring->active_tab);
+            }
 
-        if (has_authoring_block) {
-            app.trim.has_begin = authoring.has_trim_begin;
-            app.trim.begin_frame = authoring.has_trim_begin
-                ? authoring.trim_begin_frame
+            app.trim.has_begin = authoring->has_trim_begin;
+            app.trim.begin_frame = authoring->has_trim_begin
+                ? authoring->trim_begin_frame
                 : 0;
-            app.trim.has_end = authoring.has_trim_end;
-            app.trim.end_frame = authoring.has_trim_end
-                ? authoring.trim_end_frame
+            app.trim.has_end = authoring->has_trim_end;
+            app.trim.end_frame = authoring->has_trim_end
+                ? authoring->trim_end_frame
                 : 0;
             if (!app.trim.has_begin) app.trim_begin_selected = false;
             if (!app.trim.has_end)   app.trim_end_selected   = false;
             if (!app.trim.has_begin && !app.trim.has_end) {
                 app.last_selected_trim = 0;
             }
-        }
 
-        if (has_authoring_block &&
-            authoring.active_audio_view == 'S' &&
-            app.active_audio_view == 'T') {
-            app.active_audio_view = 'S';
-            target_render.rebind_to_source();
-        } else if (has_authoring_block &&
-                   authoring.active_audio_view == 'T') {
-            app.active_audio_view = 'T';
-        }
+            if (authoring->active_audio_view == 'S' &&
+                app.active_audio_view == 'T') {
+                app.active_audio_view = 'S';
+                target_render.rebind_to_source();
+            } else if (authoring->active_audio_view == 'T') {
+                app.active_audio_view = 'T';
+            }
 
-        if (has_authoring_block &&
-            authoring.zoom_level >= kFitFileLevel &&
-            authoring.zoom_level <= kMaxNumericLevel) {
-            app.zoom_level = authoring.zoom_level;
-        }
-        if (has_authoring_block) {
-            app.viewport_start_sample = authoring.viewport_start;
-        }
-        if (has_authoring_block) {
-            app.playhead_cursor_sample = authoring.playhead;
+            app.zoom_level = authoring->zoom_level;
+            app.viewport_start_sample = authoring->viewport_start;
+            app.playhead_cursor_sample = authoring->playhead;
             if (!app.playhead_scanner_active) {
-                app.playhead_scanner_sample = authoring.playhead;
+                app.playhead_scanner_sample = authoring->playhead;
             }
         }
         clamp_viewport_start(app, audio);
