@@ -30,8 +30,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // The wall check below IS the load guard's comparison, exactly,
     // applied to the snapped value.
     const int64_t drop_frame = snap_authored_frame(time_frame);
-    // Both marker columns share the warp column's EOF wall, total - 1 (the
-    // old per-column split — warp total-1, phase reset total — is retired).
+    // Both marker columns share the warp column's EOF wall, total - 1;
+    // phase reset does not get a total-exact wall.
     // Warp stops one frame short structurally (build_warp_frame_map refuses
     // sub-frame segments); phase reset stops one frame short by ruling: a
     // reset in the last source frame has nothing left to re-ground, and

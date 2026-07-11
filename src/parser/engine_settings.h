@@ -8,8 +8,8 @@
 // AppState as the live authoring store; carried by RenderRequest as the
 // only engine-settings carrier. Member-default-initialized to the values
 // format_default_settings_template emits (modulo title, which defaults to
-// empty and is overwritten at source load from the stem). N is no longer
-// a field here — it is locked to the geometry constant in
+// empty and is overwritten at source load from the stem). N is not
+// a field here — it is the geometry constant in
 // engine/engine_geometry.h (kN = 4096). bpm, notes, url, and cover are
 // inert provenance: free text,
 // unvalidated, never read by the engine or acted on by the GUI.
@@ -50,10 +50,9 @@ enum class EngineField {
 bool is_canonical_engine_key(const std::string& key);
 
 // The default render title for a source: the source stem plus "-rendered".
-// The GUI template is this function's consumer, assigning it at source load
-// (format_default_settings_template). The engine driver, blind to .settings
-// by design, does not call it — it restates the same convention (source stem
-// plus "-rendered") inline as its own command-line contract.
+// Sole consumer is the GUI first-open template (format_default_settings_template
+// in settings_io.cpp), which assigns it at source load. The CLI reads titles
+// from the .settings file through the shared schema, so it never composes one.
 std::string default_render_title(const std::string& source_stem);
 
 // Validate (key, value) per the canonical engine rules and assign to the

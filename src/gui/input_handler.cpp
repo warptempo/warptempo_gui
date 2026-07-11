@@ -224,7 +224,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Cancelling before the prompt goes up is what keeps a dismissed
     // prompt from leaving a stale drag that commits on the next motion.
     // This single gate is why no downstream hotkey needs its own
-    // drag guard: Tab, undo, `h`, and the rest never see a key mid-drag,
+    // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag,
     // the sole exception being the playhead-scrub set-marker carve-out
     // below. The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the four position drags here are mutually

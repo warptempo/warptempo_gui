@@ -65,10 +65,9 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // live on flag_cache.surface (rebuilt from on_tick via
     // maybe_rebuild_flag_cache); this blits the cache, then paints the
     // per-frame live work — the FlagPayload editor's pending text + cursor.
-    // The old floating iter/BPM/hover popup surfaces are gone; their
-    // presentations re-homed — iteration ranges render into the flags
-    // themselves, and the BPM editor and hover readout render in the bottom
-    // strip — so nothing in this pass is dark. Like the other caches, the
+    // Iteration ranges render inside the flags themselves, and the BPM
+    // editor and hover readout render in the bottom strip, so nothing in
+    // this pass is dark. Like the other caches, the
     // surface may be null on the very first paint after a load (before the
     // first rebuild fires); the blit is skipped and the background shows
     // through for that one frame.
@@ -155,9 +154,8 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
 void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
-    // The synchronous rebuild that used to live in this
-    // block is gone. wf_cache.surface is now produced by one of
-    // three paths, all of which leave this paint path blit-only:
+    // wf_cache.surface is produced by one of three paths, all of which
+    // leave this paint path blit-only:
     //   1. Worker full render — maybe_enqueue_waveform_render
     //      dispatches a full-window render on GuiWaveformWorker,
     //      which swaps into wf_cache.surface on completion. Fires
@@ -641,10 +639,9 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
     } else if (app.hover_popup.visible) {
-        // The floating hover popup paint was deleted but the dwell
-        // mechanism kept; it now lives as the lowest-priority
-        // upper-row branch. cached_text is the
-        // resolved-tempo string from compute_hover_popup_text.
+        // The hover dwell renders as the lowest-priority upper-row
+        // branch. cached_text is the resolved-tempo string from
+        // compute_hover_popup_text.
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
             app.hover_popup.cached_text, kText, flag_font_size_px());

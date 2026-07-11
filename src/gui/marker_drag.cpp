@@ -363,8 +363,8 @@ void MarkerDragOps::commit_drag() {
     // reads the committed integer time_frame from the live store and, in
     // target view, forward-translates through the live (post-commit) map —
     // the playhead lands on the dragged marker itself, expressed through
-    // the new map, subsuming the old source-anchor re-express. It runs
-    // BEFORE kick_waveform_sync so the re-warped plate and the moved
+    // the new map. It runs BEFORE kick_waveform_sync so the re-warped
+    // plate and the moved
     // playhead land in one frame. Pushes no history (like the nudge's
     // sync); undo's own restore re-syncs via its sync_playhead_to_last_selected.
     if (drag_moved) {

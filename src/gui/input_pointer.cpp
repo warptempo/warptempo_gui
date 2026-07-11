@@ -223,11 +223,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         //   click inside top strip on a different flag: switch target
         //   click anywhere else: exit edit (no commit), then fall
         //     through so the click routes through normal handling.
-        // The iter/BPM bracket-popup switch routes have been
-        // deleted along with the popup surfaces. A click in the top
-        // strip while a bracket editor is active falls through to the
-        // normal flag hit-test; D / E will re-wire bracket entry once
-        // those modes are re-homed.
+        // A click in the top strip while a flag editor is active routes
+        // through the normal flag hit-test below.
         if (text_editor::is_active(app.top_flag_editor)) {
             if (inside_top) {
                 const int hit_now = hit_test_flag(app, audio, x, y);
@@ -247,10 +244,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
         }
 
-        // The iter/BPM popup-click priority block has been
-        // deleted along with the popup surfaces. Clicks in iter/BPM
-        // mode fall through to the consolidated flag/marker hit-test
-        // below.
+        // Clicks in iter/BPM mode route through the consolidated
+        // flag/marker hit-test below.
 
         // Consolidated hit-test across waveform (marker line) and top
         // strip (flag rect). A flag click behaves exactly like a click

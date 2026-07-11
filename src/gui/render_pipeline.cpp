@@ -165,11 +165,11 @@ RenderOutcome do_render(const RenderRequest& req,
     // renders the full pair verbatim; the parser knows nothing of trim.
     // Built here at the probe, beside the phase-reset assembly above: the
     // two authored-position validations are this pipeline's parallel
-    // pair. Running it ahead of the fingerprint reuse return below is
-    // behavior-neutral — a fingerprint match implies this exact marker set
-    // already built successfully when the matching render was produced, so
-    // no reuse path can fail here that previously succeeded, and the reuse
-    // hit's extra map build is negligible against the pipeline. ---
+    // pair. Building ahead of the fingerprint reuse return below is safe:
+    // a fingerprint match implies this exact marker set builds clean, so
+    // validating before the reuse rungs can never refuse a reusable
+    // render, and the reuse hit's extra map build is negligible against
+    // the pipeline.
     auto resolved_warp_markers =
         resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
                                         sample_rate);

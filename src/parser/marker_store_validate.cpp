@@ -191,16 +191,14 @@ std::optional<std::string> first_past_eof_wall_defect(
                    format_timestamp(m.time_frame / sr_d);
         }
     }
-    // Phase reset wall: total - 1, identical to the warp compare above —
-    // the per-column marker wall split (warp total-1, phase reset total) is
-    // retired. Warp walls at total-1 structurally (build_warp_frame_map
-    // refuses sub-frame segments); phase reset walls at total-1 by ruling:
-    // a reset in the last source frame has nothing left to re-ground, and
-    // total-1 keeps every marker inside the playhead's [0, total-1] domain
-    // so marker gestures and playhead syncs agree exactly. A stored reset
-    // at exactly total frames — previously legal — is now adversarial
-    // load-fatal in both products (two-category rule); the position is
-    // musically meaningless and there is deliberately no migration.
+    // Phase reset wall: total - 1, identical to the warp compare above, not
+    // a total-exact wall. Warp walls at total-1 structurally
+    // (build_warp_frame_map refuses sub-frame segments); phase reset walls at
+    // total-1 by ruling: a reset in the last source frame has nothing left to
+    // re-ground, and total-1 keeps every marker inside the playhead's
+    // [0, total-1] domain so marker gestures and playhead syncs agree exactly.
+    // A stored reset at exactly total frames is adversarial load-fatal in both
+    // products (two-category rule); the position is musically meaningless.
     for (const auto& m : phase_resets) {
         if (m.time_frame > total_frames - 1) {
             return "phase reset marker past end of audio at " +

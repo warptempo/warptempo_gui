@@ -86,8 +86,8 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 // kWaveform / kSelected hue family preserves the background's blue cast
 // instead of neutralizing it. A tinted source lifts less per alpha unit than
 // white (the per-channel add is alpha times source-minus-dest), so the alpha
-// rises from the old white-at-0.07 to keep the overall lift at least that
-// strong, with a slight intended bump. Both values tuned by eye on the panel.
+// is set to keep the overall lift at least as strong as a plain-white overlay
+// at 0.07, with a slight intended bump. Both values tuned by eye on the panel.
 inline constexpr GuiColor kPhaseResetOverlay      = hex(0xB8D4F0);
 inline constexpr double    kPhaseResetOverlayAlpha = 0.10;
 
@@ -220,10 +220,10 @@ cairo_surface_t* playhead_triangle_mask();
 // the top, and the waveform is symmetric about its area center. Equal to the
 // triangle mask height BY CONSTRUCTION (both are playhead_triangle_h_px()),
 // so the triangle exactly fills the top band, tip at the first sample row,
-// at every font_size. At scale 1 it is 10, identical to the former constant.
-// This is NOT the old strip gap (kFlagBottomLiftPx, now 0) revived — it is a
-// distinct waveform-internal margin that shares the triangle's height
-// because that is the invariant it protects.
+// at every font_size. At scale 1 it is 10.
+// This is distinct from the strip gap constant kFlagBottomLiftPx (0) — a
+// waveform-internal margin that shares the triangle's height because that
+// is the invariant it protects.
 inline int waveform_inset_px() { return playhead_triangle_h_px(); }
 
 // Half-width (px) of the playhead triangle's horizontal footprint, H - 1
@@ -634,8 +634,8 @@ void render_phaseresetmarkers(cairo_t* cr,
                               const DragOverlay* drag_overlay = nullptr,
                               cairo_surface_t* ink_plate = nullptr);
 
-// The phase-reset chip is an invariable single `p` (the peak/heap/pass
-// phase-MODEL concept was removed once heap became the sole engine). Two
+// The phase-reset chip is an invariable single `p` (heap is the sole
+// engine, so there is no peak/heap/pass phase model to distinguish). Two
 // states only: default fill `kMarker`, selected fill `kSelected`. No editor,
 // no parse-fail state. Trim membership has no effect — flags always
 // paint full-brightness.

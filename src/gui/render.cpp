@@ -1110,8 +1110,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 namespace {
 
 std::string phase_reset_flag_text(const GuiPhaseResetMarker&) {
-    // The phase-reset chip is an invariable single `p`: the peak/heap/pass
-    // phase-MODEL concept was removed once heap became the sole engine. One
+    // The phase-reset chip is an invariable single `p`: heap is the sole
+    // engine, so there is no peak/heap/pass phase model to distinguish. One
     // cell wide, so the shared glyph-count width math yields a 1-cell chip.
     return "p";
 }

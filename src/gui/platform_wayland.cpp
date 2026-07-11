@@ -1433,12 +1433,11 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     //     as a GuiKey, so the key event is pure noise.
     //   - Function keys F1..F35: this GUI binds none of them.
     //
-    // Both used to be harmless dead weight; the command-passthrough change
-    // made them harmful, because a text editor treats any key it does not
-    // own as "exit the edit". A bare Shift press (the prefix of Shift+Left)
-    // would tear down the edit before the arrow arrived, and an F-key press
-    // would discard the edit for nothing. Ignoring them is the correct
-    // behavior for keys the GUI has no use for.
+    // Ignoring both matters because a text editor treats any key it does
+    // not own as "exit the edit". A bare Shift press (the prefix of
+    // Shift+Left) would tear down the edit before the arrow arrived, and an
+    // F-key press would discard the edit for nothing. Ignoring them is the
+    // correct behavior for keys the GUI has no use for.
     if ((sym >= XKB_KEY_F1      && sym <= XKB_KEY_F35) ||      // 0xffbe..0xffe0, function keys
         (sym >= XKB_KEY_Shift_L && sym <= XKB_KEY_Hyper_R) ||  // 0xffe1..0xffee, modifiers
         sym == XKB_KEY_ISO_Level3_Shift ||                     // AltGr

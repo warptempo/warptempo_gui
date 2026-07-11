@@ -66,7 +66,7 @@ void render_waveform_to_cache_surface(
                         kWaveform,
                         warp_frame_map_or_null);
     } else if (channel_count >= 2) {
-        // Channel gap removed (kChannelGapPx deleted): the 1972 Krips material
+        // No channel gap: the 1972 Krips material
         // is effectively never unity, so the two channels' inner excursions do
         // not visually collide at the shared midline; a plain halve of the
         // inset region is clean. The two channels share the single inset band
@@ -715,11 +715,10 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
 
 namespace {
 
-// FNV-1a over the live drag-overlay state. Folded into the StemCache
-// fingerprint in place of the old AppState::drag_overlay_generation
-// callsite bump counter — hashing the data directly removes the
-// requirement that every future mutation site of app.drag remember to
-// bump a counter. Cost is dominated by the loop over moveable_times,
+// FNV-1a over the live drag-overlay state, folded into the StemCache
+// fingerprint. Hashing the drag state directly removes the requirement
+// that every mutation site of app.drag remember to bump a generation
+// counter. Cost is dominated by the loop over moveable_times,
 // which at observed selection sizes (0–5) is a handful of nanoseconds.
 uint64_t hash_drag_overlay(const DragState& d) {
     uint64_t h = 0xcbf29ce484222325ULL;
@@ -1017,10 +1016,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                  mv == 'W' && !rve;
 
     // FlagPayload editor target drives the skip-guard (cache leaves a
-    // hole for the live editor render to fill). The iter/BPM
-    // popup-editor outline-suppression channel was removed along with
-    // the popup surfaces; the IterationBracket / BpmBracket kinds no
-    // longer feed the cache fingerprint.
+    // hole for the live editor render to fill). The IterationBracket /
+    // BpmBracket kinds do not feed the cache fingerprint.
     // FlagPayload (W view) drives the skip-guard: the cache leaves a hole for
     // the live editor render to fill. P view has no per-flag editor.
     int flag_target = -1;

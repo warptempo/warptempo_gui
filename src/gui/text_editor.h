@@ -19,10 +19,10 @@
 
 namespace text_editor {
 
-// Maximum characters allowed in `pending`. Sized for the longest valid
-// payload `BASE*SCALE:a.aa` under the old full-double vocabulary — worst
+// Maximum characters allowed in `pending`. The cap 52 covers a hypothetical
+// full-double BASE and SCALE in the payload `BASE*SCALE:a.aa` — worst
 // case 23 chars per value (17 significant digits plus point and exponent):
-// 23 + 1 + 23 + 1 + 4 = 52. BASE is now pinned to the N.NN grammar (4
+// 23 + 1 + 23 + 1 + 4 = 52. BASE is pinned to the N.NN grammar (4
 // chars at the bracket ceiling), so committable payloads are far shorter;
 // the generous cap is kept deliberately — it costs nothing and SCALE
 // remains a full double in shortest round-trip form. An operation that

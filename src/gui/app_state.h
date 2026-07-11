@@ -450,8 +450,8 @@ struct DefectSeriesState {
 // authored frame form the .settings file persists (parse_authored_frame
 // rejects negatives as malformed) — a format-representability floor, not a
 // validity rule. Loaded values mostly bypass this: the loader stays
-// lenient for crossed and equal bounds (trim's corruption tripwire stays
-// deliberately gone — those load intact), and the Load-origin defect walk
+// lenient for crossed and equal bounds (there is no trim corruption tripwire
+// — those load intact), and the Load-origin defect walk
 // demands their resolution on the first tick after the load. A past-EOF
 // bound is the exception — it is adversarial (the gesture walls make it
 // uncommittable and a .settings applies only to its own audio, so a

@@ -49,10 +49,10 @@ inline std::string format_authored_frame(int64_t frame) {
 // canonical authored position is a plain run of decimal digits — no sign, no
 // decimal point, no exponent, no leading zero unless the field is exactly
 // "0" — which is exactly what format_authored_frame writes. Anything else is
-// adversarial, load-fatal, the same category as a malformed timestamp used to
-// be: fractional or negative text, but equally the formerly-tolerated
-// integer-valued spellings ("44100.0", "6e+05", "+44100", "0044100"), and a
-// digit run so long its value overflows int64 (refused, not wrapped). The
+// adversarial, load-fatal: fractional or negative text, an MM:SS.mmm
+// timestamp, the integer-valued spellings ("44100.0", "6e+05", "+44100",
+// "0044100"), and a digit run so long its value overflows int64 (refused,
+// not wrapped). The
 // value is non-negative by construction (no '-' passes the digit test) and
 // whole (no fractional grammar exists). Returns true and sets `out` on
 // success; returns false and leaves `out` untouched on failure.

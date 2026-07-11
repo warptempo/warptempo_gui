@@ -27,7 +27,7 @@ namespace {
 // (guard * sample_rate) because block extents and reset positions are
 // whole int64 source frames, widened into the double guard-window
 // arithmetic. A phase reset within the guard before a section
-// end (or before a section start) is re-homed into the next chronological
+// end (or before a section start) counts toward the next chronological
 // labeled section by shifting every block's membership window backward by
 // this amount. Shared membership window across all three propagate
 // actions: copy_from_selection, paste_apply, and paste_state_apply.

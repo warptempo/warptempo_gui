@@ -93,9 +93,8 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 
     // Full-double derived scale, no decimal quantization: the value
     // serializer is shortest round-trip (value_format.h), so the exact
-    // ratio / base_tempo survives the .settings write bit-identically —
-    // the old 1e-6 grid existed only to keep a fixed-decimal writer and
-    // the in-memory value in agreement, and that writer is gone.
+    // ratio / base_tempo survives the .settings write bit-identically, so
+    // the in-memory value and the on-disk text agree with no decimal grid.
     const double scale = ratio / base_tempo;
     if (!std::isfinite(scale)) return std::nullopt;
     // Scale bracket (value_format.h): the derived scale is stamped into the
@@ -290,8 +289,7 @@ struct GuiInputHandler {
     bool dispatch_pending_archival_command();
 
 private:
-    // ActiveBatch holds the run_render_batch state machine. The batch loop
-    // used to be synchronous (blocking inside do_render); now each entry is
+    // ActiveBatch holds the run_render_batch state machine. Each entry is
     // dispatched onto GuiAsyncRenderer and the next entry fires from the
     // worker-completion callback. The GUI remains interactive between (and
     // during) entries.
@@ -369,7 +367,7 @@ private:
     // the single RenderCache (constructed in main, reached through
     // target_render's reference), the GUI's shared source buffer, and the
     // source's load identity. These are required request fields — do_render
-    // no longer reads the source-sample cache at all and dereferences the
+    // reads no source-sample cache and dereferences the
     // buffer and cache without fallbacks. Every archival dispatch site must
     // call this after build_render_request.
     void attach_shared_render_resources(RenderRequest& req);
