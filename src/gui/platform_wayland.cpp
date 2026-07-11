@@ -1766,15 +1766,20 @@ void GuiPlatform::on_dnd_drop() {
         destroy_current_offer();
         return;
     }
-    if (drop_accept_ && !drop_accept_(dnd_x_, dnd_y_)) {
+    const bool position_refuses = drop_accept_ && !drop_accept_(dnd_x_, dnd_y_);
+    const bool state_refuses     = drop_state_gate_ && !drop_state_gate_();
+    if (position_refuses || state_refuses) {
         destroy_current_offer();
-        // The predicate refuses for both state reasons (render view open,
-        // archival render running) and position reasons (dropped outside
-        // the waveform area). Signal the owner, which discriminates: a
-        // state refusal earns a stderr line, a plain position miss stays
-        // silent (ordinary drag-and-drop). This is the primary surface for
-        // a refused drop — the offer is destroyed unread, so on_file_drop_'s
-        // own refusal lines never fire on this path.
+        // Primary surface for a refused drop, in fact as well as in intent.
+        // A position miss usually never reaches here: the motion-time NULL
+        // accept cancels the drag before drop, and a position miss is ruled
+        // silent, so nothing is lost. A state refusal always reaches here,
+        // because motion-time acceptance no longer encodes application
+        // state — it is position-and-MIME only. Signal the owner, which
+        // discriminates: a state refusal earns a stderr line, a plain
+        // position miss stays silent (ordinary drag-and-drop). The offer is
+        // destroyed unread, so on_file_drop_'s own refusal lines never fire
+        // on this path.
         if (on_drop_refused_) on_drop_refused_();
         return;
     }
@@ -1815,6 +1820,11 @@ void GuiPlatform::on_dnd_drop() {
 void GuiPlatform::evaluate_drop_accept() {
     if (!current_data_offer_) return;
 
+    // Motion-time acceptance is position-and-MIME only: the installed
+    // drop_accept_ carries per-position acceptance and drives the
+    // compositor's cursor feedback. Application-state refusal is not
+    // encoded here — it lands at drop delivery through drop_state_gate_,
+    // so it survives the v3 unaccepted-drag cancellation.
     const bool predicate_ok = drop_accept_
         ? drop_accept_(dnd_x_, dnd_y_)
         : true;
@@ -2026,6 +2036,7 @@ void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = s
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
+void GuiPlatform::set_drop_state_gate(std::function<bool()> gate) { drop_state_gate_ = std::move(gate); }
 void GuiPlatform::set_on_drop_refused(DropRefusedCallback cb)  { on_drop_refused_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }

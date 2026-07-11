@@ -680,6 +680,15 @@ int main(int argc, char** argv) {
     // the on_file_drop handler stay here as one-line lambdas that capture
     // file_loader; the predicate has no reference to the loader.
 
+    // Position-only predicate: it drives the compositor's cursor feedback
+    // at DnD motion. A position miss is ruled silent (the compositor
+    // cancels the unaccepted drag), so this never surfaces a refusal line.
+    gui.set_drop_accept_predicate([&](int x, int y) -> bool {
+        const GuiRect area = waveform_area(app);
+        return x >= area.x && x < area.x + area.w &&
+               y >= area.y && y < area.y + area.h;
+    });
+
     // A source replacement under an open render view or a running
     // archival batch (or a parked archival command awaiting the worker)
     // would cross two projects' state: the snapshot display, the batch's
@@ -688,23 +697,19 @@ int main(int argc, char** argv) {
     // drop — the gesture is a slip of the hand; the user exits render
     // view or waits for the batch, then drops again.
     // Refuse-over-exit-then-load is the conservative reading, pending
-    // architect ratification.
-    gui.set_drop_accept_predicate([&](int x, int y) -> bool {
-        if (app.render_view.enabled || app.queue_running ||
-            app.pending_archival.armed) {
-            return false;
-        }
-        const GuiRect area = waveform_area(app);
-        return x >= area.x && x < area.x + area.w &&
-               y >= area.y && y < area.y + area.h;
+    // architect ratification. The gate is position-blind and evaluated at
+    // drop delivery, so the refusal reaches on_drop_refused below.
+    gui.set_drop_state_gate([&]() -> bool {
+        return !(app.render_view.enabled || app.queue_running ||
+                 app.pending_archival.armed);
     });
 
     // A refused drop never reaches on_file_drop below: the platform
-    // destroys the offer unread. This is the primary surface for a
-    // refused drop. The platform's drop-refused callback fires for both
-    // state reasons and position reasons, so discriminate here (the
-    // platform is app-state-blind): a state refusal earns one stderr
-    // line, a plain position miss stays silent.
+    // destroys the offer unread. This callback now fires at drop delivery
+    // — for a state refusal always, for a position miss only in the rare
+    // case a drop is delivered despite the motion-time refusal. The
+    // platform is app-state-blind, so discriminate here: a state refusal
+    // earns one stderr line, a plain position miss stays silent.
     gui.set_on_drop_refused([&]() {
         if (app.render_view.enabled) {
             std::fprintf(stderr,
@@ -724,9 +729,9 @@ int main(int argc, char** argv) {
     gui.set_on_file_drop([&](const std::string& path) {
         // Race backstop only: the platform's drop-refused callback above is
         // the primary surface for a refused drop, which destroys the offer
-        // unread. These lines fire only if a drop slips past the predicate —
-        // the accept-then-receive state changing within one dispatch, which
-        // the synchronous receive makes unreachable today. Same
+        // unread. These lines fire only if a drop slips past BOTH the
+        // position predicate and the state gate within one dispatch, which
+        // the synchronous drop-time checks make unreachable today. Same
         // render-view / archival-batch refusal, one stderr line per
         // condition.
         if (app.render_view.enabled) {

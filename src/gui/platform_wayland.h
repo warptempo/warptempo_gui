@@ -69,7 +69,20 @@ public:
     void set_on_motion(MotionCallback cb);
     void set_on_close(CloseCallback cb);
     void set_on_file_drop(FileDropCallback cb);
+    // The drop machinery splits into two callables, both installed by
+    // main.cpp so the platform stays application-state-blind:
+    //
+    //   - The accept predicate is evaluated at DnD enter/motion and feeds
+    //     wl_data_offer_accept, so it must carry only PER-POSITION
+    //     acceptance. The compositor renders it as cursor feedback, and at
+    //     data_device v3 a drag that ends unaccepted is cancelled without a
+    //     drop event, so a state refusal encoded here would never reach the
+    //     refusal surface.
+    //   - The state gate is position-blind and is evaluated once at drop
+    //     delivery, downstream of that cancellation, so a refusal there can
+    //     still reach the owner's refusal surface.
     void set_drop_accept_predicate(DropAcceptPredicate p);
+    void set_drop_state_gate(std::function<bool()> gate);
     void set_on_drop_refused(DropRefusedCallback cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
@@ -330,6 +343,7 @@ private:
     CloseCallback        on_close_;
     FileDropCallback     on_file_drop_;
     DropAcceptPredicate  drop_accept_;
+    std::function<bool()> drop_state_gate_;
     DropRefusedCallback  on_drop_refused_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
