@@ -186,8 +186,8 @@ std::vector<uint8_t> render_fingerprint(
         const std::vector<GuiWarpMarker>& warp_markers,
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         const EngineSettings& s,
-        bool has_trim_begin, double trim_begin_frame,
-        bool has_trim_end,   double trim_end_frame) {
+        bool has_trim_begin, int64_t trim_begin_frame,
+        bool has_trim_end,   int64_t trim_end_frame) {
     std::vector<uint8_t> fp;
     fp.reserve(256 + warp_markers.size() * 64);
 
@@ -212,11 +212,13 @@ std::vector<uint8_t> render_fingerprint(
 
     // Trim, with the frame values normalized to 0 when the bound is unset so
     // a stale value behind a false has-bound cannot move the key (the engine
-    // ignores it in that state).
+    // ignores it in that state). Authored int64 bounds widened to the f64
+    // encoding deliberately, like the marker positions below — the
+    // fingerprint bytes stay identical across the int64-typed API.
     put_u8 (fp, has_trim_begin ? 1 : 0);
-    put_f64(fp, has_trim_begin ? trim_begin_frame : 0.0);
+    put_f64(fp, has_trim_begin ? static_cast<double>(trim_begin_frame) : 0.0);
     put_u8 (fp, has_trim_end ? 1 : 0);
-    put_f64(fp, has_trim_end ? trim_end_frame : 0.0);
+    put_f64(fp, has_trim_end ? static_cast<double>(trim_end_frame) : 0.0);
 
     // Warp markers: parser-domain base fields only (the GuiWarpMarker session
     // scratch never reaches the engine). Positions are int64 frames widened

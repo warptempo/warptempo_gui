@@ -11,24 +11,26 @@
 
 namespace {
 
-// Authored bound -> exact double source frame: identity on the has-bound
-// branch — the authored value already is the exact double source frame. An
-// unset begin means source frame 0; an unset end means the source end
+// Authored bound -> exact double source frame: the single widening point.
+// The authored bound is a whole int64 source frame; on the has-bound branch
+// it widens exactly to a double (every int64 in range is exactly
+// representable at these magnitudes — audio frame counts are far below 2^53).
+// An unset begin means source frame 0; an unset end means the source end
 // exactly (the caller passes the matching unset_value).
-double bound_source_frame(bool has, double frame, double unset_value) {
-    return has ? frame : unset_value;
+double bound_source_frame(bool has, int64_t frame, int64_t unset_value) {
+    return static_cast<double>(has ? frame : unset_value);
 }
 
 }  // namespace
 
 std::expected<void, std::string> validate_trim_frames(
-        bool has_begin, double begin_frame,
-        bool has_end,   double end_frame,
+        bool has_begin, int64_t begin_frame,
+        bool has_end,   int64_t end_frame,
         int64_t total_frames,
         const std::vector<WarpFrameMapSegment>& full_warp_frame_map) {
     const double total = static_cast<double>(total_frames);
-    const double b_src = bound_source_frame(has_begin, begin_frame, 0.0);
-    const double e_src = bound_source_frame(has_end, end_frame, total);
+    const double b_src = bound_source_frame(has_begin, begin_frame, 0);
+    const double e_src = bound_source_frame(has_end, end_frame, total_frames);
     if (e_src <= b_src) {
         return std::unexpected("trim end at or before trim begin");
     }
@@ -55,9 +57,9 @@ std::expected<void, std::string> validate_trim_frames(
 // every choice). Notation: N and R_s from engine_geometry.h; total_frames =
 // source length; the full map is the untrimmed warp frame map.
 //
-//  1. Authored source positions are exact doubles: b_src = begin_frame,
-//     e_src = end_frame — the authored bounds themselves, bit-identical.
-//     Unset begin -> 0; unset end -> total_frames.
+//  1. Authored source positions are whole int64 frames widened exactly to
+//     doubles: b_src = begin_frame, e_src = end_frame — the authored bounds
+//     themselves, bit-identical. Unset begin -> 0; unset end -> total_frames.
 //  2. T_b / T_e are their exact double target images through the FULL map.
 //  3. Output origin hop A0 = max(0, floor(T_b / R_s) - 3). The 3 hops
 //     (N/R_s - 1) of pre-roll give full OLA weight at T_b; the pre-roll is
@@ -93,8 +95,8 @@ std::expected<void, std::string> validate_trim_frames(
 std::expected<TrimPlan, std::string> plan_trim(
         const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
         const std::vector<double>& full_phase_reset_frame_map,
-        bool has_begin, double begin_frame,
-        bool has_end,   double end_frame,
+        bool has_begin, int64_t begin_frame,
+        bool has_end,   int64_t end_frame,
         int64_t total_frames,
         int N, int R_s) {
     if (auto v = validate_trim_frames(has_begin, begin_frame,
@@ -104,9 +106,8 @@ std::expected<TrimPlan, std::string> plan_trim(
         return std::unexpected(std::move(v.error()));
     }
 
-    const double total = static_cast<double>(total_frames);
-    const double b_src = bound_source_frame(has_begin, begin_frame, 0.0);
-    const double e_src = bound_source_frame(has_end, end_frame, total);
+    const double b_src = bound_source_frame(has_begin, begin_frame, 0);
+    const double e_src = bound_source_frame(has_end, end_frame, total_frames);
     const double T_b = map_source_to_target(b_src, full_warp_frame_map);
     const double T_e = map_source_to_target(e_src, full_warp_frame_map);
 

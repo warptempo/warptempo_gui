@@ -61,8 +61,8 @@ bool GuiInputHandler::warp_render_preflight(
         const std::vector<GuiPhaseResetMarker>& phase_resets,
         bool live_store, double scale,
         const std::string& output_format,
-        bool has_trim_begin, double trim_begin_frame,
-        bool has_trim_end, double trim_end_frame) {
+        bool has_trim_begin, int64_t trim_begin_frame,
+        bool has_trim_end, int64_t trim_end_frame) {
     const long sr    = static_cast<long>(audio.sample_rate());
     const long total = static_cast<long>(audio.total_frames());
 
@@ -78,8 +78,8 @@ bool GuiInputHandler::warp_render_preflight(
             first_defect = std::move(defects.front().message);
         }
         if (first_defect.empty() && (has_trim_begin || has_trim_end)) {
-            // Exact frame-double compare on the authored bounds — no
-            // rounding anywhere, matching validate_trim_frames' own
+            // Exact integer compare on the authored bounds — the bounds are
+            // whole int64 source frames, matching validate_trim_frames' own
             // e_src <= b_src check.
             if (has_trim_begin && has_trim_end &&
                 trim_end_frame <= trim_begin_frame) {

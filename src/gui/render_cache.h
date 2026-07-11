@@ -41,8 +41,8 @@ std::vector<uint8_t> render_fingerprint(
     const std::vector<GuiWarpMarker>& warp_markers,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     const EngineSettings& settings,
-    bool has_trim_begin, double trim_begin_frame,
-    bool has_trim_end,   double trim_end_frame);
+    bool has_trim_begin, int64_t trim_begin_frame,
+    bool has_trim_end,   int64_t trim_end_frame);
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 

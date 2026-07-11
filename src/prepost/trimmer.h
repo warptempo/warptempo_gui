@@ -53,20 +53,22 @@ struct TrimPlan {
 };
 
 // Render-boundary trim validation — the sole owner of every trim refusal.
-// Authored bounds arrive as exact double source frames (the authored domain
-// itself; unset begin is 0, unset end is total_frames). Refusals, in check
-// order: end at or before begin (e_src <= b_src); begin at or past the source
-// end (b_src >= total_frames); end past the source end (e_src > total_frames);
-// target span rounding below one sample (llrint(T_e) - llrint(T_b) < 1, the
-// spans' exact double images through the full map). NOTHING else refuses — a
-// one-frame fady trim renders; it is not degenerate in the strictest sense,
-// which is what is applied. Returns {} when valid, else std::unexpected with
-// the concise reason; callers add their own context prefix (the GUI dispatch
-// preflight pops it verbatim, the CLI prints it to stderr). plan_trim calls
-// this first, so callers routing through plan_trim need no separate call.
+// Authored bounds arrive as whole int64_t source frames — the authored domain
+// itself; unset begin is 0, unset end is total_frames — and widen exactly into
+// the double map arithmetic at one point inside the trimmer. Refusals, in
+// check order: end at or before begin (e_src <= b_src); begin at or past the
+// source end (b_src >= total_frames); end past the source end (e_src >
+// total_frames); target span rounding below one sample (llrint(T_e) -
+// llrint(T_b) < 1, the spans' exact double images through the full map).
+// NOTHING else refuses — a one-frame fady trim renders; it is not degenerate
+// in the strictest sense, which is what is applied. Returns {} when valid,
+// else std::unexpected with the concise reason; callers add their own context
+// prefix (the GUI dispatch preflight pops it verbatim, the CLI prints it to
+// stderr). plan_trim calls this first, so callers routing through plan_trim
+// need no separate call.
 std::expected<void, std::string> validate_trim_frames(
-    bool has_begin, double begin_frame,
-    bool has_end,   double end_frame,
+    bool has_begin, int64_t begin_frame,
+    bool has_end,   int64_t end_frame,
     int64_t total_frames,
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map);
 
@@ -88,8 +90,8 @@ std::expected<void, std::string> validate_trim_frames(
 std::expected<TrimPlan, std::string> plan_trim(
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
     const std::vector<double>& full_phase_reset_frame_map,
-    bool has_begin, double begin_frame,
-    bool has_end,   double end_frame,
+    bool has_begin, int64_t begin_frame,
+    bool has_end,   int64_t end_frame,
     int64_t total_frames,
     int N, int R_s);
 

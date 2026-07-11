@@ -417,8 +417,8 @@ private:
                                bool live_store,
                                double scale,
                                const std::string& output_format,
-                               bool has_trim_begin, double trim_begin_frame,
-                               bool has_trim_end, double trim_end_frame);
+                               bool has_trim_begin, int64_t trim_begin_frame,
+                               bool has_trim_end, int64_t trim_end_frame);
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back

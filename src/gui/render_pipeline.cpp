@@ -144,9 +144,10 @@ RenderOutcome do_render(const RenderRequest& req,
     profile_source_sample_rate = static_cast<int>(sample_rate);
 
     // Assembled here, at the probe, so the reset frames are always validated
-    // against the probed source length (the authored positions already are
-    // exact source-frame doubles — a sidecar is authored against one audio
-    // file's frame grid).
+    // against the probed source length (the authored positions are whole
+    // int64 source frames that widen exactly into the parser's double
+    // intermediate — a sidecar is authored against one audio file's frame
+    // grid).
     auto phase_reset_source_frames_r =
         build_phase_reset_source_frames(
             slice_to_phase_reset_markers(req.phase_resets), total_frames);
