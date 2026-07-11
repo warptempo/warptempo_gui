@@ -90,9 +90,8 @@ void GuiSettingsEditor::commit() {
     // (validated whitespace-free below, so it never contains `=`); the
     // value is everything after and may itself contain `=`, so a free-text
     // value such as a url= with a `?v=` query parameter or a notes= line
-    // commits intact. This matches the settings schema readers
-    // (read_settings_file, read_rendersettings), which also split on the
-    // first `=`.
+    // commits intact. This matches the settings schema reader
+    // (read_settings_file), which also splits on the first `=`.
     const size_t eq = pending.find('=');
     auto reject = [&](const char* reason) {
         app.settings_editor.red = true;

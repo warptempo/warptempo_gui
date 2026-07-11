@@ -12,9 +12,7 @@
 #include "settings_io.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "warp_frame_map_view.h"
 #include "warpmarkers.h"
-#include "warp_frame_map.h"
 
 #include <algorithm>
 #include <chrono>
@@ -786,17 +784,22 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // in the bottom-strip BPM editor after a successful commit; there is no
     // key-dispatch handler for it here.
 
-    // Ctrl+Alt+C commits the displayed render's full authoring snapshot:
-    // source-domain warp markers and phase resets, the complete engine
-    // settings block, and any authoring view state carried by the
-    // .rendersettings sidecar. Marker/reset promotion remains one
-    // cross-file undo entry; settings and trim stay outside undo by
-    // standing convention. After the commit succeeds: render-view exits,
-    // the source view is restored (playback rebinds to the always-source
-    // audio object; the entry buffer frees), and <source_parent>/renders/
-    // is recursively wiped. The committed render survives through the
-    // render cache, not as a folder artifact. Silent no-op outside
-    // render-view.
+    // Ctrl+Alt+C commits the displayed render's snapshot — the
+    // source-domain marker pair plus the entry's standard `.settings`
+    // sidecar (the single per-entry snapshot: engine block,
+    // active_tab_view, commit-tab trim) — and adopts the BROWSED view,
+    // crop-translated into target view. Render entries are target-view
+    // states, so commit always lands in 'T', on the entry's dispatch tab,
+    // at the browsed zoom / viewport / playhead (translated by the
+    // entry's crop origin onto the target axis) and the browsed W/P mode.
+    // Marker/reset promotion remains one cross-file undo entry; settings
+    // and trim stay outside undo by standing convention. After the commit
+    // succeeds: render-view exits (playback rebinds to the always-source
+    // audio object; the entry buffer frees; the tail's preview trigger
+    // then dispatches the adopted target buffer), and
+    // <source_parent>/renders/ is recursively wiped. The committed render
+    // survives through the render cache, not as a folder artifact. Silent
+    // no-op outside render-view.
     if (ctrl && alt && !shift &&
         key == GuiKeys::C) {
         if (!app.render_view.enabled) return true;
@@ -804,19 +807,19 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // app.render_view.warp_markers / .phase_resets are display state
         // (the kept subset, authored-domain positions). Ctrl+Alt+C
-        // promotes the render's source-domain authoring sidecars, so
+        // promotes the render's source-domain snapshot sidecars, so
         // every required sidecar is validated and collected before the
-        // first mutation. The pre-mutation validation set, in
-        // order: (1) the whole .rendersettings file through the one strict
-        // parser (read_rendersettings) — a hand-edited sidecar with ANY
-        // malformed line, a broken authoring field included, aborts rather
-        // than partially restoring (a skipped trim key would otherwise
-        // read as "bound absent" and clear a live trim); (2) both marker
-        // sidecars through their strict loaders; (3) the source-load
-        // adversarial guards over the assembled candidate — past-EOF
-        // walls (first_past_eof_wall_defect), authoring viewport/playhead
-        // range in the restored view's domain (first_view_range_defect),
-        // and the target-view/output-format compatibility rule. Any
+        // first mutation. The pre-mutation validation set, in order:
+        // (1) the whole `.settings` snapshot through the one strict
+        // whole-file schema (read_settings_file, the same read
+        // load_render_view_at runs) — a hand-edited sidecar with ANY
+        // malformed line aborts rather than partially restoring (an
+        // absent trim key would otherwise read as "bound absent" and
+        // clear a live trim); (2) both marker sidecars through their
+        // strict loaders; (3) the source-load adversarial guards over the
+        // assembled candidate — past-EOF walls
+        // (first_past_eof_wall_defect), the target-view/output-format
+        // compatibility rule, and the source-clobber refusal. Any
         // failure aborts to stderr, first error only, before any mutation
         // of markers, history, settings, trim, view state, or renders/.
         // Walkable, GUI-committable defects (coincident markers, dangling
@@ -826,25 +829,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
         const std::filesystem::path sidecar =
-            cur_e.batch_folder / (cur_e.basename + ".rendersettings");
-        const auto rendersettings = read_rendersettings(sidecar);
-        if (!rendersettings) {
+            render_view.settings_path(cur_e);
+        const auto settings = read_settings_file(sidecar.string());
+        if (!settings) {
             std::fprintf(stderr,
-                "warptempo_gui: commit aborted: rendersettings read "
+                "warptempo_gui: commit aborted: settings read "
                 "failed for '%s': %s\n",
                 sidecar.string().c_str(),
-                rendersettings.error().c_str());
+                settings.error().c_str());
             return true;
         }
-        // The authoring block is none-or-all: an engaged optional restores
-        // the whole block wholesale (its five core members applied
-        // unconditionally), an absent one leaves every live authoring field
-        // in place. The two trim keys stay individually optional within an
-        // engaged block. The optional itself is the branch — a non-null
-        // pointer means engaged; there is no default-constructed fallback
-        // object and no parallel flag shadowing the optional's state.
-        const RendersettingsAuthoring* const authoring =
-            rendersettings->authoring ? &*rendersettings->authoring : nullptr;
         std::vector<GuiWarpMarker>    src_warp;
         std::vector<GuiPhaseResetMarker> src_phase_resets;
         const std::filesystem::path wm =
@@ -877,18 +871,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         // The complete candidate is collected. The routing values below are
-        // the ones the application code further down actually uses, computed
-        // here (pre-mutation they read the same live state): the commit tab
-        // receives the authoring trim and viewport/playhead (the tab switch
-        // at the application site happens before those restores, so the live
-        // fields they write belong to the commit tab), and an absent
-        // authoring block leaves the live state in place wholesale.
-        const char commit_tab =
-            authoring ? authoring->active_tab
-                      : app.active_tab_view;
-        const char restored_audio_view =
-            authoring ? authoring->active_audio_view
-                      : app.active_audio_view;
+        // the ones the application code further down actually uses: the
+        // commit tab is the tab named by the snapshot's active_tab_view
+        // (the dispatch tab the entry was rendered from), and that tab's
+        // view-state band carries the recipe trim that shaped this render
+        // — the same projection load_render_view_at displays. The tab
+        // switch at the application site happens before the trim restore,
+        // so the live fields it writes belong to the commit tab.
+        const char commit_tab = settings->active_tab_view;
+        const SettingsFileTab& commit_tab_band =
+            (commit_tab == 'B') ? settings->tab_b : settings->tab_a;
+        const SettingsTrim& recipe_trim = commit_tab_band.trim;
         // The candidates are SOURCE-domain, and the audio object is
         // invariantly the source in every view (render view's displayed
         // entry lives in its own view-owned buffer), so every wall and
@@ -931,23 +924,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                     tm.string().c_str(), detail->c_str());
                 return true;
             }
-            // The authoring block carries at most one trim, applied to the
-            // commit tab (an authoring block without trim keys clears that
-            // tab's trim — nothing to wall then; without an authoring block
-            // the live trim is untouched). The other tab's slot is empty:
-            // its live trim survives the commit and was already walled at
-            // source load against this same audio.
-            SettingsTrim cand_trim;
-            if (authoring) {
-                cand_trim.has_begin   = authoring->has_trim_begin;
-                cand_trim.begin_frame = authoring->trim_begin_frame;
-                cand_trim.has_end     = authoring->has_trim_end;
-                cand_trim.end_frame   = authoring->trim_end_frame;
-            }
+            // Both tabs' trim structs from the snapshot, the same composite
+            // the source-load guard runs. The dispatch writer emits trim
+            // only on the commit tab, but a hand-edited stray on the other
+            // tab must wall identically — only the commit tab's trim is
+            // adopted below, yet a snapshot carrying a load-fatal position
+            // anywhere is adversarial wholesale.
             if (auto detail = first_past_eof_wall_defect(
-                    {}, {},
-                    commit_tab == 'B' ? SettingsTrim{} : cand_trim,
-                    commit_tab == 'B' ? cand_trim : SettingsTrim{},
+                    {}, {}, settings->tab_a.trim, settings->tab_b.trim,
                     total_frames, sample_rate)) {
                 std::fprintf(stderr,
                     "warptempo_gui: commit aborted: past-EOF wall defect "
@@ -957,75 +941,33 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        // Source-load adversarial guard 2: authoring viewport/playhead
-        // range in the restored view's domain, the same shared validator
-        // the GUI load and warptempo_cli run (first_view_range_defect,
-        // marker_store_validate.h). The domain total: the source total for
-        // a restored 'S' view; for 'T' the deformed target total of the
-        // warp frame map built from the CANDIDATE markers and the CANDIDATE
-        // engine scale — the map the restored session would actually clamp
-        // against — via the same resolve-then-build and total math the
-        // runtime cache uses (build_target_view_warp_frame_map,
-        // warp_frame_map_view.cpp). When 'T' is restored but that map
-        // cannot build, SKIP the check entirely, the source loader's own
-        // load-lenient policy: walkable-defect stores load intact by
-        // design, there is no target total to wall against, and the
-        // runtime viewport clamps own the values then.
-        if (authoring) {
-            bool    run_view_check = true;
-            int64_t domain_total   = total_frames;
-            if (restored_audio_view == 'T') {
-                std::string build_error;
-                const std::vector<WarpFrameMapSegment> cand_map =
-                    build_target_view_warp_frame_map(
-                        src_warp, rendersettings->engine.scale,
-                        static_cast<int>(sample_rate),
-                        static_cast<long>(total_frames), &build_error);
-                if (!build_error.empty()) {
-                    run_view_check = false;
-                } else {
-                    domain_total = target_total_frames_for_map(
-                        total_frames, cand_map);
-                }
-            }
-            if (run_view_check) {
-                SettingsFileTab cand_view;
-                cand_view.has_viewport_start = true;
-                cand_view.viewport_start     = authoring->viewport_start;
-                cand_view.has_playhead       = true;
-                cand_view.playhead           = authoring->playhead;
-                if (auto detail = first_view_range_defect(
-                        commit_tab == 'B' ? SettingsFileTab{} : cand_view,
-                        commit_tab == 'B' ? cand_view : SettingsFileTab{},
-                        domain_total)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: commit aborted: view range defect "
-                        "for '%s': %s\n",
-                        sidecar.string().c_str(), detail->c_str());
-                    return true;
-                }
-            }
-        }
+        // No view-range guard here (first_view_range_defect has no subject
+        // left): the old promotion restored FILE-sourced authoring
+        // viewport/playhead, persisted scratch that had to be walled like
+        // any other load. The adopted view values are now the LIVE browsed
+        // session values — GUI-produced and in-domain by construction: the
+        // render display axis is [0, entry length), and the crop
+        // translation at the application site lands them inside the
+        // candidate map's target extent (the entry is a rendering of
+        // exactly that map).
 
-        // Source-load adversarial guard 3: target-view/output-format
-        // compatibility, the same rule the source loader applies. Target
-        // view is available only under output_format=wav
-        // (GuiTargetRender::target_view_available), and a settings commit
-        // that makes it unavailable leaves target view immediately
-        // (settings_editor.cpp), so a state RESTING in 'T' under a map
-        // format is GUI-unproducible. Tested against the effective
-        // restored view: the authoring block's value, or the live view an
-        // absent key leaves in place.
-        if (restored_audio_view == 'T' &&
-            rendersettings->engine.output_format != "wav") {
+        // Source-load adversarial guard 2: target-view/output-format
+        // compatibility, validated against the ENTRY's own .settings.
+        // Entries are target-view states — the dispatch writer emits
+        // active_audio_view=T and writes a .settings for wav renders only,
+        // and commit lands in 'T' unconditionally — so a snapshot whose
+        // output_format is not wav is GUI-unproducible ('T' is available
+        // only under output_format=wav,
+        // GuiTargetRender::target_view_available): adversarial, abort.
+        if (settings->engine.output_format != "wav") {
             std::fprintf(stderr,
-                "warptempo_gui: commit aborted: invalid authoring view for "
+                "warptempo_gui: commit aborted: invalid snapshot for "
                 "'%s': active_audio_view=T requires output_format=wav\n",
                 sidecar.string().c_str());
             return true;
         }
 
-        // Source-load adversarial guard 4: the source-clobber refusal, the
+        // Source-load adversarial guard 3: the source-clobber refusal, the
         // same shared predicate the GUI load, warptempo_cli load, and the
         // settings editor commit run (render_output_source_collision,
         // render_output_naming.h), with the render worker as the breach
@@ -1035,13 +977,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // adversarial and must abort before the first marker or AppState
         // mutation.
         if (auto collision = render_output_source_collision(
-                rendersettings->engine, app.source_audio_path)) {
+                settings->engine, app.source_audio_path)) {
             std::fprintf(stderr,
                 "warptempo_gui: commit aborted: settings in '%s' would make "
                 "the render output '%s' overwrite the source audio file\n",
                 sidecar.string().c_str(), collision->string().c_str());
             return true;
         }
+
+        // Landing-view capture, BEFORE any exit/clear mutates its sources:
+        // the browsed zoom / viewport / playhead are the live session
+        // fields (render view browses through the global view fields), and
+        // the crop origin is the displayed entry's snapshot geometry.
+        // restore_source_view and the render-view context clear below
+        // overwrite all four, so they are latched here, ahead of the first
+        // mutation.
+        const int64_t crop_begin       = app.render_view.snapshot_crop_begin;
+        const int     browsed_zoom     = app.zoom_level;
+        const int64_t browsed_viewport = app.viewport_start_sample;
+        const int64_t browsed_playhead = app.playhead_cursor_sample;
 
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
         std::vector<GuiPhaseResetMarker> phase_reset_pre = app.phaseresetmarkers.markers();
@@ -1070,10 +1024,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                        commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
 
-        // Full engine-settings commit. The whole sidecar was validated
+        // Full engine-settings commit. The whole snapshot was validated
         // before marker mutation, so commit can adopt the typed recipe
         // without degrading to the previous live settings.
-        app.engine_settings = rendersettings->engine;
+        app.engine_settings = settings->engine;
 
         const std::filesystem::path src(app.source_audio_path);
         std::filesystem::path src_parent = src.parent_path();
@@ -1103,53 +1057,62 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         render_view.restore_source_view();
 
-        // An engaged authoring block restores its five core members
-        // wholesale: active_tab, active_audio_view, zoom_level,
-        // viewport_start, and playhead are applied unconditionally (the two
-        // trim keys stay individually optional within the block). zoom_level
-        // is assigned directly: an engaged optional can only carry a value
-        // the strict zoom arm in read_rendersettings already accepted, so a
-        // range re-check here would be unreachable, and were the
-        // parser/consumer contract ever to drift the drift must fail visibly
-        // rather than silently omit one restored field. An absent block
-        // leaves every live authoring field in place.
-        if (authoring) {
-            if (authoring->active_tab != app.active_tab_view) {
-                active_views.switch_active_tab_view_to(authoring->active_tab);
-            }
+        // Landing view (the ruled UX shape): render entries are target-view
+        // states, so commit lands in target view on the entry's dispatch
+        // tab, at the EXACT view the user was browsing. The tab switch runs
+        // first so the trim and view fields written below belong to the
+        // commit tab.
+        if (commit_tab != app.active_tab_view) {
+            active_views.switch_active_tab_view_to(commit_tab);
+        }
 
-            app.trim.has_begin = authoring->has_trim_begin;
-            app.trim.begin_frame = authoring->has_trim_begin
-                ? authoring->trim_begin_frame
-                : 0;
-            app.trim.has_end = authoring->has_trim_end;
-            app.trim.end_frame = authoring->has_trim_end
-                ? authoring->trim_end_frame
-                : 0;
-            if (!app.trim.has_begin) app.trim_begin_selected = false;
-            if (!app.trim.has_end)   app.trim_end_selected   = false;
-            if (!app.trim.has_begin && !app.trim.has_end) {
-                app.last_selected_trim = 0;
-            }
+        // Recipe trim from the snapshot's commit-tab band (absent keys
+        // clear that tab's trim — an untrimmed render commits an untrimmed
+        // state). The other tab's live trim survives the commit untouched,
+        // already walled at source load against this same audio.
+        app.trim.has_begin = recipe_trim.has_begin;
+        app.trim.begin_frame = recipe_trim.has_begin
+            ? recipe_trim.begin_frame
+            : 0;
+        app.trim.has_end = recipe_trim.has_end;
+        app.trim.end_frame = recipe_trim.has_end
+            ? recipe_trim.end_frame
+            : 0;
+        if (!app.trim.has_begin) app.trim_begin_selected = false;
+        if (!app.trim.has_end)   app.trim_end_selected   = false;
+        if (!app.trim.has_begin && !app.trim.has_end) {
+            app.last_selected_trim = 0;
+        }
 
-            if (authoring->active_audio_view == 'S' &&
-                app.active_audio_view == 'T') {
-                app.active_audio_view = 'S';
-                target_render.rebind_to_source();
-            } else if (authoring->active_audio_view == 'T') {
-                app.active_audio_view = 'T';
-            }
+        // Target view, unconditionally. The flag flip is the whole
+        // mechanism: restore_source_view above already rebound playback to
+        // the source samples (and, when the pre-commit session was already
+        // in 'T', its ensure_ready funnel ran against the adopted stores),
+        // and the tail's target_render.trigger() marks the buffer stale
+        // and dispatches the adopted preview, which rebinds playback on
+        // completion — superseding any buffer the funnel bound. The
+        // browsed W/P mode needs no write: render view browses through the
+        // global active_markers_view flag, which nothing on this path
+        // mutates, so it carries into target view as-is.
+        app.active_audio_view = 'T';
 
-            app.zoom_level = authoring->zoom_level;
-            app.viewport_start_sample = authoring->viewport_start;
-            // Deliberately unclamped: persisted view scratch, validated
-            // pre-mutation by the promotion's first_view_range_defect-shape
-            // guard; playhead == total stays load-legal and the runtime
-            // clamp (move_playhead_to) owns the value at first use.
-            app.playhead_cursor_sample = authoring->playhead;
-            if (!app.playhead_scanner_active) {
-                app.playhead_scanner_sample = authoring->playhead;
-            }
+        // Browsed view, crop-translated onto the target axis: the render
+        // display axis is the entry's crop window of the deformed
+        // timeline, and target view shows the FULL deformed timeline, so
+        // display position p sits at target position p + crop_begin — the
+        // same musical position the user was browsing (crop_begin is 0 for
+        // untrimmed entries). Zoom levels share one vocabulary across
+        // views.
+        app.zoom_level = browsed_zoom;
+        app.viewport_start_sample = browsed_viewport + crop_begin;
+        // Deliberately unclamped, the restore-site convention: the browsed
+        // playhead rests in the entry's display domain [0, entry length),
+        // so its translation rests inside the adopted map's target extent;
+        // the runtime clamp (move_playhead_to) owns the value at first
+        // use.
+        app.playhead_cursor_sample = browsed_playhead + crop_begin;
+        if (!app.playhead_scanner_active) {
+            app.playhead_scanner_sample = browsed_playhead + crop_begin;
         }
         clamp_viewport_start(app, audio);
         viewport.clear_hover_popup();

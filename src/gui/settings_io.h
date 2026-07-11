@@ -4,9 +4,7 @@
 #include "settings_file.h"
 
 #include <cstdint>
-#include <expected>
 #include <filesystem>
-#include <optional>
 #include <string>
 
 struct AuthoringSnapshot;
@@ -15,7 +13,7 @@ struct ViewState;
 // The `.settings` reader is the parser-side whole-file schema
 // (read_settings_file in settings_file.h), shared verbatim with
 // warptempo_cli. This header carries the GUI-only settings surfaces: the
-// writers and the `.rendersettings` schema.
+// writers.
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
@@ -30,68 +28,16 @@ bool atomic_write_string_to_path(const std::string& path,
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
-// Whole-file strict schema for `.rendersettings`, the render-pipeline
-// sibling of read_settings_file: one parse validates the complete
-// program-written file and splits it into three projections — the typed
-// engine block, the render-view scratch state, and the optional authoring
-// snapshot. The file is program-written (write_rendersettings), so any
-// violation is adversarial and the FIRST error refuses the whole read:
-// unknown keys, keyless lines, duplicates, malformed values, out-of-range
-// zoom levels, and missing required engine keys. Absent optional keys stay
-// legal: the view projection defaults, and the authoring projection is
-// none-or-all on its five core keys — either the whole block is present
-// (engaged optional) or the whole block is absent (nullopt, the
-// old-sidecar compatibility case). The two trim keys are independently
-// optional but legal only inside an existing block; a partial core block
-// or an orphan trim key with no core block is GUI-unproducible, hence
-// adversarial: a first-error whole-file refusal, not display leniency.
-//
-// The sole remaining consumer is Ctrl+Alt+C promotion, which reads the
-// authoring block and aborts before its first marker or AppState mutation
-// on any refusal — a hand-edited sidecar must never partially restore.
-// Render view no longer reads this file: per-entry display state lives in
-// the entry's standard `.settings` snapshot (read_settings_file /
-// update_settings_view_state below), and the view projection here is
-// written for schema completeness only until a later step reworks commit.
-
-struct RenderViewState {
-    int     zoom_level     = 0;   // Filled with kFitFileLevel by the reader.
-    int64_t viewport_start = 0;
-    int64_t playhead       = 0;
-};
-
-// A complete authoring block. Present only as an engaged optional on
-// Rendersettings, so the five core members (active_tab, active_audio_view,
-// zoom_level, viewport_start, playhead) are always meaningful — the block
-// is none-or-all on them. Only the two trim keys stay individually optional
-// within the block (a render with no trim omits them).
-struct RendersettingsAuthoring {
-    char    active_tab            = 'A';
-    char    active_audio_view     = 'S';
-    bool    has_trim_begin        = false;
-    int64_t trim_begin_frame      = 0;     // source frames
-    bool    has_trim_end          = false;
-    int64_t trim_end_frame        = 0;     // source frames
-    int     zoom_level            = 0;
-    int64_t viewport_start        = 0;
-    int64_t playhead              = 0;
-};
-
-struct Rendersettings {
-    EngineSettings                         engine;
-    RenderViewState                        view;
-    std::optional<RendersettingsAuthoring> authoring;
-};
-
-std::expected<Rendersettings, std::string> read_rendersettings(
-    const std::filesystem::path& path);
-
 // Full-write of `.rendersettings`: emits the eight canonical engine keys
 // (in kSettingsOrder order, byte-identical to the engine block of
 // write_settings_file), then the three render-view scratch keys
 // (viewport_start, zoom, playhead), then the authoring block when
 // authoring.valid. Atomic via tmp + fsync + rename. Called by the render
-// pipeline at render time.
+// pipeline at render time. The file has no in-product reader anymore —
+// Ctrl+Alt+C commit and render-view display both read the entry's
+// standard `.settings` snapshot (read_settings_file /
+// update_settings_view_state below) — so this writer survives only until
+// the writer-deletion step retires the sidecar.
 bool write_rendersettings(const std::filesystem::path& path,
                           const EngineSettings& engine,
                           int64_t viewport_start,

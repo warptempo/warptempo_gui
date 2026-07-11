@@ -493,7 +493,10 @@ RenderOutcome do_render(const RenderRequest& req,
 
             // `.rendersettings` sidecar: the canonical engine block, the
             // render-view scratch defaults, and the optional dispatch-time
-            // authoring snapshot used by Ctrl+Alt+C.
+            // authoring snapshot. No in-product reader remains (Ctrl+Alt+C
+            // commit adopts the entry's standard `.settings` snapshot
+            // below); the write survives only until the writer-deletion
+            // step retires the sidecar.
             const std::filesystem::path rs_path =
                 bf / (req.batch_basename + ".rendersettings");
             existed = existed_before(rs_path);
