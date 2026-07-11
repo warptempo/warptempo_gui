@@ -264,6 +264,16 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
                 if (cb_size < 22) {
                     return std::unexpected("WAVE_FORMAT_EXTENSIBLE cbSize is too short");
                 }
+                // cbSize declares the extension bytes following the 18-byte
+                // base header, so 18 + cbSize must fit inside the chunk
+                // payload. The in-tree writer never authors extensible fmt,
+                // so a declaration running past its own chunk is adversarial
+                // container corruption refused at the owner boundary. Wide
+                // arithmetic so the sum cannot wrap.
+                if (18 + static_cast<uint64_t>(cb_size) > chunk_payload_size) {
+                    return std::unexpected(
+                        "WAVE_FORMAT_EXTENSIBLE cbSize exceeds its fmt chunk");
+                }
                 valid_bits = read_u16(fmt, 18);
                 if (guid_is_subformat(fmt.data() + 24, 1)) {
                     tag = 1;
@@ -296,6 +306,17 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             if (layout.block_align != expected_align) {
                 return std::unexpected("WAV block alignment mismatch");
             }
+            // For the PCM/Float formats accepted above, byte_rate (fmt
+            // payload offset 8) is fully determined by sample_rate *
+            // block_align, and the in-tree writer always authors exactly
+            // that product; a contradiction is adversarial container
+            // corruption refused at the owner boundary. The multiply stays
+            // wide so no 32-bit wrap can fake a match.
+            if (static_cast<uint64_t>(read_u32(fmt, 4)) * layout.block_align !=
+                read_u32(fmt, 8)) {
+                return std::unexpected(
+                    "WAV byte rate contradicts sample rate and block alignment");
+            }
             fmt_seen = true;
         } else if (fourcc_eq(id, "data")) {
             if (data_seen) {
@@ -322,6 +343,15 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     }
     layout.info.frames =
         static_cast<int64_t>(layout.data_size / layout.block_align);
+    // Zero frames is unusable audio — the WAV sibling of the FLAC
+    // zero-stream-length refusal — so it hard-fails here at the owner
+    // boundary instead of proceeding into the load-lenient marker flow. This
+    // also covers a streamed 0xffffffff placeholder whose present payload is
+    // under one frame: the salvage tolerance recovers frames that exist, and
+    // none exist here.
+    if (layout.info.frames == 0) {
+        return std::unexpected("WAV data chunk holds zero frames");
+    }
     return layout;
 }
 

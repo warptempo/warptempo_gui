@@ -288,6 +288,56 @@ bool test_data_before_fmt_overrun_fails_cleanly()
     return true;
 }
 
+bool test_byte_rate_contradiction_fails()
+{
+    // A byte_rate off by one from sample_rate * block_align contradicts the
+    // fmt declaration; the in-tree writer always authors the exact product.
+    std::vector<char> blob = riff_prefix();
+    append_pcm16_fmt(blob, 2, 44100);
+    const size_t fmt_pos = find_chunk(blob, "fmt ");
+    if (fmt_pos == blob.size()) {
+        std::cout << "selftest: byte-rate fixture fmt not found\n";
+        return false;
+    }
+    patch_u32(blob, fmt_pos + 8 + 8, 44100u * 4u + 1u);
+    append_fourcc(blob, "data");
+    append_u32(blob, 4);
+    append_i16(blob, 0);
+    append_i16(blob, 0);
+    finalize_riff_size(blob);
+
+    auto out = wav_read_full(bytes_span(blob));
+    if (out ||
+        out.error() !=
+            "WAV byte rate contradicts sample rate and block alignment") {
+        std::cout << "selftest: byte-rate contradiction failure mismatch";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool test_zero_frame_data_fails()
+{
+    // A zero-length data chunk parses to zero frames — unusable audio, the
+    // WAV sibling of the FLAC zero-stream-length refusal.
+    std::vector<char> blob = riff_prefix();
+    append_pcm16_fmt(blob, 1, 44100);
+    append_fourcc(blob, "data");
+    append_u32(blob, 0);
+    finalize_riff_size(blob);
+
+    auto out = wav_read_full(bytes_span(blob));
+    if (out || out.error() != "WAV data chunk holds zero frames") {
+        std::cout << "selftest: zero-frame data failure mismatch";
+        if (!out) std::cout << ": " << out.error();
+        std::cout << "\n";
+        return false;
+    }
+    return true;
+}
+
 bool test_odd_junk_chunk_before_data()
 {
     const std::vector<float> in = {-0.25f, 0.75f, 1.25f, -1.25f};
@@ -447,6 +497,32 @@ bool test_wave_format_extensible_fixtures()
         }
     }
 
+    {
+        // cbSize = 65535 declares far more extension bytes than the 40-byte
+        // chunk holds; the coverage check refuses the contradiction.
+        std::vector<char> blob = riff_prefix();
+        append_extensible_fmt(blob, 1, 44100, 16, 16, 1);
+        const size_t fmt_pos = find_chunk(blob, "fmt ");
+        if (fmt_pos == blob.size()) {
+            std::cout << "selftest: extensible oversized-cbSize fmt not found\n";
+            return false;
+        }
+        blob[fmt_pos + 8 + 16] = static_cast<char>(0xff);
+        blob[fmt_pos + 8 + 17] = static_cast<char>(0xff);
+        append_fourcc(blob, "data");
+        append_u32(blob, 0);
+        finalize_riff_size(blob);
+
+        auto out = wav_read_full(bytes_span(blob));
+        if (out ||
+            out.error() != "WAVE_FORMAT_EXTENSIBLE cbSize exceeds its fmt chunk") {
+            std::cout << "selftest: extensible oversized-cbSize failure mismatch";
+            if (!out) std::cout << ": " << out.error();
+            std::cout << "\n";
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -461,8 +537,8 @@ bool test_streamed_unpatched_data_size_fixture()
     append_u32(blob, 0xffffffffu);
     for (int16_t x : samples) append_i16(blob, x);
     // The unpatched-size tolerance only fires when the declared size exceeds
-    // the bytes present; a data size left at zero currently parses as zero
-    // frames, and whether to trust those bytes is still an architect question.
+    // the bytes present; a data size left at zero refuses as zero frames
+    // (test_zero_frame_data_fails), never salvaging the trailing bytes.
     blob.push_back(static_cast<char>(0x7f));
     // A streamed encoder that leaves the data size at the placeholder leaves
     // the RIFF size there too; model the real container so the placeholder
@@ -611,6 +687,8 @@ int run_selftest()
 {
     if (!test_riff_limit_predicate() || !test_data_before_fmt_parses() ||
         !test_data_before_fmt_overrun_fails_cleanly() ||
+        !test_byte_rate_contradiction_fails() ||
+        !test_zero_frame_data_fails() ||
         !test_odd_junk_chunk_before_data() ||
         !test_unknown_magic_probe_rejection()) {
         return 1;
