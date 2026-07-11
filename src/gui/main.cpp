@@ -23,6 +23,7 @@
 #include "warpmarkers.h"
 #include "file_loader.h"
 #include "flag_editor.h"
+#include "gui_display_context.h"
 #include "input_handler.h"
 #include "paint_handler.h"
 #include "playback.h"
@@ -306,14 +307,9 @@ int max_valid_numeric_level(int waveform_width_px,
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
-    int64_t result = audio.total_frames();
-    if (a.active_audio_view == 'T' && !a.render_view.enabled) {
-        const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
-            a, audio.sample_rate(),
-            static_cast<long>(audio.total_frames()));
-        if (c.tgt_total_frames > 0) result = c.tgt_total_frames;
-    }
-    return result;
+    // The active display context owns the composite view rule and the
+    // target-total fallback (gui_display_context.h).
+    return active_display_context(a, audio).domain_total_frames;
 }
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {

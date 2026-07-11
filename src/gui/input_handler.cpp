@@ -761,14 +761,12 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     // displayed position; the viewport recenter below also uses this
     // target-frame value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
-    // Playhead domain clamp: Tab mirrors move_playhead_to exactly (same
-    // live_total_frames read; the domain ruling lives there), so Tab and
-    // bare Left/Right — which route through move_playhead_to's clamp —
-    // cannot disagree about the same endpoint. In render view
-    // live_total_frames returns the loaded render's own total (its 'T'
-    // branch requires !render_view.enabled), so render-domain display
-    // positions clamp against the same total the arrow keys use. Tab onto
-    // trim end — legal at total — rests at total - 1.
+    // Playhead domain clamp: Tab mirrors move_playhead_to exactly — both
+    // read live_total_frames, which reports the active display context's
+    // domain total (active_display_context, gui_display_context.h, is the
+    // shared domain source) — so Tab and bare Left/Right — which route
+    // through move_playhead_to's clamp — cannot disagree about the same
+    // endpoint. Tab onto trim end — legal at total — rests at total - 1.
     {
         const int64_t live_total = live_total_frames(app, audio);
         if (sample < 0) sample = 0;

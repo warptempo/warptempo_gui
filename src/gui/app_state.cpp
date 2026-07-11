@@ -1,6 +1,7 @@
 #include "app_state.h"
 
 #include "audio.h"
+#include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
@@ -53,7 +54,6 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return -1;
-    const int sr = audio.sample_rate();
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
     int best_hit = -1;
@@ -76,16 +76,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
-    if (!rv && app.active_audio_view == 'T') {
-        // target_view_warp_frame_map_cached stores segments in app.target_warp_frame_map_cache.warp_frame_map,
-        // which outlives this call. The reference remains valid until a
-        // changed-key rebuild, and this function does not mutate markers,
-        // scale, or audio identity while holding it.
-        const auto& m = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) target_warp_frame_map = &m;
-    }
+    // The active display context owns the composite view rule: its map is
+    // empty (identity) in source view, in render view, and when the
+    // target map cannot build.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
+        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
     for (int i = 0; i < n; ++i) {
         int64_t src_sample;
         if (rv_phase_reset) {
@@ -143,12 +139,11 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in target view.
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
-    if (app.active_audio_view == 'T') {
-        const auto& m = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) target_warp_frame_map = &m;
-    }
+    // The render-view head guard above already returned, so the display
+    // context here is only ever source view or live target view.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
+        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
 
     auto bound_dist = [&](int64_t frame, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
@@ -202,12 +197,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same target-view translation as hit_test_trim_boundary so the chip
     // column lands where the stem (and chip) are painted in target view.
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map = nullptr;
-    if (app.active_audio_view == 'T') {
-        const auto& m = target_view_warp_frame_map_cached(
-            app, sr, static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) target_warp_frame_map = &m;
-    }
+    // As there, the render-view head guard already returned, so the
+    // context is only ever source view or live target view.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
+        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
 
     const int kMiss = std::numeric_limits<int>::max();
 
@@ -282,24 +276,19 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     // Target view's flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
-    // must walk the same warp_frame_map. Build it locally — same construction
-    // as paint_handler's on_redraw, trim forced off. Empty in source-
-    // view and render-view; the helper's nullptr-when-empty pass-through
-    // below leaves those paths untouched.
-    //
-    // During a drag, route through the frozen warp_frame_map captured at
-    // begin_drag so hit-rect positions match the frozen-coord paint.
+    // must walk the same warp_frame_map. The active display context is the
+    // base (its map is empty — identity — in source view and render view);
+    // the drag-frozen map is a paint-regime override of the context's
+    // translation map so hit-rect positions match the frozen-coord paint
+    // (the paint surfaces carry the same override).
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
-    if (!app.render_view.enabled &&
-        app.active_audio_view == 'T') {
+    if (ctx.domain == GuiDisplayDomain::TargetLive) {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
                 tmap_arg = &app.drag.frozen_warp_frame_map;
-        } else {
-            const auto& m = target_view_warp_frame_map_cached(
-                app, audio.sample_rate(),
-                static_cast<long>(audio.total_frames())).warp_frame_map;
-            if (!m.empty()) tmap_arg = &m;
+        } else if (!ctx.warp_frame_map->empty()) {
+            tmap_arg = ctx.warp_frame_map;
         }
     }
     DragOverlay drag_overlay_storage;
