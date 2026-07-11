@@ -38,19 +38,7 @@ void unlink_silent(const std::string& path) {
 }
 
 void usage(const char* argv0) {
-    std::fprintf(stderr,
-        "usage: %s <source-audio>\n"
-        " Reads <source-stem>.warpmarkers, <source-stem>.phaseresetmarkers,\n"
-        " and <source-stem>.settings beside the source audio (all three are\n"
-        " required; the GUI creates them on source load) and writes the\n"
-        " warped wav the GUI would render for the same project, at the same\n"
-        " path: title-named beside the source (<title>.wav, or\n"
-        " limiter=false;<title>.wav when the settings limiter is off). Runs\n"
-        " the full PGHI engine; output_format must be wav (this CLI renders\n"
-        " wav only; the GUI produces warptempo_maps/generic_map/midi_map). The\n"
-        " trim applied is the active tab's (the persisted active_tab_view\n"
-        " key), matching the GUI.\n",
-        argv0);
+    std::fprintf(stderr, "usage: %s <source-audio>\n", argv0);
 }
 
 }  // namespace
@@ -74,20 +62,13 @@ int main(int argc, char** argv) {
     const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
-    // --- settings: required, like the two marker sidecars below — the GUI
-    // creates this sidecar on source load, so an absent file is a startup
-    // error, not a defaults case. output_format, title, limiter, and the
-    // applied trim all come from it. ---
+    // --- settings: required, like the two marker sidecars below. The strict
+    // whole-file reader refuses an unopenable file with its own could-not-open
+    // diagnostic, which surfaces verbatim through the print below.
+    // output_format, title, limiter, and the applied trim all come from it. ---
     EngineSettings es;
     SettingsFile   sf;
     SettingsTrim   trim;
-    if (!std::filesystem::exists(set_path)) {
-        std::fprintf(stderr,
-            "warptempo_cli: missing settings file '%s' "
-            "(the GUI creates this sidecar on source load)\n",
-            set_path.c_str());
-        return 1;
-    }
     {
         // The whole-file strict schema (settings_file.h), the same reader
         // the GUI runs at source load: a sidecar set is loadable in both
@@ -148,35 +129,10 @@ int main(int argc, char** argv) {
             .front()
             .string();
 
-    // --- hard refusal: never write over the source audio itself. equivalent()
-    // is an inode match and only succeeds when both paths exist, so an output
-    // that does not exist yet can never resolve to the source. ---
-    {
-        std::error_code ec;
-        if (std::filesystem::exists(out_path, ec) &&
-            std::filesystem::equivalent(out_path, source_path, ec)) {
-            std::fprintf(stderr,
-                "warptempo_cli: output '%s' resolves to the source audio "
-                "file; refusing to overwrite the source. Change the title "
-                "setting.\n",
-                out_path.c_str());
-            return 1;
-        }
-    }
-
-    // --- markers; a missing sidecar is a startup error. Without it an absent
-    // file would flow an empty marker list through build_warp_frame_map to a
-    // seed-anchor-only map whose zero emit cap the engine refuses at dispatch;
-    // erroring here gives the pointed missing-file message instead of that
-    // indirect refusal. ---
+    // --- markers: required. parse_warpmarkers_file refuses an unopenable file
+    // with its own cannot-open-file diagnostic, which surfaces verbatim through
+    // the print below. ---
     std::vector<WarpMarker> markers;
-    if (!std::filesystem::exists(wm_path)) {
-        std::fprintf(stderr,
-            "warptempo_cli: missing warp markers file '%s' "
-            "(the GUI creates this sidecar on source load)\n",
-            wm_path.c_str());
-        return 1;
-    }
     {
         auto wmp = parse_warpmarkers_file(wm_path);
         if (!wmp) {
@@ -187,17 +143,11 @@ int main(int argc, char** argv) {
         markers = std::move(*wmp);
     }
 
-    // --- phase reset markers; a missing sidecar is a startup error. The empty
-    // file is the no-resets form and parses to an empty list; the GUI creates
-    // this sidecar on source load, so an absent file is a hard error. ---
+    // --- phase reset markers: required. parse_phaseresetmarkers_file refuses
+    // an unopenable file with its own cannot-open-file diagnostic, which
+    // surfaces verbatim through the print below; the empty file is the
+    // no-resets form and parses to an empty list. ---
     std::vector<PhaseResetMarker> resets;
-    if (!std::filesystem::exists(pr_path)) {
-        std::fprintf(stderr,
-            "warptempo_cli: missing phase reset markers file '%s' "
-            "(the GUI creates this sidecar on source load)\n",
-            pr_path.c_str());
-        return 1;
-    }
     {
         auto prp = parse_phaseresetmarkers_file(pr_path);
         if (!prp) {
