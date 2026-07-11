@@ -844,6 +844,21 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // other commit. Adversarial input; stderr-only abort.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
+        // Ahead of (1): commit promotes THE DISPLAYED RENDER, but the
+        // list/index pair is rebuilt by the pre-nav refresh, which can
+        // clamp index onto a surviving entry when the displayed wav
+        // vanished from disk without loading it; every downstream guard
+        // would then validate the WRONG entry against its own consistent
+        // sidecars, so the entry's identity is attested first against
+        // last_path, which only a successful entry load stamps.
+        if (cur_e.wav_path.string() != app.render_view.last_path) {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: selected entry '%s' is "
+                "not the displayed render '%s'\n",
+                cur_e.wav_path.string().c_str(),
+                app.render_view.last_path.c_str());
+            return true;
+        }
         const std::filesystem::path sidecar =
             render_view.settings_path(cur_e);
         const auto settings = read_settings_file(sidecar.string());

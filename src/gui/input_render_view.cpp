@@ -238,7 +238,12 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     // entry stays). Gated on app.render_view.enabled; outside render-view the
     // chord is a silent no-op (the bare-key switch at the bottom of this
     // function is modifier-strict). Same pre-nav refresh of the renders/
-    // folder.
+    // folder. The endpoint no-op must compare the displayed identity
+    // (last_path, stamped only by a successful entry load), not just the
+    // integer index: the pre-nav refresh may have clamped index onto a
+    // different entry when the displayed wav vanished from disk, and the
+    // fall-through load then reloads that slot so display and index agree
+    // again.
     if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
         render_view.autosave_active_entry();
@@ -250,7 +255,9 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
 
         const int n = static_cast<int>(app.render_view.list.size());
         const int target = (key == GuiKeys::Home) ? 0 : (n - 1);
-        if (target == app.render_view.index) return true;
+        if (target == app.render_view.index &&
+            app.render_view.list[target].wav_path.string() ==
+                app.render_view.last_path) return true;
         render_view.load_render_view_at(target);
         return true;
     }
