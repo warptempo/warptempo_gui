@@ -91,8 +91,29 @@ struct GuiRenderView {
     std::pair<uintmax_t, int64_t> wav_stat_tuple(
         const std::filesystem::path& p);
     void stash_render_view_selection_to_active_entry();
+
+    // Persist the active entry's browse state at a leave-this-entry
+    // boundary: the .settings view-state autosave (write_settings_for)
+    // followed by the in-memory selection stash. The R-toggle exit, both
+    // navigation chords, the in-place auto-open refresh, and the
+    // close/revert prompts all run this same pair. No-op when render
+    // view is off or no entry is active.
+    void autosave_active_entry();
+
     bool load_render_view_at(int index);
     void restore_source_view();
+
+    // The abandon arm of the render-view exit pair: restore_source_view
+    // restores the stashed source view for an ordinary exit;
+    // abandon_render_view tears down when the SOURCE itself is being
+    // discarded (revert-to-blank), where restoring the stashed view would
+    // be too late (the source is going away) and restore_source_view's
+    // target-view ensure_ready tail would spuriously dispatch against the
+    // dying source. Rebinds playback to the still-alive source buffer
+    // before freeing the entry buffer, then clears every render-view
+    // field. Deliberately does NOT touch the tab slots, the live view
+    // fields, or active_audio_view — revert_to_blank resets those itself.
+    void abandon_render_view();
 
     // Re-enumerate the renders/ folder and merge per-entry persisted
     // state (state, persisted_size, persisted_mtime) from the existing

@@ -159,23 +159,15 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
             app.render_view.list.clear();
         }
     } else {
-        // Capture the just-viewed render's zoom/viewport/playhead
-        // before restoring source-view state. Not done on the
-        // Ctrl+Alt+C commit path — the renders folder is wiped
-        // immediately after commit, so the write would be lost.
-        if (app.render_view.index >= 0 &&
-            app.render_view.index <
-                static_cast<int>(app.render_view.list.size())) {
-            render_view.write_settings_for(
-                app.render_view.list[app.render_view.index]);
-        }
-        // Stash the live selection onto
-        // the active entry so the next toggle-on can restore
-        // it (gated by the wav's stat tuple still matching).
-        // render_view.list is intentionally NOT cleared here
-        // — re-entry migrates its persisted_* fields into the
-        // freshly enumerated list.
-        render_view.stash_render_view_selection_to_active_entry();
+        // Capture the just-viewed render's zoom/viewport/playhead and
+        // stash its live selection onto the active entry, so the next
+        // toggle-on can restore both (the selection gated by the wav's
+        // stat tuple still matching). Not done on the Ctrl+Alt+C commit
+        // path — the renders folder is wiped immediately after commit,
+        // so the write would be lost. render_view.list is intentionally
+        // NOT cleared here — re-entry migrates its persisted_* fields
+        // into the freshly enumerated list.
+        render_view.autosave_active_entry();
         render_view.restore_source_view();
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
@@ -218,18 +210,11 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Left || key == GuiKeys::Right)) {
         // Capture outgoing state and stash selection before refresh —
         // refresh_render_view_list may reorder/drop entries.
-        if (app.render_view.index >= 0 &&
-            app.render_view.index <
-                static_cast<int>(app.render_view.list.size())) {
-            render_view.write_settings_for(
-                app.render_view.list[app.render_view.index]);
-        }
-        // Stash the outgoing entry's
-        // selection so re-navigating back later (in the same
-        // session) restores it. load_render_view_at then loads
-        // the destination's own persisted state if its stat tuple
-        // still matches; otherwise leaves selection empty.
-        render_view.stash_render_view_selection_to_active_entry();
+        // Re-navigating back later (in the same session) restores the
+        // stashed selection: load_render_view_at loads the destination's
+        // own persisted state if its stat tuple still matches; otherwise
+        // it leaves the selection empty.
+        render_view.autosave_active_entry();
 
         if (!render_view.refresh_render_view_list()) {
             // Renders folder is empty (e.g. user deleted it externally).
@@ -254,13 +239,7 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     // folder.
     if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
-        if (app.render_view.index >= 0 &&
-            app.render_view.index <
-                static_cast<int>(app.render_view.list.size())) {
-            render_view.write_settings_for(
-                app.render_view.list[app.render_view.index]);
-        }
-        render_view.stash_render_view_selection_to_active_entry();
+        render_view.autosave_active_entry();
 
         if (!render_view.refresh_render_view_list()) {
             render_view.exit_render_view_and_clear();

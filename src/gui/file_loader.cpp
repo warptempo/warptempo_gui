@@ -618,6 +618,14 @@ bool GuiFileLoader::load_file(const std::string& path) {
 }
 
 void GuiFileLoader::revert_to_blank() {
+    // The source is being discarded: tear down any live render-view
+    // state FIRST, while the source audio still exists — the teardown
+    // rebinds playback to the source buffer before freeing the entry
+    // buffer, and it must run ahead of playback.shutdown and the audio
+    // replacement below. Null only before main.cpp wires it, when no
+    // render view can exist yet.
+    if (abandon_render_view) abandon_render_view();
+
     // Stop the audio thread before the sample buffer it borrows goes
     // away. Same invariant as load_file.
     playback.stop();

@@ -518,12 +518,19 @@ int main(int argc, char** argv) {
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
+    // Back-wire the loader's render-view teardown (GuiRenderView is
+    // constructed after GuiFileLoader, so the hook can only be bound
+    // here — same post-construction shape as file_loader.prompt below).
+    // revert_to_blank calls it first, while the source is still alive.
+    file_loader.abandon_render_view =
+        [&render_view]() { render_view.abandon_render_view(); };
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
-                     phase_reset_propagate, save_ops, playback_lifecycle);
+                     phase_reset_propagate, save_ops, playback_lifecycle,
+                     render_view);
     // Back-wire the loader's error-notice surface (GuiPrompt holds a
     // GuiFileLoader&, so the pointer can only be set after both exist).
     file_loader.prompt = &prompt;
@@ -662,13 +669,40 @@ int main(int argc, char** argv) {
     // the on_file_drop handler stay here as one-line lambdas that capture
     // file_loader; the predicate has no reference to the loader.
 
+    // A source replacement under an open render view or a running
+    // archival batch (or a parked archival command awaiting the worker)
+    // would cross two projects' state: the snapshot display, the batch's
+    // terminal auto-open, and the fingerprint-rebuild request would all
+    // mix the old project's artifacts with the new source. Refuse the
+    // drop — the gesture is a slip of the hand; the user exits render
+    // view or waits for the batch, then drops again.
+    // Refuse-over-exit-then-load is the conservative reading, pending
+    // architect ratification.
     gui.set_drop_accept_predicate([&](int x, int y) -> bool {
+        if (app.render_view.enabled || app.queue_running ||
+            app.pending_archival.armed) {
+            return false;
+        }
         const GuiRect area = waveform_area(app);
         return x >= area.x && x < area.x + area.w &&
                y >= area.y && y < area.y + area.h;
     });
 
     gui.set_on_file_drop([&](const std::string& path) {
+        // Backstop for a drop that raced the predicate state: the same
+        // render-view / archival-batch refusal as the drop-accept
+        // predicate above, one stderr line per condition.
+        if (app.render_view.enabled) {
+            std::fprintf(stderr,
+                "warptempo_gui: file drop refused: render view is open\n");
+            return;
+        }
+        if (app.queue_running || app.pending_archival.armed) {
+            std::fprintf(stderr,
+                "warptempo_gui: file drop refused: an archival render is "
+                "running\n");
+            return;
+        }
         if (app.loading) {
             app.pending_drop_path = path;
             return;

@@ -177,6 +177,24 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
     e.persisted_mtime = stat.second;
 }
 
+// Persist the active entry's browse state: the .settings view-state
+// autosave plus the selection stash, in that order (both read the live
+// app.* fields; neither mutates them). One body for every
+// leave-this-entry boundary — exit, navigation, in-place auto-open
+// refresh, and the close/revert prompts. No-op when render view is off
+// or the index is out of range (no entry active).
+void GuiRenderView::autosave_active_entry() {
+    if (!app.render_view.enabled) return;
+    if (app.render_view.index < 0 ||
+        app.render_view.index >=
+            static_cast<int>(app.render_view.list.size())) {
+        return;
+    }
+    this->write_settings_for(
+        app.render_view.list[app.render_view.index]);
+    this->stash_render_view_selection_to_active_entry();
+}
+
 // Build the full archival re-render request for a stale entry from its
 // already-loaded snapshot set (markers, engine block, recipe trim). The
 // request names the entry's own batch folder and basename, so the rebuild
@@ -751,6 +769,56 @@ void GuiRenderView::restore_source_view() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
+// The abandon arm of the render-view exit pair: restore_source_view
+// restores the stashed source view for an ordinary exit;
+// abandon_render_view tears down when the source itself is being
+// discarded (revert_to_blank), where calling restore_source_view would
+// be too late (the source is gone by the time the view could be
+// restored) and would spuriously run its target-view ensure_ready tail
+// against the dying source. The caller resets the tab slots, the live
+// view fields, and active_audio_view itself, so this method touches
+// none of them — it only unwinds what render view owns: the playback
+// bind, the entry buffer, the app.render_view fields, and the
+// render-view paint transients. The source audio is still alive at call
+// time, so playback rebinds to it before the entry buffer is freed —
+// the device is never left bound to a freed buffer.
+void GuiRenderView::abandon_render_view() {
+    if (!app.render_view.enabled && entry_samples.empty()) return;
+    playback.stop();
+    app.playhead_scanner_active = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
+    app.playhead_scanner_sample = 0;
+    viewport.clear_hover_popup();
+
+    // Rebind playback to the source samples at domain offset 0, then
+    // free the entry buffer — rebind first, so the device is never left
+    // bound to a freed buffer (the same order restore_source_view uses;
+    // playback is stopped above, satisfying rebind_buffer's contract).
+    playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
+    std::vector<float>().swap(entry_samples);
+    entry_frames = 0;
+
+    app.render_view.enabled = false;
+    app.render_view.list.clear();
+    app.render_view.index = -1;
+    app.render_view.last_path.clear();
+    app.render_view.warp_markers.clear();
+    app.render_view.phase_resets.clear();
+    app.render_view.snapshot_warp_frame_map.clear();
+    app.render_view.entry_domain_begin = 0;
+    app.render_view.snapshot_display_total = 0;
+    app.render_view.snapshot_has_trim_begin = false;
+    app.render_view.snapshot_trim_begin_frame = 0;
+    app.render_view.snapshot_has_trim_end = false;
+    app.render_view.snapshot_trim_end_frame = 0;
+
+    // The displayed domain changed (the entry's axis is gone): bump the
+    // audio identity counter so the waveform / stem / flag caches
+    // invalidate, matching every other display-domain flip.
+    app.audio_generation++;
+}
+
 // Re-enumerate the renders/ folder and migrate persisted per-entry
 // state from the existing app.render_view.list into the refreshed
 // list, keyed by wav_path. Mirrors the migration block in the R-key
@@ -848,13 +916,7 @@ void GuiRenderView::auto_open_batch_at_first_file(
     // wav_path-keyed merge carries that just-stashed state into the fresh
     // list. Mirrors the entry-switch sequence the render-view nav handlers run.
     if (refreshing_in_place) {
-        if (app.render_view.index >= 0 &&
-            app.render_view.index <
-                static_cast<int>(app.render_view.list.size())) {
-            this->write_settings_for(
-                app.render_view.list[app.render_view.index]);
-        }
-        this->stash_render_view_selection_to_active_entry();
+        this->autosave_active_entry();
     }
 
     std::vector<AppState::RenderViewEntry> list =

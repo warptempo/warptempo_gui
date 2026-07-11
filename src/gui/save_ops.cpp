@@ -22,7 +22,22 @@ bool GuiSaveOps::save() {
     if (app.warpmarkers_path.empty()) return false;
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.
-    active_views.refresh_active_tab_view_from_app();
+    // NOT under render view: there the live view fields are entry-browse
+    // state on the render's target axis, and the active tab slot already
+    // holds the source view stashed at render-view entry — refreshing
+    // here would overwrite the correct stash with another domain's
+    // coordinates and persist them into the source .settings. Skipping
+    // the refresh serializes the untouched tab slots, exactly the state
+    // the user left the source view in. The close-prompt save is the
+    // ordinary route here under render view (Ctrl+S is not on the
+    // render-view allowlist and the bottom-strip editors are mutually
+    // exclusive with render view); a load-origin defect series whose
+    // first tick lands after an immediate `r` can also reach here via
+    // its mid-series Ctrl+S, so the chokepoint guard covers every
+    // caller.
+    if (!app.render_view.enabled) {
+        active_views.refresh_active_tab_view_from_app();
+    }
 
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {

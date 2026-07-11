@@ -1,13 +1,26 @@
 #include "prompt.h"
 
+#include "render_view.h"
+
 #include <utility>
 
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
+    // Both close and revert under an open render view first persist the
+    // browsed entry's view state — exactly what navigating away from the
+    // entry would persist. The autosave is history-less browse state,
+    // not part of dirty semantics, so it runs on the save AND the
+    // discard responses; renders/ survives both a close and a revert.
+    // No render-view teardown on the CLOSE_WINDOW arm — the process is
+    // exiting; the revert arm's teardown lives in revert_to_blank
+    // itself (the abandon_render_view hook), which every revert path
+    // shares. autosave_active_entry no-ops when render view is off.
     case DialogTrigger::CLOSE_WINDOW:
+        render_view.autosave_active_entry();
         gui.request_exit();
         break;
     case DialogTrigger::REVERT_TO_BLANK:
+        render_view.autosave_active_entry();
         file_loader.revert_to_blank();
         break;
     case DialogTrigger::PASTE_CONFIRM:

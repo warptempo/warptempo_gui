@@ -8,6 +8,8 @@
 #include "save_ops.h"
 #include "viewport.h"
 
+struct GuiRenderView;
+
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
 // unsaved-work dialog and the paste-confirm dialog. Two entry points are
 // exposed: request_close_or_revert (called by Ctrl+Q, Ctrl+W, and the WM-close
@@ -26,6 +28,10 @@ struct GuiPrompt {
     PhaseResetPropagate&  phase_reset_propagate;
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
+    // Close/revert under an open render view persists the browsed
+    // entry's view state (autosave_active_entry) before proceeding —
+    // the same persistence a navigation away from the entry runs.
+    GuiRenderView&        render_view;
 
     GuiPrompt(AppState&             app_,
               GuiPlatform&          gui_,
@@ -33,14 +39,16 @@ struct GuiPrompt {
               GuiFileLoader&        file_loader_,
               PhaseResetPropagate&  phase_reset_propagate_,
               GuiSaveOps&           save_ops_,
-              GuiPlaybackLifecycle& playback_lifecycle_)
+              GuiPlaybackLifecycle& playback_lifecycle_,
+              GuiRenderView&        render_view_)
         : app(app_),
           gui(gui_),
           viewport(viewport_),
           file_loader(file_loader_),
           phase_reset_propagate(phase_reset_propagate_),
           save_ops(save_ops_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          render_view(render_view_) {}
 
     void request_close_or_revert(DialogTrigger t);
     void activate_response(char k);

@@ -7,6 +7,7 @@
 #include "platform_wayland.h"
 #include "viewport.h"
 
+#include <functional>
 #include <string>
 #include <thread>
 
@@ -70,6 +71,18 @@ struct GuiFileLoader {
     // load path — the deferred startup load included — runs on ticks, after
     // the wiring.
     GuiPrompt* prompt = nullptr;
+
+    // Render-view teardown hook, wired in main.cpp after GuiRenderView's
+    // construction (GuiRenderView is built after this struct, so the
+    // reference cannot be a constructor parameter — the same
+    // post-construction back-wire shape as `prompt` above). Bound to
+    // GuiRenderView::abandon_render_view: revert_to_blank calls it first,
+    // while the source audio is still alive, so playback is rebound to
+    // the source and the entry buffer freed before the source itself is
+    // torn down. The file-drop gate makes a load under an open render
+    // view unreachable today, so this hook is the boundary's backstop,
+    // not its primary guard.
+    std::function<void()> abandon_render_view;
 
     bool load_file(const std::string& path);
     void revert_to_blank();
