@@ -799,6 +799,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Viewport is deliberately not followed — the user can pan manually
     // if the drag runs past the edge. The commit completes this tracking
     // by snapping the playhead onto the committed marker frame (commit_drag).
+    //
+    // Gated on app.drag.moved, read AFTER this event's apply_drag_motion
+    // call (that call is what latches moved on the first real position
+    // change): motion tracking engages only once the drag has actually
+    // moved a marker time, so a gesture that never moves anything —
+    // vertical-only pointer motion at a fixed x, or pushing outward
+    // against a wall that clamps the delta to zero — mutates no view
+    // state. moved latches on the first moving event and never clears, so
+    // tracking engages in that same event (no one-event lag) and keeps
+    // tracking through a wander back to the origin. This is the same moved
+    // gate the release synchronization (commit_drag) and the Esc-cancel
+    // playhead restore already apply — one consistent moved-not-net_changed
+    // story across all three.
+    if (!app.drag.moved) return;
     const int hit_idx = app.drag.hit_marker;
     int hit_pos = -1;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
