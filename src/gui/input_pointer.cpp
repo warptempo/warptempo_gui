@@ -797,7 +797,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // the frozen warp_frame_map (the same map paint walks during motion) so
     // the playhead lands at the same screen column as the marker stem.
     // Viewport is deliberately not followed — the user can pan manually
-    // if the drag runs past the edge.
+    // if the drag runs past the edge. The commit completes this tracking
+    // by snapping the playhead onto the committed marker frame (commit_drag).
     const int hit_idx = app.drag.hit_marker;
     int hit_pos = -1;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {

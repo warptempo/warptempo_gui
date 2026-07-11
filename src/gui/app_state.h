@@ -141,8 +141,9 @@ struct DragState {
     // motion handler tracks the playhead onto the grabbed marker's
     // proposed position during the drag; Esc-cancel restores this so an
     // abandoned drag leaves the playhead where it started. A normal
-    // release keeps the followed position (DragState is reset wholesale
-    // at commit, discarding this).
+    // release re-syncs the playhead onto the committed column-snapped
+    // marker position (commit_drag's sync_playhead_to_last_selected), so
+    // this captured value serves only the Esc-cancel restore.
     int64_t                pre_drag_playhead_sample = 0;
     // Index of the marker that was clicked to start the drag. Used to track
     // the playhead during motion so the audio cursor follows the grabbed
