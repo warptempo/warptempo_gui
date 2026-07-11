@@ -842,14 +842,16 @@ int main(int argc, char** argv) {
 
         // Playing was true last tick, now false — natural end. Hold the
         // scanner on the exclusive end bound for one paint, then restore it to
-        // the launch position on the following tick.
+        // the launch position on the following tick. In target view the end
+        // bound is the bound target buffer's exclusive domain end — playback's
+        // domain offset travels with the bind, so domain_end() is exactly the
+        // full-target-frame coordinate the session played to.
         if (app.playhead_scanner_active) {
             const int64_t endpoint =
                 (app.active_audio_view == 'T' &&
                  !app.render_view.enabled &&
                  app.target_buffer_frames > 0)
-                    ? (app.target_buffer_start_frame +
-                       app.target_buffer_frames)
+                    ? playback.domain_end()
                     : viewport.trim_end_sample();
             playback_lifecycle.hold_natural_end_scanner(endpoint);
             if (app.follow_mode && !app.follow_overridden_for_session)
@@ -866,25 +868,19 @@ int main(int argc, char** argv) {
         // right before paint consumes the damage list. Under the
         // split-playhead model the predictor advances the scanner only
         // — the cursor stays where the user left it.
+        //
+        // playback.cursor() reports the bound buffer's own domain: the
+        // domain offset travels with the bind (playback.h), so this is
+        // full-target-frame when the target buffer is bound and
+        // source/render-frame (offset 0) otherwise — exactly
+        // app.playhead_scanner_sample's domain, no translation here. A
+        // paint racing a target dispatch reads whatever buffer is
+        // actually bound, with that buffer's own offset; a stale bias
+        // can never be applied to the wrong buffer's cursor, structurally.
+        // (An old app-side bias field needed a target_buffer_frames > 0
+        // guard here for exactly that skew.)
         const int64_t cur = playback.cursor();
-        // Target view: playback.cursor() is a target-buffer-frame
-        // index in [0, target_buffer_frames). app.playhead_scanner_sample
-        // is full-target-frame. Translate at the boundary. Source view
-        // and render view: identity (impl_->samples points at the
-        // source's own audio for both; cursor is already in the
-        // active-domain coordinate system). The target_buffer_frames
-        // > 0 guard ensures the bias is only applied when a successful
-        // target render has populated the buffer; pre-paint can fire
-        // briefly between dispatch and on_render_done if a paint races
-        // a cancel, and applying a stale bias against the source-bound
-        // buffer would skew the playhead.
-        int64_t translated = cur;
-        if (app.active_audio_view == 'T' &&
-            !app.render_view.enabled &&
-            app.target_buffer_frames > 0) {
-            translated = cur + app.target_buffer_start_frame;
-        }
-        if (translated == app.playhead_scanner_sample) return;
+        if (cur == app.playhead_scanner_sample) return;
 
         // One-shot read of the viewport-mutation stash. When set, it
         // holds the scanner's last painted pixel-x under the OLD
@@ -898,7 +894,7 @@ int main(int argc, char** argv) {
         } else {
             old_px = scanner_pixel_x(app, audio);
         }
-        app.playhead_scanner_sample = translated;
+        app.playhead_scanner_sample = cur;
         const double new_px  = scanner_pixel_x(app, audio);
 
         // invalidate_region during pre-paint appends to damage_ without

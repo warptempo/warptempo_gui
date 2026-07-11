@@ -93,10 +93,10 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     // Snap the playhead onto the frame of the bound just set at it. The
     // bound stores an exact frame, so it can differ
     // from the live playhead sample only in target view via the integer
-    // domain round trip. In target view the playback gate maps the
-    // playhead against target_buffer_start_frame — this same begin mapped to
+    // domain round trip. In target view the playback gate checks the
+    // playhead against playback's domain offset — this same begin mapped to
     // target frames — so a playhead off the bound's frame can land a sample
-    // short of the buffer start and Space reads local < 0 and no-ops.
+    // short of the buffer start (playback.domain_begin()) and Space no-ops.
     // Playhead domain clamp, mirroring move_playhead_to (the domain ruling
     // lives there): a pin onto trim end at total rests at total - 1.
     {

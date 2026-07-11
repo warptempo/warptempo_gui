@@ -133,7 +133,7 @@ struct GuiTargetRender {
     // down the live source audio. Sets is_dirty_; clears pending_; if
     // in_flight_, requests worker cancellation and leaves the buffer
     // clear to on_render_done's Cancelled branch (asynchronous); else
-    // synchronously clears target_buffer / frames / start_frame.
+    // synchronously clears target_buffer / frames.
     // Replaces an earlier inline buffer-clear.
     void cancel_for_load();
 
@@ -153,15 +153,18 @@ private:
     // only consumes lookup/artifact results and binds the completed buffer.
     void complete_successful_buffer();
 
-    // Single source of truth for app.target_buffer_start_frame: the
-    // full-target-frame coordinate that target_buffer[0] represents. 0 for a
-    // full-song (no-trim) render; with trim set, the trim-begin source frame
-    // mapped through the target-view warp_frame_map (the engine renders only the trim
-    // range, so buffer frame 0 is the trim's target-frame start). Requires
-    // app.target_buffer_frames to be set. Called from on_render_done (after a
-    // fresh render) and from ensure_ready's clean rebind (so a cached buffer
-    // re-entered without a render gets the same anchor it had at render time).
-    void recompute_target_buffer_start_frame();
+    // Single source of truth for the domain offset handed to the
+    // target-buffer playback bind: the full-target-frame coordinate that
+    // target_buffer[0] represents. 0 for a full-song (no-trim) render; with
+    // trim set, the trim-begin source frame mapped through the target-view
+    // warp_frame_map (the engine renders only the trim range, so buffer frame
+    // 0 is the trim's target-frame start). Requires app.target_buffer_frames
+    // to be set. The value lives nowhere at rest outside GuiPlayback — it
+    // travels with the bind. Called from complete_successful_buffer (after a
+    // fresh render / cache hit / artifact load) and from ensure_ready's clean
+    // rebind (so a cached buffer re-entered without a render gets the same
+    // anchor it had at render time).
+    int64_t compute_target_buffer_start_frame() const;
 
     // Render fingerprint of the most recent dispatch. Computed at the top of
     // dispatch_render_now() and used for target-view cache/artifact lookups.

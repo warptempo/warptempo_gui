@@ -717,20 +717,10 @@ struct AppState {
     // callback; read by the playback rebind. Zero before the first
     // successful target render in this session.
     int64_t target_buffer_frames = 0;
-    // Full-target-frame coordinate that target_buffer[0] represents.
-    // With trim set: map_source_to_target(trim_begin_frame) against the
-    // full-source warp_frame_map. With trim unset: 0 (the target buffer is
-    // the full-song render starting at target frame 0). Captured in
-    // on_render_done's Success branch when target_buffer_frames
-    // has just been set and the warp_frame_map is still derivable from the
-    // live AppState. Read by toggle_playback (to translate the
-    // playhead's target-domain coordinate into a target-buffer
-    // frame index for playback.play()) and by the pre-paint hook (to
-    // translate playback.cursor() back into target-domain when writing
-    // to app.playhead_cursor_sample). Cleared at the same lifecycle points
-    // that clear target_buffer: failure/cancel, file load, revert,
-    // rebind_to_source.
-    int64_t target_buffer_start_frame = 0;
+    // The buffer's domain anchor — the full-target-frame coordinate that
+    // target_buffer[0] represents — is NOT app state: it travels with the
+    // playback bind as GuiPlayback's domain offset, computed by
+    // GuiTargetRender::compute_target_buffer_start_frame at each rebind.
 
     // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
     // (tab_a or tab_b) is mirrored into the live AppState fields.

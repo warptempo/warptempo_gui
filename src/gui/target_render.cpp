@@ -226,11 +226,11 @@ void GuiTargetRender::dispatch_render_now() {
     viewport.invalidate_timestamp_area();
 
     // Clear the target buffer; do_render appends synthesised samples
-    // into it via std::vector::insert. The start_frame is also cleared
-    // for symmetry — it will be recomputed at on_render_done time.
+    // into it via std::vector::insert. The buffer's domain anchor needs no
+    // clear here — it travels with the playback bind and is recomputed at
+    // completion time, when the rebind hands it to GuiPlayback.
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
-    app.target_buffer_start_frame = 0;
 
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
@@ -269,12 +269,10 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // gating checks this to refuse Space.
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
-        app.target_buffer_start_frame = 0;
     } else {
         std::fprintf(stderr, "warptempo_gui: target render failed\n");
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
-        app.target_buffer_start_frame = 0;
     }
 
     if (outcome != RenderOutcome::Success) {
@@ -302,10 +300,6 @@ void GuiTargetRender::complete_successful_buffer() {
     } else {
         app.target_buffer_frames = 0;
     }
-    // Capture the full-target-frame coordinate target_buffer[0] represents
-    // (0, or the trim-mapped anchor). SoT helper, shared with ensure_ready's
-    // clean rebind so a cached re-entry matches.
-    recompute_target_buffer_start_frame();
     // Only rebind if we're actually showing target audio. A T->S toggle or a
     // render-view entry during render already cancelled this render and does
     // not want playback bound to target_buffer: rebinding here would clobber
@@ -317,9 +311,13 @@ void GuiTargetRender::complete_successful_buffer() {
         app.target_buffer_frames > 0) {
         // The trigger always freezes playback before dispatch, so the device
         // should still be stopped here. The rebind helper refuses if the device
-        // is somehow playing.
+        // is somehow playing. The bind carries the buffer's domain offset —
+        // the full-target-frame coordinate target_buffer[0] represents (0, or
+        // the trim-mapped anchor). SoT helper, shared with ensure_ready's
+        // clean rebind so a cached re-entry matches.
         playback.rebind_buffer(app.target_buffer.data(),
-                               app.target_buffer_frames);
+                               app.target_buffer_frames,
+                               compute_target_buffer_start_frame());
         // Buffer now matches the engine input that produced it. Gate the clear
         // behind the rebind path: a render that completed while
         // active_audio_view flipped to Source must not clear the bit, since a
@@ -335,7 +333,7 @@ void GuiTargetRender::complete_successful_buffer() {
     app.queue_progress_text.clear();
 }
 
-void GuiTargetRender::recompute_target_buffer_start_frame() {
+int64_t GuiTargetRender::compute_target_buffer_start_frame() const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
     // with a trim begin set, buffer[0] IS llrint(T_b) by construction — the
     // post_trim crop cut the render at exactly the authored begin's target
@@ -343,21 +341,21 @@ void GuiTargetRender::recompute_target_buffer_start_frame() {
     // the trimmer's own formula) — so the anchor is that same llrint(T_b) in
     // full-target coordinates and the exact authored begin/end display falls
     // out. Compute only after target_buffer_frames is set so a failed/empty
-    // buffer does not leave a stale anchor. Reads ONLY the begin bound, so
+    // buffer cannot yield a stale anchor. Reads ONLY the begin bound, so
     // an inverted trim store (legal at rest; the target-view validity gate
     // kicks to source view within a tick) cannot misanchor it — no ordering
     // assumption here.
-    app.target_buffer_start_frame = 0;
     if (app.trim.has_begin && app.target_buffer_frames > 0 &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
         const double begin_source_frame = app.trim.begin_frame;
-        app.target_buffer_start_frame = std::llrint(map_source_to_target(
+        return std::llrint(map_source_to_target(
             begin_source_frame < 0.0 ? 0.0 : begin_source_frame,
             target_warp_frame_map));
     }
+    return 0;
 }
 
 void GuiTargetRender::ensure_ready() {
@@ -390,17 +388,18 @@ void GuiTargetRender::ensure_ready() {
             app.playhead_scanner_endpoint_painted = false;
             app.playhead_scanner_sample = app.playhead_cursor_sample;
         }
-        // Restore the playback bias the cached buffer was rendered with.
-        // rebind_to_source() (the T→S leg) zeroes target_buffer_start_frame to
-        // leave a clean slate, but a clean re-entry rebinds the SAME buffer
-        // without a render, so the trim-mapped anchor must be recomputed here or
-        // target-view play maps the playhead past the buffer and silently
-        // refuses (no audio, no playhead move). When the clean path is taken the
-        // trim is unchanged since the render (any trim edit sets is_dirty_), so
-        // this reproduces the render's anchor.
-        recompute_target_buffer_start_frame();
+        // Restore the domain offset the cached buffer was rendered with.
+        // rebind_to_source() (the T→S leg) rebinds the source at offset 0,
+        // but a clean re-entry rebinds the SAME target buffer without a
+        // render, so the trim-mapped anchor must be recomputed and handed to
+        // the bind here or target-view play judges the playhead past the
+        // buffer's domain and silently refuses (no audio, no playhead move).
+        // When the clean path is taken the trim is unchanged since the render
+        // (any trim edit sets is_dirty_), so this reproduces the render's
+        // anchor.
         playback.rebind_buffer(app.target_buffer.data(),
-                               app.target_buffer_frames);
+                               app.target_buffer_frames,
+                               compute_target_buffer_start_frame());
         return;
     }
 
@@ -500,10 +499,9 @@ void GuiTargetRender::cancel_for_load() {
         // touch the buffer fields here — that would race vector::insert
         // on the worker side. Set the cancel flag and let
         // on_render_done's Cancelled branch clear target_buffer /
-        // target_buffer_frames / target_buffer_start_frame after the
-        // worker exits. The Cancelled branch's status cleanup
-        // (invalidate_timestamp_area + queue_progress_text.clear) also
-        // covers the "updating..." text.
+        // target_buffer_frames after the worker exits. The Cancelled
+        // branch's status cleanup (invalidate_timestamp_area +
+        // queue_progress_text.clear) also covers the "updating..." text.
         async_renderer.request_cancel();
         return;
     }
@@ -514,7 +512,6 @@ void GuiTargetRender::cancel_for_load() {
     // clear is race-free.
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
-    app.target_buffer_start_frame = 0;
 }
 
 void GuiTargetRender::cancel_in_flight_update() {
@@ -547,11 +544,11 @@ void GuiTargetRender::rebind_to_source() {
         app.playhead_scanner_endpoint_painted = false;
     }
     if (audio.total_frames() > 0) {
-        playback.rebind_buffer(audio.samples_ptr(), audio.total_frames());
+        // Domain offset 0: the source is its own domain origin. The target
+        // buffer's anchor travels with its own bind, so nothing to null here;
+        // a future T→S→T round trip hands ensure_ready's recomputed anchor
+        // back to the rebind. target_buffer and frames stay populated
+        // (cheap; the next trigger() in target view will overwrite them).
+        playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
     }
-    // Target buffer is no longer the live playback source; null out
-    // its target-domain anchor so a future T→S→T round trip starts
-    // with a clean slate. target_buffer and frames stay populated
-    // (cheap; the next trigger() in target view will overwrite them).
-    app.target_buffer_start_frame = 0;
 }

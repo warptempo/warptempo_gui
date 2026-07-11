@@ -514,8 +514,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     // Bring up the audio device bound to the new sample buffer. Init
     // failure disables playback but leaves the rest of the GUI usable.
+    // Domain offset 0: the source is its own domain origin.
     if (!playback.init(audio.sample_rate(), audio.channels(),
-                       audio.samples_ptr(), audio.total_frames())) {
+                       audio.samples_ptr(), audio.total_frames(), 0)) {
         std::fprintf(stderr,
             "warptempo_gui: playback disabled; space bar will no-op.\n");
     }

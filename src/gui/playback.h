@@ -8,6 +8,20 @@
 // pointer passed to init() valid until shutdown() returns, and must call
 // stop()+shutdown() before tearing down the source.
 //
+// One bind API, and the domain offset travels with the buffer: init() and
+// rebind_buffer() take the bound buffer's domain offset — the displayed-domain
+// coordinate that buffer frame 0 represents (0 for source.wav and render-view
+// wavs, the trim-mapped full-target-frame anchor for the target buffer) — and
+// store it in the same moment as the buffer pointer, under the same
+// refuse-while-playing conditions, so the pair can never be observed
+// inconsistent. Every public position surface (play()'s bounds, cursor(),
+// domain_begin()/domain_end()) speaks the bound buffer's displayed-domain
+// coordinates; no call site hand-translates, so position reporting can never
+// skew across a rebind — a reader racing a rebind sees the currently-bound
+// buffer's own domain, never a cursor from one binding combined with an
+// offset from another. Internal audio-callback math stays buffer-local; the
+// translation happens only at this public API boundary.
+//
 // Thread model:
 //   - Audio thread (JACK process thread): reads cursor_/speed_, writes
 //     cursor_ and is_playing_ via relaxed atomics. No allocation, no I/O,
@@ -59,14 +73,18 @@ public:
     GuiPlayback& operator=(const GuiPlayback&) = delete;
 
     // Bring up the audio device at the given source sample rate and channel
-    // count and bind it to `samples` / `total_frames`. Returns true on
-    // success. On failure, logs to stderr and leaves the object in an
-    // un-initialised state where play() is a silent no-op.
+    // count and bind it to `samples` / `total_frames`, whose frame 0
+    // represents displayed-domain coordinate `domain_offset` (see the head
+    // comment). Returns true on success. On failure, logs to stderr and
+    // leaves the object in an un-initialised state where play() is a silent
+    // no-op.
     bool init(int sample_rate, int channels, const float* samples,
-              int64_t total_frames);
+              int64_t total_frames, int64_t domain_offset);
 
-    // Begin playback at `start_sample`, stopping when the source cursor
-    // reaches or passes `end_sample` (exclusive). Safe to call while
+    // Begin playback at `start_sample`, stopping when the cursor reaches or
+    // passes `end_sample` (exclusive). Both are DOMAIN coordinates of the
+    // bound buffer; the domain offset is subtracted here, before the internal
+    // buffer-local clamps and early-return checks. Safe to call while
     // already playing — the previous run is torn down cleanly first.
     void play(int64_t start_sample, int64_t end_sample);
 
@@ -92,19 +110,30 @@ public:
 
     // Snapshot accessors. Safe from the main thread. During a graph suspension,
     // cursor() holds at the last audio position rather than extrapolating.
+    // cursor() reports the DOMAIN position: the internal buffer-local cursor
+    // plus the bound buffer's domain offset.
     bool    is_playing() const;
     int64_t cursor()     const;
+
+    // The bound buffer's domain extent, for call-site range policy:
+    // domain_begin() is the domain offset (the domain coordinate of buffer
+    // frame 0), domain_end() is offset plus the bound total frames (the
+    // exclusive end). Main thread only, like cursor().
+    int64_t domain_begin() const;
+    int64_t domain_end()   const;
 
     // Swap the borrowed sample buffer pointer without tearing down the
     // device. Caller must call stop() first; stop() returns only after the
     // audio callback has quiesced, so the swap cannot race the callback. The
     // new buffer must match the sample rate and channel count the device was
-    // init()'d with — only `samples` and `total_frames` change. The cursor is
-    // reset to 0; the end_sample is reset to 0 so the next play() supplies a
-    // fresh range. Used by the target render to rebind playback to the
+    // init()'d with — only `samples`, `total_frames`, and `domain_offset`
+    // (the domain coordinate of the new buffer's frame 0) change. The cursor
+    // is reset to 0; the end_sample is reset to 0 so the next play() supplies
+    // a fresh range. Used by the target render to rebind playback to the
     // freshly-rendered target_buffer, and to swap back to source.wav
     // when leaving target view.
-    void rebind_buffer(const float* samples, int64_t total_frames);
+    void rebind_buffer(const float* samples, int64_t total_frames,
+                       int64_t domain_offset);
 
     // Tear down the device. Blocks until the audio callback has drained.
     // Call before the sample buffer dies (reload, shutdown).

@@ -442,8 +442,9 @@ bool GuiRenderView::load_render_view_at(int index) {
     // (clamp depends on it) and runs clamp at the end.
     this->apply_rendersettings_for(e);
 
+    // Domain offset 0: the displayed wav is its own domain origin.
     if (!playback.init(audio.sample_rate(), audio.channels(),
-                       audio.samples_ptr(), audio.total_frames())) {
+                       audio.samples_ptr(), audio.total_frames(), 0)) {
         std::fprintf(stderr,
             "warptempo_gui: playback disabled in render-view\n");
     }
@@ -514,8 +515,9 @@ void GuiRenderView::restore_source_audio() {
     clamp_viewport_start(app, audio);
     selection.prune_live_selection();
 
+    // Domain offset 0: the displayed wav is its own domain origin.
     if (!playback.init(audio.sample_rate(), audio.channels(),
-                       audio.samples_ptr(), audio.total_frames())) {
+                       audio.samples_ptr(), audio.total_frames(), 0)) {
         std::fprintf(stderr, "warptempo_gui: playback disabled\n");
     }
     // H1 fix: render-view exit lands playback bound to source.wav

@@ -46,6 +46,13 @@ struct GuiPlayback::Impl {
     int64_t      total_frames  = 0;
     int          channels      = 0;
     int          source_rate   = 0;
+    // Domain coordinate of buffer frame 0 (playback.h head comment). Stored
+    // in the same moment as the `samples` pointer (init / rebind_buffer,
+    // under the same refuse-while-playing conditions) so the pair can never
+    // be observed inconsistent. Main-thread only: the public API translates
+    // domain <-> buffer-local at its boundary; the audio callback and every
+    // other Impl position stay buffer-local and never read this.
+    int64_t      domain_offset = 0;
 
     // Current range. Updated from the main thread, read from the audio
     // thread. end_sample is exclusive.
@@ -221,8 +228,9 @@ void clear_after_failed_init(GuiPlayback::Impl& impl) {
     impl.client_active = false;
     impl.jack_rate.store(0, std::memory_order_relaxed);
     impl.ports.fill(nullptr);
-    impl.samples      = nullptr;
-    impl.total_frames = 0;
+    impl.samples       = nullptr;
+    impl.total_frames  = 0;
+    impl.domain_offset = 0;
     impl.process_cycles.store(0, std::memory_order_relaxed);
 }
 
@@ -230,13 +238,14 @@ GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
 GuiPlayback::~GuiPlayback() { shutdown(); }
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
-                       int64_t total_frames) {
+                       int64_t total_frames, int64_t domain_offset) {
     shutdown(); // idempotent
 
-    impl_->samples      = samples;
-    impl_->total_frames = total_frames;
-    impl_->channels     = channels;
-    impl_->source_rate  = sample_rate;
+    impl_->samples       = samples;
+    impl_->total_frames  = total_frames;
+    impl_->domain_offset = domain_offset;
+    impl_->channels      = channels;
+    impl_->source_rate   = sample_rate;
     impl_->cursor.store(0, std::memory_order_relaxed);
     impl_->anchor_sample.store(0, std::memory_order_relaxed);
     impl_->anchor_ns.store(0, std::memory_order_relaxed);
@@ -254,8 +263,9 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
             "warptempo_gui: unsupported channel count for JACK playback "
             "(channels=%d, max=%d); playback disabled.\n",
             channels, kMaxJackOutputPorts);
-        impl_->samples      = nullptr;
-        impl_->total_frames = 0;
+        impl_->samples       = nullptr;
+        impl_->total_frames  = 0;
+        impl_->domain_offset = 0;
         return false;
     }
     if (sample_rate <= 0 || samples == nullptr || total_frames <= 0) {
@@ -264,8 +274,9 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
             "(sample_rate=%d, samples=%s, total_frames=%lld); playback disabled.\n",
             sample_rate, samples ? "non-null" : "null",
             static_cast<long long>(total_frames));
-        impl_->samples      = nullptr;
-        impl_->total_frames = 0;
+        impl_->samples       = nullptr;
+        impl_->total_frames  = 0;
+        impl_->domain_offset = 0;
         return false;
     }
 
@@ -387,6 +398,12 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     if (!impl_->client_active) return;
     if (!impl_->samples || impl_->total_frames <= 0) return;
+    // Domain -> buffer-local at the API boundary (playback.h head comment).
+    // Everything below — the clamps, the early returns, the published
+    // cursor/anchor/pending-start atomics — is buffer-local, exactly as
+    // before the offset moved in here.
+    start_sample -= impl_->domain_offset;
+    end_sample   -= impl_->domain_offset;
     if (start_sample < 0) start_sample = 0;
     if (start_sample >= impl_->total_frames) return;
     if (end_sample > impl_->total_frames) end_sample = impl_->total_frames;
@@ -471,8 +488,13 @@ bool GuiPlayback::is_playing() const {
 
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
+    // Every internal value below (integer cursor, predictor anchor, end/total
+    // clamps) is buffer-local; the bound buffer's domain offset is added once
+    // at each return, so the reported position is a domain coordinate
+    // (playback.h head comment).
+    const int64_t off = impl_->domain_offset;
     if (!impl_->playing.load(std::memory_order_relaxed)) {
-        return impl_->cursor.load(std::memory_order_relaxed);
+        return impl_->cursor.load(std::memory_order_relaxed) + off;
     }
     // Graph suspended: the audio thread is holding position, so the playhead
     // holds honestly at the integer cursor. Re-anchoring continuously through
@@ -485,15 +507,15 @@ int64_t GuiPlayback::cursor() const {
                 std::chrono::steady_clock::now().time_since_epoch()).count();
         impl_->anchor_sample.store(cur, std::memory_order_relaxed);
         impl_->anchor_ns.store(now_ns, std::memory_order_relaxed);
-        return cur;
+        return cur + off;
     }
     const int64_t a_sample = impl_->anchor_sample.load(std::memory_order_relaxed);
     const int64_t a_ns     = impl_->anchor_ns.load(std::memory_order_relaxed);
-    if (a_ns == 0) return a_sample;  // before first anchor
+    if (a_ns == 0) return a_sample + off;  // before first anchor
     const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     const int64_t elapsed_ns = now_ns - a_ns;
-    if (elapsed_ns <= 0) return a_sample;
+    if (elapsed_ns <= 0) return a_sample + off;
     const double speed = static_cast<double>(
         impl_->speed_x1000.load(std::memory_order_relaxed)) / 1000.0;
     const int64_t sr = static_cast<int64_t>(impl_->source_rate);
@@ -503,31 +525,45 @@ int64_t GuiPlayback::cursor() const {
     const int64_t end = impl_->end_sample.load(std::memory_order_relaxed);
     if (predicted > end) predicted = end;
     if (predicted > impl_->total_frames) predicted = impl_->total_frames;
-    return predicted;
+    return predicted + off;
 }
 
-void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames) {
+int64_t GuiPlayback::domain_begin() const {
+    if (!impl_) return 0;
+    return impl_->domain_offset;
+}
+
+int64_t GuiPlayback::domain_end() const {
+    if (!impl_) return 0;
+    return impl_->domain_offset + impl_->total_frames;
+}
+
+void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
+                                int64_t domain_offset) {
     if (!impl_) return;
     if (!impl_->client_active) {
         // No live client — just stash so a future init() against the same
         // sample rate / channel count would see the new buffer. In
         // practice the target render path runs only after a successful init,
         // so this branch is defensive.
-        impl_->samples      = samples;
-        impl_->total_frames = total_frames;
+        impl_->samples       = samples;
+        impl_->total_frames  = total_frames;
+        impl_->domain_offset = domain_offset;
         return;
     }
     // Caller invariant: the device must be fenced by stop() before rebind.
     // This flag check is defense in depth for skipped stops; a mid-flight
-    // pointer swap would be silent corruption.
+    // pointer swap would be silent corruption. The refusal keeps the
+    // buffer/offset pair consistent: neither is stored.
     if (impl_->playing.load(std::memory_order_relaxed)) {
         std::fprintf(stderr,
             "warptempo_gui: rebind_buffer called while playing — refusing "
             "to swap the audio buffer (would race the callback)\n");
         return;
     }
-    impl_->samples      = samples;
-    impl_->total_frames = total_frames;
+    impl_->samples       = samples;
+    impl_->total_frames  = total_frames;
+    impl_->domain_offset = domain_offset;
     impl_->cursor.store(0, std::memory_order_relaxed);
     impl_->end_sample.store(0, std::memory_order_relaxed);
     impl_->pending_start.store(-1, std::memory_order_relaxed);
@@ -551,6 +587,7 @@ void GuiPlayback::shutdown() {
     }
     impl_->jack_rate.store(0, std::memory_order_relaxed);
     impl_->ports.fill(nullptr);
-    impl_->samples      = nullptr;
-    impl_->total_frames = 0;
+    impl_->samples       = nullptr;
+    impl_->total_frames  = 0;
+    impl_->domain_offset = 0;
 }
