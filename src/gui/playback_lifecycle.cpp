@@ -143,22 +143,29 @@ void GuiPlaybackLifecycle::toggle_playback() {
 }
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
-// stop-and-restart visual glitch. Mirrors toggle_playback's range policy
-// (target view and render view against the bound buffer's
-// [domain_begin(), domain_end()); source view direct trim_end_sample()) but is
-// always-on rather than toggling. `sample` is a paint-domain coordinate, the
-// same domain playback's public API speaks in every view. Called from the press
-// and motion handlers during a playhead-drag when playback was alive at press
-// time. Out-of-range positions in target and render view fall back to stop —
-// in-range-only semantics. No follow-scroll at the reseek site: the user's
-// click is a positional intent that takes precedence over visual centering
-// (unlike Space's start-of-listening).
+// stop-and-restart visual glitch. All three arms mirror toggle_playback's
+// range policy: source view against [trim_begin_sample(), trim_end_sample()),
+// target and render view against the bound buffer's [domain_begin(),
+// domain_end()). `sample` is a paint-domain coordinate, the same domain
+// playback's public API speaks in every view. Called from the PRESS handlers
+// only (input_pointer.cpp and input_render_view.cpp) during a playhead-drag
+// when playback was alive at press time — the motion handlers do not call it.
+// An out-of-range position in any arm falls back to a MANUAL stop with
+// immediate scanner teardown (stop_playback_if_playing), never the natural-end
+// scanner flash. No follow-scroll at the reseek site: the user's click is a
+// positional intent that takes precedence over visual centering (unlike
+// Space's start-of-listening).
+//
+// stop_playback_if_playing clears follow_overridden_for_session, but every
+// caller sets it back to true immediately AFTER this returns (having already
+// run move_playhead_to before), so the reset is a harmless transient — the
+// caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T' && !app.render_view.enabled) {
-        if (app.target_buffer_frames <= 0) { playback.stop(); return; }
+        if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }
         if (sample < playback.domain_begin() ||
             sample >= playback.domain_end()) {
-            playback.stop();
+            stop_playback_if_playing();
             return;
         }
         playback.play(sample, playback.domain_end());
@@ -175,10 +182,23 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
         // supersedes the interim resume-at-window-origin behavior.
         if (sample < playback.domain_begin() ||
             sample >= playback.domain_end()) {
-            playback.stop();
+            stop_playback_if_playing();
             return;
         }
         playback.play(sample, playback.domain_end());
+        return;
+    }
+    // Source view: enforce the trim window with in-range-only semantics,
+    // mirroring the two arms above. Equal or INVERTED at-rest trim bounds
+    // (legal states; render refuses, authoring never guards) make
+    // [trim_begin, trim_end) empty, so every live reseek stops — the same sane
+    // degradation as Space's silent no-op. This guard also means play() below
+    // can never be reached with an empty range from this site, closing the
+    // play() early-return trap (end_sample <= start_sample returns early
+    // WITHOUT clearing the playing flag) at its only reseek exposure.
+    if (sample < viewport.trim_begin_sample() ||
+        sample >= viewport.trim_end_sample()) {
+        stop_playback_if_playing();
         return;
     }
     playback.play(sample, viewport.trim_end_sample());
