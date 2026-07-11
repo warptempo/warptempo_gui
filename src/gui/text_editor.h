@@ -25,11 +25,11 @@ namespace text_editor {
 // 23 + 1 + 23 + 1 + 4 = 52. BASE is now pinned to the N.NN grammar (4
 // chars at the bracket ceiling), so committable payloads are far shorter;
 // the generous cap is kept deliberately — it costs nothing and SCALE
-// remains a full double in shortest round-trip form. Insertions past this
-// cap are silently
-// swallowed (no red, no flash). Backspace/Delete/cursor moves remain
-// available so an over-cap pending (loaded from a hand-edited file) can
-// be trimmed back to canonical form.
+// remains a full double in shortest round-trip form. An operation that
+// would grow the pending past this cap refuses atomically and sets the red
+// state (the whole edit lands or the buffer is untouched); shrinking and
+// non-growing edits are always accepted, so an over-cap pending loaded from
+// a hand-edited file can be trimmed back to canonical form.
 constexpr int kMaxPendingChars = 52;
 // Iteration-mode FlagPayload editing widens the accepted grammar
 // to admit the inline `+[lo, hi]` bracket (`+[-99.99, +99.99]`, 17 chars
@@ -41,11 +41,12 @@ constexpr int kMaxPendingCharsFlagIter = 69;
 // each): 10 + 2 + 23 + 1 + 23 + 1 = 60.
 constexpr int kMaxPendingCharsBpm = 60;
 // Settings prompt. Sized for the free-text provenance fields (url, notes),
-// which carry no length limit beyond what the OS imposes on the resulting
-// `.settings` line and filename; 64 was too tight for a typical URL. The
-// scalar keys are still bounded by their commit-time validators, not by
-// this cap. A value wider than the window runs off the right edge while
-// typing (no horizontal scroll) but commits and persists in full.
+// which are generous for a typical URL or note. The scalar keys are still
+// bounded by their commit-time validators, not by this cap. 1024 bytes is
+// the editor's growth ceiling: a wider on-disk value still loads, displays
+// (running off the right edge while typing — no horizontal scroll), commits
+// and persists unchanged, and can be shortened, but the editor will not grow
+// any pending past the cap.
 constexpr int kMaxPendingCharsSettings = 1024;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
@@ -160,10 +161,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // Clipboard primitives, used by the input handler to bridge the editor's
 // selection model to the platform clipboard. selected_text returns the
 // highlighted substring (empty if no selection). replace_selection is the
-// paste/cut primitive: it erases any selection, sanitizes `raw` to printable
-// ASCII (0x20..0x7e — dropping control chars, newlines, tabs, non-ASCII),
-// truncates to the field's per-Kind cap, and inserts at the cursor. Cut calls
-// it with an empty string, which simply deletes the selection.
+// paste/cut primitive: it sanitizes `raw` to printable ASCII (0x20..0x7e —
+// dropping control chars, newlines, tabs, non-ASCII), then atomically either
+// replaces the selection with the FULL sanitized text or, when that would
+// grow the pending past the field's per-Kind cap, refuses the whole operation
+// and sets the red state (buffer and selection untouched). Cut calls it with
+// an empty string, an always-accepted shrink that simply deletes the
+// selection.
 std::string selected_text(const State& s);
 void        replace_selection(State& s, const std::string& raw);
 

@@ -66,7 +66,8 @@ std::string selected_text(const State& s) {
 }
 
 void replace_selection(State& s, const std::string& raw) {
-    if (has_selection(s)) erase_selection(s);
+    // Filter the incoming text to printable ASCII (dropping non-printables is
+    // vocabulary filtering, not data loss); this is the `ins` length below.
     std::string clean;
     clean.reserve(raw.size());
     for (unsigned char c : raw) {
@@ -77,13 +78,24 @@ void replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
     if (s.kind == Kind::FlagPayload && s.iter_grammar)
         cap = kMaxPendingCharsFlagIter;
-    const int room = cap - static_cast<int>(s.pending.size());
-    if (room > 0 && !clean.empty()) {
-        if (static_cast<int>(clean.size()) > room)
-            clean.resize(static_cast<size_t>(room));
-        s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
-        s.cursor_pos += static_cast<int>(clean.size());
+    // Atomic cap: compute the result size BEFORE mutating anything. Refuse
+    // exactly when the operation would push the pending past the cap AND grow
+    // it — a non-growing edit (shorter replacement, empty insert from cut) is
+    // always accepted so an over-cap pending seeded from a hand-edited file
+    // can still be trimmed back.
+    const int old_size = static_cast<int>(s.pending.size());
+    const int sel      = has_selection(s) ? selection_end(s) - selection_start(s)
+                                          : 0;
+    const int ins      = static_cast<int>(clean.size());
+    const int new_size = old_size - sel + ins;
+    if (new_size > cap && new_size > old_size) {
+        s.red = true;
+        touch_blink(s);
+        return;
     }
+    if (has_selection(s)) erase_selection(s);
+    s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
+    s.cursor_pos += ins;
     s.red = false;
     touch_blink(s);
 }
@@ -302,15 +314,23 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
         if (s.kind == Kind::FlagPayload && s.iter_grammar)
             cap = kMaxPendingCharsFlagIter;
-        // Replace-on-type: erase before the cap check so the typed
-        // char can land inside the cap when a max-length pending is
-        // entirely selected.
+        // Atomic cap: compute the result size BEFORE erasing the selection,
+        // so a refusal leaves the buffer (selection included) untouched.
+        // Refuse exactly when the insert would push past the cap AND grow the
+        // pending; replacing a full selection with one char shrinks-then-grows
+        // within the cap and is accepted.
+        const int old_size = static_cast<int>(s.pending.size());
+        const int sel      = has_selection(s)
+                                 ? selection_end(s) - selection_start(s)
+                                 : 0;
+        const int new_size = old_size - sel + 1;
+        if (new_size > cap && new_size > old_size) {
+            s.red = true;
+            touch_blink(s);
+            return KeyAction::Consumed;
+        }
         if (has_selection(s)) {
             erase_selection(s);
-        }
-        if (static_cast<int>(s.pending.size()) >= cap) {
-            // Silent swallow at cap.
-            return KeyAction::Consumed;
         }
         s.pending.insert(static_cast<size_t>(s.cursor_pos), 1, ch);
         s.cursor_pos++;
