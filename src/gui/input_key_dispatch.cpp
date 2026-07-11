@@ -805,7 +805,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.render_view.index < 0) return true;
 
         // app.render_view.warp_markers / .phase_resets are display state
-        // (the kept subset, authored-domain positions). Ctrl+Alt+C
+        // (the snapshot vectors adopted wholesale — disabled rows included,
+        // styled as in target view — at authored-domain positions). Ctrl+Alt+C
         // promotes the render's source-domain snapshot sidecars, so
         // every required sidecar is validated and collected before the
         // first mutation. The pre-mutation validation set, in order:

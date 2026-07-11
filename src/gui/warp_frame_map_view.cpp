@@ -83,16 +83,6 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     return c;
 }
 
-int64_t to_source_frame(const AppState& app, int64_t domain_frame,
-                        const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    if (app.active_audio_view == 'S') return domain_frame;
-    const size_t q = (domain_frame < 0)
-        ? static_cast<size_t>(0)
-        : static_cast<size_t>(domain_frame);
-    return static_cast<int64_t>(
-        std::nearbyint(map_target_to_source(q, warp_frame_map)));
-}
-
 int64_t to_domain_frame(const AppState& app, int64_t source_frame,
                         const std::vector<WarpFrameMapSegment>& warp_frame_map) {
     if (app.active_audio_view == 'S') return source_frame;
@@ -219,13 +209,13 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 
 // Translate through the active display context. A Source-domain context
 // is identity outright; the mapped domains (TargetLive, Render) inline
-// the map math of to_domain_frame / to_source_frame against the
-// context's map. Inlining, not routing through the two primitives, is
-// deliberate: their 'S' short-circuit reads app.active_audio_view, which
-// can legitimately be 'S' while render view displays, and would skip the
-// snapshot map; the context's DOMAIN, not the raw flag, decides here.
-// The primitives themselves and their explicit-map callers (the drag's
-// frozen-map sites) are untouched. TargetLive is bit-identical to the
+// the forward / inverse map math (map_source_to_target /
+// map_target_to_source) against the context's map. Inlining, not routing
+// through to_domain_frame, is deliberate: its 'S' short-circuit reads
+// app.active_audio_view, which can legitimately be 'S' while render view
+// displays, and would skip the snapshot map; the context's DOMAIN, not the
+// raw flag, decides here. to_domain_frame itself and its explicit-map
+// callers (the drag's frozen-map sites) are untouched. TargetLive is bit-identical to the
 // routed path: its arm is only reached with the flag at 'T' (no
 // short-circuit). The empty-map path (the unbuildable-target
 // fallthrough, and render view with no entry loaded) stays identity —

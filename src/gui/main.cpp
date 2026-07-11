@@ -913,8 +913,10 @@ int main(int argc, char** argv) {
         //
         // playback.cursor() reports the bound buffer's own domain: the
         // domain offset travels with the bind (playback.h), so this is
-        // full-target-frame when the target buffer is bound and
-        // source/render-frame (offset 0) otherwise — exactly
+        // full-target-frame when the target buffer is bound, the source
+        // frame (offset 0) when source.wav is bound, and the render entry's
+        // target-axis coordinate when a render-view wav is bound (its
+        // entry_domain_begin origin, 0 only for an untrimmed entry) — exactly
         // app.playhead_scanner_sample's domain, no translation here. A
         // paint racing a target dispatch reads whatever buffer is
         // actually bound, with that buffer's own offset; a stale bias

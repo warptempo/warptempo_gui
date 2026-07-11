@@ -92,9 +92,10 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
 // otherwise silent no-op (nothing to base the renders folder lookup on).
 // Toggle-on enumerates the renders folder and loads either the last-displayed
 // render (if its path is still in the list) or the first entry; an empty
-// enumeration aborts the toggle. Iteration mode is forcibly disabled on entry;
-// the prior value is not restored on toggle-off — the user re-enables it
-// explicitly if desired.
+// enumeration aborts the toggle. Iter/BPM modes persist across render-view
+// enter/leave; they are inert inside render view (the input gate drops i and
+// M; iteration paint gates on !render_view.enabled), and Ctrl+Alt+C is the
+// only forced reset.
 bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -151,9 +152,10 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // !render_view.enabled) and are restored on exit. Ctrl+Alt+C is now
         // the only forced reset.
         app.render_view.enabled    = true;
-        // Render-view shares the global active_markers_view
-        // flag, so the user's chosen mode carries across the
-        // view-domain transition without per-entry restore.
+        // The entry's persisted W/P mode is applied per-entry at load
+        // (load_render_view_at reads it from the entry's .settings before the
+        // stat-gated selection restore); the global active_markers_view flag
+        // is the live carrier of the mode between entries.
         if (!render_view.load_render_view_at(target)) {
             app.render_view.enabled = false;
             app.render_view.list.clear();

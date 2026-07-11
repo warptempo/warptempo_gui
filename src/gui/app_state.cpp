@@ -346,14 +346,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 bool popup_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;
     if (app.render_view.enabled) {
-        // In render-view, hover popups apply against the loaded
-        // render's warpmarkers regardless of the pre-toggle mode.
-        // Iteration-mode is forced off on toggle-in so its gate is
-        // implicitly satisfied here too.
-        const auto& mv = app.render_view.warp_markers;
-        if (idx >= static_cast<int>(mv.size())) return false;
-        const auto& m = mv[idx];
-        return m.tempo_inherits || !m.label_ref.empty();
+        // Render view computes no hover popups: the motion handler
+        // (handle_render_view_motion) and the viewport hover recompute
+        // (recompute_hover_at_cursor) both gate render view out before
+        // eligibility is consulted. This guard keeps the function honest if
+        // a new caller forgets the gate.
+        return false;
     }
     if (app.active_markers_view != 'W') return false;
     if (app.iteration_mode_enabled) return false;

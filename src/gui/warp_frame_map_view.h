@@ -71,16 +71,6 @@ struct TargetWarpFrameMapCache {
 const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Inverse-translate a domain-frame coordinate (active-domain) into a
-// source-frame coordinate. In source view this is identity. In target
-// view this routes through `map_target_to_source` against the supplied
-// warp_frame_map. Banker's rounding to integer. Used at every input boundary
-// in target view where a pixel-derived sample coordinate (playhead,
-// click position, drag anchor / motion) becomes a source-frame value
-// written into a marker / trim / phase reset store.
-int64_t to_source_frame(const AppState& app, int64_t domain_frame,
-                        const std::vector<WarpFrameMapSegment>& warp_frame_map);
-
 // Forward-translate a source-frame coordinate (e.g. a stored marker
 // time) into the active domain's frame coordinates. Source view:
 // identity. Target view: `map_source_to_target`. Used by handlers that
@@ -99,12 +89,11 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // the displayed entry's snapshot map — the same forward/inverse map math as
 // target view, over a different map source. Use these at every input /
 // playhead boundary that currently reads
-// target_view_warp_frame_map_cached solely to feed one to_domain_frame /
-// to_source_frame.
+// target_view_warp_frame_map_cached solely to feed one to_domain_frame.
 //
 // NOT for sites translating against a non-live map — a drag's
 // app.drag.frozen_warp_frame_map, or a proposed (pre-commit) marker list. Those keep
-// calling to_domain_frame / to_source_frame directly with their explicit map.
+// calling to_domain_frame directly with their explicit map.
 class GuiAudio;
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);

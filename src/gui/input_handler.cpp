@@ -306,13 +306,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+S), and render-view is read-only with respect to
     // authoring state and source-dir writes — admitting any of
     // them would mutate state through a swapped-out view. The
-    // batch-render auto-open path in dispatch_next_batch_entry
-    // relies on this invariant: because none of the render-
-    // shaped keys can fire while render-view is on, the auto-
-    // open call cannot be reached with render-view already
-    // active, and so the new render_view.auto_open_batch_at_
-    // first_file method handles only the "render-view is off"
-    // case.
+    // batch-render auto-open path in dispatch_next_batch_entry does
+    // reach a completion with render-view already active, though: a
+    // batch dispatched from source view can be backgrounded by an
+    // R-toggle and then pump to completion under the open render view.
+    // So render_view.auto_open_batch_at_first_file handles both cases —
+    // it enters render-view when the view is off and refreshes it in
+    // place when it is already up, landing on the new batch's first
+    // file either way.
     //
     // Recorded asymmetry: Shift+0..9 playback-speed selection is
     // deliberately NOT on this allowlist, though the read-only gate below

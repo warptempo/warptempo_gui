@@ -196,8 +196,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag
-    // begin/motion, etc.) and in to_source_frame helpers used by
-    // those writers.
+    // begin/motion, etc.) and in the active_domain_to_source_frame
+    // helper used by those writers.
 
     if (app.render_view.enabled) {
         handle_render_view_press(button, x, y, inside_top, inside_waveform,
@@ -765,7 +765,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (sr <= 0) return;
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    // Target view: mouse-x → frames passes through to_source_frame so
+    // Target view: mouse-x → frames passes through
+    // active_domain_to_source_frame so
     // the delta (mouse_frame - anchor_mouse_time_frame) is a source-
     // frame value, matching the source-domain anchor begin_drag
     // captured and the source-domain time_frame the apply path
