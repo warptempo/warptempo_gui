@@ -53,149 +53,6 @@ struct CommitCriticalSidecars {
 
 }  // namespace
 
-// Render view's display derivation (declared in render_pipeline.h): the
-// entry loader derives this live from an entry's snapshot set — its sole
-// consumer — keep-filtering the authored stores against the render's
-// participation verdicts and computing the crop geometry the display
-// context translates through.
-//
-// Crop-coordinate anchors. The delivered wav's sample 0 is llrint(T_b) in
-// full-target coordinates and its length is llrint(T_e) - llrint(T_b) —
-// exactly the post_trim crop — so a kept feature at source F displays at
-// tgt(F) - llrint(T_b), a target-frame double on the deliverable's own
-// frame grid. Untrimmed, the origin is 0 and the bound is the full map's
-// last anchor target, exact in the double domain (a reset whose target
-// image lands at or past it drops from the deliverable — see the
-// render-end verdict in derive_phase_reset_frame_map; the marker walls at
-// total - 1 keep program-written resets off the bound itself).
-RenderDisplayPositions derive_render_display_positions(
-        const std::vector<GuiWarpMarker>& warp_markers,
-        const std::vector<GuiPhaseResetMarker>& phase_resets,
-        const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
-        bool has_trim_begin, int64_t trim_begin_frame,
-        bool has_trim_end,   int64_t trim_end_frame,
-        int64_t total_frames) {
-    RenderDisplayPositions out;
-    out.crop_begin = 0.0;
-    out.crop_end   = full_warp_frame_map.back().tgt_frame;
-    if (has_trim_begin || has_trim_end) {
-        const double b_src = has_trim_begin
-            ? static_cast<double>(trim_begin_frame) : 0.0;
-        const double e_src = has_trim_end
-            ? static_cast<double>(trim_end_frame)
-            : static_cast<double>(total_frames);
-        const int64_t crop_begin = std::llrint(
-            map_source_to_target(b_src, full_warp_frame_map));
-        const int64_t crop_end = std::llrint(
-            map_source_to_target(e_src, full_warp_frame_map));
-        out.crop_begin = static_cast<double>(crop_begin);
-        out.crop_end   = static_cast<double>(crop_end - crop_begin);
-    }
-
-    // Walk the FULL frame map; each kept item's render-domain position —
-    // the value the crop-bounds verdicts run on, and the position render
-    // view displays it at — is the full-render output sample minus the
-    // crop origin. When untrimmed, crop_begin is 0 and this reduces to
-    // identity placement.
-
-    // Markers sit on the aligned feature: a marker at source F displays at
-    // tgt(F) - llrint(T_b) — the crop coordinates, a frame double on the
-    // deliverable's axis, with no start-trim term (the delivered wav's
-    // first sample IS the authored begin, by the post_trim crop).
-
-    // Markers: lockstep walk between warp_markers and the real-segment
-    // range of full_warp_frame_map (built trim-off, so no synthetic trim
-    // anchors). Each kept marker consumes the next-in-order segment; the
-    // trim range gates only emission, not consumption, so the lockstep
-    // stays in step with full_warp_frame_map's all-segments vector.
-    // s.tgt_frame is the full-render target sample; subtracting crop_begin
-    // places it on the trimmed wav axis. The effective-disabled verdict
-    // comes from the shared warp_markers_render_keep_mask — the same mask
-    // resolve_warp_markers_for_render filters on — so this marker set and
-    // the resolver's render list agree by construction. The mask gates
-    // consumption itself (a dropped marker has no segment in
-    // full_warp_frame_map, so it skips before the iterator advances),
-    // while out-of-trim and pre-origin gate emission only, each running
-    // after the segment is consumed.
-    const std::vector<bool> warp_keep = warp_markers_render_keep_mask(
-        slice_to_warp_markers(warp_markers));
-
-    auto seg_it = full_warp_frame_map.begin();
-    out.warp_markers.reserve(warp_markers.size());
-    for (size_t mi = 0; mi < warp_markers.size(); ++mi) {
-        const GuiWarpMarker& g = warp_markers[mi];
-        if (!warp_keep[mi]) continue;
-
-        // Consume this marker's segment first (full_warp_frame_map holds
-        // every segment, so the lockstep advances for every non-disabled
-        // marker regardless of trim).
-        if (seg_it == full_warp_frame_map.end()) break;
-        const auto& s = *seg_it;
-        ++seg_it;
-
-        // Trim-range filter (inclusive both ends), run in authored source
-        // frames against the authored trim bounds. Gates emission only;
-        // the segment above is already consumed.
-        if (has_trim_begin && g.time_frame < trim_begin_frame) continue;
-        if (has_trim_end && g.time_frame > trim_end_frame) continue;
-
-        const double render_frame = s.tgt_frame - out.crop_begin;
-        // Pre-origin filter: a marker whose render position falls before
-        // the delivered WAV's first sample is not present in the delivered
-        // audio (a marker exactly at the trim begin can round half a
-        // sample ahead of the crop origin), so it is dropped rather than
-        // pinned at zero. After this drop, the surviving warp times are
-        // strictly ascending doubles by map monotonicity, so the display
-        // positions are strictly ascending too.
-        if (render_frame < 0.0) continue;
-        // Crop-end filter, the mirror of the phase-reset loop's below: a
-        // marker exactly at the trim end maps to the one-past-last render
-        // frame — the delivered window is half-open [begin, end) — so it
-        // has no position on the deliverable's time axis and is dropped,
-        // not painted one sample past the WAV. Untrimmed this never fires:
-        // markers wall at EOF-1, strictly inside the map's final anchor
-        // target.
-        if (render_frame >= out.crop_end) continue;
-        out.warp_markers.push_back(g);
-    }
-
-    // Phase resets: surviving resets are forward-mapped from their clicked
-    // source time through the same map and placed at tgt(F) - crop origin
-    // — the same crop coordinates the warp loop above uses, computed
-    // inline against the crop bounds — so a reset sits on the same musical
-    // position in render-view as in source and target views, expressed as
-    // an exact double with no intermediate rounding. The trim-range filter
-    // runs in authored source frames against the authored trim bounds,
-    // ahead of the crop-bounds verdict. Drop disabled, out-of-trim, and
-    // crop non-participants: a negative crop-domain target precedes the
-    // deliverable's first sample and is unrepresentable on its time axis;
-    // a target at or past the crop end lies beyond the deliverable's last
-    // sample (a reset exactly at the trim end — crop_end carries the crop
-    // length when trimmed and the full map's exact final anchor target
-    // when not; untrimmed the verdict never fires from program-written
-    // stores, since both marker columns wall at EOF-1, strictly inside the
-    // final anchor). The display positions show every authored marker that
-    // exists on the deliverable's time axis regardless of its engine-side
-    // fate — a reset just inside the trim window whose query position
-    // precedes it still displays, exactly as the warp loop keeps markers
-    // whose breakpoints the trimmer's window anchors coalesced away.
-    out.phase_resets.reserve(phase_resets.size());
-    for (const auto& t : phase_resets) {
-        if (t.disabled) continue;
-        if (has_trim_begin && t.time_frame < trim_begin_frame) continue;
-        if (has_trim_end && t.time_frame > trim_end_frame) continue;
-        const double crop_target =
-            map_source_to_target(
-                static_cast<double>(t.time_frame),
-                full_warp_frame_map)
-            - out.crop_begin;
-        if (crop_target < 0.0) continue;
-        if (crop_target >= out.crop_end) continue;
-        out.phase_resets.push_back(t);
-    }
-    return out;
-}
-
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
@@ -497,17 +354,29 @@ RenderOutcome do_render(const RenderRequest& req,
             // artifacts are not browse entries and get no .settings.
             if (output_format == "wav") {
                 // The commit tab (named by active_tab_view) initializes to the
-                // render-view browse defaults: zoom = kFitFileLevel,
-                // viewport_start = 0, playhead = 0 — the browsed view is what a
-                // later commit adopts, and per-entry autosave will own these
-                // keys once entry display lands. Its trim comes from the
-                // recipe trim that shaped this render; read_only and the rest
-                // take their ViewState defaults. The other tab is all
-                // defaults, no trim.
+                // render-view browse defaults: zoom = kFitFileLevel and
+                // viewport_start = 0 (fit shows the whole full-timeline
+                // display), playhead at the rendered window's start —
+                // render view shows the FULL deformed timeline with the
+                // out-of-window region dimmed, so playhead 0 for a trimmed
+                // entry would land in the dimmed head where Space is a
+                // silent no-op; llrint(T_b) through the full map lands it
+                // on the window's first frame (0 untrimmed). The browsed
+                // view is what a later commit adopts, and per-entry
+                // autosave owns these keys once the entry displays. Its
+                // trim comes from the recipe trim that shaped this render;
+                // read_only and the rest take their ViewState defaults.
+                // The other tab is all defaults, no trim.
                 ViewState commit_tab;
                 commit_tab.viewport_start_sample  = 0;
                 commit_tab.zoom_level             = kFitFileLevel;
-                commit_tab.playhead_cursor_sample = 0;
+                commit_tab.playhead_cursor_sample =
+                    req.authoring.has_trim_begin
+                        ? std::llrint(map_source_to_target(
+                              static_cast<double>(
+                                  req.authoring.trim_begin_frame),
+                              full_warp_frame_map))
+                        : 0;
                 commit_tab.trim.has_begin   = req.authoring.has_trim_begin;
                 commit_tab.trim.begin_frame = req.authoring.trim_begin_frame;
                 commit_tab.trim.has_end     = req.authoring.has_trim_end;

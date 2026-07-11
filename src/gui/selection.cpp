@@ -113,7 +113,7 @@ void Selection::cycle_selection(bool forward) {
     // Helper to read frame-of-index in the active domain. Source view:
     // marker source-frame == active-domain frame (identity). Target and
     // render view: forward-translate through the display context (live
-    // map, or snapshot map minus crop origin) so frame_of values are
+    // map, or snapshot map) so frame_of values are
     // comparable to playhead_cursor_sample / viewport_start_sample below.
     auto frame_of = [&](int i) -> int64_t {
         int64_t src_f;

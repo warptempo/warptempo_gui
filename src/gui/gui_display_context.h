@@ -9,7 +9,7 @@
 // currently displaying, produced by active_display_context below. The
 // GUI has three display DOMAINS — source view (identity), live target
 // view (the memoized live map), and render view (the displayed entry's
-// snapshot map minus its crop origin) — and the composite rule for which
+// snapshot map) — and the composite rule for which
 // domain is on screen (active_audio_view AND render_view.enabled
 // together) lives in exactly one place: the accessor is the ONLY reader
 // of app.active_audio_view / app.render_view.enabled for DOMAIN QUERIES
@@ -29,17 +29,9 @@ struct GuiDisplayContext {
     // (app.render_view.snapshot_warp_frame_map), built once at entry load
     // and immutable while displayed.
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr;
-    // Displayed-axis shift applied AFTER the map translation: a
-    // displayed-axis position is nearbyint(map translation) MINUS this
-    // offset, and the inverse ADDS it back before inverse-mapping. Zero
-    // for Source and TargetLive — their arms and consumers are
-    // numerically unchanged. For the Render domain it is the entry's
-    // crop origin: the delivered wav's sample 0 is llrint(T_b) of the
-    // snapshot map, so a feature at authored F displays at
-    // nearbyint(tgt(F)) - crop_begin.
-    int64_t display_offset = 0;
     // The displayed domain's total frames (live_total_frames semantics):
-    // the source total, or the built target map's target total.
+    // the source total, or the map's target total (the live target map's
+    // in TargetLive, the snapshot map's in Render).
     int64_t domain_total_frames = 0;
     int sample_rate = 0;
 };

@@ -116,14 +116,10 @@ bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
 // Per-index render-participation mask over parser-domain markers: keep[i]
 // is true when marker i survives into the render, false when it is dropped
 // (the marker_effectively_disabled verdict above, per index). Single
-// owner of the participation verdict: resolve_warp_markers_for_render
-// filters on it and the GUI's render-view display derivation
-// (derive_render_display_positions) gates its lockstep segment consumption
-// on it, so display lockstep and the resolved render list can never
-// disagree about which markers exist in a render. Warp-only as part of the
-// resolver cascade — phase reset markers
-// carry no labels or references; the reset display derivation computes its
-// window participation inline against the crop bounds.
+// owner of the participation verdict: resolve_warp_markers_for_render's
+// filter, which every render path funnels through. Warp-only as part of
+// the resolver cascade — phase reset markers carry no labels or
+// references.
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 

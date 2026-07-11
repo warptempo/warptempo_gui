@@ -132,10 +132,8 @@ void GuiWaveformWorker::worker_loop() {
                 job.area_h,
                 job.channel_count,
                 *job.audio,
-                // display_offset shifts the render into the entry's cropped
-                // deformed axis in render view; 0 elsewhere.
-                job.vp_start + job.display_offset,
-                job.vp_end + job.display_offset,
+                job.vp_start,
+                job.vp_end,
                 job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);
             ok = !cancel_flag_.load();
         }

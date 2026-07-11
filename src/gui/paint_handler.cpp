@@ -454,14 +454,12 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
     const std::vector<WarpFrameMapSegment>* dbg_tmap_arg = nullptr;
-    int64_t dbg_display_offset = 0;
     if (app.render_view.enabled) {
-        // Render view: the entry's snapshot map minus the crop origin,
-        // mirroring hit_test_flag's Render arm (no drag-frozen override —
-        // drags are gated out of render view).
+        // Render view: the entry's snapshot map, mirroring hit_test_flag's
+        // Render arm (no drag-frozen override — drags are gated out of
+        // render view).
         if (!app.render_view.snapshot_warp_frame_map.empty())
             dbg_tmap_arg = &app.render_view.snapshot_warp_frame_map;
-        dbg_display_offset = app.render_view.snapshot_crop_begin;
     } else if (app.active_audio_view == 'T') {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
@@ -486,8 +484,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         dbg_rects = compute_flag_hit_rects(
             top_strip, app.render_view.warp_markers,
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
-            dbg_tmap_arg, dbg_drag, /*iteration_on=*/false,
-            dbg_display_offset);
+            dbg_tmap_arg, dbg_drag, /*iteration_on=*/false);
     } else if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
             top_strip, app.phaseresetmarkers.markers(),
@@ -836,12 +833,48 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 GuiPaintHandler::DisplayedTrim
 GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
-    const bool rve = app.render_view.enabled;
 
-    // has-set + selected bits come live from the active tab's trim; render view
-    // forces them off (the render waveform has no trim).
-    out.has_begin      = !rve && app.trim.has_begin;
-    out.has_end        = !rve && app.trim.has_end;
+    if (app.render_view.enabled) {
+        // Render view: the displayed trim is the SNAPSHOT trim — the
+        // entry's recipe trim from its .settings, the rendered window —
+        // forward-mapped through the snapshot map onto the full target
+        // axis, the same math the target-view branch below runs against
+        // the live displayed map. Display state only, never pickable: the
+        // selected bits stay off and the hit tests keep their render-view
+        // None guards (paint yes, pick no — see hit_test_trim_boundary).
+        // The snapshot map is immutable while displayed and every entry
+        // load bumps audio_generation, so reading it directly (not a
+        // wf_cache fingerprint copy) cannot lag the plate.
+        const auto& rv = app.render_view;
+        out.has_begin = rv.snapshot_has_trim_begin;
+        out.has_end   = rv.snapshot_has_trim_end;
+        // Only SET sides carry an authored source frame to map; unset
+        // sides keep target-axis whole-timeline defaults (never painted —
+        // the has-bits gate every consumer).
+        out.begin = 0;
+        out.end   = rv.snapshot_display_total;
+        if (!rv.snapshot_warp_frame_map.empty()) {
+            if (rv.snapshot_has_trim_begin) {
+                const int64_t b = rv.snapshot_trim_begin_frame;
+                out.begin = static_cast<int64_t>(std::nearbyint(
+                    map_source_to_target(
+                        static_cast<double>(b < 0 ? 0 : b),
+                        rv.snapshot_warp_frame_map)));
+            }
+            if (rv.snapshot_has_trim_end) {
+                const int64_t en = rv.snapshot_trim_end_frame;
+                out.end = static_cast<int64_t>(std::nearbyint(
+                    map_source_to_target(
+                        static_cast<double>(en < 0 ? 0 : en),
+                        rv.snapshot_warp_frame_map)));
+            }
+        }
+        return out;
+    }
+
+    // has-set + selected bits come live from the active tab's trim.
+    out.has_begin      = app.trim.has_begin;
+    out.has_end        = app.trim.has_end;
     out.begin_selected = out.has_begin && app.trim_begin_selected;
     out.end_selected   = out.has_end   && app.trim_end_selected;
 
@@ -860,25 +893,23 @@ GuiPaintHandler::compute_displayed_trim() const {
     // Bounds may rest inverted; this helper is position-only and needs no
     // order (the dim-rect consumer applies its own inverted-window rule).
     std::pair<long long, long long> t{0, audio.total_frames()};
-    if (!rve) {
-        if (app.trim.has_begin) {
-            t.first = static_cast<long long>(
-                std::nearbyint(app.trim.begin_frame));
-        }
-        if (app.trim.has_end) {
-            t.second = static_cast<long long>(
-                std::nearbyint(app.trim.end_frame));
-        }
-        if (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty()) {
-            t.first = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<double>(t.first < 0 ? 0 : t.first),
-                    wf_cache.fp_warp_frame_map)));
-            t.second = static_cast<long long>(std::nearbyint(
-                map_source_to_target(
-                    static_cast<double>(t.second < 0 ? 0 : t.second),
-                    wf_cache.fp_warp_frame_map)));
-        }
+    if (app.trim.has_begin) {
+        t.first = static_cast<long long>(
+            std::nearbyint(app.trim.begin_frame));
+    }
+    if (app.trim.has_end) {
+        t.second = static_cast<long long>(
+            std::nearbyint(app.trim.end_frame));
+    }
+    if (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty()) {
+        t.first = static_cast<long long>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(t.first < 0 ? 0 : t.first),
+                wf_cache.fp_warp_frame_map)));
+        t.second = static_cast<long long>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(t.second < 0 ? 0 : t.second),
+                wf_cache.fp_warp_frame_map)));
     }
     out.begin = t.first;
     out.end   = t.second;
@@ -890,9 +921,11 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
     OutOfTrimRects out;
     if (area.w <= 0) return out;
 
-    // Frames in the same paint domain the trim stems use (render view forces
-    // has_begin/has_end off, so the early-out below covers it). begin/end are
-    // already mapped through the displayed warp_frame_map in target view.
+    // Frames in the same paint domain the trim stems use. begin/end are
+    // already mapped through the displayed warp_frame_map in target view and
+    // through the snapshot map in render view, where these rects dim the
+    // out-of-window region of the full deformed timeline (an untrimmed
+    // entry has no set bounds, so the early-out below covers it).
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
 

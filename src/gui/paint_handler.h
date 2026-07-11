@@ -141,9 +141,6 @@ struct WaveformCache {
     long long supersede_audio_gen   = -1;
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
-    // Render-view crop shift for the superseded job (see
-    // WaveformRenderInputs::display_offset); 0 outside render view.
-    int64_t   supersede_display_offset = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
 
     // `dirty` no longer drives the dispatch decision (the
@@ -438,16 +435,6 @@ private:
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         int      channel_count = 0;
-        // Render-view crop shift, added to vp_start/vp_end at the
-        // render_waveform call only (never in the fingerprint fields,
-        // which stay display-domain so the stem/flag caches read them
-        // unchanged): a display column at viewport x paints the deformed
-        // axis at (vp_start + display_offset) + x*spp, making display
-        // position 0 the entry's crop origin — the same subtraction the
-        // stems apply. snapshot_crop_begin in render view; 0 elsewhere.
-        // Constant per entry (the snapshot is immutable and every entry
-        // load bumps audio_generation), so it needs no fingerprint field.
-        int64_t  display_offset = 0;
         // The translation map: the target-view map in target view, the
         // entry's snapshot map in render view, empty in source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
@@ -465,8 +452,10 @@ private:
     // bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
-    // stems' coordinate system. Render view forces the bounds off (trim is a
-    // source-view authoring concept).
+    // stems' coordinate system. In render view the displayed trim is the
+    // SNAPSHOT trim through the snapshot map — the entry's rendered window,
+    // painted (stems, chips, dim) but never pickable (selected bits stay
+    // off; the hit tests keep their render-view None guards).
     struct DisplayedTrim {
         int64_t begin          = 0;
         int64_t end            = 0;

@@ -919,31 +919,45 @@ struct AppState {
         std::string last_path;
         std::vector<RenderViewEntry> list;
         int                          index = -1;     // -1 = unset
-        // The current render's display markers + phase resets: the KEPT
-        // display subset from derive_render_display_positions (entry load
-        // reads the sibling snapshot set `<basename>.warpmarkers` /
-        // `.phaseresetmarkers` / `.settings`), with time_frame at the
-        // AUTHORED whole-frame values. Render view is a display DOMAIN:
-        // every consumer translates these positions live through the
-        // display context (the snapshot map below minus the crop origin),
-        // exactly as target view translates through the live map.
+        // The current render's display markers + phase resets: the entry's
+        // snapshot stores WHOLESALE (entry load reads the sibling snapshot
+        // set `<basename>.warpmarkers` / `.phaseresetmarkers` /
+        // `.settings`), disabled rows and label defs included, with
+        // time_frame at the AUTHORED whole-frame values. Render view is a
+        // read-only 1:1 target view of the snapshot: the FULL deformed
+        // timeline, with the snapshot trim's out-of-window region dimmed
+        // and its bounds painted (unpickable), and playback bound to the
+        // entry wav at the window's target-axis origin. Every consumer
+        // translates these positions live through the display context
+        // (the snapshot map below), exactly as target view translates
+        // through the live map.
         std::vector<GuiWarpMarker>       warp_markers;
         std::vector<GuiPhaseResetMarker>    phase_resets;
         // Snapshot display geometry: built once from the entry's snapshot
         // at load (read-only view — no invalidation), cleared wherever the
         // display stores above are cleared. The Render display context
-        // (active_display_context) aliases it. snapshot_crop_begin is
-        // llrint(T_b) of the snapshot map — the delivered wav's sample 0
-        // in full-target coordinates; 0 untrimmed. snapshot_display_total
-        // is the entry's own length — the DECODED wav's frame count,
-        // captured at entry load — and is the Render display domain's
-        // total (live_total_frames semantics); the GuiAudio object stays
-        // the source in every view, so the displayed total must live
-        // context-side. sample_rate stays the source's (equal to the
-        // render's by construction, verified at entry decode).
+        // (active_display_context) aliases the map. snapshot_display_total
+        // is the snapshot map's target total (target_total_frames_for_map
+        // against the source total, computed at entry load) — the Render
+        // display domain's total (live_total_frames semantics); the
+        // GuiAudio object stays the source in every view, so the displayed
+        // total must live context-side. entry_domain_begin is the playback
+        // bind anchor: llrint(T_b) of the snapshot map — the entry wav's
+        // frame 0 in full-target coordinates; 0 untrimmed (the sibling of
+        // GuiTargetRender::compute_target_buffer_start_frame's formula).
+        // The snapshot_*trim* fields are the entry's recipe trim (whole
+        // int64 source frames from the .settings commit tab) — DISPLAY
+        // state only, never editable: the trim display surfaces map them
+        // through the snapshot map to paint the rendered window's dim and
+        // bounds. sample_rate stays the source's (equal to the render's by
+        // construction, verified at entry decode).
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
-        int64_t                          snapshot_crop_begin = 0;
+        int64_t                          entry_domain_begin = 0;
         int64_t                          snapshot_display_total = 0;
+        bool                             snapshot_has_trim_begin = false;
+        int64_t                          snapshot_trim_begin_frame = 0;
+        bool                             snapshot_has_trim_end = false;
+        int64_t                          snapshot_trim_end_frame = 0;
     };
     RenderViewContext render_view;
 };

@@ -786,11 +786,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // Ctrl+Alt+C commits the displayed render's snapshot — the
     // source-domain marker pair plus the entry's standard `.settings`
     // sidecar (the single per-entry snapshot: engine block,
-    // active_tab_view, commit-tab trim) — and adopts the BROWSED view,
-    // crop-translated into target view. Render entries are target-view
-    // states, so commit always lands in 'T', on the entry's dispatch tab,
-    // at the browsed zoom / viewport / playhead (translated by the
-    // entry's crop origin onto the target axis) and the browsed W/P mode.
+    // active_tab_view, commit-tab trim) — and adopts the BROWSED view
+    // verbatim into target view (the render display axis IS the target
+    // axis). Render entries are target-view states, so commit always
+    // lands in 'T', on the entry's dispatch tab, at the browsed zoom /
+    // viewport / playhead and the browsed W/P mode.
     // Marker/reset promotion remains one cross-file undo entry; settings
     // and trim stay outside undo by standing convention. After the commit
     // succeeds: render-view exits (playback rebinds to the always-source
@@ -945,10 +945,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // viewport/playhead, persisted scratch that had to be walled like
         // any other load. The adopted view values are now the LIVE browsed
         // session values — GUI-produced and in-domain by construction: the
-        // render display axis is [0, entry length), and the crop
-        // translation at the application site lands them inside the
-        // candidate map's target extent (the entry is a rendering of
-        // exactly that map).
+        // render display axis IS the full target axis of the snapshot map,
+        // so the browsed values already rest inside the candidate map's
+        // target extent (the entry is a rendering of exactly that map).
 
         // Source-load adversarial guard 2: target-view/output-format
         // compatibility, validated against the ENTRY's own .settings.
@@ -986,12 +985,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // Landing-view capture, BEFORE any exit/clear mutates its sources:
         // the browsed zoom / viewport / playhead are the live session
-        // fields (render view browses through the global view fields), and
-        // the crop origin is the displayed entry's snapshot geometry.
-        // restore_source_view and the render-view context clear below
-        // overwrite all four, so they are latched here, ahead of the first
-        // mutation.
-        const int64_t crop_begin       = app.render_view.snapshot_crop_begin;
+        // fields (render view browses through the global view fields).
+        // restore_source_view below overwrites all three, so they are
+        // latched here, ahead of the first mutation.
         const int     browsed_zoom     = app.zoom_level;
         const int64_t browsed_viewport = app.viewport_start_sample;
         const int64_t browsed_playhead = app.playhead_cursor_sample;
@@ -1095,23 +1091,19 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // mutates, so it carries into target view as-is.
         app.active_audio_view = 'T';
 
-        // Browsed view, crop-translated onto the target axis: the render
-        // display axis is the entry's crop window of the deformed
-        // timeline, and target view shows the FULL deformed timeline, so
-        // display position p sits at target position p + crop_begin — the
-        // same musical position the user was browsing (crop_begin is 0 for
-        // untrimmed entries). Zoom levels share one vocabulary across
-        // views.
+        // Browsed view, adopted verbatim: the render display axis IS the
+        // full target axis of the snapshot map, so commit lands in target
+        // view at the identical position with no translation. Zoom levels
+        // share one vocabulary across views.
         app.zoom_level = browsed_zoom;
-        app.viewport_start_sample = browsed_viewport + crop_begin;
+        app.viewport_start_sample = browsed_viewport;
         // Deliberately unclamped, the restore-site convention: the browsed
-        // playhead rests in the entry's display domain [0, entry length),
-        // so its translation rests inside the adopted map's target extent;
-        // the runtime clamp (move_playhead_to) owns the value at first
-        // use.
-        app.playhead_cursor_sample = browsed_playhead + crop_begin;
+        // playhead rests inside the adopted map's target extent (the entry
+        // is a rendering of exactly that map); the runtime clamp
+        // (move_playhead_to) owns the value at first use.
+        app.playhead_cursor_sample = browsed_playhead;
         if (!app.playhead_scanner_active) {
-            app.playhead_scanner_sample = browsed_playhead + crop_begin;
+            app.playhead_scanner_sample = browsed_playhead;
         }
         clamp_viewport_start(app, audio);
         viewport.clear_hover_popup();
@@ -1125,8 +1117,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
         app.render_view.snapshot_warp_frame_map.clear();
-        app.render_view.snapshot_crop_begin = 0;
+        app.render_view.entry_domain_begin = 0;
         app.render_view.snapshot_display_total = 0;
+        app.render_view.snapshot_has_trim_begin = false;
+        app.render_view.snapshot_trim_begin_frame = 0;
+        app.render_view.snapshot_has_trim_end = false;
+        app.render_view.snapshot_trim_end_frame = 0;
         app.render_view.index             = -1;
         app.render_view.last_path.clear();
 

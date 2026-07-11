@@ -138,39 +138,6 @@ struct RenderRequest {
     RenderCache* render_cache = nullptr;
 };
 
-// Render view's display derivation for one wav render: the authored markers
-// and phase resets that exist on the deliverable's time axis, keep-filtered
-// against the render's participation verdicts, plus the crop geometry.
-// Sole consumer: render view's entry loader, which derives this live from
-// an entry's snapshot set (.warpmarkers / .phaseresetmarkers / .settings)
-// to build its display stores — the kept structs carry their AUTHORED
-// time_frame unchanged, and every display consumer translates them through
-// the snapshot map minus the crop origin at use.
-struct RenderDisplayPositions {
-    // Kept warp markers, in store order.
-    std::vector<GuiWarpMarker> warp_markers;
-    // Kept phase resets, same shape as the warp column.
-    std::vector<GuiPhaseResetMarker> phase_resets;
-    // Crop origin in full-target coordinates (0 when untrimmed) and the
-    // exclusive end bound on the deliverable's own axis (the crop length
-    // when trimmed; the full map's last anchor target when not).
-    double crop_begin = 0.0;
-    double crop_end   = 0.0;
-};
-
-// Derive the render-domain display positions for one wav render from the
-// authored marker stores, the FULL warp frame map (built trim-off), and the
-// authored trim bounds. total_frames is the source's frame count (the
-// unset-end trim default). The full geometry rationale lives at the
-// definition in render_pipeline.cpp.
-RenderDisplayPositions derive_render_display_positions(
-    const std::vector<GuiWarpMarker>& warp_markers,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
-    bool has_trim_begin, int64_t trim_begin_frame,
-    bool has_trim_end,   int64_t trim_end_frame,
-    int64_t total_frames);
-
 // Synchronous render. Blocks the caller until the pipeline finishes (or
 // errors out, or is cancelled). All progress / error reporting goes to
 // stderr. Returns RenderOutcome — Success on a complete render (including

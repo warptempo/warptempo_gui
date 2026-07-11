@@ -96,9 +96,9 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // identity, no map built. Target view: the memoized
 // target_view_warp_frame_map_cached, so even repeated calls (e.g. inside a
 // loop) cost only a cache-key comparison after the first build. Render view:
-// the displayed entry's snapshot map, shifted by the context's display offset
-// (the crop origin) — forward subtracts it after the map lookup, inverse adds
-// it before. Use these at every input / playhead boundary that currently reads
+// the displayed entry's snapshot map — the same forward/inverse map math as
+// target view, over a different map source. Use these at every input /
+// playhead boundary that currently reads
 // target_view_warp_frame_map_cached solely to feed one to_domain_frame /
 // to_source_frame.
 //

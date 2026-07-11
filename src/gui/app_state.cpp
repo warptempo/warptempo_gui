@@ -79,9 +79,7 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // The active display context owns the composite view rule: its map is
     // the live target map in target view, the entry's snapshot map in
     // render view, and empty (identity) in source view or when the
-    // target map cannot build. The context's display offset (the render
-    // crop origin; 0 in the other domains) shifts the mapped position
-    // onto the displayed axis — one shared subtraction below.
+    // target map cannot build.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -103,7 +101,6 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        ms -= static_cast<double>(ctx.display_offset);
         // No viewport gate: the kMarkerHitHalfPx halo is the single reach
         // test, so a stem up to kMarkerHitHalfPx past either strip edge is
         // grabbable from the nearest onscreen pixels (the mouse is window-
@@ -128,8 +125,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
-    // Trim editing is a source-view authoring gesture against the active
-    // A/B tab; render-view has its own (trim-less) display.
+    // Trim editing is a source/target-view authoring gesture against the
+    // active A/B tab. Render view PAINTS trim bounds — the snapshot trim,
+    // the entry's rendered window — but never picks them: that trim is
+    // display state from the snapshot, not an editable bound, so this hit
+    // test and hit_test_trim_chip keep their render-view None guards (and
+    // the Tab walk excludes trim in render view for the same reason).
     if (app.render_view.enabled) return TrimHit::None;
     if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
 
@@ -181,8 +182,9 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
-    // Same gating as hit_test_trim_boundary: source-view authoring against
-    // the active A/B tab, only set bounds are testable.
+    // Same gating as hit_test_trim_boundary (paint yes, pick no in render
+    // view — see the asymmetry comment there): authoring against the
+    // active A/B tab, only set bounds are testable.
     if (app.render_view.enabled) return TrimHit::None;
     if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
 
@@ -285,12 +287,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // the drag-frozen map is a paint-regime override of the context's
     // translation map so hit-rect positions match the frozen-coord paint
     // (the paint surfaces carry the same override). In render view the
-    // context supplies the entry's snapshot map plus the crop-origin
-    // display offset; the drag-frozen override cannot occur there —
-    // drags are gated out of render view.
+    // context supplies the entry's snapshot map; the drag-frozen override
+    // cannot occur there — drags are gated out of render view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
-    int64_t display_offset = 0;
     if (ctx.domain == GuiDisplayDomain::TargetLive) {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
@@ -300,7 +300,6 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         }
     } else if (ctx.domain == GuiDisplayDomain::Render) {
         if (!ctx.warp_frame_map->empty()) tmap_arg = ctx.warp_frame_map;
-        display_offset = ctx.display_offset;
     }
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
@@ -314,8 +313,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         rects = compute_flag_hit_rects(
             top, app.render_view.warp_markers,
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
-            tmap_arg, drag_overlay, /*iteration_on=*/false,
-            display_offset);
+            tmap_arg, drag_overlay, /*iteration_on=*/false);
     } else if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             top, app.phaseresetmarkers.markers(),

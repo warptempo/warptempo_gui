@@ -28,11 +28,12 @@ struct GuiTargetRender;
 //
 // The audio-domain invariant: the GuiAudio object (`audio`) is ALWAYS the
 // source — it never swaps, in any view. Render view's audio is the
-// view-owned decoded entry buffer below, bound to playback at domain
-// offset 0 (buffer frame 0 IS display position 0 — the wav is the crop);
-// the waveform plate is the SOURCE samples deformed through the entry's
-// snapshot map, which by the render pipeline's own construction is the
-// same picture the rendered wav holds.
+// view-owned decoded entry buffer below, bound to playback at the
+// rendered window's target-axis origin (entry_domain_begin — the wav
+// covers only the window of the full deformed timeline the view
+// displays); the waveform plate is the SOURCE samples deformed through
+// the entry's snapshot map, which by the render pipeline's own
+// construction matches the rendered wav across the window.
 struct GuiRenderView {
     AppState&         app;
     GuiAudio&         audio;
@@ -48,8 +49,9 @@ struct GuiRenderView {
     // construction, verified at decode). Disk-on-demand: decoded whole in
     // load_render_view_at (entries are typically short trims), one entry
     // resident at a time, freed on nav-away / exit / commit. Playback binds
-    // this buffer through rebind_buffer at domain offset 0. Empty
-    // (entry_frames == 0) whenever no entry is displayed.
+    // this buffer through rebind_buffer at the rendered window's origin
+    // (app.render_view.entry_domain_begin). Empty (entry_frames == 0)
+    // whenever no entry is displayed.
     std::vector<float> entry_samples;
     int64_t            entry_frames = 0;
 

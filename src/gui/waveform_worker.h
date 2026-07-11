@@ -37,10 +37,6 @@ struct WaveformJob {
     long long audio_gen        = -1;
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
-    // Render-view crop shift added to vp_start/vp_end at the render call
-    // only (see WaveformRenderInputs::display_offset in paint_handler.h);
-    // 0 outside render view.
-    int64_t   display_offset   = 0;
 
     // Frame-map snapshot the worker dereferences during the render. Empty
     // for source view; populated for target view from the value paint-side

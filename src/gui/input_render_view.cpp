@@ -180,8 +180,12 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
         app.render_view.snapshot_warp_frame_map.clear();
-        app.render_view.snapshot_crop_begin = 0;
+        app.render_view.entry_domain_begin = 0;
         app.render_view.snapshot_display_total = 0;
+        app.render_view.snapshot_has_trim_begin = false;
+        app.render_view.snapshot_trim_begin_frame = 0;
+        app.render_view.snapshot_has_trim_end = false;
+        app.render_view.snapshot_trim_end_frame = 0;
         app.render_view.index             = -1;
     }
     return true;
@@ -336,8 +340,8 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
         }
         gui.invalidate_region(0, 0, app.width, app.height);
         // The stores hold AUTHORED frames; the playhead lives on the
-        // render's displayed axis, so forward-translate through the
-        // display context (snapshot map minus crop origin).
+        // render's displayed axis (the full target axis), so
+        // forward-translate through the display context (snapshot map).
         int64_t sample;
         if (sub_t) {
             sample = source_frame_to_active_domain(
@@ -467,10 +471,10 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
             // since the last motion event (point-sampling skipped
             // markers at fast pointer speeds). The stores hold AUTHORED
             // positions, so inverse-translate the displayed interval
-            // endpoints through the display context (add the crop
-            // origin, inverse-map through the snapshot map) — the same
-            // shape source view's target arm uses — so the interval
-            // compare runs in the stores' own domain.
+            // endpoints through the display context (inverse-map through
+            // the snapshot map) — the same shape source view's target
+            // arm uses — so the interval compare runs in the stores' own
+            // domain.
             const int64_t prev = app.playhead_drag.last_swept_sample;
             if (prev >= 0 && new_playhead != prev) {
                 int64_t a = prev, b = new_playhead;

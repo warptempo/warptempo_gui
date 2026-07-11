@@ -276,9 +276,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Alt+C             → commit displayed render's markers
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
-    //   - Home/End (no mods)     → playhead to absolute file bounds
-    //                              (render-view has no trim — see
-    //                              viewport.cpp trim_range)
+    //   - Home/End (no mods)     → playhead to the rendered window's
+    //                              bounds (the snapshot trim's target-axis
+    //                              window — see viewport.cpp trim_range;
+    //                              the full timeline for untrimmed entries)
     //   - Esc                    → top-level no-op
     //   - p (no mods)            → toggle warp/phase reset sub-view
     //   - Tab / Shift+Tab /      → cycle marker focus (no A/B tabs in
@@ -759,7 +760,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     }
     // Mapped views: forward-translate the marker's source-frame through
     // the display context (target view's live map; render view's snapshot
-    // map minus crop origin) so the playhead lands on the marker's
+    // map) so the playhead lands on the marker's
     // displayed position; the viewport recenter below also uses this
     // displayed value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);

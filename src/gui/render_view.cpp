@@ -233,12 +233,21 @@ static RenderRequest build_entry_rebuild_request(
 // STRICTLY: <basename>.warpmarkers / <basename>.phaseresetmarkers through
 // the standard store loaders and <basename>.settings through
 // read_settings_file. Any refusal — a decode failure, a read failure, a
-// past-EOF wall defect, or a snapshot whose map cannot rebuild — is
+// past-EOF wall defect, a snapshot whose map cannot rebuild, or an entry
+// wav whose length contradicts the snapshot's rendered window — is
 // adversarial: one stderr line, first error only, the entry refuses to
-// display (return false, prior state preserved). Display positions derive
-// live from the snapshot through derive_render_display_positions.
-// Computes F_begin/F_end against the source sr/total. Stops playback
-// before installing the entry buffer and rebinds the device to it.
+// display (return false, prior state preserved).
+//
+// The architect's ruling: render view is a read-only 1:1 target view of
+// the snapshot — the FULL deformed timeline of the snapshot map, with
+// the snapshot trim's out-of-window region dimmed and its bounds painted
+// (unpickable), and playback bound to the entry wav at the window's
+// target-axis origin (Space outside the window is a silent no-op). The
+// display stores adopt the snapshot vectors WHOLESALE — disabled markers
+// included, styled as target view styles them — and every consumer
+// translates live through the snapshot map, exactly as target view
+// translates through the live map. Stops playback before installing the
+// entry buffer and rebinds the device to it.
 //
 // When the destination entry's persisted stat tuple matches the wav's current
 // stat, restores the persisted selection. Mismatch leaves the live selection
@@ -478,28 +487,48 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Keep-filter the display stores through derive_render_display_positions
-    // (this loader is its sole consumer). The KEPT marker structs carry
-    // their AUTHORED time_frame unchanged — render view bakes no
-    // quantized render-domain positions into the stores; it translates
-    // live through the snapshot map below, exactly as target view
-    // translates through the live map. Displayed pixels are unchanged
-    // from the baked era: the old baked position
-    // was snap_authored_frame(tgt(F) - crop_begin) computed at load; the
-    // new one is nearbyint(tgt(F)) - crop_begin computed at use, and
-    // crop_begin is an integer-valued double (an llrint result), so
-    // banker's rounding commutes with the integer translation —
-    // nearbyint(x - k) == nearbyint(x) - k for integer k — and the two
-    // are identical.
-    RenderDisplayPositions display = derive_render_display_positions(
-        snapshot_warp, snapshot_phase_resets, full_warp_frame_map,
-        recipe_trim.has_begin, recipe_trim.begin_frame,
-        recipe_trim.has_end, recipe_trim.end_frame,
-        source_total_frames);
-    std::vector<GuiWarpMarker> loaded_warp =
-        std::move(display.warp_markers);
-    std::vector<GuiPhaseResetMarker> loaded_phase_resets =
-        std::move(display.phase_resets);
+    // Rendered-window geometry on the snapshot map's target axis, exact
+    // doubles. T_b / T_e are the trim bounds' target images (unset sides
+    // default to the whole timeline: 0 and the source total's image — the
+    // map's final anchor target). entry_domain_begin, llrint(T_b), is the
+    // playback bind anchor: the entry wav's frame 0 in full-target
+    // coordinates — the sibling of
+    // GuiTargetRender::compute_target_buffer_start_frame, which anchors
+    // the target-view buffer with the identical formula against the live
+    // map. 0 untrimmed.
+    const double t_begin = recipe_trim.has_begin
+        ? map_source_to_target(
+              static_cast<double>(recipe_trim.begin_frame),
+              full_warp_frame_map)
+        : 0.0;
+    const double t_end = map_source_to_target(
+        recipe_trim.has_end
+            ? static_cast<double>(recipe_trim.end_frame)
+            : static_cast<double>(source_total_frames),
+        full_warp_frame_map);
+    const int64_t entry_domain_begin = std::llrint(t_begin);
+
+    // Entry-length verification: the delivered wav covers exactly the
+    // rendered window — llrint(T_e) - llrint(T_b) frames, the post_trim
+    // crop (untrimmed, the engine's full emission extent). A mismatch is
+    // adversarial (a foreign wav dropped over the entry's name): refuse,
+    // prior state preserved. This equality is also what makes the
+    // window's end (trim_range's render-view arm) coincide with the
+    // bound buffer's exclusive domain end at playback.
+    {
+        const int64_t expected_frames =
+            std::llrint(t_end) - entry_domain_begin;
+        if (decoded_frames != expected_frames) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: '%s' holds %lld frames but "
+                "the snapshot's rendered window is %lld frames; refusing "
+                "entry\n",
+                e.wav_path.string().c_str(),
+                static_cast<long long>(decoded_frames),
+                static_cast<long long>(expected_frames));
+            return false;
+        }
+    }
 
     playback.stop();
     app.playhead_scanner_active = false;
@@ -525,19 +554,28 @@ bool GuiRenderView::load_render_view_at(int index) {
     // GuiAudio swap; the object no longer swaps, so it is explicit here.
     app.audio_generation++;
 
-    app.render_view.warp_markers           = std::move(loaded_warp);
-    app.render_view.phase_resets        = std::move(loaded_phase_resets);
+    // The display stores adopt the snapshot vectors WHOLESALE — no
+    // keep-filtering: the full timeline shows every authored row,
+    // disabled markers included (the paint and Tab-walk predicates skip
+    // or style them exactly as target view does; label defs ride in the
+    // same vector, so effective_disabled works on the snapshot).
+    app.render_view.warp_markers           = std::move(snapshot_warp);
+    app.render_view.phase_resets        = std::move(snapshot_phase_resets);
     // Snapshot display geometry for the Render display context: the FULL
-    // map this entry's authored positions translate through, plus the
-    // crop origin llrint(T_b) (an exact int64 recovery — the helper's
-    // crop_begin is an llrint result carried as a double; 0 untrimmed),
-    // plus the entry's own length (the decoded wav's frame count — the
-    // Render domain total). Built once here, immutable while displayed;
-    // cleared beside the display stores at every clear site.
+    // map this entry's authored positions translate through, its target
+    // total (the Render domain total — the full deformed timeline, not
+    // the wav length), the playback bind anchor computed above, and the
+    // recipe trim for the trim display surfaces (dim + painted bounds).
+    // Built once here, immutable while displayed; cleared beside the
+    // display stores at every clear site.
+    app.render_view.snapshot_display_total = target_total_frames_for_map(
+        source_total_frames, full_warp_frame_map);
     app.render_view.snapshot_warp_frame_map = std::move(full_warp_frame_map);
-    app.render_view.snapshot_crop_begin =
-        std::llrint(display.crop_begin);
-    app.render_view.snapshot_display_total = entry_frames;
+    app.render_view.entry_domain_begin = entry_domain_begin;
+    app.render_view.snapshot_has_trim_begin   = recipe_trim.has_begin;
+    app.render_view.snapshot_trim_begin_frame = recipe_trim.begin_frame;
+    app.render_view.snapshot_has_trim_end     = recipe_trim.has_end;
+    app.render_view.snapshot_trim_end_frame   = recipe_trim.end_frame;
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
@@ -604,13 +642,16 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.playhead_cursor_sample = commit_tab.playhead;
     clamp_viewport_start(app, audio);
 
-    // Rebind playback to the entry buffer at domain offset 0: buffer frame
-    // 0 IS display position 0 (the wav is the crop). The device stays
-    // init'd against the source's rate/channels from file load — the
-    // entry's match those by construction (verified at decode above), so a
-    // rebind suffices; playback was stopped above, satisfying
-    // rebind_buffer's contract.
-    playback.rebind_buffer(entry_samples.data(), entry_frames, 0);
+    // Rebind playback to the entry buffer at the rendered window's
+    // target-axis origin: the wav covers only the window, so its frame 0
+    // is display position entry_domain_begin (llrint(T_b); 0 untrimmed) —
+    // the same domain-offset bind pattern target view uses for its
+    // trimmed buffer. The device stays init'd against the source's
+    // rate/channels from file load — the entry's match those by
+    // construction (verified at decode above), so a rebind suffices;
+    // playback was stopped above, satisfying rebind_buffer's contract.
+    playback.rebind_buffer(entry_samples.data(), entry_frames,
+                           app.render_view.entry_domain_begin);
     // One-shot discrete jump: the loaded render swapped the entry buffer and
     // the viewport / zoom, so render the plate synchronously and publish the
     // displayed fingerprint now. Otherwise the markers / playhead repaint
@@ -894,7 +935,11 @@ void GuiRenderView::exit_render_view_and_clear() {
     app.render_view.warp_markers.clear();
     app.render_view.phase_resets.clear();
     app.render_view.snapshot_warp_frame_map.clear();
-    app.render_view.snapshot_crop_begin = 0;
+    app.render_view.entry_domain_begin = 0;
     app.render_view.snapshot_display_total = 0;
+    app.render_view.snapshot_has_trim_begin = false;
+    app.render_view.snapshot_trim_begin_frame = 0;
+    app.render_view.snapshot_has_trim_end = false;
+    app.render_view.snapshot_trim_end_frame = 0;
     app.render_view.index             = -1;
 }

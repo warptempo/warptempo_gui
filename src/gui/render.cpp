@@ -78,13 +78,9 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
 // nearbyint and looked up through map_source_to_target, and that lookup
 // is itself rounded with nearbyint; in source view (null/empty
 // warp_frame_map) the result is the frame double rounded with nearbyint.
-// `display_offset` then shifts the result onto the displayed axis: it is
-// the Render display context's crop origin (an integer, subtracted after
-// the rounding — the same shape source_frame_to_active_domain applies)
-// and 0 in source and target views, where every result is unchanged.
 // Both branches return the same integer displayed frame the playhead
-// cursor stores (the active-domain translators apply the same nearbyint
-// and offset), so the stem, chip, hit rect, and playhead share a column
+// cursor stores (the active-domain translators apply the same
+// nearbyint), so the stem, chip, hit rect, and playhead share a column
 // in every view. Painting from the fractional map_source_to_target value
 // placed the stem one pixel off the playhead whenever rounding the
 // target frame crossed a pixel-column boundary. Callers that need an
@@ -93,15 +89,13 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
 // double is a no-op.
 static inline double frame_to_paint_sample(
     double eff_frame,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    int64_t display_offset) {
+    const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (warp_frame_map && !warp_frame_map->empty()) {
         const size_t src_frame = static_cast<size_t>(
             std::nearbyint(eff_frame));
-        return std::nearbyint(map_source_to_target(src_frame, *warp_frame_map)) -
-               static_cast<double>(display_offset);
+        return std::nearbyint(map_source_to_target(src_frame, *warp_frame_map));
     }
-    return std::nearbyint(eff_frame) - static_cast<double>(display_offset);
+    return std::nearbyint(eff_frame);
 }
 
 // Caller must cairo_surface_flush(ink_plate) before calling. Collect
@@ -161,7 +155,6 @@ void render_marker_stems_impl(
     int sample_rate,
     const std::set<int>& selected_set,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    int64_t display_offset,
     const DragOverlay* drag_overlay,
     IsVisuallyDisabled&& is_disabled,
     cairo_surface_t* ink_plate) {
@@ -206,9 +199,9 @@ void render_marker_stems_impl(
             : m.time_frame;
         // Translate per-marker source-frame to the displayed axis: map in
         // target/render view (warp_frame_map non-null/non-empty), identity
-        // otherwise, minus the render crop offset (0 outside render view).
+        // otherwise.
         const double ms =
-            frame_to_paint_sample(eff_time, warp_frame_map, display_offset);
+            frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
         const GuiColor c = selected_set.count(static_cast<int>(i)) > 0
@@ -478,12 +471,11 @@ void render_markers(cairo_t* cr,
                     const std::set<int>& selected_set,
                     const std::vector<WarpFrameMapSegment>* warp_frame_map,
                     const DragOverlay* drag_overlay,
-                    cairo_surface_t* ink_plate,
-                    int64_t display_offset) {
+                    cairo_surface_t* ink_plate) {
     render_marker_stems_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, selected_set, warp_frame_map, display_offset,
+        sample_rate, selected_set, warp_frame_map,
         drag_overlay,
         [&](int i) {
             return effective_disabled(markers, i);
@@ -799,7 +791,6 @@ void iterate_visible_flags_impl(
     long long viewport_start_sample,
     long long viewport_end_sample,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    int64_t display_offset,
     const DragOverlay* drag_overlay,
     FlagTextFn&& get_flag_text,
     Emit&& emit) {
@@ -853,11 +844,10 @@ void iterate_visible_flags_impl(
                   static_cast<int>(i), m.time_frame)
             : m.time_frame;
         // Translate per-marker source-frame to the displayed axis (map in
-        // target/render view, identity otherwise, minus the render crop
-        // offset — 0 outside render view). Pack/elision walk left-to-right
-        // against post-translation positions.
+        // target/render view, identity otherwise). Pack/elision walk
+        // left-to-right against post-translation positions.
         const double ms =
-            frame_to_paint_sample(eff_time, warp_frame_map, display_offset);
+            frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
         candidates.push_back({static_cast<int>(i), ms});
@@ -955,8 +945,7 @@ void render_flags(cairo_t* cr,
                   const FlagEditorOverlay& editor,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay,
-                  bool iteration_on,
-                  int64_t display_offset) {
+                  bool iteration_on) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -988,7 +977,7 @@ void render_flags(cairo_t* cr,
     std::vector<FlagEmit> emits;
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, display_offset, drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         },
@@ -1041,12 +1030,9 @@ void render_one_editor_flag(
 
     const double hl_pad = flag_pad_x_px();
 
-    // FlagPayload editing is gated out of render view, so no render crop
-    // offset ever applies here (0).
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, /*display_offset=*/0,
-                               drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         },
@@ -1072,7 +1058,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     int sample_rate,
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    int64_t display_offset,
     const DragOverlay* drag_overlay,
     FlagTextFn&& get_flag_text) {
     std::vector<FlagHitRect> out;
@@ -1087,7 +1072,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // painted chip and this hit rect are the same rectangle by construction.
     iterate_visible_flags_impl(top_strip_area, markers,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, display_offset, drag_overlay,
+                               warp_frame_map, drag_overlay,
         std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
             const std::string& text) {
@@ -1116,11 +1101,10 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
-    bool iteration_on,
-    int64_t display_offset) {
+    bool iteration_on) {
     return compute_flag_hit_rects_impl(top_strip_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, warp_frame_map, display_offset, drag_overlay,
+        sample_rate, font_size, warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         });
@@ -1173,12 +1157,11 @@ void render_phaseresetmarkers(cairo_t* cr,
                               const std::set<int>& selected_set,
                               const std::vector<WarpFrameMapSegment>* warp_frame_map,
                               const DragOverlay* drag_overlay,
-                              cairo_surface_t* ink_plate,
-                              int64_t display_offset) {
+                              cairo_surface_t* ink_plate) {
     render_marker_stems_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, selected_set, warp_frame_map, display_offset,
+        sample_rate, selected_set, warp_frame_map,
         drag_overlay,
         [&](int i) {
             return phase_resets[i].disabled;
@@ -1195,8 +1178,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                            const DragOverlay* drag_overlay,
-                            int64_t display_offset) {
+                            const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -1220,7 +1202,7 @@ void render_phase_reset_flags(cairo_t* cr,
     std::vector<PhaseResetEmit> emits;
     iterate_visible_flags_impl(top_strip_area, phase_resets,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, display_offset, drag_overlay,
+                               warp_frame_map, drag_overlay,
         [&](int i) {
             return phase_reset_flag_text(phase_resets[i]);
         },
@@ -1246,11 +1228,10 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     int sample_rate,
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay,
-    int64_t display_offset) {
+    const DragOverlay* drag_overlay) {
     return compute_flag_hit_rects_impl(top_strip_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, warp_frame_map, display_offset, drag_overlay,
+        sample_rate, font_size, warp_frame_map, drag_overlay,
         [&](int i) {
             return phase_reset_flag_text(phase_resets[i]);
         });

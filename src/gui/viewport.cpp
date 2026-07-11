@@ -15,13 +15,36 @@
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.render_view.enabled) {
-        // Render-view has no trim — the displayed entry is already
-        // render-domain (trim baked in at render time). The range is the
-        // entry's own extent: the GuiAudio object is invariantly the
-        // source, so the displayed total comes from the context-side
-        // snapshot field, exactly what the entry's decoded buffer (and
-        // the playback bind) carries.
-        return {0, app.render_view.snapshot_display_total};
+        // Render view displays the FULL deformed timeline of the entry's
+        // snapshot; the range is the SNAPSHOT trim's target-axis window —
+        // the rendered window the entry wav covers (playback is bound to
+        // it at the window origin, so this range equals the bound
+        // buffer's [domain_begin(), domain_end()) by the entry-length
+        // check at load). Same forward translation the 'T' arm below
+        // runs, here through the Render display context (the snapshot
+        // map); unset sides fall back to 0 / the snapshot's target total.
+        // The snapshot trim passed validate_trim_frames at entry load, so
+        // the per-side clamp mirrors the 'T' arm defensively.
+        const auto& rv = app.render_view;
+        const int64_t rv_total = rv.snapshot_display_total;
+        if (!rv.snapshot_has_trim_begin && !rv.snapshot_has_trim_end) {
+            return {0, rv_total};
+        }
+        int64_t begin_tgt = 0;
+        int64_t end_tgt   = rv_total;
+        if (rv.snapshot_has_trim_begin) {
+            begin_tgt = source_frame_to_active_domain(
+                app, audio, rv.snapshot_trim_begin_frame);
+        }
+        if (rv.snapshot_has_trim_end) {
+            end_tgt = source_frame_to_active_domain(
+                app, audio, rv.snapshot_trim_end_frame);
+        }
+        if (begin_tgt < 0) begin_tgt = 0;
+        if (begin_tgt > rv_total) begin_tgt = rv_total;
+        if (end_tgt < 0) end_tgt = 0;
+        if (end_tgt > rv_total) end_tgt = rv_total;
+        return {begin_tgt, end_tgt};
     }
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store
