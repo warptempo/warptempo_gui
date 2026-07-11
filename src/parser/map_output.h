@@ -36,8 +36,8 @@ std::expected<void, std::string> write_midi_tempo_map(
 // with no decimal point). The companion to write_warp_frame_map on the
 // phase-reset axis — the engine-input export the GUI emits and an external
 // engine consumer reads as-is. The caller supplies the already-derived engine
-// query-domain positions (derive_phase_reset_frame_map applies the
-// anticipation offset and drops against the map shipped beside the file), so
+// query-domain positions (derive_phase_reset_frame_map drops
+// non-participants against the map shipped beside the file), so
 // this writer applies no policy: it does not displace, sort, or dedupe.
 std::expected<void, std::string> write_phase_reset_frame_map(
     const std::string& path, const std::vector<double>& engine_query_frames);

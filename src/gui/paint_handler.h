@@ -487,7 +487,7 @@ private:
     // in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    void paint_phase_reset_anticipation_overlay(cairo_t* cr, const GuiRect& area);
+    void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
     void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_debug_hit_rects(cairo_t* cr, const GuiRect& area,

@@ -2,9 +2,7 @@
 
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker
 #include "warp_frame_map.h"           // WarpFrameMapSegment
-#include "engine/engine_geometry.h"   // kN, kRs
 
-#include <cmath>
 #include <cstdint>
 #include <expected>
 #include <string>
@@ -53,48 +51,35 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // trimmer translates and range-filters this chain's output for a trimmed
 // render).
 //
-// The parser is the sole authored-to-engine compiler on both columns.
-// Authoring decisions — the phase reset anticipation offset, exactly like
-// warp's tempo authoring — never live engine-side: the engine consumes only
-// engine-domain inputs, blind to the anticipation
-// subtraction, the inverse mapping, and the N/2 query-origin correction
-// applied below. The .phaseresetframemap artifact is the engine-input list
-// this chain derives; the authored-domain record of reset positions is the
-// .phaseresetmarkers file, so each column ends as a markers file (authored
-// domain) plus a frame map (engine domain).
+// The parser is the sole authored-to-engine compiler on both columns: the
+// engine consumes only engine-domain inputs, blind to the N/2 query-origin
+// correction applied below. The .phaseresetframemap artifact is the
+// engine-input list this chain derives; the authored-domain record of reset
+// positions is the .phaseresetmarkers file, so each column ends as a markers
+// file (authored domain) plus a frame map (engine domain).
 //
 // The derivation has no warp sibling, because the warp frame map is already
-// the engine's input domain, while a phase-reset position alone crosses
-// three domains — authored source, to deliverable target, to engine query.
-
-// Phase-reset lead-in expressed in synthesis hops, and its integer sample
-// form: the offset-in-hops scaled by the synthesis hop, banker's-rounded to
-// the integer sample domain. The lead-in is two synthesis hops; it is not
-// authoring-tunable — not a flag, not a settings field, not a variable. The
-// offset lives parser-side because the anticipation is an authoring decision
-// the engine never sees: the derivation below bakes it into the engine-domain
-// list before the engine reads anything.
-constexpr double kPhaseResetOffsetHops = 2.0;
-inline const int64_t phase_reset_offset_samples = static_cast<int64_t>(
-    std::nearbyint(kPhaseResetOffsetHops * static_cast<double>(kRs)));
+// the engine's input domain, while a phase-reset position crosses to the
+// deliverable target domain for the render-end participation verdict and
+// then shifts by the constant N/2 into the engine query domain.
 
 // Derive the engine-input phase reset frame map against the deliverable
-// map: each authored (undisplaced) source position — an exact double source
-// frame — is mapped to its target image, bounded by the map's own final
-// anchor target (a reset at or past it lies beyond the deliverable's last
-// sample and drops), anticipated by phase_reset_offset_samples in the
-// target/output domain (with a lead-in dropzone rather than a clamp), and
-// inverse-mapped through the same map into the engine's origin-centered
-// query domain. The result stays in exact doubles; quantization to the
-// engine's integer query schedule is engine-owned, happening at placement
-// time. Non-participating positions are dropped, so the result can be
-// shorter than the input. The .phaseresetframemap artifact is this list
-// derived against the exact map shipped beside it, so the artifact pair is
-// exactly the engine's input, and the in-process render derives its
-// engine-input list through this same form — pair and render coincide by
-// construction. An empty map yields an empty list (unreachable from program
-// paths: the full-map builder always emits the seed anchor; kept so the
-// back() access is unconditionally safe, as in derive_midi_tempo_map).
+// map: each authored (undisplaced) source position S — an exact double
+// source frame — is forward-mapped to its target image only for the
+// render-end participation verdict (a reset whose image lands at or past
+// the map's own final anchor target lies beyond the deliverable's last
+// sample and drops), then emitted directly as the origin-centered query
+// S - N/2 (the window-centering rationale sits at the definition). The
+// result stays in exact doubles; quantization to the engine's integer query
+// schedule is engine-owned, happening at placement time. Non-participating
+// positions are dropped, so the result can be shorter than the input. The
+// .phaseresetframemap artifact is this list derived against the exact map
+// shipped beside it, so the artifact pair is exactly the engine's input,
+// and the in-process render derives its engine-input list through this same
+// form — pair and render coincide by construction. An empty map yields an
+// empty list (unreachable from program paths: the full-map builder always
+// emits the seed anchor; kept so the back() access is unconditionally safe,
+// as in derive_midi_tempo_map).
 std::vector<double> derive_phase_reset_frame_map(
     const std::vector<double>& source_frames,
     const std::vector<WarpFrameMapSegment>& deliverable_map);

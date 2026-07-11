@@ -72,10 +72,10 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // ascent of the phase reset input is guaranteed by the raw-store
 // coincidence refusal (marker_store_validate.h, at commit and load) plus
 // build_phase_reset_source_frames' sub-frame refusal and the parser's
-// strictly monotone derivation chain (a reset whose anticipation falls
-// before the window start is dropped, not clamped, so at most one
-// survivor can sit exactly at zero and every later survivor is strictly
-// greater), with .phaseresetframemap artifacts written from that same
+// derivation (engine query positions are the authored source frames
+// shifted by the constant N/2, so the strictly increasing authored list
+// carries strict ascent through unchanged; the render-end drop only
+// shortens the list), with .phaseresetframemap artifacts written from that same
 // derivation; warp ordering degeneracy is refused at build_warp_frame_map
 // (its sub-frame segment error) before any engine input exists. Equal
 // values here therefore always mean a breach. No epsilon band on either.
@@ -87,8 +87,8 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // any finite prior). The producers validate finiteness at build time
 // (build_warp_frame_map refuses non-finite tempo-scale divisors and
 // non-finite or non-advancing target anchors at its emission chokepoint;
-// the phase reset derivation maps finite authored positions through that
-// same finite map), so a non-finite entry here likewise always means a
+// the phase reset derivation emits finite authored positions shifted by
+// a finite constant), so a non-finite entry here likewise always means a
 // breach.
 
 // Validate the (src,tgt) warp_frame_map: non-empty, finite entries, strict

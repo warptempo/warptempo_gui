@@ -364,7 +364,7 @@ RenderOutcome do_render(const RenderRequest& req,
             const auto t_render_1 = profile::now();
             const double render_ms = profile::ms(t_render_0, t_render_1);
             std::fprintf(stderr,
-                "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu offset_samples=%lld output_buffer=%s limiter=%s outcome=%s\n",
+                "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu output_buffer=%s limiter=%s outcome=%s\n",
                 req.output_buffer ? "target" : "file", output_format.c_str(),
                 profile_source_sample_rate, profile_source_channels,
                 profile_source_frames_passed,
@@ -374,7 +374,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 static_cast<long long>(profile_target_frames),
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
                 req.warp_markers.size(), phase_reset_source_frames.size(),
-                static_cast<long long>(phase_reset_offset_samples),
                 req.output_buffer ? "yes" : "no",
                 req.engine_settings.limiter ? "yes" : "no",
                 outcome);
@@ -626,14 +625,12 @@ RenderOutcome do_render(const RenderRequest& req,
             // crop end lies beyond the deliverable's last sample (a reset
             // exactly at the trim end, or at source EOF on an untrimmed
             // render — sidecar_crop_end carries the crop length when trimmed
-            // and the full map's exact final anchor target when not). Resets
-            // dropped only by the derivation's lead-in dropzone (crop-domain
-            // target at or above zero but within phase_reset_offset_samples
-            // of the render start) still display, deliberately: the display
-            // sidecars show every authored marker that exists on the
-            // deliverable's time axis regardless of its engine-side fate,
-            // exactly as the warp sidecar displays markers whose breakpoints
-            // the trimmer's window anchors coalesced away.
+            // and the full map's exact final anchor target when not). The
+            // display sidecars show every authored marker that exists on the
+            // deliverable's time axis regardless of its engine-side fate — a
+            // reset just inside the trim window whose query position precedes
+            // it still displays, exactly as the warp sidecar displays markers
+            // whose breakpoints the trimmer's window anchors coalesced away.
             std::vector<GuiPhaseResetMarker> sidecar_phase_resets;
             // Fractional render-domain positions, parallel to
             // sidecar_phase_resets — same shape as the warp sidecar's

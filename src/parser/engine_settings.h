@@ -8,11 +8,10 @@
 // AppState as the live authoring store; carried by RenderRequest as the
 // only engine-settings carrier. Member-default-initialized to the values
 // format_default_settings_template emits (modulo title, which defaults to
-// empty and is overwritten at source load from the stem). N and the
-// phase-reset lead-in are no longer fields here — both are locked to
-// the locked geometry constants in engine/engine_geometry.h (kN = 4096;
-// lead-in = two synthesis hops). bpm, notes, url, and cover are inert
-// provenance: free text,
+// empty and is overwritten at source load from the stem). N is no longer
+// a field here — it is locked to the geometry constant in
+// engine/engine_geometry.h (kN = 4096). bpm, notes, url, and cover are
+// inert provenance: free text,
 // unvalidated, never read by the engine or acted on by the GUI.
 struct EngineSettings {
     std::string title;

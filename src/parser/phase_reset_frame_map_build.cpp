@@ -1,5 +1,7 @@
 #include "phase_reset_frame_map_build.h"
 
+#include "engine/engine_geometry.h"  // kN
+
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -30,9 +32,9 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
         // enumerator. Input marker times are non-decreasing (the load parser
         // rejects decreasing times; the GUI store is time-sorted), so a pair
         // this close refuses here; the surviving output stays strictly
-        // increasing by construction, which the derivation chain (strictly
-        // monotone map interpolation, constant subtractions, participation
-        // drops) preserves, so the engine's strict-ascent init validator holds.
+        // increasing by construction, which the derivation (a constant N/2
+        // shift of the input plus participation drops) preserves, so the
+        // engine's strict-ascent init validator holds.
         if (!out.empty() && src_frame - out.back() < 1.0) {
             return std::unexpected(
                 "phase reset markers under one source frame apart at marker "
@@ -46,32 +48,38 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // The parser compiles authored positions for the locked production geometry:
 // the engine core keeps N as a runtime parameter, but every driver hands it
 // kN, and the artifact math here is pinned to kN (the N/2 query-origin
-// correction) and to the phase_reset_offset_samples derived from kRs.
+// correction).
 //
 // Derivation mapping:
 //   Authored source onset S
-//     -> deliverable-map target onset T (bounded by the map's final anchor)
-//     -> target-domain anticipation D = T - phase_reset_offset_samples
-//     -> engine query frame E = map_target_to_source(D, map) - N/2
+//     -> deliverable-map target image T = map_source_to_target(S, map),
+//        used only for the render-end participation verdict (drop when T
+//        lands at or past the map's final anchor target)
+//     -> engine query frame E = S - N/2
 //
-// The final N/2 subtraction is a coordinate-domain correction. The engine
-// searches phase reset frames against source_frame_positions[m], which are
-// origin-centered analysis query frames:
+// The N/2 subtraction is a coordinate-domain correction, not a displacement
+// of the reset. Canonical PGHI (Prusa & Holighaus, "Phase Vocoder Done
+// Right", docs/references/ltfatnote050.pdf) defines the discrete STFT with
+// a real-valued analysis window concentrated around the ORIGIN, so an
+// analysis position is the window's CENTER. The engine searches phase reset
+// frames against source_frame_positions[m], which are origin-centered
+// analysis query frames:
 //   map_target_to_source(m * R_s) - N/2.
-// The list returned here holds exact doubles in that same query domain; the
-// engine performs the quantization against its schedule.
+// A reset that should fire with its analysis window centered at authored
+// source frame S therefore has query position S - N/2: the authored onset
+// sits at the Hann window center by construction. The list returned here
+// holds exact doubles in that same query domain; the engine performs the
+// quantization against its schedule.
 //
-// The lead-in dropzone: a reset whose anticipation D would fall before the
-// render's own start is dropped, not clamped forward. Dropping lets the
-// natural PGHI heap propagation continue undisturbed through the opening
-// stretch; an authored reset this close to the render's start means the
-// marker and its following segment, up to the next reset, are not the
-// passage in focus. The dropzone is deliberately not gated at parse time or
-// in the GUI — it is render-relative and warp-dependent, so no
-// authoring-time check could be correct, and the silent per-render drop is
-// the intended contract. (map_source_to_target clamps a pre-map source
-// position to the first pair's target rather than going negative, so the
-// dropzone is also what removes any reset ahead of the map's origin.)
+// With no target-domain displacement, the inverse map of a position's
+// forward image is the position itself, so S - N/2 is emitted directly —
+// exact, with no floating-point map round-trip; the forward map call
+// serves only the render-end verdict. An authored reset at frame 0 derives
+// to query -N/2, exactly the engine's first analysis frame query position:
+// legal and inert, since the first frame seeds synthesis phase from
+// analysis phase anyway. Strict ascent of the output holds trivially — the
+// input source frames are strictly increasing and the emission is a
+// constant shift of them; the render-end drop only shortens the list.
 std::vector<double> derive_phase_reset_frame_map(
         const std::vector<double>& source_frames,
         const std::vector<WarpFrameMapSegment>& deliverable_map) {
@@ -88,13 +96,7 @@ std::vector<double> derive_phase_reset_frame_map(
         const double authored_target =
             map_source_to_target(source_frame, deliverable_map);
         if (authored_target >= render_target_end) continue;
-        const double anticipated_target =
-            authored_target - static_cast<double>(phase_reset_offset_samples);
-        if (anticipated_target < 0.0) continue;   // lead-in dropzone
-        const double engine_source =
-            map_target_to_source(anticipated_target, deliverable_map)
-            - static_cast<double>(kN / 2);
-        out.push_back(engine_source);
+        out.push_back(source_frame - static_cast<double>(kN / 2));
     }
     return out;
 }

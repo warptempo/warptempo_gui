@@ -80,8 +80,9 @@ parse_phaseresetmarkers_file(const std::string& path) {
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
         const int64_t eff = m.time_frame;
-        // A reset at time zero parses and loads; it is inert at render because
-        // the near-start dropzone drops it at derivation.
+        // A reset at time zero parses, loads, and derives; it lands on the
+        // engine's first analysis frame, where synthesis phase is seeded from
+        // analysis phase anyway, so it is inert but harmless.
         //
         // Load rejects only DECREASING times. Equal-time (and other closely
         // spaced) markers load deliberately — load stays lenient — but they

@@ -125,8 +125,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // sidecars and cache entries must stop matching and re-render under this
 // writer before cmp baselines are refreshed. Version 3: the marker
 // tempo_scale field changed representation (string -> optional double),
-// changing the per-marker byte layout.
-constexpr uint32_t kFingerprintVersion = 3;
+// changing the per-marker byte layout. Version 4: the phase reset
+// derivation's semantics changed — a reset now fires exactly at the authored
+// source frame — so artifacts rendered under the prior derivation must stop
+// matching and re-render.
+constexpr uint32_t kFingerprintVersion = 4;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

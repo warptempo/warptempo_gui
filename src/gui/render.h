@@ -68,12 +68,14 @@ inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 
-// Phase reset anticipation overlay fill. A flat translucent rectangle behind
-// the focused phase reset marker, composited at a small alpha so it lifts
-// whatever it covers (background, waveform, and already-dimmed out-of-trim
-// pixels alike) — polarity-opposite to the out-of-trim dim, which darkens.
-// GuiColor carries no alpha, so the alpha is the separate constexpr double
-// below.
+// Phase reset overlay fill. A flat translucent rectangle spanning forward
+// in target time from the focused phase reset marker — the stretch of
+// output immediately following the reset over which the re-seeded phase
+// takes hold before normal propagation resumes — composited at a small
+// alpha so it lifts whatever it covers (background, waveform, and
+// already-dimmed out-of-trim pixels alike) — polarity-opposite to the
+// out-of-trim dim, which darkens. GuiColor carries no alpha, so the alpha
+// is the separate constexpr double below.
 //
 // Flat fill, not a plate-masked recolor: a recolor was tried and rejected
 // because it goes invisible on the silent stretches where phase resets often
@@ -86,8 +88,8 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 // white (the per-channel add is alpha times source-minus-dest), so the alpha
 // rises from the old white-at-0.07 to keep the overall lift at least that
 // strong, with a slight intended bump. Both values tuned by eye on the panel.
-inline constexpr GuiColor kPhaseResetAnticipation      = hex(0xB8D4F0);
-inline constexpr double    kPhaseResetAnticipationAlpha = 0.10;
+inline constexpr GuiColor kPhaseResetOverlay      = hex(0xB8D4F0);
+inline constexpr double    kPhaseResetOverlayAlpha = 0.10;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue

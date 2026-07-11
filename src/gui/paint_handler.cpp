@@ -6,7 +6,7 @@
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
-#include "phase_reset_frame_map_build.h"  // phase_reset_offset_samples
+#include "engine/engine_geometry.h"  // kRs
 
 #include <chrono>
 #include <cmath>
@@ -232,31 +232,33 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
-// -- GuiPaintHandler::paint_phase_reset_anticipation_overlay -------------
+// -- GuiPaintHandler::paint_phase_reset_overlay ---------------------------
 
-// Paints a transient translucent rectangle behind the focused phase reset
-// marker showing the span the phase reset anticipation operates over: it
-// runs back phase_reset_offset_samples (two synthesis hops in the
-// target/output-sample domain) in target time from the reset, ending flush
-// at the marker's stem column. Paint-only: no persisted state, nothing on
-// disk, no settings key, no undo interaction; render_background refills the
-// exposed region every frame, so the fill composites over fresh pixels and
-// never accumulates.
+// Paint-only overlay width: two synthesis hops of target/output time, the
+// scale of the reset's local effect — the stretch of output immediately
+// following the reset over which the re-seeded phase takes hold before
+// normal propagation resumes. A pure authoring aid with no engine meaning,
+// consumed nowhere else in the product.
+constexpr double kPhaseResetOverlayHops = 2.0;
+const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
+    std::nearbyint(kPhaseResetOverlayHops * static_cast<double>(kRs)));
+
+// Paints a transient translucent rectangle ahead of the focused phase reset
+// marker: a fixed-width forward span in target time starting at the marker's
+// stem column, showing the stretch of output immediately following the reset
+// over which the re-seeded phase takes hold. Paint-only: no persisted state,
+// nothing on disk, no settings key, no undo interaction; render_background
+// refills the exposed region every frame, so the fill composites over fresh
+// pixels and never accumulates.
 //
 // Target-view-only, and this is a phase-reset-only surface with no warp
-// sibling (naming-symmetry asymmetry, recorded here per CLAUDE.md): the
-// anticipation is authored as a fixed target/output-domain offset, so it has
-// a constant width in target time. Source view would show a map-dependent,
-// varying width — misrepresenting a constant offset — so the overlay is not
-// drawn there. Anticipation itself is a phase-reset-only concept, so there is
-// nothing on the warp axis to mirror.
-//
-// The bare-`h` jump handler in input_handler.cpp mirrors these eligibility
-// gates and the fixed-width left-edge math — same width_px = round(offset/spp)
-// back-extent, same width_px < 1 gate, same left_col = right_col - width_px —
-// to land the playhead on the overlay's left-edge pixel column, so any change
-// to the gates or the back-extent expression here must be reflected there.
-void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
+// sibling (naming-symmetry asymmetry, recorded here per CLAUDE.md): the span
+// is a fixed target/output-domain width, so it is constant in target time.
+// Source view would show a map-dependent, varying width — misrepresenting a
+// constant span — so the overlay is not drawn there. The reset's local
+// take-hold stretch is a phase-reset-only concept, so there is nothing on
+// the warp axis to mirror.
+void GuiPaintHandler::paint_phase_reset_overlay(
     cairo_t* cr, const GuiRect& area) {
     // Visibility: always-on for the focused marker, but only in target-view
     // phase-reset editing, never in render view. Anything else paints nothing.
@@ -321,35 +323,36 @@ void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
         ms = std::nearbyint(eff_time);
     }
 
-    // Columns: right_col uses the same std::round-to-int placement the stem
-    // renderer uses, so the overlay's right edge stays on the marker's column.
-    // left_col is a fixed whole-pixel offset back from it, so the back-edge
+    // Columns: left_col uses the same std::round-to-int placement the stem
+    // renderer uses, so the overlay's left edge stays on the marker's column.
+    // right_col is a fixed whole-pixel offset ahead of it, so the far edge
     // tracks the marker in lockstep instead of wobbling by independent
-    // per-endpoint rounding. width_px is the anticipation offset rounded to
-    // whole pixels — an approximate but rigid back-extent, which beats an exact
-    // but jittering one (the true offset point lands in the Hann/OLA fade-in).
-    const int right_col =
+    // per-endpoint rounding. width_px is the overlay span rounded to whole
+    // pixels — an approximate but rigid forward extent, which beats an exact
+    // but jittering one (the span is an authoring aid, not an engine point).
+    const int left_col =
         static_cast<int>(std::round((ms - vp_start) / spp));
     const int width_px = static_cast<int>(std::round(
-        static_cast<double>(phase_reset_offset_samples) / spp));
+        static_cast<double>(kPhaseResetOverlaySamples) / spp));
 
-    // Too-zoomed-out: if the fixed back-extent rounds below one pixel, paint
-    // nothing at all — no sliver, no clamped minimum.
+    // Too-zoomed-out: if the fixed forward extent rounds below one pixel,
+    // paint nothing at all — no sliver, no clamped minimum.
     if (width_px < 1) return;
 
-    const int left_col = right_col - width_px;
+    const int right_col = left_col + width_px;
 
-    // Rectangle spans columns [left_col, right_col): exclusive of the stem's
-    // own column (right_col), so the stem paints crisply on top of the seam.
-    // Vertical extent is the marker stem's exact span — the lower-row chip
-    // bottom down to the waveform bottom.
+    // Rectangle spans columns [left_col, right_col): the stem's own column
+    // (left_col) sits under the rectangle, and the stems paint after the
+    // overlay, so the stem stays crisp on top of the left seam. Vertical
+    // extent is the marker stem's exact span — the lower-row chip bottom
+    // down to the waveform bottom.
     const double y_top = flag_chip_bottom_y(area, ChipRow::Lower);
     const double y_bottom = static_cast<double>(area.y + area.h);
     double x0 = static_cast<double>(area.x + left_col);
     double x1 = static_cast<double>(area.x + right_col);
 
     // Horizontal clip to [area.x, area.x + area.w); draw whenever the
-    // intersection is non-empty even if the stem column is off-screen right
+    // intersection is non-empty even if the stem column is off-screen left
     // (the tail can be visible while the stem is not).
     x0 = std::max(x0, static_cast<double>(area.x));
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
@@ -360,9 +363,9 @@ void GuiPaintHandler::paint_phase_reset_anticipation_overlay(
     // already-dimmed out-of-trim pixels — that layering is intended).
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kPhaseResetAnticipation.r,
-                          kPhaseResetAnticipation.g, kPhaseResetAnticipation.b,
-                          kPhaseResetAnticipationAlpha);
+    cairo_set_source_rgba(cr, kPhaseResetOverlay.r,
+                          kPhaseResetOverlay.g, kPhaseResetOverlay.b,
+                          kPhaseResetOverlayAlpha);
     cairo_rectangle(cr, x0, y_top, x1 - x0, y_bottom - y_top);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -727,10 +730,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
             const auto m0 = clock::now();
-            // Over the plate and dim, under the stems: the anticipation
-            // overlay lightens the span behind the focused phase reset, then
-            // the stems paint on top so the focused stem stays crisp.
-            paint_phase_reset_anticipation_overlay(cr, area);
+            // Over the plate and dim, under the stems: the phase reset
+            // overlay lightens the span ahead of the focused phase reset,
+            // then the stems paint on top so the focused stem stays crisp.
+            paint_phase_reset_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
             const auto m1 = clock::now();
             t_markers_ms =
