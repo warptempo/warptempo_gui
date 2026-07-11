@@ -136,7 +136,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                     path, *source_info, samples ? samples->data() : nullptr,
                     frames, channels)) {
                 std::fprintf(stderr,
-                    "[warptempo_gui] source sample cache write skipped for %s\n",
+                    "warptempo_gui: source sample cache write skipped for %s\n",
                     path.c_str());
             }
         });
@@ -258,7 +258,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         revert_to_blank();
         return false;
     } else {
-        std::fprintf(stderr, "[warptempo_gui] parsed %zu markers from %s\n",
+        std::fprintf(stderr, "warptempo_gui: parsed %zu markers from %s\n",
                      app.warpmarkers.markers().size(), wm_path.string().c_str());
     }
 
@@ -278,7 +278,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         revert_to_blank();
         return false;
     } else {
-        std::fprintf(stderr, "[warptempo_gui] parsed %zu phase_resets from %s\n",
+        std::fprintf(stderr, "warptempo_gui: parsed %zu phase_resets from %s\n",
                      app.phaseresetmarkers.markers().size(),
                      tm_path.string().c_str());
     }
@@ -526,7 +526,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     const double load_ms =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::fprintf(stderr,
-                 "[warptempo_gui] loaded %s: sr=%d, channels=%d, frames=%lld, "
+                 "warptempo_gui: loaded %s: sr=%d, channels=%d, frames=%lld, "
                  "pyramid_levels=%d, load_time=%.1f ms\n",
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),

@@ -412,7 +412,7 @@ RenderOutcome do_render(const RenderRequest& req,
     if (!req.output_buffer && !fingerprint.empty() &&
         fingerprint_sidecar_matches(final_output_path, fingerprint)) {
         std::fprintf(stderr,
-            "[warptempo_gui] render up to date (fingerprint match): %s\n",
+            "warptempo_gui: render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
@@ -710,7 +710,7 @@ RenderOutcome do_render(const RenderRequest& req,
         const bool display_ok = publish_render_domain_sidecars();
         if (!peaks_ok || !display_ok) {
             std::fprintf(stderr,
-                "[warptempo_gui] fingerprint withheld for %s: %s write "
+                "warptempo_gui: fingerprint withheld for %s: %s write "
                 "failed\n",
                 final_output_path.c_str(),
                 !peaks_ok ? "peaks cache" : "display sidecar");
@@ -721,7 +721,7 @@ RenderOutcome do_render(const RenderRequest& req,
             !fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
-                "[warptempo_gui] fingerprint sidecar write skipped for %s\n",
+                "warptempo_gui: fingerprint sidecar write skipped for %s\n",
                 final_output_path.c_str());
         }
         cleanup_all();

@@ -815,7 +815,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (since_last >= 1.0) {
             if (app.stats_max_redraw_ms > 1.0) {
                 std::fprintf(stderr,
-                    "[warptempo_gui] redraw max=%.2fms in last %.1fs "
+                    "warptempo_gui: redraw max=%.2fms in last %.1fs "
                     "(%d redraws > 1ms)\n",
                     app.stats_max_redraw_ms, since_last,
                     app.stats_over_1ms_count);

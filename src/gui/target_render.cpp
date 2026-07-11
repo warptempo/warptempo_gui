@@ -209,7 +209,7 @@ void GuiTargetRender::dispatch_render_now() {
                               audio.sample_rate(), app.target_buffer)) {
             complete_successful_buffer();
             std::fprintf(stderr,
-                "[warptempo_gui] target view loaded from archival render: %s\n",
+                "warptempo_gui: target view loaded from archival render: %s\n",
                 artifact_candidate.c_str());
             return;
         }

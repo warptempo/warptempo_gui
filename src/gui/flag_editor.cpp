@@ -467,7 +467,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     if (n_refs_renamed > 0) {
         std::fprintf(stderr,
-            "[warptempo_gui] renamed label_def '%s' -> '%s'; "
+            "warptempo_gui: renamed label_def '%s' -> '%s'; "
             "updated %d refs\n",
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
