@@ -233,6 +233,7 @@ void GuiInputHandler::dispatch_single_archival_render(
             }
             finalize_render_run();
             if (success && app.active_audio_view == 'T' &&
+                !app.render_view.enabled &&
                 !target_render.is_updating()) {
                 // ensure_ready() may fill from the shared cache when the
                 // just-rendered fingerprint is already registered, or
@@ -240,6 +241,15 @@ void GuiInputHandler::dispatch_single_archival_render(
                 // a longer-than-RAM-tier entry is still registering on the
                 // writer thread. That miss is benign; if finalize_render_run
                 // just launched a pending target render, leave it alone.
+                //
+                // Gated on !render_view.enabled: with render view open the
+                // flag can be 'T' while the displayed audio is a render wav
+                // (R does not touch active_audio_view), and ensure_ready
+                // would rebind playback to target_buffer (clean path) or
+                // trigger a preview against the displayed render (dirty
+                // path) beneath the open view. Under render view the
+                // T-entry funnel re-runs at the next real T entry
+                // (restore_source_audio's own ensure_ready).
                 target_render.ensure_ready();
             }
         });
@@ -247,6 +257,17 @@ void GuiInputHandler::dispatch_single_archival_render(
     // single-render session so an identical re-dispatch no-ops and a
     // fingerprint-matching target-preview trigger waits the render out.
     async_renderer.set_session_fingerprint(std::move(fingerprint));
+}
+
+bool GuiInputHandler::dispatch_archival_render_if_idle(
+        RenderRequest req, std::vector<uint8_t> fingerprint) {
+    // Derived dispatch (render view's stale-entry rebuild): never kill,
+    // never park — a passive navigation must not cancel an explicit render
+    // or a running batch. Busy refuses with no side effects; the caller
+    // owns the stderr line.
+    if (async_renderer.is_busy()) return false;
+    dispatch_single_archival_render(std::move(req), std::move(fingerprint));
+    return true;
 }
 
 void GuiInputHandler::kill_running_render_and_park(

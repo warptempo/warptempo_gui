@@ -2,6 +2,7 @@
 
 #include "marker_store_validate.h"
 #include "phaseresetmarkers.h"
+#include "render_cache.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
@@ -171,6 +172,62 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
     const auto stat = this->wav_stat_tuple(e.wav_path);
     e.persisted_size  = stat.first;
     e.persisted_mtime = stat.second;
+}
+
+// Build the full archival re-render request for a stale entry from its
+// already-loaded snapshot set (markers, engine block, recipe trim). The
+// request names the entry's own batch folder and basename, so the rebuild
+// republishes the wav, its .fingerprint, and the full sidecar set through
+// do_render's normal staged/gated publication path.
+//
+// Shared resources come from the PARKED source, not the displayed render:
+// do_render's wav arm reads req.source_samples directly (it never re-reads
+// the source file — the probe only supplies metadata), and its
+// load-identity hardfail compares the identity pair against the source
+// path's current stat, so both must name the source audio. The caller
+// passes source_audio_held, or `audio` on the first-entry-not-yet-parked
+// case, mirroring the guard-domain fallback above the D1 guards.
+//
+// req.authoring reproduces the entry's own snapshot from its parsed
+// .settings, so the republished .rendersettings authoring block matches
+// what the entry carried. The republished .settings view keys reset to the
+// dispatch writer's browse defaults — acceptable, the entry was stale.
+static RenderRequest build_entry_rebuild_request(
+        const AppState& app,
+        const AppState::RenderViewEntry& e,
+        const std::vector<GuiWarpMarker>& snapshot_warp,
+        const std::vector<GuiPhaseResetMarker>& snapshot_phase_resets,
+        const SettingsFile& settings,
+        const SettingsFileTab& commit_tab,
+        const GuiAudio& parked_source,
+        RenderCache& render_cache) {
+    const SettingsTrim& recipe_trim = commit_tab.trim;
+    RenderRequest req = build_render_request(
+        app.source_audio_path, snapshot_warp, snapshot_phase_resets,
+        settings.engine,
+        recipe_trim.has_begin, recipe_trim.begin_frame,
+        recipe_trim.has_end,   recipe_trim.end_frame,
+        e.batch_folder.string(), e.basename);
+    req.render_cache        = &render_cache;
+    req.source_samples      = parked_source.samples_shared();
+    req.source_total_frames = parked_source.total_frames();
+    req.source_load_size    = parked_source.source_load_size();
+    req.source_load_mtime   = parked_source.source_load_mtime();
+    req.authoring.valid             = true;
+    req.authoring.active_tab        = settings.active_tab_view;
+    req.authoring.active_audio_view = settings.active_audio_view;
+    req.authoring.has_trim_begin    = recipe_trim.has_begin;
+    req.authoring.trim_begin_frame  = recipe_trim.begin_frame;
+    req.authoring.has_trim_end      = recipe_trim.has_end;
+    req.authoring.trim_end_frame    = recipe_trim.end_frame;
+    req.authoring.zoom_level        = commit_tab.zoom;
+    req.authoring.viewport_start    = commit_tab.viewport_start;
+    req.authoring.playhead          = commit_tab.playhead;
+    req.authoring.active_markers_view = settings.active_markers_view;
+    req.authoring.playback_speed      = settings.playback_speed;
+    req.authoring.follow              = settings.follow;
+    req.authoring.font_size           = settings.font_size;
+    return req;
 }
 
 // Loads the render at app.render_view.list[index] into the active `audio`,
@@ -345,6 +402,67 @@ bool GuiRenderView::load_render_view_at(int index) {
                 "warptempo_gui: render-view: trim validation failed for "
                 "'%s': %s\n",
                 st_path.string().c_str(), tv.error().c_str());
+            return false;
+        }
+    }
+
+    // Display follows the snapshot (ruling 4): if the entry's on-disk
+    // artifact does not match what its snapshot would render — an
+    // accidentally deleted or regenerated wav or .fingerprint; dispatch
+    // always writes matching pairs — the entry is NOT displayed as-is. The
+    // GUI re-renders it in full from the snapshot, republishing the artifact
+    // and its .fingerprint through the normal staged/gated publication path,
+    // so disk and display never diverge. The snapshot fingerprint is the
+    // same render_fingerprint a dispatch of this exact recipe computes:
+    // source path + the PARKED source's load identity (the guard-domain
+    // fallback above covers the first-entry case), the source sample rate,
+    // the snapshot stores, the entry's engine block, and the recipe trim;
+    // the compare is the same fingerprint_sidecar_matches rung do_render's
+    // reuse path runs (a missing .fingerprint is a mismatch). Placed after
+    // the adversarial guards and before any state mutation (playback stop /
+    // park / store writes), so a refused entry preserves prior state.
+    //
+    // The rebuild is a DERIVED dispatch, not a user command: a passive
+    // navigation must never kill an explicit render or a running batch, so
+    // on a busy worker it refuses the entry with one stderr line and the
+    // user retries after the worker drains. When idle it dispatches through
+    // the single-archival chokepoint with the session fingerprint armed (an
+    // identical re-dispatch no-ops; a fingerprint-matching preview trigger
+    // waits and adopts). Either way the entry does not display; there is no
+    // retry loop or auto-reload — the user's next navigation onto the entry
+    // matches and displays.
+    {
+        const GuiAudio& parked_source =
+            source_parked ? source_audio_held : audio;
+        RenderFileIdentity source_identity;
+        source_identity.size  = parked_source.source_load_size();
+        source_identity.mtime = parked_source.source_load_mtime();
+        std::vector<uint8_t> snapshot_fingerprint = render_fingerprint(
+            app.source_audio_path, source_identity,
+            static_cast<int>(source_sample_rate),
+            snapshot_warp, snapshot_phase_resets, settings->engine,
+            recipe_trim.has_begin, recipe_trim.begin_frame,
+            recipe_trim.has_end,   recipe_trim.end_frame);
+        if (!fingerprint_sidecar_matches(e.wav_path.string(),
+                                         snapshot_fingerprint)) {
+            RenderRequest req = build_entry_rebuild_request(
+                app, e, snapshot_warp, snapshot_phase_resets, *settings,
+                commit_tab, parked_source, target_render.render_cache);
+            const bool dispatched =
+                dispatch_archival_render_if_idle &&
+                dispatch_archival_render_if_idle(
+                    std::move(req), std::move(snapshot_fingerprint));
+            if (dispatched) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-view: fingerprint mismatch for "
+                    "'%s'; re-rendering from snapshot\n",
+                    e.wav_path.string().c_str());
+            } else {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-view: fingerprint mismatch for "
+                    "'%s'; renderer busy, retry after the current render\n",
+                    e.wav_path.string().c_str());
+            }
             return false;
         }
     }
