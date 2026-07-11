@@ -818,7 +818,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // strict loaders; (3) the source-load adversarial guards over the
         // assembled candidate — past-EOF walls
         // (first_past_eof_wall_defect), the target-view/output-format
-        // compatibility rule, and the source-clobber refusal. Any
+        // compatibility rule, and the source-clobber refusal; and (4) the
+        // snapshot re-attestation — the recipe re-read here must still
+        // fingerprint to the displayed wav's .fingerprint, so the sidecars
+        // cannot have been edited underneath the entry between display and
+        // commit. The wall / format / collision guards ahead of it stay as
+        // defense in depth even though a matching fingerprint transitively
+        // covers the marker and engine fields (they name the offending
+        // sidecar precisely, and run without a .fingerprint present). Any
         // failure aborts to stderr, first error only, before any mutation
         // of markers, history, settings, trim, view state, or renders/.
         // Walkable, GUI-committable defects (coincident markers, dangling
@@ -981,6 +988,40 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 "the render output '%s' overwrite the source audio file\n",
                 sidecar.string().c_str(), collision->string().c_str());
             return true;
+        }
+
+        // Source-load adversarial guard 4: snapshot re-attestation. Commit
+        // promotes THE DISPLAYED RENDER, but the sidecars are mutable files
+        // read fresh above — between display and commit they must still attest
+        // to the wav on screen. Recompute the fingerprint from the re-read
+        // recipe (the same render_fingerprint load_render_view_at computes in
+        // its fingerprint-mismatch block: source path + the source audio's
+        // load identity, the source sample rate, the snapshot stores, the
+        // entry's engine block, the recipe trim) and require the wav's
+        // existing .fingerprint to match. A mismatch means the recipe was
+        // edited underneath the displayed entry (adversarial): abort before
+        // the first mutation; the user re-navigates onto the entry (it
+        // re-renders via the normal fingerprint-mismatch path) and re-commits.
+        // The browse-only view keys ride outside the render fingerprint, so
+        // the per-entry view-state autosaves the GUI itself writes stay
+        // compatible with this check.
+        {
+            RenderFileIdentity source_identity;
+            source_identity.size  = audio.source_load_size();
+            source_identity.mtime = audio.source_load_mtime();
+            std::vector<uint8_t> fp = render_fingerprint(
+                app.source_audio_path, source_identity,
+                static_cast<int>(sample_rate),
+                src_warp, src_phase_resets, settings->engine,
+                recipe_trim.has_begin, recipe_trim.begin_frame,
+                recipe_trim.has_end,   recipe_trim.end_frame);
+            if (!fingerprint_sidecar_matches(cur_e.wav_path.string(), fp)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: commit aborted: snapshot for '%s' no "
+                    "longer matches the displayed render\n",
+                    cur_e.wav_path.string().c_str());
+                return true;
+            }
         }
 
         // Landing-view capture, BEFORE any exit/clear mutates its sources:

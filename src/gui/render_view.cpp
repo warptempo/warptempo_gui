@@ -354,6 +354,32 @@ bool GuiRenderView::load_render_view_at(int index) {
             st_path.string().c_str(), settings.error().c_str());
         return false;
     }
+    // Entry-semantic invariants of the dispatch writer: it emits an entry
+    // .settings only for wav renders and always pins active_audio_view=T (the
+    // render display axis IS the target axis, and commit lands in 'T'). Both
+    // are checked here rather than widened into the standard source settings
+    // vocabulary — the schema legitimately loads active_audio_view=S and every
+    // output_format for authoring sources. A hand-edited entry violating
+    // either is GUI-unproducible: active_audio_view=S would display fine (the
+    // key rides outside the render fingerprint) while commit still lands in T,
+    // and a non-wav output_format would drive the fingerprint-mismatch rebuild
+    // to publish a map artifact instead of a replacement wav, revisiting the
+    // same useless export forever. Refuse before fingerprint handling so a
+    // non-wav engine block never reaches the derived-rebuild dispatch.
+    if (settings->active_audio_view != 'T') {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: snapshot rejected for '%s': entry "
+            "settings must carry active_audio_view=T\n",
+            st_path.string().c_str());
+        return false;
+    }
+    if (settings->engine.output_format != "wav") {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: snapshot rejected for '%s': entry "
+            "output_format must be wav\n",
+            st_path.string().c_str());
+        return false;
+    }
     // The commit tab (named by active_tab_view) carries the recipe trim
     // that shaped this render and the browse view state autosave owns.
     const SettingsFileTab& commit_tab =
@@ -405,6 +431,32 @@ bool GuiRenderView::load_render_view_at(int index) {
                 "warptempo_gui: render-view: past-EOF wall defect for "
                 "'%s': %s\n",
                 st_path.string().c_str(), detail->c_str());
+            return false;
+        }
+    }
+
+    // Raw-store walk, the same enumerator warp_render_preflight runs ahead of
+    // the owner-level build at every live dispatch site. The GUI coincidence
+    // window (kCoincidenceWindowSeconds) is deliberately wider than the map
+    // owner's sub-frame refusal, so a hand-edited entry with enabled markers a
+    // couple dozen frames apart is raw-invalid yet still buildable — it would
+    // display, and a stale-fingerprint rebuild would even re-render and
+    // re-attest it. Every GUI-dispatched entry already passed
+    // warp_render_preflight, so a raw-store defect here is hand fabrication:
+    // an adversarial artifact boundary that hard-fails to stderr, first defect
+    // only. It must not open the live defect-resolution series and must not
+    // dispatch the derived rebuild, so it sits before fingerprint handling.
+    // The past-EOF walls above already ran (the enumerator's contract assumes
+    // in-wall stores).
+    {
+        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
+            slice_to_warp_markers(snapshot_warp),
+            slice_to_phase_reset_markers(snapshot_phase_resets),
+            source_sample_rate);
+        if (!defects.empty()) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: snapshot rejected for '%s': %s\n",
+                wm_path.string().c_str(), defects.front().message.c_str());
             return false;
         }
     }
