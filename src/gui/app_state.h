@@ -934,14 +934,16 @@ struct AppState {
         // display stores above are cleared. The Render display context
         // (active_display_context) aliases it. snapshot_crop_begin is
         // llrint(T_b) of the snapshot map — the delivered wav's sample 0
-        // in full-target coordinates; 0 untrimmed.
+        // in full-target coordinates; 0 untrimmed. snapshot_display_total
+        // is the entry's own length — the DECODED wav's frame count,
+        // captured at entry load — and is the Render display domain's
+        // total (live_total_frames semantics); the GuiAudio object stays
+        // the source in every view, so the displayed total must live
+        // context-side. sample_rate stays the source's (equal to the
+        // render's by construction, verified at entry decode).
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
         int64_t                          snapshot_crop_begin = 0;
-        // Source audio's sample rate / total frames at the time render-view
-        // was entered. Cached so timestamp computation and trim resolution
-        // don't have to peek at the swapped-out source GuiAudio.
-        int                          src_sr      = 0;
-        int64_t                      src_total   = 0;
+        int64_t                          snapshot_display_total = 0;
     };
     RenderViewContext render_view;
 };

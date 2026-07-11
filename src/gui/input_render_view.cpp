@@ -145,8 +145,6 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
                 }
             }
         }
-        app.render_view.src_sr    = audio.sample_rate();
-        app.render_view.src_total = audio.total_frames();
         app.render_view.list      = std::move(list);
         // Iter/BPM modes persist across render-view enter/leave. The flags are
         // inert inside render view (input gate drops i/M; paint gates on
@@ -162,7 +160,7 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         }
     } else {
         // Capture the just-viewed render's zoom/viewport/playhead
-        // before restoring source-audio state. Not done on the
+        // before restoring source-view state. Not done on the
         // Ctrl+Alt+C commit path — the renders folder is wiped
         // immediately after commit, so the write would be lost.
         if (app.render_view.index >= 0 &&
@@ -178,11 +176,12 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // — re-entry migrates its persisted_* fields into the
         // freshly enumerated list.
         render_view.stash_render_view_selection_to_active_entry();
-        render_view.restore_source_audio();
+        render_view.restore_source_view();
         app.render_view.warp_markers.clear();
         app.render_view.phase_resets.clear();
         app.render_view.snapshot_warp_frame_map.clear();
         app.render_view.snapshot_crop_begin = 0;
+        app.render_view.snapshot_display_total = 0;
         app.render_view.index             = -1;
     }
     return true;

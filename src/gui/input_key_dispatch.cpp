@@ -792,7 +792,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // .rendersettings sidecar. Marker/reset promotion remains one
     // cross-file undo entry; settings and trim stay outside undo by
     // standing convention. After the commit succeeds: render-view exits,
-    // the parked source audio is restored, and <source_parent>/renders/
+    // the source view is restored (playback rebinds to the always-source
+    // audio object; the entry buffer frees), and <source_parent>/renders/
     // is recursively wiped. The committed render survives through the
     // render cache, not as a folder artifact. Silent no-op outside
     // render-view.
@@ -888,16 +889,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const char restored_audio_view =
             authoring ? authoring->active_audio_view
                       : app.active_audio_view;
-        // The candidates are SOURCE-domain, but while render-view is up the
-        // live `audio` holds the displayed render (generally shorter than
-        // the source — any trimmed or speeding render); the source is parked
-        // on render_view.source_audio_held until restore_source_audio below.
-        // Every wall and view-domain guard therefore reads the parked
-        // source's totals, the domain the commit actually restores into.
-        const int64_t total_frames =
-            render_view.source_audio_held.total_frames();
+        // The candidates are SOURCE-domain, and the audio object is
+        // invariantly the source in every view (render view's displayed
+        // entry lives in its own view-owned buffer), so every wall and
+        // view-domain guard reads `audio` directly — the domain the commit
+        // actually restores into. There is no parked domain to choose.
+        const int64_t total_frames = audio.total_frames();
         const long    sample_rate  =
-            render_view.source_audio_held.sample_rate();
+            static_cast<long>(audio.sample_rate());
 
         // Source-load adversarial guard 1: past-EOF walls, the same shared
         // implementation the GUI load and warptempo_cli run
@@ -1102,7 +1101,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.iteration_mode_enabled = false;
         app.bpm_mode_enabled       = false;
 
-        render_view.restore_source_audio();
+        render_view.restore_source_view();
 
         // An engaged authoring block restores its five core members
         // wholesale: active_tab, active_audio_view, zoom_level,
@@ -1165,6 +1164,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.render_view.phase_resets.clear();
         app.render_view.snapshot_warp_frame_map.clear();
         app.render_view.snapshot_crop_begin = 0;
+        app.render_view.snapshot_display_total = 0;
         app.render_view.index             = -1;
         app.render_view.last_path.clear();
 

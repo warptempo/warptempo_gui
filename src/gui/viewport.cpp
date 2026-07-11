@@ -15,9 +15,13 @@
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.render_view.enabled) {
-        // Render-view has no trim — the loaded audio is already
-        // render-domain (trim baked in at render time).
-        return {0, audio.total_frames()};
+        // Render-view has no trim — the displayed entry is already
+        // render-domain (trim baked in at render time). The range is the
+        // entry's own extent: the GuiAudio object is invariantly the
+        // source, so the displayed total comes from the context-side
+        // snapshot field, exactly what the entry's decoded buffer (and
+        // the playback bind) carries.
+        return {0, app.render_view.snapshot_display_total};
     }
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store

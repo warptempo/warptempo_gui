@@ -21,15 +21,18 @@ struct GuiTargetRender;
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
 // the per-entry .settings snapshot (per-render zoom/viewport/playhead/W-P
 // persistence, plus the strict entry load: markers, engine scale, recipe trim),
-// the per-entry selection stash with stat-tuple gating, the load-into-active-audio
-// path that parks the source GuiAudio onto an owned member, and the inverse
-// restore. clear_hover_popup is reached through viewport;
+// the per-entry selection stash with stat-tuple gating, the entry-audio
+// decode-and-bind path, and the source-view restore on exit.
+// clear_hover_popup is reached through viewport;
 // refresh_active_tab_view_from_app is reached through active_views.
 //
-// `source_audio_held` is owned (not a reference): it was a local in main()
-// before extraction and is used only by load_render_view_at /
-// restore_source_audio. Promoting it to a member keeps lifetime tied to
-// the struct rather than to main's stack frame.
+// The audio-domain invariant: the GuiAudio object (`audio`) is ALWAYS the
+// source — it never swaps, in any view. Render view's audio is the
+// view-owned decoded entry buffer below, bound to playback at domain
+// offset 0 (buffer frame 0 IS display position 0 — the wav is the crop);
+// the waveform plate is the SOURCE samples deformed through the entry's
+// snapshot map, which by the render pipeline's own construction is the
+// same picture the rendered wav holds.
 struct GuiRenderView {
     AppState&         app;
     GuiAudio&         audio;
@@ -40,12 +43,15 @@ struct GuiRenderView {
     GuiActiveViews&   active_views;
     GuiTargetRender&  target_render;
 
-    // Parked source audio. Populated only while app.render_view.enabled is
-    // true — std::move'd off `audio` on toggle-in and std::move'd back on
-    // toggle-out so the source doesn't have to be re-read from disk.
-    // Default-constructed (empty / total_frames() == 0) when render-view is
-    // off.
-    GuiAudio source_audio_held;
+    // The displayed entry's decoded audio: interleaved float frames with
+    // channels == the source's channel count (equal to the render's by
+    // construction, verified at decode). Disk-on-demand: decoded whole in
+    // load_render_view_at (entries are typically short trims), one entry
+    // resident at a time, freed on nav-away / exit / commit. Playback binds
+    // this buffer through rebind_buffer at domain offset 0. Empty
+    // (entry_frames == 0) whenever no entry is displayed.
+    std::vector<float> entry_samples;
+    int64_t            entry_frames = 0;
 
     // Derived-dispatch surface for the stale-entry rebuild, bound in main.cpp
     // post-construction to GuiInputHandler::dispatch_archival_render_if_idle
@@ -84,7 +90,7 @@ struct GuiRenderView {
         const std::filesystem::path& p);
     void stash_render_view_selection_to_active_entry();
     bool load_render_view_at(int index);
-    void restore_source_audio();
+    void restore_source_view();
 
     // Re-enumerate the renders/ folder and merge per-entry persisted
     // state (state, persisted_size, persisted_mtime) from the existing
@@ -99,7 +105,7 @@ struct GuiRenderView {
     // boundary.
     bool refresh_render_view_list();
 
-    // Tear down render-view state and restore source audio. Mirrors
+    // Tear down render-view state and restore the source view. Mirrors
     // the toggle-off branch of the R key handler. Used by the
     // navigation handlers when refresh_render_view_list returns false
     // (renders/ folder emptied externally).

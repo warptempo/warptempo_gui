@@ -48,9 +48,9 @@ public:
     const float* samples_ptr() const { return samples_ ? samples_->data() : nullptr; }
 
     // Shared handle to the immutable sample buffer. A render dispatch copies
-    // this handle into its RenderRequest, so a file load or render-view swap
-    // that installs a NEW buffer cannot invalidate a worker mid-render — the
-    // worker's handle keeps the old buffer alive until the request dies.
+    // this handle into its RenderRequest, so a file load that installs a NEW
+    // buffer cannot invalidate a worker mid-render — the worker's handle
+    // keeps the old buffer alive until the request dies.
     // Contract: the pointed-to vector is never mutated after publish; every
     // refill builds a fresh vector and swaps the handle.
     std::shared_ptr<const std::vector<float>> samples_shared() const;

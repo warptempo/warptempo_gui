@@ -37,11 +37,16 @@ struct WaveformJob {
     long long audio_gen        = -1;
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
+    // Render-view crop shift added to vp_start/vp_end at the render call
+    // only (see WaveformRenderInputs::display_offset in paint_handler.h);
+    // 0 outside render view.
+    int64_t   display_offset   = 0;
 
-    // Frame-map snapshot the worker dereferences during the render. Empty for
-    // source view; populated for target view from the value paint-side
-    // computed (or app.drag.frozen_warp_frame_map during a target-view drag). The
-    // worker reads — never builds — this.
+    // Frame-map snapshot the worker dereferences during the render. Empty
+    // for source view; populated for target view from the value paint-side
+    // computed (or app.drag.frozen_warp_frame_map during a target-view
+    // drag), and for render view from the entry's snapshot map. The worker
+    // reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
 
     // Surface to render into. Owned by the cache (the cache's pending-slot

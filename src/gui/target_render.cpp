@@ -378,7 +378,7 @@ void GuiTargetRender::ensure_ready() {
     if (!is_dirty_ && app.target_buffer_frames > 0) {
         // Defensive stop: rebind_buffer refuses if the device is playing.
         // Call sites are expected to have stopped playback already (the
-        // S→T toggle handler does, render-view exit's restore_source_audio
+        // S→T toggle handler does, render-view exit's restore_source_view
         // does), but a future caller that forgets shouldn't get a silent
         // refused-rebind.
         if (playback.is_playing()) {

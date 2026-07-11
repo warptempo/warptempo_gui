@@ -198,6 +198,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
                            !app.render_view.enabled;
     std::vector<WarpFrameMapSegment> target_warp_frame_map;
     uint64_t target_warp_frame_map_hash = 0;
+    int64_t display_offset = 0;
     if (is_target) {
         if (app.drag.active) {
             target_warp_frame_map = app.drag.frozen_warp_frame_map;
@@ -208,6 +209,22 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
             target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
             target_warp_frame_map_hash = c.hash;
         }
+    } else if (app.render_view.enabled &&
+               !app.render_view.snapshot_warp_frame_map.empty()) {
+        // Render view: bake the entry's snapshot map over the SOURCE
+        // samples (the audio object is invariantly the source), with the
+        // viewport shifted by the crop origin at the render call — a
+        // display column at viewport x paints the deformed axis at
+        // (vp_start + snapshot_crop_begin) + x*spp, so display position 0
+        // is the crop origin, matching the stems' display_offset
+        // subtraction. The plate this paints is the deformed source — by
+        // the render pipeline's own construction, the same picture the
+        // rendered wav holds. Cache keying matches the stem cache's: the
+        // snapshot map is immutable per entry and every entry load bumps
+        // audio_generation, so the fingerprint's audio_gen already keys
+        // the map and the offset — warp_frame_map_hash stays 0 here.
+        target_warp_frame_map = app.render_view.snapshot_warp_frame_map;
+        display_offset = app.render_view.snapshot_crop_begin;
     }
 
     in.vp_start      = vp_start;
@@ -217,6 +234,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.channel_count = audio.render_channels();
+    in.display_offset = display_offset;
     in.warp_frame_map       = std::move(target_warp_frame_map);
     in.valid         = true;
     return in;
@@ -273,6 +291,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_audio_gen   = app.audio_generation;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
+        wf_cache.supersede_display_offset = in.display_offset;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
         return;
     }
@@ -300,6 +319,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio_gen      = app.audio_generation;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
+    job.display_offset = in.display_offset;
     // Stash a copy of the warp_frame_map on the pending slot so the
     // stem cache can read it at completion-swap time. The job consumes
     // the original by move; the copy stays on the cache.
@@ -368,6 +388,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio_gen      = wf_cache.supersede_audio_gen;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
+        job.display_offset = wf_cache.supersede_display_offset;
         // Thread the supersede warp_frame_map into both the job and
         // pending_fp_warp_frame_map, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
@@ -508,7 +529,10 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.area_w, in.area_h,
         in.channel_count,
         audio,
-        in.vp_start, in.vp_end,
+        // display_offset shifts the render into the entry's cropped
+        // deformed axis in render view; 0 elsewhere. The fingerprints
+        // below stay display-domain.
+        in.vp_start + in.display_offset, in.vp_end + in.display_offset,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
     // Publish the displayed fingerprint NOW so this same tick's
@@ -675,7 +699,9 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         strip_x, strip_w,
         in.channel_count,
         audio,
-        in.vp_start, in.vp_end,
+        // Same display_offset shift as the full-plate renders: the strip's
+        // columns must land on the identical cropped deformed axis.
+        in.vp_start + in.display_offset, in.vp_end + in.display_offset,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
     // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the

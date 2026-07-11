@@ -249,7 +249,7 @@ void GuiInputHandler::dispatch_single_archival_render(
                 // trigger a preview against the displayed render (dirty
                 // path) beneath the open view. Under render view the
                 // T-entry funnel re-runs at the next real T entry
-                // (restore_source_audio's own ensure_ready).
+                // (restore_source_view's own ensure_ready).
                 target_render.ensure_ready();
             }
         });
@@ -357,9 +357,9 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // Modal-surface guard (architect-ruled SKIP): a completion callback
         // must never mutate the view stack underneath a modal surface — a
         // bottom-strip editor or any prompt. Auto-opening render view here
-        // would park the source and swap `audio` under an open bpm/settings
-        // session (a bpm Enter would then sweep FROM the displayed render),
-        // or re-enter the view under a defect series. When a modal is up the
+        // would flip the displayed domain and rebind playback under an open
+        // bpm/settings session, or re-enter the view under a defect series.
+        // When a modal is up the
         // auto-open is skipped outright — the batch is on disk and in the
         // render list; `r` shows it once the modal closes. No deferral slot:
         // skip keeps the modal invariant absolute with no new lifecycle.

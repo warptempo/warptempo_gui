@@ -184,13 +184,16 @@ const GuiDisplayContext& active_display_context(const AppState& app,
         // when render view is off, and the live target-map cache is never
         // consulted here. With no entry loaded the snapshot member is
         // empty and the stores are empty, so nothing translates while the
-        // map pointer stays valid. domain_total_frames stays the
-        // displayed wav's own total for now — the audio decouple moves
-        // the total context-side.
+        // map pointer stays valid. domain_total_frames is the entry's own
+        // length (snapshot_display_total, the decoded wav's frame count
+        // captured at entry load): the GuiAudio object is invariantly the
+        // SOURCE, so the displayed total lives context-side. sample_rate
+        // stays audio.sample_rate() — the render's rate equals the
+        // source's by construction, verified at entry decode.
         ctx.domain = GuiDisplayDomain::Render;
         ctx.warp_frame_map = &app.render_view.snapshot_warp_frame_map;
         ctx.display_offset = app.render_view.snapshot_crop_begin;
-        ctx.domain_total_frames = audio.total_frames();
+        ctx.domain_total_frames = app.render_view.snapshot_display_total;
     } else if (app.active_audio_view == 'T') {
         // Live target view: the memoized target-view map is the
         // translation, and the displayed total is the built map's target

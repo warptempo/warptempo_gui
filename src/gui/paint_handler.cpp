@@ -548,8 +548,9 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     //
     //     In source-view, sr is the loaded file's sample rate and the
     //     playhead samples are source-frames. In render-view the
-    //     active `audio` is the render; its sr is what the engine
-    //     wrote and the playhead is render-frame coords. The same
+    //     playhead is render-frame coords and sr is still the source's
+    //     (the audio object is invariantly the source; the render's rate
+    //     equals it by construction, verified at entry decode). The same
     //     arithmetic suffices. Split-playhead: track the scanner
     //     during playback (what the user hears), the cursor otherwise
     //     (equal by invariant when the scanner is inactive).
