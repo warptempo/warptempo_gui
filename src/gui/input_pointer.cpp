@@ -191,8 +191,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Shift is held. All wheel chords (zoom, Alt pan) are pure viewport
     // ops and pass through unchanged. Drag-create and top-strip playhead
     // movement are silent no-ops so the read-only invariant on
-    // marker state is preserved. Hover-popup motion still runs in
-    // the motion handler against render_view.warp_markers.
+    // marker state is preserved. Render view runs no hover popup — the
+    // motion handler clears any popup still showing from source view
+    // (a recorded asymmetry at handle_render_view_motion's tail).
     // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag

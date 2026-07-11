@@ -302,6 +302,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay_storage.times   = &app.drag.moveable_times;
         drag_overlay = &drag_overlay_storage;
     }
+    // This four-way branch chain must stay in step with the debug rect
+    // builder (paint_debug_hit_rects, paint_handler.cpp), which strokes the
+    // same rects this hit test consumes.
     std::vector<FlagHitRect> rects;
     if (app.render_view.enabled && app.active_markers_view == 'P') {
         // Render-view P sub-view: hit-test the snapshot's phase-reset chips

@@ -479,8 +479,17 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         dbg_drag = &dbg_drag_storage;
     }
 
+    // This four-way branch chain must stay in step with hit_test_flag's
+    // production builder (app_state.cpp): the debug overlay validates the
+    // same rects the pointer hit-tests, so every arm here mirrors an arm
+    // there (render-view P, render-view warp, live P, live warp).
     std::vector<FlagHitRect> dbg_rects;
-    if (app.render_view.enabled) {
+    if (app.render_view.enabled && app.active_markers_view == 'P') {
+        dbg_rects = compute_phase_reset_flag_hit_rects(
+            top_strip, app.render_view.phase_resets,
+            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
+            dbg_tmap_arg, dbg_drag);
+    } else if (app.render_view.enabled) {
         dbg_rects = compute_flag_hit_rects(
             top_strip, app.render_view.warp_markers,
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),

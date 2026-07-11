@@ -454,9 +454,16 @@ bool GuiRenderView::load_render_view_at(int index) {
             slice_to_phase_reset_markers(snapshot_phase_resets),
             source_sample_rate);
         if (!defects.empty()) {
+            // Name the file that actually failed: the defect carries its
+            // column ('W' warp, 'P' phase reset), and dangling-ref /
+            // pass-after-ref defects are warp-only by construction, so a 'P'
+            // defect is always a stacked-reset coincidence group in the
+            // .phaseresetmarkers file. The column field is authoritative.
+            const std::filesystem::path& defect_path =
+                defects.front().column == 'P' ? pm_path : wm_path;
             std::fprintf(stderr,
                 "warptempo_gui: render-view: snapshot rejected for '%s': %s\n",
-                wm_path.string().c_str(), defects.front().message.c_str());
+                defect_path.string().c_str(), defects.front().message.c_str());
             return false;
         }
     }
