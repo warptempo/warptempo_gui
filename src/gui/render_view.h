@@ -17,7 +17,8 @@ struct GuiTargetRender;
 
 // Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
-// the .rendersettings sidecar (per-render zoom/viewport/playhead persistence),
+// the per-entry .settings snapshot (per-render zoom/viewport/playhead/W-P
+// persistence, plus the strict entry load: markers, engine scale, recipe trim),
 // the per-entry selection stash with stat-tuple gating, the load-into-active-audio
 // path that parks the source GuiAudio onto an owned member, and the inverse
 // restore. clear_hover_popup is reached through viewport;
@@ -62,10 +63,9 @@ struct GuiRenderView {
           target_render(target_render_) {}
 
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
-    std::filesystem::path rendersettings_path(
+    std::filesystem::path settings_path(
         const AppState::RenderViewEntry& e);
-    void write_rendersettings_for(const AppState::RenderViewEntry& e);
-    void apply_rendersettings_for(const AppState::RenderViewEntry& e);
+    void write_settings_for(const AppState::RenderViewEntry& e);
     std::pair<uintmax_t, int64_t> wav_stat_tuple(
         const std::filesystem::path& p);
     void stash_render_view_selection_to_active_entry();

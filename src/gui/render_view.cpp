@@ -1,15 +1,17 @@
 #include "render_view.h"
 
+#include "marker_store_validate.h"
 #include "phaseresetmarkers.h"
+#include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
-#include "frame_format.h"
+#include "trimmer.h"
+#include "warp_frame_map_build.h"
 #include "warpmarkers.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
-#include <fstream>
 #include <map>
 #include <string>
 #include <sys/stat.h>
@@ -18,7 +20,7 @@
 #include <vector>
 
 // Render-view cluster: batch-folder enumeration, entry load/refresh, the
-// per-entry .rendersettings view-state read/write, and the source-audio
+// per-entry .settings view-state read/write, and the source-audio
 // park/restore around render-view sessions. Reaches viewport,
 // active_views, and selection through the struct's reference members
 // (clamp_viewport_start and compute_trim_samples are free functions
@@ -99,60 +101,34 @@ GuiRenderView::enumerate_render_view_list() {
     return out;
 }
 
-// -- <basename>.rendersettings sidecar ---------------------------------
+// -- <basename>.settings snapshot --------------------------------------
 //
-// Per-render zoom/viewport/playhead persistence. Captures the live
-// render-view state at navigation/exit boundaries; applied on entry
-// / arrival. The on-disk file is shared with the engine and authoring
-// blocks written by render_pipeline (see write_rendersettings in
-// settings_io); these helpers only touch the render-view scratch block.
+// Per-render zoom/viewport/playhead/W-P persistence lives on the entry's
+// standard `.settings` snapshot (written at render time by the pipeline
+// beside the wav, browse defaults on the commit tab). The live render-view
+// state is captured at navigation/exit boundaries through the strict
+// read-modify-write helper below; the entry loader applies the file's view
+// state on arrival.
 
-std::filesystem::path GuiRenderView::rendersettings_path(
+std::filesystem::path GuiRenderView::settings_path(
         const AppState::RenderViewEntry& e) {
-    return e.batch_folder / (e.basename + ".rendersettings");
+    return e.batch_folder / (e.basename + ".settings");
 }
 
-// Atomic update of the view-state block (engine and authoring blocks, if
-// present on disk, are left untouched). Failures are non-fatal — logged
-// once by the underlying writer and otherwise discarded.
-void GuiRenderView::write_rendersettings_for(
+// Atomic view-state update of the entry's .settings (every other key is
+// preserved from the strict parse). The browsed active_markers_view rides
+// along so the entry restores the W/P mode it was last viewed in.
+// Failures are non-fatal here — logged once by the underlying helper and
+// otherwise discarded (a refused autosave costs the persisted view state,
+// never the session).
+void GuiRenderView::write_settings_for(
         const AppState::RenderViewEntry& e) {
-    update_rendersettings_view_state(
-        this->rendersettings_path(e),
+    update_settings_view_state(
+        this->settings_path(e),
         app.viewport_start_sample,
         app.zoom_level,
-        app.playhead_cursor_sample);
-}
-
-// Display-leniency caller of the strict whole-file parser: a missing or
-// refused .rendersettings logs once and applies the defaults (fit-file
-// zoom, zeroed viewport/playhead). View state here is display scratch and
-// is never adopted into authoring, so falling back is the recorded
-// display-sidecar leniency; the adoption boundary — Ctrl+Alt+C promotion —
-// consumes the same parser and aborts on the same refusal instead. Apply
-// order: zoom → viewport → playhead → clamp_viewport_start (zoom drives
-// the spp used by clamp).
-void GuiRenderView::apply_rendersettings_for(
-        const AppState::RenderViewEntry& e) {
-    RenderViewState vs;
-    vs.zoom_level = kFitFileLevel;
-    auto rs = read_rendersettings(this->rendersettings_path(e));
-    if (rs) {
-        vs = rs->view;
-    } else {
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: rendersettings read failed for "
-            "'%s': %s; applying default view state\n",
-            this->rendersettings_path(e).string().c_str(),
-            rs.error().c_str());
-    }
-    app.zoom_level            = vs.zoom_level;
-    app.viewport_start_sample = vs.viewport_start;
-    // Deliberately unclamped: persisted display scratch under the recorded
-    // display-sidecar leniency; the runtime clamp (move_playhead_to) owns
-    // the value at first use.
-    app.playhead_cursor_sample       = vs.playhead;
-    clamp_viewport_start(app, audio);
+        app.playhead_cursor_sample,
+        app.active_markers_view);
 }
 
 // Capture (size, mtime_seconds) for a wav path.
@@ -197,118 +173,19 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
     e.persisted_mtime = stat.second;
 }
 
-// Lenient, display-only reader for a .renderwarpmarkers sidecar. These
-// sidecars are a re-timed display SUBSET of the source markers, and the
-// re-timing can produce shapes the strict authoring parser rejects: the
-// mandatory 00:00.000 anchor can be dropped (a trim beginning after zero
-// drops it at the trim-range filter; a marker exactly at the trim begin can
-// round half a sample ahead of the crop origin and drop at the pre-origin
-// filter — an untrimmed render keeps the anchor, since the first
-// map segment's target frame is 0), and a label reference can survive the
-// render window while its definition is trimmed away, arriving orphaned
-// (a definition itself is not bare here — it serializes inline with its
-// colon-label suffix whenever the defining marker survives). The strict
-// authoring parser (parse_warpmarkers_file, reached via GuiWarpMarkers::load)
-// rejects a missing opening anchor and an orphaned reference, so render-view
-// reads through this reader instead — render-view is a read-only overlay on
-// already-canonical output and must accommodate the canonical parser, not
-// the reverse. (read_render_view_phaseresetmarkers below shares the
-// display-only-overlay rationale and has its own strict-parser mismatch,
-// the coincident-stack case the strict path walks as a commit defect.)
-//
-// The on-disk payload after the pipe IS the display string the flag painter
-// shows (flag_text returns label_ref verbatim when set), so the whole payload
-// is stored as label_ref with no payload-grammar parsing, no label resolution,
-// no tempo/scale parsing, and no validation. Tempo fields stay at their
-// defaults and label_def stays empty. Each line: skip blanks; split on the
-// first `|` into position|payload. The position is a frame double on the
-// render's own time axis, generically fractional, decoded through the
-// render-display pair (parse_render_frame_double, frame_format.h) — the
-// authored parse would refuse the fractional target positions this domain
-// routinely carries. The decoded double then quantizes through
-// snap_authored_frame into the int64 time_frame this display store shares
-// with the authored type: every downstream consumer (stem paint, click
-// navigation) already rounded to the nearest whole frame at use, so rounding
-// once at load displays identically; the on-disk sidecar keeps its full
-// fractional precision. Lines with no pipe or an unparseable position are
-// skipped individually — a bad line never fails the whole load, since this is
-// display-only. The render-display grammar has no disabled rows: the sidecar
-// writer filters every effectively-disabled marker out before serializing
-// (the render keep mask), so the rows built here always carry the struct
-// default disabled = false, and a leading '#' can appear only on a
-// hand-edited line, where it simply fails the position parse and is skipped
-// like any other junk — no special-casing.
-static std::vector<GuiWarpMarker> read_render_view_warpmarkers(
-        const std::string& path) {
-    std::vector<GuiWarpMarker> out;
-    std::ifstream f(path);
-    if (!f.is_open()) return out;
-    std::string line;
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        const size_t pipe = line.find('|');
-        if (pipe == std::string::npos) continue;
-        const std::string left = line.substr(0, pipe);
-        GuiWarpMarker m;
-        double render_frame = 0.0;
-        if (!parse_render_frame_double(left, render_frame)) continue;
-        m.time_frame   = snap_authored_frame(render_frame);
-        m.label_ref    = line.substr(pipe + 1);
-        out.push_back(std::move(m));
-    }
-    return out;
-}
-
-// Lenient, display-only reader for a .renderphaseresetmarkers sidecar —
-// the reset-side counterpart to read_render_view_warpmarkers above, sharing
-// its rationale: both render-domain sidecars are display-only overlays on
-// already-published output, read leniently because nothing downstream
-// depends on their invariants — a bad line costs one flag, never the whole
-// overlay — while the strict authoring parser (parse_phaseresetmarkers_file,
-// reached via GuiPhaseResetMarkers::load) owns every load whose result gets
-// edited, re-saved, or rendered from. The render publisher can legitimately
-// write two resets a fraction of a frame apart — a stack the strict path
-// would walk as a commit defect — but this reader simply displays them as
-// overlapping flags; exactly the case leniency exists for.
-//
-// Each line: skip byte-empty lines; the whole line must parse in full as a
-// render-display frame double (parse_render_frame_double consumes the whole
-// field, so trailing characters fail it; fractional target positions are this
-// domain's normal shape and parse fine) or the line is skipped individually.
-// The decoded double quantizes through snap_authored_frame into the shared
-// int64 time_frame, same rationale as the warp reader above (paint and
-// navigation already round at use). No cross-line validation of any kind. The
-// render-display grammar has no disabled rows: the sidecar writer drops every
-// disabled reset before serializing, so the rows built here always carry the
-// struct default disabled = false, and a leading '#' can appear only on a
-// hand-edited line, where it fails the position parse and is skipped like any
-// other junk — no special-casing. Leniency is the point: a bad line costs one
-// flag, never the whole overlay.
-static std::vector<GuiPhaseResetMarker> read_render_view_phaseresetmarkers(
-        const std::string& path) {
-    std::vector<GuiPhaseResetMarker> out;
-    std::ifstream f(path);
-    if (!f.is_open()) return out;
-    std::string line;
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        GuiPhaseResetMarker m;
-        double render_frame = 0.0;
-        if (!parse_render_frame_double(line, render_frame)) continue;
-        m.time_frame   = snap_authored_frame(render_frame);
-        out.push_back(std::move(m));
-    }
-    return out;
-}
-
 // Loads the render at app.render_view.list[index] into the active `audio`,
-// parking the source audio on first entry. Parses render-domain
-// <basename>.renderwarpmarkers and <basename>.renderphaseresetmarkers into
-// app.render_view.warp_markers / phase resets for display; source-domain
-// .warpmarkers and .phaseresetmarkers are reserved for Ctrl+Alt+C commit.
+// parking the source audio on first entry. Entries are program-written
+// snapshots, read STRICTLY: <basename>.warpmarkers /
+// <basename>.phaseresetmarkers through the standard store loaders and
+// <basename>.settings through read_settings_file. Any refusal — a read
+// failure, a past-EOF wall defect, or a snapshot whose map cannot rebuild —
+// is adversarial: one stderr line, first error only, the entry refuses to
+// display (return false, prior state preserved). Display positions derive
+// live from the snapshot through derive_render_display_positions — the same
+// helper the pipeline's display-sidecar writer serializes — so the
+// displayed positions are exactly what the old display sidecars carried.
 // Computes F_begin/F_end against the cached source sr/total. Stops playback
-// before the swap and re-binds the playback device. Returns true on success;
-// on failure logs to stderr and the prior state is preserved.
+// before the swap and re-binds the playback device.
 //
 // When the destination entry's persisted stat tuple matches the wav's current
 // stat, restores the persisted selection. Mismatch leaves the live selection
@@ -334,40 +211,175 @@ bool GuiRenderView::load_render_view_at(int index) {
         return false;
     }
 
-    // Render-view consumes render-domain sidecars
-    // (.renderwarpmarkers / .renderphaseresetmarkers) so visible marker
-    // positions match the rendered audio's time axis. The source-domain
-    // pair (.warpmarkers / .phaseresetmarkers) is what Ctrl+Alt+C commit
-    // reloads when promoting a render's markers into authoring memory.
-    std::vector<GuiWarpMarker>     loaded_warp;
-    std::vector<GuiPhaseResetMarker>  loaded_phase_resets;
+    // Strict snapshot reads. The source-domain marker pair is the same set
+    // Ctrl+Alt+C commit reloads when promoting a render into authoring
+    // memory; the .settings snapshot carries the entry's engine recipe,
+    // recipe trim (on the commit tab), and per-entry browse view state.
+    const std::filesystem::path wm_path =
+        e.batch_folder / (e.basename + ".warpmarkers");
+    const std::filesystem::path pm_path =
+        e.batch_folder / (e.basename + ".phaseresetmarkers");
+    const std::filesystem::path st_path = this->settings_path(e);
+
+    std::vector<GuiWarpMarker> snapshot_warp;
     {
-        const std::filesystem::path warp_sidecar_path =
-            e.batch_folder / (e.basename + ".renderwarpmarkers");
-        std::error_code ec;
-        if (std::filesystem::exists(warp_sidecar_path, ec)) {
-            loaded_warp = read_render_view_warpmarkers(warp_sidecar_path.string());
-        } else {
+        GuiWarpMarkers m;
+        auto r = m.load(wm_path.string());
+        if (!r) {
             std::fprintf(stderr,
-                "warptempo_gui: render-view: %s missing — markers will "
-                "not be displayed for this render\n",
-                warp_sidecar_path.string().c_str());
+                "warptempo_gui: render-view: load failed for '%s': %s\n",
+                wm_path.string().c_str(), r.error().c_str());
+            return false;
+        }
+        snapshot_warp = m.markers();
+    }
+    std::vector<GuiPhaseResetMarker> snapshot_phase_resets;
+    {
+        GuiPhaseResetMarkers t;
+        auto r = t.load(pm_path.string());
+        if (!r) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: load failed for '%s': %s\n",
+                pm_path.string().c_str(), r.error().c_str());
+            return false;
+        }
+        snapshot_phase_resets = t.markers();
+    }
+    const auto settings = read_settings_file(st_path.string());
+    if (!settings) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: load failed for '%s': %s\n",
+            st_path.string().c_str(), settings.error().c_str());
+        return false;
+    }
+    // The commit tab (named by active_tab_view) carries the recipe trim
+    // that shaped this render and the browse view state autosave owns.
+    const SettingsFileTab& commit_tab =
+        (settings->active_tab_view == 'B') ? settings->tab_b
+                                           : settings->tab_a;
+    const SettingsTrim& recipe_trim = commit_tab.trim;
+
+    // Guard domain: the PARKED source's totals — the snapshot markers and
+    // trim are source-domain, and while render view is up the live `audio`
+    // holds a displayed render, never the guard domain (the same rule the
+    // Ctrl+Alt+C commit guards apply). On first entry the source is not
+    // parked yet and still sits in `audio` (the park below moves it), so
+    // read whichever holds it.
+    const bool source_parked = source_audio_held.total_frames() > 0;
+    const int64_t source_total_frames = source_parked
+        ? source_audio_held.total_frames() : audio.total_frames();
+    const long source_sample_rate = static_cast<long>(
+        source_parked ? source_audio_held.sample_rate()
+                      : audio.sample_rate());
+
+    // Adversarial guards, the render-invalid-cannot-display ruling: a
+    // snapshot that cannot rebuild its map cannot be displayed. Past-EOF
+    // walls first, one call per candidate file so the message names the
+    // offending sidecar (the call order — warp markers, phase resets, trim
+    // — is the validator's own internal order, so the first offender
+    // reported matches the single-call composite).
+    {
+        const std::vector<WarpMarker> cand_warp =
+            slice_to_warp_markers(snapshot_warp);
+        const std::vector<PhaseResetMarker> cand_resets =
+            slice_to_phase_reset_markers(snapshot_phase_resets);
+        if (auto detail = first_past_eof_wall_defect(
+                cand_warp, {}, SettingsTrim{}, SettingsTrim{},
+                source_total_frames, source_sample_rate)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: past-EOF wall defect for "
+                "'%s': %s\n",
+                wm_path.string().c_str(), detail->c_str());
+            return false;
+        }
+        if (auto detail = first_past_eof_wall_defect(
+                {}, cand_resets, SettingsTrim{}, SettingsTrim{},
+                source_total_frames, source_sample_rate)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: past-EOF wall defect for "
+                "'%s': %s\n",
+                pm_path.string().c_str(), detail->c_str());
+            return false;
+        }
+        if (auto detail = first_past_eof_wall_defect(
+                {}, {}, settings->tab_a.trim, settings->tab_b.trim,
+                source_total_frames, source_sample_rate)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: past-EOF wall defect for "
+                "'%s': %s\n",
+                st_path.string().c_str(), detail->c_str());
+            return false;
         }
     }
-    {
-        const std::filesystem::path phase_reset_sidecar_path =
-            e.batch_folder / (e.basename + ".renderphaseresetmarkers");
-        std::error_code ec;
-        if (std::filesystem::exists(phase_reset_sidecar_path, ec)) {
-            loaded_phase_resets = read_render_view_phaseresetmarkers(
-                phase_reset_sidecar_path.string());
-        } else {
+
+    // Rebuild the FULL map the render was derived from: the same
+    // resolve-then-build every render path runs, against the parked
+    // source's totals and the entry's engine scale.
+    auto resolved_warp_markers = resolve_warp_markers_for_render(
+        slice_to_warp_markers(snapshot_warp), source_sample_rate);
+    if (!resolved_warp_markers) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: snapshot rejected for '%s': %s\n",
+            wm_path.string().c_str(), resolved_warp_markers.error().c_str());
+        return false;
+    }
+    auto full_map_r = build_warp_frame_map(
+        *resolved_warp_markers, settings->engine.scale,
+        source_sample_rate, static_cast<long>(source_total_frames));
+    if (!full_map_r) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: map build failed for '%s': %s\n",
+            wm_path.string().c_str(), full_map_r.error().c_str());
+        return false;
+    }
+    const std::vector<WarpFrameMapSegment> full_warp_frame_map =
+        std::move(*full_map_r);
+
+    if (recipe_trim.has_begin || recipe_trim.has_end) {
+        auto tv = validate_trim_frames(
+            recipe_trim.has_begin, recipe_trim.begin_frame,
+            recipe_trim.has_end, recipe_trim.end_frame,
+            source_total_frames, full_warp_frame_map);
+        if (!tv) {
             std::fprintf(stderr,
-                "warptempo_gui: render-view: %s missing — phase resets "
-                "will not be displayed for this render\n",
-                phase_reset_sidecar_path.string().c_str());
+                "warptempo_gui: render-view: trim validation failed for "
+                "'%s': %s\n",
+                st_path.string().c_str(), tv.error().c_str());
+            return false;
         }
     }
+
+    // Derive the display positions through the SAME helper the pipeline's
+    // display-sidecar writer serializes, then quantize each fractional
+    // position once through snap_authored_frame into the int64 time_frame
+    // the display stores share with the authored type (paint and click
+    // navigation already round to whole frames at use). Displayed values
+    // are identical to what the retired render-domain display-sidecar
+    // readers produced: the helper computes the same doubles the writer
+    // serialized, the serializer is shortest round-trip (the parse
+    // returned the exact double), and this is the
+    // same snap the readers applied — while the non-position display
+    // surface, the flag text, recomputes byte-identically from the carried
+    // marker fields (flag_text's payload branches mirror the serializer's,
+    // and the old readers displayed that serialized payload verbatim).
+    RenderDisplayPositions display = derive_render_display_positions(
+        snapshot_warp, snapshot_phase_resets, full_warp_frame_map,
+        recipe_trim.has_begin, recipe_trim.begin_frame,
+        recipe_trim.has_end, recipe_trim.end_frame,
+        source_total_frames);
+    std::vector<GuiWarpMarker> loaded_warp =
+        std::move(display.warp_markers);
+    for (size_t i = 0; i < loaded_warp.size(); ++i) {
+        loaded_warp[i].time_frame =
+            snap_authored_frame(display.warp_frames[i]);
+    }
+    std::vector<GuiPhaseResetMarker> loaded_phase_resets =
+        std::move(display.phase_resets);
+    for (size_t i = 0; i < loaded_phase_resets.size(); ++i) {
+        loaded_phase_resets[i].time_frame =
+            snap_authored_frame(display.phase_reset_frames[i]);
+    }
+
     playback.stop();
     playback.shutdown();
     app.playhead_scanner_active = false;
@@ -395,6 +407,16 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view.phase_resets        = std::move(loaded_phase_resets);
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
+
+    // Apply the entry's persisted W/P mode BEFORE the stat-gated selection
+    // restore below, so the matching-mode slot the restore reads is the
+    // mode the selection was stashed under (autosave persists the browsed
+    // mode at the same trigger the stash runs). Absent key applies the
+    // struct default 'W'. The other .settings keys — the engine block,
+    // playback_speed, follow, font_size, active_audio_view — are NOT
+    // applied at browse time: they are the commit payload, adopted only by
+    // Ctrl+Alt+C.
+    app.active_markers_view = settings->active_markers_view;
 
     // Stat-tuple-gated selection restore. A matching persisted tuple
     // (non-zero, equal to current) means the wav hasn't changed since stash;
@@ -436,11 +458,18 @@ bool GuiRenderView::load_render_view_at(int index) {
         e.state.phase_reset_last_selected = -1;
     }
 
-    // Apply this render's persisted zoom/viewport/playhead (or
-    // fit-file defaults when no .rendersettings sidecar exists).
-    // Order matters: apply_rendersettings_for sets zoom first
-    // (clamp depends on it) and runs clamp at the end.
-    this->apply_rendersettings_for(e);
+    // Apply this render's persisted zoom/viewport/playhead from the commit
+    // tab of the already-parsed .settings (absent keys carry the schema
+    // defaults: fit-file zoom, zeroed viewport/playhead). Apply order:
+    // zoom → viewport → playhead → clamp_viewport_start (zoom drives the
+    // spp used by clamp).
+    app.zoom_level            = commit_tab.zoom;
+    app.viewport_start_sample = commit_tab.viewport_start;
+    // Deliberately unclamped: persisted playhead == total stays load-legal
+    // (an exclusive-bound rest); the runtime clamp (move_playhead_to) owns
+    // the value at first use.
+    app.playhead_cursor_sample = commit_tab.playhead;
+    clamp_viewport_start(app, audio);
 
     // Domain offset 0: the displayed wav is its own domain origin.
     if (!playback.init(audio.sample_rate(), audio.channels(),
@@ -544,7 +573,7 @@ void GuiRenderView::restore_source_audio() {
 // list, keyed by wav_path. Mirrors the migration block in the R-key
 // toggle-on path, but operates on the live render_view.list (in-
 // session) rather than on a freshly-arrived list. Caller is
-// responsible for stashing selection / writing rendersettings for the
+// responsible for stashing selection / autosaving view state for the
 // outgoing entry *before* calling this, since the merge does not
 // preserve any state that lives only on app.* fields (selected_markers
 // etc.) — only the per-entry persisted slots survive.
@@ -638,7 +667,7 @@ void GuiRenderView::auto_open_batch_at_first_file(
         if (app.render_view.index >= 0 &&
             app.render_view.index <
                 static_cast<int>(app.render_view.list.size())) {
-            this->write_rendersettings_for(
+            this->write_settings_for(
                 app.render_view.list[app.render_view.index]);
         }
         this->stash_render_view_selection_to_active_entry();

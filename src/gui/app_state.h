@@ -919,9 +919,11 @@ struct AppState {
         std::string last_path;
         std::vector<RenderViewEntry> list;
         int                          index = -1;     // -1 = unset
-        // The current render's loaded markers + phase resets, parsed from
-        // sibling `<basename>.renderwarpmarkers` /
-        // `<basename>.renderphaseresetmarkers`.
+        // The current render's display markers + phase resets, derived at
+        // entry load from the sibling snapshot set (`<basename>.warpmarkers`
+        // / `.phaseresetmarkers` / `.settings`) through
+        // derive_render_display_positions and quantized once through
+        // snap_authored_frame onto the render's own frame axis.
         std::vector<GuiWarpMarker>       warp_markers;
         std::vector<GuiPhaseResetMarker>    phase_resets;
         // Source-frame mapping of the current render: F_begin..F_end (source

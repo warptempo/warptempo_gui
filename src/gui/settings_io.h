@@ -34,25 +34,25 @@ bool create_if_missing(const std::filesystem::path& p,
 // sibling of read_settings_file: one parse validates the complete
 // program-written file and splits it into three projections — the typed
 // engine block, the render-view scratch state, and the optional authoring
-// snapshot. The file is program-written (write_rendersettings /
-// update_rendersettings_view_state), so any violation is adversarial and
-// the FIRST error refuses the whole read: unknown keys, keyless lines,
-// duplicates, malformed values, out-of-range zoom levels, and missing
-// required engine keys. Absent optional keys stay legal: the view
-// projection defaults, and the authoring projection is none-or-all on its
-// five core keys — either the whole block is present (engaged optional) or
-// the whole block is absent (nullopt, the old-sidecar compatibility case).
-// The two trim keys are independently optional but legal only inside an
-// existing block; a partial core block or an orphan trim key with no core
-// block is GUI-unproducible, hence adversarial: a first-error whole-file
-// refusal, not display leniency.
+// snapshot. The file is program-written (write_rendersettings), so any
+// violation is adversarial and the FIRST error refuses the whole read:
+// unknown keys, keyless lines, duplicates, malformed values, out-of-range
+// zoom levels, and missing required engine keys. Absent optional keys stay
+// legal: the view projection defaults, and the authoring projection is
+// none-or-all on its five core keys — either the whole block is present
+// (engaged optional) or the whole block is absent (nullopt, the
+// old-sidecar compatibility case). The two trim keys are independently
+// optional but legal only inside an existing block; a partial core block
+// or an orphan trim key with no core block is GUI-unproducible, hence
+// adversarial: a first-error whole-file refusal, not display leniency.
 //
-// The two consumers apply opposite policies on a refused read, matching
-// the marker display sidecars' recorded leniency split: the render-view
-// DISPLAY caller logs once and falls back to defaults (view state is
-// display scratch, never adopted into authoring), while Ctrl+Alt+C
-// promotion aborts before its first marker or AppState mutation — a
-// hand-edited sidecar must never partially restore.
+// The sole remaining consumer is Ctrl+Alt+C promotion, which reads the
+// authoring block and aborts before its first marker or AppState mutation
+// on any refusal — a hand-edited sidecar must never partially restore.
+// Render view no longer reads this file: per-entry display state lives in
+// the entry's standard `.settings` snapshot (read_settings_file /
+// update_settings_view_state below), and the view projection here is
+// written for schema completeness only until a later step reworks commit.
 
 struct RenderViewState {
     int     zoom_level     = 0;   // Filled with kFitFileLevel by the reader.
@@ -99,21 +99,25 @@ bool write_rendersettings(const std::filesystem::path& path,
                           int64_t playhead,
                           const AuthoringSnapshot& authoring);
 
-// View-state-only update of `.rendersettings`: strict read-modify-write.
-// Strict-reads the existing file through read_rendersettings, then
-// re-serializes it canonically (engine block, the fresh view-state block,
-// the parsed authoring block) via write_rendersettings. Atomic via
+// View-state-only update of a `.settings` file: strict read-modify-write,
+// the per-entry autosave render view runs at its navigation/exit
+// boundaries. Strict-reads the existing file through read_settings_file,
+// then re-serializes the whole file canonically via write_settings_file
+// with viewport_start / zoom_level / playhead updated on the tab named by
+// the FILE's active_tab_view and active_markers_view replaced by the
+// browsed value; every other key is preserved from the parse. Atomic via
 // tmp + fsync + rename.
 //
 // Any read failure — a missing file included — refuses the update: one
 // stderr line and a false return, no write. The file is program-written,
 // so a refused read means adversarial or absent bytes this mutation
-// boundary will not perpetuate or manufacture; the display-leniency ruling
-// covers the DISPLAY reader only. Callers already tolerate false.
-bool update_rendersettings_view_state(const std::filesystem::path& path,
-                                       int64_t viewport_start,
-                                       int     zoom_level,
-                                       int64_t playhead);
+// boundary will not perpetuate or manufacture. Callers already tolerate
+// false.
+bool update_settings_view_state(const std::filesystem::path& path,
+                                int64_t viewport_start,
+                                int     zoom_level,
+                                int64_t playhead,
+                                char    active_markers_view);
 
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is

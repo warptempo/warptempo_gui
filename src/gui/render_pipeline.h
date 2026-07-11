@@ -2,6 +2,7 @@
 
 #include "engine_settings.h"
 #include "render_cache.h"
+#include "warp_frame_map.h"
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 
@@ -147,6 +148,46 @@ struct RenderRequest {
     // do_render dereferences it without a null check.
     RenderCache* render_cache = nullptr;
 };
+
+// Render-domain display positions for one wav render: every authored marker
+// and phase reset that exists on the deliverable's time axis, re-timed onto
+// that axis (crop coordinates, generically fractional). One derivation, two
+// consumers, so the two can never drift: do_render serializes this result
+// verbatim into the .renderwarpmarkers / .renderphaseresetmarkers display
+// sidecars, and render view derives the same result live from an entry's
+// snapshot set (.warpmarkers / .phaseresetmarkers / .settings) to build its
+// display stores. The fractional positions live in the parallel double
+// vectors because the authored time_frame is int64 and cannot represent the
+// target axis's fractional values; the marker structs carry the
+// non-position fields (payload, flags) unchanged.
+struct RenderDisplayPositions {
+    // Kept warp markers, in store order, plus their fractional
+    // render-domain positions (parallel vectors).
+    std::vector<GuiWarpMarker> warp_markers;
+    std::vector<double>        warp_frames;
+    // Kept phase resets plus their fractional render-domain positions
+    // (parallel vectors), same shape as the warp pair.
+    std::vector<GuiPhaseResetMarker> phase_resets;
+    std::vector<double>              phase_reset_frames;
+    // Crop origin in full-target coordinates (0 when untrimmed) and the
+    // exclusive end bound on the deliverable's own axis (the crop length
+    // when trimmed; the full map's last anchor target when not).
+    double crop_begin = 0.0;
+    double crop_end   = 0.0;
+};
+
+// Derive the render-domain display positions for one wav render from the
+// authored marker stores, the FULL warp frame map (built trim-off), and the
+// authored trim bounds. total_frames is the source's frame count (the
+// unset-end trim default). The full geometry rationale lives at the
+// definition in render_pipeline.cpp.
+RenderDisplayPositions derive_render_display_positions(
+    const std::vector<GuiWarpMarker>& warp_markers,
+    const std::vector<GuiPhaseResetMarker>& phase_resets,
+    const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
+    bool has_trim_begin, int64_t trim_begin_frame,
+    bool has_trim_end,   int64_t trim_end_frame,
+    int64_t total_frames);
 
 // Synchronous render. Blocks the caller until the pipeline finishes (or
 // errors out, or is cancelled). All progress / error reporting goes to

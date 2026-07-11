@@ -55,7 +55,9 @@ public:
     // them, so the caller passes the fractional positions in
     // `render_frames`, parallel to `markers` (each marker's own time_frame
     // is ignored; a size mismatch fails the save). Written by the render
-    // pipeline, read back only by render-view's lenient display readers.
+    // pipeline; nothing reads the file back — render view derives the same
+    // positions live through derive_render_display_positions
+    // (render_pipeline.h).
     static bool save_render_display(
         const std::string& path,
         const std::vector<GuiPhaseResetMarker>& markers,

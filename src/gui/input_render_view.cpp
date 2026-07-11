@@ -168,7 +168,7 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         if (app.render_view.index >= 0 &&
             app.render_view.index <
                 static_cast<int>(app.render_view.list.size())) {
-            render_view.write_rendersettings_for(
+            render_view.write_settings_for(
                 app.render_view.list[app.render_view.index]);
         }
         // Stash the live selection onto
@@ -218,7 +218,7 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         if (app.render_view.index >= 0 &&
             app.render_view.index <
                 static_cast<int>(app.render_view.list.size())) {
-            render_view.write_rendersettings_for(
+            render_view.write_settings_for(
                 app.render_view.list[app.render_view.index]);
         }
         // Stash the outgoing entry's
@@ -254,7 +254,7 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         if (app.render_view.index >= 0 &&
             app.render_view.index <
                 static_cast<int>(app.render_view.list.size())) {
-            render_view.write_rendersettings_for(
+            render_view.write_settings_for(
                 app.render_view.list[app.render_view.index]);
         }
         render_view.stash_render_view_selection_to_active_entry();

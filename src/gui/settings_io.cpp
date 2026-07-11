@@ -105,8 +105,7 @@ void append_engine_block(std::string& out, const EngineSettings& engine) {
 }
 
 // Append the three view-state keys (bare names, canonical order) to
-// `out`. Shared by write_rendersettings and
-// update_rendersettings_view_state.
+// `out`. Consumed by write_rendersettings.
 void append_view_state_block(std::string& out,
                               int64_t viewport_start,
                               int     zoom_level,
@@ -171,8 +170,8 @@ void append_authoring_block(std::string& out,
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Shared by
-// write_rendersettings, update_rendersettings_view_state,
-// write_settings_file, and the warp/phase-reset marker writers.
+// write_rendersettings, write_settings_file (and through it
+// update_settings_view_state), and the warp/phase-reset marker writers.
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data) {
     mode_t mode = 0644;
@@ -389,47 +388,52 @@ bool write_rendersettings(const std::filesystem::path& path,
     return atomic_write_string_to_path(path.string(), data);
 }
 
-bool update_rendersettings_view_state(const std::filesystem::path& path,
-                                       int64_t viewport_start,
-                                       int     zoom_level,
-                                       int64_t playhead) {
+bool update_settings_view_state(const std::filesystem::path& path,
+                                int64_t viewport_start,
+                                int     zoom_level,
+                                int64_t playhead,
+                                char    active_markers_view) {
     // Strict read-modify-write. The file is program-written, so any parse
     // failure — a missing file included — is adversarial at this mutation
     // boundary: refuse the update with one stderr line rather than
-    // perpetuate malformed bytes or manufacture a view-state-only file. The
-    // recorded display-leniency split covers the DISPLAY reader's fallback
-    // only, never a mutating write. On success, re-serialize the whole file
-    // canonically from the parsed struct with the fresh view state; a
-    // strict-parsed program-written file has no unknown lines or comments
-    // to lose, so the engine and authoring blocks round-trip byte-identical.
-    auto rs = read_rendersettings(path);
-    if (!rs) {
+    // perpetuate malformed bytes or manufacture a view-state-only file. On
+    // success, re-serialize the whole file canonically from the parsed
+    // struct with the fresh view state on the tab named by the FILE's
+    // active_tab_view; a strict-parsed program-written file has no unknown
+    // lines or comments to lose, so every other key round-trips (absent
+    // optional keys re-emit as their canonical defaults, the same values
+    // the readers apply).
+    auto sf = read_settings_file(path.string());
+    if (!sf) {
         std::fprintf(stderr,
             "warptempo_gui: render-view: view-state update refused for "
-            "'%s': %s\n", path.string().c_str(), rs.error().c_str());
+            "'%s': %s\n", path.string().c_str(), sf.error().c_str());
         return false;
     }
 
-    // The authoring block is none-or-all: an engaged optional restores the
-    // whole block, an absent one leaves the snapshot invalid so
-    // write_rendersettings emits no block (matching the file just read).
-    AuthoringSnapshot authoring;
-    authoring.valid = rs->authoring.has_value();
-    if (rs->authoring) {
-        const RendersettingsAuthoring& a = *rs->authoring;
-        authoring.active_tab        = a.active_tab;
-        authoring.active_audio_view = a.active_audio_view;
-        authoring.has_trim_begin    = a.has_trim_begin;
-        authoring.trim_begin_frame  = a.trim_begin_frame;
-        authoring.has_trim_end      = a.has_trim_end;
-        authoring.trim_end_frame    = a.trim_end_frame;
-        authoring.zoom_level        = a.zoom_level;
-        authoring.viewport_start    = a.viewport_start;
-        authoring.playhead          = a.playhead;
-    }
+    auto to_view_state = [](const SettingsFileTab& t) {
+        ViewState v;
+        v.viewport_start_sample  = t.viewport_start;
+        v.zoom_level             = t.zoom;
+        v.playhead_cursor_sample = t.playhead;
+        v.read_only              = t.read_only;
+        v.trim.has_begin   = t.trim.has_begin;
+        v.trim.begin_frame = t.trim.begin_frame;
+        v.trim.has_end     = t.trim.has_end;
+        v.trim.end_frame   = t.trim.end_frame;
+        return v;
+    };
+    ViewState tab_a = to_view_state(sf->tab_a);
+    ViewState tab_b = to_view_state(sf->tab_b);
+    ViewState& browsed = (sf->active_tab_view == 'B') ? tab_b : tab_a;
+    browsed.viewport_start_sample  = viewport_start;
+    browsed.zoom_level             = zoom_level;
+    browsed.playhead_cursor_sample = playhead;
 
-    return write_rendersettings(path, rs->engine, viewport_start,
-                                zoom_level, playhead, authoring);
+    return write_settings_file(path.string(), tab_a, tab_b, sf->follow,
+                               sf->active_audio_view, active_markers_view,
+                               sf->active_tab_view, sf->playback_speed,
+                               sf->font_size, sf->engine);
 }
 
 std::string format_default_settings_template(const std::string& stem) {
