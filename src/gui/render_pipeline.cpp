@@ -43,14 +43,14 @@ struct CommitCriticalSidecars {
     std::vector<std::string> created_paths;
 };
 
-// write_warp_frame_map and write_midi_tempo_map moved to the parser
+// write_warp_frame_map and write_midi_tempo_map live in the parser
 // (map_output.cpp) so the GUI render pipeline and the headless parser CLI
 // emit byte-identical artifacts from one implementation.
 
-// resolve_warp_markers_for_render moved to warp_frame_map_build.cpp (public function) so the
-// target-view paint can reach it without crossing the render_pipeline
-// boundary. Both callers — do_render below and the GUI paint in
-// paint_handler — receive the same resolved list.
+// resolve_warp_markers_for_render lives in warp_frame_map_build.cpp (public
+// function) so the target-view paint can reach it without crossing the
+// render_pipeline boundary. Both callers — do_render below and the GUI paint
+// in paint_handler — receive the same resolved list.
 
 }  // namespace
 

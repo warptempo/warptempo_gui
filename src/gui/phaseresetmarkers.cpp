@@ -59,8 +59,8 @@ bool save_impl(const std::string& path,
         const auto& m = markers_[i];
         // `[#]<frame position>` only. The `#` disable prefix composes ahead
         // of the position, exactly as the parser strips it. No mode suffix —
-        // the peak/heap/pass model was removed when heap became the sole
-        // engine.
+        // heap is the sole engine, so there is no peak/heap/pass mode to
+        // record.
         if (m.disabled) out << '#';
         out << format_position(i, m) << '\n';
     }

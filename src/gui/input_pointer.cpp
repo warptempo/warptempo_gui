@@ -39,9 +39,9 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
-// sweep_select_interval (the Shift playhead-drag sweep) moved to app_state.h
+// sweep_select_interval (the Shift playhead-drag sweep) lives in app_state.h
 // so input_render_view.cpp can call it too; the source/target sweeps below
-// still resolve it from there.
+// resolve it from there.
 
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /

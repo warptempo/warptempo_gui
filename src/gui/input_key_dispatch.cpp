@@ -775,9 +775,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
 
-    // The BPM sweep render formerly bound to Ctrl+Alt+M now lives
-    // in render_bpm_sweep(), fired by Enter in the bottom-strip BPM editor
-    // after a successful commit. The keystroke is retired here.
+    // The BPM sweep render fires from render_bpm_sweep(), triggered by Enter
+    // in the bottom-strip BPM editor after a successful commit; there is no
+    // key-dispatch handler for it here.
 
     // Ctrl+Alt+C commits the displayed render's full authoring snapshot:
     // source-domain warp markers and phase resets, the complete engine

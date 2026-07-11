@@ -63,13 +63,15 @@ std::vector<std::filesystem::path> compose_render_output_paths(
 // fallback that catches the not-yet-written output that will land on the
 // source. An empty source path yields nullopt.
 //
-// Three callers refuse a collision at their own boundary: the settings editor
-// at commit (the colliding state is GUI-uncommittable), the GUI and
-// warptempo_cli loaders at load (a hand-edited sidecar composing the output
-// onto the source is adversarial — refused first-error, stderr-only, in both
-// products so a file set is loadable in both or neither), and the render
-// worker as the breach backstop. The worker composes batch-folder paths too
-// and keeps its own exists-gated check.
+// Four boundary callers refuse a collision at their own surface: the settings
+// editor at commit (the colliding state is GUI-uncommittable), the GUI loader
+// and the warptempo_cli loader at load (a hand-edited sidecar composing the
+// output onto the source is adversarial — refused first-error, stderr-only, in
+// both products so a file set is loadable in both or neither), and the
+// Ctrl+Alt+C promotion pre-mutation guard (a hand-edited .rendersettings that
+// composes onto the source aborts before the first marker or AppState
+// mutation). Separately, the render worker is the breach backstop: it composes
+// batch-folder paths too and keeps its own exists-gated check.
 std::optional<std::filesystem::path> render_output_source_collision(
     const EngineSettings& es,
     const std::string& source_audio_path);

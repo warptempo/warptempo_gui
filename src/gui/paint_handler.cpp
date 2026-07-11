@@ -694,13 +694,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect exposed{x, y, w, h};
         const int     sr         = audio.sample_rate();
 
-        // Live viewport / target-warp_frame_map / trim computations
-        // that used to drive on_redraw's render_flags / render_markers
-        // calls have moved into the cache rebuild paths (waveform via
-        // the worker, stems via maybe_rebuild_stem_cache, flags
-        // via maybe_rebuild_flag_cache). on_redraw now reads
-        // wf_cache.fp_* for displayed-viewport inputs and treats every
-        // strip as a blit-then-overlay path.
+        // The live viewport / target-warp_frame_map / trim computations
+        // live in the cache rebuild paths (waveform via the worker, stems
+        // via maybe_rebuild_stem_cache, flags via maybe_rebuild_flag_cache),
+        // not in on_redraw, which reads wf_cache.fp_* for displayed-viewport
+        // inputs and treats every strip as a blit-then-overlay path.
 
         {
             const auto wf0 = clock::now();

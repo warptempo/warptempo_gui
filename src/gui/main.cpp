@@ -79,17 +79,16 @@
 
 namespace {
 
-// flag_font_size_px() (render.h), timestamp_pad_x(), and tab_letter_gap_px() now live in
-// paint_handler.h so paint_handler.cpp can reach them; the constants below
-// are paint-handler-independent and stay file-local. (kProgressBarHeight,
-// formerly in this group, was deleted with the load progress bar.)
+// flag_font_size_px() (render.h), timestamp_pad_x(), and tab_letter_gap_px()
+// live in paint_handler.h so paint_handler.cpp can reach them; the constants
+// below are paint-handler-independent and stay file-local.
 
-// The window-proportional strip ratios were replaced with a fixed-pixel
-// mirrored grid; the strip/row geometry now derives from monospace_row_h(),
-// kRowGapPx, and kFlagBottomLiftPx (see the geometry helpers below).
+// The strip/row geometry is a fixed-pixel mirrored grid derived from
+// monospace_row_h(), kRowGapPx, and kFlagBottomLiftPx (see the geometry
+// helpers below); nothing is window-proportional.
 
-// kMarkerHitHalfPx moved to app_state.h so the hit_test_* free
-// functions and the GuiInputHandler mouse handler can reach them.
+// kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
+// functions and the GuiInputHandler mouse handler can reach it.
 
 // ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
 // level 0 is the fit-file sentinel (table bypassed in samples_per_pixel_at).
@@ -121,9 +120,8 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 // reached here via the render.h include.
 
 // The BPM-sweep math primitive (BaseTempoScale + compute_base_tempo_scale)
-// moved out of this anonymous namespace into input_handler.h so
-// input_handler.cpp can reach it. GuiInputHandler::render_bpm_sweep is the
-// sole caller.
+// lives in input_handler.h so input_handler.cpp can reach it.
+// GuiInputHandler::render_bpm_sweep is the sole caller.
 
 // compute_hover_popup_text lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
@@ -453,24 +451,15 @@ int main(int argc, char** argv) {
 
     // -- Viewport + invalidation helpers ------------------------------------
     //
-    // The viewport-mutator and invalidation lambdas have been hoisted
-    // onto the Viewport struct in viewport.{cpp,h}. The lambdas below are
-    // one-line forwarders so callsites elsewhere in main() don't need to
-    // change. The promoted timestamp invalidation helper now lives on
-    // Viewport, so all of its former callsites now call
-    // invalidate_timestamp_area directly.
-    //
-    // The nine std::function forward-declares previously kept here
-    // (recompute_hover_at_cursor, clear_hover_popup, stop_playback_if_playing,
-    // refresh_active_tab_view_from_app, save_markers, request_close_or_revert,
-    // prompt_activate_response, toggle_playback, set_playback_speed) were
-    // retired. The two substantive bodies moved onto Viewport
-    // (clear_hover_popup, recompute_hover_at_cursor); the seven forwarders
-    // are now direct method calls on their owning struct
-    // (viewport.clear_hover_popup, playback_lifecycle.stop_playback_if_playing
-    // / toggle_playback / set_playback_speed, save_ops.save,
-    // prompt.request_close_or_revert / activate_response,
-    // active_views.refresh_active_tab_view_from_app).
+    // The viewport-mutation and invalidation helpers are methods on the
+    // Viewport struct (viewport.{cpp,h}), including the two substantive hover
+    // helpers clear_hover_popup and recompute_hover_at_cursor and the
+    // timestamp invalidation helper invalidate_timestamp_area. Every other
+    // cross-cutting operation is a method on its owning struct constructed
+    // below — stop_playback_if_playing / toggle_playback / set_playback_speed
+    // on playback_lifecycle, save on save_ops, request_close_or_revert /
+    // activate_response on prompt, refresh_active_tab_view_from_app on
+    // active_views — reached by their callsites as direct method calls.
 
     Viewport viewport(app, audio, gui, playback);
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
@@ -605,23 +594,21 @@ int main(int argc, char** argv) {
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
 
-    // popup_eligible_marker moved to a free function in
-    // app_state.{h,cpp}. The remaining callers in this TU
-    // (Viewport::recompute_hover_at_cursor, on_tick) reach it directly
-    // with the new (app, idx) signature; on_motion calls it from
+    // popup_eligible_marker is a free function in app_state.{h,cpp}. Its
+    // callers in this TU (Viewport::recompute_hover_at_cursor, on_tick) reach
+    // it directly with the (app, idx) signature; on_motion calls it from
     // input_handler.cpp. The hover-popup and iteration-mode comments live
     // above the declaration in app_state.h.
 
-    // The drag and selection-shift lambdas have been hoisted onto
-    // the GuiWarpMarkersOps struct in warpmarkers_ops.{cpp,h}.
+    // The drag and selection-shift operations are methods on the
+    // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).
 
-    // The shared wheel handler (handle_wheel) moved to
-    // GuiInputHandler as a private helper method. on_button_press is
-    // its only caller.
+    // The shared wheel handler (handle_wheel) is a private helper method on
+    // GuiInputHandler; on_button_press is its only caller.
 
-    // The multi-render queue runner (run_render_batch +
-    // RenderBatchResult) had no callers outside the on_key body. It moved
-    // to GuiInputHandler as a private helper method (see input_handler.h).
+    // The multi-render queue runner (run_render_batch + RenderBatchResult) is a
+    // private helper method on GuiInputHandler (input_handler.h); the on_key
+    // body is its only caller.
 
     gui.set_on_key([&](GuiKey key, GuiInputState mods) {
         input_handler.on_key(key, mods);
@@ -666,8 +653,8 @@ int main(int argc, char** argv) {
 
     // -- File loading --------------------------------------------------------
     //
-    // load_file, revert_to_blank, and load_then_drain moved to
-    // file_loader.{h,cpp} on GuiFileLoader. The drop-accept predicate and
+    // load_file, revert_to_blank, and load_then_drain are methods on
+    // GuiFileLoader (file_loader.{h,cpp}). The drop-accept predicate and
     // the on_file_drop handler stay here as one-line lambdas that capture
     // file_loader; the predicate has no reference to the loader.
 
@@ -818,9 +805,10 @@ int main(int argc, char** argv) {
             // pre-paint hook reads the predictor at paint time and adds
             // damage for the actually-painted position. We do not read
             // the predictor or update app.playhead_scanner_sample here
-            // — that work moved to the pre-paint hook to eliminate the
-            // tick/paint sampling-rate mismatch that caused playhead
-            // motion to stutter at high zoom. The timestamp area is
+            // — the pre-paint hook owns that work, keeping predictor
+            // sampling on the paint clock; reading it on the tick too
+            // would reintroduce the tick/paint sampling-rate mismatch
+            // that stutters playhead motion at high zoom. The timestamp area is
             // invalidated only by the pre-paint hook (when the
             // predictor advances past app.playhead_scanner_sample),
             // never by the tick — the tick fires ~2x per frame, so
