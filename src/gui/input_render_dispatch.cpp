@@ -345,10 +345,34 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // R-toggle — pumps to completion under the open view). auto_open
         // enters render-view in the first case and refreshes it in place in
         // the second, landing on the new batch's first file either way. The
-        // call runs before finalize_render_run + reqs.clear so render-view
-        // sees the same surrounding state ordering it would on a manual `r`
-        // toggle.
+        // completed batch is fully finalized — state cleared, then
+        // finalize_render_run — BEFORE the auto-open runs, so render-view
+        // opens against an idle, finalized worker, exactly the state a
+        // manual `r` toggle runs against. Two consequences: finalize's
+        // maybe_dispatch_pending may hand the worker to a parked archival
+        // command or a pending target render first, so if the auto-open's
+        // entry then needs a derived rebuild (a last-entry .fingerprint
+        // write that failed after the commit-critical sidecars published —
+        // warning-only, so the batch still reports Success), the derived
+        // dispatch_archival_render_if_idle refuses on the busy worker with
+        // its one stderr line and the entry does not display — the busy-
+        // refusal semantics; the user re-navigates once the worker drains. A
+        // rebuild that DOES dispatch owns queue_running and the progress text
+        // with no caller left to clobber them. And when the parked command is
+        // itself a batch, the old batch's auto-open runs under the new
+        // render's progress — the same reachable state as a parked batch
+        // pumped to completion under an open render view, already handled.
         const bool success = !cancelled && batch_.rendered > 0;
+        // Latch the folder the auto-open consumes before the state clear.
+        // auto_open_batch_at_first_file reads only its batch_folder argument
+        // (all other inputs are app.* fields), and the clear below drops
+        // batch_.reqs and active while finalize_render_run pumps the worker.
+        const std::filesystem::path completed_batch_folder =
+            batch_.batch_folder;
+        batch_.active = false;
+        batch_.reqs.clear();
+        batch_.reqs.shrink_to_fit();
+        finalize_render_run();
         // Modal-surface guard (architect-ruled SKIP): a completion callback
         // must never mutate the view stack underneath a modal surface — a
         // bottom-strip editor or any prompt. Auto-opening render view here
@@ -360,12 +384,8 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // skip keeps the modal invariant absolute with no new lifecycle.
         if (success && !modal_bottom_strip_editor_active() &&
             !app.prompt.active) {
-            render_view.auto_open_batch_at_first_file(batch_.batch_folder);
+            render_view.auto_open_batch_at_first_file(completed_batch_folder);
         }
-        batch_.active = false;
-        batch_.reqs.clear();
-        batch_.reqs.shrink_to_fit();
-        finalize_render_run();
         return;
     }
 
