@@ -159,9 +159,20 @@ int64_t authored_frame_at_column(
     return snap_authored_frame(t_active);
 }
 
+// Both directions are IDENTITY in render view, whatever active_audio_view
+// says: render view displays a flat rendered wav whose positions (the
+// render_view display stores) are already in the live domain, while the
+// target map describes the AUTHORING source's deformation — the flag
+// persists as 'T' through render view, so the target arm is gated on
+// !render_view.enabled, the same term live_total_frames and
+// hit_test_marker_line carry (is_target = 'T' && !render_view.enabled).
+// Translating here would also rebuild the target-map cache against the
+// render audio's totals, which is never meaningful.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
-    if (app.active_audio_view == 'S') return source_frame;
+    if (app.active_audio_view == 'S' || app.render_view.enabled) {
+        return source_frame;
+    }
     const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
@@ -170,7 +181,9 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
 
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame) {
-    if (app.active_audio_view == 'S') return domain_frame;
+    if (app.active_audio_view == 'S' || app.render_view.enabled) {
+        return domain_frame;
+    }
     const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
