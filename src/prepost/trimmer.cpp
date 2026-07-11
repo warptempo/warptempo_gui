@@ -291,6 +291,11 @@ std::expected<FinishRenderStatus, std::string> finish_render(
                 sample = pcm24_quantize(sample);
             }
         }
+        // Buffer-route completion gate: a cancel that lands during the snap
+        // (or any earlier stage) must never surface as Completed — the
+        // orchestrator treats Completed as licence to publish the buffer and
+        // its cache entry.
+        if (cancelled()) return FinishRenderStatus::Cancelled;
         return FinishRenderStatus::Completed;
     }
     const WavSampleFormat fmt =

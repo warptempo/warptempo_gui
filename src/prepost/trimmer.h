@@ -133,9 +133,11 @@ std::expected<void, std::string> validate_render_projection(
 //                              the buffer back to the caller as-is.
 // Optional cancellation hook, the post-engine sibling of the engine's own
 // flag: when non-null, the chain checks it at stage boundaries (before the
-// peak limiter, before the pcm24 snap or encode) and returns Cancelled
-// without publishing further work — a killed session must not spend seconds
-// finishing a deliverable nobody will adopt. Null (the CLI, which has no
+// peak limiter, before the pcm24 snap or encode, and on the buffer route
+// after the snap, before Completed) and returns Cancelled without
+// publishing further work — a killed session must not spend seconds
+// finishing a deliverable nobody will adopt, nor report Completed for a
+// buffer nobody will adopt. Null (the CLI, which has no
 // kill semantics) always completes. On Cancelled the buffer may hold a
 // partially processed state; callers discard it.
 // Returns the completion status on success, else the failure message

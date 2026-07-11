@@ -256,7 +256,11 @@ RenderOutcome do_render(const RenderRequest& req,
     // dispatch) that lands after the engine's last internal check can never
     // publish a deliverable, fingerprint, or cache entry as Success. A
     // cancelled return unlinks the staging file; nothing has landed under a
-    // final name at any gated point.
+    // final name at any gated point. The buffer route gates twice: the
+    // cache prep threads the flag into insert_master_floats (the writer
+    // job is dropped, before it goes live, when the flag is set), and a
+    // final buffer-route check ahead of finish_success keeps a cancelled
+    // target render from ever reporting Success with an abandoned buffer.
     auto cancel_requested = [&]() {
         return cancel_flag && cancel_flag->load();
     };
@@ -998,8 +1002,18 @@ RenderOutcome do_render(const RenderRequest& req,
             if (!fingerprint.empty() && inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
-                    inserted_frames);
+                    inserted_frames, cancel_flag);
             }
+        }
+
+        // Buffer-route publication gate: the buffer path has no rename to
+        // gate, so this is its last cancel check before finish_success. A
+        // cancel that lands after finish_render's own gate — during the
+        // cache prep above included — returns Cancelled here, and
+        // on_render_done discards the abandoned buffer instead of binding
+        // it to target view.
+        if (req.output_buffer) {
+            if (cancel_requested()) return cancelled_outcome();
         }
 
         // Atomic publish: staging → final. Buffer path skips this — the

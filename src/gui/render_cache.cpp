@@ -616,7 +616,8 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
 void RenderCache::insert_master_floats(const std::vector<uint8_t>& fp,
                                        const std::vector<float>& samples,
                                        int channels, int sample_rate,
-                                       int64_t frame_count) {
+                                       int64_t frame_count,
+                                       const std::atomic<bool>* cancel_flag) {
     if (!enabled_) {
         return;
     }
@@ -640,7 +641,7 @@ void RenderCache::insert_master_floats(const std::vector<uint8_t>& fp,
     job.frame_count = frame_count;
     job.prof = profile::enabled();
     job.t0 = job.prof ? profile::now() : profile::Clock::time_point{};
-    start_writer_job(std::move(job));
+    start_writer_job(std::move(job), cancel_flag);
 }
 
 bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
@@ -698,8 +699,18 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     return true;
 }
 
-void RenderCache::start_writer_job(WriterJob job) {
+void RenderCache::start_writer_job(WriterJob job,
+                                   const std::atomic<bool>* cancel_flag) {
     join_writer();
+
+    // Drop the job if the dispatching render was cancelled while we waited
+    // on the previous writer. The check sits after the potentially long
+    // join and before anything becomes externally observable — the disk
+    // index mutation below and the writer thread launch — so a killed
+    // session never publishes cache state.
+    if (cancel_flag && cancel_flag->load()) {
+        return;
+    }
 
     if (job.kind == WriterJob::Kind::WriteBlobToDisk) {
         {
