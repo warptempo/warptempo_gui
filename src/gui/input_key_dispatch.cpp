@@ -7,6 +7,7 @@
 
 #include "paint_handler.h"
 #include "render.h"
+#include "render_output_naming.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
@@ -1016,6 +1017,24 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 "warptempo_gui: commit aborted: invalid authoring view for "
                 "'%s': active_audio_view=T requires output_format=wav\n",
                 sidecar.string().c_str());
+            return true;
+        }
+
+        // Source-load adversarial guard 4: the source-clobber refusal, the
+        // same shared predicate the GUI load, warptempo_cli load, and the
+        // settings editor commit run (render_output_source_collision,
+        // render_output_naming.h), with the render worker as the breach
+        // backstop. A recipe whose composed render output lands on the loaded
+        // source is GUI-unproducible — the editor refuses it at commit and
+        // both product loaders refuse it at load — so an adopted one is
+        // adversarial and must abort before the first marker or AppState
+        // mutation.
+        if (auto collision = render_output_source_collision(
+                rendersettings->engine, app.source_audio_path)) {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: settings in '%s' would make "
+                "the render output '%s' overwrite the source audio file\n",
+                sidecar.string().c_str(), collision->string().c_str());
             return true;
         }
 
