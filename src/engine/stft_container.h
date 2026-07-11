@@ -15,7 +15,6 @@
 // --- Data Structures ---
 struct PhaseResetPlacement {
     int synth_frame;
-    int64_t src_frame;
 };
 
 struct LimiterParams {
@@ -136,11 +135,9 @@ struct AudioSTFT {
     std::vector<FftWorkspace> fft_ws;       // size == channels
     bool fftw_threads_inited = false;
 
-    // Phase reset placements: synth_frame is the frame m at which the reset is
-    // recorded (the synthesis loop marks prev_phase_reset when frame_idx == m);
-    // the following frame m+1 is the one that re-grounds, seeded by
-    // prev_phase_reset via seed_heap. src_frame is the authored source frame,
-    // kept for diagnostics.
+    // Phase reset placements: synth_frame is the synthesis frame the
+    // placement seeds — theta re-grounds to the analysis phase there, and
+    // that frame's analysis window centers at the authored reset.
     std::vector<PhaseResetPlacement> phase_reset_placements;
 
     // Spectral limiter

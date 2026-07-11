@@ -357,18 +357,18 @@ void Synthesis::synthesize_full(
 
         // Phase reset cursor: every placement's synth_frame indexes the
         // schedule (upper_bound over fm in run_warptempo_engine), so every
-        // placement lies inside [0, wend). The forward-only walk is safe
-        // because placements are non-decreasing in synth_frame: the strictly
-        // ascending input list (engine init refuses anything else) maps
-        // through a monotone upper_bound in run_warptempo_engine, so a
-        // placement never lands behind the cursor. Equal placements after
-        // the engine's llrint quantization remain legal — quantization is
-        // downstream of input validation — and are consumed together by the
-        // while loop below.
+        // placement lies inside [0, wend). A placement's synth_frame selects
+        // the frame that SEEDS: pghi_integrate seats theta = phi on that
+        // frame, whose analysis window centers at the authored reset
+        // position. The forward-only walk is safe because placements are
+        // non-decreasing in synth_frame: the strictly ascending input list
+        // (engine init refuses anything else) maps through a monotone
+        // upper_bound in run_warptempo_engine, so a placement never lands
+        // behind the cursor. Equal placements after the engine's llrint
+        // quantization remain legal — quantization is downstream of input
+        // validation — and are consumed together by the walk at the top of
+        // the frame loop.
         int  phase_reset_cursor = 0;
-        // `prev_phase_reset` carries "the previous frame fired a reset" into the next
-        // iteration so PGHI seats theta = phi on the post-reset frame.
-        bool prev_phase_reset = false;
         // Start-trim: N/2 samples -- the origin-centered analysis alignment
         // latency only, so source frame 0 maps to output frame 0. The OLA
         // ramp-up is intentionally NOT trimmed; it is kept as a brief head
@@ -390,6 +390,18 @@ void Synthesis::synthesize_full(
                 ch_cancelled[ch] = 1;
                 return;
             }
+            // Phase reset: consume this frame's placements. A hit makes this
+            // frame the seed frame — pghi_integrate seats theta = phi here,
+            // and this frame's analysis window centers at the authored reset
+            // position. A frame-0 placement is inert: frame 0 seeds as
+            // frame0 anyway. Channel-independent: each channel walks its own
+            // cursor.
+            bool phase_reset_fired = false;
+            while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
+                   stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {
+                ++phase_reset_cursor;
+                phase_reset_fired = true;
+            }
             // Pipeline invariant at loop top: ph_cur/mag_cur = analysis(frame),
             // ph_nxt/mag_nxt = analysis(frame+1), dt_in/df_in/quiet_in =
             // prep(frame) delivered with the frame+1 slot, and ph_prev/mag_prev
@@ -408,7 +420,7 @@ void Synthesis::synthesize_full(
             const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
             const bool    frame0     = (frame_idx == 0);
-            const bool    seed_heap  = frame0 || prev_phase_reset;
+            const bool    seed_heap  = frame0 || phase_reset_fired;
 
             if (prof) {
                 const auto _h0 = prof_clock::now();
@@ -506,18 +518,6 @@ void Synthesis::synthesize_full(
                     last_pct = pct;
                 }
             }
-
-            // Phase reset. The post-reset frame re-grounds via seed_heap
-            // (theta = phi). The loop only advances the placement cursor and
-            // records that a reset fired so `prev_phase_reset` seeds the next frame.
-            // Channel-independent: each channel walks its own cursor.
-            bool phase_reset_fired = false;
-            while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
-                   stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {
-                ++phase_reset_cursor;
-                phase_reset_fired = true;
-            }
-            prev_phase_reset = phase_reset_fired;
 
             // Advance the analysis pipeline by one frame. Only needed while
             // another synthesis frame follows; the analysis-only frame

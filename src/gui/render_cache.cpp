@@ -128,8 +128,10 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // changing the per-marker byte layout. Version 4: the phase reset
 // derivation's semantics changed — a reset now fires exactly at the authored
 // source frame — so artifacts rendered under the prior derivation must stop
-// matching and re-render.
-constexpr uint32_t kFingerprintVersion = 4;
+// matching and re-render. Version 5: the engine's phase reset placement
+// timing changed (the placement-selected frame seeds, one hop earlier), so
+// artifacts rendered under the prior engine must stop matching and re-render.
+constexpr uint32_t kFingerprintVersion = 5;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

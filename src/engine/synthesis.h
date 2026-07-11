@@ -17,9 +17,10 @@ public:
     // per-channel mono streams are interleaved after the channel threads join
     // and write_cb is invoked once with the full interleaved emit.
     //
-    // A frame following a phase-reset marker is a seed frame: theta re-grounds
-    // to the analysis phase phi so synthesis phase realigns with the source at
-    // that frame.
+    // The frame selected by a phase-reset placement is a seed frame: theta
+    // re-grounds to the analysis phase phi, realigning synthesis phase with
+    // the source at the authored position (that frame's analysis window
+    // centers on it).
     //
     // show_progress=true: print live progress % via \r, terminating with 100%.
     // pass_label: full prefix printed before each progress tick (caller provides
