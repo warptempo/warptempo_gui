@@ -172,6 +172,12 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.zoom_level        = app.zoom_level;
     s.viewport_start    = app.viewport_start_sample;
     s.playhead          = app.playhead_cursor_sample;
+    // Session prefs the per-entry .settings writer needs, captured live at
+    // dispatch so the file carries the session's real values.
+    s.active_markers_view = app.active_markers_view;
+    s.playback_speed      = app.playback_speed;
+    s.follow              = app.follow_mode;
+    s.font_size           = app.font_size;
     return s;
 }
 

@@ -27,7 +27,10 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // state that produced the render. The trim fields duplicate the
 // request's own trim on purpose: the request trim feeds the engine,
 // this block feeds the sidecar, and keeping the sidecar block
-// self-contained keeps the reader trivial.
+// self-contained keeps the reader trivial. The session prefs
+// (active_markers_view, playback_speed, follow, font_size) ride along
+// so the per-entry .settings can be written with the session's real
+// values rather than invented defaults.
 struct AuthoringSnapshot {
     bool    valid             = false;  // false: write no authoring block
     char    active_tab        = 'A';
@@ -39,6 +42,14 @@ struct AuthoringSnapshot {
     int     zoom_level        = 0;
     int64_t viewport_start    = 0;
     int64_t playhead          = 0;
+
+    // Dispatch-time session prefs the standard .settings schema needs and
+    // the request does not otherwise carry. Types match the AppState fields
+    // they are captured from.
+    char    active_markers_view = 'W';   // 'W' or 'P'
+    float   playback_speed      = 1.0f;
+    bool    follow              = true;
+    double  font_size           = 11.0;
 };
 
 // Self-contained view of the AppState fields do_render reads. Constructed by

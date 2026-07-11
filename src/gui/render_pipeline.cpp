@@ -362,6 +362,62 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             note_created(rs_path, existed);
 
+            // `.settings` sidecar: the SAME standard whole-file schema a
+            // source carries, so a later campaign step can display the entry
+            // as a read-only target-view snapshot and Ctrl+Alt+C can adopt it
+            // with plain load semantics. Written only for wav renders:
+            // entries display and adopt as target view (active_audio_view =
+            // 'T'), and 'T' requires output_format = wav, so map-format
+            // artifacts are not browse entries and get no .settings.
+            if (output_format == "wav") {
+                // The commit tab (named by active_tab_view) initializes to the
+                // render-view browse defaults: zoom = kFitFileLevel,
+                // viewport_start = 0, playhead = 0 — the browsed view is what a
+                // later commit adopts, and per-entry autosave will own these
+                // keys once entry display lands. Its trim comes from the
+                // recipe trim that shaped this render; read_only and the rest
+                // take their ViewState defaults. The other tab is all
+                // defaults, no trim.
+                ViewState commit_tab;
+                commit_tab.viewport_start_sample  = 0;
+                commit_tab.zoom_level             = kFitFileLevel;
+                commit_tab.playhead_cursor_sample = 0;
+                commit_tab.trim.has_begin   = req.authoring.has_trim_begin;
+                commit_tab.trim.begin_frame = req.authoring.trim_begin_frame;
+                commit_tab.trim.has_end     = req.authoring.has_trim_end;
+                commit_tab.trim.end_frame   = req.authoring.trim_end_frame;
+
+                ViewState other_tab;
+
+                const bool commit_is_a = req.authoring.active_tab != 'B';
+                const ViewState& tab_a = commit_is_a ? commit_tab : other_tab;
+                const ViewState& tab_b = commit_is_a ? other_tab : commit_tab;
+
+                // Values 0 / kFitFileLevel / the typed live prefs all sit
+                // inside the strict schema's vocabularies by construction
+                // (kFitFileLevel is in the persisted zoom vocabulary,
+                // playback_speed is a live preset, font_size is the live
+                // clamped value), so the file strict-parses under
+                // read_settings_file — same writer, same canonical key order
+                // as a source save — with no validation added here.
+                const std::filesystem::path st_path =
+                    bf / (req.batch_basename + ".settings");
+                existed = existed_before(st_path);
+                if (!write_settings_file(st_path.string(),
+                                         tab_a, tab_b,
+                                         req.authoring.follow,
+                                         /*active_audio_view=*/'T',
+                                         req.authoring.active_markers_view,
+                                         req.authoring.active_tab,
+                                         req.authoring.playback_speed,
+                                         req.authoring.font_size,
+                                         req.engine_settings)) {
+                    note_failure(st_path);
+                    return result;
+                }
+                note_created(st_path, existed);
+            }
+
             return result;
         };
 
