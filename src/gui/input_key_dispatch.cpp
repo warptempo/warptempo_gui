@@ -887,8 +887,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const char restored_audio_view =
             authoring ? authoring->active_audio_view
                       : app.active_audio_view;
-        const int64_t total_frames = audio.total_frames();
-        const long    sample_rate  = audio.sample_rate();
+        // The candidates are SOURCE-domain, but while render-view is up the
+        // live `audio` holds the displayed render (generally shorter than
+        // the source — any trimmed or speeding render); the source is parked
+        // on render_view.source_audio_held until restore_source_audio below.
+        // Every wall and view-domain guard therefore reads the parked
+        // source's totals, the domain the commit actually restores into.
+        const int64_t total_frames =
+            render_view.source_audio_held.total_frames();
+        const long    sample_rate  =
+            render_view.source_audio_held.sample_rate();
 
         // Source-load adversarial guard 1: past-EOF walls, the same shared
         // implementation the GUI load and warptempo_cli run
