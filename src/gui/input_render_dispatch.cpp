@@ -358,7 +358,11 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // its one stderr line and the entry does not display — the busy-
         // refusal semantics; the user re-navigates once the worker drains. A
         // rebuild that DOES dispatch owns queue_running and the progress text
-        // with no caller left to clobber them. And when the parked command is
+        // with no caller left to clobber them: the same auto-open, on a
+        // dispatched-rebuild failure, exits render view through
+        // restore_source_view, whose target-view arm now runs ensure_ready's
+        // deferring variant — it parks the exit-path preview behind the
+        // running rebuild instead of cancelling it. And when the parked command is
         // itself a batch, the old batch's auto-open runs under the new
         // render's progress — the same reachable state as a parked batch
         // pumped to completion under an open render view, already handled.

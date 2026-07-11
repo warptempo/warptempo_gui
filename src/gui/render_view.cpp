@@ -804,13 +804,21 @@ void GuiRenderView::restore_source_view() {
     playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
     std::vector<float>().swap(entry_samples);
     entry_frames = 0;
-    // H1 fix: render-view exit lands playback bound to source.wav
-    // unconditionally above. If the user is still in target view (R
-    // does not touch active_audio_view), rebind to the target buffer —
-    // ensure_ready dispatches a fresh render if the buffer is stale,
-    // otherwise it short-circuits to a clean playback.rebind_buffer.
+    // Render-view exit lands playback bound to source.wav unconditionally
+    // above. If the user is still in target view (R does not touch
+    // active_audio_view), rebind to the target buffer — ensure_ready
+    // short-circuits to a clean playback.rebind_buffer when the buffer is
+    // current, otherwise it wants a fresh render. This is a VIEW RESTORE,
+    // not a live authoring edit, so it passes the deferring variant: when an
+    // archival session is running (the derived attestation rebuild a failed
+    // in-place auto-open just dispatched is the motivating case), the
+    // exit-path preview parks behind it (pending_) rather than cancelling it
+    // — the ruled preview-kills-the-render semantics govern live edits, not a
+    // view restore. The parked preview is pumped by maybe_dispatch_pending
+    // when the worker drains — archival first, preview after, per the pump's
+    // recorded ordering.
     if (app.active_audio_view == 'T') {
-        target_render.ensure_ready();
+        target_render.ensure_ready(/*defer_archival=*/true);
     }
     // One-shot discrete jump: the source view is restored and the entering
     // tab's viewport / zoom / playhead are applied, so render the plate

@@ -122,7 +122,22 @@ struct GuiTargetRender {
     // trigger() is "an edit happened, the buffer is now stale";
     // ensure_ready() is "we just entered target view, is the buffer
     // current?".
-    void ensure_ready();
+    //
+    // defer_archival (render-view exit path only; pending architect
+    // ratification): when the dirty-or-empty path is reached while the worker
+    // is busy on a session that is NOT this preview's own in-flight render
+    // (i.e. an archival session), park the preview (pending_ = true) and
+    // return WITHOUT request_cancel / queue_cancel_requested / a
+    // queue_progress_text write, deferring behind the archival session rather
+    // than killing it. The worker-idle pump (maybe_dispatch_pending) then
+    // dispatches the archival first and this preview after, per the pump's
+    // recorded ordering — an explicit command outranks a derived preview. A
+    // view restore is not a live authoring edit, so it does not carry the
+    // ruled preview-kills-the-render semantics; every OTHER caller passes
+    // false and keeps that kill unchanged. On an idle worker, or a worker
+    // busy on the preview's own in_flight_ render, the flag is inert and the
+    // normal trigger() behavior runs.
+    void ensure_ready(bool defer_archival = false);
 
     // Force target view back to source view, preserving the playhead's screen
     // column and cancelling any target render work. Used when an engine setting
