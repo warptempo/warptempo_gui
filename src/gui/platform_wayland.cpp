@@ -1768,6 +1768,14 @@ void GuiPlatform::on_dnd_drop() {
     }
     if (drop_accept_ && !drop_accept_(dnd_x_, dnd_y_)) {
         destroy_current_offer();
+        // The predicate refuses for both state reasons (render view open,
+        // archival render running) and position reasons (dropped outside
+        // the waveform area). Signal the owner, which discriminates: a
+        // state refusal earns a stderr line, a plain position miss stays
+        // silent (ordinary drag-and-drop). This is the primary surface for
+        // a refused drop — the offer is destroyed unread, so on_file_drop_'s
+        // own refusal lines never fire on this path.
+        if (on_drop_refused_) on_drop_refused_();
         return;
     }
 
@@ -2018,6 +2026,7 @@ void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = s
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
+void GuiPlatform::set_on_drop_refused(DropRefusedCallback cb)  { on_drop_refused_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

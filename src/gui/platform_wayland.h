@@ -31,6 +31,7 @@ public:
     using CloseCallback        = std::function<void()>;
     using FileDropCallback     = std::function<void(const std::string& path)>;
     using DropAcceptPredicate  = std::function<bool(int x, int y)>;
+    using DropRefusedCallback  = std::function<void()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -69,6 +70,7 @@ public:
     void set_on_close(CloseCallback cb);
     void set_on_file_drop(FileDropCallback cb);
     void set_drop_accept_predicate(DropAcceptPredicate p);
+    void set_on_drop_refused(DropRefusedCallback cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -328,6 +330,7 @@ private:
     CloseCallback        on_close_;
     FileDropCallback     on_file_drop_;
     DropAcceptPredicate  drop_accept_;
+    DropRefusedCallback  on_drop_refused_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 

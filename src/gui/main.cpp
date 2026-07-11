@@ -699,10 +699,36 @@ int main(int argc, char** argv) {
                y >= area.y && y < area.y + area.h;
     });
 
+    // A refused drop never reaches on_file_drop below: the platform
+    // destroys the offer unread. This is the primary surface for a
+    // refused drop. The platform's drop-refused callback fires for both
+    // state reasons and position reasons, so discriminate here (the
+    // platform is app-state-blind): a state refusal earns one stderr
+    // line, a plain position miss stays silent.
+    gui.set_on_drop_refused([&]() {
+        if (app.render_view.enabled) {
+            std::fprintf(stderr,
+                "warptempo_gui: file drop refused: render view is open\n");
+            return;
+        }
+        if (app.queue_running || app.pending_archival.armed) {
+            std::fprintf(stderr,
+                "warptempo_gui: file drop refused: an archival render is "
+                "running\n");
+            return;
+        }
+        // A plain position miss (dropped outside the waveform area) is
+        // ordinary drag-and-drop and stays silent.
+    });
+
     gui.set_on_file_drop([&](const std::string& path) {
-        // Backstop for a drop that raced the predicate state: the same
-        // render-view / archival-batch refusal as the drop-accept
-        // predicate above, one stderr line per condition.
+        // Race backstop only: the platform's drop-refused callback above is
+        // the primary surface for a refused drop, which destroys the offer
+        // unread. These lines fire only if a drop slips past the predicate —
+        // the accept-then-receive state changing within one dispatch, which
+        // the synchronous receive makes unreachable today. Same
+        // render-view / archival-batch refusal, one stderr line per
+        // condition.
         if (app.render_view.enabled) {
             std::fprintf(stderr,
                 "warptempo_gui: file drop refused: render view is open\n");
