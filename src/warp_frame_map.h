@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 struct WarpFrameMapSegment {
@@ -59,6 +61,22 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
     }
     const auto& last = map.back();
     return last.src_frame + (tgt_frame - last.tgt_frame);
+}
+
+// target_total_frames_for_map is the single owner of the persisted-'T'-domain
+// total rule, shared by the GUI target-view cache, the CLI persisted-view load
+// check, and Ctrl+Alt+C candidate validation, so the rounding and fallback can
+// never drift between the products. An empty map returns the source total
+// unchanged; otherwise the source total (negative clamped to zero) is mapped
+// into the target domain, banker's-rounded, and returned when strictly
+// positive, else the source total is the fallback.
+inline int64_t target_total_frames_for_map(
+    int64_t total_frames, const std::vector<WarpFrameMapSegment>& map) {
+    if (map.empty()) return total_frames;
+    const double src = static_cast<double>(total_frames < 0 ? 0 : total_frames);
+    const int64_t tt =
+        static_cast<int64_t>(std::nearbyint(map_source_to_target(src, map)));
+    return tt > 0 ? tt : total_frames;
 }
 
 // The map artifact WRITERS live in the parser (map_output.cpp), which also

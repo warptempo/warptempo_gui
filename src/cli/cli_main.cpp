@@ -286,14 +286,8 @@ int main(int argc, char** argv) {
                            total_frames);
                        !view_map) {
                 run_view_check = false;
-            } else if (view_map->empty()) {
-                domain_total = total;
             } else {
-                const double t = map_source_to_target(
-                    static_cast<double>(total_frames < 0 ? 0 : total_frames),
-                    *view_map);
-                const int64_t tt = static_cast<int64_t>(std::nearbyint(t));
-                domain_total = tt > 0 ? tt : total;
+                domain_total = target_total_frames_for_map(total, *view_map);
             }
         }
         if (run_view_check) {

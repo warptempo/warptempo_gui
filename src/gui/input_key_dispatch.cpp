@@ -977,12 +977,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                         static_cast<long>(total_frames), &build_error);
                 if (!build_error.empty()) {
                     run_view_check = false;
-                } else if (!cand_map.empty()) {
-                    const double t = map_source_to_target(
-                        static_cast<double>(total_frames), cand_map);
-                    const int64_t tt =
-                        static_cast<int64_t>(std::nearbyint(t));
-                    if (tt > 0) domain_total = tt;
+                } else {
+                    domain_total = target_total_frames_for_map(
+                        total_frames, cand_map);
                 }
             }
             if (run_view_check) {
