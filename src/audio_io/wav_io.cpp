@@ -204,6 +204,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     }
     bool fmt_seen = false;
     bool data_seen = false;
+    bool salvaged = false;
     WavLayout layout;
     uint16_t tag = 0;
     uint16_t bits = 0;
@@ -327,13 +328,35 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             data_seen = true;
         }
 
-        if (stop_after_chunk) break;
+        if (stop_after_chunk) {
+            salvaged = true;
+            break;
+        }
 
         const uint64_t next =
             payload + chunk_payload_size + (chunk_payload_size & 1u);
         if (!src.seek(next)) {
             return std::unexpected("failed to skip WAV chunk");
         }
+    }
+
+    // A conforming chunk walk consumes the container exactly: every chunk
+    // advances by its payload plus its odd-payload pad byte (next = payload +
+    // size + (size & 1)), so the final skip lands precisely on the physical
+    // EOF. A walk that halts anywhere else is adversarial: a position short of
+    // EOF left fewer than eight bytes — a truncated chunk header (the RIFF-size
+    // equality guard above passes on a file whose dangling 1..7 trailing bytes
+    // are counted into riff_size, so this catch is not redundant with it); a
+    // position past EOF is a final chunk whose padded extent oversteps the file
+    // (the file source's fseek succeeds past the end where the memory source
+    // refuses, so this check also closes that file-vs-memory acceptance split).
+    // The 0xffffffff placeholder-salvage path legitimately ends mid-file and is
+    // exempt.
+    if (!salvaged && src.tell() != file_size) {
+        if (src.tell() > file_size) {
+            return std::unexpected("WAV chunk extends past end of file");
+        }
+        return std::unexpected("truncated WAV chunk header");
     }
 
     if (!fmt_seen) return std::unexpected("WAV fmt chunk not found");
