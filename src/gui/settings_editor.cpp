@@ -169,6 +169,25 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
+    // No-op gate. An undo entry represents a state change, not a gesture, so
+    // committing the value already in effect deactivates the editor and
+    // touches no history, dirty state, view, or render. The key has passed
+    // is_canonical_engine_key, so both serializations are engaged; comparing
+    // canonical serialized bytes makes every accepted spelling of the current
+    // value a no-op (for example a scale written with extra trailing zeros).
+    std::optional<std::string> cur_serialized =
+        format_engine_setting_value(app.engine_settings, key);
+    std::optional<std::string> new_serialized =
+        format_engine_setting_value(candidate, key);
+    if (cur_serialized == new_serialized) {
+        std::fprintf(stderr,
+            "warptempo_gui: setting unchanged: %s=%s\n",
+            key.c_str(), cur_serialized->c_str());
+        viewport.invalidate_timestamp_area();
+        text_editor::deactivate(app.settings_editor);
+        return;
+    }
+
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
