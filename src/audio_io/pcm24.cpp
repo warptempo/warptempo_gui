@@ -10,9 +10,9 @@ int32_t pcm24_code_from_float(float x)
         return 0;
     }
 
-    const long long rounded = std::llrint(static_cast<double>(x) * 8388608.0);
-    const long long clipped = std::clamp(rounded, -8388608LL, 8388607LL);
-    return static_cast<int32_t>(clipped);
+    const double scaled = std::clamp(static_cast<double>(x) * 8388608.0,
+                                     -8388608.0, 8388607.0);
+    return static_cast<int32_t>(std::llrint(scaled));
 }
 
 float pcm24_float_from_code(int32_t c)

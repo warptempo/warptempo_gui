@@ -14,9 +14,11 @@
 // and null tests. Inverse exactness therefore outranks mirror symmetry at the
 // single input, -1.0, where the two conflict. The clamp makes out-of-range
 // input saturate instead of wrapping to the opposite polarity under 3-byte
-// truncation. Scaling and rounding run in double via llrint, the project's
-// round-half-to-even convention, which is sign-symmetric by parity; NaN maps
-// to code zero.
+// truncation. The scaled value is clamped to the code interval in double
+// before rounding, so finite out-of-range inputs and infinities both saturate
+// to full scale with no invalid integer conversion. Scaling and rounding run
+// in double via llrint, the project's round-half-to-even convention, which is
+// sign-symmetric by parity; NaN maps to code zero.
 int32_t pcm24_code_from_float(float x);
 
 // Every signed 24-bit code divided by 8388608.0f is exactly representable in
