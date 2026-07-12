@@ -102,15 +102,24 @@ std::expected<void, std::string> validate_trim_frames(
 //     covers that read strictly (llrint(c2) >= c2 - 0.5) and every earlier
 //     frame's read a fortiori (the map is monotone). The remaining coverage
 //     requirements follow automatically:
-//       - cut_end >= c2 puts the closing anchor's target at or past
-//         (m_max+1)*R_s, so schedule entries through m_max+1 inverse-map
-//         through real segments (never the closing anchor's identity
-//         extrapolation) and are translation-identical to the full
-//         render's. That gives phase reset PLACEMENT identity: a reset with
-//         llrint(query) < t_a(m_max+1) places at the same frame <= m_max in
-//         both renders, and one at or past t_a(m_max+1) places past m_max
-//         in BOTH renders (schedules are nondecreasing and shared through
-//         entry m_max+1), where it can only influence samples past L.
+//       - Schedule identity holds by CONSTRUCTION, not by coincidence: the
+//         trimmed analysis schedule is not re-interpolated from the
+//         translated map. plan_trim derives it below from the FULL map's own
+//         evaluations at absolute hops A0+m and hands it to the engine
+//         verbatim (pre.source_frame_schedule -> EngineParams), so every
+//         trimmed entry IS the full render's llrint value at hop A0+m
+//         translated by the integer -cut_begin — identically, over the WHOLE
+//         schedule, not merely through entry m_max+1, and through real map
+//         segments rather than the translated map's identity extrapolation.
+//         cut_end >= c2 is therefore no longer needed for schedule identity;
+//         it remains the AUDIO-coverage bound (real cut source present for
+//         every read frame m_max+1 and earlier). That gives phase reset
+//         PLACEMENT identity: a reset with llrint(query) < t_a(m_max+1)
+//         places at the same frame <= m_max in both renders, and one at or
+//         past t_a(m_max+1) places past m_max in BOTH renders (the schedules
+//         are nondecreasing and, by construction, the trimmed one IS the full
+//         one translated over its whole length), where it can only influence
+//         samples past L.
 //       - The emit cap — llrint of the closing target — is at or past the
 //         translated (m_max+1)*R_s minus rounding, which exceeds the
 //         translated L by more than N/2 minus rounding, so the trimmed
@@ -138,13 +147,19 @@ std::expected<void, std::string> validate_trim_frames(
 //     the source cut position: with it, the trimmed engine's synthesis
 //     frame m coincides with the full render's frame A0+m and the trimmed
 //     limiter's frame grid coincides with the full render's limiter grid —
-//     the coincidence step 5's influence chain is computed on. Frames
-//     through m_max read identical source audio, see the identical
-//     lookahead frame m_max+1, and fire identical phase resets (step 5), so
-//     the emission is full-render-identical through L and every limiter
-//     frame covering a kept sample analyzes identical AUDIO. The
-//     synthesis/PGHI null therefore holds unconditionally through the last
-//     kept sample. The LIMITERS sit outside that guarantee by ruling: the
+//     the coincidence step 5's influence chain is computed on. That frame
+//     coincidence is now read-for-read by CONSTRUCTION: the engine does not
+//     re-interpolate the translated map for its analysis schedule — plan_trim
+//     derives the schedule from the FULL map at absolute hops A0+m and the
+//     engine adopts it verbatim (source_frame_schedule), so trimmed frame m's
+//     read position equals the full render's frame A0+m read position minus
+//     the integer cut_begin exactly, with no half-integer-tie divergence
+//     between two floating interpolators. Frames through m_max read identical
+//     source audio, see the identical lookahead frame m_max+1, and fire
+//     identical phase resets (step 5), so the emission is full-render-
+//     identical through L and every limiter frame covering a kept sample
+//     analyzes identical AUDIO. The synthesis/PGHI null therefore holds
+//     unconditionally through the last kept sample. The LIMITERS sit outside that guarantee by ruling: the
 //     peak limiter whenever it engages (unchanged), and the spectral
 //     limiter's per-peak DECISION layer, which is nonlocal — resolving any
 //     peak rescans plus-minus 100 limiter hops, removed peaks re-detect
@@ -242,6 +257,50 @@ std::expected<TrimPlan, std::string> plan_trim(
     }
     tm.push_back(WarpFrameMapSegment{close_src, close_tgt});
 
+    // Trimmed analysis schedule, handed to the engine verbatim
+    // (EngineParams::source_frame_schedule). Entry m is the FULL render's own
+    // schedule value at absolute synthesis hop A0 + m, translated into the
+    // cut's source domain by the integer -cut_begin:
+    //   positions[m] = llrint(map_target_to_source(origin_target + m*R_s,
+    //                                               full map) - N/2) - cut_begin
+    // — the EXACT expression the engine's generator evaluates for the full
+    // render at hop A0 + m (origin_target + m*R_s = (A0 + m)*R_s), against the
+    // same shared inline interpolator from warp_frame_map.h, the same llrint,
+    // IEEE-defined arithmetic with no fast-math, so identical in any
+    // translation unit; then an exact integer subtraction. The trimmed
+    // schedule is therefore the full render's schedule rigidly translated by
+    // construction: schedule identity with the full render no longer rests on
+    // the translated map above re-interpolating llrint-identically to the full
+    // map at half-integer ties (the codex construction verbatim). The loop
+    // bound is the engine's own target-extent test on the TRANSLATED map
+    // (m*R_s < llrint(close_tgt) + N, the same t_s < target_total_frames the
+    // engine steps), derived from the same close_tgt the closing anchor
+    // carries, so the entry count equals the engine's generation count by
+    // construction.
+    //
+    // Tail nuance: entries past the closing anchor's target (m*R_s >=
+    // close_tgt) now evaluate through the FULL map's real segments (translated)
+    // rather than the translated map's identity extrapolation. Those entries
+    // influence only samples the crop discards — the influence chain of
+    // derivation step 5 ends at m_max+1, which the closing anchor covers — and
+    // phase reset placement (an upper_bound over these entries) now enjoys
+    // exact translation over the WHOLE schedule, not only through entry
+    // m_max+1.
+    const int64_t trimmed_target_total = std::llrint(close_tgt) + N64;
+    if (R64 > 0) {
+        plan.pre.source_frame_schedule.reserve(
+            static_cast<size_t>(trimmed_target_total / R64) + 1);
+    }
+    for (int64_t m = 0; m * R64 < trimmed_target_total; ++m) {
+        plan.pre.source_frame_schedule.push_back(
+            std::llrint(
+                map_target_to_source(
+                    static_cast<double>(origin_target + m * R64),
+                    full_warp_frame_map)
+                - static_cast<double>(N) / 2.0)
+            - cut_begin);
+    }
+
     // Trimmed phase reset frame map: the full deliverable-form derivation
     // translated by -cut_begin (the engine query domain is source-anchored,
     // so the source translation is the whole re-anchor) and range-filtered.
@@ -249,16 +308,23 @@ std::expected<TrimPlan, std::string> plan_trim(
     // Filter predicate, derived from the binding invariant — every reset
     // that fires in the full render at a frame the kept window depends on
     // (frames through m_max, derivation step 5) must fire at the identical
-    // synthesis frame in the trimmed render (the engine's frames over the
-    // cut pair coincide read-for-read with the full render's frames A0+m,
-    // so a reset firing at full frame A0+m must land on trimmed frame m):
+    // synthesis frame in the trimmed render (the engine's frames over the cut
+    // pair coincide read-for-read with the full render's frames A0+m BY
+    // CONSTRUCTION now — the engine adopts source_frame_schedule, which is the
+    // full render's schedule translated by the integer -cut_begin, above — so
+    // a reset firing at full frame A0+m must land on trimmed frame m):
     //   HEAD: drop when llrint(translated) < the trimmed schedule's frame-0
-    //   read, llrint(map_target_to_source(0, trimmed map) - N/2). This is
-    //   the engine's own placement-drop verdict quantized exactly as Pass 1
-    //   quantizes (llrint, then upper_bound over the read schedule), and by
-    //   the schedule translation it equals the full render's "fires before
-    //   frame A0" verdict — the reset precedes the trimmed schedule, exactly
-    //   as it precedes the kept window in the full render.
+    //   read, llrint(map_target_to_source(0, trimmed map) - N/2). That value
+    //   equals source_frame_schedule.front() exactly (cut_begin is that same
+    //   frame-0 read rounded, and subtracting an integer from a double far
+    //   below 2^53 is exact — the result lies on the minuend's own ulp grid
+    //   or finer — so A - cut_begin is exact and the two
+    //   integer-shifted spellings round alike), so it is the engine's own
+    //   placement-drop verdict quantized exactly as Pass 1 quantizes (llrint,
+    //   then upper_bound over the read schedule); by the by-construction
+    //   schedule translation it equals the full render's "fires before frame
+    //   A0" verdict — the reset precedes the trimmed schedule, exactly as it
+    //   precedes the kept window in the full render.
     //   TAIL: drop when the translated position is at or past the cut's
     //   extent (>= pre.frames). Every reset the invariant needs — one that
     //   places at a frame <= m_max in the full render — has llrint(query) <

@@ -40,6 +40,13 @@ struct PreTrim {
     int64_t frames      = 0;
     std::vector<WarpFrameMapSegment> warp_frame_map;   // translated
     std::vector<double> phase_reset_frame_map;         // translated
+    // Precomputed source-frame analysis schedule (one int64 source-frame
+    // position per synthesis hop), derived from the FULL map's own
+    // evaluations and translated by the integer source cut, handed to the
+    // engine as EngineParams::source_frame_schedule so the trimmed schedule
+    // is the full render's schedule rigidly translated by construction — not
+    // re-interpolated from the translated map above. plan_trim fills it.
+    std::vector<int64_t> source_frame_schedule;
 };
 
 struct PostTrim {

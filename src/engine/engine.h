@@ -48,6 +48,27 @@ struct EngineParams {
     // Quantized exactly once, by Pass 1's llrint against the query schedule.
     std::vector<double> phase_reset_frame_map;
 
+    // Optional precomputed source-frame analysis schedule (one entry per
+    // synthesis hop, valued in source sample-frames). When null (the default
+    // — and the ONLY full-render path: a recorded asymmetry, full renders
+    // never supply one) the engine generates its own schedule from
+    // warp_frame_map exactly as always
+    // (AudioSTFT::generate_source_frame_positions, byte-untouched). When
+    // non-null the engine adopts it VERBATIM as source_frame_positions and
+    // skips generation, after a loud shape check: the entry count must equal
+    // what generation would produce (the number of t_s values in
+    // [0, target_total_frames) stepping R_s) and the entries must be
+    // nondecreasing (generation is nondecreasing because the map is monotone;
+    // equal neighbours are legal under extreme slow-downs). The field exists
+    // for TRIMMED renders: a trimmed render's translated map is a rebuilt
+    // object, and re-interpolating it is not provably llrint-identical to the
+    // full map at half-integer ties, so the orchestrator derives the trimmed
+    // schedule from the FULL map's own evaluations (plan_trim, translated by
+    // the integer source cut) and hands it here — schedule identity with the
+    // full render then holds by construction rather than by a floating-point
+    // coincidence. Caller-owned; must outlive run_warptempo_engine.
+    const std::vector<int64_t>* source_frame_schedule = nullptr;
+
     // The engine renders the supplied warp_frame_map wholesale and is
     // trim-ignorant: a trimmed render is produced by handing it the prepost
     // trimmer's translated map plus the matching offset+length view into the

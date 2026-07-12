@@ -374,6 +374,14 @@ int main(int argc, char** argv) {
     ep.phase_reset_frame_map = trim_plan
         ? std::move(trim_plan->pre.phase_reset_frame_map)
         : full_phase_reset_frame_map;
+    // Trimmed renders adopt the schedule plan_trim derives from the full map
+    // (identity by construction, not the translated map's re-interpolation);
+    // full renders pass none and the engine generates its own. trim_plan
+    // outlives the engine call below (finish_render reads it too), and the
+    // pointer targets a member never moved out. Identical to do_render.
+    ep.source_frame_schedule = trim_plan
+        ? &trim_plan->pre.source_frame_schedule
+        : nullptr;
     ep.N            = N_fft;
     ep.limiter      = es.limiter;
     // limiter_ceiling_dbfs / tolerance stay at EngineParams defaults —

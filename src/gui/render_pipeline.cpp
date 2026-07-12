@@ -715,6 +715,14 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.phase_reset_frame_map = trim_plan
             ? std::move(trim_plan->pre.phase_reset_frame_map)
             : full_phase_reset_frame_map;
+        // Trimmed renders adopt the schedule plan_trim derives from the full
+        // map (identity by construction, not the translated map's
+        // re-interpolation); full renders pass none and the engine generates
+        // its own. trim_plan outlives the engine call below (it is also read
+        // by finish_render), and the pointer targets a member never moved out.
+        ep.source_frame_schedule = trim_plan
+            ? &trim_plan->pre.source_frame_schedule
+            : nullptr;
         ep.N                    = N_fft;
         ep.limiter              = req.engine_settings.limiter;
 

@@ -247,7 +247,47 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // (validate_render_projection in src/prepost/trimmer.h), preserving the
     // refuse-before-cost property without the engine knowing encode shapes.
 
-    audio_stft.source_frame_positions = audio_stft.generate_source_frame_positions();
+    // Source read schedule. Absent a supplied schedule the engine generates
+    // its own from the map — the full-render path, the existing code
+    // unchanged. A supplied schedule (trimmed renders only in practice — a
+    // recorded asymmetry) is adopted VERBATIM after a loud shape check: it
+    // must carry exactly the entry count generation would produce (t_s
+    // stepping R_s over [0, target_total_frames), counted with the SAME loop
+    // as generate_source_frame_positions so the two counts cannot drift) and
+    // be nondecreasing (generation is nondecreasing because the map is
+    // monotone; equal neighbours are legal under extreme slow-downs). A breach
+    // here means a hand-built EngineParams; refuse it loudly like the
+    // strict-ascent validators above.
+    if (p.source_frame_schedule) {
+        size_t expected_count = 0;
+        for (size_t t_s = 0; t_s < audio_stft.target_total_frames;
+             t_s += audio_stft.R_s) {
+            ++expected_count;
+        }
+        if (p.source_frame_schedule->size() != expected_count) {
+            std::cerr << "Error: supplied source_frame_schedule has "
+                      << p.source_frame_schedule->size()
+                      << " entries; the map's target extent needs "
+                      << expected_count << ".\n";
+            audio_stft.cleanup();
+            return EngineResult::Failed;
+        }
+        for (size_t m = 1; m < p.source_frame_schedule->size(); ++m) {
+            if ((*p.source_frame_schedule)[m] <
+                (*p.source_frame_schedule)[m - 1]) {
+                std::cerr << "Error: supplied source_frame_schedule decreases "
+                             "at entry " << m << " ("
+                          << (*p.source_frame_schedule)[m - 1] << " -> "
+                          << (*p.source_frame_schedule)[m] << ").\n";
+                audio_stft.cleanup();
+                return EngineResult::Failed;
+            }
+        }
+        audio_stft.source_frame_positions = *p.source_frame_schedule;
+    } else {
+        audio_stft.source_frame_positions =
+            audio_stft.generate_source_frame_positions();
+    }
 
     double duration_sec = static_cast<double>(audio_stft.emit_sample_cap) /
                           audio_stft.src_info.samplerate;
