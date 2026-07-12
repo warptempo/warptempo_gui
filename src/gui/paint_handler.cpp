@@ -249,30 +249,112 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 // refills the exposed region every frame, so the fill composites over fresh
 // pixels and never accumulates.
 //
-// Target-view-only, and this is a phase-reset-only surface with no warp
-// sibling (naming-symmetry asymmetry, recorded here per CLAUDE.md): the span
-// is a fixed target/output-domain width, so it is constant in target time.
-// Source view would show a map-dependent, varying width — misrepresenting a
-// constant span — so the overlay is not drawn there. The reset's local
-// take-hold stretch is a phase-reset-only concept, so there is nothing on
-// the warp axis to mirror.
+// Painted in TARGET view and RENDER view, never source view, and this is a
+// phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
+// recorded here per CLAUDE.md). The span is a fixed target/output-domain
+// width, so it is constant in target time. Both target and render view are
+// target/output-domain displays: render view's window axis is the full
+// target axis shifted by the window origin, and a uniform shift preserves
+// spans, so the constant target-time width is exactly as honest on the window
+// axis as on the live target axis. Source view would show a map-dependent,
+// varying width — misrepresenting a constant span — so the overlay is not
+// drawn there. The reset's local take-hold stretch is a phase-reset-only
+// concept, so there is nothing on the warp axis to mirror.
 void GuiPaintHandler::paint_phase_reset_overlay(
     cairo_t* cr, const GuiRect& area) {
-    // Visibility: always-on for the focused marker, but only in target-view
-    // phase-reset editing, never in render view. Anything else paints nothing.
-    if (app.render_view.enabled) return;
-    if (app.active_audio_view != 'T') return;
+    // Visibility: always-on for the focused enabled marker while the global
+    // W/P mode is on P, in target view AND render view; never source view.
+    // The two arms below differ only in gates, marker store, and map
+    // selection; everything downstream is domain-agnostic and shared.
     if (app.active_markers_view != 'P') return;
-
-    const auto& markers = app.phaseresetmarkers.markers();
-    const int idx = app.last_selected_marker;
-    if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
-    const auto& marker = markers[idx];
-    // Mirror the phase-reset stem renderer, which skips disabled markers
-    // entirely (render_phaseresetmarkers' is_disabled reads `disabled`).
-    if (marker.disabled) return;
-
     if (area.w <= 0 || area.h <= 0) return;
+
+    // Paint sample: the exact expression render.cpp's file-local
+    // frame_to_paint_sample uses, so marker and overlay can never disagree.
+    // Each arm resolves the focused reset's window/target-axis position `ms`.
+    double ms;
+    if (app.render_view.enabled) {
+        // Render arm: active_audio_view is NOT consulted — it can rest at 'S'
+        // or 'T' through render view, but the display domain is render either
+        // way (the same reason active_display_context's render arm ignores
+        // it). The store is the display snapshot, indexed by
+        // last_selected_marker like every render-view selection consumer.
+        const auto& markers = app.render_view.phase_resets;
+        const int idx = app.last_selected_marker;
+        if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
+        const auto& marker = markers[idx];
+        // Mirror the phase-reset stem renderer, which skips disabled markers
+        // identically in both views (render_phaseresetmarkers' is_disabled
+        // reads `disabled` off the same display store).
+        if (marker.disabled) return;
+
+        // A focused marker in render view is in-window by construction: the
+        // hit tests, the Tab walk, and sweep-select all cull out-of-window
+        // rows through render_view_position_in_window (verified at those
+        // sites), so no redundant membership check is needed here — and the
+        // horizontal clip at the tail makes an offscreen paint harmless if
+        // one ever slipped through. Translate through the TARGET-SHIFTED
+        // window-axis snapshot map the render-view stem painters use; no
+        // live-authoring or drag-freeze map is meaningful here (marker drags
+        // are gated out of render view — handle_render_view_press claims the
+        // press before begin_drag runs — so app.drag with drag_mode 'P' is
+        // unreachable). Identity when the map is empty (matching the stem
+        // fallback).
+        const auto& map = app.render_view.snapshot_warp_frame_map;
+        if (!map.empty()) {
+            const size_t src_frame =
+                static_cast<size_t>(std::nearbyint(
+                    static_cast<double>(marker.time_frame)));
+            ms = std::nearbyint(map_source_to_target(src_frame, map));
+        } else {
+            ms = std::nearbyint(static_cast<double>(marker.time_frame));
+        }
+    } else {
+        if (app.active_audio_view != 'T') return;
+
+        const auto& markers = app.phaseresetmarkers.markers();
+        const int idx = app.last_selected_marker;
+        if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
+        const auto& marker = markers[idx];
+        // Mirror the phase-reset stem renderer, which skips disabled markers
+        // entirely (render_phaseresetmarkers' is_disabled reads `disabled`).
+        if (marker.disabled) return;
+
+        // Map selection: same frozen-vs-cached pattern as the debug hit-rects
+        // block and hit_test_flag. No map means identity (matching the stem
+        // renderer's fallback). We are already known to be in target view.
+        const std::vector<WarpFrameMapSegment>* tmap = nullptr;
+        if (app.drag.active) {
+            if (!app.drag.frozen_warp_frame_map.empty())
+                tmap = &app.drag.frozen_warp_frame_map;
+        } else {
+            const auto& m = target_view_warp_frame_map_cached(
+                app, static_cast<long>(audio.sample_rate()),
+                static_cast<long>(audio.total_frames())).warp_frame_map;
+            if (!m.empty()) tmap = &m;
+        }
+
+        // Effective time: during a phase-reset-mode drag, read the focused
+        // marker's proposed time through the DragOverlay (same construction
+        // as hit_test_flag). A warp-mode drag's indices refer to the warp
+        // list, so guard on drag_mode 'P'; otherwise use the live store's
+        // time.
+        double eff_time = marker.time_frame;
+        if (app.drag.active && app.drag.drag_mode == 'P') {
+            DragOverlay ov;
+            ov.indices = &app.drag.dragging_markers;
+            ov.times   = &app.drag.moveable_times;
+            eff_time = ov.effective_time(idx, marker.time_frame);
+        }
+
+        if (tmap && !tmap->empty()) {
+            const size_t src_frame =
+                static_cast<size_t>(std::nearbyint(eff_time));
+            ms = std::nearbyint(map_source_to_target(src_frame, *tmap));
+        } else {
+            ms = std::nearbyint(eff_time);
+        }
+    }
 
     // Displayed-viewport recipe: same as paint_playheads, so the overlay
     // stays locked to the blitted plate and the stem cache while the worker
@@ -283,43 +365,6 @@ void GuiPaintHandler::paint_phase_reset_overlay(
         : current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;
     const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
-
-    // Map selection: same frozen-vs-cached pattern as the debug hit-rects
-    // block and hit_test_flag. No map means identity (matching the stem
-    // renderer's fallback). We are already known to be in target view here.
-    const std::vector<WarpFrameMapSegment>* tmap = nullptr;
-    if (app.drag.active) {
-        if (!app.drag.frozen_warp_frame_map.empty())
-            tmap = &app.drag.frozen_warp_frame_map;
-    } else {
-        const auto& m = target_view_warp_frame_map_cached(
-            app, static_cast<long>(audio.sample_rate()),
-            static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!m.empty()) tmap = &m;
-    }
-
-    // Effective time: during a phase-reset-mode drag, read the focused
-    // marker's proposed time through the DragOverlay (same construction as
-    // hit_test_flag). A warp-mode drag's indices refer to the warp list, so
-    // guard on drag_mode 'P'; otherwise use the live store's time.
-    double eff_time = marker.time_frame;
-    if (app.drag.active && app.drag.drag_mode == 'P') {
-        DragOverlay ov;
-        ov.indices = &app.drag.dragging_markers;
-        ov.times   = &app.drag.moveable_times;
-        eff_time = ov.effective_time(idx, marker.time_frame);
-    }
-
-    // Paint sample: the exact expression render.cpp's file-local
-    // frame_to_paint_sample uses, so marker and overlay can never disagree.
-    double ms;
-    if (tmap && !tmap->empty()) {
-        const size_t src_frame =
-            static_cast<size_t>(std::nearbyint(eff_time));
-        ms = std::nearbyint(map_source_to_target(src_frame, *tmap));
-    } else {
-        ms = std::nearbyint(eff_time);
-    }
 
     // Columns: left_col uses the same std::round-to-int placement the stem
     // renderer uses, so the overlay's left edge stays on the marker's column.
