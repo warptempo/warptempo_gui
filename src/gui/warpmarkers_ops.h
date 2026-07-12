@@ -51,13 +51,15 @@ struct GuiWarpMarkersOps {
           target_render(target_render_) {}
 
     void drop_marker(double time_frame, bool inherit,
-                      double base, std::optional<double> scale);
+                      int64_t tempo_cents, std::optional<double> scale);
     void drop_marker_at_playhead();
     void drop_copy_previous_at_playhead();
     void delete_selected_marker();
     void force_delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();
-    void adjust_tempo(double delta);
+    // Steps the focused marker's tempo by `delta_cents` integer cents (one
+    // cent per keypress / wheel detent, signed by direction of travel).
+    void adjust_tempo_cents(int64_t delta_cents);
     void nudge_selected_markers(int direction);
 };

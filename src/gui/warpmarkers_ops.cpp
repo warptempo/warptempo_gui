@@ -43,7 +43,8 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 }
 
 void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
-                                     double base, std::optional<double> scale) {
+                                     int64_t tempo_cents,
+                                     std::optional<double> scale) {
     if (audio.sample_rate() <= 0) return;
     // Marker creation is a commit: the position funnels through
     // snap_authored_frame like every other gesture commit, so the stored
@@ -65,7 +66,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     GuiWarpMarker nm;
     nm.time_frame    = drop_frame;
     nm.tempo_inherits  = inherit;
-    nm.tempo_base      = base;
+    nm.tempo_cents     = tempo_cents;
     nm.tempo_scale     = scale;
     // Snapshot pre-mutation state for undo. Captured after the wall check
     // so rejected drops don't leave a no-op entry on the stack.
@@ -104,7 +105,8 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     drop_marker(static_cast<double>(src_frame),
-                /*inherit=*/false, /*base=*/1.0, /*scale=*/std::nullopt);
+                /*inherit=*/false, /*tempo_cents=*/100,
+                /*scale=*/std::nullopt);
 }
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
@@ -126,15 +128,15 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     const double t = static_cast<double>(src_frame);
     const auto& mv = app.warpmarkers.markers();
     const int prev_idx = find_immediate_prior(mv, t);
-    double                base = 1.0;
+    int64_t               base_cents = 100;
     std::optional<double> scale;
     if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
         const MarkerEffective eff = marker_effective(
             slice_to_warp_markers(mv), prev_idx);
-        base  = eff.base;
-        scale = eff.scale;
+        base_cents = eff.base_cents;
+        scale      = eff.scale;
     }
-    drop_marker(t, /*inherit=*/false, base, scale);
+    drop_marker(t, /*inherit=*/false, base_cents, scale);
 }
 
 // Deleting an owning marker lets downstream pass markers re-resolve to the
@@ -282,19 +284,19 @@ void GuiWarpMarkersOps::toggle_inherits() {
         if (!m.label_ref.empty()) {
             m.label_ref.clear();
             m.tempo_inherits = true;
-            m.tempo_base     = 1.0;
+            m.tempo_cents    = 100;
             m.tempo_scale.reset();
         } else if (m.tempo_inherits) {
-            const double resolved_tempo =
+            const int64_t resolved_cents =
                 resolve_inherited_tempo(resolved_src, idx);
             const std::optional<double> resolved_scale =
                 resolve_inherited_tempo_scale(resolved_src, idx);
             m.tempo_inherits = false;
-            m.tempo_base     = resolved_tempo;
+            m.tempo_cents    = resolved_cents;
             m.tempo_scale    = resolved_scale;
         } else {
             m.tempo_inherits = true;
-            m.tempo_base     = 1.0;
+            m.tempo_cents    = 100;
             m.tempo_scale.reset();
         }
         changed = true;
@@ -343,19 +345,15 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // silently skipped (no tempo to nudge — convert via Ctrl+N first). Pass
 // markers resolve walk-backward to get their starting tempo/scale, then
 // freeze to owning at the nudged value. Owning markers nudge in place.
-// `delta` arrives as a multiple of 0.01 (one per keypress or wheel
-// detent); its sign is the direction of travel. The landed gridpoint is
-// clamped into the tempo bracket [kTempoMin, kTempoMax]
+// `delta_cents` is an integer cent count (one per keypress or wheel
+// detent); its sign is the direction of travel. The landed cents are
+// clamped into the tempo bracket [kTempoMinCents, kTempoMaxCents]
 // (value_format.h). Only dirties / invalidates on real change.
 //
-// Grid rule: wheel/keyboard authoring lives on the 0.01 grid; typed
-// precision is preserved until the wheel touches the value. A value is
-// on-grid exactly when it round-trips its own cent index
-// (v == std::nearbyint(v * 100.0) / 100.0 — no epsilon nudge); on-grid
-// values step exactly 0.01 per notch, off-grid values snap outward to the
-// adjacent gridpoint in the direction of travel (up: floor + 1 cents,
-// down: ceil - 1 cents) on the first notch.
-void GuiWarpMarkersOps::adjust_tempo(double delta) {
+// The grid is structural now: authored tempo is integer cents by type, so
+// every stored value is on-grid and the step is plain integer addition —
+// the old off-grid outward snap has no input left to act on.
+void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -371,54 +369,39 @@ void GuiWarpMarkersOps::adjust_tempo(double delta) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         GuiWarpMarker& m = proposed[idx];
         if (!m.label_ref.empty()) continue;
-        double                start_tempo;
+        int64_t               start_cents;
         std::optional<double> start_scale;
         if (m.tempo_inherits) {
-            start_tempo = resolve_inherited_tempo(resolved_src, idx);
+            start_cents = resolve_inherited_tempo(resolved_src, idx);
             start_scale = resolve_inherited_tempo_scale(resolved_src, idx);
         } else {
-            start_tempo = m.tempo_base;
+            start_cents = m.tempo_cents;
             start_scale = m.tempo_scale;
-        }
-        // Land on the adjacent 0.01 gridpoint in the direction of travel
-        // (see the grid rule in the function comment). The gridpoint index
-        // is computed in cents as a double, so extreme typed magnitudes
-        // cannot overflow an integer type.
-        const double steps = std::nearbyint(delta * 100.0);
-        const double v     = start_tempo;
-        double cents;
-        if (v == std::nearbyint(v * 100.0) / 100.0) {
-            cents = std::nearbyint(v * 100.0) + steps;   // on-grid: exact 0.01 steps
-        } else if (steps > 0.0) {
-            cents = std::floor(v * 100.0) + steps;       // off-grid: snap up first
-        } else {
-            cents = std::ceil(v * 100.0) + steps;        // off-grid: snap down first
         }
         // Constructive clamp into the authored-value bracket, the same
         // convention font_size uses: the wheel walks to the bracket edge
-        // and stops there, rather than refusing. Both edges are exact in
-        // cents (kTempoMin*100 = 25, kTempoMax*100 = 400). No finiteness
-        // guard is needed: every restable value is in-bracket, so the cent
-        // product v * 100.0 cannot leave the finite double domain.
-        cents = std::clamp(cents, kTempoMin * 100.0, kTempoMax * 100.0);
-        const double new_tempo = tempo_from_cents(cents);
-        if (!m.tempo_inherits && new_tempo == m.tempo_base) continue;
+        // and stops there, rather than refusing. Exact integer compares at
+        // both edges; nothing here can overflow (stored cents are
+        // in-bracket, deltas are a handful of detents).
+        const int64_t cents = std::clamp(start_cents + delta_cents,
+                                         kTempoMinCents, kTempoMaxCents);
+        if (!m.tempo_inherits && cents == m.tempo_cents) continue;
         m.tempo_inherits = false;
-        m.tempo_base     = new_tempo;
+        m.tempo_cents    = cents;
         m.tempo_scale    = start_scale;
         // A tempo step changes the very base tempo an iteration bracket was
         // committed against, so it clears this marker's bracket in the same
-        // proposed write — NaN is the identical cleared state a blank marker
-        // holds. Because this rides the same undo entry the tempo change
-        // pushes below (the pre-state snapshot carries the iter fields), one
-        // Ctrl+Z restores tempo and bracket together. Done regardless of
-        // whether iteration mode is currently on: a bracket can only exist
-        // mode-off via an explicit undo restore, and clearing is the safe
-        // direction — silently keeping an invisible bracket under a changed
-        // tempo is exactly the pathway this closes.
-        if (!std::isnan(m.iter_start) || !std::isnan(m.iter_end)) {
-            m.iter_start = std::numeric_limits<double>::quiet_NaN();
-            m.iter_end   = std::numeric_limits<double>::quiet_NaN();
+        // proposed write — nullopt is the identical cleared state a blank
+        // marker holds. Because this rides the same undo entry the tempo
+        // change pushes below (the pre-state snapshot carries the iter
+        // fields), one Ctrl+Z restores tempo and bracket together. Done
+        // regardless of whether iteration mode is currently on: a bracket
+        // can only exist mode-off via an explicit undo restore, and
+        // clearing is the safe direction — silently keeping an invisible
+        // bracket under a changed tempo is exactly the pathway this closes.
+        if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value()) {
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
         }
         changed = true;
     }

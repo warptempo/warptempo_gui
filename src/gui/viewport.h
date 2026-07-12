@@ -75,7 +75,7 @@ struct Viewport {
     // commit_drag) whose warp_frame_map re-warp shifts the whole plate. Without the
     // inline rebuild the overlays (playhead, markers, flags) land a frame ahead
     // of the waveform, flashing. In-place fine-tune edits (nudge / jump /
-    // toggle-disabled / adjust_tempo) deliberately omit it: they don't move the
+    // toggle-disabled / adjust_tempo_cents) deliberately omit it: they don't move the
     // viewport, the async invalidate keeps pace, and a synchronous rebuild per
     // keystroke would tax the drag-time torrent the async path exists to absorb.
     std::function<void()> request_waveform_sync_;

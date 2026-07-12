@@ -219,7 +219,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
             return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
                 || a.tempo_inherits != b.tempo_inherits
-                || a.tempo_base     != b.tempo_base
+                || a.tempo_cents    != b.tempo_cents
                 || a.tempo_scale    != b.tempo_scale
                 || a.label_def      != b.label_def
                 || a.label_ref      != b.label_ref;
