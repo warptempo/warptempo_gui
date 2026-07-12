@@ -1191,6 +1191,17 @@ void GuiInputHandler::enforce_target_view_validity() {
     // clobber it. The error state persists in the cache, so the kick
     // fires on the first tick after dismissal.
     if (app.prompt.active) return;
+    // An active pointer gesture defers the kick the same way. Gestures are
+    // free by ruling: transient state (a crossed trim held mid-drag) may be
+    // render-invalid while the button is down, and kicking T → S there would
+    // both violate the nothing-pops-mid-gesture boundary and strand the drag
+    // across a modal — motion and release are dropped while a prompt is up,
+    // and the drag's anchor coordinates, captured in target space, would go
+    // stale across the domain flip. Deferral is one tick at a time until the
+    // gesture ends, the same shape as run_commit_validation's. After release
+    // the commit's own pending-validation flag opens the series first on the
+    // next tick, and this gate then defers behind that prompt like any other.
+    if (any_pointer_gesture_active(app)) return;
     const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
         app, audio.sample_rate(), static_cast<long>(audio.total_frames()));
     // Two kick conditions, checked in order: an invalid marker state (the
