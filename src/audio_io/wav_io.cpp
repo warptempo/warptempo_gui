@@ -333,29 +333,32 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             break;
         }
 
-        const uint64_t next =
+        uint64_t next =
             payload + chunk_payload_size + (chunk_payload_size & 1u);
+        // The FINAL chunk's pad byte may be legitimately absent: common
+        // taggers and encoders do not pad the last chunk of the file, and
+        // the RIFF size then counts the unpadded content (the equality
+        // guard above already matched it against the physical size).
+        // Chunk CONTENT past EOF refused at the top of the loop, so an
+        // overshooting `next` here can only be that absent final pad —
+        // end the walk at the physical EOF instead of stepping past it
+        // (the memory source refuses past-end seeks, so this clamp also
+        // keeps the two byte sources in agreement).
+        if (next > file_size) next = file_size;
         if (!src.seek(next)) {
             return std::unexpected("failed to skip WAV chunk");
         }
     }
 
     // A conforming chunk walk consumes the container exactly: every chunk
-    // advances by its payload plus its odd-payload pad byte (next = payload +
-    // size + (size & 1)), so the final skip lands precisely on the physical
-    // EOF. A walk that halts anywhere else is adversarial: a position short of
-    // EOF left fewer than eight bytes — a truncated chunk header (the RIFF-size
-    // equality guard above passes on a file whose dangling 1..7 trailing bytes
-    // are counted into riff_size, so this catch is not redundant with it); a
-    // position past EOF is a final chunk whose padded extent oversteps the file
-    // (the file source's fseek succeeds past the end where the memory source
-    // refuses, so this check also closes that file-vs-memory acceptance split).
-    // The 0xffffffff placeholder-salvage path legitimately ends mid-file and is
-    // exempt.
+    // advances by its payload plus its odd-payload pad byte (absent-final-pad
+    // clamp above), so the final skip lands precisely on the physical EOF. A
+    // walk that halts short of EOF left fewer than eight dangling bytes — a
+    // truncated chunk header, adversarial (the RIFF-size equality guard above
+    // passes on a file whose dangling 1..7 trailing bytes are counted into
+    // riff_size, so this catch is not redundant with it). The 0xffffffff
+    // placeholder-salvage path legitimately ends mid-file and is exempt.
     if (!salvaged && src.tell() != file_size) {
-        if (src.tell() > file_size) {
-            return std::unexpected("WAV chunk extends past end of file");
-        }
         return std::unexpected("truncated WAV chunk header");
     }
 
