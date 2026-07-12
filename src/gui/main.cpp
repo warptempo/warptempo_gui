@@ -531,8 +531,7 @@ int main(int argc, char** argv) {
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport, file_loader,
-                     phase_reset_propagate, save_ops, playback_lifecycle,
-                     render_view);
+                     phase_reset_propagate, save_ops, playback_lifecycle);
     // Back-wire the loader's error-notice surface (GuiPrompt holds a
     // GuiFileLoader&, so the pointer can only be set after both exist).
     file_loader.prompt = &prompt;

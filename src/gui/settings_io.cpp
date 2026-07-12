@@ -92,8 +92,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Shared by
-// write_settings_file (and through it update_settings_view_state) and the
-// warp/phase-reset marker writers.
+// write_settings_file and the warp/phase-reset marker writers.
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data) {
     mode_t mode = 0644;
@@ -159,47 +158,6 @@ ViewState view_state_from_settings_tab(const SettingsFileTab& t) {
     v.trim.has_end     = t.trim.has_end;
     v.trim.end_frame   = t.trim.end_frame;
     return v;
-}
-
-bool update_settings_view_state(const std::filesystem::path& path,
-                                int64_t viewport_start,
-                                int     zoom_level,
-                                int64_t playhead,
-                                char    active_markers_view,
-                                char    active_tab_view) {
-    // Strict read-modify-write. The file is program-written, so any parse
-    // failure — a missing file included — is adversarial at this mutation
-    // boundary: refuse the update with one stderr line rather than
-    // perpetuate malformed bytes or manufacture a view-state-only file. On
-    // success, re-serialize the whole file canonically from the parsed
-    // struct with the fresh view state on the tab named by the passed
-    // active_tab_view (the browsed tab, authoritative under the one-way
-    // bubble) and active_tab_view rewritten to match; a strict-parsed
-    // program-written file has no unknown lines or comments to lose, so
-    // every other key round-trips (absent optional keys re-emit as their
-    // canonical defaults, the same values the readers apply).
-    auto sf = read_settings_file(path.string());
-    if (!sf) {
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: view-state update refused for "
-            "'%s': %s\n", path.string().c_str(), sf.error().c_str());
-        return false;
-    }
-
-    ViewState tab_a = view_state_from_settings_tab(sf->tab_a);
-    ViewState tab_b = view_state_from_settings_tab(sf->tab_b);
-    // The browsed tab is authoritative: write the view state onto the tab
-    // named by the passed active_tab_view (not the file's own), and persist
-    // active_tab_view itself as that value.
-    ViewState& browsed = (active_tab_view == 'B') ? tab_b : tab_a;
-    browsed.viewport_start_sample  = viewport_start;
-    browsed.zoom_level             = zoom_level;
-    browsed.playhead_cursor_sample = playhead;
-
-    return write_settings_file(path.string(), tab_a, tab_b, sf->follow,
-                               sf->active_audio_view, active_markers_view,
-                               active_tab_view, sf->playback_speed,
-                               sf->font_size, sf->engine);
 }
 
 std::string format_default_settings_template(const std::string& stem) {

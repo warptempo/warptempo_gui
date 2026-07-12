@@ -476,12 +476,6 @@ struct TrimState {
 // tabs (Ctrl+Tab) and switching modes (`p`) both restore the right
 // selection set for the destination cell. The active selection lives in
 // AppState; these slots are the persistent snapshots.
-//
-// The same struct is reused by RenderViewEntry::state to carry
-// per-render persisted view-state across render-view exit/enter and
-// batch-nav. Render-view entries leave the viewport/zoom/playhead fields
-// at default (those flow through the live AppState fields and the
-// per-entry .settings autosave).
 struct ViewState {
     int64_t viewport_start_sample      = 0;
     int     zoom_level                 = 0;
@@ -886,33 +880,17 @@ struct AppState {
     bool bpm_mode_enabled = false;
 
     // One entry in the flat list of valid renders enumerated on toggle-in.
+    // Just the three path fields: an entry carries NO per-entry persisted
+    // view state and NO per-entry selection memory. A render entry's sidecar
+    // set (.warpmarkers / .phaseresetmarkers / .settings) is written ONCE at
+    // queue/dispatch and never touched again; render view is an audio player
+    // with no per-entry memory, so every display resets to a fixed
+    // fit-file/0/0 position with an empty selection (load_render_view_at), and
+    // the only transfer out of render view is Ctrl+Alt+C.
     struct RenderViewEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
-
-        // Per-entry persisted view-state across render-view
-        // exit/enter and batch-nav. The stashed marker selection is valid
-        // only when the wav still has the same (size, mtime) as when
-        // stashed; mismatch on reload drops it silently. Both mode slots
-        // (warp + phase reset) ride on `state`; the loader restores the one
-        // matching the entry's persisted W/P mode (applied to
-        // app.active_markers_view at load). The viewport/zoom/playhead fields
-        // on `state` are unused — render-view's browse position flows through
-        // the live AppState fields and the per-entry .settings. Render view is
-        // a one-way bubble: disk owns each entry's browse state. The entry's
-        // tab/zoom/viewport/playhead/W-P AUTOLOAD from its .settings on every
-        // display and AUTOSAVE back on every nav-away; the loader applies them
-        // (they no longer inherit from the live session). The authoring
-        // session's tab and W/P mode are stashed at render-view entry and
-        // restored on exit, so browsing never leaks out except through
-        // Ctrl+Alt+C.
-        ViewState state;
-
-        // Stat-tuple key for selection validity. Captured when stashed,
-        // compared against the current file's stat on re-load.
-        uintmax_t     persisted_size             = 0;
-        int64_t       persisted_mtime            = 0;
     };
 
     // Render analysis mode. Plain `r` toggles between source-view
@@ -961,17 +939,16 @@ struct AppState {
         // bounds. sample_rate stays the source's (equal to the render's by
         // construction, verified at entry decode). snapshot_commit_tab is
         // the tab the entry is browsed under, attested at commit: entry load
-        // is now the only writer — render view blocks the Ctrl+Tab tab chords
+        // is the only writer — render view blocks the Ctrl+Tab tab chords
         // outright — so it is set from the entry's persisted active_tab_view at
         // load and always names the dispatch tab of the displayed entry.
         // Ctrl+Alt+C re-reads the .settings
         // fresh and compares its active_tab_view against this stash: the
         // routing keys (active_tab_view, active_audio_view) ride OUTSIDE the
-        // render fingerprint (browse autosaves rewrite the same file), so the
-        // fingerprint check cannot catch a routing change underneath the
-        // display; this exact-match attestation does — passing for
-        // GUI-authored browsing, failing for hand edits. Cleared to 'A'
-        // beside the other snapshot fields at every clear site.
+        // render fingerprint, so the fingerprint check cannot catch a routing
+        // change underneath the display; this exact-match attestation does —
+        // passing for the frozen dispatch-time file, failing for hand edits.
+        // Cleared to 'A' beside the other snapshot fields at every clear site.
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
         int64_t                          entry_domain_begin = 0;
         int64_t                          snapshot_display_total = 0;
@@ -980,17 +957,6 @@ struct AppState {
         bool                             snapshot_has_trim_end = false;
         int64_t                          snapshot_trim_end_frame = 0;
         char                             snapshot_commit_tab = 'A';
-        // The authoring session's tab letter and W/P mode, stashed at
-        // render-view ENTRY (the first entry load, beside the tab-slot
-        // refresh) and restored wholesale by restore_source_view on exit.
-        // Render view is a one-way bubble: browsing is disk-owned per entry
-        // (each entry's tab/position/mode autoload from its .settings and
-        // autosave back on nav-away), and the authoring tab/mode never leak
-        // into that browsing — they wait here for the exit restore. Cleared
-        // beside the other snapshot fields at every clear site (to the
-        // struct defaults 'A' / 'W').
-        char                             stashed_authoring_tab = 'A';
-        char                             stashed_authoring_markers_view = 'W';
     };
     RenderViewContext render_view;
 };

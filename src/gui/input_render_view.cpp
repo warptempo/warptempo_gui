@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
-#include <map>
 #include <set>
 #include <string>
 #include <utility>
@@ -155,28 +154,6 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
                     .parent_path().string().c_str());
             return true;
         }
-        // Migrate persisted selection from
-        // the prior render-view session (still on the old
-        // app.render_view.list) into the freshly enumerated
-        // list, keyed by wav_path. Entries that disappeared
-        // since last session simply lose their persisted state;
-        // newly added entries start with default-empty
-        // persistence (no match → load_render_view_at clears).
-        if (!app.render_view.list.empty()) {
-            std::map<std::string,
-                AppState::RenderViewEntry*> prior;
-            for (auto& pe : app.render_view.list) {
-                prior[pe.wav_path.string()] = &pe;
-            }
-            for (auto& ne : list) {
-                auto it = prior.find(ne.wav_path.string());
-                if (it == prior.end()) continue;
-                const auto& src = *it->second;
-                ne.state           = src.state;
-                ne.persisted_size  = src.persisted_size;
-                ne.persisted_mtime = src.persisted_mtime;
-            }
-        }
         int target = 0;
         if (!app.render_view.last_path.empty()) {
             for (size_t i = 0; i < list.size(); ++i) {
@@ -194,9 +171,9 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // the only forced reset.
         app.render_view.enabled    = true;
         // Toggle-on is a render-view ENTRY: the first entry load stashes the
-        // authoring session (tab, W/P mode, tab-slot position) and applies the
-        // entry's disk-owned browse state — render view is a one-way bubble, so
-        // nothing inherits from the live session.
+        // authoring position and resets the display to fit-file/0/0 with an
+        // empty selection — the entry sidecars are frozen at dispatch, so
+        // render view carries no per-entry browse state.
         if (!render_view.load_render_view_at(target)) {
             app.render_view.enabled = false;
             app.render_view.list.clear();
@@ -211,15 +188,10 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // preview, which is correct here — restore_source_view's target arm
         // re-derives through ensure_ready immediately after.
         cancel_archival_session();
-        // Capture the just-viewed render's zoom/viewport/playhead and
-        // stash its live selection onto the active entry, so the next
-        // toggle-on can restore both (the selection gated by the wav's
-        // stat tuple still matching). Not done on the Ctrl+Alt+C commit
-        // path — the renders folder is wiped immediately after commit,
-        // so the write would be lost. render_view.list is intentionally
-        // NOT cleared here — re-entry migrates its persisted_* fields
-        // into the freshly enumerated list.
-        render_view.autosave_active_entry();
+        // render_view.list is intentionally NOT cleared here — re-entry
+        // re-enumerates the folder afresh. The entry sidecars are frozen at
+        // dispatch, so there is nothing to persist on the way out: the exit
+        // just restores the stashed authoring position.
         render_view.restore_source_view();
         render_view.clear_snapshot_context();
         app.render_view.index             = -1;
@@ -229,8 +201,8 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
 
 // Render-view list navigation. Handles both Shift+Left/Right (wraparound) and
 // Shift+Home / Shift+End (clamp to first/last, no wraparound). Each chord
-// pre-refreshes the renders/ folder, stashes the outgoing entry, exits
-// render-view gracefully if the folder is empty, then loads the target entry.
+// pre-refreshes the renders/ folder, exits render-view gracefully if the
+// folder is empty, then loads the target entry.
 // Returns true from each handled path; false when neither chord matches (or
 // render-view is off) so the caller falls through to the source-view playhead
 // handlers.
@@ -245,21 +217,15 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     // Shift+Right past the end loops to index 0,
     // Shift+Left before index 0 loops to the last entry.
     //
-    // Pre-nav refresh: re-enumerate the renders/ folder and merge
-    // per-entry persisted state into the refreshed list before
-    // computing the target index. New batch folders or wavs that
-    // appeared since render-view was entered become visible; deleted
-    // entries vanish. Empty-after-refresh exits render-view.
+    // Pre-nav refresh: re-enumerate the renders/ folder before computing the
+    // target index. New batch folders or wavs that appeared since render-view
+    // was entered become visible; deleted entries vanish. Empty-after-refresh
+    // exits render-view.
     if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right)) {
-        // Capture outgoing state and stash selection before refresh —
-        // refresh_render_view_list may reorder/drop entries.
-        // Re-navigating back later (in the same session) restores the
-        // stashed selection: load_render_view_at loads the destination's
-        // own persisted state if its stat tuple still matches; otherwise
-        // it leaves the selection empty.
-        render_view.autosave_active_entry();
-
+        // Refresh the folder before computing the target — the entry sidecars
+        // are frozen at dispatch, so there is no outgoing state to persist;
+        // the destination display resets to fit-file/0/0 on load.
         if (!render_view.refresh_render_view_list()) {
             // Renders folder is empty (e.g. user deleted it externally).
             // Exit render-view gracefully. Leaving render view stops any
@@ -274,9 +240,8 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         int next = app.render_view.index;
         if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
         else                       next = (next + 1) % n;
-        // Entry-to-entry NAVIGATION: the destination entry's own disk-owned
-        // browse state (tab, position, W/P mode) is applied from its .settings
-        // — the outgoing entry was autosaved above, so disk owns both.
+        // Entry-to-entry NAVIGATION: the destination display resets to
+        // fit-file/0/0 with an empty selection, like every render-view display.
         render_view.load_render_view_at(next);
         return true;
     }
@@ -294,8 +259,6 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     // again.
     if (app.render_view.enabled && shift && !ctrl && !alt &&
         (key == GuiKeys::Home || key == GuiKeys::End)) {
-        render_view.autosave_active_entry();
-
         if (!render_view.refresh_render_view_list()) {
             // Empty-folder exit stops render work first — see the toggle-off
             // arm of handle_render_view_toggle.
@@ -309,7 +272,7 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         if (target == app.render_view.index &&
             app.render_view.list[target].wav_path.string() ==
                 app.render_view.last_path) return true;
-        // Entry-to-entry NAVIGATION, same disk-owned apply as Shift+Left/Right.
+        // Entry-to-entry NAVIGATION, same fit-file/0/0 reset as Shift+Left/Right.
         render_view.load_render_view_at(target);
         return true;
     }

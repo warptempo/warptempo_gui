@@ -367,19 +367,18 @@ RenderOutcome do_render(const RenderRequest& req,
             // 'T'), and 'T' requires output_format = wav, so map-format
             // artifacts are not browse entries and get no .settings.
             if (output_format == "wav") {
-                // The commit tab (named by active_tab_view) seeds the browse
-                // position measured at the queue/dispatch that built this
-                // render (req.authoring's captured view keys), on the TARGET
-                // axis. Render view is a one-way bubble: disk owns each entry's
-                // browse state, so the entry loader APPLIES this seeded
-                // position on first display and per-entry autosave rewrites it
-                // as the user browses — it is the disk-owned starting point,
-                // not a value the loader ignores. Ctrl+Alt+C commit inherits
-                // it too: the commit autosaves the browsed view onto this same
-                // file and then reads the whole file back as the session, so
-                // these keys land in the committed target view THROUGH the
-                // file — the commit adopts the file, never a separate live
-                // latch. Those keys are captured on
+                // The commit tab (named by active_tab_view) seeds the
+                // queue/dispatch-moment position that built this render
+                // (req.authoring's captured view keys), on the TARGET axis.
+                // This file is written ONCE here and never touched again: the
+                // entry loader validates it (and resets its own display to
+                // fit-file/0/0 — render view keeps no per-entry browse memory),
+                // and Ctrl+Alt+C reads the whole frozen file back as the
+                // session, so these keys land in the committed target view
+                // THROUGH the file — the commit adopts the file, never a
+                // separate live latch. Render-view browsing itself always
+                // starts at fit-file/0/0, independent of these keys. Those keys
+                // are captured on
                 // the LIVE map's axis; a sweep cell rewrites its markers per
                 // cell, giving the cell a different (possibly shorter) target
                 // axis, so the values are CLAMPED into this entry's own map

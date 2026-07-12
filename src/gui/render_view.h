@@ -17,13 +17,12 @@ struct GuiTargetRender;
 
 // Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
-// the per-entry .settings snapshot (render view is a one-way bubble: disk owns
-// each entry's browse state — the entry loader APPLIES the persisted
-// tab/zoom/viewport/playhead/W-P on every display, and the view-state autosave
-// persists the browsed state back onto the same .settings on every nav-away —
-// plus the strict entry load: markers, engine scale, recipe trim),
-// the per-entry selection stash with stat-tuple gating, the entry-audio
-// decode-and-bind path, and the authoring-session restore on exit.
+// the strict entry load (markers, engine scale, recipe trim, and the frozen
+// .settings — validated but never rewritten), the entry-audio decode-and-bind
+// path, and the authoring-position restore on exit. A render entry's sidecar
+// set is written ONCE at dispatch and never touched again: render view is an
+// audio player with no per-entry memory, so every display resets to
+// fit-file/0/0 with an empty selection and the only transfer out is Ctrl+Alt+C.
 // clear_hover_popup is reached through viewport;
 // refresh_active_tab_view_from_app is reached through active_views.
 //
@@ -76,34 +75,17 @@ struct GuiRenderView {
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
     std::filesystem::path settings_path(
         const AppState::RenderViewEntry& e);
-    // Persist the browsed view state onto the entry's `.settings` (strict
-    // read-modify-write). Returns the underlying helper's status: false on a
-    // refused read-modify-write, true on success. Most callers ignore it (a
-    // refused autosave costs the persisted view state, never the session);
-    // the Ctrl+Alt+C commit checks it, because it is about to READ the file
-    // it just wrote.
-    bool write_settings_for(const AppState::RenderViewEntry& e);
-    std::pair<uintmax_t, int64_t> wav_stat_tuple(
-        const std::filesystem::path& p);
-    void stash_render_view_selection_to_active_entry();
 
-    // Persist the active entry's browse state at a leave-this-entry
-    // boundary: the .settings view-state autosave (write_settings_for)
-    // followed by the in-memory selection stash. The R-toggle exit, both
-    // navigation chords, and the close/revert prompts all run this same
-    // pair. No-op (returns true) when render view is off or no entry is
-    // active. Returns false only when the .settings autosave was refused
-    // (strict read-modify-write parse failure) — the Ctrl+Alt+C commit
-    // treats that as adversarial and aborts before its own file read.
-    bool autosave_active_entry();
-
-    // Load the entry at `index`. Render view is a one-way bubble: disk owns
-    // each entry's browse state, so on EVERY load — render-view entry and
-    // entry-to-entry navigation alike — this applies the entry's persisted
-    // tab / zoom / viewport / playhead / W-P from its strict-parsed .settings
-    // (nothing inherits from the live authoring session). The authoring tab
-    // and mode are stashed at render-view entry for the exit restore.
-    // Rationale at the definition's apply block.
+    // Load the entry at `index`. A render entry's sidecars are frozen at
+    // dispatch and never rewritten, so render view keeps no per-entry browse
+    // memory: EVERY display — render-view entry and entry-to-entry navigation
+    // alike — resets to a fixed fit-file zoom, viewport 0, playhead 0, and an
+    // empty selection. The .settings is still strict-read and fully validated
+    // (schema, entry invariants, fingerprint, entry-length), and its view keys
+    // are validated as the position Ctrl+Alt+C will inherit, but they are not
+    // applied at browse time. The tab letter and W/P mode stay the authoring
+    // session's (tab frozen, W/P global). Rationale at the definition's reset
+    // block.
     bool load_render_view_at(int index);
     void restore_source_view();
 
@@ -119,17 +101,14 @@ struct GuiRenderView {
     // fields, or active_audio_view — revert_to_blank resets those itself.
     void abandon_render_view();
 
-    // Re-enumerate the renders/ folder and merge per-entry persisted
-    // state (state, persisted_size, persisted_mtime) from the existing
-    // app.render_view.list into the refreshed list, keyed by wav_path.
-    // Updates app.render_view.index to follow the currently-viewed
-    // entry by wav_path; if the current entry was deleted, the index
-    // clamps to the closest surviving original position. Returns true
-    // if the list is non-empty after refresh; false if the refresh
-    // produces an empty list (caller should exit render-view in that
-    // case). Live state stashing and load_render_view_at are NOT
-    // performed by this method — callers do those at the appropriate
-    // boundary.
+    // Re-enumerate the renders/ folder. Entries carry no per-entry state to
+    // migrate, so this just rebuilds the list and updates
+    // app.render_view.index to follow the currently-viewed entry by wav_path;
+    // if the current entry was deleted, the index clamps to the closest
+    // surviving original position. Returns true if the list is non-empty after
+    // refresh; false if the refresh produces an empty list (caller should exit
+    // render-view in that case). load_render_view_at is NOT performed by this
+    // method — callers do that at the appropriate boundary.
     bool refresh_render_view_list();
 
     // Tear down render-view state and restore the source view. Mirrors

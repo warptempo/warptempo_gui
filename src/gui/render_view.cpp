@@ -14,15 +14,14 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <map>
 #include <string>
-#include <sys/stat.h>
 #include <system_error>
 #include <utility>
 #include <vector>
 
 // Render-view cluster: batch-folder enumeration, entry load/refresh, the
-// per-entry .settings view-state read/write, and the entry-audio
+// strict entry .settings read (validated, never rewritten — the entry's
+// sidecars are frozen at dispatch), and the entry-audio
 // decode/bind around render-view sessions. Reaches viewport,
 // active_views, and selection through the struct's reference members
 // (clamp_viewport_start and compute_trim_samples are free functions
@@ -106,107 +105,20 @@ GuiRenderView::enumerate_render_view_list() {
 
 // -- <basename>.settings snapshot --------------------------------------
 //
-// Per-render tab/zoom/viewport/playhead/W-P persistence lives on the entry's
-// standard `.settings` snapshot. Render view is a one-way bubble: disk owns
-// each entry's browse state. The dispatch writer seeds the queue/dispatch-time
-// position (beside the wav, on the commit tab); the entry loader APPLIES that
-// persisted tab/zoom/viewport/playhead/W-P on every display (entry and
-// navigation alike); and the autosave below — the strict read-modify-write
-// helper, run at every navigation/exit boundary — persists the browsed state
-// back onto the entry's own .settings. Exit restores the authoring session
-// stashed at entry; the browsed position never leaks out except through
-// Ctrl+Alt+C. The persisted active_markers_view (W/P mode) is per-entry:
-// applied at load ahead of the selection restore, autosaved on leave.
+// A render entry's `.settings` snapshot is frozen at dispatch: the dispatch
+// writer writes it once (beside the wav, seeding the queue/dispatch-moment
+// tab/zoom/viewport/playhead/W-P) and NOTHING in render view ever touches it
+// again. Render view is an audio player with no per-entry memory: the entry
+// loader validates the file but does NOT apply its browse position — every
+// display resets to fit-file/0/0 with an empty selection (load_render_view_at),
+// and the user may zoom/scroll/click while auditioning, with the next display
+// resetting again. The only transfer out of render view is Ctrl+Alt+C, which
+// inherits the frozen file's position (the queue-moment position, not the
+// browsed one).
 
 std::filesystem::path GuiRenderView::settings_path(
         const AppState::RenderViewEntry& e) {
     return e.batch_folder / (e.basename + ".settings");
-}
-
-// Atomic view-state update of the entry's .settings (every other key is
-// preserved from the strict parse). Persists the browsed tab as well: the
-// live viewport/zoom/playhead and W/P mode land on app.active_tab_view's
-// band, and active_tab_view itself is rewritten — disk owns the entry's whole
-// browse state under the one-way bubble model, so the tab the user browsed
-// to must round-trip like the position and mode.
-// Failures are non-fatal for the navigation/exit callers — logged once by
-// the underlying helper and otherwise discarded (a refused autosave costs
-// the persisted view state, never the session). The status is returned so
-// the Ctrl+Alt+C commit, which reads the file right after writing it, can
-// abort on a refusal instead of reading stale bytes.
-bool GuiRenderView::write_settings_for(
-        const AppState::RenderViewEntry& e) {
-    return update_settings_view_state(
-        this->settings_path(e),
-        app.viewport_start_sample,
-        app.zoom_level,
-        app.playhead_cursor_sample,
-        app.active_markers_view,
-        app.active_tab_view);
-}
-
-// Capture (size, mtime_seconds) for a wav path.
-// Errors → (0, 0), interpreted as "no valid stat tuple" by callers
-// (forces a mismatch on compare). Uses stat() directly because
-// C++17's std::filesystem::file_time_type isn't portably
-// convertible to system_clock; stat's st_mtime is seconds-since-
-// epoch, which is what the persisted field stores.
-std::pair<uintmax_t, int64_t> GuiRenderView::wav_stat_tuple(
-        const std::filesystem::path& p) {
-    struct stat st{};
-    if (::stat(p.c_str(), &st) != 0) return {0, 0};
-    return {static_cast<uintmax_t>(st.st_size),
-            static_cast<int64_t>(st.st_mtime)};
-}
-
-// Stash the live selection into the active
-// RenderViewEntry's matching-mode slot, along with the wav's
-// current stat tuple. No-op when no entry is active. Called from
-// the render-view exit path and from the batch-nav path
-// (Shift+Left/Right) before the destination is loaded. The
-// OTHER-mode slot was last written when active_markers_view flipped
-// away from it via switch_active_markers_view_to (or never written if
-// the user has not flipped mode in this render-view session);
-// either way it is current at stash time.
-void GuiRenderView::stash_render_view_selection_to_active_entry() {
-    if (app.render_view.index < 0 ||
-        app.render_view.index >=
-            static_cast<int>(app.render_view.list.size())) {
-        return;
-    }
-    auto& e = app.render_view.list[app.render_view.index];
-    if (app.active_markers_view == 'P') {
-        e.state.phase_reset_selected      = app.selected_markers;
-        e.state.phase_reset_last_selected = app.last_selected_marker;
-    } else {
-        e.state.warp_selected           = app.selected_markers;
-        e.state.warp_last_selected      = app.last_selected_marker;
-    }
-    const auto stat = this->wav_stat_tuple(e.wav_path);
-    e.persisted_size  = stat.first;
-    e.persisted_mtime = stat.second;
-}
-
-// Persist the active entry's browse state: the .settings view-state
-// autosave plus the selection stash, in that order (both read the live
-// app.* fields; neither mutates them). One body for every
-// leave-this-entry boundary — exit, navigation, and the close/revert
-// prompts. No-op when render view is off or the index is out of range
-// (no entry active).
-bool GuiRenderView::autosave_active_entry() {
-    if (!app.render_view.enabled) return true;
-    if (app.render_view.index < 0 ||
-        app.render_view.index >=
-            static_cast<int>(app.render_view.list.size())) {
-        return true;
-    }
-    // The selection stash cannot fail (in-memory); only the .settings
-    // read-modify-write can refuse. Run both regardless and report the write
-    // status so a commit that is about to read the file can abort on refusal.
-    const bool ok = this->write_settings_for(
-        app.render_view.list[app.render_view.index]);
-    this->stash_render_view_selection_to_active_entry();
-    return ok;
 }
 
 // Loads the render at app.render_view.list[index] into the view-owned
@@ -232,18 +144,17 @@ bool GuiRenderView::autosave_active_entry() {
 // translates through the live map. Stops playback before installing the
 // entry buffer and rebinds the device to it.
 //
-// When the destination entry's persisted stat tuple matches the wav's current
-// stat, restores the persisted selection. Mismatch leaves the live selection
-// empty.
-//
-// Render view is a one-way bubble: disk owns each entry's browse state. On
-// EVERY load — render-view entry and entry-to-entry navigation alike — this
-// applies the entry's persisted browse state from the strict-parsed
-// .settings: the browsed tab, then that tab band's zoom/viewport/playhead,
-// then the browsed W/P mode ahead of the selection restore (details at the
-// apply block below). Nothing inherits from the live authoring session; the
-// authoring tab/mode were stashed at render-view entry and wait for the
-// exit restore (restore_source_view).
+// The entry's sidecar set is frozen at dispatch and never rewritten, so this
+// loader never applies its browse position. Every display — render-view entry
+// and entry-to-entry navigation alike — resets to a fixed fit-file zoom,
+// viewport 0, playhead 0, and an empty selection (the per-display reset block
+// below). The .settings is still strict-read and fully validated (the schema,
+// the entry invariants, the fingerprint, the entry-length check), and its view
+// keys are validated as schema integrity and as the position Ctrl+Alt+C will
+// inherit — they are just no longer applied at browse time. The tab letter and
+// W/P mode stay the authoring session's: the tab is frozen to the authoring
+// session and W/P is global by ruling, so neither app.active_tab_view nor
+// app.active_markers_view is touched here.
 bool GuiRenderView::load_render_view_at(int index) {
     if (index < 0 ||
         index >= static_cast<int>(app.render_view.list.size())) {
@@ -290,7 +201,8 @@ bool GuiRenderView::load_render_view_at(int index) {
     // Strict snapshot reads. The source-domain marker pair is the same set
     // Ctrl+Alt+C commit reloads when promoting a render into authoring
     // memory; the .settings snapshot carries the entry's engine recipe,
-    // recipe trim (on the commit tab), and per-entry browse view state.
+    // recipe trim (on the commit tab), and the queue-moment view keys that
+    // Ctrl+Alt+C inherits (validated here, never applied at browse time).
     const std::filesystem::path wm_path =
         e.batch_folder / (e.basename + ".warpmarkers");
     const std::filesystem::path pm_path =
@@ -353,7 +265,7 @@ bool GuiRenderView::load_render_view_at(int index) {
         return false;
     }
     // The commit tab (named by active_tab_view) carries the recipe trim
-    // that shaped this render and the browse view state autosave owns.
+    // that shaped this render.
     const SettingsFileTab& commit_tab =
         (settings->active_tab_view == 'B') ? settings->tab_b
                                            : settings->tab_a;
@@ -475,23 +387,20 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Persisted browse view keys are validated like a source load: an
-    // out-of-domain viewport/playhead in an entry's .settings is
-    // adversarial, exactly as it is at a source load (the GUI's own
-    // dispatch writer and per-entry autosave only write in-domain values).
-    // The keys are validated as SCHEMA INTEGRITY — adversarial-input
-    // strictness over program-written bytes — and, under the disk-owned
-    // one-way bubble, the commit tab's values are then APPLIED as the browse
-    // position (the apply block below), so this wall is what keeps that apply
-    // in domain. Same shared rule the source load and the CLI run
-    // (first_view_range_defect, marker_store_validate.h). The entry's
-    // persisted active_audio_view is 'T' always (checked above), so the
-    // domain total is the snapshot map's target total through
+    // Persisted view keys are validated like a source load: an out-of-domain
+    // viewport/playhead in an entry's .settings is adversarial, exactly as it
+    // is at a source load (the GUI's own dispatch writer only writes in-domain
+    // values). The keys are validated as SCHEMA INTEGRITY — adversarial-input
+    // strictness over program-written bytes — and as the position Ctrl+Alt+C
+    // will inherit from the frozen file; render view itself does NOT apply them
+    // (every display resets to fit-file/0/0 below). Same shared rule the source
+    // load and the CLI run (first_view_range_defect, marker_store_validate.h).
+    // The entry's persisted active_audio_view is 'T' always (checked above), so
+    // the domain total is the snapshot map's target total through
     // target_total_frames_for_map — the same 'T' arm the source load uses;
     // the map just built IS that map, so the source load's cannot-build
     // skip arm has no analogue here. Both tabs are checked, as at source
-    // load: only the commit tab is applied below, but a hand-edited stray
-    // on the other tab walls identically.
+    // load.
     {
         const int64_t display_total = target_total_frames_for_map(
             source_total_frames, full_warp_frame_map);
@@ -591,17 +500,16 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.playhead_scanner_sample = 0;
     viewport.clear_hover_popup();
 
-    // Stash the authoring session on the FIRST entry of this render-view
+    // Stash the authoring POSITION on the FIRST entry of this render-view
     // session (no entry buffer resident yet). refresh_active_tab_view_from_app
     // snapshots the live authoring viewport/zoom/playhead and selection into
-    // the active tab's slot; the two fields beside it capture the authoring
-    // tab letter and W/P mode. restore_source_view restores all of this
-    // wholesale on exit — the one-way bubble's exit stash. The audio object
+    // the active tab's slot; restore_source_view restores it on exit. This is
+    // one-way POSITION memory (enter stashes, exit restores) with no tab or
+    // mode component — the tab stays the authoring session's throughout render
+    // view and W/P is global by ruling, so neither is stashed. The audio object
     // itself is untouched — it stays the source.
     if (entry_samples.empty()) {
         active_views.refresh_active_tab_view_from_app();
-        app.render_view.stashed_authoring_tab          = app.active_tab_view;
-        app.render_view.stashed_authoring_markers_view = app.active_markers_view;
     }
     entry_samples = std::move(*decoded);
     entry_frames  = decoded_frames;
@@ -633,104 +541,44 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.render_view.snapshot_trim_begin_frame = recipe_trim.begin_frame;
     app.render_view.snapshot_has_trim_end     = recipe_trim.has_end;
     app.render_view.snapshot_trim_end_frame   = recipe_trim.end_frame;
-    // The commit tab this entry is browsed under, stashed for the Ctrl+Alt+C
-    // routing re-attestation (the key rides outside the render fingerprint).
-    // Kept in lockstep with app.active_tab_view, set just below.
+    // The entry's dispatch tab (settings->active_tab_view, frozen at dispatch),
+    // stashed for the Ctrl+Alt+C routing re-attestation (the key rides outside
+    // the render fingerprint). app.active_tab_view is NOT set to it — the tab
+    // stays the authoring session's throughout render view — so this is a
+    // separate stash, not a mirror of app.active_tab_view.
     app.render_view.snapshot_commit_tab = settings->active_tab_view;
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
-    // Disk owns this entry's browse state (the one-way bubble; rationale at
-    // this cluster's head comment and restore_source_view). Apply the entry's
-    // persisted browse state from the strict-parsed .settings on EVERY load —
-    // entry and navigation alike.
-    //
-    // The tab letter is a PLAIN assignment, NEVER switch_active_tab_view_to:
-    // inside render view the A/B letter names the ENTRY's browsed tab, and the
-    // authoring tab slots (app.tab_a / app.tab_b) are the exit stash — they
-    // lie dormant until restore_source_view. switch_active_tab_view_to would
-    // swap the live fields WITH those slots, corrupting the stash and pulling
-    // authoring positions onto the render display axis. snapshot_commit_tab is
-    // already in lockstep (set just above).
-    app.active_tab_view = settings->active_tab_view;
-    // commit_tab is the band named by that tab (bound above). Its
-    // viewport/zoom/playhead were strict-validated at this load
-    // (first_view_range_defect over both tabs against the display total).
-    // Apply order zoom, viewport, playhead, clamp — the unclamped-playhead
-    // restore-site convention (move_playhead_to owns the value at first use;
-    // clamp_viewport_start touches only the viewport).
-    app.zoom_level             = commit_tab.zoom;
-    app.viewport_start_sample  = commit_tab.viewport_start;
-    app.playhead_cursor_sample = commit_tab.playhead;
+    // Per-display reset: the entry's sidecars are frozen at dispatch and never
+    // rewritten, so render view keeps NO per-entry browse memory. Every display
+    // — render-view entry and entry-to-entry navigation alike — lands at a
+    // fixed fit-file zoom over the displayed domain, viewport 0, playhead 0,
+    // and an empty selection. app.active_tab_view and app.active_markers_view
+    // are deliberately NOT touched: the tab is frozen to the authoring session
+    // and W/P is global by ruling. commit_tab (bound above) still supplies the
+    // recipe trim and snapshot_commit_tab; its view keys were validated at this
+    // load (first_view_range_defect) as the position Ctrl+Alt+C inherits, but
+    // they are not applied here. The engine block, playback_speed, follow,
+    // font_size, active_audio_view are likewise the commit payload only,
+    // adopted by Ctrl+Alt+C, never at browse time.
+    app.zoom_level             = kFitFileLevel;
+    app.viewport_start_sample  = 0;
+    app.playhead_cursor_sample = 0;
     clamp_viewport_start(app, audio);
-    // The W/P marker mode is per-entry again: apply the entry's persisted
-    // active_markers_view BEFORE the stat-gated selection restore below, so
-    // the restore reads the slot matching this just-applied mode (and the
-    // leave-time stash writes that same mode's slot, so the two agree). The
-    // remaining .settings keys are NOT applied at browse time — the engine
-    // block, playback_speed, follow, font_size, active_audio_view: the
-    // engine-and-prefs set is the commit payload, adopted only by Ctrl+Alt+C.
-    app.active_markers_view = settings->active_markers_view;
+    app.selected_markers.clear();
+    app.last_selected_marker = -1;
 
-    // Stat-tuple-gated selection restore. A matching persisted tuple
-    // (non-zero, equal to current) means the wav hasn't changed since stash;
-    // replay the persisted selection. Mismatch (or never-stashed defaults)
-    // drops to empty selection — the destination entry has no remembered
-    // session for this file.
-    const auto cur_stat = this->wav_stat_tuple(e.wav_path);
-    const bool stat_match =
-        cur_stat.first  != 0 &&
-        cur_stat.second != 0 &&
-        cur_stat.first  == e.persisted_size &&
-        cur_stat.second == e.persisted_mtime;
-    if (stat_match) {
-        // Load the slot matching the CURRENT global W/P mode into the live
-        // pair (entry.state carries both mode slots; the leave-time stash
-        // writes the current mode's slot, so this is the slot last stashed).
-        // The OTHER-mode slot stays on state and gets swapped in if mode
-        // flips during this render-view session via
-        // switch_active_markers_view_to.
-        if (app.active_markers_view == 'P') {
-            app.selected_markers     = e.state.phase_reset_selected;
-            app.last_selected_marker = e.state.phase_reset_last_selected;
-        } else {
-            app.selected_markers     = e.state.warp_selected;
-            app.last_selected_marker = e.state.warp_last_selected;
-        }
-        selection.prune_live_selection();
-    } else {
-        // Stat mismatch invalidates BOTH slots — the wav has
-        // changed, so any stashed indices for either mode could
-        // be stale. Symmetric with stat-match's "live pair gets
-        // matching slot, OTHER stays on state": when we don't
-        // trust state, clear both the live pair AND the OTHER
-        // slot on state so a later mode-flip doesn't pull in
-        // stale data.
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        e.state.warp_selected.clear();
-        e.state.warp_last_selected      = -1;
-        e.state.phase_reset_selected.clear();
-        e.state.phase_reset_last_selected = -1;
-    }
-
-    // A freshly loaded entry starts with NO trim bound focused. Render entries
-    // carry no persisted trim selection (only marker selection is stashed per
-    // entry), and the snapshot bounds are Tab stops now (cycle_selection), so a
-    // lingering trim-bound selection — from the source view on the first entry,
-    // or from the previously browsed entry on a navigation — must be dropped
-    // here regardless of the stat-gated marker outcome, else it would paint a
-    // spurious focus on this entry's bound. Mirrors clear_selection's trim
-    // reset without disturbing the marker selection just established above.
+    // A freshly loaded entry starts with NO trim bound focused. The snapshot
+    // bounds are Tab stops now (cycle_selection), so a lingering trim-bound
+    // selection — from the source view on the first entry, or from the
+    // previously browsed entry on a navigation — must be dropped here, else it
+    // would paint a spurious focus on this entry's bound. Mirrors
+    // clear_selection's trim reset.
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     app.last_selected_trim  = 0;
     app.last_sel_group      = LastSelGroup::Markers;
-
-    // Browse position was applied above from the entry's persisted .settings
-    // (the disk-owned one-way bubble): app.active_tab_view, that band's
-    // zoom/viewport/playhead, and the W/P mode. Nothing inherits from the
-    // live session; navigation and entry take the identical disk-sourced path.
 
     // Split-playhead invariant (move_playhead_to): the scanner mirror
     // tracks the cursor while the scanner is inactive. It was forced
@@ -763,14 +611,15 @@ bool GuiRenderView::load_render_view_at(int index) {
     return true;
 }
 
-// Render-view exit cleanup, the one-way bubble's exit arm: restores the
-// authoring session stashed at render-view entry (tab letter, W/P mode, and
-// the tab slot's viewport/zoom/playhead and selection) wholesale, rebinds
-// playback to the source samples, and frees the entry buffer. Nothing the
-// user browsed leaks out — the only transfer out is Ctrl+Alt+C. The audio
+// Render-view exit cleanup: restores the authoring position stashed at
+// render-view entry (the active tab slot's viewport/zoom/playhead and
+// selection), rebinds playback to the source samples, and frees the entry
+// buffer. The tab letter and W/P mode are NOT part of the stash — the tab
+// stayed the authoring session's throughout render view, and W/P is global,
+// so `p` flips made while auditioning persist across the exit. The audio
 // object never moved (it is invariantly the source), so there is no buffer
-// to restore, only the view state and the playback bind. No-op when no entry
-// buffer is resident (render view never displayed an entry).
+// to restore, only the view position and the playback bind. No-op when no
+// entry buffer is resident (render view never displayed an entry).
 void GuiRenderView::restore_source_view() {
     // Leaving render view: clear the flag BEFORE the synchronous waveform
     // kick at the end of this function. kick_waveform_sync resolves to
@@ -798,25 +647,24 @@ void GuiRenderView::restore_source_view() {
     // moves, so it is explicit here).
     app.audio_generation++;
 
-    // Render view is a one-way bubble: enter stashes the authoring session,
-    // browsing is disk-owned per entry (each entry autoloads/autosaves its own
-    // .settings), and exit restores that stash wholesale — nothing browsed
-    // leaks out (the only transfer out is Ctrl+Alt+C). Restore the authoring
-    // tab letter and W/P mode from the entry-time stash first, so the slot and
-    // mode reads below name the authoring session.
+    // Render view keeps no per-entry browse memory; exit restores the authoring
+    // POSITION stashed at entry. The tab letter never changed (render view
+    // blocks the A/B chords and never touches app.active_tab_view), and W/P is
+    // global by ruling — a `p` flip made while auditioning stays flipped here —
+    // so neither is restored: only the tab slot's position and the current
+    // mode's selection come back. app.active_tab_view still names the authoring
+    // tab, so the slot reads below name the authoring session directly.
     //
     // Recorded-dead asymmetry: the old carry-in / carry-out model — render
     // view pushed the browsed position OUT to the authoring axis on exit
     // (inverse-mapped through the snapshot map for source view, left live for
-    // target view) and inherited it IN at entry — is gone. Disk owns browsing;
-    // the authoring position comes back untouched from the tab slot, so there
-    // is no per-tab push-out and no S/T axis translation at exit.
-    app.active_tab_view     = app.render_view.stashed_authoring_tab;
-    app.active_markers_view = app.render_view.stashed_authoring_markers_view;
-
+    // target view) and inherited it IN at entry — is gone. The authoring
+    // position comes back untouched from the tab slot, so there is no per-tab
+    // push-out and no S/T axis translation at exit.
+    //
     // Restore the authoring tab's slot position: viewport/zoom/playhead
     // (unclamped playhead — the restore-site convention; move_playhead_to owns
-    // the value at first use), then the matching-mode selection and the
+    // the value at first use), then the current-mode selection and the
     // trim-selection fields below. The tab slots were seeded at render-view
     // entry (refresh_active_tab_view_from_app) and are untouched while
     // browsing, so this returns the authoring view exactly as it was left.
@@ -898,8 +746,6 @@ void GuiRenderView::clear_snapshot_context() {
     app.render_view.snapshot_has_trim_end = false;
     app.render_view.snapshot_trim_end_frame = 0;
     app.render_view.snapshot_commit_tab = 'A';
-    app.render_view.stashed_authoring_tab = 'A';
-    app.render_view.stashed_authoring_markers_view = 'W';
 }
 
 // The abandon arm of the render-view exit pair: restore_source_view
@@ -947,15 +793,11 @@ void GuiRenderView::abandon_render_view() {
     app.audio_generation++;
 }
 
-// Re-enumerate the renders/ folder and migrate persisted per-entry
-// state from the existing app.render_view.list into the refreshed
-// list, keyed by wav_path. Mirrors the migration block in the R-key
-// toggle-on path, but operates on the live render_view.list (in-
-// session) rather than on a freshly-arrived list. Caller is
-// responsible for stashing selection / autosaving view state for the
-// outgoing entry *before* calling this, since the merge does not
-// preserve any state that lives only on app.* fields (selected_markers
-// etc.) — only the per-entry persisted slots survive.
+// Re-enumerate the renders/ folder and follow the currently-viewed entry by
+// wav_path into the refreshed list. Entries carry no per-entry persisted state
+// to migrate — a render entry is just its three path fields — so this only
+// re-enumerates, keeps the index on the displayed entry (clamping to the
+// closest surviving position when it was deleted), and reports empty.
 bool GuiRenderView::refresh_render_view_list() {
     std::vector<AppState::RenderViewEntry> fresh =
         this->enumerate_render_view_list();
@@ -971,22 +813,6 @@ bool GuiRenderView::refresh_render_view_list() {
         prior_index < static_cast<int>(app.render_view.list.size())) {
         current_wav_path =
             app.render_view.list[prior_index].wav_path.string();
-    }
-
-    if (!app.render_view.list.empty()) {
-        std::map<std::string,
-            AppState::RenderViewEntry*> prior;
-        for (auto& pe : app.render_view.list) {
-            prior[pe.wav_path.string()] = &pe;
-        }
-        for (auto& ne : fresh) {
-            auto it = prior.find(ne.wav_path.string());
-            if (it == prior.end()) continue;
-            const auto& src = *it->second;
-            ne.state           = src.state;
-            ne.persisted_size  = src.persisted_size;
-            ne.persisted_mtime = src.persisted_mtime;
-        }
     }
 
     app.render_view.list = std::move(fresh);
@@ -1013,9 +839,8 @@ bool GuiRenderView::refresh_render_view_list() {
 }
 
 // Show render-view at the first .wav of the just-finished batch: enumerate
-// the renders/ folder, migrate the prior list's per-entry persisted state by
-// wav_path, select the first entry whose batch_folder matches the passed-in
-// argument, and enter render view at it — the R-key toggle-on entry
+// the renders/ folder, select the first entry whose batch_folder matches the
+// passed-in argument, and enter render view at it — the R-key toggle-on entry
 // sequence, substituting the batch_folder match for the last_path match.
 // A completion beneath an OPEN render view is unreachable under the
 // entry-gated contract: `r` refuses while archival work is running or
@@ -1032,25 +857,6 @@ void GuiRenderView::auto_open_batch_at_first_file(
         std::fprintf(stderr,
             "warptempo_gui: auto-open: enumerator returned empty list\n");
         return;
-    }
-
-    // Migrate persisted per-entry state from the prior
-    // app.render_view.list into the freshly enumerated list, keyed by
-    // wav_path. Same shape as the R-toggle entry-path migration.
-    if (!app.render_view.list.empty()) {
-        std::map<std::string,
-            AppState::RenderViewEntry*> prior;
-        for (auto& pe : app.render_view.list) {
-            prior[pe.wav_path.string()] = &pe;
-        }
-        for (auto& ne : list) {
-            auto it = prior.find(ne.wav_path.string());
-            if (it == prior.end()) continue;
-            const auto& src = *it->second;
-            ne.state           = src.state;
-            ne.persisted_size  = src.persisted_size;
-            ne.persisted_mtime = src.persisted_mtime;
-        }
     }
 
     int target = -1;
@@ -1074,8 +880,8 @@ void GuiRenderView::auto_open_batch_at_first_file(
     // gates on !render_view.enabled), so they're simply restored on exit.
     app.render_view.enabled    = true;
     // Batch auto-open is a render-view ENTRY: the first entry load stashes the
-    // authoring session and applies the entry's disk-owned browse state, the
-    // same one-way-bubble entry sequence as the r toggle-on.
+    // authoring position and resets the display to fit-file/0/0, the same entry
+    // sequence as the r toggle-on.
     if (!this->load_render_view_at(target)) {
         app.render_view.enabled = false;
         app.render_view.list.clear();

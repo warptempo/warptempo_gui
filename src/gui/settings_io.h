@@ -31,32 +31,8 @@ bool create_if_missing(const std::filesystem::path& p,
 // viewport / zoom / playhead scratch, the read-only flag, and the trim pair.
 // The selection and trim-selection fields take their ViewState defaults (a
 // parsed band carries no selection). One home for the band-to-ViewState
-// field mapping, shared by the per-entry view-state autosave
-// (update_settings_view_state) and the Ctrl+Alt+C full-inheritance commit.
+// field mapping; the sole caller is the Ctrl+Alt+C full-inheritance commit.
 ViewState view_state_from_settings_tab(const SettingsFileTab& t);
-
-// View-state-only update of a `.settings` file: strict read-modify-write,
-// the per-entry autosave render view runs at its navigation/exit
-// boundaries. Strict-reads the existing file through read_settings_file,
-// then re-serializes the whole file canonically via write_settings_file
-// with viewport_start / zoom_level / playhead written onto the tab named by
-// the passed active_tab_view (NOT the file's own — render view is a one-way
-// bubble, so the browsed tab is authoritative), active_tab_view itself
-// rewritten to that value, and active_markers_view replaced by the browsed
-// value; every other key is preserved from the parse. Atomic via
-// tmp + fsync + rename.
-//
-// Any read failure — a missing file included — refuses the update: one
-// stderr line and a false return, no write. The file is program-written,
-// so a refused read means adversarial or absent bytes this mutation
-// boundary will not perpetuate or manufacture. Callers already tolerate
-// false.
-bool update_settings_view_state(const std::filesystem::path& path,
-                                int64_t viewport_start,
-                                int     zoom_level,
-                                int64_t playhead,
-                                char    active_markers_view,
-                                char    active_tab_view);
 
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is

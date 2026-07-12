@@ -799,17 +799,22 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // key-dispatch handler for it here.
 
     // Ctrl+Alt+C commits the displayed render by INHERITING its .settings
-    // wholesale. The mechanism is the file, not a latch: the handler first
-    // autosaves the live browsed view onto the entry's .settings (the same
-    // read-modify-write every nav-away runs), then strict-reads that file and
-    // applies the WHOLE of it as the new session — both tab bands
-    // (viewport/zoom/playhead/read_only/trim), active_tab_view,
-    // active_audio_view, active_markers_view, playback_speed, follow,
-    // font_size, and the engine block — alongside the source-domain marker
-    // pair the commit adopts. Because the browsed position was autosaved
-    // first, the landing feel is unchanged: render entries are target-view
-    // states, so commit lands in 'T' on the entry's dispatch tab at exactly
-    // the browsed zoom / viewport / playhead and W/P mode.
+    // wholesale. The mechanism is the file, which is FROZEN at dispatch and
+    // never rewritten by render view: the handler strict-reads the entry's
+    // dispatch-time bytes and applies the WHOLE of it as the new session —
+    // both tab bands (viewport/zoom/playhead/read_only/trim), active_tab_view,
+    // active_audio_view, playback_speed, follow, font_size, and the engine
+    // block — alongside the source-domain marker pair the commit adopts. Render
+    // entries are target-view states, so commit lands in 'T' on the entry's
+    // dispatch tab at exactly the QUEUE-MOMENT zoom / viewport / playhead (the
+    // browsed position is deliberately not preserved — render view is an audio
+    // player with no per-entry memory). With the file immutable and the A/B tab
+    // chords blocked in render view, the fingerprint-regression class is closed
+    // by construction: nothing can drift the entry's sidecars between dispatch
+    // and commit.
+    // One carve-out from the wholesale inheritance: active_markers_view is NOT
+    // applied — W/P is global by ruling, so the LIVE mode survives the commit
+    // (recorded at the prefs block below).
     // Undo scope is unchanged: marker/reset promotion plus the pre-commit
     // engine settings are one cross-file undo entry; the inherited prefs and
     // view state stay outside undo by the same standing convention that keeps
@@ -881,28 +886,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
         const std::filesystem::path sidecar =
             render_view.settings_path(cur_e);
-        // Commit is a nav-away like any other, and the full inheritance below
-        // reads the entry's .settings, so the browsed state must be on disk
-        // FIRST: run the same read-modify-write autosave every navigation/exit
-        // boundary runs (browsed viewport/zoom/playhead onto the active tab
-        // band, plus the browsed tab and W/P mode). The read_settings_file
-        // right below then sees the just-autosaved browse state, so the file
-        // IS the session the commit inherits. The autosave rewrites only the
-        // browse-only view keys; guard 5's render fingerprint excludes those
-        // by construction (its inputs are the source identity, sample rate,
-        // the marker stores, the engine block, and the recipe trim — none of
-        // them view keys), so the pre-commit autosave cannot disturb the
-        // fingerprint re-attestation. A refused autosave is a strict
-        // read-modify-write parse failure over program-written bytes —
-        // adversarial — so abort here, the same stderr shape as the reads
-        // below, before any mutation.
-        if (!render_view.autosave_active_entry()) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: entry autosave failed for "
-                "'%s'\n",
-                sidecar.string().c_str());
-            return true;
-        }
+        // The entry's .settings is frozen at dispatch and never rewritten by
+        // render view, so the strict read below sees the DISPATCH-TIME bytes —
+        // which is the point: the commit inherits the position/tab the project
+        // had when the render was QUEUED, not the browsed one. That immutability
+        // is also what closes the fingerprint-regression class: guard 5's
+        // re-attestation compares against a file no browse ever touched.
         const auto settings = read_settings_file(sidecar.string());
         if (!settings) {
             std::fprintf(stderr,
@@ -1015,16 +1004,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         // No view-range guard here (first_view_range_defect). The inherited
-        // view values come from the entry's .settings, but they are the LIVE
-        // browsed position the pre-commit autosave just wrote there from
-        // GUI-produced session state — applied from the entry's own disk
-        // .settings at display, validated then (load_render_view_at's
-        // first_view_range_defect), and moved since only by the user's
-        // browsing, which the browse clamps keep in domain. They may still
-        // rest outside the adopted map's target extent; the runtime clamps
-        // (move_playhead_to, clamp_viewport_start) own them at first use, the
-        // restore-site convention — load-time adversarial strictness is for
-        // bytes a user could hand-edit, not the GUI's own round-tripped view.
+        // view values come from the entry's frozen .settings — the queue-moment
+        // position the dispatch writer clamped into this entry's map domain and
+        // validated at display (load_render_view_at's first_view_range_defect).
+        // They may still rest outside the adopted map's target extent; the
+        // runtime clamps (move_playhead_to, clamp_viewport_start) own them at
+        // first use, the restore-site convention — load-time adversarial
+        // strictness is for bytes a user could hand-edit, not the GUI's own
+        // round-tripped view.
 
         // Source-load adversarial guard 2: target-view/output-format
         // compatibility, validated against the ENTRY's own .settings.
@@ -1044,9 +1031,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // Source-load adversarial guard 3: routing-field re-attestation. The
         // two routing keys — active_audio_view and active_tab_view — ride
-        // OUTSIDE guard 5's render fingerprint (the per-entry browse autosaves
-        // rewrite the same .settings file, so the fingerprint deliberately
-        // excludes browse-only view keys), yet they steer this commit:
+        // OUTSIDE guard 5's render fingerprint (which excludes the view keys),
+        // yet they steer this commit:
         // active_audio_view asserts the entry is a target-view state, and
         // active_tab_view (commit_tab above) names the tab whose recipe trim
         // and view band the mutation below adopts. Both are pinned by the
@@ -1108,10 +1094,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // edited underneath the displayed entry (adversarial): abort before
         // the first mutation; the next navigation onto the entry refuses it
         // through load_render_view_at's own fingerprint gate, and the user
-        // re-renders from the live project.
-        // The browse-only view keys ride outside the render fingerprint, so
-        // the per-entry view-state autosaves the GUI itself writes stay
-        // compatible with this check.
+        // re-renders from the live project. The view keys ride outside the
+        // render fingerprint, and the entry's .settings is frozen at dispatch,
+        // so this check is against bytes no browse ever touched.
         {
             RenderFileIdentity source_identity;
             source_identity.size  = audio.source_load_size();
@@ -1131,13 +1116,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        // No landing-view latch: the entry's .settings — just autosaved with
-        // the live browsed viewport/zoom/playhead/tab/W-P above — IS the
-        // session this commit inherits wholesale below (both tab bands,
-        // active_tab_view, active_audio_view, active_markers_view, the prefs,
-        // and the engine block). restore_source_view still runs the one-way
-        // bubble's exit arm, but the post-restore block overwrites its stash
-        // restore with the parsed file, so the exit stash is transient here.
+        // No landing-view latch: the entry's frozen .settings — the
+        // dispatch-time viewport/zoom/playhead/tab — IS the session this commit
+        // inherits wholesale below (both tab bands, active_tab_view,
+        // active_audio_view, the prefs, and the engine block; active_markers_view
+        // is the one carve-out — W/P is global, so the live mode survives).
+        // restore_source_view still runs the exit arm, but the post-restore
+        // block overwrites its stash restore with the parsed file, so the exit
+        // stash is transient here.
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
         std::vector<GuiPhaseResetMarker> phase_reset_pre = app.phaseresetmarkers.markers();
         const int                 hint_last = app.last_selected_marker;
@@ -1169,8 +1155,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // (capture_current_settings, snapshotted just now inside
         // push_undo_both). The inherited session prefs (playback_speed,
         // follow, font_size) and the whole view state (both tab bands,
-        // active_tab_view, active_audio_view, active_markers_view, the live
-        // position) ride OUTSIDE undo — the same standing convention that
+        // active_tab_view, active_audio_view, the live position) ride OUTSIDE
+        // undo — the same standing convention that
         // keeps view state and trim out of history. Ctrl+Z restores the
         // pre-commit stores and engine block exactly as before; it does not
         // roll back the adopted prefs or landing view. Grow this payload only
@@ -1214,8 +1200,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // deliberate reuse, not a leak.
         render_view.restore_source_view();
 
-        // Full inheritance (the ruled shape): the entry's .settings — just
-        // autosaved to the live browsed view — is the whole session now, the
+        // Full inheritance (the ruled shape): the entry's frozen .settings —
+        // the dispatch-time view — is the whole session now, the
         // same SettingsFileTab-to-live application a source load performs.
         // Both tab bands come from the file (view_state_from_settings_tab, the
         // shared band conversion: viewport/zoom/playhead, read_only, and the
@@ -1234,22 +1220,21 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         {
             const ViewState& band =
                 (commit_tab == 'B') ? app.tab_b : app.tab_a;
-            // Live viewport/zoom/playhead from the active band reproduce the
-            // browsed landing (the pre-commit autosave put the browsed values
-            // there). The render display axis IS the full target axis of the
-            // snapshot map, so this lands at the identical position with no
-            // translation; zoom levels share one vocabulary across views.
+            // Live viewport/zoom/playhead from the active band land at the
+            // dispatch-time (queue-moment) position the entry was written with.
+            // The render display axis IS the full target axis of the snapshot
+            // map, so this lands at that position with no translation; zoom
+            // levels share one vocabulary across views.
             app.viewport_start_sample  = band.viewport_start_sample;
             app.zoom_level             = band.zoom_level;
-            // Deliberately unclamped, the restore-site convention: the browsed
-            // playhead came from the entry's disk .settings and was moved by
-            // the user's browsing, so it may rest outside the adopted map's
-            // target extent; move_playhead_to owns the value at first use.
+            // Deliberately unclamped, the restore-site convention: the
+            // dispatch-time playhead may rest outside the adopted map's target
+            // extent; move_playhead_to owns the value at first use.
             app.playhead_cursor_sample = band.playhead_cursor_sample;
             // Live trim is the active band's trim, which is exactly the
-            // recipe trim that shaped this render: the autosave preserves the
-            // file's per-tab trim, and the commit tab's band trim IS
-            // recipe_trim (both read from the same parsed file), so the trim
+            // recipe trim that shaped this render: the frozen file's per-tab
+            // trim is intact, and the commit tab's band trim IS recipe_trim
+            // (both read from the same parsed file), so the trim
             // the guards and the fingerprint validated is the trim now live.
             // A committed render lands with no trim bound focused: a parsed
             // band carries the default false/0 trim-selection fields, so
@@ -1265,9 +1250,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // Session prefs from the file, the same application path a source
         // load uses (has_X ? X : default; a program-written entry carries
         // every key). These ride OUTSIDE undo — see the undo-scope note above.
+        //
+        // Recorded asymmetry: active_markers_view is deliberately NOT applied
+        // from the file. W/P is global by ruling — one mode binary affecting
+        // every view alike — so the LIVE mode survives the commit (a `p` flip
+        // made while auditioning stays put), unlike playback_speed, follow,
+        // font_size, active_audio_view, and both tab bands, which all adopt
+        // from the file here.
         app.follow_mode    = settings->has_follow ? settings->follow : true;
-        app.active_markers_view = settings->has_active_markers_view
-            ? settings->active_markers_view : 'W';
         app.playback_speed = settings->has_playback_speed
             ? settings->playback_speed : 1.0f;
         // Push the inherited speed to the engine so playback picks it up, the
