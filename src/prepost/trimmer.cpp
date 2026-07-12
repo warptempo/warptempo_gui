@@ -70,10 +70,59 @@ std::expected<void, std::string> validate_trim_frames(
 //     engine's llrint read schedule translates exactly. The max(0, ...) is
 //     the near-piece-start clamp: cut nothing; the engine zero-pads its head
 //     exactly like a full render's own head.
-//  5. Source cut end = min(total_frames, llrint(e_src) + N) — a tail margin
-//     of REAL audio so the frames near T_e read what the full render reads
-//     and the null extends through the last kept sample (slightly too long
-//     at the tail).
+//  5. Source cut end: the tail-influence chain from the last kept output
+//     sample, computed in ABSOLUTE full-map coordinates (legitimate because
+//     the trimmed hop grids coincide with the full render's — step 8):
+//       K     = llrint(T_e) - 1, the last kept output sample (K >= 0:
+//               validation guarantees llrint(T_e) >= llrint(T_b) + 1 with
+//               T_b >= 0).
+//       f_max = K / R_s (floor), the last spectral-limiter analysis frame
+//               covering K. The limiter frames the emission on the same R_s
+//               grid with N-wide windows, so that frame's analysis reads
+//               emitted samples through L = f_max*R_s + N - 1: the trimmed
+//               emission must carry full-render-identical audio through L.
+//               plan_trim does not know the limiter flag, so this limiter-on
+//               bound applies unconditionally; it strictly contains the
+//               limiter-off requirement (identical audio through K < L).
+//       m_max = (L + N/2) / R_s (floor), the last synthesis frame whose OLA
+//               window can touch sample L (the frame at exactly L + N/2
+//               lands on window index 0, weight zero; including it costs at
+//               most one hop of context and removes any dependence on
+//               zero-weight edge behavior).
+//     The chain ends one frame LATER than m_max: frame m_max's synthesized
+//     phase depends on frame m_max+1's analysis CONTENT, because the PGHI
+//     prep time-gradient is centered — pghi_prep for frame m reads ph_nxt,
+//     the analysis phases of frame m+1 (stft_container.h; synthesis.cpp
+//     delivers prep(frame) with the frame+1 slot). That one-deep lookahead
+//     is the non-obvious link; do not shorten the chain to m_max. So with
+//     c2 = map_target_to_source((m_max+1)*R_s), frame m_max+1's exact
+//     source center, whose analysis read ends at
+//     llrint(c2 - N/2) + N - 1 <= c2 + N/2 - 0.5,
+//       cut_end = min(total_frames, llrint(c2) + N/2 + 1)
+//     covers that read strictly (llrint(c2) >= c2 - 0.5) and every earlier
+//     frame's read a fortiori (the map is monotone). The remaining coverage
+//     requirements follow automatically:
+//       - cut_end >= c2 puts the closing anchor's target at or past
+//         (m_max+1)*R_s, so schedule entries through m_max+1 inverse-map
+//         through real segments (never the closing anchor's identity
+//         extrapolation) and are translation-identical to the full
+//         render's. That gives phase reset PLACEMENT identity: a reset with
+//         llrint(query) < t_a(m_max+1) places at the same frame <= m_max in
+//         both renders, and one at or past t_a(m_max+1) places past m_max
+//         in BOTH renders (schedules are nondecreasing and shared through
+//         entry m_max+1), where it can only influence samples past L.
+//       - The emit cap — llrint of the closing target — is at or past the
+//         translated (m_max+1)*R_s minus rounding, which exceeds the
+//         translated L by more than N/2 minus rounding, so the trimmed
+//         emission carries real full-render-identical audio through L —
+//         everything a kept-sample-covering limiter frame reads.
+//     When the min() clamps, the closing anchor IS the full map's EOF pair:
+//     the trimmed schedule, extrapolation, emission extent, and zero-padded
+//     reads past the buffer end all coincide with the full render's own
+//     tail behavior, so the null survives the clamp. Synthesis frames past
+//     m_max+1 may read past the cut buffer's end zero-padded exactly as a
+//     full render reads past its own source end; they influence only
+//     samples past L.
 //  6. Trimmed warp frame map = the full map translated by (-cut_begin in
 //     source, -A0*R_s in target); out-of-window breakpoints dropped; a seed
 //     anchor interpolated at target 0 (it lies on the containing segment's
@@ -86,10 +135,16 @@ std::expected<void, std::string> validate_trim_frames(
 //     translated by the same -cut_begin and range-filtered to the cut's
 //     query range (the filter predicate is derived at the loop below).
 //  8. The null condition is the HOP-MULTIPLE TARGET RE-ANCHOR (A0*R_s), not
-//     the source cut position: with it, the trimmed engine's read schedule
-//     coincides read-for-read with the full render's frames A0+m, so the
-//     null holds through the spectral limiter (its framing sits on the same
-//     R_s grid) and through the peak limiter whenever it does not engage.
+//     the source cut position: with it, the trimmed engine's synthesis
+//     frame m coincides with the full render's frame A0+m and the trimmed
+//     limiter's frame grid coincides with the full render's limiter grid —
+//     the coincidence step 5's influence chain is computed on. Frames
+//     through m_max read identical source audio, see the identical
+//     lookahead frame m_max+1, and fire identical phase resets (step 5), so
+//     the emission is full-render-identical through L, every limiter frame
+//     covering a kept sample analyzes identical audio, and the null holds
+//     through the last kept sample — and through the peak limiter whenever
+//     it does not engage.
 //  9. Crop: begin_sample = llrint(T_b) - A0*R_s, samples = llrint(T_e) -
 //     llrint(T_b).
 std::expected<TrimPlan, std::string> plan_trim(
@@ -118,7 +173,10 @@ std::expected<TrimPlan, std::string> plan_trim(
     const int64_t origin_target = A0 * static_cast<int64_t>(R_s);
 
     // Source cut: the origin hop's integer analysis read position at the
-    // head, llrint(e_src) + N of real tail margin at the end. Named
+    // head; at the tail, the influence chain of derivation step 5 — last
+    // kept sample -> last limiter frame covering it -> its read extent ->
+    // last synthesis frame touching that -> its centered-gradient lookahead
+    // frame -> that frame's analysis read, rounded outward. Named
     // cut_begin/cut_end to keep them distinct from the authored-bound
     // parameters (begin_frame / end_frame).
     int64_t cut_begin = std::llrint(
@@ -126,7 +184,17 @@ std::expected<TrimPlan, std::string> plan_trim(
                              full_warp_frame_map)
         - static_cast<double>(N) / 2.0);
     if (cut_begin < 0) cut_begin = 0;
-    int64_t cut_end = std::llrint(e_src) + N;
+    const int64_t R64 = static_cast<int64_t>(R_s);
+    const int64_t N64 = static_cast<int64_t>(N);
+    // K >= 0 (see step 5), so the floor divisions below are plain
+    // nonnegative integer division.
+    const int64_t K     = std::llrint(T_e) - 1;
+    const int64_t f_max = K / R64;
+    const int64_t L     = f_max * R64 + N64 - 1;
+    const int64_t m_max = (L + N64 / 2) / R64;
+    const double  c2    = map_target_to_source(
+        static_cast<double>((m_max + 1) * R64), full_warp_frame_map);
+    int64_t cut_end = std::llrint(c2) + N64 / 2 + 1;
     if (cut_end > total_frames) cut_end = total_frames;
 
     TrimPlan plan;
@@ -167,11 +235,11 @@ std::expected<TrimPlan, std::string> plan_trim(
     // so the source translation is the whole re-anchor) and range-filtered.
     //
     // Filter predicate, derived from the binding invariant — every reset
-    // that fires in the full render inside the kept window must fire at the
-    // identical synthesis frame in the trimmed render (the engine's frames
-    // over the cut pair coincide read-for-read with the full render's frames
-    // A0+m, so a reset firing at full frame A0+m must land on trimmed frame
-    // m):
+    // that fires in the full render at a frame the kept window depends on
+    // (frames through m_max, derivation step 5) must fire at the identical
+    // synthesis frame in the trimmed render (the engine's frames over the
+    // cut pair coincide read-for-read with the full render's frames A0+m,
+    // so a reset firing at full frame A0+m must land on trimmed frame m):
     //   HEAD: drop when llrint(translated) < the trimmed schedule's frame-0
     //   read, llrint(map_target_to_source(0, trimmed map) - N/2). This is
     //   the engine's own placement-drop verdict quantized exactly as Pass 1
@@ -180,12 +248,19 @@ std::expected<TrimPlan, std::string> plan_trim(
     //   frame A0" verdict — the reset precedes the trimmed schedule, exactly
     //   as it precedes the kept window in the full render.
     //   TAIL: drop when the translated position is at or past the cut's
-    //   extent (>= pre.frames). Every reset the invariant needs reads real
-    //   cut audio (its query sits at least N/2 before the cut end by the
-    //   tail-margin construction), so nothing needed is dropped; what drops
-    //   would otherwise clamp onto the trimmed schedule's final frames past
-    //   the crop — frames the full render schedules differently and the crop
-    //   discards, so keeping them could only perturb discarded samples.
+    //   extent (>= pre.frames). Every reset the invariant needs — one that
+    //   places at a frame <= m_max in the full render — has llrint(query) <
+    //   t_a(m_max+1) <= c2 - N/2 + 0.5, so its query sits about N before
+    //   the cut end (cut_end >= c2 + N/2 + 0.5, derivation step 5): nothing
+    //   needed is dropped, and its placement frame reads real cut audio.
+    //   Under the total_frames clamp the margin is still over N/2: queries
+    //   are authored frames minus N/2 with the authored wall at
+    //   total_frames - 1. What drops (query at or past the cut end) has
+    //   llrint(query) >= cut_end > t_a(m_max+1), so it places past frame
+    //   m_max in the FULL render too; frames past m_max write only samples
+    //   past L, which the crop discards and only limiter frames gating
+    //   discarded samples read — so keeping them could only perturb
+    //   discarded samples.
     // Translation and subsetting both preserve strict ascent, so the engine's
     // strict-ascent init validator holds by construction.
     const int64_t schedule_origin_read = std::llrint(
@@ -202,8 +277,10 @@ std::expected<TrimPlan, std::string> plan_trim(
     // Crop to the exact authored window. begin_sample discards the pre-roll
     // (and the sub-hop remainder of T_b); samples is the authored target
     // span, exact. The engine's emit cap — llrint of the closing anchor's
-    // target — always covers begin_sample + samples: the tail margin puts
-    // the closing target at or beyond T_e, and llrint is monotone.
+    // target — always covers begin_sample + samples: the derived cut end
+    // puts the closing target past L + N/2 > T_e (unclamped, step 5), and
+    // under the clamp it is the full map's own EOF target, at or beyond
+    // T_e; llrint is monotone.
     plan.post.begin_sample = std::llrint(T_b) - origin_target;
     plan.post.samples      = std::llrint(T_e) - std::llrint(T_b);
     return plan;
