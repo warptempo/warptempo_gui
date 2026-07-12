@@ -175,8 +175,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.limiter         = p.limiter;
     audio_stft.limiter_verbose = p.limiter_verbose;
 
-    if (audio_stft.N % 4 != 0) {
-        std::cerr << "Error: N must be divisible by 4.\n";
+    if (audio_stft.N <= 0 || audio_stft.N % 4 != 0) {
+        std::cerr << "Error: N must be a positive multiple of 4.\n";
         return EngineResult::Failed;
     }
 
