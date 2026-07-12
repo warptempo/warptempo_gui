@@ -381,7 +381,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                 if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx)) {
                     m->label_ref.clear();
                     m->tempo_inherits = false;
-                    m->tempo_cents    = 100;
+                    m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
                     // No iter bracket to clear: a ref is never
                     // iter-eligible (iter_popup_eligible_marker), so this
@@ -406,7 +406,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                 // implies (e.g. the following pass in a chain).
                 if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx)) {
                     m->tempo_inherits = false;
-                    m->tempo_cents    = 100;
+                    m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
                     // No iter bracket to clear: a pass is never
                     // iter-eligible (iter_popup_eligible_marker), so this
@@ -433,7 +433,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                 if (GuiWarpMarker* m = app.warpmarkers.marker_mut(0)) {
                     m->disabled       = false;
                     m->tempo_inherits = false;
-                    m->tempo_cents    = 100;
+                    m->tempo_base     = 1.0;
                     m->tempo_scale.reset();
                     m->label_ref.clear();
                     m->label_def.clear();
@@ -442,10 +442,10 @@ void GuiInputHandler::handle_defect_response(char k) {
                     // marker still carrying a bracket typed while it was
                     // enabled (refs and passes are never iter-eligible),
                     // and the reset tempo invalidates that bracket's
-                    // validation basis — same rationale as
-                    // adjust_tempo_cents' bracket clear.
-                    m->iter_start_cents.reset();
-                    m->iter_end_cents.reset();
+                    // validation basis — same rationale as adjust_tempo's
+                    // bracket clear.
+                    m->iter_start = std::numeric_limits<double>::quiet_NaN();
+                    m->iter_end   = std::numeric_limits<double>::quiet_NaN();
                     store_changed = true;
                 }
             } else {
@@ -459,7 +459,7 @@ void GuiInputHandler::handle_defect_response(char k) {
                 GuiWarpMarker nm;
                 nm.time_frame   = 0;
                 nm.tempo_inherits = false;
-                nm.tempo_cents    = 100;
+                nm.tempo_base     = 1.0;
                 app.warpmarkers.insert_marker(std::move(nm));
                 clear_column_selection_state(app, 'W');
                 store_changed = true;

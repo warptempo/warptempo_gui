@@ -11,10 +11,10 @@
 // engine-bound render path read. Three independent state axes:
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
-//      (`tempo_cents` is the numeric value). `tempo_inherits == true` (a
+//      (`tempo_base` is the numeric value). `tempo_inherits == true` (a
 //      "pass" marker): the presentation tempo is resolved live by walking
 //      backward through the marker list to the nearest owning marker.
-//      `tempo_cents`/`tempo_scale` carry inert defaults (100 / nullopt)
+//      `tempo_base`/`tempo_scale` carry inert defaults (1.0 / nullopt)
 //      that are never read while the marker is inheriting.
 //
 //   2. Label relationship. At most one of `label_def` and `label_ref` is
@@ -35,17 +35,9 @@ struct WarpMarker {
     int64_t time_frame = 0;
 
     bool        tempo_inherits = false;
-    // Authored tempo: 100-based integer cents held in an int64_t — an
-    // off-grid or fractional tempo is unrepresentable by type, the exact
-    // value-domain sibling of the int64 frame position above. The N.NN
-    // spelling is the text interface only (format_tempo_cents /
-    // parse_tempo_cents, value_format.h); a double tempo exists only past
-    // tempo_from_cents at the DSP boundary. 100 is the 1.00 default.
-    int64_t     tempo_cents    = 100;
+    double      tempo_base     = 1.0;
     // nullopt: no typed scale (the serializer omits "*scale"; semantically
-    // scale 1). A present value is the authored scale, a full double —
-    // a recorded asymmetry: tempo is integer cents, scale is deliberately
-    // full-double by standing ruling.
+    // scale 1). A present value is the authored scale, a full double.
     std::optional<double> tempo_scale;
 
     std::string label_def;
@@ -72,8 +64,8 @@ namespace warpmarkers_internal {
 // editor's commit path (flag_editor). Line-local validation only —
 // cross-marker rules (label_def uniqueness, time ordering: non-decreasing
 // at load, degeneracy refused at the render boundary) are the caller's.
-// On `pass`, tempo_cents/tempo_scale are
-// populated with inert defaults (100 / nullopt). Returns the marker on
+// On `pass`, tempo_base/tempo_scale are
+// populated with inert defaults (1.0 / nullopt). Returns the marker on
 // success, or a one-line diagnostic on failure.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line);

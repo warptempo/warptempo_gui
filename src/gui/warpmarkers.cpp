@@ -59,19 +59,17 @@ bool save_impl(const std::string& path,
         //   owning, with scale      → "1.23*1.2345"
         //   def, no scale           → "1.23:a.03"
         //   def, with scale         → "1.23*1.2345:a.03"
-        // Tempo persists through its integer-cents serialization owner
-        // (format_tempo_cents, value_format.h — the exact N.NN text, byte-
-        // identical to the historical min-2-padded form); scale persists as
-        // a padded shortest-round-trip double (format_value_double, min 4).
-        // A saved store reloads bit-identically and historical
-        // fixed-decimal forms re-serialize byte-for-byte.
+        // Values persist as padded shortest-round-trip doubles
+        // (value_format.h: tempo min 2 decimals, scale min 4), so a saved
+        // store reloads bit-identically and historical fixed-decimal forms
+        // re-serialize byte-for-byte.
         if (!m.label_ref.empty()) {
             out << m.label_ref;
         } else {
             if (m.tempo_inherits) {
                 out << "pass";
             } else {
-                out << format_tempo_cents(m.tempo_cents);
+                out << format_value_double(m.tempo_base, 2);
                 if (m.tempo_scale.has_value()) {
                     out << '*' << format_value_double(*m.tempo_scale, 4);
                 }

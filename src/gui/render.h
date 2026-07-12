@@ -670,7 +670,7 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
 // Iteration-aware sibling of flag_text_for_marker. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
-// the tempo. The single canonical composer for warp flag text — used
+// `tempo_base`. The single canonical composer for warp flag text — used
 // by render_flags / render_one_editor_flag / compute_flag_hit_rects and
 // to seed the flag editor in iteration mode.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,

@@ -625,14 +625,14 @@ bool GuiInputHandler::render_bpm_sweep() {
         // practice every cell derives in-bracket and serializes exactly
         // (padded shortest round-trip form).
         cell_warp_markers[owner_idx].tempo_inherits = false;
-        cell_warp_markers[owner_idx].tempo_cents    = computed->base_tempo_cents;
+        cell_warp_markers[owner_idx].tempo_base     = computed->base_tempo;
         cell_warp_markers[owner_idx].tempo_scale.reset();
         // Span-internal markers pass: their own tempo is subsumed by the
         // owner's span tempo. Disabled span-internal markers stay disabled
         // but also pass (the disabled flag is independent of tempo_inherits).
         for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
             cell_warp_markers[i].tempo_inherits = true;
-            cell_warp_markers[i].tempo_cents    = 100;   // inert default
+            cell_warp_markers[i].tempo_base     = 1.0;   // inert default
             cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
             // label_def on a span-internal marker is preserved (refs are
             // excluded from spans by the `m` two-marker span gate, but a def
@@ -656,14 +656,14 @@ bool GuiInputHandler::render_bpm_sweep() {
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
                       "%0*d", pad_width, seq);
-        // Filename embeds the exact cell values (bpm plain shortest, tempo
-        // straight from cents via format_tempo_cents, scale min-4 padded
-        // shortest), so the name never rounds away stored precision.
+        // Filename embeds the exact cell values in padded shortest
+        // round-trip form (bpm plain, tempo min 2 decimals, scale min 4),
+        // so the name never rounds away stored precision.
         std::string basename = num_buf;
         basename += '_';
         basename += format_value_double(bpm, 0);
         basename += ',';
-        basename += format_tempo_cents(computed->base_tempo_cents);
+        basename += format_value_double(computed->base_tempo, 2);
         basename += ',';
         basename += format_value_double(computed->scale, 4);
 

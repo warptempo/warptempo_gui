@@ -541,14 +541,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Tempo nudge. Ctrl+Up / Ctrl+Down only. Bare `=` / `-` were the
     // previous binding; they now zoom (see below) so the keyboard has
     // a symbol-key alias for the bare Up/Down zoom chord. No view guard
-    // here — adjust_tempo_cents returns at once unless the warp view is
-    // active, so Ctrl+arrows are an inert (still consumed) no-op in
-    // phase-reset view.
+    // here — adjust_tempo returns at once unless the warp view is active,
+    // so Ctrl+arrows are an inert (still consumed) no-op in phase-reset view.
     if (ctrl && !shift && !alt && key == GuiKeys::Up) {
-        warpops.adjust_tempo_cents(+1); return;
+        warpops.adjust_tempo(+0.01); return;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::Down) {
-        warpops.adjust_tempo_cents(-1); return;
+        warpops.adjust_tempo(-0.01); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
         viewport.zoom_in(); return;
@@ -869,10 +868,10 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
         // sit at the phase-reset selection's index, which silently corrupted
         // an unrelated warp marker and fired a spurious target render.
         if (app.active_markers_view == 'P') return;
-        const int64_t delta_cents =
-            (button == GuiMouseButton::WheelUp ? -1 : +1) *
-            static_cast<int64_t>(count);
-        warpops.adjust_tempo_cents(delta_cents);
+        const double delta =
+            (button == GuiMouseButton::WheelUp ? -0.01 : +0.01) *
+            static_cast<double>(count);
+        warpops.adjust_tempo(delta);
         return;
     }
     if (alt && !ctrl && !shift) {

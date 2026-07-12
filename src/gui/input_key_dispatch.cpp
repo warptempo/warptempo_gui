@@ -532,7 +532,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // named `<seq>_<delta_csv>.wav`. The CSV holds the swept markers' deltas
     // in timeline order, formatted `%+0.2f`; markers with no iter range
     // authored are excluded from the CSV and contribute one fixed value (their
-    // authored tempo_cents) to the product. Per-cell progress and Esc
+    // authored tempo_base) to the product. Per-cell progress and Esc
     // cancellation are handled by run_render_batch. Silent no-op outside
     // iteration mode.
     if (ctrl && alt && !shift &&
@@ -543,7 +543,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // Pre-flight the live store: a modeled defect (a trimmed
         // map-format render included) opens the defect-resolution series
         // and refuses the whole sweep; a non-modeled failure refuses with
-        // the popup. Per-cell tempo_cents mutations remain on the async
+        // the popup. Per-cell tempo_base mutations remain on the async
         // stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
                                    app.phaseresetmarkers.markers(),
@@ -557,27 +557,31 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // Snapshot markers in timeline order (the GuiWarpMarkers store is
         // sorted by time_frame, with ties legal). For each owning marker
-        // build its per-cell delta list in integer cents: a single 0 when
-        // no iter range is authored, otherwise the cents enumeration from
-        // iter_start_cents to iter_end_cents inclusive. Deltas and tempos
-        // share the one integer-cents domain, so the per-cell base + delta
-        // below is plain integer addition — no conversion anywhere.
+        // build its per-cell delta list IN INTEGER CENTS: a single 0 when
+        // no iter range is authored, otherwise integer-cents enumeration
+        // from iter_start to iter_end inclusive. The deltas stay integer
+        // cents all the way through the per-cell base + delta addition —
+        // adding tempo doubles instead (0.28 + 0.01) can land one ulp off
+        // the parse-canonical double, and the batch writer would then emit
+        // a sidecar the strict N.NN tempo grammar refuses at promote.
         const std::vector<GuiWarpMarker> base_warp_markers =
             app.warpmarkers.markers();
-        std::vector<int>                  eligible_indices;
-        std::vector<std::vector<int64_t>> per_marker_delta_cents;
-        std::vector<bool>                 is_swept;
+        std::vector<int>              eligible_indices;
+        std::vector<std::vector<int>> per_marker_delta_cents;
+        std::vector<bool>             is_swept;
         for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
             const GuiWarpMarker& m = base_warp_markers[i];
             if (!iter_popup_eligible_marker(m)) continue;
             eligible_indices.push_back(i);
             const bool swept =
-                m.iter_start_cents.has_value() && m.iter_end_cents.has_value();
+                !std::isnan(m.iter_start) && !std::isnan(m.iter_end);
             is_swept.push_back(swept);
-            std::vector<int64_t> delta_cents;
+            std::vector<int> delta_cents;
             if (swept) {
-                const int64_t start_cents = *m.iter_start_cents;
-                const int64_t end_cents   = *m.iter_end_cents;
+                const int start_cents = static_cast<int>(
+                    std::lround(m.iter_start * 100.0));
+                const int end_cents = static_cast<int>(
+                    std::lround(m.iter_end * 100.0));
                 // The editor commit enforces start <= end and the bracket is
                 // session-only (wiped on mode exit), so an inverted bracket
                 // here is an internal breach — refuse the dispatch loudly and
@@ -590,7 +594,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                         "iter bracket start exceeds end\n", i);
                     return true;
                 }
-                for (int64_t c = start_cents; c <= end_cents; ++c) {
+                for (int c = start_cents; c <= end_cents; ++c) {
                     delta_cents.push_back(c);
                 }
             } else {
@@ -695,7 +699,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (pad_width > 9) pad_width = 9;
 
         // Snapshot phase resets once — every cell shares the same
-        // phase reset configuration, only marker tempo_cents values
+        // phase reset configuration, only marker tempo_base values
         // differ across cells.
         const std::vector<GuiPhaseResetMarker> base_phase_resets =
             app.phaseresetmarkers.markers();
@@ -713,11 +717,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             std::string delta_csv;
             for (size_t k = 0; k < num_dims; ++k) {
                 if (!is_swept[k]) continue;
-                // Signed two-decimal text straight from cents — no double
-                // round-trip (format_signed_delta_cents, warpmarkers.h).
+                const double d =
+                    tempo_from_cents(per_marker_delta_cents[k][indices[k]]);
+                char dbuf[16];
+                std::snprintf(dbuf, sizeof(dbuf), "%+0.2f", d);
                 if (!delta_csv.empty()) delta_csv += ',';
-                delta_csv += format_signed_delta_cents(
-                    per_marker_delta_cents[k][indices[k]]);
+                delta_csv += dbuf;
             }
 
             char num_buf[16];
@@ -732,20 +737,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 const int mi = eligible_indices[k];
                 // Per-cell tempo is a computed value, not an authored one,
                 // so it takes no bracket gate: with deltas up to
-                // +-kIterDeltaMaxCents a cell tempo can go non-positive,
-                // and build_warp_frame_map's existing refusal on the async
-                // render path (stderr) is the backstop. Base and delta live
-                // in the one integer-cents domain, so the sum is plain
-                // integer addition and the cell sidecar's N.NN spelling
-                // re-parses to exactly this value — Ctrl+Alt+C promotion
-                // stays closed under the grammar by type.
-                cell_warp_markers[mi].tempo_cents =
-                    base_warp_markers[mi].tempo_cents +
-                    per_marker_delta_cents[k][indices[k]];
+                // +-kIterDeltaMax a cell tempo can go non-positive, and
+                // build_warp_frame_map's existing refusal on the async
+                // render path (stderr) is the backstop. The base is on the
+                // cent grid (every tempo producer is), so lround recovers
+                // its exact cent index and the base + delta sum happens in
+                // integer cents — tempo_from_cents then yields exactly the
+                // double the cell sidecar's N.NN spelling re-parses to,
+                // keeping Ctrl+Alt+C promotion closed under the grammar.
+                const long base_cents = std::lround(
+                    base_warp_markers[mi].tempo_base * 100.0);
+                cell_warp_markers[mi].tempo_base = tempo_from_cents(
+                    static_cast<double>(base_cents) +
+                    per_marker_delta_cents[k][indices[k]]);
                 // The engine doesn't consume iter values; clear them
                 // so the request is quiet.
-                cell_warp_markers[mi].iter_start_cents.reset();
-                cell_warp_markers[mi].iter_end_cents.reset();
+                cell_warp_markers[mi].iter_start =
+                    std::numeric_limits<double>::quiet_NaN();
+                cell_warp_markers[mi].iter_end =
+                    std::numeric_limits<double>::quiet_NaN();
             }
 
             RenderRequest req = build_render_request(
@@ -1196,8 +1206,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         {
             auto& mv = app.warpmarkers.markers_mut();
             for (auto& m : mv) {
-                m.iter_start_cents.reset();
-                m.iter_end_cents.reset();
+                m.iter_start = std::numeric_limits<double>::quiet_NaN();
+                m.iter_end   = std::numeric_limits<double>::quiet_NaN();
             }
         }
         flag_editor.wipe_bpm_state();

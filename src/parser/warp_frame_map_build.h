@@ -21,7 +21,7 @@ struct MidiTempoMapEntry {
 
 // Minimal POD the warp_frame_map math needs. The GUI's `GuiWarpMarker` resolves into
 // this: tempo_inherits markers are walked back to their nearest owning
-// ancestor and their effective tempo_cents / tempo_scale are copied forward.
+// ancestor and their effective tempo_base / tempo_scale are copied forward.
 // Disabled markers (and any references to disabled-defined labels) are
 // filtered out BEFORE conversion.
 struct MarkerForRender {
@@ -29,10 +29,7 @@ struct MarkerForRender {
     // Consumers that divide or accumulate convert to double inside their
     // own arithmetic (exact far below 2^53).
     int64_t     time_frame = 0;
-    // Resolved owning tempo in integer cents (see WarpMarker); irrelevant
-    // for label_ref (0). Becomes a double only inside build_warp_frame_map's
-    // slope product, via tempo_from_cents.
-    int64_t     tempo_cents  = 100;
+    double      tempo_base   = 1.0;   // resolved owning tempo; irrelevant for label_ref
     std::optional<double> tempo_scale; // nullopt or the typed scale after '*'
     std::string label_def;
     std::string label_ref;
@@ -41,8 +38,7 @@ struct MarkerForRender {
 // Effective tempo a marker resolves to, for display/authoring callers (not
 // fed to the render path). See marker_effective() below.
 struct MarkerEffective {
-    int64_t     base_cents = 0;     // integer tempo cents; 0 means "could
-                                    // not resolve"
+    double      base       = 0.0;   // 0.0 means "could not resolve"
     std::optional<double> scale;    // nullopt means no typed scale (treated
                                     // as 1.0); the label_ref branch always
                                     // carries the combined multiplier here,
@@ -50,8 +46,8 @@ struct MarkerEffective {
                                     // ceiling
     int         source_idx = -1;    // marker this value was taken from; -1
                                     // means no visible source (e.g. a
-                                    // first-marker pass resolving to the
-                                    // 1.00 default)
+                                    // first-marker pass resolving to the 1.0
+                                    // default)
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -190,7 +186,7 @@ validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
 // warp_markers_render_keep_mask above — the participation verdict's single
 // owner — dropping disabled label-definition markers (and thereby all refs
 // to them) and disabled markers generally. The inherit walk-back is applied
-// here so MarkerForRender carries a concrete tempo_cents / tempo_scale —
+// here so MarkerForRender carries a concrete tempo_base / tempo_scale —
 // same rule as resolve_inherited_tempo. Both the engine-bound render
 // pipeline and the target view's warp_frame_map recompute go through this single
 // resolver so the visible deformity matches what the engine would emit.
@@ -202,22 +198,20 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
 // false, not a label reference, and not disabled. Disabled markers are skipped
 // because the engine drops them before resolution, so a disabled marker
-// contributes no tempo downstream. Returns 100 cents (tempo 1.00) / nullopt
-// (scale) if none is found. Inheritance is a pure value copy — cents copy
-// exactly. This is the single canonical inheritance walk: resolve_warp_markers_for_render
+// contributes no tempo downstream. Returns 1.0 (tempo) / nullopt (scale) if
+// none is found. This is the single canonical inheritance walk: resolve_warp_markers_for_render
 // and compute_hover_popup_text both call it, so the popup display always
 // matches the tempo the engine resolves.
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
+double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
 std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index);
 
-// Effective (base_cents, scale, source) a marker resolves to, for
-// display/authoring callers in hover/popup and marker operation paths.
-// base_cents == 0 means "could not resolve" (mirrors
-// compute_hover_popup_text's "" guards). scale == nullopt means no typed
-// scale (treated as 1.0 by callers).
+// Effective (base, scale, source) a marker resolves to, for display/authoring
+// callers in hover/popup and marker operation paths. base
+// == 0.0 means "could not resolve" (mirrors compute_hover_popup_text's ""
+// guards). scale == nullopt means no typed scale (treated as 1.0 by callers).
 // source_idx names the marker the value is visibly taken from:
-//   owner     -> idx itself (its own tempo_cents / tempo_scale).
+//   owner     -> idx itself (its own tempo_base / tempo_scale).
 //   pass      -> the nearest non-disabled marker strictly before idx (the
 //                immediate prior marker the value is inherited from — NOT
 //                necessarily the owning marker if there's a chain of passes).
@@ -246,7 +240,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // resolution is unresolvable (base 0.0), the suffix is dropped entirely and
 // the popup shows just the resolved tempo. Label_ref markers emit
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
-// tempo value via format_tempo_cents; COMBINED_SCALE = def_scale * multiplier
+// tempo-like value, min 2 decimals; COMBINED_SCALE = def_scale * multiplier
 // when the def has a typed scale, else multiplier, printed as a scale-like
 // value at min 4 decimals with no ceiling — the "~=" marks an implied,
 // geometry-dependent value, while a pass popup's "=" marks an exact
@@ -264,7 +258,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 //
 // When `copy_payload_out` is non-null and the marker qualifies, it receives
 // the pasteable effective value in the exact text the flag editor accepts and
-// the serializer writes: format_tempo_cents(base_cents), plus
+// the serializer writes: format_value_double(base, 2), plus
 // "*"+format_value_double(scale, 4) when a scale is present (omitted for a
 // pass whose scale is semantically 1, always included for a label ref). No
 // "= "/"~= " prefix, no provenance, no copy hint — just the value. It is the

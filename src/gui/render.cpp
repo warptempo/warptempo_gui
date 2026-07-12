@@ -55,11 +55,10 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     if (m.tempo_inherits) {
         text = "pass";
     } else {
-        // Serializer forms (tempo straight from integer cents via
-        // format_tempo_cents, scale min-4 padded shortest round trip) — the
-        // flag paints the stored value at full precision, exactly the
-        // serializer's bytes.
-        text = format_tempo_cents(m.tempo_cents);
+        // Padded shortest-round-trip forms (tempo min 2 decimals, scale min
+        // 4) — the flag paints the stored value at full precision, exactly
+        // the serializer's bytes.
+        text = format_value_double(m.tempo_base, 2);
         if (m.tempo_scale.has_value()) {
             text += "*";
             text += format_value_double(*m.tempo_scale, 4);
@@ -232,8 +231,8 @@ std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int 
 
 // The single iteration-aware text composer. Returns the plain flag_text for
 // ineligible markers or when iteration mode is off; for an eligible owning
-// marker with iteration on, splices the inline bracket after the tempo and
-// before any `*scale`/`:label` (e.g. `1.23+[+1.50,-0.50]*1.2345:a.aa`). All
+// marker with iteration on, splices the inline bracket after `tempo_base` and
+// before any `*scale`/`:label` (e.g. `1.23+[+1.50, -0.50]*1.2345:a.aa`). All
 // warp flag callers route through here so display, hit-rects, and the editor
 // seed stay in sync.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
@@ -245,8 +244,8 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
     }
     // Eligible owning marker (tempo_inherits == false, no label_ref):
     // tempo, then the bracket, then optional scale and label. Values print
-    // in the same serializer forms as flag_text.
-    std::string text = format_tempo_cents(m.tempo_cents);
+    // in the same padded shortest-round-trip forms as flag_text.
+    std::string text = format_value_double(m.tempo_base, 2);
     text += format_iter_bracket_inline(m);
     if (m.tempo_scale.has_value()) {
         text += "*";

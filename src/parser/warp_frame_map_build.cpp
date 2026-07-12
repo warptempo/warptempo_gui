@@ -13,14 +13,10 @@
 namespace {
 
 double effective_tempo(const MarkerForRender& m) {
-    // The authored-tempo DSP boundary: the integer-cents tempo becomes a
-    // double HERE, at the slope product, through tempo_from_cents — the one
-    // conversion route — yielding bit-identically the double the N.NN text
-    // parse used to produce, so the map arithmetic downstream is byte-
-    // stable. tempo_scale is a typed double (nullopt means no typed scale,
-    // i.e. scale 1). A genuinely non-positive product is still rejected by
-    // the callers' tempo <= 0 checks.
-    return tempo_from_cents(m.tempo_cents) * m.tempo_scale.value_or(1.0);
+    // tempo_scale is a typed double (nullopt means no typed scale, i.e.
+    // scale 1). A genuinely non-positive product is still rejected by the
+    // callers' tempo <= 0 checks.
+    return m.tempo_base * m.tempo_scale.value_or(1.0);
 }
 
 // A label definition contributes exactly one thing to its references: the
@@ -173,7 +169,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
         m.label_ref     = g.label_ref;
 
         if (!g.label_ref.empty()) {
-            m.tempo_cents = 0;
+            m.tempo_base = 0.0;
             m.tempo_scale.reset();
         } else if (g.tempo_inherits) {
             // A pass whose immediate prior surviving marker is an enabled
@@ -188,10 +184,10 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                 return std::unexpected(std::move(v.error()));
             }
             const int gi = static_cast<int>(i);
-            m.tempo_cents = resolve_inherited_tempo(src, gi);
+            m.tempo_base  = resolve_inherited_tempo(src, gi);
             m.tempo_scale = resolve_inherited_tempo_scale(src, gi);
         } else {
-            m.tempo_cents = g.tempo_cents;
+            m.tempo_base  = g.tempo_base;
             m.tempo_scale = g.tempo_scale;
         }
         out.push_back(std::move(m));
@@ -218,11 +214,11 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // tempo drift under unrelated position edits. Pass values must stay
 // literal, grammar-exact owner fields so that freezing a pass (tempo
 // nudge, Ctrl+N) is lossless.
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
+double resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
         if (!m.tempo_inherits && m.label_ref.empty() && !m.disabled) {
-            return m.tempo_cents;
+            return m.tempo_base;
         }
     }
     // Reachable: a leading pass with no owner before it loads fine (the
@@ -231,7 +227,7 @@ int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int inde
     // render boundary refuses such a list via
     // validate_first_marker_render_grammar before the fallback can shape
     // deliverable bytes.
-    return 100;
+    return 1.0;
 }
 
 std::optional<double> resolve_inherited_tempo_scale(
@@ -256,8 +252,8 @@ MarkerEffective marker_effective(
         // idx+1 lets it return idx's resolved tempo if idx is the only
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
-        r.base_cents = resolve_inherited_tempo(mv, walk);
-        r.scale      = resolve_inherited_tempo_scale(mv, walk);
+        r.base  = resolve_inherited_tempo(mv, walk);
+        r.scale = resolve_inherited_tempo_scale(mv, walk);
         // source_idx is the immediate prior render-surviving marker — the
         // visible source of the inherited value, not necessarily the owning
         // marker if there is a chain of passes; cascade-disabled refs are
@@ -312,26 +308,22 @@ MarkerEffective marker_effective(
         if (def_src_dist <= 0.0 || lr_src_dist <= 0.0) return r;
 
         const WarpMarker& def = mv[def_idx];
-        int64_t               def_base_cents;
+        double                def_base;
         std::optional<double> def_scale;
         if (def.tempo_inherits) {
             // An inheriting definition (a pass) contributes both its resolved
             // base and its resolved scale, mirroring resolve_warp_markers_for_render
             // so the hover multiplier matches the frame map. Both resolvers walk
             // backward from def_idx-1, correctly excluding the pass itself.
-            def_base_cents = resolve_inherited_tempo(mv, def_idx);
-            def_scale      = resolve_inherited_tempo_scale(mv, def_idx);
+            def_base  = resolve_inherited_tempo(mv, def_idx);
+            def_scale = resolve_inherited_tempo_scale(mv, def_idx);
         } else {
-            def_base_cents = def.tempo_cents;
-            def_scale      = def.tempo_scale;
+            def_base  = def.tempo_base;
+            def_scale = def.tempo_scale;
         }
         const double def_scale_val = def_scale.value_or(1.0);
-        // Display-domain cents-to-double boundary: the multiplier below is
-        // a derived scale-like quantity, so the def's tempo enters its
-        // double arithmetic here, through the one conversion route.
-        const double def_base      = tempo_from_cents(def_base_cents);
         const double def_eff_tempo = def_base * def_scale_val;
-        if (def_base_cents == 0 || def_eff_tempo == 0.0) return r;
+        if (def_base == 0.0 || def_eff_tempo == 0.0) return r;
 
         // settings.scale cancels in the engine's multiplier expression:
         //   multiplier = (lr_src_dist * def_eff_tempo)
@@ -350,13 +342,13 @@ MarkerEffective marker_effective(
         // doubles with no display ceiling; the render's ref handling is
         // delta-based and never reads this.
         r.scale = multiplier;
-        r.base_cents = def_base_cents;
+        r.base       = def_base;
         r.source_idx = def_idx;
         return r;
     }
 
-    // Owner: resolves to its own tempo_cents / tempo_scale.
-    r.base_cents = m.tempo_cents;
+    // Owner: resolves to its own tempo_base / tempo_scale.
+    r.base       = m.tempo_base;
     r.scale      = m.tempo_scale;
     r.source_idx = idx;
     return r;
@@ -383,10 +375,10 @@ std::string compute_hover_popup_text(
 
     if (m.tempo_inherits) {
         const MarkerEffective eff = marker_effective(mv, idx);
-        if (eff.base_cents == 0) return "";
+        if (eff.base == 0.0) return "";
 
         std::string out = "= ";
-        out += format_tempo_cents(eff.base_cents);
+        out += format_value_double(eff.base, 2);
         if (eff.scale.has_value()) {
             out += "*";
             out += format_value_double(*eff.scale, 4);
@@ -396,7 +388,7 @@ std::string compute_hover_popup_text(
         // it can never drift from what the popup shows.
         if (copy_payload_out) *copy_payload_out = out.substr(2);
 
-        // A first-marker pass resolves to the 1.00 default and has no prior
+        // A first-marker pass resolves to the 1.0 default and has no prior
         // marker to attribute, so source_idx stays negative; the popup shows
         // just the resolved tempo ("= 1.00") without a provenance suffix. The
         // same guard covers a pass whose priors are all disabled, should that
@@ -406,20 +398,20 @@ std::string compute_hover_popup_text(
         // Provenance: the immediate prior marker's own resolved displayed
         // tempo (its base, or base*scale if it carries a typed scale) and its
         // position. The prior marker can itself be a pass or a label_ref,
-        // whose stored tempo_cents/tempo_scale are inert placeholders, so the
+        // whose stored tempo_base/tempo_scale are inert placeholders, so the
         // descriptor is built from that marker's own resolution rather than
         // its raw fields.
         const WarpMarker& src = mv[eff.source_idx];
         const MarkerEffective src_eff =
             marker_effective(mv, eff.source_idx);
-        if (src_eff.base_cents == 0) return out + kCopyHint;
+        if (src_eff.base == 0.0) return out + kCopyHint;
 
         // The visible immediate prior can be an enabled label ref only on a
         // transiently-unresolved store (at rest that arrangement is the
         // walked pass-after-label-ref defect); its combined multiplier then
         // prints in full like the ref's own popup — values carry no display
         // ceiling.
-        std::string descriptor = format_tempo_cents(src_eff.base_cents);
+        std::string descriptor = format_value_double(src_eff.base, 2);
         if (src_eff.scale.has_value()) {
             descriptor += "*";
             descriptor += format_value_double(*src_eff.scale, 4);
@@ -434,9 +426,9 @@ std::string compute_hover_popup_text(
 
     if (!m.label_ref.empty()) {
         const MarkerEffective eff = marker_effective(mv, idx);
-        if (eff.base_cents == 0) return "";
+        if (eff.base == 0.0) return "";
 
-        const std::string base_text = format_tempo_cents(eff.base_cents);
+        const std::string base_text = format_value_double(eff.base, 2);
         // "~=" marks an implied, geometry-dependent multiplier (contrast the
         // pass popup's hard "=", an exact inherited literal). The value
         // prints in full — no display ceiling at any magnitude.
@@ -505,8 +497,8 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // (tempo * marker scale) in [1/8, 8] with bounded, exact
             // anchors. The sweep batches' computed per-cell tempo mutations
             // are the one wider route: a delta can push the product to
-            // (kTempoMaxCents + kIterDeltaMaxCents) cents times kScaleMax or
-            // drive a cell tempo non-positive, and this builder
+            // (kTempoMax + kIterDeltaMax) * kScaleMax or drive a cell tempo
+            // non-positive, and this builder
             // is that path's ruled async-stderr backstop — the tempo <= 0
             // guard is exactly where such a cell refuses. The divisor check
             // and the finite/strictly-advancing anchor chokepoint in pass 2
