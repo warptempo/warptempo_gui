@@ -13,8 +13,9 @@
 // position is a whole source frame (int64_t) that widens exactly into the
 // double intermediate, matching the warp-marker
 // convention in build_warp_frame_map. Refuses an
-// enabled reset authored past the source end (strictly greater than
-// total_frames; equal is allowed), the producer-side validation layer parallel
+// enabled reset authored past the source's final frame (the wall is
+// total_frames - 1, the shared marker wall on both columns — see the check
+// in the .cpp), the producer-side validation layer parallel
 // to build_warp_frame_map's past-end check on the warp axis: a phase-reset
 // sidecar sitting beside a shorter or replaced source fails loudly here
 // instead of the reset silently falling out of the derivation's window drop
