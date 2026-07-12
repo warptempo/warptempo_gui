@@ -1014,7 +1014,8 @@ inline int64_t snap_authored_frame(double frame) {
 // The single query for "some pointer gesture is in flight" — a Ctrl marker
 // drag, a trim drag, a scroll drag, a playhead drag, or an editor text
 // drag. Consumed by the deferral and skip gates that must never fire
-// mid-gesture: the commit-validation deferral and the batch auto-open skip.
+// mid-gesture: the batch auto-open skip, the run_commit_validation deferral,
+// the enforce_target_view_validity deferral, and the on_wheel drag gate.
 // The load-bearing rationale is the "nothing pops mid-gesture" boundary and,
 // for the asynchronous batch completion specifically, that flipping the
 // displayed domain under a live drag would make the drag's release commit

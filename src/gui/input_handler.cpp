@@ -908,10 +908,11 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // scrub is included: the keyboard gate swallows every authoring chord
     // mid-scrub, so the wheel's authoring routes (Ctrl+wheel tempo, the
     // trim-end move) and viewport changes must not slip through either.
-    if (app.drag.active) return;
-    if (app.trim_drag.active) return;
-    if (app.scroll_drag.active) return;
-    if (app.playhead_drag.active) return;
+    // The editor-text drag is included: the wheel's authoring routes and
+    // viewport changes must not fire under a held text-selection drag either
+    // (a wheel can emit axis events while the primary button stays held), so
+    // this gate is the helper, all five gestures.
+    if (any_pointer_gesture_active(app)) return;
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
