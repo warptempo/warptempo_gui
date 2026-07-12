@@ -1656,7 +1656,46 @@ void GuiPlatform::on_pointer_frame() {
     } else if (frame_have_axis_) {
         delta120 = frame_axis_accum_ * kAxisToV120;
     }
-    scroll_accum_ += delta120;
+
+    // Bind the carried remainder to its routing context before growing it.
+    // Every unit inside scroll_accum_ must have been contributed under the
+    // SAME routing context (modifier chord plus hit region plus not-blocked)
+    // that the eventual on_wheel_ emission fires with, so a completed detent
+    // can never be assembled from motion the emission-time context did not
+    // own. The probe is the application's wheel_context predicate, consulted
+    // per raw frame precisely because sub-detent remainder never reaches the
+    // application's own completed-detent gate — that gate sees only whole
+    // detents, after this attribution has happened. Only frames carrying
+    // axis input consult the probe: a motion-only frame (no scroll events)
+    // neither re-probes nor clears the remainder, so the remainder is
+    // re-validated at exactly the moment new scroll input arrives, the only
+    // time it can grow or emit. Cursor drift within one hit region keeps the
+    // remainder, matching how a physical wheel behaves under drift — the key
+    // is region-granular, not per-pixel.
+    //
+    // Accepted: a remainder contributed in an accepted context, interrupted
+    // by a modal that opens and closes with NO scroll frames in between,
+    // deliberately survives — it is consumed under the same context key and
+    // no frame arrived to re-probe. The defect this guards against is
+    // cross-context attribution, not staleness.
+    if (frame_have_v120_ || frame_have_axis_) {
+        const int probe = wheel_context_probe_
+            ? wheel_context_probe_(pointer_x_, pointer_y_)
+            : 0;
+        if (probe < 0) {
+            // A blocked surface contributes nothing, and any remainder
+            // carried into a blocked context dies here.
+            scroll_accum_ = 0.0;
+        } else {
+            const int key = (probe << 3) | (mod_ctrl_ << 2) |
+                            (mod_shift_ << 1) | (mod_alt_ ? 1 : 0);
+            if (scroll_accum_ != 0.0 && key != scroll_context_key_) {
+                scroll_accum_ = 0.0;
+            }
+            scroll_context_key_ = key;
+            scroll_accum_ += delta120;
+        }
+    }
 
     // Drain the accumulated delta into a NET signed step count for this
     // frame, carrying the sub-detent remainder forward to the next frame.
@@ -2027,6 +2066,7 @@ void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = s
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }
 void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
+void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

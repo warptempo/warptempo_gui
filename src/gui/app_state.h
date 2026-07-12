@@ -1015,7 +1015,9 @@ inline int64_t snap_authored_frame(double frame) {
 // drag, a trim drag, a scroll drag, a playhead drag, or an editor text
 // drag. Consumed by the deferral and skip gates that must never fire
 // mid-gesture: the batch auto-open skip, the run_commit_validation deferral,
-// the enforce_target_view_validity deferral, and the on_wheel drag gate.
+// the enforce_target_view_validity deferral, and the wheel_context predicate
+// (on_wheel's completed-detent gate and the platform's per-frame sub-detent
+// accumulator probe both route through it).
 // The load-bearing rationale is the "nothing pops mid-gesture" boundary and,
 // for the asynchronous batch completion specifically, that flipping the
 // displayed domain under a live drag would make the drag's release commit

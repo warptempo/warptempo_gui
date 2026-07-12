@@ -882,28 +882,22 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     }
 }
 
-// Coalesced wheel entry point. The platform delivers one of these per
-// pointer frame carrying the net detent count (>= 1), instead of pumping a
-// WheelUp/WheelDown through on_button_press once per detent. The gating here
-// mirrors on_button_press's wheel-relevant guards (prompt / editor modals,
-// loading, active drags, area hit-test) so a wheel event is swallowed in
-// exactly the same situations as before; the wheel branch was identical in
-// the render-view and source-view arms of on_button_press, so a single
-// shared handler covers both.
-void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
-                               GuiInputState mods) {
-    if constexpr (kDebugPerf) {
-        app.last_input_event_time = std::chrono::steady_clock::now();
-    }
-    if (app.prompt.active) return;
+int GuiInputHandler::wheel_context(int x, int y) const {
+    // The SINGLE wheel routing predicate, shared by two surfaces that must
+    // never drift: the platform's per-frame accumulator probe (which decides
+    // whether and under what context key sub-detent scroll remainder may
+    // accumulate) and on_wheel's own completed-detent gate. Every swallow
+    // gate below is a gate on_wheel would otherwise spell inline; keeping
+    // them here means the platform never grows remainder in a context the
+    // eventual emission could not fire in.
+    //
     // Only the bottom-strip modal surfaces swallow the wheel (the settings
     // editor and the BpmBracket reuse of top_flag_editor, the same predicate
     // the keyboard gate uses). The top-strip flag editor is deliberately
     // NOT modal — commands punch through it on the keyboard, so wheel zoom,
     // Alt+wheel pan, and Ctrl+wheel authoring punch through it too.
-    if (modal_bottom_strip_editor_active()) return;
-    if (app.loading || audio.total_frames() <= 0) return;
-    // A wheel event during ANY active drag is ignored, matching
+    //
+    // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The playhead
     // scrub is included: the keyboard gate swallows every authoring chord
     // mid-scrub, so the wheel's authoring routes (Ctrl+wheel tempo, the
@@ -911,8 +905,11 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // The editor-text drag is included: the wheel's authoring routes and
     // viewport changes must not fire under a held text-selection drag either
     // (a wheel can emit axis events while the primary button stays held), so
-    // this gate is the helper, all five gestures.
-    if (any_pointer_gesture_active(app)) return;
+    // this gate is any_pointer_gesture_active, all five gestures.
+    if (app.prompt.active) return -1;
+    if (modal_bottom_strip_editor_active()) return -1;
+    if (app.loading || audio.total_frames() <= 0) return -1;
+    if (any_pointer_gesture_active(app)) return -1;
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
@@ -922,8 +919,27 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     const bool inside_top =
         x >= top.x && x < top.x + top.w &&
         y >= top.y && y < top.y + top.h;
+    if (inside_waveform) return 1;
+    if (inside_top) return 2;
+    return 0;
+}
 
-    handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt, inside_waveform, inside_top);
+// Coalesced wheel entry point. The platform delivers one of these per
+// pointer frame carrying the net detent count (>= 1), instead of pumping a
+// WheelUp/WheelDown through on_button_press once per detent. The gating —
+// prompt / editor modals, loading, active gestures, area hit-test — lives in
+// wheel_context above, the same predicate the platform's sub-detent
+// accumulator probes, so a wheel event is swallowed in exactly the same
+// situations the platform refuses to accumulate remainder in.
+void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
+                               GuiInputState mods) {
+    if constexpr (kDebugPerf) {
+        app.last_input_event_time = std::chrono::steady_clock::now();
+    }
+    const int ctx = wheel_context(x, y);
+    if (ctx < 0) return;
+    handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
+                 ctx == 1, ctx == 2);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

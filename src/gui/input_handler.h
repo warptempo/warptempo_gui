@@ -226,6 +226,13 @@ struct GuiInputHandler {
     // pointer frame (>= 1); the platform's set_on_wheel routes here.
     void on_wheel(GuiMouseButton dir, int count, int x, int y,
                   GuiInputState mods);
+
+    // The SINGLE wheel routing predicate. Returns -1 when the wheel is
+    // swallowed at (x, y), else a region code: 1 inside the waveform area,
+    // 2 inside the top strip, 0 outside both. on_wheel's completed-detent
+    // gate and the platform's per-frame sub-detent accumulator probe both
+    // consult it so the two surfaces can never drift.
+    int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // Stop all four pointer drag gestures. A marker or trim drag is stopped

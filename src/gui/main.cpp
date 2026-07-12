@@ -611,7 +611,7 @@ int main(int argc, char** argv) {
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).
 
     // The shared wheel handler (handle_wheel) is a private helper method on
-    // GuiInputHandler; on_button_press is its only caller.
+    // GuiInputHandler; GuiInputHandler::on_wheel is its only caller.
 
     // The multi-render queue runner (run_render_batch + RenderBatchResult) is a
     // private helper method on GuiInputHandler (input_handler.h); the on_key
@@ -652,6 +652,13 @@ int main(int argc, char** argv) {
     gui.set_on_wheel([&](GuiMouseButton dir, int steps, int x, int y,
                          GuiInputState mods) {
         input_handler.on_wheel(dir, steps, x, y, mods);
+    });
+
+    // The same wheel routing predicate on_wheel gates with, exposed to the
+    // platform so its per-frame accumulator binds sub-detent remainder to the
+    // context it will emit in — one predicate, two surfaces that never drift.
+    gui.set_wheel_context_probe([&](int x, int y) {
+        return input_handler.wheel_context(x, y);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

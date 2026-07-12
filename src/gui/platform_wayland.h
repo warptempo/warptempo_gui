@@ -31,6 +31,11 @@ public:
     using CloseCallback        = std::function<void()>;
     using FileDropCallback     = std::function<void(const std::string& path)>;
     using DropAcceptPredicate  = std::function<bool(int x, int y)>;
+    // Wheel routing predicate installed by main.cpp: given pointer
+    // coordinates, returns -1 (blocked) or a region code. on_pointer_frame()
+    // consults it per raw pointer frame before accumulating sub-detent
+    // scroll so remainder is bound to the routing context it will emit in.
+    using WheelContextProbe    = std::function<int(int x, int y)>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -76,6 +81,7 @@ public:
     // ruling. Application state never refuses a drop, so no state hook
     // exists.
     void set_drop_accept_predicate(DropAcceptPredicate p);
+    void set_wheel_context_probe(WheelContextProbe cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -278,6 +284,13 @@ private:
     // steps a mouse wheel produces.
     double scroll_accum_ = 0.0;
 
+    // The routing context every unit currently in scroll_accum_ was
+    // contributed under: (probe region << 3) | modifier chord bits. When a
+    // frame carrying axis input re-probes to a different key, the stale
+    // remainder is cleared before the new delta is added, so a completed
+    // detent is never assembled across a modifier or region change.
+    int    scroll_context_key_ = 0;
+
     // Per-frame scroll staging. A wl_pointer.frame may carry a value120
     // event (wheel, high-resolution) and/or a legacy wl_pointer.axis event
     // (touchpad and other continuous sources). Both handlers stage into
@@ -335,6 +348,7 @@ private:
     CloseCallback        on_close_;
     FileDropCallback     on_file_drop_;
     DropAcceptPredicate  drop_accept_;
+    WheelContextProbe    wheel_context_probe_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
