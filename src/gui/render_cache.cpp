@@ -224,12 +224,16 @@ std::vector<uint8_t> render_fingerprint(
     // scratch never reaches the engine). Positions are int64 frames widened
     // to the f64 encoding deliberately — the fingerprint bytes stay
     // identical to the ones minted when the fields were integer-valued
-    // doubles, so archival sidecars stay valid.
+    // doubles, so archival sidecars stay valid. The tempo is integer cents
+    // widened through tempo_from_cents for the same reason: the conversion
+    // is bit-identical to the double the old parse stored, so every
+    // existing entry's fingerprint still verifies and render view never
+    // invalidates the corpus.
     put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
     for (const auto& m : warp_markers) {
         put_f64(fp, static_cast<double>(m.time_frame));
         put_u8 (fp, m.tempo_inherits ? 1 : 0);
-        put_f64(fp, m.tempo_base);
+        put_f64(fp, tempo_from_cents(m.tempo_cents));
         // Optional typed scale: presence flag then the value (0.0 filler
         // when absent, so an absent scale and a hypothetical 0.0 cannot
         // collide — 0.0 is unparseable as a typed scale anyway).

@@ -48,19 +48,21 @@ struct GuiPaintHandler;
 // home is open for relocation.
 //
 // Given a span's measured duration (seconds), the user-asserted beat count
-// for that span, and a target BPM, return the (base_tempo, scale) pair the
-// engine needs so that one cell of the BPM sweep renders at exactly the
-// target tempo. base_tempo rounds to 2 decimals via banker's rounding
-// (std::nearbyint with FE_TONEAREST); scale stays full double precision
+// for that span, and a target BPM, return the (base_tempo_cents, scale)
+// pair the engine needs so that one cell of the BPM sweep renders at
+// exactly the target tempo. The derivation is a double-domain ENTRY into
+// the integer-cents tempo domain: the ratio rounds ONCE to int64 cents via
+// banker's rounding (std::nearbyint with FE_TONEAREST), is bracket-checked
+// in cents, and is assigned as cents; scale stays full double precision
 // (the shortest round-trip serializer keeps in-memory and on-disk values
 // bit-identical). The bash-script port uses an epsilon nudge before
 // rounding to work around shell-level numerics — that nudge does not apply
 // in C++ and is intentionally omitted here. The C++ port may diverge from
 // the bash script on tie cases; this is documented behavior.
 struct BaseTempoScale {
-    double base_tempo;
-    double scale;
-    double ratio;
+    int64_t base_tempo_cents;
+    double  scale;
+    double  ratio;
 };
 
 inline std::optional<BaseTempoScale> compute_base_tempo_scale(
@@ -77,25 +79,31 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     const double ratio = duration_seconds / desired_duration;
     if (!std::isfinite(ratio)) return std::nullopt;
 
-    const double base_tempo =
-        tempo_from_cents(std::nearbyint(ratio * 100.0));
-    if (!std::isfinite(base_tempo) ||
-        base_tempo == 0.0) return std::nullopt;
     // Tempo bracket (value_format.h): a derived base tempo lands in marker
     // stores and .warpmarkers sidecars exactly like a typed tempo, so an
     // out-of-bracket derivation refuses here — never clamps, which would
-    // silently mistune the span. The BPM editor commit checks the bracket's
-    // two ends through this refusal (the derivation is monotone in bpm),
-    // and the sweep's per-cell loop rejects any refused cell to stderr.
-    if (base_tempo < kTempoMin || base_tempo > kTempoMax) {
+    // silently mistune the span. The bracket check runs on the rounded
+    // cents count BEFORE the int64 cast, so a non-finite or overflowing
+    // cents value can never reach the cast (in-bracket doubles convert
+    // exactly). The BPM editor commit checks the bracket's two ends through
+    // this refusal (the derivation is monotone in bpm), and the sweep's
+    // per-cell loop rejects any refused cell to stderr.
+    const double cents_d = std::nearbyint(ratio * 100.0);
+    if (!std::isfinite(cents_d) ||
+        cents_d < static_cast<double>(kTempoMinCents) ||
+        cents_d > static_cast<double>(kTempoMaxCents)) {
         return std::nullopt;
     }
+    const int64_t base_tempo_cents = static_cast<int64_t>(cents_d);
 
     // Full-double derived scale, no decimal quantization: the value
     // serializer is shortest round-trip (value_format.h), so the exact
     // ratio / base_tempo survives the .settings write bit-identically, so
     // the in-memory value and the on-disk text agree with no decimal grid.
-    const double scale = ratio / base_tempo;
+    // tempo_from_cents here is the derivation's own cents-to-double
+    // boundary — the divisor is bit-identical to the double the cell
+    // sidecar's N.NN spelling parses to.
+    const double scale = ratio / tempo_from_cents(base_tempo_cents);
     if (!std::isfinite(scale)) return std::nullopt;
     // Scale bracket (value_format.h): the derived scale is stamped into the
     // cell's .settings exactly like the derived base tempo is stamped into
@@ -104,7 +112,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     // GUI could never author.
     if (scale < kScaleMin || scale > kScaleMax) return std::nullopt;
 
-    return BaseTempoScale{base_tempo, scale, ratio};
+    return BaseTempoScale{base_tempo_cents, scale, ratio};
 }
 
 // -- Target-view entry validity predicate --------------------------------

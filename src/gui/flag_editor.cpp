@@ -25,10 +25,13 @@
 
 namespace {
 
-// Strict signed two-decimal parse (sign, >=1 integer digit, '.',
-// exactly two fraction digits). Leading/trailing ASCII whitespace is
-// trimmed first so the bracket's `, ` separator round-trips.
-bool parse_signed_2dp(const std::string& raw, double& out) {
+// Strict signed two-decimal parse straight to integer cents (sign, >=1
+// integer digit, '.', exactly two fraction digits; direct digit-to-cents
+// conversion — no strtod, no doubles). Leading/trailing ASCII whitespace
+// is trimmed first so the bracket's `, ` separator round-trips. A digit
+// run whose cents would overflow int64 is refused (unreachable under the
+// caller's delta bracket; adversarial typing earns the plain refusal).
+bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
     size_t a = 0, b = raw.size();
     while (a < b && std::isspace(static_cast<unsigned char>(raw[a]))) ++a;
     while (b > a && std::isspace(static_cast<unsigned char>(raw[b - 1]))) --b;
@@ -43,24 +46,33 @@ bool parse_signed_2dp(const std::string& raw, double& out) {
         if (i == dot) continue;
         if (!std::isdigit(static_cast<unsigned char>(v[i]))) return false;
     }
-    try { out = std::stod(v); }
-    catch (...) { return false; }
+    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+    int64_t whole = 0;
+    for (size_t i = 1; i < dot; ++i) {
+        if (whole > (kMax - 9) / 10) return false;       // overflow refused
+        whole = whole * 10 + (v[i] - '0');
+    }
+    if (whole > (kMax - 99) / 100) return false;         // overflow refused
+    const int64_t mag =
+        whole * 100 + (v[dot + 1] - '0') * 10 + (v[dot + 2] - '0');
+    out = (v[0] == '-') ? -mag : mag;
     return true;
 }
 
 // Extract the inline iteration bracket from a flag payload edited
 // under the widened grammar. Searches for the `+[` segment after the
 // tempo token; on match, removes `+[ ... ]` from `payload` and writes the
-// parsed bounds (lo <= hi, each within [-kIterDeltaMax, kIterDeltaMax])
-// to `lo_out`/`hi_out`. The all-zero blank (`+[+0.00, +0.00]`) and an
-// absent bracket both yield NaN (clear). The FlagPayload
-// tempo/scale/label vocabulary never produces a `+`, so `+[` is an
-// unambiguous marker. Returns false on a malformed bracket (caller
-// red-flashes); true otherwise.
-bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) {
-    const double kNaN = std::numeric_limits<double>::quiet_NaN();
-    lo_out = kNaN;
-    hi_out = kNaN;
+// parsed bounds in integer cents (lo <= hi, each within
+// [-kIterDeltaMaxCents, kIterDeltaMaxCents]) to `lo_out`/`hi_out`. The
+// all-zero blank (`+[+0.00, +0.00]`) and an absent bracket both yield
+// nullopt (clear). The FlagPayload tempo/scale/label vocabulary never
+// produces a `+`, so `+[` is an unambiguous marker. Returns false on a
+// malformed bracket (caller red-flashes); true otherwise.
+bool extract_iter_bracket(std::string& payload,
+                          std::optional<int64_t>& lo_out,
+                          std::optional<int64_t>& hi_out) {
+    lo_out.reset();
+    hi_out.reset();
     const auto open = payload.find("+[");
     if (open == std::string::npos) return true;          // absent → clear
     const auto close = payload.find(']', open + 2);
@@ -68,20 +80,20 @@ bool extract_iter_bracket(std::string& payload, double& lo_out, double& hi_out) 
     const std::string inner = payload.substr(open + 2, close - (open + 2));
     const auto comma = inner.find(',');
     if (comma == std::string::npos) return false;
-    double lo, hi;
-    if (!parse_signed_2dp(inner.substr(0, comma), lo)) return false;
-    if (!parse_signed_2dp(inner.substr(comma + 1), hi)) return false;
+    int64_t lo = 0, hi = 0;
+    if (!parse_signed_2dp_cents(inner.substr(0, comma), lo)) return false;
+    if (!parse_signed_2dp_cents(inner.substr(comma + 1), hi)) return false;
     if (lo > hi) return false;
-    // Iteration deltas live in [-kIterDeltaMax, kIterDeltaMax]
-    // (value_format.h). Bounding here also keeps the sweep's
-    // lround(delta * 100.0) cent products tiny, far from the range where
-    // an overflowing lround would return an unspecified value.
-    if (std::abs(lo) > kIterDeltaMax || std::abs(hi) > kIterDeltaMax) {
+    // Iteration deltas live in [-kIterDeltaMaxCents, kIterDeltaMaxCents]
+    // (value_format.h) — exact integer compares, like every tempo-domain
+    // bracket.
+    if (lo < -kIterDeltaMaxCents || lo > kIterDeltaMaxCents ||
+        hi < -kIterDeltaMaxCents || hi > kIterDeltaMaxCents) {
         return false;
     }
     payload.erase(open, close - open + 1);
     // All-zero blank is the cleared state, not a zero-width sweep.
-    if (lo != 0.0 || hi != 0.0) {
+    if (lo != 0 || hi != 0) {
         lo_out = lo;
         hi_out = hi;
     }
@@ -252,14 +264,14 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 
     // In iteration mode the buffer may carry the inline bracket
-    // after `tempo_base`. Strip and capture it here (iteration-mode
-    // wrapper) so parse_single_canonical_line stays bracket-unaware. NaN
-    // bounds mean "blank/clear"; a malformed bracket red-flashes without
-    // touching the marker.
+    // after the tempo. Strip and capture it here (iteration-mode
+    // wrapper) so parse_single_canonical_line stays bracket-unaware.
+    // nullopt bounds mean "blank/clear"; a malformed bracket red-flashes
+    // without touching the marker.
     const bool iter_grammar = app.top_flag_editor.iter_grammar;
     std::string payload = app.top_flag_editor.pending;
-    double iter_lo = std::numeric_limits<double>::quiet_NaN();
-    double iter_hi = std::numeric_limits<double>::quiet_NaN();
+    std::optional<int64_t> iter_lo;
+    std::optional<int64_t> iter_hi;
     if (iter_grammar) {
         if (!extract_iter_bracket(payload, iter_lo, iter_hi)) {
             app.top_flag_editor.red = true;
@@ -322,35 +334,38 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // Iteration cell-range gate. Every sweep cell mutates this owner's
-    // tempo_base to tempo_base + delta (input_key_dispatch.cpp), and the
-    // deltas run from iter_start to iter_end inclusive, so the two bracket
-    // endpoints bound every cell. If the committed base tempo plus either
-    // bound lands outside the tempo bracket [kTempoMin, kTempoMax], some cell
-    // would render a marker whose tempo cannot re-parse at a later promote
-    // (the strict sidecar parse), so the bracket is refused at its own input
-    // surface — the same red-flash a malformed bracket earns. Per-cell tempos
-    // are computed values guarded only by build_warp_frame_map's refusal on
-    // the async render's stderr backstop; but the bracket TYPED here is
-    // authored input, so an authored bracket whose cells cannot all rest
-    // inside the tempo bracket is caught now. A later tempo change under a
-    // live bracket is deliberately NOT re-gated (iter state is session-only;
-    // build_warp_frame_map's refusals and the strict sidecar parse at promote
-    // remain the backstops). The cleared/blank bracket (NaN bounds) and any
-    // marker the sweep would skip (a pass or label_ref, ineligible per
-    // iter_popup_eligible_marker — the base the sweep reads is tempo_base of
-    // an owning numeric marker) carry no cells, so both skip the check.
-    if (iter_grammar && !std::isnan(iter_lo) && !std::isnan(iter_hi) &&
+    // Iteration cell-range gate, an exact integer-cents compare. Every
+    // sweep cell mutates this owner's tempo_cents to tempo_cents + delta
+    // (input_key_dispatch.cpp), and the deltas run from iter_start_cents to
+    // iter_end_cents inclusive, so the two bracket endpoints bound every
+    // cell. If the committed base tempo plus either bound lands outside the
+    // tempo bracket [kTempoMinCents, kTempoMaxCents], some cell would
+    // render a marker whose tempo cannot re-parse at a later promote (the
+    // strict sidecar parse), so the bracket is refused at its own input
+    // surface — the same red-flash a malformed bracket earns. Per-cell
+    // tempos are computed values guarded only by build_warp_frame_map's
+    // refusal on the async render's stderr backstop; but the bracket TYPED
+    // here is authored input, so an authored bracket whose cells cannot all
+    // rest inside the tempo bracket is caught now. A later tempo change
+    // under a live bracket is deliberately NOT re-gated (iter state is
+    // session-only; build_warp_frame_map's refusals and the strict promote
+    // parse remain the backstops). The cleared/blank bracket (nullopt
+    // bounds) and any marker the sweep would skip (a pass or label_ref,
+    // ineligible per iter_popup_eligible_marker — the base the sweep reads
+    // is tempo_cents of an owning numeric marker) carry no cells, so both
+    // skip the check.
+    if (iter_grammar && iter_lo.has_value() && iter_hi.has_value() &&
         !parsed.tempo_inherits && parsed.label_ref.empty()) {
-        const double base = parsed.tempo_base;
-        if (base + iter_lo < kTempoMin || base + iter_hi > kTempoMax) {
+        const int64_t base_cents = parsed.tempo_cents;
+        if (base_cents + *iter_lo < kTempoMinCents ||
+            base_cents + *iter_hi > kTempoMaxCents) {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
             std::fprintf(stderr,
                 "warptempo_gui: edit rejected: iteration bracket cells "
                 "leave the tempo bracket [%s, %s]: %s\n",
-                format_value_double(kTempoMin, 2).c_str(),
-                format_value_double(kTempoMax, 2).c_str(),
+                format_tempo_cents(kTempoMinCents).c_str(),
+                format_tempo_cents(kTempoMaxCents).c_str(),
                 app.top_flag_editor.pending.c_str());
             return;
         }
@@ -379,19 +394,19 @@ void GuiFlagEditor::commit_top_flag_edit() {
     const int64_t preserved_time = m.time_frame;
 
     // Cache-free: typing `pass` writes inert defaults into
-    // tempo_base/tempo_scale; typing an explicit tempo writes the
+    // tempo_cents/tempo_scale; typing an explicit tempo writes the
     // owned value. label_def is independent of tempo source —
     // `pass:LABEL` carries a def at this position while inheriting
     // the tempo from a prior owning marker.
     if (parsed.tempo_inherits) {
         m.tempo_inherits = true;
-        m.tempo_base     = 1.0;
+        m.tempo_cents    = 100;
         m.tempo_scale.reset();
         m.label_def      = parsed.label_def;
         m.label_ref.clear();
     } else {
         m.tempo_inherits = false;
-        m.tempo_base     = parsed.tempo_base;
+        m.tempo_cents    = parsed.tempo_cents;
         m.tempo_scale    = parsed.tempo_scale;
         m.label_def      = parsed.label_def;
         m.label_ref      = parsed.label_ref;
@@ -405,7 +420,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // every other marker that referenced old_def gets its ref updated to
     // the new name. Removal (new_def empty) deliberately does NOT
     // cascade: clearing a ref would leave that marker serializing as an
-    // owning 0.00 line (a pure ref parses with tempo_base 0.0), which the
+    // owning 0.00 line (a pure ref parses with tempo_cents 0), which the
     // parser rejects on reload. Dangling refs, by contrast, load fine and
     // are refused at the render boundary — so the refs are left pointing
     // at the removed name.
@@ -420,38 +435,36 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    // Apply the parsed iteration bracket. Session-only; NaN
+    // Apply the parsed iteration bracket. Session-only; nullopt
     // bounds clear the sweep. The accepted live-vector assignment bumps
     // the warp generation, so the flag cache repaints the bracket
     // regardless of whether the canonical fields moved.
     if (iter_grammar) {
-        m.iter_start = iter_lo;
-        m.iter_end   = iter_hi;
+        m.iter_start_cents = iter_lo;
+        m.iter_end_cents   = iter_hi;
     }
 
     // Did any serialized field change? Cascade renames imply a label_def
     // change, already covered by the field compare below.
     const bool canonical_changed =
         m.tempo_inherits != before.tempo_inherits ||
-        m.tempo_base     != before.tempo_base ||
+        m.tempo_cents    != before.tempo_cents ||
         m.tempo_scale    != before.tempo_scale ||
         m.label_def      != before.label_def ||
         m.label_ref      != before.label_ref ||
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    // Did the session-only iteration bracket move? NaN-aware: two bounds
-    // are equal when both are NaN or when they compare equal under ==.
-    // A bracket-only edit does not mark dirty (iter values are session-
-    // only), but it is still a real undoable change — the snapshot
-    // restores the iter values — so its push must not be skipped.
-    auto iter_bound_equal = [](double a, double b) {
-        return (std::isnan(a) && std::isnan(b)) || a == b;
-    };
+    // Did the session-only iteration bracket move? optional<int64_t>
+    // equality: two bounds are equal when both are nullopt or when the
+    // held cents compare equal. A bracket-only edit does not mark dirty
+    // (iter values are session-only), but it is still a real undoable
+    // change — the snapshot restores the iter values — so its push must
+    // not be skipped.
     const bool bracket_changed =
         iter_grammar &&
-        (!iter_bound_equal(iter_lo, before.iter_start) ||
-         !iter_bound_equal(iter_hi, before.iter_end));
+        (iter_lo != before.iter_start_cents ||
+         iter_hi != before.iter_end_cents);
 
     // An undo entry represents a state change, not a gesture. A commit
     // that moves neither a canonical field nor the bracket is a no-op:
@@ -504,7 +517,7 @@ void GuiFlagEditor::wipe_iter_state() {
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {
-        if (!std::isnan(m.iter_start) || !std::isnan(m.iter_end)) {
+        if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value()) {
             any = true;
             break;
         }
@@ -513,8 +526,8 @@ void GuiFlagEditor::wipe_iter_state() {
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int hint_last = app.last_selected_marker;
     for (auto& m : mv) {
-        m.iter_start = std::numeric_limits<double>::quiet_NaN();
-        m.iter_end   = std::numeric_limits<double>::quiet_NaN();
+        m.iter_start_cents.reset();
+        m.iter_end_cents.reset();
     }
     undo.push_undo_warp(std::move(pre_state), hint_last);
 }
@@ -601,7 +614,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
     // tempo into its cell markers and a derived scale into its cell
     // .settings, and the derivation (compute_base_tempo_scale) is monotone
     // in bpm, so the bracket ends bound every cell: if either endpoint bpm
-    // refuses — the derived base tempo lands outside [kTempoMin, kTempoMax]
+    // refuses — the derived base tempo lands outside [kTempoMinCents,
+    // kTempoMaxCents]
     // or the derived scale outside [kScaleMin, kScaleMax] — the commit
     // red-flashes like any invalid editor value. Never clamp: a clamped
     // derivation would silently mistune the span. Gated on a well-formed
@@ -625,8 +639,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
                     "warptempo_gui: bpm edit rejected: derived tempo or "
                     "scale outside its bracket (tempo [%s, %s], scale "
                     "[%s, %s]): %s\n",
-                    format_value_double(kTempoMin, 2).c_str(),
-                    format_value_double(kTempoMax, 2).c_str(),
+                    format_tempo_cents(kTempoMinCents).c_str(),
+                    format_tempo_cents(kTempoMaxCents).c_str(),
                     format_value_double(kScaleMin, 4).c_str(),
                     format_value_double(kScaleMax, 4).c_str(),
                     s.c_str());

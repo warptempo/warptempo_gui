@@ -21,10 +21,13 @@ struct GuiWarpMarker : WarpMarker {
     // Iteration mode. Session-only render-parameter scratchpad: never
     // serialized, lost on app close, populated and edited inline via the
     // iteration popup that appears above each owning marker's flag rect
-    // when iteration mode is on. NaN means "blank" (popup shows []); when
-    // set, both are non-NaN and iter_start <= iter_end.
-    double iter_start = std::numeric_limits<double>::quiet_NaN();
-    double iter_end   = std::numeric_limits<double>::quiet_NaN();
+    // when iteration mode is on. Signed tempo deltas in integer cents —
+    // the same integer-cents domain the tempo itself lives in, so the
+    // sweep's per-cell base + delta is plain integer addition. nullopt
+    // means "blank" (popup shows []); when set, both are set and
+    // iter_start_cents <= iter_end_cents.
+    std::optional<int64_t> iter_start_cents;
+    std::optional<int64_t> iter_end_cents;
 
     // BPM mode. Session-only authoring state for basetempo-scale
     // sweeps; never serialized, lost on app close. The mode is a two-marker
@@ -137,20 +140,37 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 
+// Signed tempo-delta cents -> the explicit-sign two-decimal text ("+1.50",
+// "-0.50", "+0.00"). The signed session-only sibling of format_tempo_cents
+// (value_format.h): iter deltas live in integer cents, so their display
+// text formats directly from cents with no double round-trip. Used by the
+// inline iter bracket below and the iteration sweep's delta CSV filenames.
+inline std::string format_signed_delta_cents(int64_t cents) {
+    std::string s(1, cents < 0 ? '-' : '+');
+    const int64_t a = cents < 0 ? -cents : cents;
+    s += std::to_string(a / 100);
+    s += '.';
+    s += static_cast<char>('0' + (a % 100) / 10);
+    s += static_cast<char>('0' + a % 10);
+    return s;
+}
+
 // Iteration mode: format the inline bracket segment spliced into
-// an eligible flag after `tempo_base`. The leading `+` is the
-// "relative to base" cue; the blank (both iter values NaN) renders as the
-// zero-filled `+[+0.00,+0.00]`, set values as `+[%+0.2f,%+0.2f]` (no
-// space after the comma, so the display form matches the typeable form).
-// This is the single locked display form.
+// an eligible flag after the tempo. The leading `+` is the
+// "relative to base" cue; the blank (both iter values nullopt) renders as
+// the zero-filled `+[+0.00,+0.00]`, set values as the same signed
+// two-decimal form (no space after the comma, so the display form matches
+// the typeable form). This is the single locked display form.
 inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
-    if (std::isnan(m.iter_start) || std::isnan(m.iter_end)) {
+    if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
         return "+[+0.00,+0.00]";
     }
-    char buf[48];
-    std::snprintf(buf, sizeof(buf), "+[%+0.2f,%+0.2f]",
-                  m.iter_start, m.iter_end);
-    return buf;
+    std::string out = "+[";
+    out += format_signed_delta_cents(*m.iter_start_cents);
+    out += ',';
+    out += format_signed_delta_cents(*m.iter_end_cents);
+    out += ']';
+    return out;
 }
 
 // Iteration mode: an owning marker (tempo_inherits=false AND no
