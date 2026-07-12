@@ -188,13 +188,11 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // !render_view.enabled) and are restored on exit. Ctrl+Alt+C is now
         // the only forced reset.
         app.render_view.enabled    = true;
-        // The entry's persisted W/P mode is applied per-entry at load
-        // (load_render_view_at reads it from the entry's .settings before the
-        // stat-gated selection restore); the global active_markers_view flag
-        // is the live carrier of the mode between entries. Toggle-on is a
-        // render-view ENTRY: the browse position inherits from the live
-        // view (directly from target view, through the S→T toggle's anchor
-        // math from source view).
+        // The W/P mode is global: active_markers_view carries across all
+        // views and is never applied per entry, so the mode the user is in
+        // stays the mode. Toggle-on is a render-view ENTRY: the browse
+        // position inherits from the live view (directly from target view,
+        // through the S→T toggle's anchor math from source view).
         if (!render_view.load_render_view_at(target, /*entering=*/true)) {
             app.render_view.enabled = false;
             app.render_view.list.clear();

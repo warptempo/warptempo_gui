@@ -115,8 +115,10 @@ GuiRenderView::enumerate_render_view_list() {
 // applies the persisted viewport/zoom/playhead: the browse position
 // inherits from the live session at render-view entry and carries over
 // unchanged on entry-to-entry navigation (the inheritance block in
-// load_render_view_at). The persisted active_markers_view (W/P mode) IS
-// still applied per entry.
+// load_render_view_at). The persisted active_markers_view (W/P mode) is
+// written the same way but NOT applied per entry either: the W/P mode is
+// global, carried across all views, so the mode the user is in stays the
+// mode.
 
 std::filesystem::path GuiRenderView::settings_path(
         const AppState::RenderViewEntry& e) {
@@ -125,7 +127,8 @@ std::filesystem::path GuiRenderView::settings_path(
 
 // Atomic view-state update of the entry's .settings (every other key is
 // preserved from the strict parse). The browsed active_markers_view rides
-// along so the entry restores the W/P mode it was last viewed in.
+// along for schema stability — it is never applied per entry, since the
+// W/P mode is global and carries across all views.
 // Failures are non-fatal here — logged once by the underlying helper and
 // otherwise discarded (a refused autosave costs the persisted view state,
 // never the session).
@@ -582,10 +585,12 @@ bool GuiRenderView::load_render_view_at(int index, bool entering) {
 
     // Snapshot the live authoring playhead/viewport/zoom into the
     // active tab's slot on the FIRST entry of this render-view session
-    // (no entry buffer resident yet). restore_source_view reads it back
-    // on render-view exit so the user lands where they left the source
-    // view rather than at sample 0. The audio object itself is untouched
-    // — it stays the source.
+    // (no entry buffer resident yet). This syncs the leaving tab's slot,
+    // which tab switching relies on; restore_source_view reads back the
+    // SELECTION indexes from it on exit. The browse POSITION is no longer
+    // restored from it — render-view exit carries the browsed position out
+    // (directly to target view, inverse-mapped to source view). The audio
+    // object itself is untouched — it stays the source.
     if (entry_samples.empty()) {
         active_views.refresh_active_tab_view_from_app();
     }
@@ -625,20 +630,19 @@ bool GuiRenderView::load_render_view_at(int index, bool entering) {
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
-    // Apply the entry's persisted W/P mode BEFORE the stat-gated selection
-    // restore below, so the matching-mode slot the restore reads is the
-    // mode the selection was stashed under (autosave persists the browsed
-    // mode at the same trigger the stash runs). Absent key applies the
-    // struct default 'W'. The other .settings keys — the engine block,
-    // playback_speed, follow, font_size, active_audio_view, and the browse
-    // view keys (viewport/zoom/playhead) — are NOT applied at browse time:
+    // The W/P marker mode (active_markers_view) is GLOBAL: it carries
+    // across every view — source, target, and render — exactly as it
+    // carries between source and target, so the entry's persisted
+    // active_markers_view is NOT applied: the mode the user is in stays the
+    // mode. The stat-gated selection restore below reads the live
+    // app.active_markers_view (the global mode) to pick its slot, and the
+    // leave-time stash writes that same global mode's slot, so the two
+    // agree. The other .settings keys are likewise not applied at browse
+    // time — the engine block, playback_speed, follow, font_size,
+    // active_audio_view, and the browse view keys (viewport/zoom/playhead):
     // the engine-and-prefs set is the commit payload, adopted only by
     // Ctrl+Alt+C, and the browse position inherits from the live session
-    // (the inheritance block below) instead of restoring the persisted
-    // keys. active_markers_view is the deliberate contrast: it IS applied
-    // per entry, so each entry reopens in the W/P mode it was last
-    // browsed under.
-    app.active_markers_view = settings->active_markers_view;
+    // (the inheritance block below).
 
     // Stat-tuple-gated selection restore. A matching persisted tuple
     // (non-zero, equal to current) means the wav hasn't changed since stash;
@@ -652,10 +656,12 @@ bool GuiRenderView::load_render_view_at(int index, bool entering) {
         cur_stat.first  == e.persisted_size &&
         cur_stat.second == e.persisted_mtime;
     if (stat_match) {
-        // Load only the matching-mode slot
-        // into the live pair. The OTHER-mode slot stays on state
-        // and gets swapped in if mode flips during this render-
-        // view session via switch_active_markers_view_to.
+        // Load the slot matching the CURRENT global W/P mode into the live
+        // pair (entry.state carries both mode slots; the leave-time stash
+        // writes the current mode's slot, so this is the slot last stashed).
+        // The OTHER-mode slot stays on state and gets swapped in if mode
+        // flips during this render-view session via
+        // switch_active_markers_view_to.
         if (app.active_markers_view == 'P') {
             app.selected_markers     = e.state.phase_reset_selected;
             app.last_selected_marker = e.state.phase_reset_last_selected;
@@ -788,12 +794,13 @@ bool GuiRenderView::load_render_view_at(int index, bool entering) {
     return true;
 }
 
-// Render-view exit cleanup: restores the source VIEW — the stashed
-// authoring viewport/zoom/playhead and selection — rebinds playback to
-// the source samples, and frees the entry buffer. The audio object never
-// moved (it is invariantly the source), so there is no buffer to restore,
-// only the view state and the playback bind. No-op when no entry buffer
-// is resident (render view never displayed an entry).
+// Render-view exit cleanup: carries the browsed position OUT to the
+// authoring view (directly to target view, inverse-mapped to source
+// view), restores the stashed selection, rebinds playback to the source
+// samples, and frees the entry buffer. The audio object never moved (it
+// is invariantly the source), so there is no buffer to restore, only the
+// view state and the playback bind. No-op when no entry buffer is
+// resident (render view never displayed an entry).
 void GuiRenderView::restore_source_view() {
     // Leaving render view: clear the flag BEFORE the synchronous waveform
     // kick at the end of this function. kick_waveform_sync resolves to
@@ -821,17 +828,74 @@ void GuiRenderView::restore_source_view() {
     // moves, so it is explicit here).
     app.audio_generation++;
 
-    // Read back the active tab's snapshot saved when render-view was
-    // first entered. The Tab key is gated out of render-view's input
-    // allowlist, so app.active_tab_view is the same letter the snapshot
-    // was written under.
+    // Render view is just another view: the browsed position carries OUT
+    // on exit, with domain translation where the axes differ, symmetric
+    // with the carry-IN at render-view entry (load_render_view_at's
+    // inheritance block). Tabs are the only axis that does not carry.
+    //   - Exit to TARGET view: the render display axis and the target axis
+    //     are both target axes, so the live viewport/zoom/playhead simply
+    //     STAY — the ruled direct carry even when the live map and the
+    //     snapshot map differ. Any out-of-domain value is owned by the
+    //     runtime clamps at first use (move_playhead_to, and
+    //     clamp_viewport_start below — the restore-site convention).
+    //   - Exit to SOURCE view: inverse-translate the way the T->S toggle
+    //     does (GuiTargetRender::leave_target_view), mirrored against the
+    //     SNAPSHOT map. The snapshot context is still installed here: every
+    //     restore_source_view caller clears it AFTER this returns (the r
+    //     toggle-off, exit_render_view_and_clear, and the Ctrl+Alt+C
+    //     commit all order clear_snapshot_context after restore_source_view),
+    //     so snapshot_warp_frame_map / snapshot_display_total are alive.
+    // Recorded asymmetry versus the T->S toggle: that toggle re-expresses
+    // BOTH tabs because both live on the one flipping global axis; a
+    // render-view exit moves only the CURRENT tab's live position — tabs
+    // are independent, and the other tab's position is its own.
+    if (app.active_audio_view == 'S') {
+        // Pre-exit samples-per-pixel against the RENDER domain explicitly:
+        // enabled was cleared at the top of this function, so
+        // current_samples_per_pixel would already read the source domain —
+        // this needs the domain the user was browsing (the snapshot display
+        // total). Mirrors load_render_view_at's explicit pre-entry spp.
+        const GuiRect area = waveform_area(app);
+        const double cur_spp = samples_per_pixel_at(
+            app.zoom_level, area.w,
+            app.render_view.snapshot_display_total, audio.sample_rate());
+        const double ph_px =
+            (cur_spp > 0.0)
+            ? (static_cast<double>(app.playhead_cursor_sample -
+                                   app.viewport_start_sample) / cur_spp)
+            : 0.0;
+        // Inverse-map the playhead through the snapshot map back to the
+        // source axis (map_target_to_source, std::nearbyint), then clamp to
+        // [0, source total - 1]: a nearbyint of an in-domain target playhead
+        // can land exactly on the source total, and move_playhead_to holds
+        // the [0, total - 1] ruling. The same shape leave_target_view's
+        // to_source lambda uses.
+        const size_t q = static_cast<size_t>(
+            app.playhead_cursor_sample < 0 ? 0 : app.playhead_cursor_sample);
+        int64_t new_playhead = static_cast<int64_t>(std::nearbyint(
+            map_target_to_source(
+                q, app.render_view.snapshot_warp_frame_map)));
+        const int64_t src_total = audio.total_frames();
+        if (new_playhead < 0) new_playhead = 0;
+        if (src_total > 0 && new_playhead >= src_total) {
+            new_playhead = src_total - 1;
+        }
+        app.playhead_cursor_sample = new_playhead;
+        // zoom_level preserved across the exit; the post-exit spp reads the
+        // source domain (enabled cleared, active_audio_view == 'S'), so the
+        // playhead keeps its screen column across the domain change.
+        const double new_spp = current_samples_per_pixel(app, audio);
+        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
+            static_cast<double>(new_playhead) - ph_px * new_spp));
+    }
+    // Exit to TARGET view: viewport/zoom/playhead are left exactly as the
+    // user browsed them — both axes are target axes.
+
+    // The active tab slot still owns the SELECTION indexes stashed at
+    // render-view entry (position is what now carries out instead). The
+    // Tab key is gated out of render-view's input allowlist, so
+    // app.active_tab_view is the same letter the snapshot was written under.
     const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
-    app.viewport_start_sample = t.viewport_start_sample;
-    app.zoom_level            = t.zoom_level;
-    // Deliberately unclamped: restores the authoring snapshot stashed at
-    // render-view entry — a previously-resting value in the authoring
-    // domain (move_playhead_to owns the value at first use).
-    app.playhead_cursor_sample       = t.playhead_cursor_sample;
     // Load the matching-mode slot into the
     // live pair. Live pair held render-view selection while
     // render-view was active; restoring source-view requires

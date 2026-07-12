@@ -1113,8 +1113,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // Landing-view capture, BEFORE any exit/clear mutates its sources:
         // the browsed zoom / viewport / playhead are the live session
         // fields (render view browses through the global view fields).
-        // restore_source_view below overwrites all three, so they are
-        // latched here, ahead of the first mutation.
+        // restore_source_view below runs its exit push-out over all three
+        // (the S arm inverse-maps them, the T arm leaves them live), so they
+        // are latched here, ahead of the first mutation, and re-applied
+        // verbatim after the exit — the push-out never changes the commit's
+        // end state, which lands at the browsed position in target view.
         const int     browsed_zoom     = app.zoom_level;
         const int64_t browsed_viewport = app.viewport_start_sample;
         const int64_t browsed_playhead = app.playhead_cursor_sample;

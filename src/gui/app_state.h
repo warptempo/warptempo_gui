@@ -892,15 +892,18 @@ struct AppState {
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
 
         // Per-entry persisted view-state across render-view
-        // exit/enter and batch-nav. Selection + sub-mode are valid only
-        // when the wav still has the same (size, mtime) as when stashed;
-        // mismatch on reload drops them silently. The viewport/zoom/
-        // playhead fields on `state` are unused — render-view's
-        // viewport state flows through the live AppState fields; the
-        // per-entry .settings autosave still writes the browse keys
-        // (schema stability), but the entry loader never applies them —
-        // the browse position inherits from the live session at entry
-        // and carries over unchanged on navigation.
+        // exit/enter and batch-nav. The stashed marker selection is valid
+        // only when the wav still has the same (size, mtime) as when
+        // stashed; mismatch on reload drops it silently. Both mode slots
+        // (warp + phase reset) ride on `state`; the loader restores the one
+        // matching the live GLOBAL W/P mode, which is never stashed per
+        // entry. The viewport/zoom/playhead fields on `state` are unused —
+        // render-view's viewport state flows through the live AppState
+        // fields; the per-entry .settings autosave still writes the browse
+        // keys and the W/P mode (schema stability), but the entry loader
+        // never applies them — the browse position inherits from the live
+        // session at entry and carries over unchanged on navigation, and the
+        // W/P mode stays global.
         ViewState state;
 
         // Stat-tuple key for selection validity. Captured when stashed,

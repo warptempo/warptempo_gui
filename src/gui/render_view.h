@@ -18,9 +18,10 @@ struct GuiTargetRender;
 // Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
 // the per-entry .settings snapshot (the view-state autosave — the persisted
-// browse keys are written for schema stability but never applied, since the
-// browse position inherits from the live session; the W/P mode IS applied
-// per entry — plus the strict entry load: markers, engine scale, recipe trim),
+// browse keys and the W/P mode are written for schema stability but never
+// applied, since the browse position inherits from the live session and the
+// W/P mode is global across all views — plus the strict entry load:
+// markers, engine scale, recipe trim),
 // the per-entry selection stash with stat-tuple gating, the entry-audio
 // decode-and-bind path, and the source-view restore on exit.
 // clear_hover_popup is reached through viewport;
