@@ -1195,7 +1195,11 @@ bool popup_eligible_marker(const AppState& app, int idx);
 // anything was added. Shared by the source/target and render-view playhead-drag
 // Shift sweeps (input_handler.cpp / input_render_view.cpp); templated on the
 // vector element type because the two stores hold different marker types that
-// both expose time_frame. O(log n + added) per call.
+// both expose time_frame. In render view the inclusive source interval can
+// contain a marker whose rounded window-axis image is the exclusive end (the
+// inverse of the last displayed frame can round to the trim-end source frame),
+// so add() applies the same explicit window-membership rule as hit-test and
+// Tab. O(log n + scanned) per call.
 template <typename MarkerVec>
 bool sweep_select_interval(AppState& app, const MarkerVec& markers,
                            double lo_t, double hi_t, bool forward,
@@ -1216,6 +1220,10 @@ bool sweep_select_interval(AppState& app, const MarkerVec& markers,
     bool changed = false;
     auto add = [&](int idx) {
         if (idx == press_marker_idx) return;
+        if (app.render_view.enabled &&
+            !render_view_position_in_window(app, markers[idx].time_frame)) {
+            return;
+        }
         const bool newly = app.selected_markers.insert(idx).second;
         if (newly || app.last_selected_marker != idx) changed = true;
         app.last_selected_marker = idx;

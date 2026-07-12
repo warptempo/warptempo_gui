@@ -500,12 +500,10 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
             // endpoints through the display context (inverse-map through
             // the target-shifted snapshot map) — the same shape source
             // view's target arm uses — so the interval compare runs in the
-            // stores' own domain. Out-of-window markers cannot be swept
-            // without a redundant membership check: the playhead rests in
-            // [0, snapshot_display_total) (the window), so both endpoints
-            // inverse-map into the in-window source range and a pre/post-window
-            // marker (source frame outside that range) never falls inside the
-            // swept interval.
+            // stores' own domain. The shared sweep helper still applies the
+            // explicit render-window membership predicate: inverse-mapping the
+            // last displayed frame can round to the source frame whose mapped
+            // image is the exclusive window end.
             const int64_t prev = app.playhead_drag.last_swept_sample;
             if (prev >= 0 && new_playhead != prev) {
                 int64_t a = prev, b = new_playhead;
