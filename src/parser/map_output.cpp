@@ -14,7 +14,7 @@ std::expected<void, std::string> write_warp_frame_map(
     for (const auto& s : segs) {
         of << s.src_frame << " " << s.tgt_frame << "\n";
     }
-    of.flush();
+    of.close();
     if (!of) {
         return std::unexpected("could not write warpframemap '" + path + "' (I/O error)");
     }
@@ -31,7 +31,7 @@ std::expected<void, std::string> write_midi_tempo_map(
     for (const auto& e : entries) {
         of << e.target_time_sec << " " << e.multiplier << "\n";
     }
-    of.flush();
+    of.close();
     if (!of) {
         return std::unexpected("could not write miditempomap '" + path + "' (I/O error)");
     }
@@ -48,7 +48,7 @@ std::expected<void, std::string> write_phase_reset_frame_map(
     for (const double f : engine_query_frames) {
         of << f << "\n";
     }
-    of.flush();
+    of.close();
     if (!of) {
         return std::unexpected("could not write phaseresetframemap '" + path + "' (I/O error)");
     }
