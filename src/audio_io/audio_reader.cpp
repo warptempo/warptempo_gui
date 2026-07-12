@@ -164,7 +164,7 @@ AudioReader::open(const std::string& path)
         decoder.handle = drflac_open_file(path.c_str(), nullptr);
         if (!decoder.handle) return std::unexpected("failed to open FLAC file");
         // The probe hand-parses STREAMINFO and enforces project policy (known
-        // length, at most 24 bits). Re-check the fields the decoder parsed so a
+        // length, exactly 16 or 24 bits). Re-check the fields the decoder parsed so a
         // malformed or inconsistent header cannot slip a different geometry past
         // the probe, and re-verify the bit-depth gate the float-exactness
         // argument depends on against the decoder's own view.
@@ -175,7 +175,8 @@ AudioReader::open(const std::string& path)
             return std::unexpected(
                 "FLAC decoder disagrees with STREAMINFO probe");
         }
-        if (decoder.handle->bitsPerSample > 24) {
+        if (decoder.handle->bitsPerSample != 16 &&
+            decoder.handle->bitsPerSample != 24) {
             return std::unexpected(
                 "unsupported FLAC bit depth (16- or 24-bit expected)");
         }

@@ -83,6 +83,19 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
+    // The corpus is stereo, and mono-for-sale is delivered as locked stereo, so
+    // off-corpus channel counts are refused rather than supported (convert once
+    // outside, e.g. with ffmpeg). The stereo invariant also makes every
+    // product-written wav payload even (see WavWriter::close), so the RIFF
+    // odd-payload pad byte stays unreachable.
+    if (source_info->channels != 2) {
+        std::fprintf(stderr,
+            "warptempo_gui: source load failed for '%s': %d channels (stereo "
+            "sources only)\n",
+            path.c_str(), source_info->channels);
+        return false;
+    }
+
     // Source-replacement teardown, in the same order revert_to_blank uses:
     // cancel first, then tear down render view while the outgoing source is
     // still alive. A drop is a deliberate source replacement, so it cancels

@@ -66,7 +66,7 @@ std::expected<FlacInfo, std::string> flac_probe(const std::string& path)
         return std::unexpected(
             "FLAC STREAMINFO reports unknown stream length; re-encode the file once at acquisition");
     }
-    if (info.bits_per_sample > 24) {
+    if (info.bits_per_sample != 16 && info.bits_per_sample != 24) {
         return std::unexpected("unsupported FLAC bit depth (16- or 24-bit expected)");
     }
     return info;

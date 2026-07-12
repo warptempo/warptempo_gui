@@ -183,6 +183,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // The corpus is stereo, and mono-for-sale is delivered as locked stereo, so
+    // off-corpus channel counts are refused rather than supported (convert once
+    // outside, e.g. with ffmpeg). The stereo invariant also makes every
+    // product-written wav payload even (see WavWriter::close), so the RIFF
+    // odd-payload pad byte stays unreachable. Same compare in both binaries: a
+    // file set is loadable in both products or neither.
+    if (info->channels != 2) {
+        std::fprintf(stderr,
+            "warptempo_cli: source load failed for '%s': %d channels (stereo "
+            "sources only)\n",
+            source_path.c_str(), info->channels);
+        return 1;
+    }
+
     // --- adversarial past-EOF guard: refuse the load like a corrupt audio
     // file when any marker or any tab's trim sits past its wall. Such a
     // position is uncommittable through the GUI (marker EOF walls, per-bound

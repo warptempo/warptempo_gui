@@ -839,6 +839,12 @@ std::expected<void, std::string> WavWriter::close()
         }
         return std::unexpected("WAV file exceeds RIFF size limit");
     }
+    // Every payload this writer produces is even by construction: PCM24 frames
+    // are 3 bytes times the stereo channel pair (6) and Float32 samples are 4
+    // bytes, because sources are stereo-only and output channels equal source
+    // channels. The RIFF odd-payload pad byte is therefore unreachable and
+    // deliberately unimplemented; a future channel-vocabulary change must
+    // revisit this.
     const uint64_t riff_size = header_span + data_bytes_ - 8;
     auto ok = patch_u32(riff_size_offset_, static_cast<uint32_t>(riff_size));
     if (!ok) return ok;

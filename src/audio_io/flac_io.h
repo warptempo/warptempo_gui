@@ -5,8 +5,9 @@
 #include <string>
 
 // Hand-parsed native FLAC STREAMINFO probe over the fixed-offset first metadata
-// block. The probe admits only known-length, <=24-bit streams so downstream
-// decoding can keep exact integer-to-float conversion semantics.
+// block. The probe admits only known-length streams at exactly 16- or 24-bit
+// depth (the depths that exist for sale); the s32-to-float exactness argument
+// downstream decoding depends on holds for both.
 
 struct FlacInfo {
     int     sample_rate     = 0;
