@@ -58,6 +58,16 @@ std::expected<void, std::string> scan_settings_file(
         if (!r) return std::unexpected(std::move(r.error()));
     }
 
+    // The getline loop ends on eofbit (normal end of file) or on badbit (a
+    // stream read failure mid-file). eofbit+failbit is the ordinary end of a
+    // healthy file and parses on; badbit alone is a filesystem or media read
+    // error, checked here BEFORE the required-key tail so a read that failed
+    // after the four required keys already arrived can never be laundered
+    // into a complete-looking file.
+    if (in.bad()) {
+        return std::unexpected(std::string("I/O read error"));
+    }
+
     for (const char* k : {"title", "output_format", "scale", "limiter"}) {
         if (seen.count(k) == 0) {
             return std::unexpected(

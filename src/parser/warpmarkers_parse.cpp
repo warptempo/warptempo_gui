@@ -298,6 +298,13 @@ parse_warpmarkers_file(const std::string& path) {
         std::string line;
         while (std::getline(f, line)) raw_lines.push_back(std::move(line));
     }
+    // The getline loop ends on eofbit (normal end of file) or on badbit (a
+    // stream read failure mid-file). eofbit+failbit is the ordinary end of a
+    // healthy file and parses on; badbit alone is a filesystem or media read
+    // error, checked here before the parsing walk so a read that failed after
+    // a valid prefix can never yield a silently shortened marker list.
+    if (f.bad())
+        return std::unexpected("read error in file: " + path);
     if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
     // ----- Build markers ---------------------------------------------------
