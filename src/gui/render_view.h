@@ -17,8 +17,10 @@ struct GuiTargetRender;
 
 // Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
-// the per-entry .settings snapshot (per-render zoom/viewport/playhead/W-P
-// persistence, plus the strict entry load: markers, engine scale, recipe trim),
+// the per-entry .settings snapshot (the view-state autosave — the persisted
+// browse keys are written for schema stability but never applied, since the
+// browse position inherits from the live session; the W/P mode IS applied
+// per entry — plus the strict entry load: markers, engine scale, recipe trim),
 // the per-entry selection stash with stat-tuple gating, the entry-audio
 // decode-and-bind path, and the source-view restore on exit.
 // clear_hover_popup is reached through viewport;
@@ -85,7 +87,14 @@ struct GuiRenderView {
     // pair. No-op when render view is off or no entry is active.
     void autosave_active_entry();
 
-    bool load_render_view_at(int index);
+    // `entering` distinguishes a render-view ENTRY (the r toggle-on and
+    // the batch auto-open, which pass true) from an entry-to-entry
+    // NAVIGATION under an already-open view (both navigation chords pass
+    // false). On entry the browse position inherits from the live view —
+    // directly from target view, through the S→T toggle's anchor math
+    // from source view; on navigation the browsed position carries over
+    // unchanged. Rationale at the definition's inheritance block.
+    bool load_render_view_at(int index, bool entering);
     void restore_source_view();
 
     // The abandon arm of the render-view exit pair: restore_source_view

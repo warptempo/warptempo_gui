@@ -268,10 +268,10 @@ std::pair<long long, long long> compute_trim_samples(
     return {begin, end};
 }
 
-static double samples_per_pixel_at(int zoom_level,
-                                   int waveform_width_px,
-                                   int64_t total_frames,
-                                   int sample_rate) {
+double samples_per_pixel_at(int zoom_level,
+                            int waveform_width_px,
+                            int64_t total_frames,
+                            int sample_rate) {
     if (zoom_level == kFitFileLevel) {
         if (waveform_width_px <= 0) return 1.0;
         double spp = static_cast<double>(total_frames) /

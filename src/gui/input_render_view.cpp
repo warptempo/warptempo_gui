@@ -191,8 +191,11 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // The entry's persisted W/P mode is applied per-entry at load
         // (load_render_view_at reads it from the entry's .settings before the
         // stat-gated selection restore); the global active_markers_view flag
-        // is the live carrier of the mode between entries.
-        if (!render_view.load_render_view_at(target)) {
+        // is the live carrier of the mode between entries. Toggle-on is a
+        // render-view ENTRY: the browse position inherits from the live
+        // view (directly from target view, through the S→T toggle's anchor
+        // math from source view).
+        if (!render_view.load_render_view_at(target, /*entering=*/true)) {
             app.render_view.enabled = false;
             app.render_view.list.clear();
         }
@@ -269,7 +272,10 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         int next = app.render_view.index;
         if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
         else                       next = (next + 1) % n;
-        render_view.load_render_view_at(next);
+        // Entry-to-entry NAVIGATION: the browsed position carries over
+        // unchanged (both axes are target axes; runtime clamps own an
+        // out-of-domain carry at first use).
+        render_view.load_render_view_at(next, /*entering=*/false);
         return true;
     }
 
@@ -301,7 +307,8 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         if (target == app.render_view.index &&
             app.render_view.list[target].wav_path.string() ==
                 app.render_view.last_path) return true;
-        render_view.load_render_view_at(target);
+        // Entry-to-entry NAVIGATION, same carry-over as Shift+Left/Right.
+        render_view.load_render_view_at(target, /*entering=*/false);
         return true;
     }
 

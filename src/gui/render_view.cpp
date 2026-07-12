@@ -108,10 +108,15 @@ GuiRenderView::enumerate_render_view_list() {
 //
 // Per-render zoom/viewport/playhead/W-P persistence lives on the entry's
 // standard `.settings` snapshot (written at render time by the pipeline
-// beside the wav, browse defaults on the commit tab). The live render-view
-// state is captured at navigation/exit boundaries through the strict
-// read-modify-write helper below; the entry loader applies the file's view
-// state on arrival.
+// beside the wav, in-domain defaults on the commit tab). The live
+// render-view state is captured at navigation/exit boundaries through the
+// strict read-modify-write helper below — the autosave keeps writing the
+// browse view keys for schema stability — but the entry loader never
+// applies the persisted viewport/zoom/playhead: the browse position
+// inherits from the live session at render-view entry and carries over
+// unchanged on entry-to-entry navigation (the inheritance block in
+// load_render_view_at). The persisted active_markers_view (W/P mode) IS
+// still applied per entry.
 
 std::filesystem::path GuiRenderView::settings_path(
         const AppState::RenderViewEntry& e) {
@@ -220,7 +225,15 @@ void GuiRenderView::autosave_active_entry() {
 // When the destination entry's persisted stat tuple matches the wav's current
 // stat, restores the persisted selection. Mismatch leaves the live selection
 // empty.
-bool GuiRenderView::load_render_view_at(int index) {
+//
+// `entering` marks a render-view ENTRY (r toggle-on, batch auto-open)
+// versus an entry-to-entry NAVIGATION under an already-open view. The
+// browse position is never restored from the entry's .settings: on entry
+// it inherits from the live view the user came from (read off
+// app.active_audio_view, which render view never mutates), and on
+// navigation it carries over unchanged — details at the inheritance
+// block below.
+bool GuiRenderView::load_render_view_at(int index, bool entering) {
     if (index < 0 ||
         index >= static_cast<int>(app.render_view.list.size())) {
         return false;
@@ -455,6 +468,10 @@ bool GuiRenderView::load_render_view_at(int index) {
     // out-of-domain viewport/playhead in an entry's .settings is
     // adversarial, exactly as it is at a source load (the GUI's own
     // dispatch writer and per-entry autosave only write in-domain values).
+    // The keys are validated as SCHEMA INTEGRITY — adversarial-input
+    // strictness over program-written bytes — even though the browse
+    // position now inherits from the live session and the persisted
+    // values are never applied (the inheritance block below).
     // Same shared rule the source load and the CLI run
     // (first_view_range_defect, marker_store_validate.h). The entry's
     // persisted active_audio_view is 'T' always (checked above), so the
@@ -613,9 +630,14 @@ bool GuiRenderView::load_render_view_at(int index) {
     // mode the selection was stashed under (autosave persists the browsed
     // mode at the same trigger the stash runs). Absent key applies the
     // struct default 'W'. The other .settings keys — the engine block,
-    // playback_speed, follow, font_size, active_audio_view — are NOT
-    // applied at browse time: they are the commit payload, adopted only by
-    // Ctrl+Alt+C.
+    // playback_speed, follow, font_size, active_audio_view, and the browse
+    // view keys (viewport/zoom/playhead) — are NOT applied at browse time:
+    // the engine-and-prefs set is the commit payload, adopted only by
+    // Ctrl+Alt+C, and the browse position inherits from the live session
+    // (the inheritance block below) instead of restoring the persisted
+    // keys. active_markers_view is the deliberate contrast: it IS applied
+    // per entry, so each entry reopens in the W/P mode it was last
+    // browsed under.
     app.active_markers_view = settings->active_markers_view;
 
     // Stat-tuple-gated selection restore. A matching persisted tuple
@@ -671,21 +693,77 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.last_selected_trim  = 0;
     app.last_sel_group      = LastSelGroup::Markers;
 
-    // Apply this render's persisted zoom/viewport/playhead from the commit
-    // tab of the already-parsed .settings (absent keys carry the schema
-    // defaults: fit-file zoom, zeroed viewport/playhead). The values were
-    // validated at entry load like a source load (first_view_range_defect
-    // above, against the snapshot map's target total). Apply order:
-    // zoom → viewport → playhead → clamp_viewport_start (zoom drives the
-    // spp used by clamp).
-    app.zoom_level            = commit_tab.zoom;
-    app.viewport_start_sample = commit_tab.viewport_start;
-    // Deliberately unclamped: the validation above permits playhead ==
-    // total exactly (an exclusive-bound rest) and refuses only strictly
-    // past it; the runtime clamp (move_playhead_to) owns the value at
-    // first use.
-    app.playhead_cursor_sample = commit_tab.playhead;
-    clamp_viewport_start(app, audio);
+    // Browse position: render view INHERITS the user's live viewing
+    // position instead of restoring the entry's persisted browse keys
+    // (which stay validated above and autosaved on leave, but are never
+    // applied).
+    //   - Entry from TARGET view: the render display axis is a target
+    //     axis, so the live viewport/zoom/playhead carry over DIRECTLY —
+    //     the ruled behavior even when the live map and this entry's
+    //     snapshot map differ. An out-of-domain carry is owned by the
+    //     runtime clamps at first use (move_playhead_to,
+    //     clamp_viewport_start — the restore-site convention).
+    //   - Entry from SOURCE view: inherit the way pressing t in source
+    //     view does — the S→T toggle's anchor math, mirrored below
+    //     against the snapshot map just built.
+    //   - Entry-to-entry NAVIGATION (entering == false): the browsed
+    //     position carries over unchanged — both axes are target axes,
+    //     and nothing is applied at all (the same out-of-domain carry
+    //     rule as the target-view entry).
+    // Render view never mutates active_audio_view, so on entry it still
+    // names the authoring view the user came from.
+    if (entering && app.active_audio_view == 'S') {
+        // Mirror of the S→T toggle's anchor block (input_handler.cpp,
+        // handle_active_audio_view_toggle): capture the playhead's
+        // pre-entry screen-pixel column, forward-translate the playhead,
+        // keep zoom_level, then derive the new viewport_start so the
+        // translated playhead occupies the same column. The pre-entry
+        // samples-per-pixel is computed against the SOURCE total
+        // explicitly: the caller already set render_view.enabled and the
+        // snapshot display context is installed above, so
+        // current_samples_per_pixel reads the render domain here (the two
+        // differ only at fit-file zoom; numeric levels are
+        // total-independent).
+        const GuiRect area = waveform_area(app);
+        const double cur_spp = samples_per_pixel_at(
+            app.zoom_level, area.w, source_total_frames,
+            audio.sample_rate());
+        const double ph_px =
+            (cur_spp > 0.0)
+            ? (static_cast<double>(app.playhead_cursor_sample -
+                                   app.viewport_start_sample) / cur_spp)
+            : 0.0;
+        const double tph = map_source_to_target(
+            static_cast<double>(app.playhead_cursor_sample < 0
+                                ? 0 : app.playhead_cursor_sample),
+            app.render_view.snapshot_warp_frame_map);
+        int64_t new_playhead = static_cast<int64_t>(std::nearbyint(tph));
+        // Same pre-anchor destination clamp as the toggle: a nearbyint of
+        // an in-domain playhead can land exactly on the destination total
+        // (move_playhead_to holds the [0, total - 1] ruling), applied
+        // BEFORE the viewport is derived from it.
+        const int64_t dest_total = app.render_view.snapshot_display_total;
+        if (new_playhead < 0) new_playhead = 0;
+        if (dest_total > 0 && new_playhead >= dest_total) {
+            new_playhead = dest_total - 1;
+        }
+        app.playhead_cursor_sample = new_playhead;
+        // zoom_level preserved across the entry; the post-entry spp reads
+        // the render domain installed above (the visible time span differs
+        // by the snapshot map's net stretch — the deformity made visible).
+        const double new_spp = current_samples_per_pixel(app, audio);
+        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
+            static_cast<double>(new_playhead) - ph_px * new_spp));
+        clamp_viewport_start(app, audio);
+    }
+    // Split-playhead invariant (move_playhead_to): the scanner mirror
+    // tracks the cursor while the scanner is inactive. It was forced
+    // inactive and zeroed beside playback.stop above, so re-mirror it to
+    // whatever playhead value rules now — the inherited entry position,
+    // or the carried-over position on navigation.
+    if (!app.playhead_scanner_active) {
+        app.playhead_scanner_sample = app.playhead_cursor_sample;
+    }
 
     // Rebind playback to the entry buffer at the rendered window's
     // target-axis origin: the wav covers only the window, so its frame 0
@@ -1001,7 +1079,10 @@ void GuiRenderView::auto_open_batch_at_first_file(
     // inert inside render view (input gate drops i/M; paint
     // gates on !render_view.enabled), so they're simply restored on exit.
     app.render_view.enabled    = true;
-    if (!this->load_render_view_at(target)) {
+    // Batch auto-open is a render-view ENTRY: the browse position inherits
+    // from the live view on screen at completion (app.active_audio_view
+    // picks the S-versus-T inheritance arm, exactly as at the r toggle-on).
+    if (!this->load_render_view_at(target, /*entering=*/true)) {
         app.render_view.enabled = false;
         app.render_view.list.clear();
     }

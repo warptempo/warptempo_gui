@@ -1000,10 +1000,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // left): the old promotion restored FILE-sourced authoring
         // viewport/playhead, persisted scratch that had to be walled like
         // any other load. The adopted view values are now the LIVE browsed
-        // session values — GUI-produced and in-domain by construction: the
-        // render display axis IS the full target axis of the snapshot map,
-        // so the browsed values already rest inside the candidate map's
-        // target extent (the entry is a rendering of exactly that map).
+        // session values — GUI-produced session state, not file input.
+        // They inherited from the live view at render-view entry and carry
+        // over across navigation, so they may rest outside the adopted
+        // map's target extent; the runtime clamps (move_playhead_to,
+        // clamp_viewport_start) own them at first use, the restore-site
+        // convention — adversarial strictness applies only to bytes read
+        // from disk.
 
         // Source-load adversarial guard 2: target-view/output-format
         // compatibility, validated against the ENTRY's own .settings.
@@ -1233,9 +1236,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.zoom_level = browsed_zoom;
         app.viewport_start_sample = browsed_viewport;
         // Deliberately unclamped, the restore-site convention: the browsed
-        // playhead rests inside the adopted map's target extent (the entry
-        // is a rendering of exactly that map); the runtime clamp
-        // (move_playhead_to) owns the value at first use.
+        // playhead is live session state (inherited at render-view entry,
+        // carried across navigation), which may rest outside the adopted
+        // map's target extent; the runtime clamp (move_playhead_to) owns
+        // the value at first use.
         app.playhead_cursor_sample = browsed_playhead;
         if (!app.playhead_scanner_active) {
             app.playhead_scanner_sample = browsed_playhead;

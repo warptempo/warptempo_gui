@@ -353,17 +353,17 @@ RenderOutcome do_render(const RenderRequest& req,
             // 'T'), and 'T' requires output_format = wav, so map-format
             // artifacts are not browse entries and get no .settings.
             if (output_format == "wav") {
-                // The commit tab (named by active_tab_view) initializes to the
-                // render-view browse defaults: zoom = kFitFileLevel and
-                // viewport_start = 0 (fit shows the whole full-timeline
-                // display), playhead at the rendered window's start —
-                // render view shows the FULL deformed timeline with the
-                // out-of-window region dimmed, so playhead 0 for a trimmed
-                // entry would land in the dimmed head where Space is a
-                // silent no-op; llrint(T_b) through the full map lands it
-                // on the window's first frame (0 untrimmed). The browsed
-                // view is what a later commit adopts, and per-entry
-                // autosave owns these keys once the entry displays. Its
+                // The commit tab (named by active_tab_view) initializes the
+                // persisted view keys to in-domain defaults: zoom =
+                // kFitFileLevel, viewport_start = 0, playhead at the
+                // rendered window's start (llrint(T_b) through the full
+                // map; 0 untrimmed). The browse keys are schema-required
+                // and strictly validated at entry load, but never applied:
+                // render view inherits the live session's position at
+                // entry and carries it across navigation, so these values
+                // only need to be in-domain and stable. A later commit
+                // adopts the LIVE browsed view, not these keys; per-entry
+                // autosave rewrites them once the entry displays. Its
                 // trim comes from the recipe trim that shaped this render;
                 // read_only and the rest take their ViewState defaults.
                 // The other tab is all defaults, no trim.

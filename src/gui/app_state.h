@@ -896,8 +896,11 @@ struct AppState {
         // when the wav still has the same (size, mtime) as when stashed;
         // mismatch on reload drops them silently. The viewport/zoom/
         // playhead fields on `state` are unused — render-view's
-        // viewport state flows through the live AppState fields and the
-        // per-entry .settings autosave.
+        // viewport state flows through the live AppState fields; the
+        // per-entry .settings autosave still writes the browse keys
+        // (schema stability), but the entry loader never applies them —
+        // the browse position inherits from the live session at entry
+        // and carries over unchanged on navigation.
         ViewState state;
 
         // Stat-tuple key for selection validity. Captured when stashed,
@@ -983,6 +986,16 @@ GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+// The explicit-domain form of current_samples_per_pixel: spp at a zoom
+// level against a caller-chosen domain total (fit-file zoom divides the
+// total by the width; numeric levels are total-independent). For callers
+// that need a domain OTHER than the active display context's — render-view
+// entry computes the pre-entry source-view spp after the render display
+// context is already installed.
+double  samples_per_pixel_at(int zoom_level,
+                             int waveform_width_px,
+                             int64_t total_frames,
+                             int sample_rate);
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
