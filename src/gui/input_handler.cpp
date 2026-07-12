@@ -306,7 +306,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
-    //   - Shift+Left/Right       → playhead-by-samples scrub
     //   - Shift+0..9             → select playback speed
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
@@ -614,8 +613,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Render-view list navigation:
     // Shift+Left / Shift+Right -> previous / next render, with wraparound
     // Shift+Home / Shift+End -> first / last render, clamped, no wraparound
-    // Outside render-view these chords fall through to the source-view handlers
-    // below (see handle_render_view_nav).
+    // These chords bind ONLY inside render view. Outside render view
+    // handle_render_view_nav returns false and the Shift-held arrow reaches
+    // the bare-key dispatch gate below, which drops any modifier-held chord —
+    // so it is an unbound no-op, not a fall-through to a source-view handler.
     if (handle_render_view_nav(key, mods)) return;
 
     // Ctrl+Left / Ctrl+Right: nudge the last-selected group by one pixel of

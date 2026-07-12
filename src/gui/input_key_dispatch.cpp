@@ -52,9 +52,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_scrub =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
          !ctrl && !shift && !alt);
-    const bool is_scrub_samples =
-        ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !ctrl && shift && !alt);
     const bool is_home_end =
         ((key == GuiKeys::Home || key == GuiKeys::End) &&
          !ctrl && !shift && !alt);
@@ -93,12 +90,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_sub_p =
         (key == GuiKeys::P && !ctrl && !shift && !alt);
     const bool is_tab_cycle =
-        (!ctrl && key == GuiKeys::Tab) ||
-        (!ctrl && key == GuiKeys::IsoLeftTab);
+        (!ctrl && !alt && key == GuiKeys::Tab) ||
+        (!ctrl && !alt && key == GuiKeys::IsoLeftTab);
     const bool is_ctrl_tab =
-        (ctrl && !shift && key == GuiKeys::Tab);
+        (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
-        (ctrl && shift && key == GuiKeys::Tab);
+        (ctrl && shift && !alt && key == GuiKeys::Tab);
     const bool is_esc = (key == GuiKeys::Escape);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
@@ -116,7 +113,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // survives as a backstop for entries that outlive a mid-history lock.
     // The trim gestures (x / Shift+X), Delete, and the propagate copy/paste
     // chords are likewise absent (blocked here).
-    return !(is_o || is_play_pause || is_scrub || is_scrub_samples ||
+    return !(is_o || is_play_pause || is_scrub ||
              is_home_end || is_page_updown ||
              is_zoom || is_zoom_symbol || is_font_size_step || is_zero ||
              is_speed_select ||
@@ -1444,11 +1441,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
+    const bool alt   = mods.alt;
 
     // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
     // current viewport/zoom/playhead to the leaving tab, restores the
-    // target tab. Does not mark the document dirty.
-    if (ctrl && !shift && key == GuiKeys::Tab) {
+    // target tab. Does not mark the document dirty. Alt-strict: an Alt
+    // held alongside makes the chord an unbound no-op, never this binding.
+    if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         target_render.trigger();
         return true;
@@ -1457,7 +1456,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord.
-    if (ctrl && shift && key == GuiKeys::Tab) {
+    if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus_with_recenter(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_marker_focus_with_recenter(true);
@@ -1469,14 +1468,15 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // focused marker at the current zoom. The Ctrl+Tab branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
-    // cycle path either.
-    if (!ctrl && key == GuiKeys::Tab && !shift) {
+    // cycle path either. Alt-strict everywhere: an Alt held makes the chord
+    // an unbound no-op rather than falling into the cycle.
+    if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
         cycle_marker_focus_with_recenter(true);  return true;
     }
-    if (!ctrl && key == GuiKeys::Tab && shift)  {
+    if (!ctrl && !alt && key == GuiKeys::Tab && shift)  {
         cycle_marker_focus_with_recenter(false); return true;
     }
-    if (!ctrl && key == GuiKeys::IsoLeftTab)    {
+    if (!ctrl && !alt && key == GuiKeys::IsoLeftTab)    {
         cycle_marker_focus_with_recenter(false); return true;
     }
 

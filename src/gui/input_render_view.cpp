@@ -31,11 +31,11 @@
 // Delta over read-only:
 //   ADMITS (render-view-specific, checked first):
 //     - r                      → toggle render-view off
-//     - Shift+Left/Right       → previous/next render (deliberately shadows
-//                                the authoring playhead-by-samples scrub,
-//                                which is unreachable in render view — render
-//                                view browses entries, it does not scrub by
-//                                samples)
+//     - Shift+Left/Right       → previous/next render (render view browses
+//                                entries; there is no source-view Shift+arrow
+//                                binding to shadow — outside render view a
+//                                Shift-held arrow is an unbound no-op at the
+//                                bare-key gate)
 //     - Shift+Home/Shift+End   → first/last render, clamped
 //     - Ctrl+Alt+C             → commit the displayed render
 //   EXTRA BLOCKS (read-only honors these; render view does not):
@@ -53,11 +53,11 @@
 //                                authoring view state for exit restore
 //   Everything else defers to read_only_key_blocked(key, mods).
 //
-// Two chords the deferral net-admits that render view honors safely (both
-// route through the same display-domain-aware handlers the already-admitted
-// chords use): PageUp/PageDown page the viewport against live_total_frames,
-// and Alt+Tab / Alt+IsoLeftTab reach the same marker-focus cycle bare Tab
-// does (read-only's tab-cycle predicate is not alt-strict).
+// One family the deferral net-admits that render view honors safely (it
+// routes through the same display-domain-aware handler the already-admitted
+// chords use): PageUp/PageDown page the viewport against live_total_frames.
+// The Tab family is alt-strict throughout, so an Alt-held Tab is an unbound
+// no-op here as everywhere, not a smuggled marker-focus cycle.
 bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -90,9 +90,9 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
         (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 &&
          shift && !ctrl && !alt);
     const bool is_ctrl_tab =
-        (ctrl && !shift && key == GuiKeys::Tab);
+        (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
-        (ctrl && shift && key == GuiKeys::Tab);
+        (ctrl && shift && !alt && key == GuiKeys::Tab);
     if (is_sub_audio_toggle || is_read_only_toggle || is_save ||
         is_speed_select || is_ctrl_tab || is_ctrl_shift_tab) {
         return true;
@@ -238,8 +238,8 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     // Shift+Left / Shift+Right navigates the render-view
     // list with wraparound. Active only when render_view.enabled is
-    // true; in source-view these chords fall through to the normal
-    // playhead-by-pixel handler in the switch below. Wraparound:
+    // true; in source-view this returns false and the Shift-held arrow is
+    // an unbound no-op at the bare-key gate (no source-view binding). Wraparound:
     // Shift+Right past the end loops to index 0,
     // Shift+Left before index 0 loops to the last entry.
     //
