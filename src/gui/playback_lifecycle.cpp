@@ -172,14 +172,13 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
         return;
     }
     if (app.render_view.enabled) {
-        // The audio device is bound to the entry wav, which covers exactly the
-        // rendered window on the displayed target axis (verified at entry
-        // load); [domain_begin(), domain_end()) is that window. The displayed
-        // timeline is the FULL deformed axis, so a click can land outside the
-        // window (a trimmed entry dims the head/tail). Space outside the window
-        // is a deliberate no-op, and the live reseek matches it by stopping —
-        // in-range-only semantics, the same rule as target view. This
-        // supersedes the interim resume-at-window-origin behavior.
+        // The audio device is bound to the entry wav at offset 0, and render
+        // view displays that wav's OWN timeline — so [domain_begin(),
+        // domain_end()) is [0, entry frames), the WHOLE displayed domain. The
+        // playhead always rests inside it, so this bound-buffer range check is
+        // defensively unreachable in practice; it is kept as the shared shape
+        // of the three reseek arms (a stray out-of-range value falls back to a
+        // clean manual stop rather than a bad play()).
         if (sample < playback.domain_begin() ||
             sample >= playback.domain_end()) {
             stop_playback_if_playing();

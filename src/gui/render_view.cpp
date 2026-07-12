@@ -1,6 +1,5 @@
 #include "render_view.h"
 
-#include "audio_reader.h"
 #include "marker_store_validate.h"
 #include "phaseresetmarkers.h"
 #include "render_cache.h"
@@ -25,9 +24,10 @@
 // decode/bind around render-view sessions. Reaches viewport,
 // active_views, and selection through the struct's reference members
 // (clamp_viewport_start and compute_trim_samples are free functions
-// declared in app_state.h). The GuiAudio object is ALWAYS the source
-// (see the invariant at GuiRenderView's head comment); the displayed
-// entry decodes into the view-owned entry_samples buffer.
+// declared in app_state.h). The source GuiAudio object `audio` is ALWAYS the
+// source (see the invariant at GuiRenderView's head comment); the displayed
+// entry decodes into its own view-owned GuiAudio (app.render_view.entry_audio)
+// through the standard peaks pipeline, and the plate paints from its samples.
 
 // Enumerate the flat render-view list under <source_parent>/renders/.
 // Returns an empty vector if no source path is set or if the renders root
@@ -122,8 +122,8 @@ std::filesystem::path GuiRenderView::settings_path(
 }
 
 // Loads the render at app.render_view.list[index] into the view-owned
-// entry buffer — the GuiAudio object stays the source (the invariant at
-// the struct's head comment). Entries are program-written snapshots, read
+// entry audio — the GuiAudio object `audio` stays the source (the invariant
+// at the struct's head comment). Entries are program-written snapshots, read
 // STRICTLY: <basename>.warpmarkers / <basename>.phaseresetmarkers through
 // the standard store loaders and <basename>.settings through
 // read_settings_file. Any refusal — a decode failure, a read failure, a
@@ -133,16 +133,18 @@ std::filesystem::path GuiRenderView::settings_path(
 // is adversarial: one stderr line, first error only, the entry refuses to
 // display (return false, prior state preserved).
 //
-// The architect's ruling: render view is a read-only 1:1 target view of
-// the snapshot — the FULL deformed timeline of the snapshot map, with
-// the snapshot trim's out-of-window region dimmed and its bounds painted
-// (pickable, immutable), and playback bound to the entry wav at the window's
-// target-axis origin (Space outside the window is a silent no-op). The
-// display stores adopt the snapshot vectors WHOLESALE — disabled markers
-// included, styled as target view styles them — and every consumer
-// translates live through the snapshot map, exactly as target view
-// translates through the live map. Stops playback before installing the
-// entry buffer and rebinds the device to it.
+// The architect's ruling: render view displays the RENDERED ARTIFACT — the
+// entry wav's own timeline, which IS the trimmed window when the recipe was
+// trimmed. The waveform pixels come from the entry audio's own samples, and
+// playback binds that buffer at domain offset 0. Markers paint at their
+// positions on the WINDOW axis — the authored frame forward-mapped through
+// the target-shifted snapshot map (built below), minus the window origin,
+// which the shift folds in — and a marker whose image falls outside the
+// rendered window is absent, like the audio it annotates. The display stores
+// adopt the snapshot vectors WHOLESALE (disabled markers and label defs
+// included; the membership rule culls out-of-window rows at each consumer).
+// Stops playback before installing the entry buffer and rebinds the device
+// to it.
 //
 // The entry's sidecar set is frozen at dispatch and never rewritten, so this
 // loader never applies its browse position. Every display — render-view entry
@@ -168,35 +170,37 @@ bool GuiRenderView::load_render_view_at(int index) {
     // (render-to-render navigation).
     target_render.cancel_in_flight_update();
 
-    // Decode the entry wav whole into an interleaved float buffer, the same
-    // in-tree route GuiAudio::load bottoms out in (audio_read_full,
-    // audio_reader.h) — deliberately NOT GuiAudio::load itself, so no peaks
-    // pyramid is built and no .peaks sidecar is read or written for render
-    // entries (the plate paints from the SOURCE samples). Failures are
-    // adversarial: one stderr line, prior state preserved.
-    AudioFileInfo entry_info{};
-    auto decoded = audio_read_full(e.wav_path.string(), &entry_info);
-    if (!decoded) {
+    // Decode the entry wav through the STANDARD peaks pipeline: a fresh
+    // GuiAudio::load (decode + `<basename>.peaks` sidecar read beside the wav,
+    // pyramid rebuild and sidecar write on a miss / stale / corrupt cache).
+    // The render plate paints from THIS audio's own samples — the rendered
+    // artifact's own timeline — so an entry carries its own pyramid like any
+    // source, and a first display writes the entry's .peaks. Entries are
+    // short, so the progress callback is empty. A load failure is adversarial:
+    // GuiAudio::load already printed its own owner diagnostic, and this adds
+    // one render-view line; prior state is preserved (nothing mutated until
+    // the install block below).
+    auto entry_audio = std::make_shared<GuiAudio>();
+    if (!entry_audio->load(e.wav_path.string(), {})) {
         std::fprintf(stderr,
-            "warptempo_gui: render-view: failed to load %s: %s\n",
-            e.wav_path.string().c_str(), decoded.error().c_str());
+            "warptempo_gui: render-view: failed to load %s\n",
+            e.wav_path.string().c_str());
         return false;
     }
     // The engine emits the source's sample rate and channel count, so a
     // mismatch is adversarial (a foreign wav dropped into renders/): refuse
     // — the playback device stays init'd against the source's rate/channels
     // and a rebind must match them.
-    if (entry_info.sample_rate != audio.sample_rate() ||
-        entry_info.channels != audio.channels()) {
+    if (entry_audio->sample_rate() != audio.sample_rate() ||
+        entry_audio->channels() != audio.channels()) {
         std::fprintf(stderr,
             "warptempo_gui: render-view: '%s' rate/channels (%d Hz, %d ch) "
             "do not match the source (%d Hz, %d ch); refusing entry\n",
-            e.wav_path.string().c_str(), entry_info.sample_rate,
-            entry_info.channels, audio.sample_rate(), audio.channels());
+            e.wav_path.string().c_str(), entry_audio->sample_rate(),
+            entry_audio->channels(), audio.sample_rate(), audio.channels());
         return false;
     }
-    const int64_t decoded_frames = static_cast<int64_t>(
-        decoded->size() / static_cast<size_t>(entry_info.channels));
+    const int64_t decoded_frames = entry_audio->total_frames();
 
     // Strict snapshot reads. The source-domain marker pair is the same set
     // Ctrl+Alt+C commit reloads when promoting a render into authoring
@@ -395,12 +399,16 @@ bool GuiRenderView::load_render_view_at(int index) {
     // will inherit from the frozen file; render view itself does NOT apply them
     // (every display resets to fit-file/0/0 below). Same shared rule the source
     // load and the CLI run (first_view_range_defect, marker_store_validate.h).
-    // The entry's persisted active_audio_view is 'T' always (checked above), so
-    // the domain total is the snapshot map's target total through
-    // target_total_frames_for_map — the same 'T' arm the source load uses;
-    // the map just built IS that map, so the source load's cannot-build
-    // skip arm has no analogue here. Both tabs are checked, as at source
-    // load.
+    // The AXIS these keys live on is the FULL target axis (the entry's
+    // persisted active_audio_view is 'T' always, checked above), so the domain
+    // total is the UNSHIFTED full map's target total through
+    // target_total_frames_for_map — the same 'T' arm the source load uses; the
+    // map just built (before the window shift below) IS that map, so the source
+    // load's cannot-build skip arm has no analogue here. This is the
+    // queue-moment position Ctrl+Alt+C inherits — NOT applied at browse time —
+    // and is DELIBERATELY the full target axis, not the browsed window: the
+    // display total (snapshot_display_total, the entry frame count) no longer
+    // equals it. Both tabs are checked, as at source load.
     {
         const int64_t display_total = target_total_frames_for_map(
             source_total_frames, full_warp_frame_map);
@@ -450,15 +458,15 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Rendered-window geometry on the snapshot map's target axis, exact
-    // doubles. T_b / T_e are the trim bounds' target images (unset sides
-    // default to the whole timeline: 0 and the source total's image — the
-    // map's final anchor target). entry_domain_begin, llrint(T_b), is the
-    // playback bind anchor: the entry wav's frame 0 in full-target
-    // coordinates — the sibling of
-    // GuiTargetRender::compute_target_buffer_start_frame, which anchors
-    // the target-view buffer with the identical formula against the live
-    // map. 0 untrimmed.
+    // Rendered-window geometry on the FULL (unshifted) snapshot map's target
+    // axis, exact doubles. T_b / T_e are the trim bounds' target images (unset
+    // sides default to the whole timeline: 0 and the source total's image —
+    // the map's final anchor target). T_b (llrint) is the window origin: the
+    // entry wav's frame 0 in full-target coordinates, 0 untrimmed. It is now a
+    // LOAD-TIME LOCAL only — it sizes the shift that folds the window origin
+    // into snapshot_warp_frame_map (so every display consumer reads window-axis
+    // positions directly) and drives the entry-length check below; playback
+    // binds the entry buffer at offset 0, so there is no stored bind anchor.
     const double t_begin = recipe_trim.has_begin
         ? map_source_to_target(
               static_cast<double>(recipe_trim.begin_frame),
@@ -469,18 +477,18 @@ bool GuiRenderView::load_render_view_at(int index) {
             ? static_cast<double>(recipe_trim.end_frame)
             : static_cast<double>(source_total_frames),
         full_warp_frame_map);
-    const int64_t entry_domain_begin = std::llrint(t_begin);
+    const int64_t window_origin_frame = std::llrint(t_begin);
 
     // Entry-length verification: the delivered wav covers exactly the
     // rendered window — llrint(T_e) - llrint(T_b) frames, the post_trim
     // crop (untrimmed, the engine's full emission extent). A mismatch is
     // adversarial (a foreign wav dropped over the entry's name): refuse,
-    // prior state preserved. This equality is also what makes the
-    // window's end (trim_range's render-view arm) coincide with the
-    // bound buffer's exclusive domain end at playback.
+    // prior state preserved. This equality is what lets snapshot_display_total
+    // be the entry frame count (decoded_frames) and still equal the window
+    // span the shifted map spans.
     {
         const int64_t expected_frames =
-            std::llrint(t_end) - entry_domain_begin;
+            std::llrint(t_end) - window_origin_frame;
         if (decoded_frames != expected_frames) {
             std::fprintf(stderr,
                 "warptempo_gui: render-view: '%s' holds %lld frames but "
@@ -501,46 +509,54 @@ bool GuiRenderView::load_render_view_at(int index) {
     viewport.clear_hover_popup();
 
     // Stash the authoring POSITION on the FIRST entry of this render-view
-    // session (no entry buffer resident yet). refresh_active_tab_view_from_app
+    // session (no entry audio resident yet). refresh_active_tab_view_from_app
     // snapshots the live authoring viewport/zoom/playhead and selection into
     // the active tab's slot; restore_source_view restores it on exit. This is
     // one-way POSITION memory (enter stashes, exit restores) with no tab or
     // mode component — the tab stays the authoring session's throughout render
-    // view and W/P is global by ruling, so neither is stashed. The audio object
-    // itself is untouched — it stays the source.
-    if (entry_samples.empty()) {
+    // view and W/P is global by ruling, so neither is stashed. The source audio
+    // object itself is untouched — it stays the source.
+    if (!app.render_view.entry_audio) {
         active_views.refresh_active_tab_view_from_app();
     }
-    entry_samples = std::move(*decoded);
-    entry_frames  = decoded_frames;
+    // Install the entry audio. Hold the OUTGOING entry (the previously browsed
+    // entry, on a render-to-render navigation) alive in a local until playback
+    // has been stopped (above) and rebound (below): playback borrows the entry
+    // samples raw, and a waveform worker job may hold a raw pointer into the
+    // old entry too — the job's own shared_ptr keepalive covers the async case,
+    // and this local covers the synchronous stop/rebind window. It drops at
+    // function scope end, after kick_waveform_sync has drained the worker.
+    std::shared_ptr<GuiAudio> outgoing_entry =
+        std::move(app.render_view.entry_audio);
+    app.render_view.entry_audio = entry_audio;
     // The displayed domain changed (a different entry's axis): bump the
     // audio identity counter so the waveform / stem / flag caches — all
-    // keyed on audio_generation — invalidate. The bump used to ride the
-    // GuiAudio swap; the object no longer swaps, so it is explicit here.
+    // keyed on audio_generation — invalidate. The bump keys the render-view
+    // identity flip (the plate's audio source and map change), so no new
+    // fingerprint field is needed.
     app.audio_generation++;
 
     // The display stores adopt the snapshot vectors WHOLESALE — no
-    // keep-filtering: the full timeline shows every authored row,
-    // disabled markers included (the paint and Tab-walk predicates skip
-    // or style them exactly as target view does; label defs ride in the
-    // same vector, so effective_disabled works on the snapshot).
+    // keep-filtering here: every authored row rides in, disabled markers
+    // included (label defs ride in the same vector, so effective_disabled
+    // works on the snapshot). The out-of-window membership rule
+    // (render_view_position_in_window) culls rows whose window-axis image
+    // falls outside the entry wav at each display consumer.
     app.render_view.warp_markers           = std::move(snapshot_warp);
     app.render_view.phase_resets        = std::move(snapshot_phase_resets);
-    // Snapshot display geometry for the Render display context: the FULL
-    // map this entry's authored positions translate through, its target
-    // total (the Render domain total — the full deformed timeline, not
-    // the wav length), the playback bind anchor computed above, and the
-    // recipe trim for the trim display surfaces (dim + painted bounds).
-    // Built once here, immutable while displayed; cleared beside the
-    // display stores at every clear site.
-    app.render_view.snapshot_display_total = target_total_frames_for_map(
-        source_total_frames, full_warp_frame_map);
+    // Snapshot display geometry for the Render display context: the
+    // TARGET-SHIFTED map (window axis) this entry's authored positions
+    // translate through, and the entry frame count as the display total. Shift
+    // every segment's tgt_frame by -T_b so map_source_to_target yields
+    // window-axis positions directly; the display total is the decoded entry
+    // frame count (verified above to equal the window span), stored rather than
+    // re-derived from the shifted map. Built once here, immutable while
+    // displayed; cleared beside the display stores at every clear site.
+    for (auto& seg : full_warp_frame_map) {
+        seg.tgt_frame -= static_cast<double>(window_origin_frame);
+    }
+    app.render_view.snapshot_display_total  = decoded_frames;
     app.render_view.snapshot_warp_frame_map = std::move(full_warp_frame_map);
-    app.render_view.entry_domain_begin = entry_domain_begin;
-    app.render_view.snapshot_has_trim_begin   = recipe_trim.has_begin;
-    app.render_view.snapshot_trim_begin_frame = recipe_trim.begin_frame;
-    app.render_view.snapshot_has_trim_end     = recipe_trim.has_end;
-    app.render_view.snapshot_trim_end_frame   = recipe_trim.end_frame;
     // The entry's dispatch tab (settings->active_tab_view, frozen at dispatch),
     // stashed for the Ctrl+Alt+C routing re-attestation (the key rides outside
     // the render fingerprint). app.active_tab_view is NOT set to it — the tab
@@ -556,10 +572,12 @@ bool GuiRenderView::load_render_view_at(int index) {
     // fixed fit-file zoom over the displayed domain, viewport 0, playhead 0,
     // and an empty selection. app.active_tab_view and app.active_markers_view
     // are deliberately NOT touched: the tab is frozen to the authoring session
-    // and W/P is global by ruling. commit_tab (bound above) still supplies the
-    // recipe trim and snapshot_commit_tab; its view keys were validated at this
-    // load (first_view_range_defect) as the position Ctrl+Alt+C inherits, but
-    // they are not applied here. The engine block, playback_speed, follow,
+    // and W/P is global by ruling. commit_tab (bound above) still supplies
+    // snapshot_commit_tab (the recipe trim it also carries stays a load-time
+    // local — it sized the window shift and the length check, and is not
+    // stored); its view keys were validated at this load
+    // (first_view_range_defect) as the position Ctrl+Alt+C inherits, but they
+    // are not applied here. The engine block, playback_speed, follow,
     // font_size, active_audio_view are likewise the commit payload only,
     // adopted by Ctrl+Alt+C, never at browse time.
     app.zoom_level             = kFitFileLevel;
@@ -569,12 +587,13 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.selected_markers.clear();
     app.last_selected_marker = -1;
 
-    // A freshly loaded entry starts with NO trim bound focused. The snapshot
-    // bounds are Tab stops now (cycle_selection), so a lingering trim-bound
-    // selection — from the source view on the first entry, or from the
-    // previously browsed entry on a navigation — must be dropped here, else it
-    // would paint a spurious focus on this entry's bound. Mirrors
-    // clear_selection's trim reset.
+    // A freshly loaded entry starts with NO trim bound focused. Render view
+    // has no trim display surface and no trim Tab stops, so a trim-bound
+    // selection carried in from source view (on the first entry) must be
+    // dropped here — otherwise it would sit as stale focus behind the read-only
+    // display and be restored oddly. restore_source_view brings the authoring
+    // trim focus back from the tab slot stashed at entry, so clearing the live
+    // fields here is safe. Mirrors clear_selection's trim reset.
     app.trim_begin_selected = false;
     app.trim_end_selected   = false;
     app.last_selected_trim  = 0;
@@ -588,16 +607,15 @@ bool GuiRenderView::load_render_view_at(int index) {
         app.playhead_scanner_sample = app.playhead_cursor_sample;
     }
 
-    // Rebind playback to the entry buffer at the rendered window's
-    // target-axis origin: the wav covers only the window, so its frame 0
-    // is display position entry_domain_begin (llrint(T_b); 0 untrimmed) —
-    // the same domain-offset bind pattern target view uses for its
-    // trimmed buffer. The device stays init'd against the source's
-    // rate/channels from file load — the entry's match those by
-    // construction (verified at decode above), so a rebind suffices;
-    // playback was stopped above, satisfying rebind_buffer's contract.
-    playback.rebind_buffer(entry_samples.data(), entry_frames,
-                           app.render_view.entry_domain_begin);
+    // Rebind playback to the entry buffer at domain offset 0: render view
+    // displays the entry wav's OWN timeline, so its frame 0 is display
+    // position 0 and the whole [0, entry frames) buffer is the playable
+    // domain. The device stays init'd against the source's rate/channels from
+    // file load — the entry's match those by construction (verified above), so
+    // a rebind suffices; playback was stopped above, satisfying rebind_buffer's
+    // contract.
+    playback.rebind_buffer(app.render_view.entry_audio->samples_ptr(),
+                           app.render_view.entry_audio->total_frames(), 0);
     // One-shot discrete jump: the loaded render swapped the entry buffer and
     // the viewport / zoom, so render the plate synchronously and publish the
     // displayed fingerprint now. Otherwise the markers / playhead repaint
@@ -633,7 +651,7 @@ void GuiRenderView::restore_source_view() {
     // here, ahead of the entry-buffer guard, makes every leave path
     // correct without each call site having to order the flag itself.
     app.render_view.enabled = false;
-    if (entry_samples.empty()) return;
+    if (!app.render_view.entry_audio) return;
     playback.stop();
     app.playhead_scanner_active = false;
     app.playhead_scanner_restore_pending = false;
@@ -700,13 +718,16 @@ void GuiRenderView::restore_source_view() {
     selection.prune_live_selection();
 
     // Rebind playback to the source samples at domain offset 0 (the source
-    // is its own domain origin), then free the entry buffer — rebind first,
-    // so the device is never left bound to a freed buffer. The device was
-    // init'd against the source's rate/channels at file load; playback is
-    // stopped above, satisfying rebind_buffer's contract.
+    // is its own domain origin), then release the entry audio — rebind first,
+    // so the device is never left bound to a freed buffer. The entry audio was
+    // held alive by app.render_view.entry_audio through the stop/rebind window;
+    // a waveform worker job still rendering it keeps its own shared_ptr
+    // keepalive, so this reset cannot dangle the worker (the kick_waveform_sync
+    // tail below drains it). The device was init'd against the source's
+    // rate/channels at file load; playback is stopped above, satisfying
+    // rebind_buffer's contract.
     playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
-    std::vector<float>().swap(entry_samples);
-    entry_frames = 0;
+    app.render_view.entry_audio.reset();
     // Render-view exit lands playback bound to source.wav unconditionally
     // above. If the user is still in target view (R does not touch
     // active_audio_view), rebind to the target buffer — ensure_ready
@@ -739,12 +760,7 @@ void GuiRenderView::clear_snapshot_context() {
     app.render_view.warp_markers.clear();
     app.render_view.phase_resets.clear();
     app.render_view.snapshot_warp_frame_map.clear();
-    app.render_view.entry_domain_begin = 0;
     app.render_view.snapshot_display_total = 0;
-    app.render_view.snapshot_has_trim_begin = false;
-    app.render_view.snapshot_trim_begin_frame = 0;
-    app.render_view.snapshot_has_trim_end = false;
-    app.render_view.snapshot_trim_end_frame = 0;
     app.render_view.snapshot_commit_tab = 'A';
 }
 
@@ -765,7 +781,7 @@ void GuiRenderView::abandon_render_view() {
     // Deliberately no cancel_archival_session on this exit: revert_to_blank's
     // cancel_archival_render hook already ran the same cancel before this
     // teardown.
-    if (!app.render_view.enabled && entry_samples.empty()) return;
+    if (!app.render_view.enabled && !app.render_view.entry_audio) return;
     playback.stop();
     app.playhead_scanner_active = false;
     app.playhead_scanner_restore_pending = false;
@@ -774,12 +790,12 @@ void GuiRenderView::abandon_render_view() {
     viewport.clear_hover_popup();
 
     // Rebind playback to the source samples at domain offset 0, then
-    // free the entry buffer — rebind first, so the device is never left
-    // bound to a freed buffer (the same order restore_source_view uses;
-    // playback is stopped above, satisfying rebind_buffer's contract).
+    // release the entry audio — rebind first, so the device is never left
+    // bound to a freed buffer (the same order restore_source_view uses; a
+    // worker job rendering the entry keeps its own keepalive; playback is
+    // stopped above, satisfying rebind_buffer's contract).
     playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
-    std::vector<float>().swap(entry_samples);
-    entry_frames = 0;
+    app.render_view.entry_audio.reset();
 
     app.render_view.enabled = false;
     app.render_view.list.clear();

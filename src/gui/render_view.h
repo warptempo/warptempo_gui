@@ -27,13 +27,14 @@ struct GuiTargetRender;
 // refresh_active_tab_view_from_app is reached through active_views.
 //
 // The audio-domain invariant: the GuiAudio object (`audio`) is ALWAYS the
-// source — it never swaps, in any view. Render view's audio is the
-// view-owned decoded entry buffer below, bound to playback at the
-// rendered window's target-axis origin (entry_domain_begin — the wav
-// covers only the window of the full deformed timeline the view
-// displays); the waveform plate is the SOURCE samples deformed through
-// the entry's snapshot map, which by the render pipeline's own
-// construction matches the rendered wav across the window.
+// source — it never swaps, in any view. Render view DISPLAYS the rendered
+// artifact: the entry wav's own timeline (which IS the trimmed window when
+// the recipe was trimmed). The view-owned entry audio
+// (app.render_view.entry_audio, a fresh GuiAudio decoded from the entry wav
+// through the standard peaks pipeline) supplies the waveform pixels from its
+// OWN samples and binds to playback at domain offset 0. Markers paint on the
+// window axis through the target-shifted snapshot map; markers whose image
+// falls outside the rendered window are absent, like the audio they annotate.
 struct GuiRenderView {
     AppState&         app;
     GuiAudio&         audio;
@@ -43,17 +44,6 @@ struct GuiRenderView {
     Viewport&         viewport;
     GuiActiveViews&   active_views;
     GuiTargetRender&  target_render;
-
-    // The displayed entry's decoded audio: interleaved float frames with
-    // channels == the source's channel count (equal to the render's by
-    // construction, verified at decode). Disk-on-demand: decoded whole in
-    // load_render_view_at (entries are typically short trims), one entry
-    // resident at a time, freed on nav-away / exit / commit. Playback binds
-    // this buffer through rebind_buffer at the rendered window's origin
-    // (app.render_view.entry_domain_begin). Empty (entry_frames == 0)
-    // whenever no entry is displayed.
-    std::vector<float> entry_samples;
-    int64_t            entry_frames = 0;
 
     GuiRenderView(AppState&         app_,
                   GuiAudio&         audio_,
@@ -118,10 +108,9 @@ struct GuiRenderView {
     void exit_render_view_and_clear();
 
     // Clear exactly the snapshot-context fields of the RenderViewContext:
-    // the display marker/reset vectors, the snapshot warp frame map, the
-    // entry domain begin, the snapshot display total, the snapshot trim
-    // bounds, the snapshot commit tab (reset to 'A'), and the authoring-session
-    // stash (tab reset to 'A', W/P mode reset to 'W'). Deliberately does
+    // the display marker/reset vectors, the shifted snapshot warp frame map,
+    // the snapshot display total, and the snapshot commit tab (reset to 'A').
+    // Deliberately does
     // NOT touch enabled, list, index, or last_path — those are selection and
     // lifecycle state whose handling legitimately differs per exit, so each
     // clear site keeps its own lines for them. Exists so a new snapshot field

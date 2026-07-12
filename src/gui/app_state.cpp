@@ -94,6 +94,12 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
         } else {
             src_sample = app.warpmarkers.markers()[i].time_frame;
         }
+        // Out-of-window culling: a render-view marker whose window-axis image
+        // falls outside the entry wav is absent from paint, so it must be
+        // unpickable too (else a marker just past the window edge would be
+        // grabbable through the halo at the boundary column). One definition,
+        // render_view_position_in_window; no-op outside render view.
+        if (rv && !render_view_position_in_window(app, src_sample)) continue;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
@@ -125,25 +131,16 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
-    // Trim bounds hit-test like markers in every view. Authoring views test
-    // the active A/B tab's live bounds. Render view tests the SNAPSHOT
-    // bounds — the entry's recipe trim from its .settings, the rendered
-    // window — at their DISPLAYED positions: the display context below
-    // supplies the entry's snapshot map, so the forward-mapping is the same
-    // projection compute_displayed_trim paints the stems at. A render-view
-    // pick selects and navigates only, exactly like a click on a snapshot
-    // marker; the bounds stay immutable there — the press handler
-    // (handle_render_view_press) never arms a drag.
-    const bool rv = app.render_view.enabled;
-    const bool has_begin = rv ? app.render_view.snapshot_has_trim_begin
-                              : app.trim.has_begin;
-    const bool has_end   = rv ? app.render_view.snapshot_has_trim_end
-                              : app.trim.has_end;
+    // Trim bounds hit-test like markers in the AUTHORING views only, against
+    // the active A/B tab's live bounds. Render view displays the rendered
+    // artifact — there is no trim overlay and no trim pick — so it returns
+    // None outright.
+    if (app.render_view.enabled) return TrimHit::None;
+    const bool has_begin = app.trim.has_begin;
+    const bool has_end   = app.trim.has_end;
     if (!has_begin && !has_end) return TrimHit::None;
-    const int64_t begin_frame = rv ? app.render_view.snapshot_trim_begin_frame
-                                   : app.trim.begin_frame;
-    const int64_t end_frame   = rv ? app.render_view.snapshot_trim_end_frame
-                                   : app.trim.end_frame;
+    const int64_t begin_frame = app.trim.begin_frame;
+    const int64_t end_frame   = app.trim.end_frame;
 
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
@@ -193,19 +190,15 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
-    // Same bound sourcing as hit_test_trim_boundary (see the view comment
-    // there): the active A/B tab's live bounds in authoring views, the
-    // entry's snapshot bounds in render view; only set bounds are testable.
-    const bool rv = app.render_view.enabled;
-    const bool has_begin = rv ? app.render_view.snapshot_has_trim_begin
-                              : app.trim.has_begin;
-    const bool has_end   = rv ? app.render_view.snapshot_has_trim_end
-                              : app.trim.has_end;
+    // Same bound sourcing as hit_test_trim_boundary: the active A/B tab's live
+    // bounds in the AUTHORING views only; render view has no trim overlay and
+    // returns None outright. Only set bounds are testable.
+    if (app.render_view.enabled) return TrimHit::None;
+    const bool has_begin = app.trim.has_begin;
+    const bool has_end   = app.trim.has_end;
     if (!has_begin && !has_end) return TrimHit::None;
-    const int64_t begin_frame = rv ? app.render_view.snapshot_trim_begin_frame
-                                   : app.trim.begin_frame;
-    const int64_t end_frame   = rv ? app.render_view.snapshot_trim_end_frame
-                                   : app.trim.end_frame;
+    const int64_t begin_frame = app.trim.begin_frame;
+    const int64_t end_frame   = app.trim.end_frame;
 
     // The b/e chips fill top_upper_row_area exactly (the painted
     // chip box top/height equal this row). A press outside that vertical band
@@ -355,6 +348,30 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             app.iteration_mode_enabled);
     }
     for (const auto& r : rects) {
+        // Out-of-window culling: a render-view flag whose window-axis image
+        // falls outside the entry wav is absent from paint, so its chip is
+        // unpickable too (one definition, render_view_position_in_window). The
+        // rect's marker_index indexes the render-view store the rects were
+        // built from.
+        if (app.render_view.enabled) {
+            int64_t src_frame;
+            if (app.active_markers_view == 'P') {
+                if (r.marker_index < 0 ||
+                    r.marker_index >=
+                        static_cast<int>(app.render_view.phase_resets.size()))
+                    continue;
+                src_frame =
+                    app.render_view.phase_resets[r.marker_index].time_frame;
+            } else {
+                if (r.marker_index < 0 ||
+                    r.marker_index >=
+                        static_cast<int>(app.render_view.warp_markers.size()))
+                    continue;
+                src_frame =
+                    app.render_view.warp_markers[r.marker_index].time_frame;
+            }
+            if (!render_view_position_in_window(app, src_frame)) continue;
+        }
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {
             return r.marker_index;

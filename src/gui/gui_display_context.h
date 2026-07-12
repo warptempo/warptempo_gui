@@ -25,13 +25,14 @@ struct GuiDisplayContext {
     // NEVER null; points at an empty vector when the displayed domain is
     // the source timeline (identity), or when the target map cannot
     // build (the existing empty-map identity fallthrough). In the Render
-    // domain it aliases the entry's snapshot map
-    // (app.render_view.snapshot_warp_frame_map), built once at entry load
-    // and immutable while displayed.
+    // domain it aliases the entry's TARGET-SHIFTED snapshot map
+    // (app.render_view.snapshot_warp_frame_map — window axis), built once at
+    // entry load and immutable while displayed.
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr;
     // The displayed domain's total frames (live_total_frames semantics):
-    // the source total, or the map's target total (the live target map's
-    // in TargetLive, the snapshot map's in Render).
+    // the source total in Source, the live target map's target total in
+    // TargetLive, and the ENTRY FRAME COUNT (snapshot_display_total, stored,
+    // NOT re-derived from the shifted map) in Render.
     int64_t domain_total_frames = 0;
     int sample_rate = 0;
 };

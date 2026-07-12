@@ -208,21 +208,21 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
             target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
             target_warp_frame_map_hash = c.hash;
         }
-    } else if (app.render_view.enabled &&
-               !app.render_view.snapshot_warp_frame_map.empty()) {
-        // Render view: bake the entry's snapshot map over the SOURCE
-        // samples (the audio object is invariantly the source) — the FULL
-        // deformed timeline, exactly the picture a target view of this
-        // snapshot would paint (the entry's wav covers only the rendered
-        // window; playback binds it at the window's target-axis origin,
-        // and the out-of-window region paints dimmed through the trim
-        // display surfaces). By the render pipeline's own construction the
-        // in-window stretch is the same picture the rendered wav holds.
-        // Cache keying matches the stem cache's: the snapshot map is
-        // immutable per entry and every entry load bumps
-        // audio_generation, so the fingerprint's audio_gen already keys
-        // the map — warp_frame_map_hash stays 0 here.
-        target_warp_frame_map = app.render_view.snapshot_warp_frame_map;
+    }
+    // Render view: the plate is IDENTITY over the entry audio — the rendered
+    // artifact's own samples, its own timeline — not a deformation of the
+    // source. So no warp_frame_map (empty) and is_target false; the audio
+    // source flips to the entry audio below. The stem / flag caches still lay
+    // markers onto the window axis through app.render_view.snapshot_warp_frame_map
+    // (the shifted map), independent of this identity plate. The dirty-detect
+    // fingerprint needs no new key: audio_generation bumps on every entry load
+    // and on every render-view enter/exit, which already keys the identity flip
+    // (audio source + map both change together).
+    const GuiAudio* audio_source = &audio;
+    std::shared_ptr<const GuiAudio> audio_keepalive;
+    if (app.render_view.enabled && app.render_view.entry_audio) {
+        audio_source   = app.render_view.entry_audio.get();
+        audio_keepalive = app.render_view.entry_audio;
     }
 
     in.vp_start      = vp_start;
@@ -231,8 +231,10 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
-    in.channel_count = audio.render_channels();
+    in.channel_count = audio_source->render_channels();
     in.warp_frame_map       = std::move(target_warp_frame_map);
+    in.audio         = audio_source;
+    in.audio_keepalive = std::move(audio_keepalive);
     in.valid         = true;
     return in;
 }
@@ -289,6 +291,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
+        wf_cache.supersede_audio           = in.audio;
+        wf_cache.supersede_audio_keepalive = std::move(in.audio_keepalive);
         return;
     }
 
@@ -322,7 +326,10 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.warp_frame_map        = std::move(in.warp_frame_map);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = in.channel_count;
-    job.audio          = &audio;
+    // The audio the worker reads: source audio outside render view, the entry
+    // audio in render view (keepalive holds its shared_ptr across a nav-away).
+    job.audio          = in.audio;
+    job.audio_keepalive = std::move(in.audio_keepalive);
 
     wf_cache.pending_fp_vp_start    = in.vp_start;
     wf_cache.pending_fp_vp_end      = in.vp_end;
@@ -343,6 +350,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
             "on next tick\n");
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
+        wf_cache.supersede_audio = nullptr;
+        wf_cache.supersede_audio_keepalive.reset();
         // Make sure the next maybe_enqueue tick sees the live fingerprint
         // as dirty so we retry. The simplest way is to mark pending_fp_*
         // dirty by resetting audio_gen — comparison will mismatch.
@@ -390,8 +399,14 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
-        job.channel_count  = audio.render_channels();
-        job.audio          = &audio;
+        // The superseded audio source (entry audio in render view, else the
+        // source); channel_count reads from it since the two may differ across
+        // a render-view enter/exit that superseded a job.
+        const GuiAudio* sup_audio =
+            wf_cache.supersede_audio ? wf_cache.supersede_audio : &audio;
+        job.channel_count  = sup_audio->render_channels();
+        job.audio          = sup_audio;
+        job.audio_keepalive = wf_cache.supersede_audio_keepalive;
 
         wf_cache.pending_fp_vp_start    = wf_cache.supersede_vp_start;
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
@@ -403,6 +418,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
+        wf_cache.supersede_audio = nullptr;
+        wf_cache.supersede_audio_keepalive.reset();
 
         waveform_worker.dispatch(std::move(job),
             [this](bool ok2) { on_waveform_render_done(ok2); });
@@ -502,6 +519,8 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // re-dispatch an old one on a later tick.
     wf_cache.supersede = false;
     wf_cache.supersede_warp_frame_map.clear();
+    wf_cache.supersede_audio = nullptr;
+    wf_cache.supersede_audio_keepalive.reset();
 
     // Render into the LIVE surface directly. Reuse-or-recreate on
     // dimension mismatch, mirroring the dispatch path.
@@ -518,11 +537,13 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.height = in.area_h;
     }
 
+    // in.audio is the source audio outside render view, the entry audio in
+    // render view (identity plate over the artifact's own samples).
     render_waveform_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
         in.channel_count,
-        audio,
+        *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
@@ -689,7 +710,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         in.area_w, in.area_h,
         strip_x, strip_w,
         in.channel_count,
-        audio,
+        *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
@@ -894,11 +915,16 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // into the live waveform pixels), not a freshly-built one — keeps
     // stem positions consistent with the displayed waveform during the
     // worker's rebuild window. Render-view stems translate the
-    // authored-domain display stores through the entry's snapshot map;
-    // the snapshot is immutable while displayed and every entry load
-    // bumps audio_generation (fp_audio_gen), so the existing fingerprint
-    // already keys it — no new field. The drag-frozen override cannot
-    // occur here: drags are gated out of render view.
+    // authored-domain display stores through the entry's TARGET-SHIFTED
+    // snapshot map, so they land on the WINDOW axis of the entry wav's own
+    // identity plate; out-of-window rows never reach a paintable column (the
+    // stem-loop clips to [vp_start, vp_end), which the window-bounded viewport
+    // holds inside [0, snapshot_display_total) — the same membership
+    // render_view_position_in_window enforces at the pickable surfaces). The
+    // snapshot is immutable while displayed and every entry load bumps
+    // audio_generation (fp_audio_gen), so the existing fingerprint already
+    // keys it — no new field. The drag-frozen override cannot occur here:
+    // drags are gated out of render view.
     const std::vector<WarpFrameMapSegment>* tmap_arg =
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
@@ -1108,9 +1134,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
 
-    // Render-view flags translate through the entry's snapshot map,
-    // mirroring the stem cache (same immutable-snapshot / audio_gen
-    // fingerprint argument; drags cannot occur in render view).
+    // Render-view flags translate through the entry's target-shifted snapshot
+    // map onto the window axis, mirroring the stem cache (same
+    // immutable-snapshot / audio_gen fingerprint argument; out-of-window rows
+    // clip off; drags cannot occur in render view).
     const std::vector<WarpFrameMapSegment>* rv_tmap_arg = nullptr;
     if (rve && !app.render_view.snapshot_warp_frame_map.empty()) {
         rv_tmap_arg = &app.render_view.snapshot_warp_frame_map;
@@ -1174,11 +1201,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     }
 
     // The b/e trim chips cap their stems in the upper top row. Painted
-    // in both 'W' and 'P' views (like the stems); in render view the dtrim
-    // carries the snapshot trim's target-axis positions, so a trimmed
-    // entry's b/e chips paint (pickable like the snapshot markers — the
-    // trim hit tests project the same snapshot positions — but immutable)
-    // and an untrimmed entry's has-bits are off.
+    // in both 'W' and 'P' views (like the stems) in the AUTHORING views only;
+    // render view displays the rendered artifact and has no trim overlay, so
+    // compute_displayed_trim returns nothing set there and this no-ops.
     // The real waveform_area sets the upper-row chip bottom; the top strip's
     // screen origin equals the cache surface origin (0,0), so local_top_strip
     // and the real waveform rect need no translation.

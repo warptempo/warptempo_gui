@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -51,8 +52,15 @@ struct WaveformJob {
     cairo_surface_t* surface = nullptr;
     int channel_count = 0;     // 1 for mono, 2 for stereo
 
-    // Audio handle (see lifetime invariant above).
+    // Audio handle the render reads (see lifetime invariant above). In
+    // source/target view this is main.cpp's long-lived source audio and
+    // `audio_keepalive` stays null (the lifetime invariant covers it). In
+    // render view it is the view-owned entry audio, whose shared_ptr can be
+    // swapped out by a navigation while this job is still in flight — so
+    // `audio_keepalive` holds a copy of that shared_ptr, keeping the entry
+    // GuiAudio (and its samples/pyramid) alive until the job is destroyed.
     const GuiAudio* audio = nullptr;
+    std::shared_ptr<const GuiAudio> audio_keepalive;
 };
 
 class GuiWaveformWorker {

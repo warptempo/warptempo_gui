@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <limits>
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
@@ -906,38 +907,47 @@ struct AppState {
         std::string last_path;
         std::vector<RenderViewEntry> list;
         int                          index = -1;     // -1 = unset
+        // The displayed entry's decoded audio: a fresh GuiAudio loaded from
+        // the entry wav at load_render_view_at through the standard peaks
+        // pipeline (decode + `<basename>.peaks` sidecar read/rebuild beside
+        // the wav). The waveform plate paints from THIS audio's own samples
+        // — the rendered artifact's own timeline — and playback binds this
+        // buffer at domain offset 0. shared_ptr so an in-flight waveform
+        // worker job and the playback callback can hold a keepalive across a
+        // navigation that swaps the pointer. Null before the first entry and
+        // after every render-view exit. The source `audio` object still
+        // stays the source in every view; this is the view-owned entry
+        // handle, not a swap of `audio`.
+        std::shared_ptr<GuiAudio>        entry_audio;
         // The current render's display markers + phase resets: the entry's
         // snapshot stores WHOLESALE (entry load reads the sibling snapshot
         // set `<basename>.warpmarkers` / `.phaseresetmarkers` /
         // `.settings`), disabled rows and label defs included, with
-        // time_frame at the AUTHORED whole-frame values. Render view is a
-        // read-only 1:1 target view of the snapshot: the FULL deformed
-        // timeline, with the snapshot trim's out-of-window region dimmed
-        // and its bounds painted (pickable, immutable), and playback bound
-        // to the entry wav at the window's target-axis origin. Every consumer
-        // translates these positions live through the display context
-        // (the snapshot map below), exactly as target view translates
-        // through the live map.
+        // time_frame at the AUTHORED whole-frame values. Render view displays
+        // the rendered artifact: the entry wav's own timeline. Markers paint
+        // at their positions on that WINDOW axis (the authored frame
+        // forward-mapped through the target-shifted snapshot map below), and
+        // a marker whose image falls outside the rendered window is simply
+        // absent — like the audio it annotates. Every in-window consumer
+        // translates these positions live through the display context (the
+        // shifted map below), exactly as target view translates through the
+        // live map.
         std::vector<GuiWarpMarker>       warp_markers;
         std::vector<GuiPhaseResetMarker>    phase_resets;
         // Snapshot display geometry: built once from the entry's snapshot
         // at load (read-only view — no invalidation), cleared wherever the
-        // display stores above are cleared. The Render display context
-        // (active_display_context) aliases the map. snapshot_display_total
-        // is the snapshot map's target total (target_total_frames_for_map
-        // against the source total, computed at entry load) — the Render
-        // display domain's total (live_total_frames semantics); the
-        // GuiAudio object stays the source in every view, so the displayed
-        // total must live context-side. entry_domain_begin is the playback
-        // bind anchor: llrint(T_b) of the snapshot map — the entry wav's
-        // frame 0 in full-target coordinates; 0 untrimmed (the sibling of
-        // GuiTargetRender::compute_target_buffer_start_frame's formula).
-        // The snapshot_*trim* fields are the entry's recipe trim (whole
-        // int64 source frames from the .settings commit tab) — DISPLAY
-        // state only, never editable: the trim display surfaces map them
-        // through the snapshot map to paint the rendered window's dim and
-        // bounds. sample_rate stays the source's (equal to the render's by
-        // construction, verified at entry decode). snapshot_commit_tab is
+        // display stores above are cleared. snapshot_warp_frame_map is the
+        // full snapshot map with every segment's tgt_frame shifted by -T_b
+        // (T_b = llrint of the trim begin's target image, 0 untrimmed), so
+        // map_source_to_target over it yields WINDOW-axis positions directly
+        // — a marker before the window maps negative, one past it at or
+        // beyond the window total. The Render display context
+        // (active_display_context) aliases this shifted map.
+        // snapshot_display_total is the ENTRY FRAME COUNT (the decoded entry
+        // audio's total_frames, already verified equal to the rendered
+        // window span) — the Render display domain's total (live_total_frames
+        // semantics), stored rather than recomputed from the shifted map
+        // (which no longer target-totals to it). snapshot_commit_tab is
         // the tab the entry is browsed under, attested at commit: entry load
         // is the only writer — render view blocks the Ctrl+Tab tab chords
         // outright — so it is set from the entry's persisted active_tab_view at
@@ -950,12 +960,7 @@ struct AppState {
         // passing for the frozen dispatch-time file, failing for hand edits.
         // Cleared to 'A' beside the other snapshot fields at every clear site.
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
-        int64_t                          entry_domain_begin = 0;
         int64_t                          snapshot_display_total = 0;
-        bool                             snapshot_has_trim_begin = false;
-        int64_t                          snapshot_trim_begin_frame = 0;
-        bool                             snapshot_has_trim_end = false;
-        int64_t                          snapshot_trim_end_frame = 0;
         char                             snapshot_commit_tab = 'A';
     };
     RenderViewContext render_view;
@@ -1149,13 +1154,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
-// column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
-// bounds are testable — the active tab's live pair in authoring views,
-// the entry's snapshot recipe bounds in render view. Walks the same
-// warp_frame_map as hit_test_marker_line in the mapped views so the hit
-// lands on the visually-drawn stem. Trim is project-level, and applies
-// in both 'W' and 'P' views. When both bounds are within reach, the
-// nearer wins.
+// column is within kMarkerHitHalfPx of `mouse_x`, or None. AUTHORING views
+// only — the active tab's live pair; render view has no trim overlay and
+// returns None outright. Walks the same warp_frame_map as
+// hit_test_marker_line in target view so the hit lands on the visually-drawn
+// stem. Trim is project-level, and applies in both 'W' and 'P' views. When
+// both bounds are within reach, the nearer wins.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 

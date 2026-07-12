@@ -150,6 +150,21 @@ int64_t authored_frame_at_column(
     return snap_authored_frame(t_active);
 }
 
+bool render_view_position_in_window(const AppState& app, int64_t source_frame) {
+    // nearbyint(map_source_to_target(source_frame, shifted_map)) — the same
+    // math source_frame_to_active_domain runs in the Render domain, inlined
+    // here to read app.render_view directly (no audio handle needed) and to
+    // keep this the single membership authority. The shifted map already
+    // subtracts T_b, so the result is the window-axis image; the half-open
+    // rule and rationale live at the declaration in warp_frame_map_view.h.
+    const size_t q = (source_frame < 0)
+        ? static_cast<size_t>(0)
+        : static_cast<size_t>(source_frame);
+    const int64_t image = static_cast<int64_t>(std::nearbyint(
+        map_source_to_target(q, app.render_view.snapshot_warp_frame_map)));
+    return image >= 0 && image < app.render_view.snapshot_display_total;
+}
+
 // The single reader of app.active_audio_view / app.render_view.enabled
 // for DOMAIN QUERIES (see gui_display_context.h for the ruling and the
 // mode-logic carve-out). The three arms are the composite view rule.
@@ -163,24 +178,25 @@ const GuiDisplayContext& active_display_context(const AppState& app,
     static const std::vector<WarpFrameMapSegment> kIdentityMap;
     if (app.render_view.enabled) {
         // Render view is a display DOMAIN, whatever active_audio_view
-        // says — a read-only 1:1 target view of the displayed entry's
-        // snapshot (the architect's ruling): the FULL deformed timeline
-        // of the snapshot map, with the snapshot trim's out-of-window
-        // region dimmed and its bounds painted (pickable, immutable), and playback
-        // bound to the entry wav at the window's target-axis origin. The
-        // stores hold the whole AUTHORED-domain snapshot, and this arm
-        // behaves exactly like the TargetLive arm below with a different
-        // map source: the translation is the entry's snapshot map, the
-        // displayed total the snapshot map's target total (computed once
-        // at entry load). The flag can persist as 'T' or 'S' through
-        // render view — the TargetLive arm below is reached only when
-        // render view is off, and the live target-map cache is never
-        // consulted here. With no entry loaded the snapshot member is
-        // empty and the stores are empty, so nothing translates while the
-        // map pointer stays valid. The GuiAudio object is invariantly the
-        // SOURCE, so the displayed total lives context-side; sample_rate
-        // stays audio.sample_rate() — the render's rate equals the
-        // source's by construction, verified at entry decode.
+        // says — it displays the RENDERED ARTIFACT: the entry wav's own
+        // timeline, which is the trimmed WINDOW when the recipe was trimmed.
+        // The domain is that window: the map is the TARGET-SHIFTED snapshot
+        // map (each segment's tgt_frame shifted by -T_b at entry load), so
+        // map_source_to_target yields window-axis positions directly, and the
+        // displayed total is the entry frame count (snapshot_display_total,
+        // stored — NOT re-derived from the shifted map). This arm behaves
+        // like the TargetLive arm below with a different map source: forward /
+        // inverse map math over the shifted map. Markers whose window-axis
+        // image falls outside [0, snapshot_display_total) are absent (see
+        // render_view_position_in_window). The flag can persist as 'T' or 'S'
+        // through render view — the TargetLive arm below is reached only when
+        // render view is off, and the live target-map cache is never consulted
+        // here. With no entry loaded the snapshot member is empty and the
+        // stores are empty, so nothing translates while the map pointer stays
+        // valid. The GuiAudio object is invariantly the SOURCE, so the
+        // displayed total lives context-side; sample_rate stays
+        // audio.sample_rate() — the render's rate equals the source's by
+        // construction, verified at entry load.
         ctx.domain = GuiDisplayDomain::Render;
         ctx.warp_frame_map = &app.render_view.snapshot_warp_frame_map;
         ctx.domain_total_frames = app.render_view.snapshot_display_total;

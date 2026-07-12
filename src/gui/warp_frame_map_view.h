@@ -100,6 +100,20 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
 
+// Render-view out-of-window membership, ONE definition. A marker or phase
+// reset is DISPLAYED in render view iff its window-axis image lies in
+// [0, snapshot_display_total). The image is
+// nearbyint(map_source_to_target(source_frame, snapshot_warp_frame_map)) over
+// the TARGET-SHIFTED snapshot map — the exact expression every render-view
+// display consumer (painters, hit tests, Tab walk) computes a position with —
+// so a marker before the window maps negative and one past it at or beyond
+// the window total. Half-open: a marker exactly at the window end (image ==
+// snapshot_display_total) annotates a sample the entry wav does not contain
+// (the window is [T_b, T_e); the wav holds T_e - T_b frames), so it is culled
+// with everything past the end. Callers must gate on app.render_view.enabled;
+// this reads app.render_view directly and is meaningful only there.
+bool render_view_position_in_window(const AppState& app, int64_t source_frame);
+
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the Ctrl+Left/Right nudges on both
 // marker columns and the trim bounds, the Ctrl+wheel trim end-move) or

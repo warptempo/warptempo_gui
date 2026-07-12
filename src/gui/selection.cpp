@@ -128,8 +128,20 @@ void Selection::cycle_selection(bool forward) {
     };
 
     // Disabled-skip predicate. Warp side respects label_ref cascade via
-    // effective_disabled; phase reset has no cascade and reads the bool.
+    // effective_disabled; phase reset has no cascade and reads the bool. In
+    // render view a row whose window-axis image falls outside the entry wav is
+    // absent from the display, so it is not a Tab stop either — fold the
+    // membership rule (render_view_position_in_window) in here, the one hook
+    // every scan below already honors (frame scan, in-group step,
+    // first_marker_at_ph). Without it a pre-window marker (negative image) or a
+    // past-window one could be selected by the frame scan.
     auto is_disabled = [&](int i) -> bool {
+        if (app.render_view.enabled) {
+            const int64_t src_f = phase_reset
+                ? phase_reset_vec[i].time_frame
+                : warp_vec[i].time_frame;
+            if (!render_view_position_in_window(app, src_f)) return true;
+        }
         if (phase_reset) {
             return phase_reset_vec[i].disabled;
         }
@@ -145,33 +157,22 @@ void Selection::cycle_selection(bool forward) {
     // Disabled markers are skipped as if absent from the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
 
-    // Trim stops exist in every view; trim is project-level, orthogonal to the
-    // marker list. Authoring views walk the live app.trim pair. Render view
-    // walks the entry's SNAPSHOT recipe bounds (whole int64 source frames from
-    // the entry's .settings) — a display of the render's recipe, selectable
-    // like a snapshot marker (Tab focus here, mouse pick through the trim hit
-    // tests) but never editable: render view is read-only, the press handler
-    // never arms a trim drag, and the nudge chords are absent from the
-    // render-view key allowlist, so focus moves them nowhere. Both stores hold whole
-    // int64 source frames. Each set bound has one active-domain frame,
+    // Trim stops are AUTHORING-only: trim is a project-level authoring tool,
+    // orthogonal to the marker list, and render view displays the rendered
+    // artifact with no trim overlay and no trim pick — so its stops are gated
+    // off entirely there (has_b / has_e forced false). The authoring views walk
+    // the live app.trim pair; each set bound has one active-domain frame,
     // projected through source_frame_to_active_domain exactly as the marker
-    // frames are — in render view that route is the snapshot map, the same
-    // translation frame_of takes. The group-order comment below (begin bound,
-    // end bound, then markers; the half-open [begin, end) rationale) applies
-    // unchanged here.
-    const bool render_view = app.render_view.enabled;
+    // frames are. The group-order comment below (begin bound, end bound, then
+    // markers; the half-open [begin, end) rationale) applies to the authoring
+    // views.
     auto bound_frame = [&](char which) -> int64_t {
-        const int64_t src_f = render_view
-            ? ((which == 'B') ? app.render_view.snapshot_trim_begin_frame
-                              : app.render_view.snapshot_trim_end_frame)
-            : ((which == 'B') ? app.trim.begin_frame
-                              : app.trim.end_frame);
+        const int64_t src_f = (which == 'B') ? app.trim.begin_frame
+                                             : app.trim.end_frame;
         return source_frame_to_active_domain(app, audio, src_f);
     };
-    const bool has_b = render_view ? app.render_view.snapshot_has_trim_begin
-                                   : app.trim.has_begin;
-    const bool has_e = render_view ? app.render_view.snapshot_has_trim_end
-                                   : app.trim.has_end;
+    const bool has_b = !app.render_view.enabled && app.trim.has_begin;
+    const bool has_e = !app.render_view.enabled && app.trim.has_end;
     const int64_t bf = has_b ? bound_frame('B') : 0;
     const int64_t ef = has_e ? bound_frame('E') : 0;
 

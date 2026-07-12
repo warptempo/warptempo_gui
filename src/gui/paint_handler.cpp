@@ -850,46 +850,11 @@ GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
 
     if (app.render_view.enabled) {
-        // Render view: the displayed trim is the SNAPSHOT trim — the
-        // entry's recipe trim from its .settings, the rendered window —
-        // forward-mapped through the snapshot map onto the full target
-        // axis, the same math the target-view branch below runs against
-        // the live displayed map, and the same projection the hit tests
-        // (hit_test_trim_boundary / hit_test_trim_chip) pick against. The
-        // bounds behave exactly like the snapshot markers: selectable —
-        // mouse pick and Tab focus (cycle_selection walks them as cycle
-        // stops), both tracked by the selected bits here so a focused bound
-        // paints in the selected style like a source-view bound — but
-        // immutable, so no gesture ever moves one. The snapshot map is
-        // immutable while displayed and every entry load bumps audio_generation,
-        // so reading it directly (not a wf_cache fingerprint copy) cannot lag
-        // the plate.
-        const auto& rv = app.render_view;
-        out.has_begin      = rv.snapshot_has_trim_begin;
-        out.has_end        = rv.snapshot_has_trim_end;
-        out.begin_selected = out.has_begin && app.trim_begin_selected;
-        out.end_selected   = out.has_end   && app.trim_end_selected;
-        // Only SET sides carry an authored source frame to map; unset
-        // sides keep target-axis whole-timeline defaults (never painted —
-        // the has-bits gate every consumer).
-        out.begin = 0;
-        out.end   = rv.snapshot_display_total;
-        if (!rv.snapshot_warp_frame_map.empty()) {
-            if (rv.snapshot_has_trim_begin) {
-                const int64_t b = rv.snapshot_trim_begin_frame;
-                out.begin = static_cast<int64_t>(std::nearbyint(
-                    map_source_to_target(
-                        static_cast<double>(b < 0 ? 0 : b),
-                        rv.snapshot_warp_frame_map)));
-            }
-            if (rv.snapshot_has_trim_end) {
-                const int64_t en = rv.snapshot_trim_end_frame;
-                out.end = static_cast<int64_t>(std::nearbyint(
-                    map_source_to_target(
-                        static_cast<double>(en < 0 ? 0 : en),
-                        rv.snapshot_warp_frame_map)));
-            }
-        }
+        // Render view displays the rendered ARTIFACT — the entry wav's own
+        // timeline — so there is no trim overlay: return a default
+        // DisplayedTrim (nothing set). compute_out_of_trim_rects then no-ops
+        // via its unset-both early-out, and the b/e stems and chips do not
+        // paint.
         return out;
     }
 
@@ -943,10 +908,10 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
     if (area.w <= 0) return out;
 
     // Frames in the same paint domain the trim stems use. begin/end are
-    // already mapped through the displayed warp_frame_map in target view and
-    // through the snapshot map in render view, where these rects dim the
-    // out-of-window region of the full deformed timeline (an untrimmed
-    // entry has no set bounds, so the early-out below covers it).
+    // already mapped through the displayed warp_frame_map in target view.
+    // Render view has no trim overlay — compute_displayed_trim returns nothing
+    // set there — so the unset-both early-out below no-ops it (no dim region
+    // over the artifact).
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
 

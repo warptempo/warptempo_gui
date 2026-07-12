@@ -142,6 +142,12 @@ struct WaveformCache {
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
+    // Audio the superseding job will read (see WaveformJob.audio). Carried so
+    // the deferred redispatch names the same audio the superseded viewport
+    // change was computed against — the entry audio in render view, the
+    // source audio otherwise; the keepalive holds a render-view entry alive.
+    const GuiAudio* supersede_audio = nullptr;
+    std::shared_ptr<const GuiAudio> supersede_audio_keepalive;
 
     // `dirty` no longer drives the dispatch decision (the
     // pending_fp_* comparison does). It remains as a startup/clear flag:
@@ -169,6 +175,8 @@ struct WaveformCache {
         pending_fp_audio_gen = -1;
         supersede = false;
         supersede_warp_frame_map.clear();
+        supersede_audio = nullptr;
+        supersede_audio_keepalive.reset();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
     }
@@ -435,9 +443,18 @@ private:
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         int      channel_count = 0;
-        // The translation map: the target-view map in target view, the
-        // entry's snapshot map in render view, empty in source view.
+        // The translation map: the target-view map in target view, empty in
+        // source view AND in render view (the render-view plate is identity
+        // over the entry audio — the rendered artifact's own samples — not a
+        // deformation of the source).
         std::vector<WarpFrameMapSegment> warp_frame_map;
+        // The audio the plate reads from: the source audio outside render
+        // view, the view-owned entry audio in render view (audio_keepalive
+        // holds its shared_ptr alive across a nav-away that swaps it). Set by
+        // compute_waveform_render_inputs; routed into WaveformJob.audio /
+        // .audio_keepalive and into the synchronous / pan render paths.
+        const GuiAudio* audio = nullptr;
+        std::shared_ptr<const GuiAudio> audio_keepalive;
         bool     valid         = false;        // false if degenerate / loading
     };
 
