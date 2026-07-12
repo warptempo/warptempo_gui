@@ -548,9 +548,12 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 
     // --- Lower row: status line (always on). One assembled field
     //     drawn in a single pass; elements (timestamp, S/T, W/P,
-    //     A/B, render-view filename, dirty *, transient message) are
-    //     space-separated and paint uniformly in kText. Read-only on
-    //     the active A/B tab is the literal "(read-only)" token.
+    //     A/B, dirty *, transient message) are space-separated and
+    //     paint uniformly in kText. The three view letters paint in
+    //     every view, render view included. Read-only on the active
+    //     A/B tab is the literal "(read-only)" token, gated to
+    //     authoring: render view is its own read-only modality, so
+    //     the tab's read-only flag is irrelevant there.
     //
     //     In source-view, sr is the loaded file's sample rate and the
     //     playhead samples are source-frames. In render-view the
@@ -573,29 +576,16 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (seconds > 5999.999) seconds = 5999.999;
 
         std::string assembled = format_timestamp(seconds);
-        if (!app.render_view.enabled) {
+        assembled += ' ';
+        assembled += (app.active_audio_view == 'T'
+                        ? 'T' : 'S');
+        assembled += ' ';
+        assembled += app.active_markers_view;
+        assembled += ' ';
+        assembled += app.active_tab_view;
+        if (!app.render_view.enabled && active_view_state(app).read_only) {
             assembled += ' ';
-            assembled += (app.active_audio_view == 'T'
-                            ? 'T' : 'S');
-            assembled += ' ';
-            assembled += app.active_markers_view;
-            assembled += ' ';
-            assembled += app.active_tab_view;
-            if (active_view_state(app).read_only) {
-                assembled += ' ';
-                assembled += "(read-only)";
-            }
-        } else if (app.render_view.index >= 0 &&
-                   app.render_view.index <
-                       static_cast<int>(
-                           app.render_view.list.size())) {
-            const auto& e =
-                app.render_view.list[app.render_view.index];
-            assembled += ' ';
-            assembled += e.batch_folder.filename().string();
-            assembled += '/';
-            assembled += e.basename;
-            assembled += ".wav";
+            assembled += "(read-only)";
         }
         if (app.dirty) {
             assembled += ' ';
@@ -654,12 +644,28 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
     } else if (app.hover_popup.visible) {
-        // The hover dwell renders as the lowest-priority upper-row
-        // branch. cached_text is the resolved-tempo string from
+        // The hover dwell renders below every modal/progress tier.
+        // cached_text is the resolved-tempo string from
         // compute_hover_popup_text.
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
             app.hover_popup.cached_text, kText, flag_font_size_px());
+    } else if (app.render_view.enabled &&
+               app.render_view.index >= 0 &&
+               app.render_view.index <
+                   static_cast<int>(app.render_view.list.size())) {
+        // Lowest-priority tier: the displayed render entry's name,
+        // <batch_folder>/<basename>.wav, shown only when nothing else
+        // claims the row. The lower row used to carry this; it moves
+        // here so the three view letters read uniformly in every view.
+        const auto& e = app.render_view.list[app.render_view.index];
+        std::string assembled = e.batch_folder.filename().string();
+        assembled += '/';
+        assembled += e.basename;
+        assembled += ".wav";
+        text_display::draw_line(
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            assembled, kText, flag_font_size_px());
     }
 
     return t_ts_ms;
