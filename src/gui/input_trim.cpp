@@ -623,6 +623,17 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,
     // `shift` here are the exact chords and the else-branch is a
     // plain-or-Shift select.
     if (which == TrimHit::None) return;
+    // Read-only refusal on the movement chords, the trim sibling of the
+    // marker Ctrl+drag refusal in on_button_press: in a read-only tab the
+    // trim drag never enters flight (app.trim_drag.active stays false, so
+    // motion / release / Escape all short-circuit), making a bound
+    // selectable but not moveable — exactly a marker's read-only behavior.
+    // Trim bounds were deliberately moveable in read-only while trim was one
+    // unified setting across both tabs; with per-tab trim that rationale is
+    // gone, so the mobility is revoked. The plain / Shift select+navigate
+    // branch below still runs: a click on a bound focuses it, mirroring
+    // plain marker clicks, which select in read-only.
+    if (ctrl && active_view_state(app).read_only) return;
     if (ctrl && shift) {
         begin_trim_drag(which, mouse_x, /*both=*/true);
         return;

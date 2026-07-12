@@ -209,7 +209,7 @@ void GuiRenderView::autosave_active_entry() {
 // The architect's ruling: render view is a read-only 1:1 target view of
 // the snapshot — the FULL deformed timeline of the snapshot map, with
 // the snapshot trim's out-of-window region dimmed and its bounds painted
-// (unpickable), and playback bound to the entry wav at the window's
+// (pickable, immutable), and playback bound to the entry wav at the window's
 // target-axis origin (Space outside the window is a silent no-op). The
 // display stores adopt the snapshot vectors WHOLESALE — disabled markers
 // included, styled as target view styles them — and every consumer

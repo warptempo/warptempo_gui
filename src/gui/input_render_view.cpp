@@ -309,19 +309,23 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
 }
 
 // Render-view mouse-press handler. Fully terminating: the on_button_press
-// caller invokes this and returns. Left-click on a marker line (waveform) or a
-// flag rect (top strip) toggles selection and jumps the playhead; left-click
-// elsewhere positions the playhead (with playback stop) and clears the
-// selection unless Shift is held. In P sub-view the top-strip click hits the
-// snapshot's phase-reset chips through hit_test_flag, the same as a W flag
-// click. Drag-create and top-strip playhead movement are silent no-ops so the
-// read-only marker-state invariant is preserved. Recomputes the cheap geometry
-// it needs; derives `shift` from `mods`.
+// caller invokes this and returns. Left-click on a marker line (waveform), a
+// flag rect (top strip), or a snapshot trim bound's stem or chip toggles /
+// sets selection and jumps the playhead; left-click elsewhere positions the
+// playhead (with playback stop) and clears the selection unless Shift is
+// held. In P sub-view the top-strip click hits the snapshot's phase-reset
+// chips through hit_test_flag, the same as a W flag click. Alt-exact presses
+// inside the waveform arm the same viewport scroll-drag source view runs.
+// Drag-create and top-strip playhead movement are silent no-ops so the
+// read-only marker-state invariant is preserved. Recomputes the cheap
+// geometry it needs; derives the modifier bools from `mods`.
 void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
                                                int y, bool inside_top,
                                                bool inside_waveform,
                                                GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
+    const bool alt   = mods.alt;
     const GuiRect area = waveform_area(app);
     // Wheel events arrive via on_wheel (coalesced per pointer frame), not
     // here; a stray wheel button is caught by the Left-only gate below.
@@ -335,10 +339,68 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
     const bool was_playing_rv = playback.is_playing();
     const int64_t playhead_at_entry_rv = app.playhead_cursor_sample;
     if (inside_top) playback_lifecycle.stop_playback_if_playing();
+    // Alt+drag (exact) pans the viewport — the same stepped scroll-drag
+    // source view arms (on_button_press's Alt-exact arm), regardless of
+    // whether the press landed on a marker or trim stem, so a pan never
+    // grabs anything. No-op in the top strip; the scroll happens on motion.
+    // The scroll-drag only moves the viewport, so it is fine in render
+    // view's read-only modality, and it deliberately does NOT override
+    // follow mode: a pan during playback moves the view along with the
+    // audio rather than signaling a stop.
+    if (alt && !ctrl && !shift) {
+        if (inside_waveform) {
+            app.scroll_drag.active        = true;
+            app.scroll_drag.last_x        = x;
+            app.scroll_drag.accum_samples = 0.0;
+        }
+        return;
+    }
     int hit = -1;
     if (inside_waveform)  hit = hit_test_marker_line(app, audio, x);
     else if (inside_top)  hit = hit_test_flag(app, audio, x, y);
     else                  return;
+    // Snapshot trim bounds are mouse-pickable like the snapshot markers,
+    // with source view's press priority: markers take priority on a shared
+    // column, so the trim tests run only on a marker/flag miss — the stem
+    // column in the waveform area, the chip rect first (falling back to the
+    // stem column) in the top strip. Alt is reserved for panning and never
+    // routes to trim, matching source view's trim_gesture filter. A hit
+    // selects the bound and jumps the playhead to its displayed frame; no
+    // drag ever starts — the bound is immutable in render view, exactly
+    // like the snapshot markers.
+    if (hit < 0 && !alt) {
+        TrimHit th = TrimHit::None;
+        if (inside_waveform) {
+            th = hit_test_trim_boundary(app, audio, x);
+        } else {
+            // Top strip: the b/e chip rect is tested first, the stem column
+            // fills in on a miss — the same order the source-view press uses.
+            const TrimHit chip = hit_test_trim_chip(app, audio, x, y);
+            th = (chip != TrimHit::None)
+                     ? chip
+                     : hit_test_trim_boundary(app, audio, x);
+        }
+        if (th != TrimHit::None) {
+            // Select the bound via the helper source-view clicks use: a
+            // plain click single-selects (this bound on, the other off,
+            // marker selection dropped, group Trim — the same
+            // exactly-one-thing-selected rule the marker-click arm below
+            // and the Tab-stop walk follow); Shift adds to the selection,
+            // exactly as source view's trim click passes shift through.
+            select_trim_boundary(th, /*additive=*/shift);
+            gui.invalidate_region(0, 0, app.width, app.height);
+            // Jump the playhead to the bound's displayed frame: the
+            // snapshot bound is an authored source frame, so
+            // forward-translate through the display context (snapshot
+            // map), the same route the marker click below takes.
+            const int64_t src = (th == TrimHit::Begin)
+                ? app.render_view.snapshot_trim_begin_frame
+                : app.render_view.snapshot_trim_end_frame;
+            viewport.move_playhead_to(
+                source_frame_to_active_domain(app, audio, src));
+            return;
+        }
+    }
     // Live selection lives in the global pair regardless of view domain.
     // active_markers_view tells us which marker list the indices map to.
     const bool sub_t = (app.active_markers_view == 'P');

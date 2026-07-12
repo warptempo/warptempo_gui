@@ -454,8 +454,10 @@ private:
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
     // stems' coordinate system. In render view the displayed trim is the
     // SNAPSHOT trim through the snapshot map — the entry's rendered window,
-    // painted (stems, chips, dim) but never pickable (selected bits stay
-    // off; the hit tests keep their render-view None guards).
+    // painted (stems, chips, dim) and selectable like the snapshot markers
+    // (mouse pick through the trim hit tests, Tab focus through
+    // cycle_selection; the selected bits track both) but immutable — no
+    // gesture ever moves a snapshot bound.
     struct DisplayedTrim {
         int64_t begin          = 0;
         int64_t end            = 0;

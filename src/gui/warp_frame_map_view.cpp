@@ -166,7 +166,7 @@ const GuiDisplayContext& active_display_context(const AppState& app,
         // says — a read-only 1:1 target view of the displayed entry's
         // snapshot (the architect's ruling): the FULL deformed timeline
         // of the snapshot map, with the snapshot trim's out-of-window
-        // region dimmed and its bounds painted (unpickable), and playback
+        // region dimmed and its bounds painted (pickable, immutable), and playback
         // bound to the entry wav at the window's target-axis origin. The
         // stores hold the whole AUTHORED-domain snapshot, and this arm
         // behaves exactly like the TargetLive arm below with a different

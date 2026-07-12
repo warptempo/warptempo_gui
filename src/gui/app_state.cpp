@@ -125,15 +125,25 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
-    // Trim editing is a source/target-view authoring gesture against the
-    // active A/B tab. Render view PAINTS trim bounds — the snapshot trim,
-    // the entry's rendered window — but never picks them: that trim is
-    // display state from the snapshot, not an editable bound, so this hit
-    // test and hit_test_trim_chip keep their render-view None guards. The
-    // Tab walk DOES stop on render view's snapshot bounds (cycle_selection),
-    // focusable for inspection but still mouse-unpickable and immutable.
-    if (app.render_view.enabled) return TrimHit::None;
-    if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
+    // Trim bounds hit-test like markers in every view. Authoring views test
+    // the active A/B tab's live bounds. Render view tests the SNAPSHOT
+    // bounds — the entry's recipe trim from its .settings, the rendered
+    // window — at their DISPLAYED positions: the display context below
+    // supplies the entry's snapshot map, so the forward-mapping is the same
+    // projection compute_displayed_trim paints the stems at. A render-view
+    // pick selects and navigates only, exactly like a click on a snapshot
+    // marker; the bounds stay immutable there — the press handler
+    // (handle_render_view_press) never arms a drag.
+    const bool rv = app.render_view.enabled;
+    const bool has_begin = rv ? app.render_view.snapshot_has_trim_begin
+                              : app.trim.has_begin;
+    const bool has_end   = rv ? app.render_view.snapshot_has_trim_end
+                              : app.trim.has_end;
+    if (!has_begin && !has_end) return TrimHit::None;
+    const int64_t begin_frame = rv ? app.render_view.snapshot_trim_begin_frame
+                                   : app.trim.begin_frame;
+    const int64_t end_frame   = rv ? app.render_view.snapshot_trim_end_frame
+                                   : app.trim.end_frame;
 
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
@@ -143,10 +153,10 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
 
-    // Same target-view translation as hit_test_marker_line: trim is stored
-    // source-domain, painted at map_source_to_target columns in target view.
-    // The render-view head guard above already returned, so the display
-    // context here is only ever source view or live target view.
+    // Same translation as hit_test_marker_line: trim is stored
+    // source-domain, painted at map_source_to_target columns in the mapped
+    // views. The context's map is empty (identity) in source view, the live
+    // map in target view, and the entry's snapshot map in render view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -171,8 +181,8 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
         return std::abs(b_px - click_rel_x);
     };
 
-    const int db = bound_dist(app.trim.begin_frame, app.trim.has_begin);
-    const int de = bound_dist(app.trim.end_frame, app.trim.has_end);
+    const int db = bound_dist(begin_frame, has_begin);
+    const int de = bound_dist(end_frame, has_end);
     const bool begin_ok = db <= kMarkerHitHalfPx;
     const bool end_ok   = de <= kMarkerHitHalfPx;
     if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
@@ -183,11 +193,19 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
-    // Same gating as hit_test_trim_boundary (paint yes, pick no in render
-    // view — see the asymmetry comment there): authoring against the
-    // active A/B tab, only set bounds are testable.
-    if (app.render_view.enabled) return TrimHit::None;
-    if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
+    // Same bound sourcing as hit_test_trim_boundary (see the view comment
+    // there): the active A/B tab's live bounds in authoring views, the
+    // entry's snapshot bounds in render view; only set bounds are testable.
+    const bool rv = app.render_view.enabled;
+    const bool has_begin = rv ? app.render_view.snapshot_has_trim_begin
+                              : app.trim.has_begin;
+    const bool has_end   = rv ? app.render_view.snapshot_has_trim_end
+                              : app.trim.has_end;
+    if (!has_begin && !has_end) return TrimHit::None;
+    const int64_t begin_frame = rv ? app.render_view.snapshot_trim_begin_frame
+                                   : app.trim.begin_frame;
+    const int64_t end_frame   = rv ? app.render_view.snapshot_trim_end_frame
+                                   : app.trim.end_frame;
 
     // The b/e chips fill top_upper_row_area exactly (the painted
     // chip box top/height equal this row). A press outside that vertical band
@@ -202,10 +220,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (sr <= 0) return TrimHit::None;
     const double vp = static_cast<double>(app.viewport_start_sample);
 
-    // Same target-view translation as hit_test_trim_boundary so the chip
-    // column lands where the stem (and chip) are painted in target view.
-    // As there, the render-view head guard already returned, so the
-    // context is only ever source view or live target view.
+    // Same translation as hit_test_trim_boundary so the chip column lands
+    // where the stem (and chip) are painted in the mapped views: the
+    // context's map is empty (identity) in source view, the live map in
+    // target view, and the entry's snapshot map in render view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -254,8 +272,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         return std::abs(mouse_x - rx);
     };
 
-    const int db = chip_dist(app.trim.begin_frame, app.trim.has_begin, "b");
-    const int de = chip_dist(app.trim.end_frame,   app.trim.has_end,   "e");
+    const int db = chip_dist(begin_frame, has_begin, "b");
+    const int de = chip_dist(end_frame,   has_end,   "e");
 
     // Overlapping chips: the renderer elides the right one, but guard the tie
     // by preferring the bound whose column is nearer the press, mirroring

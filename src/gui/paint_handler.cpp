@@ -848,12 +848,13 @@ GuiPaintHandler::compute_displayed_trim() const {
         // entry's recipe trim from its .settings, the rendered window —
         // forward-mapped through the snapshot map onto the full target
         // axis, the same math the target-view branch below runs against
-        // the live displayed map. Immutable and never pickable: the hit
-        // tests keep their render-view None guards (paint yes, pick no —
-        // see hit_test_trim_boundary). The selected bits DO track Tab focus:
-        // render view walks the snapshot bounds as cycle stops (cycle_selection),
-        // so a Tab-focused bound paints in the selected style like a source-view
-        // bound — inspection only, the bound cannot move. The snapshot map is
+        // the live displayed map, and the same projection the hit tests
+        // (hit_test_trim_boundary / hit_test_trim_chip) pick against. The
+        // bounds behave exactly like the snapshot markers: selectable —
+        // mouse pick and Tab focus (cycle_selection walks them as cycle
+        // stops), both tracked by the selected bits here so a focused bound
+        // paints in the selected style like a source-view bound — but
+        // immutable, so no gesture ever moves one. The snapshot map is
         // immutable while displayed and every entry load bumps audio_generation,
         // so reading it directly (not a wf_cache fingerprint copy) cannot lag
         // the plate.

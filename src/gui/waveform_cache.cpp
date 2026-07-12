@@ -1176,8 +1176,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // The b/e trim chips cap their stems in the upper top row. Painted
     // in both 'W' and 'P' views (like the stems); in render view the dtrim
     // carries the snapshot trim's target-axis positions, so a trimmed
-    // entry's b/e chips paint (unpickable — the hit tests keep their
-    // render-view None guards) and an untrimmed entry's has-bits are off.
+    // entry's b/e chips paint (pickable like the snapshot markers — the
+    // trim hit tests project the same snapshot positions — but immutable)
+    // and an untrimmed entry's has-bits are off.
     // The real waveform_area sets the upper-row chip bottom; the top strip's
     // screen origin equals the cache surface origin (0,0), so local_top_strip
     // and the real waveform rect need no translation.

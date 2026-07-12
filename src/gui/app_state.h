@@ -926,8 +926,8 @@ struct AppState {
         // time_frame at the AUTHORED whole-frame values. Render view is a
         // read-only 1:1 target view of the snapshot: the FULL deformed
         // timeline, with the snapshot trim's out-of-window region dimmed
-        // and its bounds painted (unpickable), and playback bound to the
-        // entry wav at the window's target-axis origin. Every consumer
+        // and its bounds painted (pickable, immutable), and playback bound
+        // to the entry wav at the window's target-axis origin. Every consumer
         // translates these positions live through the display context
         // (the snapshot map below), exactly as target view translates
         // through the live map.
@@ -1150,10 +1150,12 @@ enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
 // column is within kMarkerHitHalfPx of `mouse_x`, or None. Only set
-// bounds (trim.has_begin / trim.has_end) are testable. Walks the same
-// warp_frame_map as hit_test_marker_line in target view so the hit lands on the
-// visually-drawn stem. Trim is project-level, and applies in both 'W'
-// and 'P' views. When both bounds are within reach, the nearer wins.
+// bounds are testable — the active tab's live pair in authoring views,
+// the entry's snapshot recipe bounds in render view. Walks the same
+// warp_frame_map as hit_test_marker_line in the mapped views so the hit
+// lands on the visually-drawn stem. Trim is project-level, and applies
+// in both 'W' and 'P' views. When both bounds are within reach, the
+// nearer wins.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 

@@ -148,10 +148,11 @@ void Selection::cycle_selection(bool forward) {
     // Trim stops exist in every view; trim is project-level, orthogonal to the
     // marker list. Authoring views walk the live app.trim pair. Render view
     // walks the entry's SNAPSHOT recipe bounds (whole int64 source frames from
-    // the entry's .settings) — a display of the render's recipe, focusable for
-    // inspection but never editable: render view is read-only, the bounds stay
-    // mouse-unpickable, and the nudge chords are absent from the render-view
-    // key allowlist, so focus moves them nowhere. Both stores hold whole
+    // the entry's .settings) — a display of the render's recipe, selectable
+    // like a snapshot marker (Tab focus here, mouse pick through the trim hit
+    // tests) but never editable: render view is read-only, the press handler
+    // never arms a trim drag, and the nudge chords are absent from the
+    // render-view key allowlist, so focus moves them nowhere. Both stores hold whole
     // int64 source frames. Each set bound has one active-domain frame,
     // projected through source_frame_to_active_domain exactly as the marker
     // frames are — in render view that route is the snapshot map, the same

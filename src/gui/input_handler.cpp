@@ -791,11 +791,15 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (ctrl && !shift && !alt) {
         // Ctrl+wheel: when the begin trim bound is last-selected, move the end
         // bound. Otherwise nudge the focused warp marker's tempo. Refused in
-        // render-view (both paths) and read-only (tempo path only).
+        // render-view and read-only (both paths — the trim-end move was
+        // read-only-mobile while trim was one unified setting across both
+        // tabs; with per-tab trim that rationale is gone, so the bound
+        // refuses exactly like the marker tempo nudge, a silent no-op).
         if (app.render_view.enabled) return;
         if (app.last_sel_group == LastSelGroup::Trim &&
             app.last_selected_trim == 'B' &&
             app.trim.has_begin && app.trim.has_end) {
+            if (active_view_state(app).read_only) return;
             const int sr = audio.sample_rate();
             if (audio.total_frames() <= 0 || sr <= 0) return;
             const double spp = current_samples_per_pixel(app, audio);
