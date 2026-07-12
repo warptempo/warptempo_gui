@@ -848,7 +848,10 @@ void GuiRenderView::restore_source_view() {
     // Recorded asymmetry versus the T->S toggle: that toggle re-expresses
     // BOTH tabs because both live on the one flipping global axis; a
     // render-view exit moves only the CURRENT tab's live position — tabs
-    // are independent, and the other tab's position is its own.
+    // are independent, and the other tab's position is its own. A Ctrl+Tab
+    // inside render view changes which tab is current at exit, so the
+    // push-out lands on whichever tab is active then; the other tab is left
+    // untouched. This is the intended per-tab independence.
     if (app.active_audio_view == 'S') {
         // Pre-exit samples-per-pixel against the RENDER domain explicitly:
         // enabled was cleared at the top of this function, so
@@ -891,10 +894,11 @@ void GuiRenderView::restore_source_view() {
     // Exit to TARGET view: viewport/zoom/playhead are left exactly as the
     // user browsed them — both axes are target axes.
 
-    // The active tab slot still owns the SELECTION indexes stashed at
-    // render-view entry (position is what now carries out instead). The
-    // Tab key is gated out of render-view's input allowlist, so
-    // app.active_tab_view is the same letter the snapshot was written under.
+    // The restore reads the CURRENT tab's slot — that tab's own stashed
+    // selection (position is what now carries out instead). Ctrl+Tab switches
+    // tabs inside render view, and switch_active_tab_view_to refreshes the
+    // leaving and entering slots as it swaps, so whichever tab is active at
+    // exit restores its own selection from its slot here.
     const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     // Load the matching-mode slot into the
     // live pair. Live pair held render-view selection while

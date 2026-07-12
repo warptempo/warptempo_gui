@@ -48,16 +48,24 @@
 //                                gates on active_audio_view being T, which
 //                                render view does not guarantee, so admitting
 //                                it would change the entry's playback speed
-//     - Ctrl+Tab / Ctrl+Shift+Tab → A/B tab switch; the entry is bound to its
-//                                commit tab and the tab slots hold the stashed
-//                                authoring view state for exit restore
 //   Everything else defers to read_only_key_blocked(key, mods).
 //
-// One family the deferral net-admits that render view honors safely (it
-// routes through the same display-domain-aware handler the already-admitted
-// chords use): PageUp/PageDown page the viewport against live_total_frames.
-// The Tab family is alt-strict throughout, so an Alt-held Tab is an unbound
-// no-op here as everywhere, not a smuggled marker-focus cycle.
+// Two families the deferral net-admits that render view honors safely (both
+// route through the same display-domain-aware handlers the already-admitted
+// chords use): PageUp/PageDown page the viewport against live_total_frames,
+// and Ctrl+Tab / Ctrl+Shift+Tab switch the A/B tab. Tabs are part of the
+// view-state model and are not read-only gated, so render view — being just
+// another view — has them: a tab switch swaps to the other tab's cached
+// position, interpreted on the render display axis by the same direct carry
+// the target-view entry uses, with the runtime clamps owning any
+// out-of-domain value at first use. The old block rationale (the entry is
+// bound to its commit tab; the tab slots hold the stashed authoring view
+// state for exit restore) is superseded: the commit routes off the ENTRY's
+// file fields and the display-time snapshot_commit_tab stash rather than the
+// live active tab, and exit pushes the live position out rather than
+// restoring a stash, so a live tab switch under render view threatens
+// neither. The Tab family is alt-strict throughout, so an Alt-held Tab is an
+// unbound no-op here as everywhere, not a smuggled marker-focus cycle.
 bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -89,12 +97,8 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_speed_select =
         (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 &&
          shift && !ctrl && !alt);
-    const bool is_ctrl_tab =
-        (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    const bool is_ctrl_shift_tab =
-        (ctrl && shift && !alt && key == GuiKeys::Tab);
     if (is_sub_audio_toggle || is_read_only_toggle || is_save ||
-        is_speed_select || is_ctrl_tab || is_ctrl_shift_tab) {
+        is_speed_select) {
         return true;
     }
 

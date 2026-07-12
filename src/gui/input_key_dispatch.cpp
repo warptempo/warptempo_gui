@@ -1452,18 +1452,26 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // held alongside makes the chord an unbound no-op, never this binding.
     if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        target_render.trigger();
+        // No render work runs under an open render view (the entry-gate
+        // invariant): a preview dispatch from a tab switch would violate it,
+        // so the trigger is gated out in render view. The preview re-derives
+        // at exit through restore_source_view's ensure_ready; authoring-view
+        // tab switches keep the trigger.
+        if (!app.render_view.enabled) target_render.trigger();
         return true;
     }
 
     // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
-    // march paired tabs forward in lockstep with one chord.
+    // march paired tabs forward in lockstep with one chord. The composition
+    // holds under render view: cycle_marker_focus_with_recenter walks the
+    // snapshot collections there, and the tab switch swaps the ruled per-tab
+    // position — see the Ctrl+Tab arm for why the trigger is gated out.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus_with_recenter(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_marker_focus_with_recenter(true);
-        target_render.trigger();
+        if (!app.render_view.enabled) target_render.trigger();
         return true;
     }
 
