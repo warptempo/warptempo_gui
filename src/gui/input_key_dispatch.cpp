@@ -1081,8 +1081,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // entry's engine block, the recipe trim) and require the wav's
         // existing .fingerprint to match. A mismatch means the recipe was
         // edited underneath the displayed entry (adversarial): abort before
-        // the first mutation; the user re-navigates onto the entry (it
-        // re-renders via the normal fingerprint-mismatch path) and re-commits.
+        // the first mutation; the next navigation onto the entry refuses it
+        // through load_render_view_at's own fingerprint gate, and the user
+        // re-renders from the live project.
         // The browse-only view keys ride outside the render fingerprint, so
         // the per-entry view-state autosaves the GUI itself writes stay
         // compatible with this check.

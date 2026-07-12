@@ -4,7 +4,6 @@
 #include "marker_store_validate.h"
 #include "phaseresetmarkers.h"
 #include "render_cache.h"
-#include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "trimmer.h"
@@ -195,65 +194,16 @@ void GuiRenderView::autosave_active_entry() {
     this->stash_render_view_selection_to_active_entry();
 }
 
-// Build the full archival re-render request for a stale entry from its
-// already-loaded snapshot set (markers, engine block, recipe trim). The
-// request names the entry's own batch folder and basename, so the rebuild
-// republishes the wav, its .fingerprint, and the full sidecar set through
-// do_render's normal staged/gated publication path.
-//
-// Shared resources come from the source `audio` — the audio object is
-// invariantly the source in every view, so there is no parked domain to
-// choose: do_render's wav arm reads req.source_samples directly (it never
-// re-reads the source file — the probe only supplies metadata), and its
-// load-identity hardfail compares the identity pair against the source
-// path's current stat, so both name the source audio.
-//
-// req.authoring reproduces the entry's own snapshot from its parsed
-// .settings, so the republished per-entry .settings carries what the entry
-// carried. Its view keys reset to the dispatch writer's browse defaults —
-// acceptable, the entry was stale.
-static RenderRequest build_entry_rebuild_request(
-        const AppState& app,
-        const AppState::RenderViewEntry& e,
-        const std::vector<GuiWarpMarker>& snapshot_warp,
-        const std::vector<GuiPhaseResetMarker>& snapshot_phase_resets,
-        const SettingsFile& settings,
-        const SettingsFileTab& commit_tab,
-        const GuiAudio& source_audio,
-        RenderCache& render_cache) {
-    const SettingsTrim& recipe_trim = commit_tab.trim;
-    RenderRequest req = build_render_request(
-        app.source_audio_path, snapshot_warp, snapshot_phase_resets,
-        settings.engine,
-        recipe_trim.has_begin, recipe_trim.begin_frame,
-        recipe_trim.has_end,   recipe_trim.end_frame,
-        e.batch_folder.string(), e.basename);
-    req.render_cache        = &render_cache;
-    req.source_samples      = source_audio.samples_shared();
-    req.source_total_frames = source_audio.total_frames();
-    req.source_load_size    = source_audio.source_load_size();
-    req.source_load_mtime   = source_audio.source_load_mtime();
-    req.authoring.active_tab        = settings.active_tab_view;
-    req.authoring.has_trim_begin    = recipe_trim.has_begin;
-    req.authoring.trim_begin_frame  = recipe_trim.begin_frame;
-    req.authoring.has_trim_end      = recipe_trim.has_end;
-    req.authoring.trim_end_frame    = recipe_trim.end_frame;
-    req.authoring.active_markers_view = settings.active_markers_view;
-    req.authoring.playback_speed      = settings.playback_speed;
-    req.authoring.follow              = settings.follow;
-    req.authoring.font_size           = settings.font_size;
-    return req;
-}
-
 // Loads the render at app.render_view.list[index] into the view-owned
 // entry buffer — the GuiAudio object stays the source (the invariant at
 // the struct's head comment). Entries are program-written snapshots, read
 // STRICTLY: <basename>.warpmarkers / <basename>.phaseresetmarkers through
 // the standard store loaders and <basename>.settings through
 // read_settings_file. Any refusal — a decode failure, a read failure, a
-// past-EOF wall defect, a snapshot whose map cannot rebuild, or an entry
-// wav whose length contradicts the snapshot's rendered window — is
-// adversarial: one stderr line, first error only, the entry refuses to
+// past-EOF wall defect, a snapshot whose map cannot rebuild, an
+// out-of-domain persisted view position, an entry wav whose length
+// contradicts the snapshot's rendered window, or a fingerprint mismatch —
+// is adversarial: one stderr line, first error only, the entry refuses to
 // display (return false, prior state preserved).
 //
 // The architect's ruling: render view is a read-only 1:1 target view of
@@ -360,12 +310,10 @@ bool GuiRenderView::load_render_view_at(int index) {
     // are checked here rather than widened into the standard source settings
     // vocabulary — the schema legitimately loads active_audio_view=S and every
     // output_format for authoring sources. A hand-edited entry violating
-    // either is GUI-unproducible: active_audio_view=S would display fine (the
-    // key rides outside the render fingerprint) while commit still lands in T,
-    // and a non-wav output_format would drive the fingerprint-mismatch rebuild
-    // to publish a map artifact instead of a replacement wav, revisiting the
-    // same useless export forever. Refuse before fingerprint handling so a
-    // non-wav engine block never reaches the derived-rebuild dispatch.
+    // either is GUI-unproducible and therefore adversarial: refuse.
+    // active_audio_view=S would otherwise display fine (the key rides outside
+    // the render fingerprint) while commit still lands in T, and a non-wav
+    // output_format contradicts the entry's own wav artifact.
     if (settings->active_audio_view != 'T') {
         std::fprintf(stderr,
             "warptempo_gui: render-view: snapshot rejected for '%s': entry "
@@ -439,15 +387,13 @@ bool GuiRenderView::load_render_view_at(int index) {
     // the owner-level build at every live dispatch site. The GUI coincidence
     // window (kCoincidenceWindowSeconds) is deliberately wider than the map
     // owner's sub-frame refusal, so a hand-edited entry with enabled markers a
-    // couple dozen frames apart is raw-invalid yet still buildable — it would
-    // display, and a stale-fingerprint rebuild would even re-render and
-    // re-attest it. Every GUI-dispatched entry already passed
+    // couple dozen frames apart is raw-invalid yet still buildable — without
+    // this walk it would display. Every GUI-dispatched entry already passed
     // warp_render_preflight, so a raw-store defect here is hand fabrication:
     // an adversarial artifact boundary that hard-fails to stderr, first defect
-    // only. It must not open the live defect-resolution series and must not
-    // dispatch the derived rebuild, so it sits before fingerprint handling.
-    // The past-EOF walls above already ran (the enumerator's contract assumes
-    // in-wall stores).
+    // only, and must not open the live defect-resolution series. The past-EOF
+    // walls above already ran (the enumerator's contract assumes in-wall
+    // stores).
     {
         std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
             slice_to_warp_markers(snapshot_warp),
@@ -505,31 +451,48 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
-    // Display follows the snapshot (ruling 4): if the entry's on-disk
-    // artifact does not match what its snapshot would render — an
-    // accidentally deleted or regenerated wav or .fingerprint; dispatch
-    // always writes matching pairs — the entry is NOT displayed as-is. The
-    // GUI re-renders it in full from the snapshot, republishing the artifact
-    // and its .fingerprint through the normal staged/gated publication path,
-    // so disk and display never diverge. The snapshot fingerprint is the
-    // same render_fingerprint a dispatch of this exact recipe computes:
-    // source path + the source `audio`'s load identity (the audio object is
-    // invariantly the source), the source sample rate, the snapshot stores,
-    // the entry's engine block, and the recipe trim; the compare is the same
-    // fingerprint_sidecar_matches rung do_render's reuse path runs (a
-    // missing .fingerprint is a mismatch). Placed after the adversarial
-    // guards and before any state mutation (playback stop / buffer install /
-    // store writes), so a refused entry preserves prior state.
-    //
-    // The rebuild is a DERIVED dispatch, not a user command: a passive
-    // navigation must never kill an explicit render or a running batch, so
-    // on a busy worker it refuses the entry with one stderr line and the
-    // user retries after the worker drains. When idle it dispatches through
-    // the single-archival chokepoint with the session fingerprint armed (an
-    // identical re-dispatch no-ops; a fingerprint-matching preview trigger
-    // waits and adopts). Either way the entry does not display; there is no
-    // retry loop or auto-reload — the user's next navigation onto the entry
-    // matches and displays.
+    // Persisted browse view keys are validated like a source load: an
+    // out-of-domain viewport/playhead in an entry's .settings is
+    // adversarial, exactly as it is at a source load (the GUI's own
+    // dispatch writer and per-entry autosave only write in-domain values).
+    // Same shared rule the source load and the CLI run
+    // (first_view_range_defect, marker_store_validate.h). The entry's
+    // persisted active_audio_view is 'T' always (checked above), so the
+    // domain total is the snapshot map's target total through
+    // target_total_frames_for_map — the same 'T' arm the source load uses;
+    // the map just built IS that map, so the source load's cannot-build
+    // skip arm has no analogue here. Both tabs are checked, as at source
+    // load: only the commit tab is applied below, but a hand-edited stray
+    // on the other tab walls identically.
+    {
+        const int64_t display_total = target_total_frames_for_map(
+            source_total_frames, full_warp_frame_map);
+        if (auto detail = first_view_range_defect(
+                settings->tab_a, settings->tab_b, display_total)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: view-range defect for '%s': "
+                "%s\n",
+                st_path.string().c_str(), detail->c_str());
+            return false;
+        }
+    }
+
+    // Display follows the snapshot, and an entry whose artifact does not
+    // attest to its snapshot REFUSES to display. Renders are transient by
+    // design — cheap to recreate, never committed as artifacts — and
+    // Ctrl+Alt+C commit overwrites the project from an entry, so an entry
+    // is displayed spotless or not at all: any attestation failure is one
+    // stderr line and a refusal, no repair attempted — there is no repair
+    // path, the user re-renders from the live project. The snapshot
+    // fingerprint is the same render_fingerprint a dispatch of this exact
+    // recipe computes: source path + the source `audio`'s load identity
+    // (the audio object is invariantly the source), the source sample
+    // rate, the snapshot stores, the entry's engine block, and the recipe
+    // trim; the compare is the same fingerprint_sidecar_matches rung
+    // do_render's reuse path runs (a missing .fingerprint is a mismatch).
+    // Placed after the adversarial guards and before any state mutation
+    // (playback stop / buffer install / store writes), so a refused entry
+    // preserves prior state.
     {
         RenderFileIdentity source_identity;
         source_identity.size  = audio.source_load_size();
@@ -542,24 +505,10 @@ bool GuiRenderView::load_render_view_at(int index) {
             recipe_trim.has_end,   recipe_trim.end_frame);
         if (!fingerprint_sidecar_matches(e.wav_path.string(),
                                          snapshot_fingerprint)) {
-            RenderRequest req = build_entry_rebuild_request(
-                app, e, snapshot_warp, snapshot_phase_resets, *settings,
-                commit_tab, audio, target_render.render_cache);
-            const bool dispatched =
-                dispatch_archival_render_if_idle &&
-                dispatch_archival_render_if_idle(
-                    std::move(req), std::move(snapshot_fingerprint));
-            if (dispatched) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: fingerprint mismatch for "
-                    "'%s'; re-rendering from snapshot\n",
-                    e.wav_path.string().c_str());
-            } else {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: fingerprint mismatch for "
-                    "'%s'; renderer busy, retry after the current render\n",
-                    e.wav_path.string().c_str());
-            }
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: fingerprint mismatch for "
+                "'%s'; refusing entry\n",
+                e.wav_path.string().c_str());
             return false;
         }
     }
@@ -711,14 +660,17 @@ bool GuiRenderView::load_render_view_at(int index) {
 
     // Apply this render's persisted zoom/viewport/playhead from the commit
     // tab of the already-parsed .settings (absent keys carry the schema
-    // defaults: fit-file zoom, zeroed viewport/playhead). Apply order:
+    // defaults: fit-file zoom, zeroed viewport/playhead). The values were
+    // validated at entry load like a source load (first_view_range_defect
+    // above, against the snapshot map's target total). Apply order:
     // zoom → viewport → playhead → clamp_viewport_start (zoom drives the
     // spp used by clamp).
     app.zoom_level            = commit_tab.zoom;
     app.viewport_start_sample = commit_tab.viewport_start;
-    // Deliberately unclamped: persisted playhead == total stays load-legal
-    // (an exclusive-bound rest); the runtime clamp (move_playhead_to) owns
-    // the value at first use.
+    // Deliberately unclamped: the validation above permits playhead ==
+    // total exactly (an exclusive-bound rest) and refuses only strictly
+    // past it; the runtime clamp (move_playhead_to) owns the value at
+    // first use.
     app.playhead_cursor_sample = commit_tab.playhead;
     clamp_viewport_start(app, audio);
 
@@ -970,9 +922,8 @@ bool GuiRenderView::refresh_render_view_list() {
 // A completion beneath an OPEN render view is unreachable under the
 // entry-gated contract: `r` refuses while archival work is running or
 // parked, the render-view key allowlist admits no archival dispatch chord,
-// and the one render the view itself dispatches — the fingerprint-mismatch
-// rebuild — completes through the single-render callback, never this
-// caller's batch tail. So this method only ever enters fresh.
+// and the view itself dispatches nothing — no render can run under an open
+// render view at all. So this method only ever enters fresh.
 void GuiRenderView::auto_open_batch_at_first_file(
         const std::filesystem::path& batch_folder) {
     if (app.source_audio_path.empty()) return;

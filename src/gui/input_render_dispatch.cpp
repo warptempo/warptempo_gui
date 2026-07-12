@@ -254,17 +254,6 @@ void GuiInputHandler::dispatch_single_archival_render(
     async_renderer.set_session_fingerprint(std::move(fingerprint));
 }
 
-bool GuiInputHandler::dispatch_archival_render_if_idle(
-        RenderRequest req, std::vector<uint8_t> fingerprint) {
-    // Derived dispatch (render view's stale-entry rebuild): never kill,
-    // never park — a passive navigation must not cancel an explicit render
-    // or a running batch. Busy refuses with no side effects; the caller
-    // owns the stderr line.
-    if (async_renderer.is_busy()) return false;
-    dispatch_single_archival_render(std::move(req), std::move(fingerprint));
-    return true;
-}
-
 void GuiInputHandler::kill_running_render_and_park(
         AppState::PendingArchivalCommand cmd) {
     async_renderer.request_cancel();

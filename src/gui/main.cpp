@@ -550,16 +550,9 @@ int main(int argc, char** argv) {
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
-    // Back-wire render view's stale-entry rebuild dispatch (GuiInputHandler
-    // holds a GuiRenderView&, so the hook can only be bound after both
-    // exist — same post-construction shape as file_loader.prompt above).
-    render_view.dispatch_archival_render_if_idle =
-        [&input_handler](RenderRequest req, std::vector<uint8_t> fingerprint) {
-            return input_handler.dispatch_archival_render_if_idle(
-                std::move(req), std::move(fingerprint));
-        };
     // Back-wire the loader's archival-session cancel (same
-    // post-construction shape). Both revert_to_blank and load_file call it
+    // post-construction shape as file_loader.prompt above). Both
+    // revert_to_blank and load_file call it
     // before any teardown: each discards or replaces the source, so an
     // archival session rendering it must receive the Esc-cancel semantics
     // — otherwise the session keeps running against the discarded project

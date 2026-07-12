@@ -181,15 +181,14 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
             app.render_view.list.clear();
         }
     } else {
-        // Leaving render view stops anything render-related. Given the entry
-        // gate above, the only possible running session is the
-        // fingerprint-mismatch rebuild render view itself dispatched, and
-        // killing it loses nothing: the publication gates leave the prior
-        // artifacts intact on disk, and the next display of that entry
-        // re-attests and re-dispatches the rebuild. cancel_archival_session
-        // also clears the pending target preview, which is correct here —
-        // restore_source_view's target arm re-derives through ensure_ready
-        // immediately after.
+        // Leaving render view stops anything render-related. Nothing can be
+        // running by construction — entry is gated on an idle worker with
+        // nothing parked, the render-view key allowlist admits no dispatch
+        // chord, and the view itself dispatches nothing — so this cancel is
+        // the literal form of the leave-stops-renders rule and defense in
+        // depth. cancel_archival_session also clears the pending target
+        // preview, which is correct here — restore_source_view's target arm
+        // re-derives through ensure_ready immediately after.
         cancel_archival_session();
         // Capture the just-viewed render's zoom/viewport/playhead and
         // stash its live selection onto the active entry, so the next

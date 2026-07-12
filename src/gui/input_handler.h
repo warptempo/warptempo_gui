@@ -288,19 +288,6 @@ struct GuiInputHandler {
     // pending preview queued behind it.
     bool dispatch_pending_archival_command();
 
-    // Derived-dispatch surface for render view's stale-entry rebuild (bound
-    // onto GuiRenderView::dispatch_archival_render_if_idle in main.cpp).
-    // A nav-triggered rebuild is not a user command, so it never kills or
-    // parks: when the worker is busy this returns false with no side
-    // effects (the caller prints the busy refusal and the user retries
-    // after the worker drains). When idle it runs the request through
-    // dispatch_single_archival_render with `fingerprint` armed as the
-    // session fingerprint — the normal single-archival semantics (an
-    // identical re-dispatch no-ops, a fingerprint-matching preview trigger
-    // waits and adopts) — and returns true.
-    bool dispatch_archival_render_if_idle(RenderRequest req,
-                                          std::vector<uint8_t> fingerprint);
-
     // The Esc-cancel body itself, key-free: cancel the running archival
     // session (worker cancel flag + batch finalize sentinel) and disarm the
     // parked archival command. Called by handle_escape_cancels and by

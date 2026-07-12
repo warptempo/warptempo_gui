@@ -4,14 +4,12 @@
 #include "app_state.h"
 #include "audio.h"
 #include "playback.h"
-#include "render_pipeline.h"
 #include "selection.h"
 #include "viewport.h"
 #include "platform_wayland.h"
 
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <utility>
 #include <vector>
 
@@ -54,18 +52,6 @@ struct GuiRenderView {
     // whenever no entry is displayed.
     std::vector<float> entry_samples;
     int64_t            entry_frames = 0;
-
-    // Derived-dispatch surface for the stale-entry rebuild, bound in main.cpp
-    // post-construction to GuiInputHandler::dispatch_archival_render_if_idle
-    // (the dispatch chokepoints are GuiInputHandler methods and this struct
-    // holds no handler reference — same post-construction back-wire shape as
-    // file_loader.prompt). Returns true iff the request was dispatched on an
-    // idle worker; false (no side effects) when the worker is busy — a
-    // nav-triggered rebuild is a derived dispatch, never a kill, and the
-    // caller prints the busy refusal. Null only before main.cpp wires it,
-    // when no navigation can have happened yet.
-    std::function<bool(RenderRequest, std::vector<uint8_t>)>
-        dispatch_archival_render_if_idle;
 
     GuiRenderView(AppState&         app_,
                   GuiAudio&         audio_,
