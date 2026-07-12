@@ -672,14 +672,6 @@ void GuiRenderView::restore_source_view() {
     // so neither is restored: only the tab slot's position and the current
     // mode's selection come back. app.active_tab_view still names the authoring
     // tab, so the slot reads below name the authoring session directly.
-    //
-    // Recorded-dead asymmetry: the old carry-in / carry-out model — render
-    // view pushed the browsed position OUT to the authoring axis on exit
-    // (inverse-mapped through the snapshot map for source view, left live for
-    // target view) and inherited it IN at entry — is gone. The authoring
-    // position comes back untouched from the tab slot, so there is no per-tab
-    // push-out and no S/T axis translation at exit.
-    //
     // Restore the authoring tab's slot position: viewport/zoom/playhead
     // (unclamped playhead — the restore-site convention; move_playhead_to owns
     // the value at first use), then the current-mode selection and the
@@ -702,11 +694,11 @@ void GuiRenderView::restore_source_view() {
         app.last_selected_marker = t.warp_last_selected;
     }
     // Restore the trim-bound selection from the same tab slot the markers came
-    // from. Render-view Tab focus writes the global trim-selection fields (the
-    // snapshot bounds are cycle stops now), so they can be dirty on exit;
-    // pulling back the snapshot saved at render-view entry
-    // (refresh_active_tab_view_from_app) keeps the source view's focused bound
-    // intact across the round trip, symmetric with the marker restore above.
+    // from. Entry display cleared the live trim-selection fields because render
+    // view has no trim surface; pulling back the snapshot saved at render-view
+    // entry (refresh_active_tab_view_from_app) keeps the authoring view's focused
+    // bound intact across the round trip, symmetric with the marker restore
+    // above.
     // app.trim itself is untouched in read-only render view, so only the
     // selection fields are restored (mirroring switch_active_tab_view_to's
     // tab-restore of the same fields).

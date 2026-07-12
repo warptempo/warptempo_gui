@@ -1059,8 +1059,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
     const bool      rve        = app.render_view.enabled;
-    // Iteration mode only affects warp-view (non-render) flags;
-    // render view resets the toggle off, so this is false there.
+    // Iteration mode only affects warp-view (non-render) flags; the mode may
+    // persist inert through render view, so the explicit !rve makes this false
+    // there.
     const bool      iter_on    = app.iteration_mode_enabled &&
                                  mv == 'W' && !rve;
 

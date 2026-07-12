@@ -648,8 +648,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // PageUp / PageDown: step the viewport back / forward by exactly the
     // Alt-wheel step (samples_visible / 10). PageUp goes back, PageDown
-    // forward. Source-view only — the render-view allowlist above excludes
-    // them.
+    // forward. Pure active-display navigation, so the read-only and render-view
+    // allowlists both admit it.
     if (!ctrl && !alt && !shift &&
         (key == GuiKeys::PageDown || key == GuiKeys::PageUp)) {
         const int64_t step = std::max<int64_t>(

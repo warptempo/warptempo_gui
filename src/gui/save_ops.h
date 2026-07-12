@@ -11,7 +11,7 @@
 // bookkeeping (active-tab snapshot refresh, history mark_saved,
 // dirty-flag refold). The .warpmarkers write is the primary
 // target; the .phaseresetmarkers write is a sibling; the .settings
-// write is best-effort and its failure does not fail the call.
+// write is required too, so any of the three failures keeps the save dirty.
 struct GuiSaveOps {
     AppState&        app;
     Undo&            undo;

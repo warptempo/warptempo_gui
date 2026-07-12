@@ -1237,9 +1237,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // (both read from the same parsed file), so the trim
             // the guards and the fingerprint validated is the trim now live.
             // A committed render lands with no trim bound focused: a parsed
-            // band carries the default false/0 trim-selection fields, so
-            // pulling them drops any render-view Tab focus (the bounds are
-            // cycle stops now), the same reset the marker selection took.
+            // band carries the default false/0 trim-selection fields, matching
+            // the marker-selection reset.
             app.trim                = band.trim;
             app.trim_begin_selected = band.trim_begin_selected;
             app.trim_end_selected   = band.trim_end_selected;
