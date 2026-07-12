@@ -44,6 +44,19 @@ struct AuthoringSnapshot {
     float   playback_speed      = 1.0f;
     bool    follow              = true;
     double  font_size           = 11.0;
+
+    // Dispatch-time browse position, captured on the TARGET axis: the
+    // entry's .settings persists active_audio_view=T, so the browse keys
+    // live on the target axis. A source-view dispatch forward-maps the live
+    // playhead through the live target map exactly the way the S-to-T toggle
+    // does (anchoring the same screen column); a target-view dispatch takes
+    // the live values verbatim. The values are the position the user was at
+    // when the render was queued or dispatched. do_render's wav-arm writer
+    // clamps them into the entry's own map domain before writing (a sweep
+    // cell's rewritten markers can give the cell a shorter target axis).
+    int64_t view_viewport_start_frame = 0;   // target-axis frames
+    int     view_zoom_level           = 0;   // persisted zoom vocabulary
+    int64_t view_playhead_frame       = 0;   // target-axis frames
 };
 
 // Self-contained view of the AppState fields do_render reads. Constructed by

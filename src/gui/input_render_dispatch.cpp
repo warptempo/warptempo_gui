@@ -173,6 +173,64 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.playback_speed      = app.playback_speed;
     s.follow              = app.follow_mode;
     s.font_size           = app.font_size;
+
+    // Browse position, captured on the TARGET axis (the entry's .settings is
+    // an active_audio_view=T state). Zoom rides through unchanged; the
+    // playhead and viewport express where the user was AT THIS DISPATCH.
+    s.view_zoom_level = app.zoom_level;
+    if (app.active_audio_view == 'T') {
+        // Already target-axis: take the live values verbatim.
+        s.view_viewport_start_frame = app.viewport_start_sample;
+        s.view_playhead_frame       = app.playhead_cursor_sample;
+    } else {
+        // Source view: forward-map the playhead through the live target map
+        // the same way handle_active_audio_view_toggle does its S-to-T
+        // anchor, so the captured position is the target image of the
+        // on-screen playhead with its screen column preserved. At dispatch
+        // the live stores equal the request's stores for plain dispatches,
+        // so the live map IS the entry's axis; a sweep cell rewrites markers
+        // per cell and diverges, which the wav-arm writer clamp brings back
+        // in-domain. If the live map cannot build (walkable-defect store),
+        // fall back to the untranslated live values: the writer clamp keeps
+        // them in-domain, and a dispatch from a defective store is already
+        // refused upstream by preflight.
+        const int64_t src_total = audio.total_frames();
+        const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
+            app, audio.sample_rate(),
+            static_cast<long>(src_total));
+        if (c.build_error.empty()) {
+            // Forward-map the playhead, banker's-rounded, exactly as the
+            // toggle does.
+            const int64_t ph = app.playhead_cursor_sample < 0
+                                   ? 0 : app.playhead_cursor_sample;
+            const int64_t tph = static_cast<int64_t>(std::nearbyint(
+                map_source_to_target(static_cast<double>(ph),
+                                     c.warp_frame_map)));
+            s.view_playhead_frame = tph;
+
+            // Derive the viewport so the translated playhead keeps its
+            // pre-flip screen column: ph_px is the playhead's column in the
+            // source domain; the target-domain viewport start places the
+            // translated playhead at that same column, at the unchanged zoom.
+            const GuiRect area = waveform_area(app);
+            const double cur_spp = samples_per_pixel_at(
+                app.zoom_level, area.w, src_total, audio.sample_rate());
+            const double ph_px = (cur_spp > 0.0)
+                ? (static_cast<double>(app.playhead_cursor_sample -
+                                       app.viewport_start_sample) / cur_spp)
+                : 0.0;
+            const double new_spp = samples_per_pixel_at(
+                app.zoom_level, area.w, c.tgt_total_frames,
+                audio.sample_rate());
+            const double new_vp_d =
+                static_cast<double>(tph) - ph_px * new_spp;
+            s.view_viewport_start_frame =
+                static_cast<int64_t>(std::nearbyint(new_vp_d));
+        } else {
+            s.view_viewport_start_frame = app.viewport_start_sample;
+            s.view_playhead_frame       = app.playhead_cursor_sample;
+        }
+    }
     return s;
 }
 

@@ -353,30 +353,36 @@ RenderOutcome do_render(const RenderRequest& req,
             // 'T'), and 'T' requires output_format = wav, so map-format
             // artifacts are not browse entries and get no .settings.
             if (output_format == "wav") {
-                // The commit tab (named by active_tab_view) initializes the
-                // persisted view keys to in-domain defaults: zoom =
-                // kFitFileLevel, viewport_start = 0, playhead at the
-                // rendered window's start (llrint(T_b) through the full
-                // map; 0 untrimmed). The browse keys are schema-required
-                // and strictly validated at entry load, but never applied:
-                // render view inherits the live session's position at
-                // entry and carries it across navigation, so these values
-                // only need to be in-domain and stable. A later commit
-                // adopts the LIVE browsed view, not these keys; per-entry
-                // autosave rewrites them once the entry displays. Its
-                // trim comes from the recipe trim that shaped this render;
-                // read_only and the rest take their ViewState defaults.
-                // The other tab is all defaults, no trim.
+                // The commit tab (named by active_tab_view) carries the
+                // browse position measured at the queue/dispatch that built
+                // this render (req.authoring's captured view keys), on the
+                // TARGET axis. Those keys are captured on the LIVE map's
+                // axis; a sweep cell rewrites its markers per cell, giving
+                // the cell a different (possibly shorter) target axis, so
+                // the values are CLAMPED into this entry's own map domain
+                // before writing — the GUI never authors a load-refusable
+                // value. The clamp mirrors first_view_range_defect's load
+                // rule exactly: viewport start must sit in [0, total-1]
+                // (a start on the total's frame shows nothing) and the
+                // playhead in [0, total] (it may rest on the end exactly).
+                // target_total is this entry's map domain total. Zoom passes
+                // through: the live zoom is always in the persisted
+                // vocabulary. Once the entry displays, per-entry autosave
+                // rewrites these as the user browses. Its trim comes from
+                // the recipe trim that shaped this render; read_only and the
+                // rest take their ViewState defaults. The other tab is all
+                // defaults, no trim.
+                const int64_t target_total = target_total_frames_for_map(
+                    static_cast<int64_t>(total_frames), full_warp_frame_map);
+                const int64_t vp_hi =
+                    target_total > 0 ? target_total - 1 : 0;
                 ViewState commit_tab;
-                commit_tab.viewport_start_sample  = 0;
-                commit_tab.zoom_level             = kFitFileLevel;
-                commit_tab.playhead_cursor_sample =
-                    req.authoring.has_trim_begin
-                        ? std::llrint(map_source_to_target(
-                              static_cast<double>(
-                                  req.authoring.trim_begin_frame),
-                              full_warp_frame_map))
-                        : 0;
+                commit_tab.viewport_start_sample = std::clamp<int64_t>(
+                    req.authoring.view_viewport_start_frame, 0, vp_hi);
+                commit_tab.zoom_level             =
+                    req.authoring.view_zoom_level;
+                commit_tab.playhead_cursor_sample = std::clamp<int64_t>(
+                    req.authoring.view_playhead_frame, 0, target_total);
                 commit_tab.trim.has_begin   = req.authoring.has_trim_begin;
                 commit_tab.trim.begin_frame = req.authoring.trim_begin_frame;
                 commit_tab.trim.has_end     = req.authoring.has_trim_end;
