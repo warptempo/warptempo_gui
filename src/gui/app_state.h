@@ -1011,6 +1011,21 @@ inline int64_t snap_authored_frame(double frame) {
     return static_cast<int64_t>(std::nearbyint(frame));
 }
 
+// The single query for "some pointer gesture is in flight" — a Ctrl marker
+// drag, a trim drag, a scroll drag, a playhead drag, or an editor text
+// drag. Consumed by the deferral and skip gates that must never fire
+// mid-gesture: the commit-validation deferral and the batch auto-open skip.
+// The load-bearing rationale is the "nothing pops mid-gesture" boundary and,
+// for the asynchronous batch completion specifically, that flipping the
+// displayed domain under a live drag would make the drag's release commit
+// through the wrong display context (the pixel-anchoring helpers select
+// their arm from the current context).
+inline bool any_pointer_gesture_active(const AppState& app) {
+    return app.drag.active || app.trim_drag.active ||
+           app.scroll_drag.active || app.playhead_drag.active ||
+           app.editor_text_drag.active;
+}
+
 // Restore ascending time_frame order after a mutation that may have
 // moved markers past their neighbors (shift, nudge, drag commit). The
 // marker stores are always sorted by time_frame at rest; mutations

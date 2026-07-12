@@ -107,9 +107,7 @@ void GuiInputHandler::run_commit_validation() {
     // ends. Without this, the prompt's generic mouse swallow would strand
     // the in-flight drag (motion and release are dropped while a prompt is
     // up), leaving it to resume against post-resolution state.
-    if (app.drag.active || app.trim_drag.active ||
-        app.scroll_drag.active || app.playhead_drag.active ||
-        app.editor_text_drag.active) return;
+    if (any_pointer_gesture_active(app)) return;
     // Blank state: nothing to validate against; the load path clears the
     // flag, this is just the same-tick backstop.
     if (audio.total_frames() <= 0) return;

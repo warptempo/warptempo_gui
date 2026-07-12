@@ -406,17 +406,24 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         batch_.reqs.clear();
         batch_.reqs.shrink_to_fit();
         finalize_render_run();
-        // Modal-surface guard (architect-ruled SKIP): a completion callback
+        // Modal-surface and gesture guard (architect-ruled SKIP): a
+        // completion callback
         // must never mutate the view stack underneath a modal surface — a
         // bottom-strip editor or any prompt. Auto-opening render view here
         // would flip the displayed domain and rebind playback under an open
         // bpm/settings session, or re-enter the view under a defect series.
-        // When a modal is up the
-        // auto-open is skipped outright — the batch is on disk and in the
-        // render list; `r` shows it once the modal closes. No deferral slot:
-        // skip keeps the modal invariant absolute with no new lifecycle.
+        // A completion callback likewise never flips the displayed domain
+        // beneath an in-flight pointer gesture: the release of a drag begun
+        // in the authoring view must commit in that view's display context
+        // (the pixel-anchoring helpers select their arm from the current
+        // context), so a domain flip mid-drag would commit the release
+        // through the wrong axis. When a modal is up or a gesture is in
+        // flight the auto-open is skipped outright — the batch is on disk and
+        // in the render list; `r` shows it once the modal closes or the
+        // gesture ends. No deferral slot: skip keeps the invariant absolute
+        // with no new lifecycle.
         if (success && !modal_bottom_strip_editor_active() &&
-            !app.prompt.active) {
+            !app.prompt.active && !any_pointer_gesture_active(app)) {
             // Entry gate, the same refusal the r key prints: render view
             // never opens over running or parked render work.
             if (app.queue_running || app.pending_archival.armed) {
