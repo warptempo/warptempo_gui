@@ -575,15 +575,19 @@ private:
     // behavior-preserving lift of one render-view-only block. They live on
     // the class so their definitions can move to input_render_view.cpp.
     //
-    // render_view_key_blocked: the on_key read-only allowlist as a predicate
-    // — true when `key`+`mods` is NOT one of the chords permitted while
-    // render-view is active (so the caller drops it with an early return).
+    // render_view_key_blocked: the render-view key gate as a predicate — true
+    // when `key`+`mods` is NOT permitted while render-view is active (so the
+    // caller drops it with an early return). Expressed as read_only_key_blocked
+    // plus a small named delta (render-view-specific admits and extra blocks)
+    // so the two gates cannot drift; the delta is documented at the definition.
     bool render_view_key_blocked(GuiKey key, GuiInputState mods);
 
-    // Source-view read-only allowlist. Returns true if key+mods is NOT on the
-    // allowlist of navigation / playback / zoom / view-switch / trim / undo /
-    // close-prompt keys honored in a read-only source tab — i.e. should be
-    // dropped. Sibling of render_view_key_blocked.
+    // Source-view read-only allowlist, and the base gate render_view_key_blocked
+    // defers to. Returns true if key+mods is NOT on the allowlist of navigation
+    // / playback / zoom / view-switch / close-prompt / save keys honored in a
+    // read-only source tab — i.e. should be dropped. Authoring-mutation chords
+    // (trim gestures, Delete, undo/redo, the propagate commands) are blocked
+    // here at the gate.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // Bottom-strip modal-editor predicate + key gate (bodies in

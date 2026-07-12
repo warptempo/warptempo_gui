@@ -30,8 +30,18 @@
 #include <utility>
 #include <vector>
 
-// Source-view read-only allowlist (sibling of render_view_key_blocked).
-// True when key+mods is not on the allowlist and should be dropped.
+// Source-view read-only allowlist, and the base gate render_view_key_blocked
+// defers to. True when key+mods is not on the allowlist and should be dropped.
+// Authoring-mutation chords are blocked here at the gate, not admitted for a
+// deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gestures
+// (x / Shift+X), Delete, and every propagate command all drop at this gate.
+// ALL propagate commands are read-only-blocked: the copy (Ctrl+P) explicitly,
+// the paste pair (Ctrl+Alt+P and Ctrl+Alt+Shift+P) structurally — their
+// ctrl+alt modifier combinations match no allowlist predicate. The deeper
+// owner refusals — do_undo / do_redo's per-entry target-tab check
+// (undo.cpp), and the read-only drag refusals (input_pointer.cpp) — stay as
+// backstops for the mouse and cross-tab paths, no longer the primary surface
+// for these keyboard chords.
 bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -96,29 +106,23 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && !shift && !alt && key == GuiKeys::W);
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
-    const bool is_copy_phase_resets =
-        (ctrl && !shift && !alt && key == GuiKeys::P);
-    // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are admitted through this
-    // active-tab gate unconditionally. The honored-ness rule is not the
-    // active tab's read-only state but the target entry's tab, which may
-    // be the other tab; only do_undo / do_redo have that entry in hand,
-    // so the real read-only decision lives there, not here.
-    const bool is_undo_redo = (ctrl && !alt && key == GuiKeys::Z);
-    const bool is_trim_set =
-        (key == GuiKeys::X && !ctrl && !shift && !alt);
-    const bool is_trim_clear =
-        (key == GuiKeys::X && !ctrl && shift && !alt);
-    const bool is_delete =
-        (key == GuiKeys::Delete && !ctrl && !alt);
+    // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
+    // drop at this gate. The old design admitted them because an undo entry
+    // may target the OTHER (writable) tab, deferring the real decision to
+    // do_undo / do_redo's per-entry target-tab peek. Under the gate-block,
+    // undoing from a read-only tab first requires switching to the writable
+    // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
+    // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
+    // survives as a backstop for entries that outlive a mid-history lock.
+    // The trim gestures (x / Shift+X), Delete, and the propagate copy/paste
+    // chords are likewise absent (blocked here).
     return !(is_o || is_play_pause || is_scrub || is_scrub_samples ||
              is_home_end || is_page_updown ||
              is_zoom || is_zoom_symbol || is_font_size_step || is_zero ||
              is_speed_select ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-             is_esc || is_ctrl_q || is_ctrl_w || is_save ||
-             is_copy_phase_resets || is_undo_redo ||
-             is_trim_set || is_trim_clear || is_delete);
+             is_esc || is_ctrl_q || is_ctrl_w || is_save);
 }
 
 // Modal bottom-strip editor predicate. Modal surfaces are bottom-strip

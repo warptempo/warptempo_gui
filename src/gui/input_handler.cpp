@@ -264,62 +264,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Render-view input gate. While render-view is active
-    // only keys driving navigation / playback / exit / commit are
-    // honored; every authoring key is silently dropped so a stray
-    // press can't mutate state through a swapped-out view.
-    // Allowlist:
-    //   - r (no mods)            → toggle render-view off
-    //   - Shift+Left/Right       → previous/next render
-    //   - Shift+Home/Shift+End   → first/last render, clamped, no
-    //                              wraparound
-    //   - Ctrl+Alt+C             → commit displayed render's markers
-    //   - Space                  → playback toggle
-    //   - Left/Right (no mods)   → playhead-by-pixel scrub
-    //   - Home/End (no mods)     → playhead to the rendered window's
-    //                              bounds (the snapshot trim's target-axis
-    //                              window — see viewport.cpp trim_range;
-    //                              the full timeline for untrimmed entries)
-    //   - Esc                    → top-level no-op
-    //   - p (no mods)            → toggle warp/phase reset sub-view
-    //   - Tab / Shift+Tab /      → cycle marker focus (no A/B tabs in
-    //     IsoLeftTab               render-view, so Ctrl+Tab / Ctrl+Shift+Tab
-    //                              stay no-ops; cycles the render-domain
-    //                              collection per the active p-state)
-    //   - Ctrl+Q / Ctrl+W        → close-prompt routing
-    //   - Up/Down (no mods)      → zoom in/out
-    //   - =/- (no mods)          → zoom in/out symbol-key alias
-    //   - Ctrl+Shift+=/-         → step GUI font size (display preference,
-    //                              not authoring state — admitted like the
-    //                              bare =/- zoom aliases)
-    //   - 0 (no mods)            → fit ↔ snap-zoom toggle
-    //   - f (no mods)            → follow mode toggle
-    //   - c (no mods)            → center+snap-zoom on playhead
+    // Render-view input gate. Render view IS the read-only modality, so
+    // render_view_key_blocked is read_only_key_blocked plus a small named
+    // delta (full per-chord rationale at the predicate in
+    // input_render_view.cpp). Render-view-specific ADMITS: r (toggle off),
+    // Shift+Left/Right (prev/next render), Shift+Home/End (first/last,
+    // clamped), Ctrl+Alt+C (commit). EXTRA BLOCKS on top of read-only: t
+    // (S/T toggle), o (read-only flag), Ctrl+S (save; the save surface is
+    // Ctrl+Alt+C), Shift+0..9 (playback speed), Ctrl+Tab / Ctrl+Shift+Tab
+    // (A/B switch). Everything else — playback, the bare-key scrub / zoom /
+    // follow / center / p sub-view toggle, Home/End, PageUp/PageDown paging,
+    // Tab cycling, Ctrl+Q/W, the font-size step — follows the read-only gate.
     //
-    // Note on the absent disk-save-shape keys: Ctrl+S (save),
-    // Ctrl+E (queue-add), Ctrl+Alt+R (single render to source dir),
-    // Ctrl+Alt+E (render queue), and Ctrl+Alt+I (render iterations) are
-    // intentionally NOT on the allowlist. The BPM sweep render is likewise
-    // unreachable here — it fires only from the BPM editor's Enter, which
-    // cannot be open in render-view. Rendering and queue-add are disk-write
-    // operations against the source folder (the same shape as
-    // Ctrl+S), and render-view is read-only with respect to
-    // authoring state and source-dir writes — admitting any of
-    // them would mutate state through a swapped-out view. With no
-    // archival dispatch chord admitted here and render-view entry
-    // gated on an idle worker with nothing parked
-    // (handle_render_view_toggle), no batch can be running or start
-    // while the view is up, so a batch completion — and its terminal
-    // auto-open — only ever happens with render view closed.
+    // The archival dispatch chords (Ctrl+S save, Ctrl+E queue-add,
+    // Ctrl+Alt+R/E/I render) are all absent — Ctrl+S is an EXTRA BLOCK, the
+    // rest match no read-only allowlist predicate — and the BPM sweep fires
+    // only from the BPM editor's Enter, which cannot be open here. With no
+    // archival dispatch chord admitted and render-view entry gated on an idle
+    // worker with nothing parked (handle_render_view_toggle), no batch can be
+    // running or start while the view is up, so a batch completion — and its
+    // terminal auto-open — only ever happens with render view closed.
     //
-    // Recorded asymmetry: Shift+0..9 playback-speed selection is
-    // deliberately NOT on this allowlist, though the read-only gate below
-    // admits it. Render-view playback is pinned to 1x by toggle_playback's
-    // force_one_x (the audible result must match the rendered warp, not
-    // the warp scaled by an extra factor), so admitting the chord here
-    // would let a press mutate live render playback mid-play and then have
-    // the next Space press silently snap it back to 1x. The chord stays
-    // blocked at this gate while the read-only gate admits it.
+    // Shift+0..9 is an EXTRA BLOCK rather than a deferral because render-view
+    // playback is pinned to 1x by toggle_playback's force_one_x (the audible
+    // result must match the rendered warp, not the warp scaled by an extra
+    // factor); admitting the chord would let a press change the entry's
+    // playback speed and then have the next Space press silently snap it
+    // back to 1x. Read-only mode has no such pin, so it admits Shift+0..9.
     if (app.render_view.enabled && render_view_key_blocked(key, mods)) {
         return;
     }
@@ -350,14 +321,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → center+snap-zoom on playhead
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
-    //   - x / Shift+x / Delete   → trim gestures: x sets the begin trim
-    //                              (with the autoset end), Shift+x clears
-    //                              both bounds, Delete clears the
-    //                              selected trim bound(s) when a trim
-    //                              boundary is last-selected. Delete's
-    //                              other half, marker delete, is
-    //                              re-blocked inside the Delete handler's
-    //                              own read-only check, not at this gate.
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
@@ -380,26 +343,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              reflect only authoring done where it
     //                              was legal (possibly the other,
     //                              unlocked tab).
-    //   - Ctrl+P                 → copy phase reset placements
-    //                              (read-only: writes only to the
-    //                              session-only phase_reset_clipboard)
-    //   - Ctrl+Z / Ctrl+Shift+Z  → undo / redo. Admitted at this gate
-    //                              because honored-ness is decided not by
-    //                              the active tab's read-only state but
-    //                              by the target entry's tab; do_undo and
-    //                              do_redo peek the entry and silently
-    //                              no-op when its target tab is
-    //                              read-only. The full rationale lives at
-    //                              is_undo_redo in input_key_dispatch.cpp
-    //                              and at the peek-then-bail sites in
-    //                              undo.cpp.
-    // Marker, tempo, and phase-reset drop / nudge / status-toggle chords
-    // are silently dropped at this gate; trim gestures are admitted
-    // because trim is per-tab navigation state. Delete and Ctrl+Z are
-    // also admitted here, but their authoring refusal lives downstream:
-    // the Delete handler's own read-only branch re-blocks marker delete,
-    // and do_undo / do_redo's target-tab peek silently no-ops when the
-    // undo/redo target's tab is read-only.
+    // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
+    // deeper refusal: the marker / tempo / phase-reset drop / nudge /
+    // status-toggle chords, the trim gestures (x / Shift+x), Delete, the
+    // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
+    // (Ctrl+Z / Ctrl+Shift+Z) all drop here. The deeper owner refusals stay
+    // as backstops for the paths the keyboard gate does not cover: the Delete
+    // handler's own read-only branch (mouse-adjacent marker delete) and
+    // do_undo / do_redo's target-tab peek (a history entry that targets the
+    // other, writable tab — now reached by Ctrl+Tab to that tab first, ruled
+    // acceptable for gate legibility; full rationale at read_only_key_blocked
+    // in input_key_dispatch.cpp).
     if (!app.render_view.enabled && active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;

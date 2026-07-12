@@ -20,16 +20,50 @@
 // reach: is_play_pause_key (gui_input.h) and the sweep_select_interval
 // template (app_state.h).
 
-// Render-view read-only allowlist as a predicate. While render-view is
-// active only navigation / playback / exit / commit chords are honored;
-// every authoring key is silently dropped. Returns true when the key is NOT
-// permitted, so the on_key caller drops it with an early return. The
-// permitted-chord classifiers are byte-for-byte the same set the inline gate
-// used. See the call site in on_key for the per-chord allowlist rationale.
+// Render-view key gate, expressed as read-only mode plus exactly one named
+// delta so the two gates cannot drift. Render view IS the read-only modality:
+// everything it permits, it permits by deferring to read_only_key_blocked,
+// except for a small set it admits on top (its own navigation and commit
+// chords) and a small set it blocks on top (chords read-only honors but that
+// would misbehave against the swapped-out display axis). Returns true when the
+// key is NOT permitted, so the on_key caller drops it with an early return.
+//
+// Delta over read-only:
+//   ADMITS (render-view-specific, checked first):
+//     - r                      → toggle render-view off
+//     - Shift+Left/Right       → previous/next render (deliberately shadows
+//                                the authoring playhead-by-samples scrub,
+//                                which is unreachable in render view — render
+//                                view browses entries, it does not scrub by
+//                                samples)
+//     - Shift+Home/Shift+End   → first/last render, clamped
+//     - Ctrl+Alt+C             → commit the displayed render
+//   EXTRA BLOCKS (read-only honors these; render view does not):
+//     - t                      → S/T audio-view toggle; render view owns the
+//                                display axis, so the toggle is meaningless
+//     - o                      → read-only flag toggle; irrelevant while
+//                                render view is its own read-only modality
+//     - Ctrl+S                 → save; render view's save surface is Ctrl+Alt+C
+//     - Shift+0..9             → playback speed; target view's deeper refusal
+//                                gates on active_audio_view being T, which
+//                                render view does not guarantee, so admitting
+//                                it would change the entry's playback speed
+//     - Ctrl+Tab / Ctrl+Shift+Tab → A/B tab switch; the entry is bound to its
+//                                commit tab and the tab slots hold the stashed
+//                                authoring view state for exit restore
+//   Everything else defers to read_only_key_blocked(key, mods).
+//
+// Two chords the deferral net-admits that render view honors safely (both
+// route through the same display-domain-aware handlers the already-admitted
+// chords use): PageUp/PageDown page the viewport against live_total_frames,
+// and Alt+Tab / Alt+IsoLeftTab reach the same marker-focus cycle bare Tab
+// does (read-only's tab-cycle predicate is not alt-strict).
 bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
+
+    // 1. Render-view-specific ADMITS.
     const bool is_r =
         (key == GuiKeys::R && !ctrl && !shift && !alt);
     const bool is_nav =
@@ -41,49 +75,31 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_commit =
         (ctrl && alt && !shift &&
          key == GuiKeys::C);
-    const bool is_playback = is_play_pause_key(key);
-    const bool is_scrub =
-        ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !ctrl && !shift && !alt);
-    const bool is_jump =
-        ((key == GuiKeys::Home || key == GuiKeys::End) &&
-         !ctrl && !shift && !alt);
-    const bool is_esc = (key == GuiKeys::Escape);
-    const bool is_sub_view_toggle =
-        (key == GuiKeys::P && !ctrl && !shift && !alt);
-    const bool is_tab_cycle =
-        (!ctrl && !alt &&
-         (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab));
-    const bool is_ctrl_q =
-        (ctrl && !shift && !alt && key == GuiKeys::Q);
-    const bool is_ctrl_w =
-        (ctrl && !shift && !alt && key == GuiKeys::W);
-    const bool is_zoom =
-        ((key == GuiKeys::Up || key == GuiKeys::Down) &&
-         !ctrl && !shift && !alt);
-    const bool is_zoom_symbol =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-         !ctrl && !shift && !alt);
-    // Ctrl+Shift+=/- steps the GUI font size. Pure display state, the sibling
-    // of the bare =/- zoom aliases this gate already admits; it mutates no
-    // state through the swapped-out view, so render-view honors it.
-    const bool is_font_size_step =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-         ctrl && shift && !alt);
-    const bool is_zero =
-        (key == GuiKeys::Digit0) && !ctrl && !shift && !alt;
-    const bool is_follow =
-        (key == GuiKeys::F && !ctrl && !shift && !alt);
-    const bool is_center =
-        (key == GuiKeys::C && !ctrl && !shift && !alt);
-    return !(is_r || is_nav || is_render_view_nav_jump ||
-             is_commit || is_playback ||
-             is_scrub || is_jump || is_esc ||
-             is_sub_view_toggle || is_tab_cycle ||
-             is_ctrl_q || is_ctrl_w ||
-             is_zoom || is_zoom_symbol || is_font_size_step ||
-             is_zero || is_follow ||
-             is_center);
+    if (is_r || is_nav || is_render_view_nav_jump || is_commit) {
+        return false;
+    }
+
+    // 2. Render-view EXTRA BLOCKS on top of read-only.
+    const bool is_sub_audio_toggle =
+        (key == GuiKeys::T && !ctrl && !shift && !alt);
+    const bool is_read_only_toggle =
+        (key == GuiKeys::O && !ctrl && !shift && !alt);
+    const bool is_save =
+        (ctrl && !shift && !alt && key == GuiKeys::S);
+    const bool is_speed_select =
+        (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 &&
+         shift && !ctrl && !alt);
+    const bool is_ctrl_tab =
+        (ctrl && !shift && key == GuiKeys::Tab);
+    const bool is_ctrl_shift_tab =
+        (ctrl && shift && key == GuiKeys::Tab);
+    if (is_sub_audio_toggle || is_read_only_toggle || is_save ||
+        is_speed_select || is_ctrl_tab || is_ctrl_shift_tab) {
+        return true;
+    }
+
+    // 3. Everything else follows the read-only gate.
+    return read_only_key_blocked(key, mods);
 }
 
 // Plain `r` toggles render analysis mode. Returns false if the chord is not
