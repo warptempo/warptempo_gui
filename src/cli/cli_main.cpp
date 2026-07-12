@@ -14,7 +14,8 @@
                                         // validate_render_projection
 #include "render_output_naming.h"       // render_output_directory,
                                         // render_output_stem,
-                                        // compose_render_output_paths
+                                        // compose_render_output_paths,
+                                        // render_staging_path
 #include "source_audio_io.h"            // load_source_range_to_buffer
 
 #include "audio_probe.h"
@@ -380,7 +381,7 @@ int main(int argc, char** argv) {
     // --- render into the buffer, then run the shared post-engine chain
     // (crop when trimmed -> peak limiter when limiter=true -> encode to the
     // sibling staging file); success publishes atomically via rename.
-    const std::string staging_output_path = out_path + ".tmp";
+    const std::string staging_output_path = render_staging_path(out_path);
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
         std::fprintf(stderr, "warptempo_cli: engine %s\n",

@@ -52,13 +52,31 @@ std::vector<std::filesystem::path> compose_render_output_paths(
     const std::string& stem,
     const std::string& output_format);
 
+// The staging name a deliverable publishes through: the final path's spelling
+// with ".tmp" appended (path string plus ".tmp", never an extension swap).
+// Every deliverable publication — the CLI's wav render, the GUI's wav engine
+// path and reuse rungs, the single-file map formats, and both files of the
+// warptempo_maps pair — writes under this name first and rename-publishes to
+// the final name. This is the single owner of the staging spelling, so the
+// two products cannot drift, and render_output_source_collision below checks
+// these staging names against the source alongside the finals.
+std::string render_staging_path(const std::string& final_path);
+
 // Source-clobber guard. The render output must never overwrite the source
 // audio itself. Composes the single-render source-sibling output paths exactly
 // as a render dispatch does (compose_render_output_paths over
-// render_output_directory / render_output_stem) and returns the first output
-// path that resolves to the source, or nullopt when none collide. Every path
+// render_output_directory / render_output_stem) and returns the first path
+// that resolves to the source, or nullopt when none collide. Every path
 // of the format is checked, so the warptempo_maps pair's second file is
-// covered too. std::filesystem::equivalent is an inode match that only
+// covered too — and for each final path its render_staging_path sibling is
+// checked as well: publication opens the staging name with a truncating
+// write BEFORE the render completes, so a staging name that resolves to the
+// source destroys it just as surely as a final-name collision would (a
+// source audio file literally named `<final>.tmp`, or an existing staging
+// file that is a symlink or hard link to the source). When the staging name
+// is the collider, the returned path is the staging path itself, so the
+// boundary diagnostics name the true colliding path.
+// std::filesystem::equivalent is an inode match that only
 // succeeds when both paths exist, so the lexically_normal comparison is the
 // fallback that catches the not-yet-written output that will land on the
 // source. An empty source path yields nullopt.

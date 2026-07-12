@@ -40,6 +40,10 @@ std::vector<std::filesystem::path> compose_render_output_paths(
     return paths;
 }
 
+std::string render_staging_path(const std::string& final_path) {
+    return final_path + ".tmp";
+}
+
 std::optional<std::filesystem::path> render_output_source_collision(
     const EngineSettings& es,
     const std::string& source_audio_path) {
@@ -47,15 +51,22 @@ std::optional<std::filesystem::path> render_output_source_collision(
     const std::filesystem::path src(source_audio_path);
     const std::string source_stem =
         std::filesystem::path(source_audio_path).stem().string();
+    auto collides = [&](const std::filesystem::path& path) {
+        std::error_code ec;
+        return std::filesystem::equivalent(path, src, ec)
+            || path.lexically_normal() == src.lexically_normal();
+    };
     for (const std::filesystem::path& out : compose_render_output_paths(
              render_output_directory(source_audio_path),
              render_output_stem(es, source_stem),
              es.output_format)) {
-        std::error_code ec;
-        if (std::filesystem::equivalent(out, src, ec)
-            || out.lexically_normal() == src.lexically_normal()) {
-            return out;
-        }
+        if (collides(out)) return out;
+        // The staging name is opened truncating before the render completes,
+        // so a staging collision destroys the source too; return the staging
+        // path itself so diagnostics name the true collider.
+        const std::filesystem::path staging(
+            render_staging_path(out.string()));
+        if (collides(staging)) return staging;
     }
     return std::nullopt;
 }

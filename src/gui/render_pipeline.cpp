@@ -225,28 +225,42 @@ RenderOutcome do_render(const RenderRequest& req,
     // inode-level match and only succeeds when both paths exist — if the
     // output path doesn't exist yet it cannot be the source. Every output
     // path of the format is checked, so the warptempo_maps pair's second
-    // file is covered by the same refusal.
+    // file is covered by the same refusal — and each path's
+    // render_staging_path sibling is checked too: the staging name is opened
+    // with a truncating write before the render completes, so an existing
+    // staging file resolving to the source (a symlink or hard link, or the
+    // source literally named `<final>.tmp`) would destroy it just as surely.
+    // This is the render-time inode backstop, so it also covers batch-folder
+    // stagings, whose finals are composed from the batch folder rather than
+    // the source siblings.
     for (const std::filesystem::path& out_path : output_paths) {
-        std::error_code ec;
-        if (std::filesystem::exists(out_path, ec) &&
-            std::filesystem::equivalent(out_path,
-                                        req.source_audio_path, ec)) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: output '%s' resolves to the "
-                "source audio file; refusing to overwrite the source. "
-                "Change the title setting.\n",
-                out_path.string().c_str());
-            return RenderOutcome::Failed;
+        for (const std::filesystem::path& candidate :
+                 {out_path,
+                  std::filesystem::path(
+                      render_staging_path(out_path.string()))}) {
+            std::error_code ec;
+            if (std::filesystem::exists(candidate, ec) &&
+                std::filesystem::equivalent(candidate,
+                                            req.source_audio_path, ec)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render error: output '%s' resolves to "
+                    "the source audio file; refusing to overwrite the "
+                    "source. Change the title setting.\n",
+                    candidate.string().c_str());
+                return RenderOutcome::Failed;
+            }
         }
     }
 
-    // Staging path (final path plus ".tmp") for the atomic rename used by the
-    // wav engine path, the reuse rungs, and the single-file map formats
-    // (generic_map, midi_map): every publication writes staging first, gates
-    // on cancel, then renames to the final name, so a cancel never lands a
-    // partial file under a final name. The warptempo_maps pair stages both of
-    // its files under their own ".tmp" names for the same reason.
-    const std::string staging_output_path = final_output_path + ".tmp";
+    // Staging path (render_staging_path: final path plus ".tmp") for the
+    // atomic rename used by the wav engine path, the reuse rungs, and the
+    // single-file map formats (generic_map, midi_map): every publication
+    // writes staging first, gates on cancel, then renames to the final name,
+    // so a cancel never lands a partial file under a final name. The
+    // warptempo_maps pair stages both of its files under their own
+    // render_staging_path names for the same reason.
+    const std::string staging_output_path =
+        render_staging_path(final_output_path);
 
     auto cleanup_all = [&]() {
         unlink_silent(staging_output_path);
@@ -914,8 +928,9 @@ RenderOutcome do_render(const RenderRequest& req,
             // the warp column, entry 1 the phase reset column.
             const std::string warp_final = output_paths.front().string();
             const std::string phase_reset_final = output_paths.back().string();
-            const std::string warp_staging = warp_final + ".tmp";
-            const std::string phase_reset_staging = phase_reset_final + ".tmp";
+            const std::string warp_staging = render_staging_path(warp_final);
+            const std::string phase_reset_staging =
+                render_staging_path(phase_reset_final);
             // Stage-first, gate, forfeit, publish: both staging files are
             // written to their ".tmp" names FIRST, before any old final is
             // touched. A staging-write failure or a cancel landing during the
