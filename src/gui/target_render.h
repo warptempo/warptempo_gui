@@ -153,23 +153,32 @@ private:
     // only consumes lookup/artifact results and binds the completed buffer.
     void complete_successful_buffer();
 
-    // Single source of truth for the domain offset handed to the
-    // target-buffer playback bind: the full-target-frame coordinate that
-    // target_buffer[0] represents. 0 for a full-song (no-trim) render; with
-    // trim set, the trim-begin source frame mapped through the target-view
-    // warp_frame_map (the engine renders only the trim range, so buffer frame
-    // 0 is the trim's target-frame start). Requires app.target_buffer_frames
-    // to be set. The value lives nowhere at rest outside GuiPlayback — it
-    // travels with the bind. Called from complete_successful_buffer (after a
-    // fresh render / cache hit / artifact load) and from ensure_ready's clean
-    // rebind (so a cached buffer re-entered without a render gets the same
-    // anchor it had at render time).
-    int64_t compute_target_buffer_start_frame() const;
+    // Compute the domain offset for the target-buffer playback bind: the
+    // full-target-frame coordinate that target_buffer[0] represents, for an
+    // explicit (has_begin, begin_frame) trim pair. 0 for a full-song (no-trim)
+    // render; with trim set, the trim-begin source frame mapped through the
+    // target-view warp_frame_map (the engine renders only the trim range, so
+    // buffer frame 0 is the trim's target-frame start). No buffer-frames gate:
+    // callers stamp the origin at production time, when the buffer may still be
+    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
+    // travels to GuiPlayback with each bind.
+    int64_t compute_buffer_start_frame_for(bool has_begin,
+                                           int64_t begin_frame) const;
 
     // Render fingerprint of the most recent dispatch. Computed at the top of
     // dispatch_render_now() and used for target-view cache/artifact lookups.
     // The worker computes the same fingerprint for fresh target-route inserts.
     std::vector<uint8_t> last_fingerprint_;
+
+    // Full-target-domain frame coordinate that element zero of app.target_buffer
+    // represents for the production currently in flight or most recently
+    // completed. Stamped at each production site in dispatch_render_now from the
+    // trim values the produced samples embody, and consumed by the completion
+    // rebind and ensure_ready's clean rebind. Freezing it at production keeps a
+    // mid-flight trim drag — the one gesture that mutates the live authored
+    // store before its commit — from mislabeling a buffer with a bound its
+    // samples never embodied.
+    int64_t dispatched_buffer_start_frame_ = 0;
 
     // Set true by trigger() when a dispatch is wanted but the worker
     // wasn't idle. Cleared once dispatch_render_now is actually

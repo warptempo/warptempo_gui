@@ -711,8 +711,9 @@ struct AppState {
     int64_t target_buffer_frames = 0;
     // The buffer's domain anchor — the full-target-frame coordinate that
     // target_buffer[0] represents — is NOT app state: it travels with the
-    // playback bind as GuiPlayback's domain offset, computed by
-    // GuiTargetRender::compute_target_buffer_start_frame at each rebind.
+    // playback bind as GuiPlayback's domain offset, stamped at production time
+    // by GuiTargetRender from the trim values the produced samples embody and
+    // carried to the completion rebind.
 
     // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
     // (tab_a or tab_b) is mirrored into the live AppState fields.
