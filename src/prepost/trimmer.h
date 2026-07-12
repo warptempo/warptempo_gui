@@ -121,7 +121,12 @@ std::expected<void, std::string> validate_render_projection(
 
 // The shared post-engine chain — ONE implementation compiled by both
 // warptempo_gui (do_render's wav arm) and warptempo_cli, so the CLI stays
-// byte-identical to the GUI by construction. Stages, in order:
+// byte-identical to the GUI by construction. The output-buffer contract
+// (channels > 0, sample_rate > 0, whole interleaved frames, every sample
+// finite) is validated once at entry, before the crop, the limiter, and sink
+// selection, so the routes downstream may assume it; the finiteness check is
+// a deliberate single linear scan, negligible next to synthesis (the same
+// argument as the buffer route's PCM 24 snap). Stages, in order:
 //   post_trim crop        when post_trim != nullptr (trimmed renders)
 //   peak limiter          when limiter (kPeakLimiter* constants)
 //   pcm24 decision + sink:

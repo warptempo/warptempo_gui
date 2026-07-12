@@ -344,6 +344,37 @@ std::expected<FinishRenderStatus, std::string> finish_render(
     const auto cancelled = [&]() {
         return cancel_flag && cancel_flag->load();
     };
+    // Output-buffer contract, validated once before the crop, the limiter,
+    // and sink selection so every route below may assume a well-shaped,
+    // finite buffer. A legal engine emission always passes; a violation is an
+    // internal breach, refused loudly rather than left to route-dependent
+    // handling (a division by zero, a silently floored ragged tail, or a
+    // non-finite sample the buffer route maps to code zero while a writer
+    // refuses it). The finiteness scan is a single linear pass — negligible
+    // next to synthesis, the same argument as the buffer route's PCM 24 snap.
+    if (channels <= 0) {
+        return std::unexpected(
+            "render buffer has an invalid channel count (channels=" +
+            std::to_string(channels) + ")");
+    }
+    if (sample_rate <= 0) {
+        return std::unexpected(
+            "render buffer has an invalid sample rate (sample_rate=" +
+            std::to_string(sample_rate) + ")");
+    }
+    if (buffer.size() % static_cast<size_t>(channels) != 0) {
+        return std::unexpected(
+            "render buffer is not whole interleaved frames (size=" +
+            std::to_string(buffer.size()) + ", channels=" +
+            std::to_string(channels) + ")");
+    }
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        if (!std::isfinite(buffer[i])) {
+            return std::unexpected(
+                "render buffer has a non-finite sample at index " +
+                std::to_string(i));
+        }
+    }
     if (post_trim) {
         if (auto cropped = apply_post_trim(buffer, channels, *post_trim);
             !cropped) {
