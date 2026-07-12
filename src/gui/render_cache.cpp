@@ -131,7 +131,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // matching and re-render. Version 5: the engine's phase reset placement
 // timing changed (the placement-selected frame seeds, one hop earlier), so
 // artifacts rendered under the prior engine must stop matching and re-render.
-constexpr uint32_t kFingerprintVersion = 5;
+// Version 6: the synthesis write now snaps the DC and Nyquist bins to their
+// nearest legal real phase (endpoint bins have no imaginary degree of
+// freedom), changing every render's bytes, so prior-DSP artifacts must stop
+// matching and re-render rather than pose as current-DSP renders.
+constexpr uint32_t kFingerprintVersion = 6;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

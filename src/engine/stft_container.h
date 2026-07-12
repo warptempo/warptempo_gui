@@ -528,6 +528,32 @@ struct AudioSTFT {
             w.ifft_in[k][0] = mag[k] * c;
             w.ifft_in[k][1] = mag[k] * s;
         }
+        // Hermitian-endpoint correction, applied AFTER the interior loop so the
+        // interior bins' arithmetic (the sincos and both writes above) is
+        // byte-for-byte untouched. The half-spectrum of an even-length real
+        // transform is Hermitian; the DC bin (k == 0) and the Nyquist bin
+        // (k == K-1) have no imaginary degree of freedom, and FFTW's c2r
+        // ignores whatever imaginary part sits there. The old code wrote
+        // mag[k]*(cos theta, sin theta) at those two bins, so c2r effectively
+        // synthesized mag[k]*cos(theta[k]) — a non-real theta scaled the
+        // endpoint magnitude by |cos(theta)| (down toward zero near a quarter
+        // turn) instead of rotating it. Project theta onto the only legal
+        // endpoint phase set {0, pi}: keep the analyzed magnitude and let the
+        // sign of cos pick the nearer legal phase. copysign carries the tie:
+        // cos(theta) == 0.0 (theta at pi/2 to double precision) yields
+        // copysign(mag, +0.0) = +mag — a deterministic, documented choice.
+        //
+        // Determinism: this touches ONLY the two endpoint coefficients per
+        // frame per channel. The quiet-bin RNG draws, theta, the propagation
+        // heap, and every phase-domain input are untouched (draw alignment is
+        // a standing determinism ruling), so the write is a pure function of
+        // the same inputs and holds bit-for-bit run to run. Seed frames carry
+        // real endpoint phases from the r2c analysis (cos is exactly +/-1
+        // there), so their endpoints are byte-identical through this change.
+        for (const int k : {0, K - 1}) {
+            w.ifft_in[k][0] = std::copysign(mag[k], std::cos(theta[k]));
+            w.ifft_in[k][1] = 0.0;
+        }
     }
 
     void cleanup() {
