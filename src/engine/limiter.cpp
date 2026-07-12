@@ -13,7 +13,7 @@
 // frames), the over-ceiling peaks are resolved against a limiter-local
 // attenuation map, the buffer is reconstructed, and the result replaces the
 // input render. The solver (c_id identity contributions, eval_map coherent-sum
-// prediction, apply_update proportional/clamp-redistribution, the symmetric
+// prediction, apply_update proportional distribution, the symmetric
 // dist_to_ceiling selection, the outer re-queue/rescan loop) is the same one
 // that ran in-PV; only its analysis grid and data source changed.
 //
@@ -31,7 +31,6 @@ constexpr int    RESCAN_HALF_WIDTH_FRAMES = 100;  // base radius (frames) for re
 constexpr int    MIN_PEAK_EDGE_MARGIN     = 25;   // minimum frames between any peak and region edge
 constexpr int    PEAK_DEDUP_RADIUS        = 4;    // per-channel minimum sample gap between peaks
 constexpr int    MAX_REFINEMENT_TRIES     = 3;    // extra attempts past the first (inner predictive aim)
-constexpr int    MAX_CLAMP_REDIST_TRIES   = 8;    // safety cap on apply_update inner loop
 constexpr int    MAX_PEAK_RESOLVE_PASSES  = 4;    // per-lineage outer re-queue cap (architect sweeps)
 constexpr bool   kCidSelfCheck            = false; // cross-check direct c_id against band_ifft
 
@@ -511,10 +510,16 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         double ref_sign = (ref_val >= 0.0) ? 1.0 : -1.0;
 
         // Apply proportional update with signed target. Operates on `base`,
-        // writes into `out`. r = target/current clamped to [0,1]. Inner loop
-        // freezes bands that would clamp below zero and redistributes their
-        // share to the unfrozen pool (legitimate dominant-band case; also keeps
-        // the outer loop from stalling on a single band).
+        // writes into `out`. r = target/current clamped to [0,1], and each cell
+        // gets factor = 1 - (1-r) * contrib/total_mag, so its gain reduction is
+        // proportional to its share of the coherent-sum magnitude. The factor is
+        // nonnegative by construction: r in [0,1] gives 1-r in [0,1], and every
+        // contrib is a term of total_mag so contrib/total_mag is in [0,1] (the
+        // nonnegative partial sums keep each quotient at or below 1 in floating
+        // point), leaving the product at most 1 and the factor at least 0. When
+        // total_mag is degenerate (< 1e-30, an all-zero contribution set) the
+        // factor is 0.0 to avoid NaN; the floor keeps the factor nonnegative
+        // against a future change to the update equation.
         auto apply_update = [&](const std::vector<std::vector<double>>& base,
                                 double current_val, double target_val,
                                 std::vector<std::vector<double>>& out) {
@@ -523,48 +528,21 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             if (r < 0.0) r = 0.0;
             if (r > 1.0) r = 1.0;
 
-            const size_t n_pairs = frames_cov.size() * static_cast<size_t>(num_bands);
-            std::vector<double> contrib(n_pairs, 0.0);
-            std::vector<unsigned char> frozen(n_pairs, 0);
             double total_mag = 0.0;
             for (size_t i = 0; i < frames_cov.size(); ++i)
-                for (int b = 0; b < num_bands; ++b) {
-                    double c = std::abs(base[i][b] * c_id[i * num_bands + b]);
-                    contrib[i * num_bands + b] = c;
-                    total_mag += c;
-                }
+                for (int b = 0; b < num_bands; ++b)
+                    total_mag += std::abs(base[i][b] * c_id[i * num_bands + b]);
 
             const double one_minus_r = 1.0 - r;
-            double active_total_mag    = total_mag;
-            double clamped_contrib_sum = 0.0;
-            double one_minus_r_adj     = one_minus_r;
-
-            for (int inner = 0; inner < MAX_CLAMP_REDIST_TRIES; ++inner) {
-                bool any_new_clamp = false;
-                for (size_t p = 0; p < n_pairs; ++p) {
-                    if (frozen[p]) continue;
-                    double tentative = 1.0 - one_minus_r_adj * contrib[p] / active_total_mag;
-                    if (tentative < 0.0) {
-                        frozen[p] = 1;
-                        clamped_contrib_sum += contrib[p];
-                        active_total_mag    -= contrib[p];
-                        any_new_clamp = true;
-                    }
-                }
-                if (!any_new_clamp) break;
-                if (active_total_mag < 1e-30) break;
-                one_minus_r_adj =
-                    (one_minus_r * total_mag - clamped_contrib_sum) / active_total_mag;
-            }
 
             for (size_t i = 0; i < frames_cov.size(); ++i)
                 for (int b = 0; b < num_bands; ++b) {
-                    size_t p = i * num_bands + b;
+                    double contrib = std::abs(base[i][b] * c_id[i * num_bands + b]);
                     double factor;
-                    if (frozen[p] || active_total_mag < 1e-30) {
+                    if (total_mag < 1e-30) {
                         factor = 0.0;
                     } else {
-                        factor = 1.0 - one_minus_r_adj * contrib[p] / active_total_mag;
+                        factor = 1.0 - one_minus_r * contrib / total_mag;
                         if (factor < 0.0) factor = 0.0;
                     }
                     out[i][b] = base[i][b] * factor;
