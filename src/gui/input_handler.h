@@ -495,17 +495,6 @@ private:
     // matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
-    // The render-view A/B tab switch (the one-way bubble's tab arm), run
-    // INSTEAD of switch_active_tab_view_to inside render view: that authoring
-    // switch would swap the live fields with the authoring tab slots (the
-    // exit stash) and corrupt it. Persists the leaving tab's band, stops
-    // playback like the authoring switch, flips app.active_tab_view, applies
-    // the OTHER band's zoom/viewport/playhead from a strict re-read of the
-    // entry's .settings — refusing (one stderr line, NO flip) on a parse
-    // failure — then persists the entering tab so disk active_tab_view agrees
-    // with snapshot_commit_tab (kept in lockstep with the new tab).
-    void switch_render_view_tab();
-
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
     // Home-End / trim begin-end. Caller gates on no modifiers held.
     void handle_plain_bare_keys(GuiKey key);

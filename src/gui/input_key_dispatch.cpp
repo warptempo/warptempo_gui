@@ -35,6 +35,11 @@
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
 // deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gestures
 // (x / Shift+X), Delete, and every propagate command all drop at this gate.
+// Ctrl+S (save) is likewise NOT on the allowlist: read-only means no save, so
+// it drops here like the authoring chords. Gesture-owned state changed in a
+// locked tab (the read-only flag, trim, view state, font size, playback speed)
+// reaches disk only after unlocking (bare o) or via Ctrl+S from the writable
+// tab — never by saving from the locked tab itself.
 // ALL propagate commands are read-only-blocked: the copy (Ctrl+P) explicitly,
 // the paste pair (Ctrl+Alt+P and Ctrl+Alt+Shift+P) structurally — their
 // ctrl+alt modifier combinations match no allowlist predicate. The deeper
@@ -101,8 +106,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     const bool is_ctrl_w =
         (ctrl && !shift && !alt && key == GuiKeys::W);
-    const bool is_save =
-        (ctrl && !shift && !alt && key == GuiKeys::S);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
     // drop at this gate. The old design admitted them because an undo entry
     // may target the OTHER (writable) tab, deferring the real decision to
@@ -119,7 +122,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_speed_select ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-             is_esc || is_ctrl_q || is_ctrl_w || is_save);
+             is_esc || is_ctrl_q || is_ctrl_w);
 }
 
 // Modal bottom-strip editor predicate. Modal surfaces are bottom-strip
@@ -1489,87 +1492,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     return false;
 }
 
-// The render-view A/B tab switch (one-way bubble tab arm). See the
-// declaration for why this replaces switch_active_tab_view_to inside render
-// view. Disk owns each tab's browse state, so this persists TWICE: once for
-// the leaving tab (before the flip) and once for the entering tab (after
-// applying its band), so both bands round-trip and disk active_tab_view ends
-// up equal to snapshot_commit_tab for the commit attestation. In between it
-// applies the OTHER band's position from a fresh strict read of the entry's
-// own .settings.
-void GuiInputHandler::switch_render_view_tab() {
-    if (app.render_view.index < 0 ||
-        app.render_view.index >=
-            static_cast<int>(app.render_view.list.size())) {
-        return;
-    }
-    const AppState::RenderViewEntry& entry =
-        app.render_view.list[app.render_view.index];
-    // Persist the LEAVING tab first: disk owns each tab's browse state, so a
-    // later switch back reloads exactly what we leave now. write_settings_for
-    // writes the live viewport/zoom/playhead/W-P onto app.active_tab_view's
-    // band (still the leaving tab here) and records active_tab_view as that
-    // leaving tab.
-    render_view.write_settings_for(entry);
-
-    const char other_tab = (app.active_tab_view == 'B') ? 'A' : 'B';
-    // Strict re-read of the entry's own .settings — the same read the entry
-    // load runs. The file is program-written, so a malformed read at this
-    // boundary is adversarial: refuse with one stderr line and NO flip, so a
-    // parse failure leaves the browsed view unchanged.
-    const std::filesystem::path st_path = render_view.settings_path(entry);
-    const auto settings = read_settings_file(st_path.string());
-    if (!settings) {
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: tab switch refused for '%s': %s\n",
-            st_path.string().c_str(), settings.error().c_str());
-        return;
-    }
-
-    // Playback stop, the same the authoring switch performs (the leaving-tab
-    // position is the Space-launch cursor, not the run-time audio cursor).
-    if (playback.is_playing()) {
-        playback.stop();
-        playback_lifecycle.restore_playhead_to_lsp();
-    }
-    viewport.clear_hover_popup();
-
-    // Flip the tab (PLAIN assignment — never switch_active_tab_view_to, which
-    // would swap the live fields with the authoring tab slots / exit stash),
-    // and keep snapshot_commit_tab in lockstep with the new tab.
-    app.active_tab_view = other_tab;
-    app.render_view.snapshot_commit_tab = other_tab;
-    // Apply the OTHER band's zoom/viewport/playhead from the re-read .settings;
-    // the values were strict-validated by read_settings_file. Apply order
-    // zoom, viewport, playhead, clamp — the unclamped-playhead restore-site
-    // convention (move_playhead_to owns the value at first use).
-    const SettingsFileTab& band =
-        (other_tab == 'B') ? settings->tab_b : settings->tab_a;
-    app.zoom_level             = band.zoom;
-    app.viewport_start_sample  = band.viewport_start;
-    app.playhead_cursor_sample = band.playhead;
-    clamp_viewport_start(app, audio);
-    // Re-mirror the split playhead's scanner to the applied cursor while it is
-    // inactive, matching load_render_view_at's re-mirror after a position apply.
-    if (!app.playhead_scanner_active) {
-        app.playhead_scanner_sample = app.playhead_cursor_sample;
-    }
-    // Persist the ENTERING tab now that it is live: this records
-    // active_tab_view as the new tab on disk, so it agrees with
-    // snapshot_commit_tab just set. Ctrl+Alt+C re-reads active_tab_view and
-    // requires it to equal the stash, so this second write is what keeps the
-    // routing attestation passing for a GUI tab switch (the leaving tab's
-    // band, written above, is preserved — write_settings_for only rewrites the
-    // active band). The entering band re-persists its own just-clamped value,
-    // idempotent modulo the viewport clamp.
-    render_view.write_settings_for(entry);
-    // One-shot discrete jump, mirroring switch_active_tab_view_to: render the
-    // plate synchronously and damage the waveform + timestamp areas now.
-    viewport.kick_waveform_sync();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-}
-
 // Tab-key family. See the declaration for the chord list.
 bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -1581,40 +1503,26 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // target tab. Does not mark the document dirty. Alt-strict: an Alt
     // held alongside makes the chord an unbound no-op, never this binding.
     if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
-        // Render view is a one-way bubble: its tab switch has its OWN arm,
-        // which reads the entry's other band off disk rather than swapping the
-        // authoring tab slots (the exit stash). Runs ahead of the authoring
-        // call so the authoring switch is never reached under render view.
-        if (app.render_view.enabled) {
-            switch_render_view_tab();
-            return true;
-        }
+        // Render view blocks Ctrl+Tab outright at the key gate
+        // (render_view_key_blocked's EXTRA BLOCKS), so this arm runs only in
+        // authoring views: the A/B tab is authoring view state and render view
+        // may not mutate the live tab. The trigger dispatches a target-view
+        // preview, always safe here for the same reason.
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        // No render work runs under an open render view (the entry-gate
-        // invariant): a preview dispatch from a tab switch would violate it,
-        // so the trigger is gated out in render view. The preview re-derives
-        // at exit through restore_source_view's ensure_ready; authoring-view
-        // tab switches keep the trigger.
-        if (!app.render_view.enabled) target_render.trigger();
+        target_render.trigger();
         return true;
     }
 
     // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
-    // march paired tabs forward in lockstep with one chord. The composition
-    // holds under render view: cycle_marker_focus_with_recenter walks the
-    // snapshot collections there, and the render-view tab switch (substituted
-    // for the authoring one) swaps the entry's disk-owned per-tab position —
-    // see the Ctrl+Tab arm for why the trigger is gated out.
+    // march paired tabs forward in lockstep with one chord. Render view blocks
+    // this chord at the key gate (like Ctrl+Tab), so this arm is authoring-only;
+    // cycle_marker_focus_with_recenter survives unchanged for those views.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus_with_recenter(true);
-        if (app.render_view.enabled) {
-            switch_render_view_tab();
-        } else {
-            active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        }
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_marker_focus_with_recenter(true);
-        if (!app.render_view.enabled) target_render.trigger();
+        target_render.trigger();
         return true;
     }
 

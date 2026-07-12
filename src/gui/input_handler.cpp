@@ -270,17 +270,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // input_render_view.cpp). Render-view-specific ADMITS: r (toggle off),
     // Shift+Left/Right (prev/next render), Shift+Home/End (first/last,
     // clamped), Ctrl+Alt+C (commit). EXTRA BLOCKS on top of read-only: t
-    // (S/T toggle), o (read-only flag), Ctrl+S (save; the save surface is
-    // Ctrl+Alt+C), Shift+0..9 (playback speed). Everything else — playback,
-    // the bare-key scrub / zoom / follow / center / p sub-view toggle,
-    // Home/End, PageUp/PageDown paging, Tab cycling, the Ctrl+Tab /
-    // Ctrl+Shift+Tab A/B switch, Ctrl+Q/W, the font-size step — follows the
-    // read-only gate.
+    // (S/T toggle), o (read-only flag), the Ctrl+Tab / Ctrl+Shift+Tab A/B
+    // switch (render view displays one immutable rendered artifact and may not
+    // mutate the live tab), Shift+0..9 (playback speed). Everything else —
+    // playback, the bare-key scrub / zoom / follow / center / p sub-view
+    // toggle, Home/End, PageUp/PageDown paging, bare Tab marker-focus cycling,
+    // Ctrl+Q/W, the font-size step — follows the read-only gate; Ctrl+S is
+    // blocked through that deferral (read-only itself now blocks it), so the
+    // save surface is Ctrl+Alt+C only.
     //
     // The archival dispatch chords (Ctrl+S save, Ctrl+E queue-add,
-    // Ctrl+Alt+R/E/I render) are all absent — Ctrl+S is an EXTRA BLOCK, the
-    // rest match no read-only allowlist predicate — and the BPM sweep fires
-    // only from the BPM editor's Enter, which cannot be open here. With no
+    // Ctrl+Alt+R/E/I render) are all absent — Ctrl+S drops through the
+    // read-only deferral, the rest match no read-only allowlist predicate —
+    // and the BPM sweep fires only from the BPM editor's Enter, which cannot be
+    // open here. With no
     // archival dispatch chord admitted and render-view entry gated on an idle
     // worker with nothing parked (handle_render_view_toggle), no batch can be
     // running or start while the view is up, so a batch completion — and its
@@ -326,23 +329,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → top-level no-op
     //   - Ctrl+Q / Ctrl+W        → close-prompt routing
-    //   - Ctrl+S                 → save. Deliberately admitted: save is a
-    //                              whole-application persistence action
-    //                              (save_ops.save writes the marker
-    //                              sidecars and .settings), and admitting
-    //                              it from a locked tab is what lets
-    //                              gesture-owned state changed there —
-    //                              the read-only flag itself, trim, view
-    //                              state, font size, playback speed —
-    //                              reach disk; the bare-o handler comment
-    //                              below already records that the flag is
-    //                              silently persisted on Ctrl+S. It is
-    //                              not an authoring mutation of the
-    //                              locked tab: the marker-editing chords
-    //                              stay blocked, so the sidecar bytes
-    //                              reflect only authoring done where it
-    //                              was legal (possibly the other,
-    //                              unlocked tab).
+    // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
+    // gate like the authoring chords. Gesture-owned state changed in a locked
+    // tab (the read-only flag itself, trim, view state, font size, playback
+    // speed) reaches disk only after unlocking (bare o) or via Ctrl+S from the
+    // writable tab.
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, the trim gestures (x / Shift+x), Delete, the
@@ -380,8 +371,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // able to unlock) and dropped by the render-view allowlist (the
     // flag is irrelevant while render-view is its own read-only
     // modality). Pure view-state mutation: not undoable, not dirty;
-    // silently persisted on Ctrl+S. The bottom-strip dim update lands
-    // through invalidate_timestamp_area, which covers the A/B tab
+    // silently persisted on the next Ctrl+S from a writable surface (Ctrl+S
+    // drops at the read-only gate, so a tab just locked here reaches disk from
+    // the other, unlocked tab — or after a bare-o unlock). The bottom-strip dim
+    // update lands through invalidate_timestamp_area, which covers the A/B tab
     // letter glyph.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         ViewState& vs = active_view_state(app);

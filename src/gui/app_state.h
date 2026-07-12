@@ -961,10 +961,10 @@ struct AppState {
         // bounds. sample_rate stays the source's (equal to the render's by
         // construction, verified at entry decode). snapshot_commit_tab is
         // the tab the entry is browsed under, attested at commit: entry load
-        // sets it from the entry's persisted active_tab_view, and a
-        // render-view Ctrl+Tab updates it to the new tab at the same moment
-        // the autosave persists the new active_tab_view, so it always names
-        // the tab currently on screen. Ctrl+Alt+C re-reads the .settings
+        // is now the only writer — render view blocks the Ctrl+Tab tab chords
+        // outright — so it is set from the entry's persisted active_tab_view at
+        // load and always names the dispatch tab of the displayed entry.
+        // Ctrl+Alt+C re-reads the .settings
         // fresh and compares its active_tab_view against this stash: the
         // routing keys (active_tab_view, active_audio_view) ride OUTSIDE the
         // render fingerprint (browse autosaves rewrite the same file), so the

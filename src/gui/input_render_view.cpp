@@ -43,27 +43,27 @@
 //                                display axis, so the toggle is meaningless
 //     - o                      → read-only flag toggle; irrelevant while
 //                                render view is its own read-only modality
-//     - Ctrl+S                 → save; render view's save surface is Ctrl+Alt+C
+//     - Ctrl+Tab / Ctrl+Shift+Tab → A/B tab switch; render view displays one
+//                                rendered artifact, the A/B tab is authoring
+//                                view state, the entry sidecar is immutable
+//                                after dispatch, and nothing in render view may
+//                                mutate the live tab
 //     - Shift+0..9             → playback speed; target view's deeper refusal
 //                                gates on active_audio_view being T, which
 //                                render view does not guarantee, so admitting
 //                                it would change the entry's playback speed
-//   Everything else defers to read_only_key_blocked(key, mods).
+//   Everything else defers to read_only_key_blocked(key, mods) — including
+//   Ctrl+S, which read-only itself now blocks, so render view's save surface
+//   remains Ctrl+Alt+C only.
 //
-// Two families the deferral net-admits that render view honors safely:
-// PageUp/PageDown page the viewport against live_total_frames, and
-// Ctrl+Tab / Ctrl+Shift+Tab switch the A/B tab. Tabs are part of the
-// view-state model and are not read-only gated, so render view — being just
-// another view — has them. Under the one-way bubble a render-view tab switch
-// takes its OWN arm (handle_tab_switch_keys): it autosaves the current band,
-// flips app.active_tab_view, and applies the entry's OTHER band from a strict
-// re-read of its .settings — never switch_active_tab_view_to, which would
-// swap the live fields WITH the authoring tab slots (the exit stash) and both
-// corrupt the stash and pull authoring positions onto the render axis. The
-// A/B letter follows the entry's browsed tab; the authoring tabs lie dormant
-// in the stash until exit. The Tab family is alt-strict throughout, so an
-// Alt-held Tab is an unbound no-op here as everywhere, not a smuggled
-// marker-focus cycle.
+// PageUp/PageDown are the deferral's page family that render view honors
+// safely: they page the viewport against live_total_frames, pure navigation
+// against the swapped-out display axis. The Ctrl+Tab / Ctrl+Shift+Tab A/B
+// switch is NOT admitted — it is an EXTRA BLOCK above: render view displays
+// one immutable rendered artifact and nothing here may mutate the live tab.
+// The bare Tab / Shift+Tab marker-focus cycle still defers through read-only
+// (it moves focus only, mutating nothing). The Tab family is alt-strict
+// throughout, so an Alt-held Tab is an unbound no-op here as everywhere.
 bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -85,18 +85,21 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
         return false;
     }
 
-    // 2. Render-view EXTRA BLOCKS on top of read-only.
+    // 2. Render-view EXTRA BLOCKS on top of read-only. The Tab-family blocks
+    // are alt-strict, matching the read-only Tab predicates they override.
     const bool is_sub_audio_toggle =
         (key == GuiKeys::T && !ctrl && !shift && !alt);
     const bool is_read_only_toggle =
         (key == GuiKeys::O && !ctrl && !shift && !alt);
-    const bool is_save =
-        (ctrl && !shift && !alt && key == GuiKeys::S);
+    const bool is_ctrl_tab =
+        (ctrl && !shift && !alt && key == GuiKeys::Tab);
+    const bool is_ctrl_shift_tab =
+        (ctrl && shift && !alt && key == GuiKeys::Tab);
     const bool is_speed_select =
         (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 &&
          shift && !ctrl && !alt);
-    if (is_sub_audio_toggle || is_read_only_toggle || is_save ||
-        is_speed_select) {
+    if (is_sub_audio_toggle || is_read_only_toggle || is_ctrl_tab ||
+        is_ctrl_shift_tab || is_speed_select) {
         return true;
     }
 
