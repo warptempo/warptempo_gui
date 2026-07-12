@@ -141,10 +141,22 @@ std::expected<void, std::string> validate_trim_frames(
 //     the coincidence step 5's influence chain is computed on. Frames
 //     through m_max read identical source audio, see the identical
 //     lookahead frame m_max+1, and fire identical phase resets (step 5), so
-//     the emission is full-render-identical through L, every limiter frame
-//     covering a kept sample analyzes identical audio, and the null holds
-//     through the last kept sample — and through the peak limiter whenever
-//     it does not engage.
+//     the emission is full-render-identical through L and every limiter
+//     frame covering a kept sample analyzes identical AUDIO. The
+//     synthesis/PGHI null therefore holds unconditionally through the last
+//     kept sample. The LIMITERS sit outside that guarantee by ruling: the
+//     peak limiter whenever it engages (unchanged), and the spectral
+//     limiter's per-peak DECISION layer, which is nonlocal — resolving any
+//     peak rescans plus-minus 100 limiter hops, removed peaks re-detect
+//     with their retry lineage incremented, and a lineage reaching the
+//     retry cap retires its peak WITHOUT a gain update — so whether a peak
+//     near either window edge is acted on can depend on peaks far outside
+//     any finite cut, and the coupling chains transitively, so no finite
+//     margin can close it. With the limiter on, the null is guaranteed
+//     only when no over-spectral-ceiling peak lies within lineage-coupling
+//     range of either window edge; in practice trim bounds sit in quiet
+//     seams (the audition's meat is at the window's center), and the null
+//     contract is understood as a phase/synthesis contract.
 //  9. Crop: begin_sample = llrint(T_b) - A0*R_s, samples = llrint(T_e) -
 //     llrint(T_b).
 std::expected<TrimPlan, std::string> plan_trim(
