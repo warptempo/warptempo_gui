@@ -1201,11 +1201,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.trim.end_frame = recipe_trim.has_end
             ? recipe_trim.end_frame
             : 0;
-        if (!app.trim.has_begin) app.trim_begin_selected = false;
-        if (!app.trim.has_end)   app.trim_end_selected   = false;
-        if (!app.trim.has_begin && !app.trim.has_end) {
-            app.last_selected_trim = 0;
-        }
+        // A committed render lands with no trim bound selected, matching the
+        // wholesale marker-selection reset above. The recipe trim adopted
+        // here is browsable but unfocused; render-view Tab can leave a
+        // snapshot bound focused (the bounds are cycle stops now), and that
+        // focus must not carry into the committed target view.
+        app.trim_begin_selected = false;
+        app.trim_end_selected   = false;
+        app.last_selected_trim  = 0;
 
         // Target view, unconditionally. The flag flip is the whole
         // mechanism: restore_source_view above already rebound playback to

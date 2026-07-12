@@ -349,6 +349,12 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
             sel.clear();
             sel.insert(hit);
             last_sel = hit;
+            // Fresh single-select drops any Tab-focused snapshot trim bound
+            // (the bounds are cycle stops now), mirroring source view's
+            // set_single_selection: exactly one thing stays selected.
+            app.trim_begin_selected = false;
+            app.trim_end_selected   = false;
+            app.last_selected_trim  = 0;
         }
         gui.invalidate_region(0, 0, app.width, app.height);
         // The stores hold AUTHORED frames; the playhead lives on the
@@ -383,10 +389,17 @@ void GuiInputHandler::handle_render_view_press(GuiMouseButton button, int x,
     // Also start a playhead-drag gesture so
     // the motion handler's snap logic kicks in.
     if (inside_waveform) {
+        const bool had_trim_sel =
+            app.trim_begin_selected || app.trim_end_selected;
         if (!shift &&
-            (!sel.empty() || last_sel != -1)) {
+            (!sel.empty() || last_sel != -1 || had_trim_sel)) {
             sel.clear();
             last_sel = -1;
+            // An empty-space click also drops a Tab-focused snapshot trim
+            // bound, mirroring source view's clear_selection on an empty click.
+            app.trim_begin_selected = false;
+            app.trim_end_selected   = false;
+            app.last_selected_trim  = 0;
             gui.invalidate_region(0, 0, app.width, app.height);
         }
         const double spp = current_samples_per_pixel(app, audio);
@@ -454,20 +467,31 @@ void GuiInputHandler::handle_render_view_motion(int mouse_x, int mouse_y,
         // through the global selection pair with a full-window invalidate to
         // match this path's existing selection writes.
         if (!mods.shift) {
+            // A fresh single-select or an empty-drag clear also drops any
+            // Tab-focused snapshot trim bound (the bounds are cycle stops
+            // now), mirroring the press handler and source view.
+            const bool had_trim_sel =
+                app.trim_begin_selected || app.trim_end_selected;
             if (hit >= 0) {
                 const bool already_single =
                     app.selected_markers.size() == 1 &&
                     *app.selected_markers.begin() == hit;
-                if (!already_single) {
+                if (!already_single || had_trim_sel) {
                     app.selected_markers.clear();
                     app.selected_markers.insert(hit);
                     app.last_selected_marker = hit;
+                    app.trim_begin_selected = false;
+                    app.trim_end_selected   = false;
+                    app.last_selected_trim  = 0;
                     gui.invalidate_region(0, 0, app.width, app.height);
                 }
             } else if (!app.selected_markers.empty() ||
-                       app.last_selected_marker != -1) {
+                       app.last_selected_marker != -1 || had_trim_sel) {
                 app.selected_markers.clear();
                 app.last_selected_marker = -1;
+                app.trim_begin_selected = false;
+                app.trim_end_selected   = false;
+                app.last_selected_trim  = 0;
                 gui.invalidate_region(0, 0, app.width, app.height);
             }
         } else {

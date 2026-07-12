@@ -129,8 +129,9 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     // active A/B tab. Render view PAINTS trim bounds — the snapshot trim,
     // the entry's rendered window — but never picks them: that trim is
     // display state from the snapshot, not an editable bound, so this hit
-    // test and hit_test_trim_chip keep their render-view None guards (and
-    // the Tab walk excludes trim in render view for the same reason).
+    // test and hit_test_trim_chip keep their render-view None guards. The
+    // Tab walk DOES stop on render view's snapshot bounds (cycle_selection),
+    // focusable for inspection but still mouse-unpickable and immutable.
     if (app.render_view.enabled) return TrimHit::None;
     if (!app.trim.has_begin && !app.trim.has_end) return TrimHit::None;
 

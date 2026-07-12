@@ -658,6 +658,19 @@ bool GuiRenderView::load_render_view_at(int index) {
         e.state.phase_reset_last_selected = -1;
     }
 
+    // A freshly loaded entry starts with NO trim bound focused. Render entries
+    // carry no persisted trim selection (only marker selection is stashed per
+    // entry), and the snapshot bounds are Tab stops now (cycle_selection), so a
+    // lingering trim-bound selection — from the source view on the first entry,
+    // or from the previously browsed entry on a navigation — must be dropped
+    // here regardless of the stat-gated marker outcome, else it would paint a
+    // spurious focus on this entry's bound. Mirrors clear_selection's trim
+    // reset without disturbing the marker selection just established above.
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
+    app.last_selected_trim  = 0;
+    app.last_sel_group      = LastSelGroup::Markers;
+
     // Apply this render's persisted zoom/viewport/playhead from the commit
     // tab of the already-parsed .settings (absent keys carry the schema
     // defaults: fit-file zoom, zeroed viewport/playhead). The values were
@@ -752,6 +765,19 @@ void GuiRenderView::restore_source_view() {
         app.selected_markers     = t.warp_selected;
         app.last_selected_marker = t.warp_last_selected;
     }
+    // Restore the trim-bound selection from the same tab slot the markers came
+    // from. Render-view Tab focus writes the global trim-selection fields (the
+    // snapshot bounds are cycle stops now), so they can be dirty on exit;
+    // pulling back the snapshot saved at render-view entry
+    // (refresh_active_tab_view_from_app) keeps the source view's focused bound
+    // intact across the round trip, symmetric with the marker restore above.
+    // app.trim itself is untouched in read-only render view, so only the
+    // selection fields are restored (mirroring switch_active_tab_view_to's
+    // tab-restore of the same fields).
+    app.trim_begin_selected = t.trim_begin_selected;
+    app.trim_end_selected   = t.trim_end_selected;
+    app.last_selected_trim  = t.last_selected_trim;
+    app.last_sel_group      = t.last_sel_group;
     clamp_viewport_start(app, audio);
     selection.prune_live_selection();
 

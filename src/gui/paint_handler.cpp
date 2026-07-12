@@ -848,15 +848,20 @@ GuiPaintHandler::compute_displayed_trim() const {
         // entry's recipe trim from its .settings, the rendered window —
         // forward-mapped through the snapshot map onto the full target
         // axis, the same math the target-view branch below runs against
-        // the live displayed map. Display state only, never pickable: the
-        // selected bits stay off and the hit tests keep their render-view
-        // None guards (paint yes, pick no — see hit_test_trim_boundary).
-        // The snapshot map is immutable while displayed and every entry
-        // load bumps audio_generation, so reading it directly (not a
-        // wf_cache fingerprint copy) cannot lag the plate.
+        // the live displayed map. Immutable and never pickable: the hit
+        // tests keep their render-view None guards (paint yes, pick no —
+        // see hit_test_trim_boundary). The selected bits DO track Tab focus:
+        // render view walks the snapshot bounds as cycle stops (cycle_selection),
+        // so a Tab-focused bound paints in the selected style like a source-view
+        // bound — inspection only, the bound cannot move. The snapshot map is
+        // immutable while displayed and every entry load bumps audio_generation,
+        // so reading it directly (not a wf_cache fingerprint copy) cannot lag
+        // the plate.
         const auto& rv = app.render_view;
-        out.has_begin = rv.snapshot_has_trim_begin;
-        out.has_end   = rv.snapshot_has_trim_end;
+        out.has_begin      = rv.snapshot_has_trim_begin;
+        out.has_end        = rv.snapshot_has_trim_end;
+        out.begin_selected = out.has_begin && app.trim_begin_selected;
+        out.end_selected   = out.has_end   && app.trim_end_selected;
         // Only SET sides carry an authored source frame to map; unset
         // sides keep target-axis whole-timeline defaults (never painted —
         // the has-bits gate every consumer).

@@ -145,22 +145,34 @@ void Selection::cycle_selection(bool forward) {
     // Disabled markers are skipped as if absent from the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
 
-    // Trim bounds are cycle stops in both marker modes (trim is project-level,
-    // orthogonal to the marker list) but not in render view, which has no
-    // editable trim. Each set bound has one active-domain frame, computed
-    // exactly as the marker frames are (nearbyint of the stored frame
-    // double, then projected to the active domain).
-    const bool trim_live = !app.render_view.enabled;
+    // Trim stops exist in every view; trim is project-level, orthogonal to the
+    // marker list. Authoring views walk the live app.trim pair. Render view
+    // walks the entry's SNAPSHOT recipe bounds (whole int64 source frames from
+    // the entry's .settings) — a display of the render's recipe, focusable for
+    // inspection but never editable: render view is read-only, the bounds stay
+    // mouse-unpickable, and the nudge chords are absent from the render-view
+    // key allowlist, so focus moves them nowhere. Both stores hold whole
+    // int64 source frames. Each set bound has one active-domain frame,
+    // projected through source_frame_to_active_domain exactly as the marker
+    // frames are — in render view that route is the snapshot map, the same
+    // translation frame_of takes. The group-order comment below (begin bound,
+    // end bound, then markers; the half-open [begin, end) rationale) applies
+    // unchanged here.
+    const bool render_view = app.render_view.enabled;
     auto bound_frame = [&](char which) -> int64_t {
-        const double frame = (which == 'B') ? app.trim.begin_frame
-                                            : app.trim.end_frame;
-        return source_frame_to_active_domain(app, audio,
-            static_cast<int64_t>(std::nearbyint(frame)));
+        const int64_t src_f = render_view
+            ? ((which == 'B') ? app.render_view.snapshot_trim_begin_frame
+                              : app.render_view.snapshot_trim_end_frame)
+            : ((which == 'B') ? app.trim.begin_frame
+                              : app.trim.end_frame);
+        return source_frame_to_active_domain(app, audio, src_f);
     };
-    const bool    has_b = trim_live && app.trim.has_begin;
-    const bool    has_e = trim_live && app.trim.has_end;
-    const int64_t bf    = has_b ? bound_frame('B') : 0;
-    const int64_t ef    = has_e ? bound_frame('E') : 0;
+    const bool has_b = render_view ? app.render_view.snapshot_has_trim_begin
+                                   : app.trim.has_begin;
+    const bool has_e = render_view ? app.render_view.snapshot_has_trim_end
+                                   : app.trim.has_end;
+    const int64_t bf = has_b ? bound_frame('B') : 0;
+    const int64_t ef = has_e ? bound_frame('E') : 0;
 
     // Group order within one active-domain frame, forward: begin bound, end
     // bound, then markers by ascending index; backward is the exact reverse
