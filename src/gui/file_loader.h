@@ -76,25 +76,26 @@ struct GuiFileLoader {
     // construction (GuiRenderView is built after this struct, so the
     // reference cannot be a constructor parameter — the same
     // post-construction back-wire shape as `prompt` above). Bound to
-    // GuiRenderView::abandon_render_view: revert_to_blank calls it first,
-    // while the source audio is still alive, so playback is rebound to
-    // the source and the entry buffer freed before the source itself is
-    // torn down. The file-drop gate makes a load under an open render
-    // view unreachable today, so this hook is the boundary's backstop,
-    // not its primary guard.
+    // GuiRenderView::abandon_render_view: revert_to_blank and load_file
+    // both call it early, while the source audio is still alive, so
+    // playback is rebound to the source and the entry buffer freed before
+    // the source itself is torn down or replaced. A file drop always wins
+    // over an open render view (drops are deliberate; the application
+    // state never refuses one), so load_file's call is a live path, not a
+    // backstop.
     std::function<void()> abandon_render_view;
 
     // Archival-session cancel hook, wired in main.cpp after
     // GuiInputHandler's construction (the same post-construction back-wire
     // shape as `prompt` and `abandon_render_view`). Bound to
     // GuiInputHandler::cancel_archival_session, the body behind Esc's
-    // render-cancel semantics. revert_to_blank calls it first: the revert
-    // discards the source, and an archival session still rendering that
-    // source must receive the Esc-cancel semantics — otherwise the session
-    // keeps running against a discarded project, and blank state stays
-    // trapped behind app.queue_running (the blank-state key path handles
-    // only Ctrl+Q, so Esc cannot reach the cancel, and the drop-accept
-    // predicate refuses every new source while queue_running is set).
+    // render-cancel semantics. revert_to_blank and load_file both call it
+    // first: each discards or replaces the source, and an archival session
+    // still rendering that source must receive the Esc-cancel semantics —
+    // otherwise the session keeps running against a discarded project, and
+    // blank state would stay trapped behind app.queue_running (the
+    // blank-state key path handles only Ctrl+Q, so Esc cannot reach the
+    // cancel there).
     std::function<void()> cancel_archival_render;
 
     bool load_file(const std::string& path);

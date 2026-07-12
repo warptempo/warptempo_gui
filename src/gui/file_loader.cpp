@@ -83,6 +83,25 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
+    // Source-replacement teardown, in the same order revert_to_blank uses:
+    // cancel first, then tear down render view while the outgoing source is
+    // still alive. A drop is a deliberate source replacement, so it cancels
+    // running or parked render work and tears down render view before the
+    // old source is replaced — the application state never refuses a drop.
+    // The async cancel is safe because render workers own the old source
+    // through RenderRequest::source_samples (a shared_ptr), the same
+    // guarantee the revert-to-blank path relies on; abandon_render_view
+    // rebinds playback to the still-live source before freeing the entry
+    // buffer and no-ops when render view is off. The teardown runs after
+    // the three preflights above so a refused drop (corrupt file, cache
+    // path, low rate) changes nothing. One accepted tail: if the dropped
+    // file then fails to DECODE (the next.load failure arm below), the
+    // cancel and teardown have already landed and the old source stays
+    // loaded without its render view — the drop was deliberate, and the
+    // decode failure prints its own refusal.
+    if (cancel_archival_render) cancel_archival_render();
+    if (abandon_render_view) abandon_render_view();
+
     // Stop and tear down the audio device before the sample buffer it
     // borrows is replaced. Playing into a freed buffer would crash the
     // audio thread. Order (stop → shutdown → load → init) is fixed.

@@ -559,14 +559,14 @@ int main(int argc, char** argv) {
                 std::move(req), std::move(fingerprint));
         };
     // Back-wire the loader's archival-session cancel (same
-    // post-construction shape). revert_to_blank calls it before any
-    // teardown: the revert discards the source, so an archival session
-    // rendering it must receive the Esc-cancel semantics — otherwise the
-    // session keeps running against the discarded project and blank state
-    // stays trapped behind queue_running (Esc never reaches the cancel in
-    // blank state, and the drop-accept predicate refuses every new source
-    // while queue_running is set). cancel_archival_session is the same
-    // body Esc's handle_escape_cancels runs.
+    // post-construction shape). Both revert_to_blank and load_file call it
+    // before any teardown: each discards or replaces the source, so an
+    // archival session rendering it must receive the Esc-cancel semantics
+    // — otherwise the session keeps running against the discarded project
+    // (and blank state would stay trapped behind queue_running: the
+    // blank-state key path handles only Ctrl+Q, so Esc cannot reach the
+    // cancel there). cancel_archival_session is the same body Esc's
+    // handle_escape_cancels runs.
     file_loader.cancel_archival_render =
         [&input_handler]() { input_handler.cancel_archival_session(); };
 
@@ -683,68 +683,19 @@ int main(int argc, char** argv) {
     // Position-only predicate: it drives the compositor's cursor feedback
     // at DnD motion. A position miss is ruled silent (the compositor
     // cancels the unaccepted drag), so this never surfaces a refusal line.
+    // Application state never refuses a drop.
     gui.set_drop_accept_predicate([&](int x, int y) -> bool {
         const GuiRect area = waveform_area(app);
         return x >= area.x && x < area.x + area.w &&
                y >= area.y && y < area.y + area.h;
     });
 
-    // A source replacement under an open render view or a running
-    // archival batch (or a parked archival command awaiting the worker)
-    // would cross two projects' state: the snapshot display, the batch's
-    // terminal auto-open, and the fingerprint-rebuild request would all
-    // mix the old project's artifacts with the new source. Refuse the
-    // drop — the gesture is a slip of the hand; the user exits render
-    // view or waits for the batch, then drops again.
-    // Refuse-over-exit-then-load is the conservative reading, pending
-    // architect ratification. The gate is position-blind and evaluated at
-    // drop delivery, so the refusal reaches on_drop_refused below.
-    gui.set_drop_state_gate([&]() -> bool {
-        return !(app.render_view.enabled || app.queue_running ||
-                 app.pending_archival.armed);
-    });
-
-    // A refused drop never reaches on_file_drop below: the platform
-    // destroys the offer unread. This callback now fires at drop delivery
-    // — for a state refusal always, for a position miss only in the rare
-    // case a drop is delivered despite the motion-time refusal. The
-    // platform is app-state-blind, so discriminate here: a state refusal
-    // earns one stderr line, a plain position miss stays silent.
-    gui.set_on_drop_refused([&]() {
-        if (app.render_view.enabled) {
-            std::fprintf(stderr,
-                "warptempo_gui: file drop refused: render view is open\n");
-            return;
-        }
-        if (app.queue_running || app.pending_archival.armed) {
-            std::fprintf(stderr,
-                "warptempo_gui: file drop refused: an archival render is "
-                "running\n");
-            return;
-        }
-        // A plain position miss (dropped outside the waveform area) is
-        // ordinary drag-and-drop and stays silent.
-    });
-
     gui.set_on_file_drop([&](const std::string& path) {
-        // Race backstop only: the platform's drop-refused callback above is
-        // the primary surface for a refused drop, which destroys the offer
-        // unread. These lines fire only if a drop slips past BOTH the
-        // position predicate and the state gate within one dispatch, which
-        // the synchronous drop-time checks make unreachable today. Same
-        // render-view / archival-batch refusal, one stderr line per
-        // condition.
-        if (app.render_view.enabled) {
-            std::fprintf(stderr,
-                "warptempo_gui: file drop refused: render view is open\n");
-            return;
-        }
-        if (app.queue_running || app.pending_archival.armed) {
-            std::fprintf(stderr,
-                "warptempo_gui: file drop refused: an archival render is "
-                "running\n");
-            return;
-        }
+        // Drops always win: dragging a file onto the window is a deliberate
+        // action, so the load path cancels running or parked render work
+        // and tears down render view itself (GuiFileLoader::load_file) —
+        // this handler needs no state checks. Only the in-flight-load
+        // deferral remains.
         if (app.loading) {
             app.pending_drop_path = path;
             return;
