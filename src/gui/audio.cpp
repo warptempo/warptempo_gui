@@ -539,12 +539,6 @@ int GuiAudio::num_levels() const {
     return 1 + kNumLevels;  // level 0 (raw) + three cache levels
 }
 
-int64_t GuiAudio::level_size(int level) const {
-    if (level <= 0) return total_frames_;
-    if (level > kNumLevels) return 0;
-    return levels_[level - 1].pair_count;
-}
-
 std::pair<float,float> GuiAudio::get_peak_range(int channel,
                                                 int level,
                                                 int64_t start_sample,

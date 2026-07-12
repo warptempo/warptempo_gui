@@ -199,10 +199,6 @@ struct UndoHistory {
     int  saved_distance = 0;
     bool saved_valid    = true;
 
-    bool is_dirty() const {
-        return !(saved_valid && saved_distance == 0);
-    }
-
     // Push the pre-mutation entry. Clears the redo stack. If the saved
     // reference was on the redo stack, it's orphaned (saved_valid = false).
     // If pushing would evict the bottom of the undo stack and the saved
@@ -649,9 +645,10 @@ struct AppState {
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
 
-    // Undo/redo history for marker mutations. `dirty` below becomes a
-    // derived signal: dirty = history.is_dirty(). Save/load reshape the
-    // saved reference rather than touching dirty directly.
+    // Undo/redo history for marker mutations. The dirty flags below are
+    // derived from it (Undo::recompute_dirty walks saved_distance against
+    // each entry's op_mode). Save/load reshape the saved reference rather
+    // than touching the flags directly.
     UndoHistory history;
 
     // True if any authoring-class file has changes since the last save.
@@ -973,7 +970,6 @@ GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
 GuiRect bottom_strip_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
-GuiRect top_lower_row_area(const AppState& a);
 GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);

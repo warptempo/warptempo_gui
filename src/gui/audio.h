@@ -58,9 +58,6 @@ public:
     // Total number of pyramid levels, counting level 0 (raw samples).
     int num_levels() const;
 
-    // Size of pyramid level L (in pairs). L == 0 returns total_frames_.
-    int64_t level_size(int level) const;
-
     // Returns (min, max) over source-sample indices [start_sample, end_sample)
     // on `channel`, read at pyramid `level`. Level 0 is raw samples; levels
     // 1..3 select cached min/max pairs at strides 32, 1024, 32768

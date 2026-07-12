@@ -2044,4 +2044,3 @@ void GuiPlatform::set_waveform_worker_completion_fd(int fd, std::function<void()
 
 int GuiPlatform::width()  const { return width_; }
 int GuiPlatform::height() const { return height_; }
-int GuiPlatform::playback_tick_ms() const { return playback_tick_ms_; }

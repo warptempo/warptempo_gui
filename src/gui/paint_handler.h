@@ -47,16 +47,13 @@ class GuiWaveformWorker;
 // Timestamp text layout (bottom-left of the status strip). The
 // window-bottom baseline anchor (kTimestampBaselineFromBottom) was replaced
 // with row-relative baselines derived from bottom_lower_row_area /
-// bottom_upper_row_area. Both scale proportionally with the font_size
-// setting: the authored value (8 / 10) times gui_font_scale(), rounded with
-// std::nearbyint so they stay integers and the sharp-edge conventions keep
-// holding. At scale 1 each equals its authored value by identity
-// (nearbyint(8*1) == 8, nearbyint(10*1) == 10).
+// bottom_upper_row_area. Scales proportionally with the font_size
+// setting: the authored value (8) times gui_font_scale(), rounded with
+// std::nearbyint so it stays an integer and the sharp-edge conventions keep
+// holding. At scale 1 it equals its authored value by identity
+// (nearbyint(8*1) == 8).
 inline int timestamp_pad_x() {
     return static_cast<int>(std::nearbyint(8.0 * gui_font_scale()));
-}
-inline double tab_letter_gap_px() {
-    return std::nearbyint(10.0 * gui_font_scale());
 }
 
 // Single source for the two bottom-strip editor prefixes. The paint

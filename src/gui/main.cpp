@@ -80,8 +80,8 @@
 
 namespace {
 
-// flag_font_size_px() (render.h), timestamp_pad_x(), and tab_letter_gap_px()
-// live in paint_handler.h so paint_handler.cpp can reach them; the constants
+// flag_font_size_px() (render.h) and timestamp_pad_x() (paint_handler.h)
+// live where paint_handler.cpp can reach them; the constants
 // below are paint-handler-independent and stay file-local.
 
 // The strip/row geometry is a fixed-pixel mirrored grid derived from
@@ -206,15 +206,6 @@ GuiRect top_upper_row_area(const AppState& a) {
     clamp_dims(w, h);
     const int row_h = monospace_row_h();
     const int y = static_cast<int>(kFlagBottomLiftPx);
-    return GuiRect{0, y, w, row_h};
-}
-
-GuiRect top_lower_row_area(const AppState& a) {
-    int w = a.width, h = a.height;
-    clamp_dims(w, h);
-    const int row_h = monospace_row_h();
-    const int y = static_cast<int>(kFlagBottomLiftPx)
-                + row_h + static_cast<int>(kRowGapPx);
     return GuiRect{0, y, w, row_h};
 }
 

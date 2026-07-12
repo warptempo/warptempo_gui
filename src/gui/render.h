@@ -115,12 +115,11 @@ inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
 // (11) every derived quantity equals its former fixed constant exactly.
 inline constexpr double kDefaultFontSizePt = 11.0;
 
-// Set/read the current GUI font size (points). The setter only records the
+// Set the current GUI font size (points). The setter only records the
 // value; the geometry re-measure happens on the next redraw via
 // init_monospace_grid_metrics, and the callers route the cache rebuild
 // through the same path a window resize uses.
 void set_gui_font_size_pt(double pt);
-double gui_font_size_pt();
 
 // Proportional scale factor s = font_size / 11. Exactly 1.0 at the default.
 double gui_font_scale();

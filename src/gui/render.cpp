@@ -1260,7 +1260,6 @@ namespace {
 } // namespace
 
 void   set_gui_font_size_pt(double pt) { g_font_size_pt = pt; }
-double gui_font_size_pt()  { return g_font_size_pt; }
 double gui_font_scale()    { return g_font_size_pt / kDefaultFontSizePt; }
 double flag_font_size_px() { return g_font_size_pt * 96.0 / 72.0; }
 

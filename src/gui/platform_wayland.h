@@ -56,7 +56,6 @@ public:
 
     int width()  const;
     int height() const;
-    int playback_tick_ms() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
     void set_on_redraw(RedrawCallback cb);

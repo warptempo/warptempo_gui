@@ -177,12 +177,6 @@ void        replace_selection(State& s, const std::string& raw);
 // keystroke.
 bool cursor_visible_now(const State& s);
 
-// True if `now - s.blink_epoch` straddled a half-period since the last
-// call. Convenience for renderers that want to know whether to schedule
-// the next paint. Always returns true on the first call after a state
-// change.
-bool blink_period_milliseconds(int& out_ms);
-
 // Translate a click x-coordinate to a byte index into `pending` based on
 // the monospace per-character advance and a known text-left x (the char-0
 // origin). Both `advance > 0` and `text_left_x >= 0` must hold; callers

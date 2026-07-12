@@ -353,9 +353,4 @@ bool cursor_visible_now(const State& s) {
     return ((ms / 500) % 2) == 0;
 }
 
-bool blink_period_milliseconds(int& out_ms) {
-    out_ms = 500;
-    return true;
-}
-
 } // namespace text_editor
