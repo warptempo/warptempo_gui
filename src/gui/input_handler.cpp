@@ -338,13 +338,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, the trim gestures (x / Shift+x), Delete, the
     // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
-    // (Ctrl+Z / Ctrl+Shift+Z) all drop here. The deeper owner refusals stay
-    // as backstops for the paths the keyboard gate does not cover: the Delete
-    // handler's own read-only branch (mouse-adjacent marker delete) and
-    // do_undo / do_redo's target-tab peek (a history entry that targets the
-    // other, writable tab — now reached by Ctrl+Tab to that tab first, ruled
-    // acceptable for gate legibility; full rationale at read_only_key_blocked
-    // in input_key_dispatch.cpp).
+    // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
+    // guard on the keyboard path; the surviving deeper checks each cover a
+    // surface it cannot reach — do_undo / do_redo's target-tab peek (the
+    // ACTIVE tab is writable but the top history entry targets the other,
+    // read-only tab; this gate tests only the active tab), and the per-gesture
+    // wheel and pointer guards (wheel and mouse events never pass through
+    // on_key). Full rationale at read_only_key_blocked in
+    // input_key_dispatch.cpp.
     if (!app.render_view.enabled && active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;
@@ -512,12 +513,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Delete && !ctrl && !alt) {
         // Delete acts on the group named by last_sel_group. With
         // a trim boundary last-selected, clear the selected bound(s) and
-        // leave markers untouched; otherwise the marker-delete runs.
+        // leave markers untouched; otherwise the marker-delete runs. No
+        // read-only check here: Delete drops at the read-only gate above,
+        // which is the keyboard path's single guard, and no pointer path
+        // reaches the delete routines.
         if (app.last_sel_group == LastSelGroup::Trim) {
             delete_selected_trim();
             return;
         }
-        if (!app.render_view.enabled && active_view_state(app).read_only) return;
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
