@@ -621,11 +621,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Left / Ctrl+Right: nudge the last-selected group by one pixel of
     // time. Routes like Delete and Ctrl+wheel — a last-selected trim bound
     // (Trim group) nudges the bound; otherwise the marker/phase-reset nudge
-    // runs. Refused in render-view on the trim route, mirroring the Ctrl+wheel
-    // trim path's render-view refusal.
+    // runs. No render-view branch: the chord drops at the render-view key
+    // gate (it matches no render admit and is not on the read-only
+    // allowlist), so this dispatch is unreachable in render view — unlike
+    // the Ctrl+wheel trim path, which keeps its own render-view refusal
+    // because wheel events bypass the keyboard gate.
     if (ctrl && !shift && !alt && key == GuiKeys::Left) {
         if (app.last_sel_group == LastSelGroup::Trim) {
-            if (app.render_view.enabled) return;
             if ((app.trim_begin_selected && app.trim.has_begin) ||
                 (app.trim_end_selected && app.trim.has_end)) {
                 nudge_selected_trim(-1);
@@ -638,7 +640,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
     if (ctrl && !shift && !alt && key == GuiKeys::Right) {
         if (app.last_sel_group == LastSelGroup::Trim) {
-            if (app.render_view.enabled) return;
             if ((app.trim_begin_selected && app.trim.has_begin) ||
                 (app.trim_end_selected && app.trim.has_end)) {
                 nudge_selected_trim(+1);
