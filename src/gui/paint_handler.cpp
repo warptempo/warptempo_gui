@@ -547,13 +547,24 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         upper_row.y + monospace_row_baseline_offset();
 
     // --- Lower row: status line (always on). One assembled field
-    //     drawn in a single pass; elements (timestamp, S/T, W/P,
-    //     A/B, dirty *, transient message) are space-separated and
-    //     paint uniformly in kText. The three view letters paint in
-    //     every view, render view included. Read-only on the active
-    //     A/B tab is the literal "(read-only)" token, gated to
-    //     authoring: render view is its own read-only modality, so
-    //     the tab's read-only flag is irrelevant there.
+    //     drawn in a single pass; elements are space-separated and
+    //     paint uniformly in kText. Two branches:
+    //
+    //     Authoring views (render view off): timestamp, S/T, W/P, A/B,
+    //     then the literal "(read-only)" token when the active A/B tab
+    //     carries the read-only flag.
+    //
+    //     Render view: timestamp, W/P, then the literal
+    //     "(permanent read only)" token. No S/T — the display axis is
+    //     the artifact's own timeline, not a source/target selection.
+    //     No A/B — the tab chords are blocked in render view. W/P
+    //     paints because it is the one global mode that still works
+    //     here (the p toggle drives it). "(permanent read only)" names
+    //     render view's own modality, distinct from the per-tab
+    //     "(read-only)" flag token of authoring views.
+    //
+    //     The dirty * and transient message appendices follow the
+    //     tokens in BOTH branches — they are status, not view letters.
     //
     //     In source-view, sr is the loaded file's sample rate and the
     //     playhead samples are source-frames. In render-view the
@@ -576,16 +587,23 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (seconds > 5999.999) seconds = 5999.999;
 
         std::string assembled = format_timestamp(seconds);
-        assembled += ' ';
-        assembled += (app.active_audio_view == 'T'
-                        ? 'T' : 'S');
-        assembled += ' ';
-        assembled += app.active_markers_view;
-        assembled += ' ';
-        assembled += app.active_tab_view;
-        if (!app.render_view.enabled && active_view_state(app).read_only) {
+        if (app.render_view.enabled) {
             assembled += ' ';
-            assembled += "(read-only)";
+            assembled += app.active_markers_view;
+            assembled += ' ';
+            assembled += "(permanent read only)";
+        } else {
+            assembled += ' ';
+            assembled += (app.active_audio_view == 'T'
+                            ? 'T' : 'S');
+            assembled += ' ';
+            assembled += app.active_markers_view;
+            assembled += ' ';
+            assembled += app.active_tab_view;
+            if (active_view_state(app).read_only) {
+                assembled += ' ';
+                assembled += "(read-only)";
+            }
         }
         if (app.dirty) {
             assembled += ' ';
@@ -657,7 +675,8 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // Lowest-priority tier: the displayed render entry's name,
         // <batch_folder>/<basename>.wav, shown only when nothing else
         // claims the row. The lower row used to carry this; it moves
-        // here so the three view letters read uniformly in every view.
+        // here so the lower row is free for the status tokens (which in
+        // render view are the timestamp, W/P, and "(permanent read only)").
         const auto& e = app.render_view.list[app.render_view.index];
         std::string assembled = e.batch_folder.filename().string();
         assembled += '/';
