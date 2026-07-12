@@ -596,6 +596,17 @@ int main(int argc, char** argv) {
     });
 
     gui.set_on_resize([&](int w, int h) {
+        // A compositor configure can change zoom, samples-per-pixel, and the
+        // viewport beneath an in-flight positional drag whose grab anchor is a
+        // frame coordinate computed from the old geometry, so the next motion
+        // event would derive its delta across two different coordinate systems
+        // and commit a spurious jump. Cancel any in-flight pointer drag before
+        // on_resize applies, so the resize always lands on a gesture-free
+        // state: cancel_active_drags is a no-op when no drag is active, so the
+        // plain no-gesture resize path is unaffected. The editor text-selection
+        // drag needs no cancel here: its lost-button motion merely finalizes
+        // the selection, a benign finalize rather than a positional commit.
+        input_handler.cancel_active_drags();
         paint_handler.on_resize(w, h);
     });
 
