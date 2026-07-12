@@ -144,8 +144,10 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 
 } // namespace
 
-// Geometry helpers — public to viewport.cpp via app_state.h. samples_per_pixel_at
-// remains main-private (`static`).
+// Geometry helpers — public to viewport.cpp via app_state.h.
+// samples_per_pixel_at is likewise declared in app_state.h and defined
+// non-static: its explicit-domain form is called from input_render_dispatch.cpp
+// (the queue/dispatch view-anchor math), so it cannot be main-private.
 //
 // Fixed-pixel mirrored four-row grid. Top and bottom strips are equal
 // pixel height regardless of window size; the waveform flexes in the middle.

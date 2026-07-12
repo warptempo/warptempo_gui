@@ -896,14 +896,17 @@ struct AppState {
         // only when the wav still has the same (size, mtime) as when
         // stashed; mismatch on reload drops it silently. Both mode slots
         // (warp + phase reset) ride on `state`; the loader restores the one
-        // matching the live GLOBAL W/P mode, which is never stashed per
-        // entry. The viewport/zoom/playhead fields on `state` are unused —
-        // render-view's viewport state flows through the live AppState
-        // fields; the per-entry .settings autosave still writes the browse
-        // keys and the W/P mode (schema stability), but the entry loader
-        // never applies them — the browse position inherits from the live
-        // session at entry and carries over unchanged on navigation, and the
-        // W/P mode stays global.
+        // matching the entry's persisted W/P mode (applied to
+        // app.active_markers_view at load). The viewport/zoom/playhead fields
+        // on `state` are unused — render-view's browse position flows through
+        // the live AppState fields and the per-entry .settings. Render view is
+        // a one-way bubble: disk owns each entry's browse state. The entry's
+        // tab/zoom/viewport/playhead/W-P AUTOLOAD from its .settings on every
+        // display and AUTOSAVE back on every nav-away; the loader applies them
+        // (they no longer inherit from the live session). The authoring
+        // session's tab and W/P mode are stashed at render-view entry and
+        // restored on exit, so browsing never leaks out except through
+        // Ctrl+Alt+C.
         ViewState state;
 
         // Stat-tuple key for selection validity. Captured when stashed,
@@ -957,14 +960,18 @@ struct AppState {
         // through the snapshot map to paint the rendered window's dim and
         // bounds. sample_rate stays the source's (equal to the render's by
         // construction, verified at entry decode). snapshot_commit_tab is
-        // the entry's active_tab_view captured at load — the commit tab the
-        // entry was browsed under. Ctrl+Alt+C re-reads the .settings fresh
-        // and compares its active_tab_view against this stash: the routing
-        // keys (active_tab_view, active_audio_view) ride OUTSIDE the render
-        // fingerprint (browse autosaves rewrite the same file), so the
+        // the tab the entry is browsed under, attested at commit: entry load
+        // sets it from the entry's persisted active_tab_view, and a
+        // render-view Ctrl+Tab updates it to the new tab at the same moment
+        // the autosave persists the new active_tab_view, so it always names
+        // the tab currently on screen. Ctrl+Alt+C re-reads the .settings
+        // fresh and compares its active_tab_view against this stash: the
+        // routing keys (active_tab_view, active_audio_view) ride OUTSIDE the
+        // render fingerprint (browse autosaves rewrite the same file), so the
         // fingerprint check cannot catch a routing change underneath the
-        // display; this exact-match attestation does. Cleared to 'A' beside
-        // the other snapshot fields at every clear site.
+        // display; this exact-match attestation does — passing for
+        // GUI-authored browsing, failing for hand edits. Cleared to 'A'
+        // beside the other snapshot fields at every clear site.
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
         int64_t                          entry_domain_begin = 0;
         int64_t                          snapshot_display_total = 0;
@@ -973,6 +980,17 @@ struct AppState {
         bool                             snapshot_has_trim_end = false;
         int64_t                          snapshot_trim_end_frame = 0;
         char                             snapshot_commit_tab = 'A';
+        // The authoring session's tab letter and W/P mode, stashed at
+        // render-view ENTRY (the first entry load, beside the tab-slot
+        // refresh) and restored wholesale by restore_source_view on exit.
+        // Render view is a one-way bubble: browsing is disk-owned per entry
+        // (each entry's tab/position/mode autoload from its .settings and
+        // autosave back on nav-away), and the authoring tab/mode never leak
+        // into that browsing — they wait here for the exit restore. Cleared
+        // beside the other snapshot fields at every clear site (to the
+        // struct defaults 'A' / 'W').
+        char                             stashed_authoring_tab = 'A';
+        char                             stashed_authoring_markers_view = 'W';
     };
     RenderViewContext render_view;
 };

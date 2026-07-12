@@ -98,19 +98,14 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
 // leaving tab, restores the target tab. Does not mark the document
 // dirty.
 //
-// Render-view-safe: this same swap runs when Ctrl+Tab is pressed inside
-// render view, and every field it touches is render-view-benign. The
-// viewport/zoom/playhead swap is the ruled per-tab position carry — the
-// other tab's cached position, read on the render display axis, with the
-// runtime clamps owning any out-of-domain value at first use. The app.trim
-// swap is invisible in render view: compute_displayed_trim's render arm
-// reads the snapshot trim fields, not app.trim. The restored marker
-// selection is not pruned here, but render view indexes the snapshot
-// vectors and reads a restored (possibly stale) selection only through
-// membership tests in its paint path, while every authoring-op dereference
-// bounds-guards its indices and prune_live_selection runs at render-view
-// entry and exit — so no out-of-range read follows. Playback-stop and the
-// invalidations are harmless in any view.
+// This is the AUTHORING tab switch: it swaps the live view fields WITH the
+// per-tab slots (app.tab_a / app.tab_b). It is NOT used inside render view —
+// render view is a one-way bubble where those slots are the exit stash, so a
+// render-view Ctrl+Tab takes its own arm (GuiInputHandler::switch_render_view_tab),
+// which reads the entry's other band off disk and never touches the stash. The
+// only render-view-adjacent call is the Ctrl+Alt+C commit's switch to the
+// commit tab, which runs AFTER restore_source_view has already left render
+// view (app.render_view.enabled cleared), so it is a plain authoring switch.
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // Mirror toggle_playback's stop branch: tab switch is not a
     // navigational commit, so the leaving tab's snapshot should

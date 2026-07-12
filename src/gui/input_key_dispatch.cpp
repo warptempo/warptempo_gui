@@ -997,13 +997,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // left): the old promotion restored FILE-sourced authoring
         // viewport/playhead, persisted scratch that had to be walled like
         // any other load. The adopted view values are now the LIVE browsed
-        // session values — GUI-produced session state, not file input.
-        // They inherited from the live view at render-view entry and carry
-        // over across navigation, so they may rest outside the adopted
-        // map's target extent; the runtime clamps (move_playhead_to,
-        // clamp_viewport_start) own them at first use, the restore-site
-        // convention — adversarial strictness applies only to bytes read
-        // from disk.
+        // session values — GUI-produced session state, not file input. Under
+        // the one-way bubble they were applied from the entry's own disk
+        // .settings at display and moved only by the user's browsing, so they
+        // may rest outside the adopted map's target extent; the runtime clamps
+        // (move_playhead_to, clamp_viewport_start) own them at first use, the
+        // restore-site convention — adversarial strictness applies only to
+        // bytes read from disk.
 
         // Source-load adversarial guard 2: target-view/output-format
         // compatibility, validated against the ENTRY's own .settings.
@@ -1113,11 +1113,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // Landing-view capture, BEFORE any exit/clear mutates its sources:
         // the browsed zoom / viewport / playhead are the live session
         // fields (render view browses through the global view fields).
-        // restore_source_view below runs its exit push-out over all three
-        // (the S arm inverse-maps them, the T arm leaves them live), so they
-        // are latched here, ahead of the first mutation, and re-applied
-        // verbatim after the exit — the push-out never changes the commit's
-        // end state, which lands at the browsed position in target view.
+        // restore_source_view below is now the one-way bubble's exit arm —
+        // it OVERWRITES all three with the stashed authoring position — so
+        // they are latched here, ahead of the first mutation, and re-applied
+        // verbatim after the exit (below), which lands the commit at the
+        // browsed position in target view regardless of the stash restore.
         const int     browsed_zoom     = app.zoom_level;
         const int64_t browsed_viewport = app.viewport_start_sample;
         const int64_t browsed_playhead = app.playhead_cursor_sample;
@@ -1236,10 +1236,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.zoom_level = browsed_zoom;
         app.viewport_start_sample = browsed_viewport;
         // Deliberately unclamped, the restore-site convention: the browsed
-        // playhead is live session state (inherited at render-view entry,
-        // carried across navigation), which may rest outside the adopted
-        // map's target extent; the runtime clamp (move_playhead_to) owns
-        // the value at first use.
+        // playhead is live session state (applied from the entry's disk
+        // .settings at display, moved by the user's browsing), which may rest
+        // outside the adopted map's target extent; the runtime clamp
+        // (move_playhead_to) owns the value at first use.
         app.playhead_cursor_sample = browsed_playhead;
         if (!app.playhead_scanner_active) {
             app.playhead_scanner_sample = browsed_playhead;
@@ -1440,6 +1440,87 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     return false;
 }
 
+// The render-view A/B tab switch (one-way bubble tab arm). See the
+// declaration for why this replaces switch_active_tab_view_to inside render
+// view. Disk owns each tab's browse state, so this persists TWICE: once for
+// the leaving tab (before the flip) and once for the entering tab (after
+// applying its band), so both bands round-trip and disk active_tab_view ends
+// up equal to snapshot_commit_tab for the commit attestation. In between it
+// applies the OTHER band's position from a fresh strict read of the entry's
+// own .settings.
+void GuiInputHandler::switch_render_view_tab() {
+    if (app.render_view.index < 0 ||
+        app.render_view.index >=
+            static_cast<int>(app.render_view.list.size())) {
+        return;
+    }
+    const AppState::RenderViewEntry& entry =
+        app.render_view.list[app.render_view.index];
+    // Persist the LEAVING tab first: disk owns each tab's browse state, so a
+    // later switch back reloads exactly what we leave now. write_settings_for
+    // writes the live viewport/zoom/playhead/W-P onto app.active_tab_view's
+    // band (still the leaving tab here) and records active_tab_view as that
+    // leaving tab.
+    render_view.write_settings_for(entry);
+
+    const char other_tab = (app.active_tab_view == 'B') ? 'A' : 'B';
+    // Strict re-read of the entry's own .settings — the same read the entry
+    // load runs. The file is program-written, so a malformed read at this
+    // boundary is adversarial: refuse with one stderr line and NO flip, so a
+    // parse failure leaves the browsed view unchanged.
+    const std::filesystem::path st_path = render_view.settings_path(entry);
+    const auto settings = read_settings_file(st_path.string());
+    if (!settings) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-view: tab switch refused for '%s': %s\n",
+            st_path.string().c_str(), settings.error().c_str());
+        return;
+    }
+
+    // Playback stop, the same the authoring switch performs (the leaving-tab
+    // position is the Space-launch cursor, not the run-time audio cursor).
+    if (playback.is_playing()) {
+        playback.stop();
+        playback_lifecycle.restore_playhead_to_lsp();
+    }
+    viewport.clear_hover_popup();
+
+    // Flip the tab (PLAIN assignment — never switch_active_tab_view_to, which
+    // would swap the live fields with the authoring tab slots / exit stash),
+    // and keep snapshot_commit_tab in lockstep with the new tab.
+    app.active_tab_view = other_tab;
+    app.render_view.snapshot_commit_tab = other_tab;
+    // Apply the OTHER band's zoom/viewport/playhead from the re-read .settings;
+    // the values were strict-validated by read_settings_file. Apply order
+    // zoom, viewport, playhead, clamp — the unclamped-playhead restore-site
+    // convention (move_playhead_to owns the value at first use).
+    const SettingsFileTab& band =
+        (other_tab == 'B') ? settings->tab_b : settings->tab_a;
+    app.zoom_level             = band.zoom;
+    app.viewport_start_sample  = band.viewport_start;
+    app.playhead_cursor_sample = band.playhead;
+    clamp_viewport_start(app, audio);
+    // Re-mirror the split playhead's scanner to the applied cursor while it is
+    // inactive, matching load_render_view_at's re-mirror after a position apply.
+    if (!app.playhead_scanner_active) {
+        app.playhead_scanner_sample = app.playhead_cursor_sample;
+    }
+    // Persist the ENTERING tab now that it is live: this records
+    // active_tab_view as the new tab on disk, so it agrees with
+    // snapshot_commit_tab just set. Ctrl+Alt+C re-reads active_tab_view and
+    // requires it to equal the stash, so this second write is what keeps the
+    // routing attestation passing for a GUI tab switch (the leaving tab's
+    // band, written above, is preserved — write_settings_for only rewrites the
+    // active band). The entering band re-persists its own just-clamped value,
+    // idempotent modulo the viewport clamp.
+    render_view.write_settings_for(entry);
+    // One-shot discrete jump, mirroring switch_active_tab_view_to: render the
+    // plate synchronously and damage the waveform + timestamp areas now.
+    viewport.kick_waveform_sync();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+}
+
 // Tab-key family. See the declaration for the chord list.
 bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -1451,6 +1532,14 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // target tab. Does not mark the document dirty. Alt-strict: an Alt
     // held alongside makes the chord an unbound no-op, never this binding.
     if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
+        // Render view is a one-way bubble: its tab switch has its OWN arm,
+        // which reads the entry's other band off disk rather than swapping the
+        // authoring tab slots (the exit stash). Runs ahead of the authoring
+        // call so the authoring switch is never reached under render view.
+        if (app.render_view.enabled) {
+            switch_render_view_tab();
+            return true;
+        }
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         // No render work runs under an open render view (the entry-gate
         // invariant): a preview dispatch from a tab switch would violate it,
@@ -1465,11 +1554,16 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord. The composition
     // holds under render view: cycle_marker_focus_with_recenter walks the
-    // snapshot collections there, and the tab switch swaps the ruled per-tab
-    // position — see the Ctrl+Tab arm for why the trigger is gated out.
+    // snapshot collections there, and the render-view tab switch (substituted
+    // for the authoring one) swaps the entry's disk-owned per-tab position —
+    // see the Ctrl+Tab arm for why the trigger is gated out.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus_with_recenter(true);
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        if (app.render_view.enabled) {
+            switch_render_view_tab();
+        } else {
+            active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        }
         cycle_marker_focus_with_recenter(true);
         if (!app.render_view.enabled) target_render.trigger();
         return true;

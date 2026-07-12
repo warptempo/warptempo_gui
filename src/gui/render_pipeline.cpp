@@ -353,25 +353,27 @@ RenderOutcome do_render(const RenderRequest& req,
             // 'T'), and 'T' requires output_format = wav, so map-format
             // artifacts are not browse entries and get no .settings.
             if (output_format == "wav") {
-                // The commit tab (named by active_tab_view) carries the
-                // browse position measured at the queue/dispatch that built
-                // this render (req.authoring's captured view keys), on the
-                // TARGET axis. Those keys are captured on the LIVE map's
-                // axis; a sweep cell rewrites its markers per cell, giving
-                // the cell a different (possibly shorter) target axis, so
-                // the values are CLAMPED into this entry's own map domain
-                // before writing — the GUI never authors a load-refusable
-                // value. The clamp mirrors first_view_range_defect's load
-                // rule exactly: viewport start must sit in [0, total-1]
-                // (a start on the total's frame shows nothing) and the
-                // playhead in [0, total] (it may rest on the end exactly).
-                // target_total is this entry's map domain total. Zoom passes
-                // through: the live zoom is always in the persisted
-                // vocabulary. Once the entry displays, per-entry autosave
-                // rewrites these as the user browses. Its trim comes from
-                // the recipe trim that shaped this render; read_only and the
-                // rest take their ViewState defaults. The other tab is all
-                // defaults, no trim.
+                // The commit tab (named by active_tab_view) seeds the browse
+                // position measured at the queue/dispatch that built this
+                // render (req.authoring's captured view keys), on the TARGET
+                // axis. Render view is a one-way bubble: disk owns each entry's
+                // browse state, so the entry loader APPLIES this seeded
+                // position on first display and per-entry autosave rewrites it
+                // as the user browses — it is the disk-owned starting point,
+                // not a value the loader ignores. Those keys are captured on
+                // the LIVE map's axis; a sweep cell rewrites its markers per
+                // cell, giving the cell a different (possibly shorter) target
+                // axis, so the values are CLAMPED into this entry's own map
+                // domain before writing — the GUI never authors a
+                // load-refusable value. The clamp mirrors
+                // first_view_range_defect's load rule exactly: viewport start
+                // must sit in [0, total-1] (a start on the total's frame shows
+                // nothing) and the playhead in [0, total] (it may rest on the
+                // end exactly). target_total is this entry's map domain total.
+                // Zoom passes through: the live zoom is always in the persisted
+                // vocabulary. Its trim comes from the recipe trim that shaped
+                // this render; read_only and the rest take their ViewState
+                // defaults. The other tab is all defaults, no trim.
                 const int64_t target_total = target_total_frames_for_map(
                     static_cast<int64_t>(total_frames), full_warp_frame_map);
                 const int64_t vp_hi =

@@ -152,17 +152,19 @@ bool update_settings_view_state(const std::filesystem::path& path,
                                 int64_t viewport_start,
                                 int     zoom_level,
                                 int64_t playhead,
-                                char    active_markers_view) {
+                                char    active_markers_view,
+                                char    active_tab_view) {
     // Strict read-modify-write. The file is program-written, so any parse
     // failure — a missing file included — is adversarial at this mutation
     // boundary: refuse the update with one stderr line rather than
     // perpetuate malformed bytes or manufacture a view-state-only file. On
     // success, re-serialize the whole file canonically from the parsed
-    // struct with the fresh view state on the tab named by the FILE's
-    // active_tab_view; a strict-parsed program-written file has no unknown
-    // lines or comments to lose, so every other key round-trips (absent
-    // optional keys re-emit as their canonical defaults, the same values
-    // the readers apply).
+    // struct with the fresh view state on the tab named by the passed
+    // active_tab_view (the browsed tab, authoritative under the one-way
+    // bubble) and active_tab_view rewritten to match; a strict-parsed
+    // program-written file has no unknown lines or comments to lose, so
+    // every other key round-trips (absent optional keys re-emit as their
+    // canonical defaults, the same values the readers apply).
     auto sf = read_settings_file(path.string());
     if (!sf) {
         std::fprintf(stderr,
@@ -185,14 +187,17 @@ bool update_settings_view_state(const std::filesystem::path& path,
     };
     ViewState tab_a = to_view_state(sf->tab_a);
     ViewState tab_b = to_view_state(sf->tab_b);
-    ViewState& browsed = (sf->active_tab_view == 'B') ? tab_b : tab_a;
+    // The browsed tab is authoritative: write the view state onto the tab
+    // named by the passed active_tab_view (not the file's own), and persist
+    // active_tab_view itself as that value.
+    ViewState& browsed = (active_tab_view == 'B') ? tab_b : tab_a;
     browsed.viewport_start_sample  = viewport_start;
     browsed.zoom_level             = zoom_level;
     browsed.playhead_cursor_sample = playhead;
 
     return write_settings_file(path.string(), tab_a, tab_b, sf->follow,
                                sf->active_audio_view, active_markers_view,
-                               sf->active_tab_view, sf->playback_speed,
+                               active_tab_view, sf->playback_speed,
                                sf->font_size, sf->engine);
 }
 

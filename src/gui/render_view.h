@@ -17,13 +17,13 @@ struct GuiTargetRender;
 
 // Render-view cluster, extracted from main.cpp's inline lambdas.
 // Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
-// the per-entry .settings snapshot (the view-state autosave — the persisted
-// browse keys and the W/P mode are written for schema stability but never
-// applied, since the browse position inherits from the live session and the
-// W/P mode is global across all views — plus the strict entry load:
-// markers, engine scale, recipe trim),
+// the per-entry .settings snapshot (render view is a one-way bubble: disk owns
+// each entry's browse state — the entry loader APPLIES the persisted
+// tab/zoom/viewport/playhead/W-P on every display, and the view-state autosave
+// persists the browsed state back onto the same .settings on every nav-away —
+// plus the strict entry load: markers, engine scale, recipe trim),
 // the per-entry selection stash with stat-tuple gating, the entry-audio
-// decode-and-bind path, and the source-view restore on exit.
+// decode-and-bind path, and the authoring-session restore on exit.
 // clear_hover_popup is reached through viewport;
 // refresh_active_tab_view_from_app is reached through active_views.
 //
@@ -88,14 +88,14 @@ struct GuiRenderView {
     // pair. No-op when render view is off or no entry is active.
     void autosave_active_entry();
 
-    // `entering` distinguishes a render-view ENTRY (the r toggle-on and
-    // the batch auto-open, which pass true) from an entry-to-entry
-    // NAVIGATION under an already-open view (both navigation chords pass
-    // false). On entry the browse position inherits from the live view —
-    // directly from target view, through the S→T toggle's anchor math
-    // from source view; on navigation the browsed position carries over
-    // unchanged. Rationale at the definition's inheritance block.
-    bool load_render_view_at(int index, bool entering);
+    // Load the entry at `index`. Render view is a one-way bubble: disk owns
+    // each entry's browse state, so on EVERY load — render-view entry and
+    // entry-to-entry navigation alike — this applies the entry's persisted
+    // tab / zoom / viewport / playhead / W-P from its strict-parsed .settings
+    // (nothing inherits from the live authoring session). The authoring tab
+    // and mode are stashed at render-view entry for the exit restore.
+    // Rationale at the definition's apply block.
+    bool load_render_view_at(int index);
     void restore_source_view();
 
     // The abandon arm of the render-view exit pair: restore_source_view
@@ -132,7 +132,8 @@ struct GuiRenderView {
     // Clear exactly the snapshot-context fields of the RenderViewContext:
     // the display marker/reset vectors, the snapshot warp frame map, the
     // entry domain begin, the snapshot display total, the snapshot trim
-    // bounds, and the snapshot commit tab (reset to 'A'). Deliberately does
+    // bounds, the snapshot commit tab (reset to 'A'), and the authoring-session
+    // stash (tab reset to 'A', W/P mode reset to 'W'). Deliberately does
     // NOT touch enabled, list, index, or last_path — those are selection and
     // lifecycle state whose handling legitimately differs per exit, so each
     // clear site keeps its own lines for them. Exists so a new snapshot field

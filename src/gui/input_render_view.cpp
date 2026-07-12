@@ -50,22 +50,20 @@
 //                                it would change the entry's playback speed
 //   Everything else defers to read_only_key_blocked(key, mods).
 //
-// Two families the deferral net-admits that render view honors safely (both
-// route through the same display-domain-aware handlers the already-admitted
-// chords use): PageUp/PageDown page the viewport against live_total_frames,
-// and Ctrl+Tab / Ctrl+Shift+Tab switch the A/B tab. Tabs are part of the
+// Two families the deferral net-admits that render view honors safely:
+// PageUp/PageDown page the viewport against live_total_frames, and
+// Ctrl+Tab / Ctrl+Shift+Tab switch the A/B tab. Tabs are part of the
 // view-state model and are not read-only gated, so render view — being just
-// another view — has them: a tab switch swaps to the other tab's cached
-// position, interpreted on the render display axis by the same direct carry
-// the target-view entry uses, with the runtime clamps owning any
-// out-of-domain value at first use. The old block rationale (the entry is
-// bound to its commit tab; the tab slots hold the stashed authoring view
-// state for exit restore) is superseded: the commit routes off the ENTRY's
-// file fields and the display-time snapshot_commit_tab stash rather than the
-// live active tab, and exit pushes the live position out rather than
-// restoring a stash, so a live tab switch under render view threatens
-// neither. The Tab family is alt-strict throughout, so an Alt-held Tab is an
-// unbound no-op here as everywhere, not a smuggled marker-focus cycle.
+// another view — has them. Under the one-way bubble a render-view tab switch
+// takes its OWN arm (handle_tab_switch_keys): it autosaves the current band,
+// flips app.active_tab_view, and applies the entry's OTHER band from a strict
+// re-read of its .settings — never switch_active_tab_view_to, which would
+// swap the live fields WITH the authoring tab slots (the exit stash) and both
+// corrupt the stash and pull authoring positions onto the render axis. The
+// A/B letter follows the entry's browsed tab; the authoring tabs lie dormant
+// in the stash until exit. The Tab family is alt-strict throughout, so an
+// Alt-held Tab is an unbound no-op here as everywhere, not a smuggled
+// marker-focus cycle.
 bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -192,12 +190,11 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
         // !render_view.enabled) and are restored on exit. Ctrl+Alt+C is now
         // the only forced reset.
         app.render_view.enabled    = true;
-        // The W/P mode is global: active_markers_view carries across all
-        // views and is never applied per entry, so the mode the user is in
-        // stays the mode. Toggle-on is a render-view ENTRY: the browse
-        // position inherits from the live view (directly from target view,
-        // through the S→T toggle's anchor math from source view).
-        if (!render_view.load_render_view_at(target, /*entering=*/true)) {
+        // Toggle-on is a render-view ENTRY: the first entry load stashes the
+        // authoring session (tab, W/P mode, tab-slot position) and applies the
+        // entry's disk-owned browse state — render view is a one-way bubble, so
+        // nothing inherits from the live session.
+        if (!render_view.load_render_view_at(target)) {
             app.render_view.enabled = false;
             app.render_view.list.clear();
         }
@@ -274,10 +271,10 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         int next = app.render_view.index;
         if (key == GuiKeys::Left)  next = (next - 1 + n) % n;
         else                       next = (next + 1) % n;
-        // Entry-to-entry NAVIGATION: the browsed position carries over
-        // unchanged (both axes are target axes; runtime clamps own an
-        // out-of-domain carry at first use).
-        render_view.load_render_view_at(next, /*entering=*/false);
+        // Entry-to-entry NAVIGATION: the destination entry's own disk-owned
+        // browse state (tab, position, W/P mode) is applied from its .settings
+        // — the outgoing entry was autosaved above, so disk owns both.
+        render_view.load_render_view_at(next);
         return true;
     }
 
@@ -309,8 +306,8 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         if (target == app.render_view.index &&
             app.render_view.list[target].wav_path.string() ==
                 app.render_view.last_path) return true;
-        // Entry-to-entry NAVIGATION, same carry-over as Shift+Left/Right.
-        render_view.load_render_view_at(target, /*entering=*/false);
+        // Entry-to-entry NAVIGATION, same disk-owned apply as Shift+Left/Right.
+        render_view.load_render_view_at(target);
         return true;
     }
 
