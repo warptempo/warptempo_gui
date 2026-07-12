@@ -1172,6 +1172,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.iteration_mode_enabled = false;
         app.bpm_mode_enabled       = false;
 
+        // Deliberately no cancel_archival_session on this exit: the tail's
+        // target_render.trigger() already stops or adopts a running rebuild
+        // through its kill/match-wait — a rebuild whose session fingerprint
+        // matches the just-committed state is ADOPTED as the preview,
+        // deliberate reuse, not a leak.
         render_view.restore_source_view();
 
         // Landing view (the ruled UX shape): render entries are target-view

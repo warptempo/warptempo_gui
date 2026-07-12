@@ -338,34 +338,16 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // Show render-view at the just-rendered batch's first file. Gated
         // on a non-cancelled terminal branch that actually produced at
         // least one .wav on disk; a batch where every entry returned Failed
-        // leaves rendered == 0 and there is nothing to view. Two reachable
-        // states: render-view was off (a batch dispatched and run from
-        // source view), and render-view was already up (a parked batch —
-        // dispatched during a running render, then backgrounded by an
-        // R-toggle — pumps to completion under the open view). auto_open
-        // enters render-view in the first case and refreshes it in place in
-        // the second, landing on the new batch's first file either way. The
-        // completed batch is fully finalized — state cleared, then
-        // finalize_render_run — BEFORE the auto-open runs, so render-view
-        // opens against an idle, finalized worker, exactly the state a
-        // manual `r` toggle runs against. Two consequences: finalize's
-        // maybe_dispatch_pending may hand the worker to a parked archival
-        // command or a pending target render first, so if the auto-open's
-        // entry then needs a derived rebuild (a last-entry .fingerprint
-        // write that failed after the commit-critical sidecars published —
-        // warning-only, so the batch still reports Success), the derived
-        // dispatch_archival_render_if_idle refuses on the busy worker with
-        // its one stderr line and the entry does not display — the busy-
-        // refusal semantics; the user re-navigates once the worker drains. A
-        // rebuild that DOES dispatch owns queue_running and the progress text
-        // with no caller left to clobber them: the same auto-open, on a
-        // dispatched-rebuild failure, exits render view through
-        // restore_source_view, whose target-view arm now runs ensure_ready's
-        // deferring variant — it parks the exit-path preview behind the
-        // running rebuild instead of cancelling it. And when the parked command is
-        // itself a batch, the old batch's auto-open runs under the new
-        // render's progress — the same reachable state as a parked batch
-        // pumped to completion under an open render view, already handled.
+        // leaves rendered == 0 and there is nothing to view. Render view
+        // opens only against an idle worker with nothing parked, so the
+        // auto-open — an automatic `r` — obeys the same entry gate the r key
+        // does. The completed batch is fully finalized — state cleared, then
+        // finalize_render_run — BEFORE the auto-open runs, and finalize's
+        // maybe_dispatch_pending can hand the worker to a parked archival
+        // command or a pending target render on that same beat; when the
+        // pump started new work the auto-open is skipped outright with the
+        // gate's one refusal line — the batch is on disk and in the render
+        // list for a later `r`, exactly like the modal-surface skip below.
         const bool success = !cancelled && batch_.rendered > 0;
         // Latch the folder the auto-open consumes before the state clear.
         // auto_open_batch_at_first_file reads only its batch_folder argument
@@ -388,7 +370,16 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // skip keeps the modal invariant absolute with no new lifecycle.
         if (success && !modal_bottom_strip_editor_active() &&
             !app.prompt.active) {
-            render_view.auto_open_batch_at_first_file(completed_batch_folder);
+            // Entry gate, the same refusal the r key prints: render view
+            // never opens over running or parked render work.
+            if (app.queue_running || app.pending_archival.armed) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render view refused: a render is running "
+                    "(Esc cancels it, then r)\n");
+            } else {
+                render_view.auto_open_batch_at_first_file(
+                    completed_batch_folder);
+            }
         }
         return;
     }

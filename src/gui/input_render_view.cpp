@@ -90,7 +90,10 @@ bool GuiInputHandler::render_view_key_blocked(GuiKey key, GuiInputState mods) {
 // the bare R so the caller falls through; otherwise it is fully handled
 // (including the no-op guards) and returns true. Source audio must be loaded;
 // otherwise silent no-op (nothing to base the renders folder lookup on).
-// Toggle-on enumerates the renders folder and loads either the last-displayed
+// Entry is gated on an idle render worker with nothing parked (one refusal
+// line, rationale at the gate); exit stops any render work (rationale at
+// the toggle-off arm). Toggle-on enumerates the renders folder and loads
+// either the last-displayed
 // render (if its path is still in the list) or the first entry; an empty
 // enumeration aborts the toggle. Iter/BPM modes persist across render-view
 // enter/leave; they are inert inside render view (the input gate drops i and
@@ -104,6 +107,23 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
     if (app.source_audio_path.empty()) return true;
     if (app.loading) return true;
     if (!app.render_view.enabled) {
+        // Entry gate: render view is incompatible with running render work.
+        // While archival work is running or parked, entry is REFUSED, not
+        // cancelled — the running batch or parked command may be
+        // irreplaceable queued work, and r is a browse gesture, so a slip of
+        // the hand must not destroy renders. Esc is the explicit cancel (Esc,
+        // then r). Honest drain window: right after an Esc, queue_running
+        // stays set until the cancelled worker's callback finalizes, so an
+        // immediate r can refuse again; pressing r a moment later enters.
+        // The predicate is deliberately archival-only: a busy target PREVIEW
+        // does not refuse entry (a preview is derived, loses nothing, and the
+        // entry path already cancels it through cancel_in_flight_update).
+        if (app.queue_running || app.pending_archival.armed) {
+            std::fprintf(stderr,
+                "warptempo_gui: render view refused: a render is running "
+                "(Esc cancels it, then r)\n");
+            return true;
+        }
         std::vector<AppState::RenderViewEntry> list =
             render_view.enumerate_render_view_list();
         if (list.empty()) {
@@ -161,6 +181,16 @@ bool GuiInputHandler::handle_render_view_toggle(GuiKey key, GuiInputState mods) 
             app.render_view.list.clear();
         }
     } else {
+        // Leaving render view stops anything render-related. Given the entry
+        // gate above, the only possible running session is the
+        // fingerprint-mismatch rebuild render view itself dispatched, and
+        // killing it loses nothing: the publication gates leave the prior
+        // artifacts intact on disk, and the next display of that entry
+        // re-attests and re-dispatches the rebuild. cancel_archival_session
+        // also clears the pending target preview, which is correct here —
+        // restore_source_view's target arm re-derives through ensure_ready
+        // immediately after.
+        cancel_archival_session();
         // Capture the just-viewed render's zoom/viewport/playhead and
         // stash its live selection onto the active entry, so the next
         // toggle-on can restore both (the selection gated by the wav's
@@ -212,7 +242,10 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
 
         if (!render_view.refresh_render_view_list()) {
             // Renders folder is empty (e.g. user deleted it externally).
-            // Exit render-view gracefully.
+            // Exit render-view gracefully. Leaving render view stops any
+            // render work first — see the toggle-off arm of
+            // handle_render_view_toggle.
+            cancel_archival_session();
             render_view.exit_render_view_and_clear();
             return true;
         }
@@ -241,6 +274,9 @@ bool GuiInputHandler::handle_render_view_nav(GuiKey key, GuiInputState mods) {
         render_view.autosave_active_entry();
 
         if (!render_view.refresh_render_view_list()) {
+            // Empty-folder exit stops render work first — see the toggle-off
+            // arm of handle_render_view_toggle.
+            cancel_archival_session();
             render_view.exit_render_view_and_clear();
             return true;
         }

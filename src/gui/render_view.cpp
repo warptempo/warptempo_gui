@@ -180,9 +180,9 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // Persist the active entry's browse state: the .settings view-state
 // autosave plus the selection stash, in that order (both read the live
 // app.* fields; neither mutates them). One body for every
-// leave-this-entry boundary — exit, navigation, in-place auto-open
-// refresh, and the close/revert prompts. No-op when render view is off
-// or the index is out of range (no entry active).
+// leave-this-entry boundary — exit, navigation, and the close/revert
+// prompts. No-op when render view is off or the index is out of range
+// (no entry active).
 void GuiRenderView::autosave_active_entry() {
     if (!app.render_view.enabled) return;
     if (app.render_view.index < 0 ||
@@ -815,17 +815,12 @@ void GuiRenderView::restore_source_view() {
     // above. If the user is still in target view (R does not touch
     // active_audio_view), rebind to the target buffer — ensure_ready
     // short-circuits to a clean playback.rebind_buffer when the buffer is
-    // current, otherwise it wants a fresh render. This is a VIEW RESTORE,
-    // not a live authoring edit, so it passes the deferring variant: when an
-    // archival session is running (the derived attestation rebuild a failed
-    // in-place auto-open just dispatched is the motivating case), the
-    // exit-path preview parks behind it (pending_) rather than cancelling it
-    // — the ruled preview-kills-the-render semantics govern live edits, not a
-    // view restore. The parked preview is pumped by maybe_dispatch_pending
-    // when the worker drains — archival first, preview after, per the pump's
-    // recorded ordering.
+    // current, otherwise it dispatches a fresh preview. Leaving render view
+    // stops anything render-related (the user-driven exits run
+    // cancel_archival_session before this restore), so the preview
+    // re-derives against an idle or draining worker.
     if (app.active_audio_view == 'T') {
-        target_render.ensure_ready(/*defer_archival=*/true);
+        target_render.ensure_ready();
     }
     // One-shot discrete jump: the source view is restored and the entering
     // tab's viewport / zoom / playhead are applied, so render the plate
@@ -871,6 +866,9 @@ void GuiRenderView::clear_snapshot_context() {
 // time, so playback rebinds to it before the entry buffer is freed —
 // the device is never left bound to a freed buffer.
 void GuiRenderView::abandon_render_view() {
+    // Deliberately no cancel_archival_session on this exit: revert_to_blank's
+    // cancel_archival_render hook already ran the same cancel before this
+    // teardown.
     if (!app.render_view.enabled && entry_samples.empty()) return;
     playback.stop();
     app.playhead_scanner_active = false;
@@ -964,40 +962,20 @@ bool GuiRenderView::refresh_render_view_list() {
     return true;
 }
 
-// Show render-view at the first .wav of the just-finished batch. Two
-// outcomes share one body — enumerate the renders/ folder, migrate the
-// prior list's per-entry persisted state by wav_path, and select the first
-// entry whose batch_folder matches the passed-in argument — differing only
-// in the tail:
-//
-//   - Render-view closed: enter it at that entry, mirroring the R-key
-//     toggle-on entry sequence, substituting the batch_folder match for the
-//     last_path match.
-//   - Render-view already open: a parked batch (dispatched during a running
-//     render, then backgrounded by an R-toggle so the user browses old
-//     renders) can pump to completion while the view is up. Refresh the view
-//     in place so it shows what source-view completion would show — the fresh
-//     list, landed on the new batch's first file — instead of the stale
-//     pre-batch list. The live selection is stashed onto the outgoing entry
-//     first (the migration below then carries it into the fresh list), and
-//     the new entry loads through the same load path navigation uses, which
-//     decodes its wav into the entry buffer and rebinds playback to it; the
-//     enter sequence (the authoring view-state snapshot) is skipped because
-//     the view is already up (an entry buffer is resident).
+// Show render-view at the first .wav of the just-finished batch: enumerate
+// the renders/ folder, migrate the prior list's per-entry persisted state by
+// wav_path, select the first entry whose batch_folder matches the passed-in
+// argument, and enter render view at it — the R-key toggle-on entry
+// sequence, substituting the batch_folder match for the last_path match.
+// A completion beneath an OPEN render view is unreachable under the
+// entry-gated contract: `r` refuses while archival work is running or
+// parked, the render-view key allowlist admits no archival dispatch chord,
+// and the one render the view itself dispatches — the fingerprint-mismatch
+// rebuild — completes through the single-render callback, never this
+// caller's batch tail. So this method only ever enters fresh.
 void GuiRenderView::auto_open_batch_at_first_file(
         const std::filesystem::path& batch_folder) {
     if (app.source_audio_path.empty()) return;
-
-    const bool refreshing_in_place = app.render_view.enabled;
-
-    // In-place refresh: the live selection still sits on the app.* fields, so
-    // capture the outgoing entry's viewport sidecar and stash its selection
-    // onto the active list entry BEFORE the migration below, so the
-    // wav_path-keyed merge carries that just-stashed state into the fresh
-    // list. Mirrors the entry-switch sequence the render-view nav handlers run.
-    if (refreshing_in_place) {
-        this->autosave_active_entry();
-    }
 
     std::vector<AppState::RenderViewEntry> list =
         this->enumerate_render_view_list();
@@ -1038,21 +1016,6 @@ void GuiRenderView::auto_open_batch_at_first_file(
             "warptempo_gui: auto-open: batch folder '%s' not found "
             "in render-view list\n",
             batch_folder.string().c_str());
-        return;
-    }
-
-    if (refreshing_in_place) {
-        // View already up, an entry buffer already resident: swap in the
-        // fresh list and load the new batch's first entry through the same
-        // path navigation uses (it decodes the wav and rebinds playback to
-        // the fresh entry buffer; the non-empty resident buffer marks the
-        // session as already entered, so the authoring view-state snapshot
-        // is not re-taken). On the defensive load-failure path fall back to
-        // a clean source-view exit.
-        app.render_view.list = std::move(list);
-        if (!this->load_render_view_at(target)) {
-            this->exit_render_view_and_clear();
-        }
         return;
     }
 

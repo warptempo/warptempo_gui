@@ -95,9 +95,8 @@ struct GuiRenderView {
     // Persist the active entry's browse state at a leave-this-entry
     // boundary: the .settings view-state autosave (write_settings_for)
     // followed by the in-memory selection stash. The R-toggle exit, both
-    // navigation chords, the in-place auto-open refresh, and the
-    // close/revert prompts all run this same pair. No-op when render
-    // view is off or no entry is active.
+    // navigation chords, and the close/revert prompts all run this same
+    // pair. No-op when render view is off or no entry is active.
     void autosave_active_entry();
 
     bool load_render_view_at(int index);
@@ -150,15 +149,13 @@ struct GuiRenderView {
     // Show the first .wav of the just-rendered batch. Called from
     // GuiInputHandler::dispatch_next_batch_entry's terminal success
     // branch after a batch finishes uncancelled with at least one
-    // render on disk. Render-view off: mirrors the R-key toggle-on
-    // entry sequence, targeting the first list entry whose
-    // batch_folder matches instead of render_view.last_path.
-    // Render-view already up (a parked batch can complete under an
-    // open view): refreshes the list in place — stash the current
-    // entry, re-enumerate, migrate persisted per-entry state, land on
-    // the new batch's first file through the navigation load path —
-    // so the view shows exactly what it would had the batch completed
-    // with render-view closed.
+    // render on disk, behind the render-view entry gate (render view
+    // opens only against an idle worker with nothing parked). Mirrors
+    // the R-key toggle-on entry sequence, targeting the first list
+    // entry whose batch_folder matches instead of render_view.last_path.
+    // A completion under an OPEN render view is unreachable under the
+    // entry-gated contract — rationale at the definition — so this
+    // method only ever enters fresh.
     void auto_open_batch_at_first_file(
         const std::filesystem::path& batch_folder);
 };

@@ -358,7 +358,7 @@ int64_t GuiTargetRender::compute_target_buffer_start_frame() const {
     return 0;
 }
 
-void GuiTargetRender::ensure_ready(bool defer_archival) {
+void GuiTargetRender::ensure_ready() {
     // Source view does not use target_buffer. Match trigger()'s
     // source-view no-op invariant.
     if (app.active_audio_view != 'T') {
@@ -403,27 +403,8 @@ void GuiTargetRender::ensure_ready(bool defer_archival) {
         return;
     }
 
-    // Dirty or empty buffer. The render-view exit path (defer_archival)
-    // parks behind a busy ARCHIVAL session instead of killing it: the worker
-    // is busy (async_renderer.is_busy()) on a render that is not this
-    // preview's own (!in_flight_), so it is an archival session — the
-    // motivating case being the derived attestation rebuild a failed in-place
-    // auto-open just dispatched, which restore_source_view must not cancel
-    // from its own cleanup. Set pending_ and return without request_cancel,
-    // without queue_cancel_requested, and without a queue_progress_text write
-    // (the archival session owns the progress slot; the eventual dispatch
-    // stamps its own text). The worker-idle pump (maybe_dispatch_pending)
-    // dispatches the archival first and this parked preview after — an
-    // explicit command outranks a derived preview. See ensure_ready's head
-    // comment for the ratification note.
-    if (defer_archival && async_renderer.is_busy() && !in_flight_) {
-        pending_ = true;
-        return;
-    }
-
-    // Otherwise dispatch fresh (worker idle, or busy on this preview's own
-    // in_flight_ render, or an ordinary non-deferring entry). trigger()
-    // re-sets the bit (already true here by construction) and runs the
+    // Dirty or empty buffer: dispatch fresh. trigger() re-sets the bit
+    // (already true here by construction) and runs the
     // cancel-clear-dispatch sequence. Identical body to the original S→T
     // eager-dispatch path that this method replaces.
     trigger();
