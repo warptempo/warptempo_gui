@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "gui_display_context.h"
 #include "warp_frame_map_view.h"
 #include "marker_drag.h"
 #include "paint_handler.h"
@@ -773,7 +774,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // captured and the source-domain time_frame the apply path
     // writes into.
     double mouse_frame;
-    if (app.active_audio_view == 'T') {
+    if (active_display_context(app, audio).domain != GuiDisplayDomain::Source) {
         const int64_t mouse_frame_active =
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(
@@ -822,9 +823,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
         const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
             app.drag.moveable_times[hit_pos]));
-        int64_t ph = (app.active_audio_view == 'T')
-            ? to_domain_frame(app, ph_src, app.drag.frozen_warp_frame_map)
-            : ph_src;
+        // to_domain_frame decides Source-identity vs mapped forward-map off
+        // the active display context, so the call is unconditional: the
+        // frozen map translates in a mapped domain and is inert in the
+        // Source domain (the outer flag test was a duplicate of that
+        // internal short-circuit).
+        int64_t ph = to_domain_frame(app, audio, ph_src,
+                                     app.drag.frozen_warp_frame_map);
         // Playhead domain clamp, mirroring move_playhead_to (the ruling
         // lives there). With both marker walls at total - 1 the source-view
         // value is already in domain; this closes the target-view case

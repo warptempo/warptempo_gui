@@ -1,6 +1,7 @@
 #include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
+#include "gui_display_context.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -152,15 +153,15 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
     }
-    // Source view anchors through the identity map (empty list); target
-    // view through the live cached map — the same map the stem painter
-    // reads, so the anchored column is the painted one.
-    const bool target_view = (app.active_audio_view == 'T');
-    const std::vector<WarpFrameMapSegment> no_map;
-    const auto& map = target_view
-        ? target_view_warp_frame_map_cached(
-              app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
-        : no_map;
+    // The display context supplies the anchoring map: identity in source
+    // view, the live cached map in target view — the same map the stem
+    // painter reads, so the anchored column is the painted one. The
+    // mapped-domain test that selects the map also keys the wall policy
+    // below: map selection and refuse-vs-clamp describe one coordinate
+    // regime.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const bool mapped_domain = (ctx.domain != GuiDisplayDomain::Source);
+    const auto& map = *ctx.warp_frame_map;
     const int64_t reset_wall = audio.total_frames() - 1;
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
@@ -169,7 +170,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             app, audio, static_cast<double>(tv[idx].time_frame), map);
         int64_t t_new =
             authored_frame_at_column(app, audio, c + direction, map);
-        if (target_view) {
+        if (mapped_domain) {
             // All-or-nothing silent refusal outside the absolute range.
             if (t_new < 0 || t_new > reset_wall) return;
         } else {

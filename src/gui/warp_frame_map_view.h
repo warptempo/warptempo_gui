@@ -71,13 +71,20 @@ struct TargetWarpFrameMapCache {
 const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Forward-translate a source-frame coordinate (e.g. a stored marker
-// time) into the active domain's frame coordinates. Source view:
-// identity. Target view: `map_source_to_target`. Used by handlers that
-// need to position the viewport / playhead at a source-domain anchor
-// while in the active domain (e.g. Tab cycling recentering on a marker
-// whose time_frame is source-domain).
-int64_t to_domain_frame(const AppState& app, int64_t source_frame,
+// Forward-translate a source-frame coordinate into the active display
+// domain's frame coordinates against a CALLER-SUPPLIED map. Source
+// domain: identity. Mapped domains (TargetLive, Render):
+// `map_source_to_target` through `warp_frame_map`. The domain decision
+// comes from the active display context (active_display_context), while
+// the map stays the explicit one the caller passes — its live purpose is
+// explicit-map translation for the drag's frozen-map regime (the playhead
+// tracks the grabbed stem through the same frozen coordinate system paint
+// walks). An empty map is identity in a mapped domain. For live-map
+// translation use source_frame_to_active_domain below, which owns the
+// context's own map.
+class GuiAudio;
+int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
+                        int64_t source_frame,
                         const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
 // Convenience wrappers that own the domain-check and the map selection for the
@@ -88,13 +95,11 @@ int64_t to_domain_frame(const AppState& app, int64_t source_frame,
 // loop) cost only a cache-key comparison after the first build. Render view:
 // the displayed entry's snapshot map — the same forward/inverse map math as
 // target view, over a different map source. Use these at every input /
-// playhead boundary that currently reads
-// target_view_warp_frame_map_cached solely to feed one to_domain_frame.
+// playhead boundary that translates against the live displayed domain.
 //
 // NOT for sites translating against a non-live map — a drag's
 // app.drag.frozen_warp_frame_map, or a proposed (pre-commit) marker list. Those keep
 // calling to_domain_frame directly with their explicit map.
-class GuiAudio;
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
@@ -131,25 +136,27 @@ bool render_view_position_in_window(const AppState& app, int64_t source_frame);
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,
 // computed with the painters' own math (render_marker_stems_impl /
-// render_trim_stems): nearbyint the frame; in target view forward-map it
-// through `warp_frame_map` and nearbyint the map output; then divide by
-// the painters' samples-per-pixel — the visible span nearbyint-quantized
-// to whole samples over the strip width — and round with the painters'
+// render_trim_stems): nearbyint the frame; in the mapped domains
+// (TargetLive, Render) forward-map it through `warp_frame_map` and
+// nearbyint the map output; then divide by the painters'
+// samples-per-pixel — the visible span nearbyint-quantized to whole
+// samples over the strip width — and round with the painters'
 // std::round. `warp_frame_map` is the map the item is painted through:
 // the live cached map at rest, the drag's frozen map at drag commit.
-// Ignored in source view; an empty map in target view falls back to
-// identity, exactly like paint. Returns 0 when the strip has no width
-// (callers guard the degenerate geometry).
+// Ignored in the Source domain; an empty map in a mapped domain falls
+// back to identity, exactly like paint. Returns 0 when the strip has no
+// width (callers guard the degenerate geometry).
 int painted_column_of_source_frame(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
 // authored_frame_at_column: the authored source-frame value of pixel
 // column `col` under the same coordinate system — active-domain time =
-// viewport start + col * the painters' samples-per-pixel; in target view
-// that time is quantized to an integer target frame (llrint, floored at
-// 0 — the same quantization the target-view nudges have always applied)
-// and inverse-mapped through `warp_frame_map` at full precision. The
+// viewport start + col * the painters' samples-per-pixel; in the mapped
+// domains (TargetLive, Render) that time is quantized to an integer
+// target frame (llrint, floored at 0 — the same quantization the
+// target-view nudges have always applied) and inverse-mapped through
+// `warp_frame_map` at full precision. The
 // result returns through snap_authored_frame, so it is a whole source
 // frame in the authored int64 domain; callers apply their own walls
 // AFTER — the walls win over the

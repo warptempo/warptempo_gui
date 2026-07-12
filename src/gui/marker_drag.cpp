@@ -1,6 +1,7 @@
 #include "marker_drag.h"
 
 #include "audio.h"
+#include "gui_display_context.h"
 #include "warp_frame_map.h"
 #include "warp_frame_map_view.h"
 #include "phaseresetmarkers.h"
@@ -66,7 +67,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // (mouse_frame - anchor_mouse_time_frame) lives in source frames.
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    if (app.active_audio_view == 'T') {
+    if (active_display_context(app, audio).domain != GuiDisplayDomain::Source) {
         const int64_t anchor_frame_active =
             app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(

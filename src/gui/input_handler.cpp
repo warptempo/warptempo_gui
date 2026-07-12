@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "gui_display_context.h"
 #include "paint_handler.h"
 #include "playback_speed_presets.h"
 #include "render.h"
@@ -810,7 +811,8 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // whole-column step, and commit that column's time — source
             // view: viewport start plus column times samples-per-pixel;
             // target view: the column's target-domain time inverse-mapped
-            // through the cached map — through snap_authored_frame
+            // through the display context's cached map — through
+            // snap_authored_frame
             // (inside authored_frame_at_column), so the stored bound is a
             // whole source frame. The step keeps its samples_visible /
             // kTrimEndWheelDivisor magnitude, expressed as whole pixel
@@ -834,12 +836,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             const int64_t dcols =
                 (button == GuiMouseButton::WheelUp ? -step_cols : +step_cols) *
                 count;
-            const std::vector<WarpFrameMapSegment> no_map;
-            const auto& map = (app.active_audio_view == 'T')
-                ? target_view_warp_frame_map_cached(
-                      app, sr,
-                      static_cast<long>(audio.total_frames())).warp_frame_map
-                : no_map;
+            const auto& map = *active_display_context(app, audio).warp_frame_map;
             const int c = painted_column_of_source_frame(
                 app, audio, static_cast<double>(app.trim.end_frame), map);
             int64_t v = authored_frame_at_column(

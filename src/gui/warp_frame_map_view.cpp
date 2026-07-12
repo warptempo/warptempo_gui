@@ -14,7 +14,7 @@
 // build core (resolve_warp_markers_for_render / build_warp_frame_map / the
 // phase-reset assembly) carries no AppState dependency and lives in
 // the parser sources. These helpers stay GUI-side: they read the
-// live AppState marker store and the active-view selector, and own the
+// live AppState marker store and the active display context, and own the
 // memoized target-view cache. Declarations remain in warp_frame_map_view.h.
 
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
@@ -83,9 +83,11 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     return c;
 }
 
-int64_t to_domain_frame(const AppState& app, int64_t source_frame,
+int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
+                        int64_t source_frame,
                         const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    if (app.active_audio_view == 'S') return source_frame;
+    if (active_display_context(app, audio).domain ==
+        GuiDisplayDomain::Source) return source_frame;
     const size_t q = (source_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(source_frame);
@@ -116,11 +118,13 @@ int painted_column_of_source_frame(
     const GuiRect area = waveform_area(app);
     const double spp = painter_samples_per_pixel(app, audio, area);
     if (spp <= 0.0) return 0;
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The painters' exact shape (frame_to_paint_sample in render.cpp):
-    // nearbyint the source frame; in target view forward-map and
-    // nearbyint the map output; then std::round the fractional column.
+    // nearbyint the source frame; in the mapped domains (TargetLive,
+    // Render) forward-map and nearbyint the map output; then std::round
+    // the fractional column.
     double ms = std::nearbyint(source_frame);
-    if (app.active_audio_view != 'S' && !warp_frame_map.empty()) {
+    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
     }
     const double x_raw =
@@ -134,10 +138,11 @@ int64_t authored_frame_at_column(
     const GuiRect area = waveform_area(app);
     const double spp = painter_samples_per_pixel(app, audio, area);
     if (spp <= 0.0) return 0;
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
     const double t_active =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(col) * spp;
-    if (app.active_audio_view != 'S' && !warp_frame_map.empty()) {
+    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         // Quantize the column's target-domain time to an integer target
         // frame (floored at 0), then inverse-map at full precision; the
         // map is monotone increasing, so the target-domain direction is
@@ -227,16 +232,15 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 // is identity outright; the mapped domains (TargetLive, Render) inline
 // the forward / inverse map math (map_source_to_target /
 // map_target_to_source) against the context's map. Inlining, not routing
-// through to_domain_frame, is deliberate: its 'S' short-circuit reads
-// app.active_audio_view, which can legitimately be 'S' while render view
-// displays, and would skip the snapshot map; the context's DOMAIN, not the
-// raw flag, decides here. to_domain_frame itself and its explicit-map
-// callers (the drag's frozen-map sites) are untouched. TargetLive is bit-identical to the
-// routed path: its arm is only reached with the flag at 'T' (no
-// short-circuit). The empty-map path (the unbuildable-target
-// fallthrough, and render view with no entry loaded) stays identity —
-// map_source_to_target / map_target_to_source are identity on an empty
-// map.
+// through to_domain_frame, is deliberate here for a different reason than
+// the domain predicate (to_domain_frame now decides its own domain off the
+// display context too): these wrappers translate against the CONTEXT'S OWN
+// map, while to_domain_frame serves explicit non-live maps (the drag's
+// frozen-map sites) supplied by the caller. Keeping the two separate lets
+// each own its map source without re-selecting one. The empty-map path
+// (the unbuildable-target fallthrough, and render view with no entry
+// loaded) stays identity — map_source_to_target / map_target_to_source are
+// identity on an empty map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);

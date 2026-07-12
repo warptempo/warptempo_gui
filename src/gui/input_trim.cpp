@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "gui_display_context.h"
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
@@ -437,10 +438,12 @@ void GuiInputHandler::commit_trim_drag() {
         // pair's span may deform by up to one frame at release — the same
         // accepted behavior multi-marker drags have (the constant-gap phrasing
         // at TrimDragState describes the mid-gesture active-domain motion).
-        // The map is the live cached one, as the trim nudge and trim-end
-        // wheel anchor: markers freeze a pre-drag map because a warp drag
-        // deforms it, but trim never enters build_target_view_warp_frame_map,
-        // so the live map is stable across the drag. The trim stems paint
+        // The map is the display context's own — identity in source view,
+        // the live cached map in target view — as the trim nudge and
+        // trim-end wheel anchor: markers freeze a pre-drag map because a
+        // warp drag deforms it, but trim never enters
+        // build_target_view_warp_frame_map, so the live map is stable
+        // across the drag. The trim stems paint
         // through the waveform cache's baked map (fp_warp_frame_map), which
         // can LAG the live cache inside an async waveform-rebuild window
         // (e.g. a trim grab immediately after a tempo commit); inside that
@@ -456,12 +459,7 @@ void GuiInputHandler::commit_trim_drag() {
         const int sr = audio.sample_rate();
         if (sr > 0 && audio.total_frames() > 0 &&
             current_samples_per_pixel(app, audio) > 0.0) {
-            const std::vector<WarpFrameMapSegment> no_map;
-            const auto& map = (app.active_audio_view == 'T')
-                ? target_view_warp_frame_map_cached(
-                      app, sr,
-                      static_cast<long>(audio.total_frames())).warp_frame_map
-                : no_map;
+            const auto& map = *active_display_context(app, audio).warp_frame_map;
             const auto snap_moved_bound = [&](int64_t& field, int64_t orig,
                                               int64_t wall) {
                 if (field == orig) return;  // untouched: bit-exact, no snap
@@ -569,13 +567,10 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     // shape): read the bound's currently painted column, target the
     // adjacent column, and commit that column's time — source view:
     // viewport start plus column times samples-per-pixel; target view:
-    // the column's target-domain time inverse-mapped through the cached
-    // map — through snap_authored_frame (inside authored_frame_at_column).
-    const std::vector<WarpFrameMapSegment> no_map;
-    const auto& map = (app.active_audio_view == 'T')
-        ? target_view_warp_frame_map_cached(
-              app, sr, static_cast<long>(audio.total_frames())).warp_frame_map
-        : no_map;
+    // the column's target-domain time inverse-mapped through the display
+    // context's cached map — through snap_authored_frame (inside
+    // authored_frame_at_column).
+    const auto& map = *active_display_context(app, audio).warp_frame_map;
     const int c = painted_column_of_source_frame(
         app, audio, static_cast<double>(cur), map);
     int64_t proposed = authored_frame_at_column(app, audio, c + direction, map);
