@@ -271,10 +271,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Shift+Left/Right (prev/next render), Shift+Home/End (first/last,
     // clamped), Ctrl+Alt+C (commit). EXTRA BLOCKS on top of read-only: t
     // (S/T toggle), o (read-only flag), Ctrl+S (save; the save surface is
-    // Ctrl+Alt+C), Shift+0..9 (playback speed), Ctrl+Tab / Ctrl+Shift+Tab
-    // (A/B switch). Everything else — playback, the bare-key scrub / zoom /
-    // follow / center / p sub-view toggle, Home/End, PageUp/PageDown paging,
-    // Tab cycling, Ctrl+Q/W, the font-size step — follows the read-only gate.
+    // Ctrl+Alt+C), Shift+0..9 (playback speed). Everything else — playback,
+    // the bare-key scrub / zoom / follow / center / p sub-view toggle,
+    // Home/End, PageUp/PageDown paging, Tab cycling, the Ctrl+Tab /
+    // Ctrl+Shift+Tab A/B switch, Ctrl+Q/W, the font-size step — follows the
+    // read-only gate.
     //
     // The archival dispatch chords (Ctrl+S save, Ctrl+E queue-add,
     // Ctrl+Alt+R/E/I render) are all absent — Ctrl+S is an EXTRA BLOCK, the
