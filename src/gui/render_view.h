@@ -76,7 +76,13 @@ struct GuiRenderView {
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
     std::filesystem::path settings_path(
         const AppState::RenderViewEntry& e);
-    void write_settings_for(const AppState::RenderViewEntry& e);
+    // Persist the browsed view state onto the entry's `.settings` (strict
+    // read-modify-write). Returns the underlying helper's status: false on a
+    // refused read-modify-write, true on success. Most callers ignore it (a
+    // refused autosave costs the persisted view state, never the session);
+    // the Ctrl+Alt+C commit checks it, because it is about to READ the file
+    // it just wrote.
+    bool write_settings_for(const AppState::RenderViewEntry& e);
     std::pair<uintmax_t, int64_t> wav_stat_tuple(
         const std::filesystem::path& p);
     void stash_render_view_selection_to_active_entry();
@@ -85,8 +91,11 @@ struct GuiRenderView {
     // boundary: the .settings view-state autosave (write_settings_for)
     // followed by the in-memory selection stash. The R-toggle exit, both
     // navigation chords, and the close/revert prompts all run this same
-    // pair. No-op when render view is off or no entry is active.
-    void autosave_active_entry();
+    // pair. No-op (returns true) when render view is off or no entry is
+    // active. Returns false only when the .settings autosave was refused
+    // (strict read-modify-write parse failure) — the Ctrl+Alt+C commit
+    // treats that as adversarial and aborts before its own file read.
+    bool autosave_active_entry();
 
     // Load the entry at `index`. Render view is a one-way bubble: disk owns
     // each entry's browse state, so on EVERY load — render-view entry and

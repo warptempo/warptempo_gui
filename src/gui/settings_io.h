@@ -27,6 +27,14 @@ bool atomic_write_string_to_path(const std::string& path,
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
+// Convert one parsed `.settings` tab band into a live ViewState: the
+// viewport / zoom / playhead scratch, the read-only flag, and the trim pair.
+// The selection and trim-selection fields take their ViewState defaults (a
+// parsed band carries no selection). One home for the band-to-ViewState
+// field mapping, shared by the per-entry view-state autosave
+// (update_settings_view_state) and the Ctrl+Alt+C full-inheritance commit.
+ViewState view_state_from_settings_tab(const SettingsFileTab& t);
+
 // View-state-only update of a `.settings` file: strict read-modify-write,
 // the per-entry autosave render view runs at its navigation/exit
 // boundaries. Strict-reads the existing file through read_settings_file,

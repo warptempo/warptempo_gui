@@ -805,19 +805,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // in the bottom-strip BPM editor after a successful commit; there is no
     // key-dispatch handler for it here.
 
-    // Ctrl+Alt+C commits the displayed render's snapshot — the
-    // source-domain marker pair plus the entry's standard `.settings`
-    // sidecar (the single per-entry snapshot: engine block,
-    // active_tab_view, commit-tab trim) — and adopts the BROWSED view
-    // verbatim into target view (the render display axis IS the target
-    // axis). Render entries are target-view states, so commit always
-    // lands in 'T', on the entry's dispatch tab, at the browsed zoom /
-    // viewport / playhead and the browsed W/P mode.
-    // Marker/reset promotion remains one cross-file undo entry; settings
-    // and trim stay outside undo by standing convention. After the commit
-    // succeeds: render-view exits (playback rebinds to the always-source
-    // audio object; the entry buffer frees; the tail's preview trigger
-    // then dispatches the adopted target buffer), and
+    // Ctrl+Alt+C commits the displayed render by INHERITING its .settings
+    // wholesale. The mechanism is the file, not a latch: the handler first
+    // autosaves the live browsed view onto the entry's .settings (the same
+    // read-modify-write every nav-away runs), then strict-reads that file and
+    // applies the WHOLE of it as the new session — both tab bands
+    // (viewport/zoom/playhead/read_only/trim), active_tab_view,
+    // active_audio_view, active_markers_view, playback_speed, follow,
+    // font_size, and the engine block — alongside the source-domain marker
+    // pair the commit adopts. Because the browsed position was autosaved
+    // first, the landing feel is unchanged: render entries are target-view
+    // states, so commit lands in 'T' on the entry's dispatch tab at exactly
+    // the browsed zoom / viewport / playhead and W/P mode.
+    // Undo scope is unchanged: marker/reset promotion plus the pre-commit
+    // engine settings are one cross-file undo entry; the inherited prefs and
+    // view state stay outside undo by the same standing convention that keeps
+    // view state and trim out of history (recorded at the undo push below).
+    // After the commit succeeds: render-view exits (playback rebinds to the
+    // always-source audio object; the entry buffer frees; the tail's preview
+    // trigger then dispatches the adopted target buffer), and
     // <source_parent>/renders/ is recursively wiped. The committed render
     // survives through the render cache, not as a folder artifact. Silent
     // no-op outside render-view.
@@ -882,6 +888,28 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
         const std::filesystem::path sidecar =
             render_view.settings_path(cur_e);
+        // Commit is a nav-away like any other, and the full inheritance below
+        // reads the entry's .settings, so the browsed state must be on disk
+        // FIRST: run the same read-modify-write autosave every navigation/exit
+        // boundary runs (browsed viewport/zoom/playhead onto the active tab
+        // band, plus the browsed tab and W/P mode). The read_settings_file
+        // right below then sees the just-autosaved browse state, so the file
+        // IS the session the commit inherits. The autosave rewrites only the
+        // browse-only view keys; guard 5's render fingerprint excludes those
+        // by construction (its inputs are the source identity, sample rate,
+        // the marker stores, the engine block, and the recipe trim — none of
+        // them view keys), so the pre-commit autosave cannot disturb the
+        // fingerprint re-attestation. A refused autosave is a strict
+        // read-modify-write parse failure over program-written bytes —
+        // adversarial — so abort here, the same stderr shape as the reads
+        // below, before any mutation.
+        if (!render_view.autosave_active_entry()) {
+            std::fprintf(stderr,
+                "warptempo_gui: commit aborted: entry autosave failed for "
+                "'%s'\n",
+                sidecar.string().c_str());
+            return true;
+        }
         const auto settings = read_settings_file(sidecar.string());
         if (!settings) {
             std::fprintf(stderr,
@@ -993,17 +1021,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        // No view-range guard here (first_view_range_defect has no subject
-        // left): the old promotion restored FILE-sourced authoring
-        // viewport/playhead, persisted scratch that had to be walled like
-        // any other load. The adopted view values are now the LIVE browsed
-        // session values — GUI-produced session state, not file input. Under
-        // the one-way bubble they were applied from the entry's own disk
-        // .settings at display and moved only by the user's browsing, so they
-        // may rest outside the adopted map's target extent; the runtime clamps
+        // No view-range guard here (first_view_range_defect). The inherited
+        // view values come from the entry's .settings, but they are the LIVE
+        // browsed position the pre-commit autosave just wrote there from
+        // GUI-produced session state — applied from the entry's own disk
+        // .settings at display, validated then (load_render_view_at's
+        // first_view_range_defect), and moved since only by the user's
+        // browsing, which the browse clamps keep in domain. They may still
+        // rest outside the adopted map's target extent; the runtime clamps
         // (move_playhead_to, clamp_viewport_start) own them at first use, the
-        // restore-site convention — adversarial strictness applies only to
-        // bytes read from disk.
+        // restore-site convention — load-time adversarial strictness is for
+        // bytes a user could hand-edit, not the GUI's own round-tripped view.
 
         // Source-load adversarial guard 2: target-view/output-format
         // compatibility, validated against the ENTRY's own .settings.
@@ -1110,18 +1138,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             }
         }
 
-        // Landing-view capture, BEFORE any exit/clear mutates its sources:
-        // the browsed zoom / viewport / playhead are the live session
-        // fields (render view browses through the global view fields).
-        // restore_source_view below is now the one-way bubble's exit arm —
-        // it OVERWRITES all three with the stashed authoring position — so
-        // they are latched here, ahead of the first mutation, and re-applied
-        // verbatim after the exit (below), which lands the commit at the
-        // browsed position in target view regardless of the stash restore.
-        const int     browsed_zoom     = app.zoom_level;
-        const int64_t browsed_viewport = app.viewport_start_sample;
-        const int64_t browsed_playhead = app.playhead_cursor_sample;
-
+        // No landing-view latch: the entry's .settings — just autosaved with
+        // the live browsed viewport/zoom/playhead/tab/W-P above — IS the
+        // session this commit inherits wholesale below (both tab bands,
+        // active_tab_view, active_audio_view, active_markers_view, the prefs,
+        // and the engine block). restore_source_view still runs the one-way
+        // bubble's exit arm, but the post-restore block overwrites its stash
+        // restore with the parsed file, so the exit stash is transient here.
         std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
         std::vector<GuiPhaseResetMarker> phase_reset_pre = app.phaseresetmarkers.markers();
         const int                 hint_last = app.last_selected_marker;
@@ -1148,6 +1171,17 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
                        commit_marker_mode, hint_last, commit_tab);
         undo.recompute_dirty();
+        // Undo scope, unchanged by the full inheritance: this entry captures
+        // the marker pair and the pre-commit engine settings only
+        // (capture_current_settings, snapshotted just now inside
+        // push_undo_both). The inherited session prefs (playback_speed,
+        // follow, font_size) and the whole view state (both tab bands,
+        // active_tab_view, active_audio_view, active_markers_view, the live
+        // position) ride OUTSIDE undo — the same standing convention that
+        // keeps view state and trim out of history. Ctrl+Z restores the
+        // pre-commit stores and engine block exactly as before; it does not
+        // roll back the adopted prefs or landing view. Grow this payload only
+        // deliberately.
 
         // Full engine-settings commit. The whole snapshot was validated
         // before marker mutation, so commit can adopt the typed recipe
@@ -1187,62 +1221,87 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // deliberate reuse, not a leak.
         render_view.restore_source_view();
 
-        // Landing view (the ruled UX shape): render entries are target-view
-        // states, so commit lands in target view on the entry's dispatch
-        // tab, at the EXACT view the user was browsing. The tab switch runs
-        // first so the trim and view fields written below belong to the
-        // commit tab.
-        if (commit_tab != app.active_tab_view) {
-            active_views.switch_active_tab_view_to(commit_tab);
+        // Full inheritance (the ruled shape): the entry's .settings — just
+        // autosaved to the live browsed view — is the whole session now, the
+        // same SettingsFileTab-to-live application a source load performs.
+        // Both tab bands come from the file (view_state_from_settings_tab, the
+        // shared band conversion: viewport/zoom/playhead, read_only, and the
+        // trim pair; a parsed band carries no selection, matching the
+        // wholesale marker-selection reset above). This replaces the exit
+        // stash restore_source_view just applied — the stash was transient.
+        app.tab_a = view_state_from_settings_tab(settings->tab_a);
+        app.tab_b = view_state_from_settings_tab(settings->tab_b);
+
+        // active_tab_view from the file (== commit_tab, re-attested by guard
+        // 3). Set it directly — NOT switch_active_tab_view_to, which would
+        // swap the live fields WITH the tab slots and re-push the authoring
+        // position; both bands are already the file's, so the live fields are
+        // pulled straight from the active band with no double-apply.
+        app.active_tab_view = commit_tab;
+        {
+            const ViewState& band =
+                (commit_tab == 'B') ? app.tab_b : app.tab_a;
+            // Live viewport/zoom/playhead from the active band reproduce the
+            // browsed landing (the pre-commit autosave put the browsed values
+            // there). The render display axis IS the full target axis of the
+            // snapshot map, so this lands at the identical position with no
+            // translation; zoom levels share one vocabulary across views.
+            app.viewport_start_sample  = band.viewport_start_sample;
+            app.zoom_level             = band.zoom_level;
+            // Deliberately unclamped, the restore-site convention: the browsed
+            // playhead came from the entry's disk .settings and was moved by
+            // the user's browsing, so it may rest outside the adopted map's
+            // target extent; move_playhead_to owns the value at first use.
+            app.playhead_cursor_sample = band.playhead_cursor_sample;
+            // Live trim is the active band's trim, which is exactly the
+            // recipe trim that shaped this render: the autosave preserves the
+            // file's per-tab trim, and the commit tab's band trim IS
+            // recipe_trim (both read from the same parsed file), so the trim
+            // the guards and the fingerprint validated is the trim now live.
+            // A committed render lands with no trim bound focused: a parsed
+            // band carries the default false/0 trim-selection fields, so
+            // pulling them drops any render-view Tab focus (the bounds are
+            // cycle stops now), the same reset the marker selection took.
+            app.trim                = band.trim;
+            app.trim_begin_selected = band.trim_begin_selected;
+            app.trim_end_selected   = band.trim_end_selected;
+            app.last_selected_trim  = band.last_selected_trim;
+            app.last_sel_group      = band.last_sel_group;
         }
 
-        // Recipe trim from the snapshot's commit-tab band (absent keys
-        // clear that tab's trim — an untrimmed render commits an untrimmed
-        // state). The other tab's live trim survives the commit untouched,
-        // already walled at source load against this same audio.
-        app.trim.has_begin = recipe_trim.has_begin;
-        app.trim.begin_frame = recipe_trim.has_begin
-            ? recipe_trim.begin_frame
-            : 0;
-        app.trim.has_end = recipe_trim.has_end;
-        app.trim.end_frame = recipe_trim.has_end
-            ? recipe_trim.end_frame
-            : 0;
-        // A committed render lands with no trim bound selected, matching the
-        // wholesale marker-selection reset above. The recipe trim adopted
-        // here is browsable but unfocused; render-view Tab can leave a
-        // snapshot bound focused (the bounds are cycle stops now), and that
-        // focus must not carry into the committed target view.
-        app.trim_begin_selected = false;
-        app.trim_end_selected   = false;
-        app.last_selected_trim  = 0;
+        // Session prefs from the file, the same application path a source
+        // load uses (has_X ? X : default; a program-written entry carries
+        // every key). These ride OUTSIDE undo — see the undo-scope note above.
+        app.follow_mode    = settings->has_follow ? settings->follow : true;
+        app.active_markers_view = settings->has_active_markers_view
+            ? settings->active_markers_view : 'W';
+        app.playback_speed = settings->has_playback_speed
+            ? settings->playback_speed : 1.0f;
+        // Push the inherited speed to the engine so playback picks it up, the
+        // same call load_file makes after the parse.
+        playback.set_speed(app.playback_speed);
+        // font_size through the gesture's live-apply route: the renderer
+        // file-scope state plus the resize-path geometry rebuild
+        // (set_gui_font_size_pt + on_resize), exactly as load_file applies a
+        // parsed font_size. The full-window repaint at this handler's tail
+        // supplies the damage.
+        app.font_size = settings->has_font_size ? settings->font_size : 11.0;
+        set_gui_font_size_pt(app.font_size);
+        paint_handler.on_resize(app.width, app.height);
 
-        // Target view, unconditionally. The flag flip is the whole
-        // mechanism: restore_source_view above already rebound playback to
-        // the source samples (and, when the pre-commit session was already
-        // in 'T', its ensure_ready funnel ran against the adopted stores),
-        // and the tail's target_render.trigger() marks the buffer stale
-        // and dispatches the adopted preview, which rebinds playback on
-        // completion — superseding any buffer the funnel bound. The
-        // browsed W/P mode needs no write: render view browses through the
-        // global active_markers_view flag, which nothing on this path
-        // mutates, so it carries into target view as-is.
-        app.active_audio_view = 'T';
+        // active_audio_view from the file — 'T' by attestation (guard 3),
+        // which is also the ruled landing. The flag flip is the whole
+        // target-view entry mechanism: restore_source_view above rebound
+        // playback to the source samples (and, when the pre-commit session was
+        // already in 'T', its ensure_ready funnel ran against the adopted
+        // stores), and the tail's target_render.trigger() marks the buffer
+        // stale and dispatches the adopted preview, which rebinds playback on
+        // completion — superseding any buffer the funnel bound.
+        app.active_audio_view = settings->has_active_audio_view
+            ? settings->active_audio_view : 'S';
 
-        // Browsed view, adopted verbatim: the render display axis IS the
-        // full target axis of the snapshot map, so commit lands in target
-        // view at the identical position with no translation. Zoom levels
-        // share one vocabulary across views.
-        app.zoom_level = browsed_zoom;
-        app.viewport_start_sample = browsed_viewport;
-        // Deliberately unclamped, the restore-site convention: the browsed
-        // playhead is live session state (applied from the entry's disk
-        // .settings at display, moved by the user's browsing), which may rest
-        // outside the adopted map's target extent; the runtime clamp
-        // (move_playhead_to) owns the value at first use.
-        app.playhead_cursor_sample = browsed_playhead;
         if (!app.playhead_scanner_active) {
-            app.playhead_scanner_sample = browsed_playhead;
+            app.playhead_scanner_sample = app.playhead_cursor_sample;
         }
         clamp_viewport_start(app, audio);
         viewport.clear_hover_popup();

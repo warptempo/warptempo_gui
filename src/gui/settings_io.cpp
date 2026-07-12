@@ -148,6 +148,19 @@ bool create_if_missing(const std::filesystem::path& p,
     return true;
 }
 
+ViewState view_state_from_settings_tab(const SettingsFileTab& t) {
+    ViewState v;
+    v.viewport_start_sample  = t.viewport_start;
+    v.zoom_level             = t.zoom;
+    v.playhead_cursor_sample = t.playhead;
+    v.read_only              = t.read_only;
+    v.trim.has_begin   = t.trim.has_begin;
+    v.trim.begin_frame = t.trim.begin_frame;
+    v.trim.has_end     = t.trim.has_end;
+    v.trim.end_frame   = t.trim.end_frame;
+    return v;
+}
+
 bool update_settings_view_state(const std::filesystem::path& path,
                                 int64_t viewport_start,
                                 int     zoom_level,
@@ -173,20 +186,8 @@ bool update_settings_view_state(const std::filesystem::path& path,
         return false;
     }
 
-    auto to_view_state = [](const SettingsFileTab& t) {
-        ViewState v;
-        v.viewport_start_sample  = t.viewport_start;
-        v.zoom_level             = t.zoom;
-        v.playhead_cursor_sample = t.playhead;
-        v.read_only              = t.read_only;
-        v.trim.has_begin   = t.trim.has_begin;
-        v.trim.begin_frame = t.trim.begin_frame;
-        v.trim.has_end     = t.trim.has_end;
-        v.trim.end_frame   = t.trim.end_frame;
-        return v;
-    };
-    ViewState tab_a = to_view_state(sf->tab_a);
-    ViewState tab_b = to_view_state(sf->tab_b);
+    ViewState tab_a = view_state_from_settings_tab(sf->tab_a);
+    ViewState tab_b = view_state_from_settings_tab(sf->tab_b);
     // The browsed tab is authoritative: write the view state onto the tab
     // named by the passed active_tab_view (not the file's own), and persist
     // active_tab_view itself as that value.

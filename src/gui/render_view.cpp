@@ -129,12 +129,14 @@ std::filesystem::path GuiRenderView::settings_path(
 // band, and active_tab_view itself is rewritten — disk owns the entry's whole
 // browse state under the one-way bubble model, so the tab the user browsed
 // to must round-trip like the position and mode.
-// Failures are non-fatal here — logged once by the underlying helper and
-// otherwise discarded (a refused autosave costs the persisted view state,
-// never the session).
-void GuiRenderView::write_settings_for(
+// Failures are non-fatal for the navigation/exit callers — logged once by
+// the underlying helper and otherwise discarded (a refused autosave costs
+// the persisted view state, never the session). The status is returned so
+// the Ctrl+Alt+C commit, which reads the file right after writing it, can
+// abort on a refusal instead of reading stale bytes.
+bool GuiRenderView::write_settings_for(
         const AppState::RenderViewEntry& e) {
-    update_settings_view_state(
+    return update_settings_view_state(
         this->settings_path(e),
         app.viewport_start_sample,
         app.zoom_level,
@@ -191,16 +193,20 @@ void GuiRenderView::stash_render_view_selection_to_active_entry() {
 // leave-this-entry boundary — exit, navigation, and the close/revert
 // prompts. No-op when render view is off or the index is out of range
 // (no entry active).
-void GuiRenderView::autosave_active_entry() {
-    if (!app.render_view.enabled) return;
+bool GuiRenderView::autosave_active_entry() {
+    if (!app.render_view.enabled) return true;
     if (app.render_view.index < 0 ||
         app.render_view.index >=
             static_cast<int>(app.render_view.list.size())) {
-        return;
+        return true;
     }
-    this->write_settings_for(
+    // The selection stash cannot fail (in-memory); only the .settings
+    // read-modify-write can refuse. Run both regardless and report the write
+    // status so a commit that is about to read the file can abort on refusal.
+    const bool ok = this->write_settings_for(
         app.render_view.list[app.render_view.index]);
     this->stash_render_view_selection_to_active_entry();
+    return ok;
 }
 
 // Loads the render at app.render_view.list[index] into the view-owned
