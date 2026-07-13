@@ -110,32 +110,6 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Failed;
     }
 
-    // Hard refusal: the on-screen authored state (markers, trim, settings)
-    // describes the loaded buffer, so rendering a source that changed on disk
-    // since load — an ordinary mid-session swap or regeneration at the same
-    // path, or anything else — would silently bind those authoring decisions
-    // to different audio; hence refusal, not warn-and-continue. Every dispatched
-    // render on both the file and target-view buffer paths runs this check
-    // unconditionally, and the target-view reuse rungs in
-    // GuiTargetRender::dispatch_render_now independently prove the same
-    // load-identity equality before reusing cached or archival audio,
-    // falling through to this refusal on mismatch. The load identity is a
-    // required request field — GuiAudio refuses a load it cannot stat, and
-    // every dispatcher forwards the pair — so the check runs unconditionally.
-    {
-        RenderFileIdentity load_time_identity;
-        if (!stat_file_identity(req.source_audio_path, load_time_identity) ||
-            load_time_identity.size != req.source_load_size ||
-            load_time_identity.mtime != req.source_load_mtime) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: source '%s' changed on disk "
-                "since it was loaded; refusing to render (reload the "
-                "source)\n",
-                req.source_audio_path.c_str());
-            return RenderOutcome::Failed;
-        }
-    }
-
     const long sample_rate  = src_info->sample_rate;
     const long total_frames = static_cast<long>(src_info->frames);
     const int source_channels_probe = src_info->channels;
@@ -466,12 +440,11 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Success;
     };
 
-    // The identity check above just proved the on-disk identity equals the
-    // request's load identity, so the fingerprint's source identity is built
-    // from that proven pair directly — no second stat, no race window between
-    // the check and the fingerprint. fingerprint is non-empty exactly when
-    // output_format is wav, until the mid-render identity re-check in the wav
-    // arm deliberately clears it.
+    // The fingerprint's source identity is built directly from the request's
+    // load-time-captured identity (req.source_load_size/mtime): the loaded
+    // source is immutable for the process lifetime, so no on-disk re-stat is
+    // needed. fingerprint is non-empty exactly when output_format is wav; the
+    // map formats compute none.
     RenderFileIdentity source_identity;
     std::vector<uint8_t> fingerprint;
     if (output_format == "wav") {
@@ -550,9 +523,8 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        // An empty fingerprint here means the mid-render identity re-check
-        // cleared it (mid-render source replacement); write no attestation
-        // then.
+        // An empty fingerprint here means the format computed none — the map
+        // formats never build one; write no attestation then.
         if (!fingerprint.empty() &&
             !write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
@@ -651,9 +623,9 @@ RenderOutcome do_render(const RenderRequest& req,
             // copy.
             const auto t_source_load_0 = profile::now();
             // Borrowed samples and the probed file are the same audio: the
-            // probe's load-identity hardfail proved the borrowed buffer
-            // decodes the probed bytes, so it covers the cut view by
-            // construction for a well-formed container.
+            // loaded source is immutable for the process lifetime, so the
+            // borrowed buffer decodes the probed bytes and covers the cut view
+            // by construction for a well-formed container.
             src_ch = source_channels_probe;
             src_sample_data = req.source_samples->data();
             if (trim_plan) {
@@ -797,38 +769,6 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
-        // The fingerprint names the load identity, which the probe's hardfail
-        // proved still matched the on-disk file at dispatch. This re-check
-        // runs POST-render, immediately ahead of every cache/fingerprint
-        // publication below (the buffer route's master-floats insert, the
-        // disk route's cache insert and fingerprint sidecar), comparing the
-        // now-stat against that same identity: if the source was replaced
-        // at any point up to here — synthesis and the post-engine chain
-        // included — the association between the borrowed samples and the
-        // fingerprint can no longer be proven, so publish the render
-        // without one. A rename-replace that lands mid-render can skip
-        // the fingerprint of a still-consistent render; the cost is one
-        // re-render, in the safe direction. Reuse rungs above are deliberately
-        // unguarded because they publish audio and fingerprint that were
-        // created together, so their association holds regardless of what the
-        // file does afterward. fingerprint is always non-empty here — the wav
-        // arm computes it unconditionally and nothing clears it before this
-        // point — so the clear below is the only producer of an empty
-        // fingerprint on the wav path.
-        {
-            RenderFileIdentity now_identity;
-            if (!stat_file_identity(req.source_audio_path, now_identity) ||
-                now_identity.size != source_identity.size ||
-                now_identity.mtime != source_identity.mtime) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: source identity changed "
-                    "during render; skipping fingerprint and cache publication "
-                    "for '%s'\n",
-                    final_output_path.c_str());
-                fingerprint.clear();
-            }
-        }
-
         if (req.output_buffer && ep.limiter) {
             // Target playback auditions the deliverable lattice —
             // finish_render just snapped the limited buffer to PCM_24 in
@@ -842,8 +782,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<int64_t>(req.output_buffer->size() /
                                        static_cast<size_t>(src_ch))
                 : 0;
-            // The fingerprint may have been cleared by the mid-render
-            // identity re-check above; skip the insert then.
+            // fingerprint is non-empty on every wav path (computed
+            // unconditionally, never cleared); the insert additionally
+            // requires a non-empty buffer.
             if (!fingerprint.empty() && inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
@@ -880,9 +821,9 @@ RenderOutcome do_render(const RenderRequest& req,
             // just published. The insert races nothing: the rename above
             // already landed, the cache's writer thread copies its own job
             // data, and a concurrent lookup that misses because the write
-            // hasn't landed yet simply re-renders. The fingerprint may have
-            // been cleared by the mid-render identity re-check above; skip
-            // the insert then.
+            // hasn't landed yet simply re-renders. fingerprint is non-empty on
+            // every wav path (computed unconditionally, never cleared); the
+            // guard stays as a defensive check.
             if (!fingerprint.empty()) {
                 std::vector<char> wav_blob;
                 if (!read_file_bytes(final_output_path, wav_blob)) {

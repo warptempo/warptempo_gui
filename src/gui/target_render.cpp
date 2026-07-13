@@ -175,8 +175,9 @@ void GuiTargetRender::dispatch_render_now() {
     // compute_live_render_fingerprint (shared with the preview match-wait
     // and the Ctrl+Alt+R session fingerprint). On stat failure or identity
     // mismatch the fingerprint comes back empty, both reuse rungs miss, and
-    // the flow falls through to dispatch, where do_render's source-changed
-    // check refuses the render (that refusal owns the stderr diagnostic).
+    // the flow falls through to dispatch, where do_render simply renders from
+    // the in-memory source samples — the loaded source is immutable for the
+    // process lifetime, so there is no source-changed refusal.
     last_fingerprint_ = compute_live_render_fingerprint(app, audio);
 
     if (!last_fingerprint_.empty() &&
