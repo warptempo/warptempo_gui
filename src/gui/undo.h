@@ -58,6 +58,11 @@ struct Undo {
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
+    // True when do_undo would actually act (non-empty stack, render view off,
+    // top entry's target tab writable). do_undo's authoritative guard, and the
+    // predicate the defect-resolution [U]ndo offer consults so the option
+    // appears only when it will act.
+    bool can_undo() const;
     void do_undo();
     void do_redo();
 };

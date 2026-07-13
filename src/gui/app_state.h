@@ -413,6 +413,19 @@ enum class PendingValidation { None, Commit, Load };
 // kinds.
 enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 
+// Pre-remedy funnel stage for the defect-resolution series. A mutating remedy
+// ([U]ndo / [R]eset / [Delete]) may only be presented in an editable
+// source-authoring context. When the series would open over render view (the
+// source stores are hidden and [U]ndo a no-op there) or a read-only tab
+// ([U]ndo silently refuses, and [R]eset/[Delete] would mutate a locked store)
+// — both reachable only by a near-impossible commit-then-toggle race —
+// open_defect_series first presents a forced single-[Y]es prompt to leave that
+// context, and the response handler re-enters the funnel after acting. None
+// means the current DEFECT_RESOLUTION prompt is the real remedy. Every
+// open_defect_series pass sets this field; the wholesale DefectSeriesState
+// reset restores None.
+enum class DefectPreStep { None, LeaveRenderView, DisableReadOnly };
+
 // Defect-resolution series state (DialogTrigger::DEFECT_RESOLUTION). The
 // series holds only the CURRENT defect; every resolution re-enumerates the
 // stores from scratch (one undo can fix several defects at once), so a
@@ -435,10 +448,14 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // save/discard/cancel form: every state the series can show is a walkable
 // defect, hence load-legal, so a save writes a loadable file that
 // re-walks its series on the next load. Any wholesale defect_series reset
-// (load) clears it; the resume path clears it explicitly.
+// (load) clears it; the resume path clears it explicitly. `pre_step` names the
+// funnel stage the current prompt belongs to (see DefectPreStep): None for the
+// real remedy, LeaveRenderView / DisableReadOnly for the forced [Y]es
+// pre-modals that clear the way to an editable context.
 struct DefectSeriesState {
     MarkerDefect      defect;
     TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
+    DefectPreStep     pre_step           = DefectPreStep::None;
     bool              commit_context     = false;
     bool              suspended_for_close = false;
     PendingValidation pending_validation = PendingValidation::None;

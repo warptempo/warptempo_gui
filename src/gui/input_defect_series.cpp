@@ -120,6 +120,45 @@ void GuiInputHandler::run_commit_validation() {
     open_defect_series(origin == PendingValidation::Commit);
 }
 
+bool GuiInputHandler::present_defect_pre_step(const std::string& defect_summary) {
+    // A mutating remedy ([U]ndo / [R]eset / [Delete]) may only be presented in
+    // an editable source-authoring context. Render view first: its source
+    // stores are hidden, so every remedy would act on what the user cannot
+    // see. Then a read-only active tab: [U]ndo silently refuses and
+    // [R]eset/[Delete] would mutate a locked store. Either sets pre_step and
+    // presents a forced single-[Y]es pre-modal deferring the remedy; the
+    // response handler leaves the context and re-enters the funnel. Both
+    // contexts are reachable only by a commit landing its validation on the
+    // first tick after a render-view / read-only toggle.
+    DefectPreStep step = DefectPreStep::None;
+    std::string   question;
+    if (app.render_view.enabled) {
+        step     = DefectPreStep::LeaveRenderView;
+        question = ". Leave render view to resolve?";
+    } else if (active_view_state(app).read_only) {
+        step     = DefectPreStep::DisableReadOnly;
+        question = ". Disable read-only?";
+    }
+    app.defect_series.pre_step = step;
+    if (step == DefectPreStep::None) return false;
+
+    // A modal surface is opening: stop playback (same rule as the remedy opens
+    // below). The pre-modal carries no defect payload — the re-entry after
+    // [Y]es re-enumerates and re-stashes — so defect / trim_defect_kind reset
+    // to benign defaults here.
+    playback_lifecycle.stop_playback_if_playing();
+    app.prompt.active          = true;
+    app.prompt.text            = defect_summary + question;
+    app.prompt.response_keys   = {'y'};
+    app.prompt.response_labels = {"[Y]es"};
+    app.prompt.trigger         = DialogTrigger::DEFECT_RESOLUTION;
+    app.defect_series.defect           = MarkerDefect{};
+    app.defect_series.trim_defect_kind = TrimDefectKind::None;
+    viewport.clear_hover_popup();
+    viewport.invalidate_all();
+    return true;
+}
+
 bool GuiInputHandler::open_defect_series(bool commit_context) {
     const long sr    = static_cast<long>(audio.sample_rate());
     const long total = static_cast<long>(audio.total_frames());
@@ -136,14 +175,22 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             slice_to_phase_reset_markers(app.phaseresetmarkers.markers()), sr);
         if (!defects.empty()) {
             MarkerDefect d = std::move(defects.front());
-            // [U]ndo is offered exactly when the undo stack is non-empty
-            // and the defect can be rewound through history: marker
+            // Pre-remedy funnel: a mutating remedy is only shown in an
+            // editable source-authoring context. When render view is on or the
+            // active tab is read-only, present the forced [Y]es pre-modal
+            // (named by this defect's own message) and defer the remedy — the
+            // re-entry after [Y]es re-enumerates and re-stashes this defect.
+            if (present_defect_pre_step(d.message)) return true;
+            // [U]ndo is offered exactly when do_undo will actually act
+            // (undo.can_undo(): non-empty stack and the top entry's target tab
+            // writable; render view is already off, guaranteed by the funnel
+            // above) and the defect can be rewound through history: marker
             // defects (here) and the map-format conflict (a settings-class
             // entry, below); the delete-both-bounds trim defects cannot
             // (trim is not in history).
             std::vector<char>        keys;
             std::vector<std::string> labels;
-            if (!app.history.undo_stack.empty()) {
+            if (undo.can_undo()) {
                 keys.push_back('u');
                 labels.push_back("[U]ndo");
             }
@@ -224,6 +271,11 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 }
             }
             if (!trim_msg.empty()) {
+                // Pre-remedy funnel (same gate as the marker branch above):
+                // defer to a forced [Y]es pre-modal, named by this trim
+                // defect's message, when render view is on or the active tab
+                // is read-only.
+                if (present_defect_pre_step(trim_msg)) return true;
                 std::vector<char>        keys;
                 std::vector<std::string> labels;
                 if (kind == TrimDefectKind::MapFormatConflict) {
@@ -239,8 +291,10 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                     // wav, the trim survives) and [Delete] (both bounds
                     // cleared, the format survives). Map-format membership is
                     // the same != "wav" test the conflict itself is detected
-                    // by above.
-                    if (!app.history.undo_stack.empty()) {
+                    // by above. undo.can_undo() also gates on do_undo actually
+                    // acting (the top entry's target tab writable; render view
+                    // is already off past the funnel).
+                    if (undo.can_undo()) {
                         const UndoEntry& top = app.history.undo_stack.back();
                         if (top.op_mode == 'S' &&
                             top.settings.engine_settings.output_format ==
@@ -274,6 +328,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
     // Clean: close the series. Dismiss only our own prompt — another
     // trigger's prompt is never touched from here.
     app.defect_series.trim_defect_kind = TrimDefectKind::None;
+    app.defect_series.pre_step         = DefectPreStep::None;
     if (app.prompt.active &&
         app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
         app.prompt.active = false;
@@ -290,6 +345,30 @@ void GuiInputHandler::handle_defect_response(char k) {
     if (std::find(app.prompt.response_keys.begin(),
                   app.prompt.response_keys.end(), k) ==
         app.prompt.response_keys.end()) return;
+
+    // Pre-remedy funnel stage: the current prompt is a forced [Y]es to reach
+    // an editable source-authoring context before any mutating remedy. The
+    // membership test above already swallowed everything but the single
+    // offered 'y'. Leaving the context pushes NO history (both are view /
+    // read-only state), then re-enters the funnel — which re-enumerates and
+    // presents the next pre-step or the real remedy now that the context is
+    // editable.
+    if (app.defect_series.pre_step != DefectPreStep::None) {
+        const DefectPreStep step = app.defect_series.pre_step;
+        app.defect_series.pre_step = DefectPreStep::None;
+        if (step == DefectPreStep::LeaveRenderView) {
+            // The same teardown the R-key toggle-off uses: restore the source
+            // view and clear the render-view snapshot context.
+            render_view.exit_render_view_and_clear();
+        } else {  // DisableReadOnly
+            // Mirror of the bare-`o` unlock: pure view-state, not dirty, not
+            // undoable.
+            active_view_state(app).read_only = false;
+            viewport.invalidate_timestamp_area();
+        }
+        open_defect_series(app.defect_series.commit_context);
+        return;
+    }
 
     const TrimDefectKind trim_kind = app.defect_series.trim_defect_kind;
     if (trim_kind == TrimDefectKind::MapFormatConflict && k == 'u') {

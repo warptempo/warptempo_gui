@@ -258,27 +258,33 @@ void Undo::apply_post_restore_rules_phase_reset(
         });
 }
 
+// True when do_undo would actually act — do_undo's authoritative guard, and
+// the predicate the defect-resolution [U]ndo offer consults so the option
+// appears only when it will act. Three ways undo is a silent no-op:
+//   - empty undo stack;
+//   - render view enabled: render view is its own read-only modality, so
+//     undo/redo do not mutate the hidden source-view marker lists behind the
+//     user's back while the UI says render view is read-only;
+//   - the top entry's TARGET tab is currently read-only. When the ACTIVE tab
+//     is read-only Ctrl+Z is already dropped at the keyboard gate
+//     (read_only_key_blocked); this catches the remaining cross-tab path — the
+//     active tab writable but the top entry targeting the OTHER, locked tab.
+//     Read-only is a reversible per-tab toggle, so honored-ness is decided by
+//     the target tab's state now, not when the action was recorded.
+// Each bail leaves the entry on the stack and the view unchanged, so unlocking
+// the tab / leaving render view makes the history reachable again with nothing
+// lost.
+bool Undo::can_undo() const {
+    if (app.history.undo_stack.empty()) return false;
+    if (app.render_view.enabled) return false;
+    const char tt = app.history.undo_stack.back().tab;
+    const bool target_ro = (tt == 'B') ? app.tab_b.read_only
+                                        : app.tab_a.read_only;
+    return !target_ro;
+}
+
 void Undo::do_undo() {
-    if (app.history.undo_stack.empty()) return;
-    // Render view is read-only: undo and redo are silent no-ops so the
-    // underlying source-view marker lists are not mutated behind the
-    // user's back while the UI says render view is read-only.
-    if (app.render_view.enabled) return;
-    // Backstop peek for the cross-tab case: when the ACTIVE tab is read-only
-    // Ctrl+Z already dropped at the keyboard gate (read_only_key_blocked), so
-    // this bail catches the remaining path — the active tab is writable but
-    // the top history entry targets the OTHER tab, which is read-only. If the
-    // target tab is read-only, undo is a silent no-op. Read-only is a
-    // reversible per-tab toggle, so honored-ness is decided by the target
-    // tab's state now, not when the action was recorded. Peek-then-bail — the
-    // entry stays on the stack and the view is unchanged, so unlocking the tab
-    // makes the history reachable again with nothing lost.
-    {
-        const char tt = app.history.undo_stack.back().tab;
-        const bool target_ro = (tt == 'B') ? app.tab_b.read_only
-                                            : app.tab_a.read_only;
-        if (target_ro) return;
-    }
+    if (!can_undo()) return;   // authoritative guard; see can_undo's comment
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());

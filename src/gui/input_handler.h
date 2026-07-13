@@ -293,10 +293,24 @@ struct GuiInputHandler {
     // returns false.
     bool open_defect_series(bool commit_context);
 
-    // handle_defect_response: apply the chosen resolution ([U]ndo /
-    // [R]eset / [Delete] per defect kind), then re-open the series with the
-    // same commit-context flag — re-validate from scratch; next defect or
-    // done. Keys not offered by the current defect are swallowed.
+    // present_defect_pre_step: the pre-remedy funnel gate, called by
+    // open_defect_series with the first defect's own message once a defect is
+    // known but before the [U]ndo/[R]eset/[Delete] remedy is built. If render
+    // view is enabled or the active tab is read-only, sets
+    // defect_series.pre_step and presents a forced single-[Y]es prompt to leave
+    // that context ("<summary>. Leave render view to resolve?" /
+    // "<summary>. Disable read-only?"), returning true so the caller returns
+    // without building the remedy. Otherwise clears pre_step to None and
+    // returns false, so the caller builds the real remedy in the now-editable
+    // context.
+    bool present_defect_pre_step(const std::string& defect_summary);
+
+    // handle_defect_response: a pre-step [Y]es (pre_step != None) leaves render
+    // view / disables read-only with NO history and re-enters the funnel;
+    // otherwise apply the chosen resolution ([U]ndo / [R]eset / [Delete] per
+    // defect kind), then re-open the series with the same commit-context flag —
+    // re-validate from scratch; next defect or done. Keys not offered by the
+    // current defect are swallowed.
     void handle_defect_response(char k);
 
     // Pump half of the kill-and-park dispatch rule, reached through
@@ -561,11 +575,14 @@ private:
     void delete_selected_trim();
 
     // Ctrl+Left / Ctrl+Right on the trim group: nudge the focused bound by
-    // one pixel of time at the current zoom, at full double precision.
-    // direction: -1 earlier, +1 later. The sibling of nudge_selected_markers;
-    // differs where trim differs by design: no walls at all (no partner, no
-    // zero/EOF — the render boundary owns validity), only the 0.0
-    // format-representability floor.
+    // one whole-frame pixel-anchored column at the current zoom, exactly
+    // like nudge_selected_markers (painted column steps by one, the new
+    // column's time commits through snap_authored_frame). direction: -1
+    // earlier, +1 later. Differs from the marker nudge only in its walls:
+    // each bound clamps to its own absolute per-bound range — begin to
+    // [0, EOF-1], end to [0, EOF] (EOF is the exclusive upper bound) — and
+    // there is no partner wall, so the two bounds may cross or equal
+    // mid-gesture; the render boundary owns cross/equal validity at commit.
     void nudge_selected_trim(int direction);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
