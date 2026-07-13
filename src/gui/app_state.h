@@ -426,7 +426,7 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // consumed by GuiInputHandler::run_commit_validation at the top of
 // on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q
 // close prompt is up over it (the defect modal is dismissed for the
-// duration): it makes request_close_or_revert confirm
+// duration): it makes request_close confirm
 // the close even when the store is clean (a load-origin series has
 // app.dirty == false), and, on cancel, is the signal that the series must
 // resume — re-queued through pending_validation with the origin derived

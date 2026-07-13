@@ -68,7 +68,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
             ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.cancel_paste_confirmation();
-            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+            prompt.request_close();
             return;
         }
         char k = 0;
@@ -101,13 +101,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // (commit_context stays on defect_series and drives both the
             // resume origin and the same defect's reappearance on cancel),
             // dismiss this modal, and route to the shared funnel.
-            // request_close_or_revert refuses re-entry while a prompt is
+            // request_close refuses re-entry while a prompt is
             // active, so the defect prompt is cleared first.
             if (ctrl && !shift && !alt && key == GuiKeys::Q) {
                 app.defect_series.suspended_for_close = true;
                 app.prompt.active = false;
                 viewport.invalidate_all();
-                prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+                prompt.request_close();
                 return;
             }
             if (k != 0 && k != '\x1b') handle_defect_response(k);
@@ -131,7 +131,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // has been loaded or edited yet).
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+            prompt.request_close();
         }
         return;
     }
@@ -234,7 +234,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             cancel_active_drags();
-            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+            prompt.request_close();
             return;
         }
         // A playhead scrub is a navigation gesture, so it alone lets the
@@ -381,7 +381,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+        prompt.request_close();
         return;
     }
 

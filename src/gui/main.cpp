@@ -446,7 +446,7 @@ int main(int argc, char** argv) {
     // timestamp invalidation helper invalidate_timestamp_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
     // below — stop_playback_if_playing / toggle_playback / set_playback_speed
-    // on playback_lifecycle, save on save_ops, request_close_or_revert /
+    // on playback_lifecycle, save on save_ops, request_close /
     // activate_response on prompt, refresh_active_tab_view_from_app on
     // active_views — reached by their callsites as direct method calls.
 
@@ -626,7 +626,7 @@ int main(int argc, char** argv) {
         // after dismissal its lost-button motion merely finalizes the
         // selection, a benign finalize rather than a positional commit.
         input_handler.cancel_active_drags();
-        prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
+        prompt.request_close();
     });
 
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,

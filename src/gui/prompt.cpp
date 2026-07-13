@@ -166,8 +166,10 @@ void GuiPrompt::cancel_paste_confirmation() {
 // ordinary save/discard/cancel form: walkable defects are load-legal, so
 // the save writes a loadable file that re-walks its series on the next
 // load, and Esc still resumes the suspended series.
-void GuiPrompt::request_close_or_revert(DialogTrigger t) {
+void GuiPrompt::request_close() {
     if (app.prompt.active) return; // already gated; ignore re-entry
-    if (app.dirty || app.defect_series.suspended_for_close) open_unsaved(t);
-    else                                                    proceed(t);
+    if (app.dirty || app.defect_series.suspended_for_close)
+        open_unsaved(DialogTrigger::CLOSE_WINDOW);
+    else
+        proceed(DialogTrigger::CLOSE_WINDOW);
 }

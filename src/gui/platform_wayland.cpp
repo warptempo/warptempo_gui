@@ -1175,7 +1175,7 @@ void GuiPlatform::on_toplevel_close() {
     // immediately when the document is clean. Setting should_exit_ here
     // unconditionally was the bug: the run loop (while !should_exit_) exited in
     // the same frame the dialog opened, so a dirty document closed without the
-    // prompt. Ctrl+Q was unaffected because it reaches request_close_or_revert
+    // prompt. Ctrl+Q was unaffected because it reaches request_close
     // directly and only exits via proceed() when clean. Honor the close
     // directly only when no callback is wired.
     if (on_close_) on_close_();

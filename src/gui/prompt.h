@@ -9,7 +9,7 @@
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
 // unsaved-work dialog and the paste-confirm dialog. Two entry points are
-// exposed: request_close_or_revert (called by Ctrl+Q and the WM-close
+// exposed: request_close (called by Ctrl+Q and the WM-close
 // callback) and activate_response (called by the keyboard handler when a
 // prompt is active). The other two former lambdas (open_unsaved, proceed) are
 // private helpers; they have no callers outside this cluster.
@@ -38,7 +38,7 @@ struct GuiPrompt {
           save_ops(save_ops_),
           playback_lifecycle(playback_lifecycle_) {}
 
-    void request_close_or_revert(DialogTrigger t);
+    void request_close();
     void activate_response(char k);
 
     // Dismiss-only modal error notice in the bottom strip (ERROR_NOTICE).
