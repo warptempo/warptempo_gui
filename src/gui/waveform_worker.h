@@ -25,7 +25,7 @@ class GuiAudio;
 // The job-payload owns no audio bytes. It carries `const GuiAudio*` whose
 // lifetime invariant is: audio outlives all in-flight jobs because (a)
 // main.cpp's GuiAudio is constructed before the worker and destroyed after
-// gui.shutdown(), and (b) revert_to_blank's `audio = GuiAudio{};` move-
+// gui.shutdown(), and (b) load_file's `audio = std::move(next)` move-
 // assignment is preceded by GuiWaveformWorker::wait_until_idle so no
 // in-flight job is dereferencing the old audio when the move happens.
 struct WaveformJob {

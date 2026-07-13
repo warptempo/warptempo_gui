@@ -96,22 +96,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Source-replacement teardown, in the same order revert_to_blank uses:
-    // cancel first, then tear down render view while the outgoing source is
-    // still alive. A drop is a deliberate source replacement, so it cancels
-    // running or parked render work and tears down render view before the
-    // old source is replaced — the application state never refuses a drop.
-    // The async cancel is safe because render workers own the old source
-    // through RenderRequest::source_samples (a shared_ptr), the same
-    // guarantee the revert-to-blank path relies on; abandon_render_view
-    // rebinds playback to the still-live source before freeing the entry
-    // buffer and no-ops when render view is off. The teardown runs after
-    // the three preflights above so a refused drop (corrupt file, cache
-    // path, low rate) changes nothing. One accepted tail: if the dropped
-    // file then fails to DECODE (the next.load failure arm below), the
-    // cancel and teardown have already landed and the old source stays
-    // loaded without its render view — the drop was deliberate, and the
-    // decode failure prints its own refusal.
+    // Pre-install teardown, cancel-then-abandon order. This is the sole
+    // (startup) load, so there is nothing to cancel or tear down — no render
+    // can have been dispatched yet — and both hooks no-op; they stay as the
+    // ordered teardown the install path funnels through.
     if (cancel_archival_render) cancel_archival_render();
     if (abandon_render_view) abandon_render_view();
 
@@ -141,25 +129,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     const auto t1 = std::chrono::steady_clock::now();
 
     if (!ok) {
+        // The sole source load (at launch) failed to decode. GuiAudio::load
+        // already printed the reason; there is no prior project to fall back
+        // to and no in-session way to load another, so exit — the user reads
+        // the terminal and relaunches.
         app.loading       = false;
         app.queue_progress_text.clear();
-        // The replacement never installed, so the old source remains the
-        // live project. Re-create the playback client that the load attempt
-        // shut down above; otherwise the still-displayed old project becomes
-        // silently unauditionable until a later successful load. A target-
-        // view project rebinds or refreshes its target buffer through the
-        // ordinary ensure_ready path after the source client exists again.
-        if (audio.total_frames() > 0) {
-            if (!playback.init(audio.sample_rate(), audio.channels(),
-                               audio.samples_ptr(), audio.total_frames(), 0)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: playback disabled; space bar will no-op.\n");
-            }
-            playback.set_speed(app.playback_speed);
-            app.playhead_scanner_sample = app.playhead_cursor_sample;
-            target_render.ensure_ready();
-        }
-        gui.invalidate_region(0, 0, app.width, app.height);
+        gui.request_exit();
         return false;
     }
 
@@ -303,7 +279,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
             "warptempo_gui: source load aborted: invalid warp markers in "
             "'%s': %s\n",
             wm_path.string().c_str(), r.error().c_str());
-        revert_to_blank();
+        gui.request_exit();
         return false;
     } else {
         std::fprintf(stderr, "warptempo_gui: parsed %zu markers from %s\n",
@@ -323,7 +299,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
             "warptempo_gui: source load aborted: invalid phase reset "
             "markers in '%s': %s\n",
             tm_path.string().c_str(), r.error().c_str());
-        revert_to_blank();
+        gui.request_exit();
         return false;
     } else {
         std::fprintf(stderr, "warptempo_gui: parsed %zu phase_resets from %s\n",
@@ -381,7 +357,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 "warptempo_gui: source load aborted: invalid settings in "
                 "'%s': %s\n",
                 app.settings_path.c_str(), sf_r.error().c_str());
-            revert_to_blank();
+            gui.request_exit();
             return false;
         }
         const SettingsFile& sf = *sf_r;
@@ -400,7 +376,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 "warptempo_gui: source load aborted: settings in '%s' would "
                 "make the render output '%s' overwrite the source audio file\n",
                 app.settings_path.c_str(), collision->string().c_str());
-            revert_to_blank();
+            gui.request_exit();
             return false;
         }
         // The schema already enforced syntax, non-negativity, and the zoom
@@ -483,7 +459,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                         "warptempo_gui: source load aborted: invalid "
                         "settings in '%s': %s\n",
                         app.settings_path.c_str(), detail->c_str());
-                    revert_to_blank();
+                    gui.request_exit();
                     return false;
                 }
             }
@@ -495,7 +471,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
             "warptempo_gui: source load aborted: invalid settings in '%s': "
             "active_audio_view=T requires output_format=wav\n",
             app.settings_path.c_str());
-        revert_to_blank();
+        gui.request_exit();
         return false;
     }
 
@@ -555,7 +531,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (detail) {
             std::fprintf(stderr,
                 "warptempo_gui: source load aborted: %s\n", detail->c_str());
-            revert_to_blank();
+            gui.request_exit();
             return false;
         }
     }
@@ -663,142 +639,4 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
-}
-
-void GuiFileLoader::revert_to_blank() {
-    // The source is being discarded: an archival render or batch still
-    // synthesizing it gets the Esc-cancel semantics (worker cancel flag,
-    // batch finalize sentinel, parked-command disarm) before anything else
-    // is torn down. Cancellation is asynchronous and the revert does NOT
-    // wait it out: the worker owns the old source buffer through the
-    // RenderRequest's shared_ptr (safe across file loads mid-render, per
-    // the contract at RenderRequest::source_samples), the batch machine
-    // finalizes via queue_cancel_requested at on_batch_entry_complete,
-    // and the terminal auto-open requires a non-cancelled batch, so the
-    // dead session can never open render view over the blank state. The
-    // post-cancel completion path (on_batch_entry_complete →
-    // dispatch_next_batch_entry's cancelled branch → finalize_render_run →
-    // maybe_dispatch_pending) reads only its own batch_ fields and the
-    // flags cancelled here — pending_archival is disarmed and the pending
-    // preview is cleared by cancel_for_load below, so nothing re-dispatches
-    // against the discarded audio. Null only before main.cpp wires it,
-    // when no render can be running yet.
-    if (cancel_archival_render) cancel_archival_render();
-
-    // Tear down any live render-view state next, while the source audio
-    // still exists — the teardown rebinds playback to the source buffer
-    // before freeing the entry buffer, and it must run ahead of
-    // playback.shutdown and the audio replacement below. Null only before
-    // main.cpp wires it, when no render view can exist yet.
-    if (abandon_render_view) abandon_render_view();
-
-    // Stop the audio thread before the sample buffer it borrows goes
-    // away. Same invariant as load_file.
-    playback.stop();
-    playback.shutdown();
-    app.playhead_scanner_active = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
-    app.playhead_scanner_sample = 0;
-
-    // Drain the waveform worker before discarding the audio.
-    // Same invariant as load_file — the worker holds a pointer into
-    // `audio`, and `audio = GuiAudio{}` will replace its internals.
-    waveform_worker.wait_until_idle();
-
-    // Keep the source-sample-cache writer serialized with audio clears.
-    join_source_sample_cache_writer();
-
-    audio = GuiAudio{};
-    app.audio_generation++;
-    wf_cache.destroy_surface();
-    // Stem cache mirrors the waveform cache's lifecycle. Safe
-    // to destroy on the main thread; the rebuild path is fully
-    // synchronous so no in-flight work to drain.
-    stem_cache.destroy_surface();
-    // Flag cache mirrors the same lifecycle as the stem cache.
-    flag_cache.destroy_surface();
-
-    app.playhead_cursor_sample  = 0;
-    app.viewport_start_sample   = 0;
-    app.zoom_level              = 0;
-    app.follow_mode             = true;
-    app.playhead_scanner_active = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
-    app.playhead_scanner_sample = 0;
-    app.playback_speed          = 1.0f;
-    // Mirror for font_size: back to the default on revert, pushed to the
-    // renderer immediately (the invalidate_all below supplies the damage;
-    // the blank state has no caches to rebuild).
-    app.font_size               = 11.0;
-    set_gui_font_size_pt(app.font_size);
-
-    app.warpmarkers.clear();
-    app.phaseresetmarkers.clear();
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
-    // Same reset as load_file: the stores are gone, so the defect series
-    // and its pending flag go with them.
-    app.defect_series = DefectSeriesState{};
-    if (app.prompt.active &&
-        app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
-        app.prompt.active = false;
-    }
-    app.drag          = DragState{};
-    app.playhead_drag = PlayheadDragState{};
-    app.trim_drag     = TrimDragState{};
-    app.scroll_drag   = ScrollDragState{};
-    app.last_sel_group = LastSelGroup::Markers;
-    app.hover_popup   = HoverPopupState{};
-    app.history.reset();
-    app.dirty              = false;
-    app.warp_dirty         = false;
-    app.phase_reset_dirty    = false;
-    app.settings_dirty     = false;
-    app.first_save_pending = true;
-
-    app.warpmarkers_path.clear();
-    app.phaseresetmarkers_path.clear();
-    app.settings_path.clear();
-    app.source_audio_path.clear();
-    gui.set_title("warptempo_gui");
-    app.pending_drop_path.clear();
-    app.engine_settings = EngineSettings{};
-
-    app.tab_a = ViewState{};
-    app.tab_b = ViewState{};
-
-    // Project trim lives on AppState; the fresh-ViewState assignment above
-    // no longer clears it. Reset explicitly so no trim carries into the
-    // next load.
-    app.trim.has_begin      = false;
-    app.trim.has_end        = false;
-    app.trim.begin_frame  = 0;
-    app.trim.end_frame    = 0;
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
-
-    // View-selector triplet defaults, in bottom-bar order [S/T] [W/P] [A/B].
-    app.active_audio_view   = 'S';
-    app.active_markers_view = 'W';
-    app.active_tab_view     = 'A';
-
-    // Target render state is tied to the live source audio; cancel any
-    // in-flight target render and clear it on revert so a subsequent
-    // file load doesn't inherit stale frames.
-    target_render.cancel_for_load();
-
-    viewport.invalidate_all();
-}
-
-// Process `path` and any drops that arrived while the load was running.
-// Pending slot is last-wins, not a queue; rapid drags collapse.
-void GuiFileLoader::load_then_drain(std::string path) {
-    while (true) {
-        load_file(path);
-        if (app.pending_drop_path.empty()) break;
-        path = std::move(app.pending_drop_path);
-        app.pending_drop_path.clear();
-    }
 }

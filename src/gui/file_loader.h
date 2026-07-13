@@ -17,12 +17,9 @@ struct GuiPrompt;
 
 // File-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
-// playback-init pipeline (load_file) and its companion revert-to-blank
-// operation. Both manipulate the same per-file AppState fields and the
-// same audio device. The drop-accept predicate and the on_file_drop
-// handler are supplied to the platform layer as std::function objects
-// produced by methods on this struct, so the platform wiring in main.cpp
-// is a single line each.
+// playback-init pipeline (load_file), the sole loader, invoked once from
+// the startup tick: the GUI has no in-session file open or drag-and-drop,
+// so a failed load exits rather than reverting to a blank window.
 struct GuiFileLoader {
     AppState&          app;
     GuiAudio&          audio;
@@ -76,35 +73,25 @@ struct GuiFileLoader {
     // construction (GuiRenderView is built after this struct, so the
     // reference cannot be a constructor parameter — the same
     // post-construction back-wire shape as `prompt` above). Bound to
-    // GuiRenderView::abandon_render_view: revert_to_blank and load_file
-    // both call it early, while the source audio is still alive, so
-    // playback is rebound to the source and the entry buffer freed before
-    // the source itself is torn down or replaced. A file drop always wins
-    // over an open render view (drops are deliberate; the application
-    // state never refuses one), so load_file's call is a live path, not a
-    // backstop.
+    // GuiRenderView::abandon_render_view: load_file calls it early, while
+    // the source audio is still alive, so playback is rebound to the source
+    // and the entry buffer freed before the source is installed. On the sole
+    // startup load there is no render view up, so the call no-ops.
     std::function<void()> abandon_render_view;
 
     // Archival-session cancel hook, wired in main.cpp after
     // GuiInputHandler's construction (the same post-construction back-wire
     // shape as `prompt` and `abandon_render_view`). Bound to
     // GuiInputHandler::cancel_archival_session, the body behind Esc's
-    // render-cancel semantics. revert_to_blank and load_file both call it
-    // first: each discards or replaces the source, and an archival session
-    // still rendering that source must receive the Esc-cancel semantics —
-    // otherwise the session keeps running against a discarded project, and
-    // blank state would stay trapped behind app.queue_running (the
-    // blank-state key path handles only Ctrl+Q, so Esc cannot reach the
-    // cancel there).
+    // render-cancel semantics. load_file calls it early; on the sole startup
+    // load no archival session can exist yet, so the call no-ops.
     std::function<void()> cancel_archival_render;
 
     bool load_file(const std::string& path);
-    void revert_to_blank();
-    void load_then_drain(std::string path);
     void join_source_sample_cache_writer();
 
     // The writer reads GuiAudio's sample buffer through a raw pointer.
-    // Callers join before replacing the buffer in load_file/revert_to_blank,
-    // and the destructor joins before GuiAudio is destroyed.
+    // Callers join before replacing the buffer in load_file, and the
+    // destructor joins before GuiAudio is destroyed.
     std::thread source_sample_cache_writer_;
 };

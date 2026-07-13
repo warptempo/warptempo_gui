@@ -104,8 +104,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_esc = (key == GuiKeys::Escape);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    const bool is_ctrl_w =
-        (ctrl && !shift && !alt && key == GuiKeys::W);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
     // drop at this gate. The old design admitted them because an undo entry
     // may target the OTHER (writable) tab, deferring the real decision to
@@ -122,7 +120,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_speed_select ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-             is_esc || is_ctrl_q || is_ctrl_w);
+             is_esc || is_ctrl_q);
 }
 
 // Modal bottom-strip editor predicate. Modal surfaces are bottom-strip
@@ -143,7 +141,7 @@ bool GuiInputHandler::modal_bottom_strip_editor_active() const {
 // read_only_key_blocked's allowlist shape. True when key+mods is not on
 // the allowlist and should be dropped. While a bottom-strip editor is open
 // the user can reach the editor itself, Esc (exit), Ctrl+S (save; the
-// editor stays open), and Ctrl+Q / Ctrl+W (close / revert routing) —
+// editor stays open), and Ctrl+Q (close routing) —
 // nothing else: Space-as-playback, zoom, mode toggles, tab switches,
 // undo/redo, and the marker / trim chords all drop here. "The editor
 // itself" mirrors text_editor::handle_key's consumption exactly — Escape
@@ -183,18 +181,16 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    const bool is_ctrl_w =
-        (ctrl && !shift && !alt && key == GuiKeys::W);
     return !(is_esc || is_commit || is_editor_ctrl_chord ||
              is_editor_motion_or_edit || is_printable ||
              is_settings_autocomplete ||
-             is_save || is_ctrl_q || is_ctrl_w);
+             is_save || is_ctrl_q);
 }
 
 // The Esc-cancel semantics as a callable body, shared by the Esc key
-// handler below and GuiFileLoader's cancel_archival_render hook
-// (revert_to_blank discards the source, so a session rendering it must
-// receive the same cancellation Esc would deliver). Requesting
+// handler below and GuiFileLoader's cancel_archival_render hook (load_file
+// calls it before installing a source; on the sole startup load no archival
+// session exists yet, so it no-ops). Requesting
 // cancellation has two effects:
 //   1. async_renderer.request_cancel() sets the worker's cancel flag,
 //      which do_render passes through to the engine.

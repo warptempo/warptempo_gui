@@ -88,7 +88,7 @@ struct GuiRenderView {
     // dying source. Rebinds playback to the still-alive source buffer
     // before freeing the entry buffer, then clears every render-view
     // field. Deliberately does NOT touch the tab slots, the live view
-    // fields, or active_audio_view — revert_to_blank resets those itself.
+    // fields, or active_audio_view — load_file resets those itself.
     void abandon_render_view();
 
     // Re-enumerate the renders/ folder. Entries carry no per-entry state to

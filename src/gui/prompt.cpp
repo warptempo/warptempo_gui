@@ -4,16 +4,11 @@
 
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
-    // A render entry's sidecars are frozen at dispatch, so a close or revert
-    // under an open render view has nothing to persist — renders/ survives
-    // both regardless. No render-view teardown on the CLOSE_WINDOW arm — the
-    // process is exiting; the revert arm's teardown lives in revert_to_blank
-    // itself (the abandon_render_view hook), which every revert path shares.
+    // A render entry's sidecars are frozen at dispatch, so a close under an
+    // open render view has nothing to persist — renders/ survives regardless.
+    // No render-view teardown on the CLOSE_WINDOW arm: the process is exiting.
     case DialogTrigger::CLOSE_WINDOW:
         gui.request_exit();
-        break;
-    case DialogTrigger::REVERT_TO_BLANK:
-        file_loader.revert_to_blank();
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
@@ -106,8 +101,7 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
-    if (trigger == DialogTrigger::CLOSE_WINDOW ||
-        trigger == DialogTrigger::REVERT_TO_BLANK) {
+    if (trigger == DialogTrigger::CLOSE_WINDOW) {
         if (k == 's' || k == 'r') {
             const bool ok = save_ops.save();
             if (!ok) {
@@ -162,10 +156,10 @@ void GuiPrompt::cancel_paste_confirmation() {
     viewport.invalidate_all();
 }
 
-// Route a close / revert gesture through the prompt when history is
-// dirty or a defect series is suspended for this close; otherwise
-// proceed immediately. Centralizes the decision so Ctrl+Q, Ctrl+W, and
-// the WM-close callback share identical behavior. A suspended series is
+// Route a close gesture through the prompt when history is dirty or a
+// defect series is suspended for this close; otherwise proceed
+// immediately. Centralizes the decision so Ctrl+Q and the WM-close
+// callback share identical behavior. A suspended series is
 // mid-resolution of a walkable defect — its store can be clean (a
 // load-origin series has app.dirty == false), yet the close must still
 // be confirmed, so it gates on suspended_for_close. The prompt is the

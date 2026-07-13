@@ -178,8 +178,14 @@ bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
         sec < std::numeric_limits<int64_t>::min() / kNsecPerSec) {
         return false;
     }
+    const int64_t nsec = static_cast<int64_t>(st.st_mtim.tv_nsec);
+    const int64_t base = sec * kNsecPerSec;
+    if (nsec < 0 || nsec >= kNsecPerSec ||
+        base > std::numeric_limits<int64_t>::max() - nsec) {
+        return false;
+    }
     out.size = static_cast<uint64_t>(st.st_size);
-    out.mtime = sec * kNsecPerSec + static_cast<int64_t>(st.st_mtim.tv_nsec);
+    out.mtime = base + nsec;
     return true;
 }
 

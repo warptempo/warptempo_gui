@@ -406,15 +406,15 @@ GuiRect timestamp_invalidate_rect(const AppState& a) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
-    const char* cli_path = nullptr;
-    if (argc == 1) {
-        // Empty window; wait for a drag-and-drop.
-    } else if (argc == 2) {
-        cli_path = argv[1];
-    } else {
-        std::fprintf(stderr, "usage: warptempo_gui [<audio_file>]\n");
+    // A source is loaded only from the command line: the GUI has no
+    // in-session file open or drag-and-drop (open the next source by
+    // relaunching). The audio path is therefore mandatory — there is no
+    // blank-window state to load into.
+    if (argc != 2) {
+        std::fprintf(stderr, "usage: warptempo_gui <audio_file>\n");
         return 1;
     }
+    const char* cli_path = argv[1];
 
     // Wayland clipboard source writes go to consumer-owned pipes.
     // Ignoring SIGPIPE turns a vanishing consumer into EPIPE for the send loop.
@@ -514,17 +514,18 @@ int main(int argc, char** argv) {
     // Back-wire the loader's render-view teardown (GuiRenderView is
     // constructed after GuiFileLoader, so the hook can only be bound
     // here — same post-construction shape as file_loader.prompt below).
-    // revert_to_blank calls it first, while the source is still alive.
+    // load_file calls it before installing a source (a no-op on the sole
+    // startup load, where no render view is up).
     file_loader.abandon_render_view =
         [&render_view]() { render_view.abandon_render_view(); };
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
-    GuiPrompt prompt(app, gui, viewport, file_loader,
+    GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle);
-    // Back-wire the loader's error-notice surface (GuiPrompt holds a
-    // GuiFileLoader&, so the pointer can only be set after both exist).
+    // Back-wire the loader's prompt pointer: prompt is constructed after
+    // file_loader, so the pointer is set once both exist.
     file_loader.prompt = &prompt;
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
                                       target_render);
@@ -543,15 +544,10 @@ int main(int argc, char** argv) {
                                   settings_editor, target_render,
                                   paint_handler);
     // Back-wire the loader's archival-session cancel (same
-    // post-construction shape as file_loader.prompt above). Both
-    // revert_to_blank and load_file call it
-    // before any teardown: each discards or replaces the source, so an
-    // archival session rendering it must receive the Esc-cancel semantics
-    // — otherwise the session keeps running against the discarded project
-    // (and blank state would stay trapped behind queue_running: the
-    // blank-state key path handles only Ctrl+Q, so Esc cannot reach the
-    // cancel there). cancel_archival_session is the same body Esc's
-    // handle_escape_cancels runs.
+    // post-construction shape as file_loader.prompt above). load_file calls
+    // it before installing a source; on the sole startup load no archival
+    // session can exist yet, so it no-ops. cancel_archival_session is the
+    // same body Esc's handle_escape_cancels runs.
     file_loader.cancel_archival_render =
         [&input_handler]() { input_handler.cancel_archival_session(); };
 
@@ -583,7 +579,7 @@ int main(int argc, char** argv) {
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
-    std::string pending_initial_load = cli_path ? std::string(cli_path) : std::string();
+    std::string pending_initial_load = cli_path;
     bool        initial_load_done    = false;
 
     // -- Redraw -------------------------------------------------------------
@@ -678,33 +674,10 @@ int main(int argc, char** argv) {
 
     // -- File loading --------------------------------------------------------
     //
-    // load_file, revert_to_blank, and load_then_drain are methods on
-    // GuiFileLoader (file_loader.{h,cpp}). The drop-accept predicate and
-    // the on_file_drop handler stay here as one-line lambdas that capture
-    // file_loader; the predicate has no reference to the loader.
-
-    // Position-only predicate: it drives the compositor's cursor feedback
-    // at DnD motion. A position miss is ruled silent (the compositor
-    // cancels the unaccepted drag), so this never surfaces a refusal line.
-    // Application state never refuses a drop.
-    gui.set_drop_accept_predicate([&](int x, int y) -> bool {
-        const GuiRect area = waveform_area(app);
-        return x >= area.x && x < area.x + area.w &&
-               y >= area.y && y < area.y + area.h;
-    });
-
-    gui.set_on_file_drop([&](const std::string& path) {
-        // Drops always win: dragging a file onto the window is a deliberate
-        // action, so the load path cancels running or parked render work
-        // and tears down render view itself (GuiFileLoader::load_file) —
-        // this handler needs no state checks. Only the in-flight-load
-        // deferral remains.
-        if (app.loading) {
-            app.pending_drop_path = path;
-            return;
-        }
-        file_loader.load_then_drain(path);
-    });
+    // load_file (file_loader.{h,cpp}) is the sole loader, invoked once from
+    // the startup tick below. The GUI has no in-session file open or
+    // drag-and-drop: the source is fixed at launch, so there is nothing to
+    // wire here.
 
     // Tick: runs once per event-loop iteration. During playback, snapshots
     // the audio thread's cursor and mirrors it into the main-thread playhead,
@@ -715,20 +688,12 @@ int main(int argc, char** argv) {
         // paints first (the compositor's initial configure / first frame only
         // land once run() is pumping). Gated on has_initial_configure() so the
         // load — and its loading notice — run against a mapped, painted surface.
-        // Mirrors on_file_drop, which already loads from inside the loop. Drops
-        // queued during the startup load run immediately after, as the old
-        // pre-run block did.
         if (!initial_load_done && !pending_initial_load.empty() &&
             gui.has_initial_configure()) {
             initial_load_done = true;
             const std::string p = std::move(pending_initial_load);
             pending_initial_load.clear();
             file_loader.load_file(p);
-            while (!app.pending_drop_path.empty()) {
-                std::string next = std::move(app.pending_drop_path);
-                app.pending_drop_path.clear();
-                file_loader.load_file(next);
-            }
             return;  // loaded state paints on the next tick
         }
 

@@ -39,6 +39,15 @@ bool GuiSaveOps::save() {
         active_views.refresh_active_tab_view_from_app();
     }
 
+    // The three sidecars publish sequentially, each individually atomic
+    // (tmp + fsync + rename). This is deliberately NOT a cross-file
+    // transaction: if a later write fails (disk full, an I/O error) after an
+    // earlier one has renamed, disk holds a mixed-generation set until the
+    // next save. Accepted — the non-adversarial single user reaches this only
+    // on a real disk/IO fault, which is non-silent (the failing write prints
+    // its path and `dirty` survives below, so the unsaved-work prompt offers
+    // retry). A true fix would need one combined project file, a frozen-parser
+    // change out of scope for this tool.
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         std::fprintf(stderr,

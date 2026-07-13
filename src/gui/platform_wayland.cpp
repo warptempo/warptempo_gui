@@ -116,33 +116,6 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
     return true;
 }
 
-// URL-decode in-place: %XX becomes one byte. Stops at the first
-// malformed escape (preserved literally).
-std::string url_decode(const std::string& s) {
-    std::string out;
-    out.reserve(s.size());
-    for (size_t i = 0; i < s.size(); ) {
-        if (s[i] == '%' && i + 2 < s.size()) {
-            auto hex = [](char c) -> int {
-                if (c >= '0' && c <= '9') return c - '0';
-                if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-                if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-                return -1;
-            };
-            const int hi = hex(s[i + 1]);
-            const int lo = hex(s[i + 2]);
-            if (hi >= 0 && lo >= 0) {
-                out.push_back(static_cast<char>((hi << 4) | lo));
-                i += 3;
-                continue;
-            }
-        }
-        out.push_back(s[i]);
-        ++i;
-    }
-    return out;
-}
-
 // Open an anonymous, sealable, in-memory file for the wl_shm pool. memfd
 // is preferred (Linux ≥ 3.17). Falls back to shm_open + immediate unlink
 // for portability hygiene.
@@ -342,66 +315,6 @@ struct WaylandListeners {
     }
     static void pointer_axis_relative_direction(void*, struct wl_pointer*,
                                                 uint32_t, uint32_t) {}
-
-    // wl_data_device
-    static void data_device_data_offer(void* data, struct wl_data_device*,
-                                       struct wl_data_offer* offer) {
-        static_cast<GuiPlatform*>(data)->on_data_offer(offer);
-    }
-    static void data_device_enter(void* data, struct wl_data_device*,
-                                  uint32_t serial, struct wl_surface* surface,
-                                  wl_fixed_t sx, wl_fixed_t sy,
-                                  struct wl_data_offer* offer) {
-        static_cast<GuiPlatform*>(data)->on_dnd_enter(serial, surface, sx, sy, offer);
-    }
-    static void data_device_leave(void* data, struct wl_data_device*) {
-        static_cast<GuiPlatform*>(data)->on_dnd_leave();
-    }
-    static void data_device_motion(void* data, struct wl_data_device*,
-                                   uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
-        static_cast<GuiPlatform*>(data)->on_dnd_motion(time, sx, sy);
-    }
-    static void data_device_drop(void* data, struct wl_data_device*) {
-        static_cast<GuiPlatform*>(data)->on_dnd_drop();
-    }
-    // wl_data_device.selection (clipboard ownership change). The offer arg
-    // is the new CLIPBOARD selection offer, or NULL when the selection was
-    // cleared.
-    static void data_device_selection(void* data, struct wl_data_device*,
-                                      struct wl_data_offer* offer) {
-        static_cast<GuiPlatform*>(data)->on_selection(offer);
-    }
-
-    // wl_data_offer
-    static void data_offer_offer(void* data, struct wl_data_offer* offer,
-                                 const char* mime_type) {
-        static_cast<GuiPlatform*>(data)->on_data_offer_mime_type(offer, mime_type);
-    }
-    // wl_data_offer.source_actions (v3+). Required listener slot; we
-    // don't use the actions API beyond accepting at v3.
-    static void data_offer_source_actions(void*, struct wl_data_offer*,
-                                          uint32_t) {}
-    // wl_data_offer.action (v3+). Required listener slot.
-    static void data_offer_action(void*, struct wl_data_offer*,
-                                  uint32_t) {}
-
-    // wl_data_source (the clipboard payload we own). The manager is bound at
-    // v3, so every v3 slot is filled; only send (a consumer is reading our
-    // payload) and cancelled (another client took the selection) do anything.
-    static void data_source_target(void*, struct wl_data_source*,
-                                   const char*) {}
-    static void data_source_send(void* data, struct wl_data_source* src,
-                                 const char* mime, int32_t fd) {
-        static_cast<GuiPlatform*>(data)->on_data_source_send(src, mime, fd);
-    }
-    static void data_source_cancelled(void* data, struct wl_data_source* src) {
-        static_cast<GuiPlatform*>(data)->on_data_source_cancelled(src);
-    }
-    static void data_source_dnd_drop_performed(void*,
-                                               struct wl_data_source*) {}
-    static void data_source_dnd_finished(void*, struct wl_data_source*) {}
-    static void data_source_action(void*, struct wl_data_source*,
-                                   uint32_t) {}
 };
 
 namespace {
@@ -486,30 +399,6 @@ const struct wl_pointer_listener s_pointer_listener = {
     WaylandListeners::pointer_axis_discrete,
     WaylandListeners::pointer_axis_value120,
     WaylandListeners::pointer_axis_relative_direction,
-};
-
-const struct wl_data_device_listener s_data_device_listener = {
-    WaylandListeners::data_device_data_offer,
-    WaylandListeners::data_device_enter,
-    WaylandListeners::data_device_leave,
-    WaylandListeners::data_device_motion,
-    WaylandListeners::data_device_drop,
-    WaylandListeners::data_device_selection,
-};
-
-const struct wl_data_offer_listener s_data_offer_listener = {
-    WaylandListeners::data_offer_offer,
-    WaylandListeners::data_offer_source_actions,
-    WaylandListeners::data_offer_action,
-};
-
-const struct wl_data_source_listener s_data_source_listener = {
-    WaylandListeners::data_source_target,
-    WaylandListeners::data_source_send,
-    WaylandListeners::data_source_cancelled,
-    WaylandListeners::data_source_dnd_drop_performed,
-    WaylandListeners::data_source_dnd_finished,
-    WaylandListeners::data_source_action,
 };
 
 #pragma GCC diagnostic pop
@@ -621,14 +510,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     }
     if (!arm_playback_timer()) return false;
 
-    if (wl_data_device_manager_ && wl_seat_) {
-        ensure_data_device();
-    } else {
-        std::fprintf(stderr,
-            "warptempo_gui: compositor did not advertise "
-            "wl_data_device_manager; file drop disabled\n");
-    }
-
     // Initial commit so the compositor delivers the first xdg_surface
     // configure. The configure handler then acks, sets has_initial_configure_,
     // and arms the frame-callback chain.
@@ -658,28 +539,6 @@ void GuiPlatform::destroy_wayland_state() {
     if (timerfd_ >= 0) {
         close(timerfd_);
         timerfd_ = -1;
-    }
-
-    destroy_current_offer();
-    destroy_pending_offer();
-    if (clipboard_source_) {
-        wl_data_source_destroy(clipboard_source_);
-        clipboard_source_ = nullptr;
-    }
-    if (clipboard_offer_) {
-        // Clipboard, active DnD, and pending offers occupy distinct slots, so
-        // none of the two destroys above can have freed this object.
-        wl_data_offer_destroy(clipboard_offer_);
-        clipboard_offer_ = nullptr;
-    }
-    clipboard_offer_text_mime_.clear();
-    if (wl_data_device_) {
-        wl_data_device_release(wl_data_device_);
-        wl_data_device_ = nullptr;
-    }
-    if (wl_data_device_manager_) {
-        wl_data_device_manager_destroy(wl_data_device_manager_);
-        wl_data_device_manager_ = nullptr;
     }
 
     if (wl_keyboard_) {
@@ -1217,21 +1076,6 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             wl_registry_bind(r, name, &wl_seat_interface, v));
         seat_global_name_ = name;
         wl_seat_add_listener(wl_seat_, &s_seat_listener, this);
-        ensure_data_device();
-    } else if (std::strcmp(interface, wl_data_device_manager_interface.name) == 0) {
-        // Require v3 minimum. v3 introduced the actions API and
-        // wl_data_offer.finish, both of which this implementation
-        // uses. If the compositor only advertises v1 or v2, leave
-        // the manager unbound — file drop will be disabled, same
-        // fallback as if the manager weren't advertised at all.
-        if (version >= 3) {
-            wl_data_device_manager_ = static_cast<struct wl_data_device_manager*>(
-                wl_registry_bind(r, name, &wl_data_device_manager_interface, 3));
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: wl_data_device_manager v%u advertised; "
-                "v3+ required for file drop; feature disabled\n", version);
-        }
     }
 }
 
@@ -1257,27 +1101,9 @@ void GuiPlatform::on_registry_global_remove(uint32_t name) {
     // and no modifier/scroll state crosses into a replacement seat.
     on_seat_capabilities(0);
 
-    destroy_current_offer();
-    destroy_pending_offer();
-    if (clipboard_offer_) {
-        wl_data_offer_destroy(clipboard_offer_);
-        clipboard_offer_ = nullptr;
-    }
-    clipboard_offer_text_mime_.clear();
-    if (clipboard_source_) {
-        wl_data_source_destroy(clipboard_source_);
-        clipboard_source_ = nullptr;
-    }
-    clipboard_we_own_ = false;
-    if (wl_data_device_) {
-        wl_data_device_release(wl_data_device_);
-        wl_data_device_ = nullptr;
-    }
-
     wl_seat_destroy(wl_seat_);
     wl_seat_ = nullptr;
     seat_global_name_ = 0;
-    last_input_serial_ = 0;
 }
 
 void GuiPlatform::on_output_mode(uint32_t flags, int32_t /*width*/,
@@ -1479,12 +1305,8 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     repeat_key_ = 0;
 }
 
-void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
+void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
-    // Cache the serial for wl_data_device.set_selection: copy is always
-    // triggered by a Ctrl+C key event, so this is current at set time.
-    last_input_serial_ = serial;
-
     if (!xkb_state_) return;
 
     // Wayland delivers raw evdev keycodes (offset by 8 for X11
@@ -1831,403 +1653,6 @@ void GuiPlatform::on_pointer_frame() {
     frame_have_v120_  = false;
     frame_have_axis_  = false;
 }
-
-// ---------------------------------------------------------------------------
-// Data device (drag-and-drop) handlers
-// ---------------------------------------------------------------------------
-
-void GuiPlatform::on_data_offer(struct wl_data_offer* offer) {
-    // data_offer announces an unclassified object; the following enter or
-    // selection event assigns it to DnD or clipboard. Supersede only an older
-    // unclaimed announcement — never the active drag or clipboard offer.
-    destroy_pending_offer();
-    pending_data_offer_ = offer;
-    pending_offer_has_uri_list_ = false;
-    pending_offer_text_mime_.clear();
-    wl_data_offer_add_listener(offer, &s_data_offer_listener, this);
-}
-
-void GuiPlatform::on_data_offer_mime_type(struct wl_data_offer* offer,
-                                          const char* mime) {
-    if (!mime) return;
-    if (offer == pending_data_offer_) {
-        if (std::strcmp(mime, "text/uri-list") == 0) {
-            pending_offer_has_uri_list_ = true;
-        }
-        if (std::strcmp(mime, "text/plain;charset=utf-8") == 0) {
-            pending_offer_text_mime_ = mime;
-        } else if (std::strcmp(mime, "text/plain") == 0 &&
-                   pending_offer_text_mime_.empty()) {
-            pending_offer_text_mime_ = mime;
-        }
-        return;
-    }
-    // The protocol normally sends all MIME events before assigning the offer,
-    // but keep the claimed slots truthful if a compositor delivers one late.
-    if (offer == current_data_offer_ &&
-        std::strcmp(mime, "text/uri-list") == 0) {
-        current_offer_has_uri_list_ = true;
-    }
-    if (offer == clipboard_offer_) {
-        if (std::strcmp(mime, "text/plain;charset=utf-8") == 0) {
-            clipboard_offer_text_mime_ = mime;
-        } else if (std::strcmp(mime, "text/plain") == 0 &&
-                   clipboard_offer_text_mime_.empty()) {
-            clipboard_offer_text_mime_ = mime;
-        }
-    }
-}
-
-void GuiPlatform::on_dnd_enter(uint32_t serial, struct wl_surface* surface,
-                               int32_t surface_x, int32_t surface_y,
-                               struct wl_data_offer* offer) {
-    if (surface != wl_surface_) return;
-    if (offer != pending_data_offer_) {
-        // Drag is referencing an offer we don't know about. Shouldn't
-        // happen per protocol but guard.
-        return;
-    }
-    destroy_current_offer();
-    current_data_offer_ = pending_data_offer_;
-    current_offer_has_uri_list_ = pending_offer_has_uri_list_;
-    pending_data_offer_ = nullptr;
-    pending_offer_has_uri_list_ = false;
-    pending_offer_text_mime_.clear();
-    dnd_enter_serial_ = serial;
-    dnd_x_ = wl_fixed_to_int(surface_x);
-    dnd_y_ = wl_fixed_to_int(surface_y);
-    evaluate_drop_accept();
-}
-
-void GuiPlatform::on_dnd_leave() {
-    destroy_current_offer();
-}
-
-void GuiPlatform::on_dnd_motion(uint32_t /*time*/,
-                                int32_t surface_x, int32_t surface_y) {
-    dnd_x_ = wl_fixed_to_int(surface_x);
-    dnd_y_ = wl_fixed_to_int(surface_y);
-    evaluate_drop_accept();
-}
-
-void GuiPlatform::on_dnd_drop() {
-    if (!current_data_offer_) return;
-
-    // If we didn't accept (no uri-list, or predicate said no at the
-    // last position), drop without reading. The compositor will
-    // cancel the source.
-    if (!current_offer_has_uri_list_) {
-        destroy_current_offer();
-        return;
-    }
-    if (drop_accept_ && !drop_accept_(dnd_x_, dnd_y_)) {
-        // Position miss at drop time: destroy the offer unread, silently —
-        // a position miss is ruled silent, ordinary drag-and-drop. It
-        // usually never reaches here anyway: the motion-time NULL accept
-        // cancels the drag before drop. Application state never refuses a
-        // drop, so position is the only refusal at this point.
-        destroy_current_offer();
-        return;
-    }
-
-    // Create a pipe. We give the write end to the compositor (which
-    // forwards to the source); we read from the read end until EOF.
-    int fds[2];
-    if (pipe2(fds, O_CLOEXEC) < 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: pipe2 for file drop failed: %s\n",
-            std::strerror(errno));
-        destroy_current_offer();
-        return;
-    }
-
-    wl_data_offer_receive(current_data_offer_, "text/uri-list", fds[1]);
-    close(fds[1]);
-
-    // Flush so the receive request actually goes out before we
-    // start reading. Without this, the source never sees the
-    // request and our read blocks forever (or until the timeout).
-    wl_display_flush(wl_display_);
-
-    const std::string uri_list = read_drop_data(fds[0]);
-    close(fds[0]);
-
-    // Per v3 protocol: signal completion to the compositor before
-    // destroying the offer.
-    wl_data_offer_finish(current_data_offer_);
-    destroy_current_offer();
-
-    const std::string path = parse_first_file_uri(uri_list);
-    if (!path.empty() && on_file_drop_) {
-        on_file_drop_(path);
-    }
-}
-
-void GuiPlatform::ensure_data_device() {
-    if (wl_data_device_ || !wl_data_device_manager_ || !wl_seat_) return;
-    wl_data_device_ = wl_data_device_manager_get_data_device(
-        wl_data_device_manager_, wl_seat_);
-    if (wl_data_device_) {
-        wl_data_device_add_listener(wl_data_device_,
-                                    &s_data_device_listener, this);
-    } else {
-        std::fprintf(stderr,
-            "warptempo_gui: wl_data_device_manager_get_data_device failed; "
-            "file drop disabled\n");
-    }
-}
-
-void GuiPlatform::evaluate_drop_accept() {
-    if (!current_data_offer_) return;
-
-    // Acceptance is position-and-MIME only: the installed drop_accept_
-    // carries per-position acceptance and drives the compositor's cursor
-    // feedback. Application state never refuses a drop, so there is no
-    // state check here or at drop delivery.
-    const bool predicate_ok = drop_accept_
-        ? drop_accept_(dnd_x_, dnd_y_)
-        : true;
-    const bool offers_uri_list = current_offer_has_uri_list_;
-
-    const char* mime = (predicate_ok && offers_uri_list)
-        ? "text/uri-list"
-        : nullptr;
-
-    wl_data_offer_accept(current_data_offer_, dnd_enter_serial_, mime);
-
-    // At v3+, also signal supported actions. Copy is the natural
-    // semantic for "open this file" — we don't remove or modify the
-    // source.
-    wl_data_offer_set_actions(current_data_offer_,
-        WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY,
-        WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
-}
-
-void GuiPlatform::destroy_current_offer() {
-    if (current_data_offer_) {
-        wl_data_offer_destroy(current_data_offer_);
-        current_data_offer_ = nullptr;
-    }
-    current_offer_has_uri_list_ = false;
-    dnd_enter_serial_ = 0;
-}
-
-void GuiPlatform::destroy_pending_offer() {
-    if (pending_data_offer_) {
-        wl_data_offer_destroy(pending_data_offer_);
-        pending_data_offer_ = nullptr;
-    }
-    pending_offer_has_uri_list_ = false;
-    pending_offer_text_mime_.clear();
-}
-
-std::string GuiPlatform::read_drop_data(int read_fd) {
-    std::string out;
-    out.reserve(4096);
-    constexpr int timeout_ms = 1000;
-
-    for (;;) {
-        struct pollfd pfd{};
-        pfd.fd = read_fd;
-        pfd.events = POLLIN;
-        const int n = poll(&pfd, 1, timeout_ms);
-        if (n <= 0) {
-            if (n < 0 && errno == EINTR) continue;
-            std::fprintf(stderr,
-                "warptempo_gui: file drop read timed out or failed\n");
-            break;
-        }
-        char buf[4096];
-        const ssize_t r = read(read_fd, buf, sizeof(buf));
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            std::fprintf(stderr,
-                "warptempo_gui: file drop read failed: %s\n",
-                std::strerror(errno));
-            break;
-        }
-        if (r == 0) break;  // EOF
-        out.append(buf, static_cast<size_t>(r));
-    }
-    return out;
-}
-
-// ---------------------------------------------------------------------------
-// Clipboard (regular CLIPBOARD selection)
-// ---------------------------------------------------------------------------
-
-void GuiPlatform::clipboard_set_text(const std::string& text) {
-    clipboard_send_text_ = text;        // also the self-paste local copy
-    if (!wl_data_device_manager_ || !wl_data_device_) return;
-    if (clipboard_source_) {
-        wl_data_source_destroy(clipboard_source_);
-        clipboard_source_ = nullptr;
-    }
-    clipboard_source_ = wl_data_device_manager_create_data_source(
-        wl_data_device_manager_);
-    if (!clipboard_source_) { clipboard_we_own_ = false; return; }
-    wl_data_source_add_listener(clipboard_source_,
-                                &s_data_source_listener, this);
-    wl_data_source_offer(clipboard_source_, "text/plain;charset=utf-8");
-    wl_data_source_offer(clipboard_source_, "text/plain");
-    wl_data_device_set_selection(wl_data_device_, clipboard_source_,
-                                 last_input_serial_);
-    clipboard_we_own_ = true;
-}
-
-void GuiPlatform::on_data_source_send(struct wl_data_source* /*src*/,
-                                      const char* /*mime*/, int fd) {
-    // Runs only for an EXTERNAL consumer (self-paste is short-circuited in
-    // clipboard_get_text), so a brief blocking write of a short string is
-    // fine.
-    const char* p = clipboard_send_text_.data();
-    size_t left   = clipboard_send_text_.size();
-    while (left > 0) {
-        ssize_t n = ::write(fd, p, left);
-        if (n <= 0) break;          // receiver went away (EPIPE etc.)
-        p    += n;
-        left -= static_cast<size_t>(n);
-    }
-    ::close(fd);
-}
-
-void GuiPlatform::on_data_source_cancelled(struct wl_data_source* src) {
-    if (src == clipboard_source_) {
-        wl_data_source_destroy(clipboard_source_);
-        clipboard_source_   = nullptr;
-        clipboard_we_own_   = false;
-    }
-}
-
-void GuiPlatform::on_selection(struct wl_data_offer* offer) {
-    if (offer == clipboard_offer_) return;
-    // Supersede any previous external clipboard offer.
-    if (clipboard_offer_) {
-        wl_data_offer_destroy(clipboard_offer_);
-    }
-    clipboard_offer_ = offer;  // may be null (cleared)
-    clipboard_offer_text_mime_.clear();
-    if (offer && offer == pending_data_offer_) {
-        clipboard_offer_text_mime_ = pending_offer_text_mime_;
-        pending_data_offer_ = nullptr;
-        pending_offer_has_uri_list_ = false;
-        pending_offer_text_mime_.clear();
-    }
-}
-
-std::string GuiPlatform::clipboard_get_text() {
-    // Self-paste: we own the selection — return the local copy, never touch
-    // the pipe (this is what avoids the same-thread send-then-read deadlock).
-    if (clipboard_we_own_) return clipboard_send_text_;
-    if (!clipboard_offer_ || clipboard_offer_text_mime_.empty()) {
-        return std::string();
-    }
-    int fds[2];
-    if (pipe2(fds, O_CLOEXEC) != 0) return std::string();
-    wl_data_offer_receive(clipboard_offer_,
-                          clipboard_offer_text_mime_.c_str(), fds[1]);
-    ::close(fds[1]);
-    wl_display_flush(wl_display_);
-    std::string out = read_clipboard_data(fds[0]);
-    ::close(fds[0]);
-    return out;
-}
-
-std::string GuiPlatform::read_clipboard_data(int read_fd) {
-    // Bounded, non-blocking read. A legitimate external source gets one full
-    // second for its complete short payload; the old 50 ms per-poll cutoff
-    // could silently turn ordinary scheduler delay into an empty or truncated
-    // paste. The overall deadline still bounds an unresponsive source. The
-    // editor truncates to the field cap afterward, so kMaxBytes is only a
-    // runaway guard.
-    std::string out;
-    fcntl(read_fd, F_SETFL, O_NONBLOCK);
-    const size_t kMaxBytes = 64 * 1024;
-    const uint64_t deadline_us = monotonic_us() + 1'000'000;
-    bool failed = false;
-    char buf[4096];
-    for (;;) {
-        const uint64_t now_us = monotonic_us();
-        if (now_us >= deadline_us) {
-            std::fprintf(stderr,
-                "warptempo_gui: clipboard read timed out\n");
-            failed = true;
-            break;
-        }
-        const int remaining_ms = static_cast<int>(
-            (deadline_us - now_us + 999) / 1000);
-        struct pollfd pfd { read_fd, POLLIN, 0 };
-        const int pr = poll(&pfd, 1, remaining_ms);
-        if (pr == 0) {
-            std::fprintf(stderr,
-                "warptempo_gui: clipboard read timed out\n");
-            failed = true;
-            break;
-        }
-        if (pr < 0) {
-            if (errno == EINTR) continue;
-            std::fprintf(stderr,
-                "warptempo_gui: clipboard read failed: %s\n",
-                std::strerror(errno));
-            failed = true;
-            break;
-        }
-        ssize_t n = ::read(read_fd, buf, sizeof buf);
-        if (n < 0) {
-            if (errno == EINTR || errno == EAGAIN) continue;
-            std::fprintf(stderr,
-                "warptempo_gui: clipboard read failed: %s\n",
-                std::strerror(errno));
-            failed = true;
-            break;
-        }
-        if (n == 0) break;                   // EOF
-        out.append(buf, static_cast<size_t>(n));
-        if (out.size() >= kMaxBytes) break;
-    }
-    return failed ? std::string() : out;
-}
-
-std::string GuiPlatform::parse_first_file_uri(const std::string& uri_list) {
-    // RFC 2483 text/uri-list: CRLF-separated URIs, '#' comment lines
-    // skipped. Many implementations send LF only; accept either. Each
-    // URI is URL-encoded; we URL-decode and require the file:// scheme
-    // with an absolute path. Multi-file drops collapse to first-wins
-    // because warptempo_gui is single-source-audio; a stderr line announces
-    // when the user dropped more than one.
-    std::string first_path;
-    int valid_count = 0;
-
-    size_t i = 0;
-    while (i < uri_list.size()) {
-        size_t j = i;
-        while (j < uri_list.size() && uri_list[j] != '\n' && uri_list[j] != '\r') ++j;
-        std::string line = uri_list.substr(i, j - i);
-
-        if (j < uri_list.size() && uri_list[j] == '\r') ++j;
-        if (j < uri_list.size() && uri_list[j] == '\n') ++j;
-        i = j;
-
-        if (line.empty() || line[0] == '#') continue;
-
-        const char* prefix = "file://";
-        if (line.compare(0, std::strlen(prefix), prefix) != 0) continue;
-
-        std::string path = url_decode(line.substr(std::strlen(prefix)));
-        if (path.empty() || path[0] != '/') continue;
-
-        ++valid_count;
-        if (first_path.empty()) first_path = path;
-    }
-
-    if (valid_count > 1) {
-        std::fprintf(stderr,
-            "warptempo_gui: multi-file drop, loading first of %d\n",
-            valid_count);
-    }
-    return first_path;
-}
-
 // ---------------------------------------------------------------------------
 // Setters (callbacks)
 // ---------------------------------------------------------------------------
@@ -2240,8 +1665,6 @@ void GuiPlatform::set_on_button_release(ButtonCallback cb)      { on_button_rele
 void GuiPlatform::set_on_wheel(WheelCallback cb)                { on_wheel_ = std::move(cb); }
 void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
-void GuiPlatform::set_on_file_drop(FileDropCallback cb)         { on_file_drop_ = std::move(cb); }
-void GuiPlatform::set_drop_accept_predicate(DropAcceptPredicate p) { drop_accept_ = std::move(p); }
 void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }

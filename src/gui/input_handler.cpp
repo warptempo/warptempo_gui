@@ -61,18 +61,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Escape map to sentinel chars '\x7f' and '\x1b' so they participate
     // in the same vector<char> match as letter responses.
     if (app.prompt.active) {
-        // PASTE_CONFIRM only: Ctrl+Q / Ctrl+W abandon the pending paste
-        // (the real cancel, not a synthesized Esc) and then run the
-        // normal close/revert path. The unsaved-work dialogs
-        // (CLOSE_WINDOW / REVERT_TO_BLANK) deliberately fall through to
-        // the modal swallow below and keep blocking these chords.
+        // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
+        // cancel, not a synthesized Esc) and then runs the normal close
+        // path. The unsaved-work dialog (CLOSE_WINDOW) deliberately falls
+        // through to the modal swallow below and keeps blocking this chord.
         if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
-            ctrl && !shift && !alt &&
-            (key == GuiKeys::Q || key == GuiKeys::W)) {
+            ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.cancel_paste_confirmation();
-            prompt.request_close_or_revert(
-                key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
-                                  : DialogTrigger::REVERT_TO_BLANK);
+            prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
             return;
         }
         char k = 0;
@@ -98,23 +94,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 save_ops.save();
                 return;
             }
-            // Ctrl+Q / Ctrl+W do not resolve the defect; they open the
-            // close / revert prompt in its normal save/discard/cancel form
-            // over the parked series (walkable defects are load-legal, so the
-            // save option writes a loadable file that re-walks on reload).
-            // Suspend the series (commit_context stays on defect_series and
-            // drives both the resume origin and the same defect's
-            // reappearance on cancel), dismiss this modal, and route to the
-            // shared funnel. request_close_or_revert refuses re-entry while
-            // a prompt is active, so the defect prompt is cleared first.
-            if (ctrl && !shift && !alt &&
-                (key == GuiKeys::Q || key == GuiKeys::W)) {
+            // Ctrl+Q does not resolve the defect; it opens the close prompt
+            // in its normal save/discard/cancel form over the parked series
+            // (walkable defects are load-legal, so the save option writes a
+            // loadable file that re-walks on reload). Suspend the series
+            // (commit_context stays on defect_series and drives both the
+            // resume origin and the same defect's reappearance on cancel),
+            // dismiss this modal, and route to the shared funnel.
+            // request_close_or_revert refuses re-entry while a prompt is
+            // active, so the defect prompt is cleared first.
+            if (ctrl && !shift && !alt && key == GuiKeys::Q) {
                 app.defect_series.suspended_for_close = true;
                 app.prompt.active = false;
                 viewport.invalidate_all();
-                prompt.request_close_or_revert(
-                    key == GuiKeys::Q ? DialogTrigger::CLOSE_WINDOW
-                                      : DialogTrigger::REVERT_TO_BLANK);
+                prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
                 return;
             }
             if (k != 0 && k != '\x1b') handle_defect_response(k);
@@ -150,19 +143,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // escape hatch, finalize the selection first (reading the still-live
     // editor geometry) and then fall through with no return, so the
     // editor and global handlers below run Esc (cancel the edit) or
-    // Ctrl+Q / Ctrl+W (tear the edit down, then open the close / revert
-    // prompt) exactly as they would with no drag in flight. A text drag
-    // is not a navigation gesture, so it gets no bare-`s` carve-out.
+    // Ctrl+Q (tear the edit down, then open the close prompt) exactly as
+    // they would with no drag in flight. A text drag is not a navigation
+    // gesture, so it gets no bare-`s` carve-out.
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
             key == GuiKeys::Escape ||
-            (ctrl && !shift && !alt &&
-             (key == GuiKeys::Q || key == GuiKeys::W));
+            (ctrl && !shift && !alt && key == GuiKeys::Q);
         if (!escape_hatch) return;
         finalize_editor_text_drag();
         // fall through: the editor handler below runs Esc (cancel the
-        // edit) or Ctrl+Q / Ctrl+W (tear the edit down, then the close /
-        // revert prompt opens) exactly as with no drag in flight.
+        // edit) or Ctrl+Q (tear the edit down, then the close prompt
+        // opens) exactly as with no drag in flight.
     }
 
     // Bottom-strip modal-editor gate. Modal surfaces are bottom-strip
@@ -212,16 +204,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // was otherwise unbound globally.
     if (ctrl && !shift && !alt && key == GuiKeys::C &&
         app.hover_popup.visible) {
-        gui.clipboard_set_text(app.hover_popup.copy_payload);
+        app.text_clipboard = app.hover_popup.copy_payload;
         return;
     }
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
     // flight, swallow every hotkey except the escape hatches — Esc stops
-    // the gesture (cancel_active_drags), and Ctrl+Q / Ctrl+W cancel the
-    // in-flight drag first (the same abandon Esc performs, since the
-    // gesture is uncommitted) and then run the close / revert flow.
+    // the gesture (cancel_active_drags), and Ctrl+Q cancels the in-flight
+    // drag first (the same abandon Esc performs, since the gesture is
+    // uncommitted) and then runs the close flow.
     // Cancelling before the prompt goes up is what keeps a dismissed
     // prompt from leaving a stale drag that commits on the next motion.
     // This single gate is why no downstream hotkey needs its own
@@ -239,11 +231,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             cancel_active_drags();
             prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
-            return;
-        }
-        if (ctrl && !shift && !alt && key == GuiKeys::W) {
-            cancel_active_drags();
-            prompt.request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
             return;
         }
         // A playhead scrub is a navigation gesture, so it alone lets the
@@ -329,7 +316,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → top-level no-op
-    //   - Ctrl+Q / Ctrl+W        → close-prompt routing
+    //   - Ctrl+Q                 → close-prompt routing
     // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
     // gate like the authoring chords. Gesture-owned state changed in a locked
     // tab (the read-only flag itself, trim, view state, font size, playback
@@ -391,12 +378,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
         prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
-        return;
-    }
-
-    // Ctrl+W: revert to blank state (via unsaved-work dialog when dirty).
-    if (ctrl && !shift && !alt && key == GuiKeys::W) {
-        prompt.request_close_or_revert(DialogTrigger::REVERT_TO_BLANK);
         return;
     }
 
@@ -946,14 +927,14 @@ bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
         case text_editor::KeyAction::CopyRequested:
-            gui.clipboard_set_text(text_editor::selected_text(s));
+            app.text_clipboard = text_editor::selected_text(s);
             return true;
         case text_editor::KeyAction::CutRequested:
-            gui.clipboard_set_text(text_editor::selected_text(s));
+            app.text_clipboard = text_editor::selected_text(s);
             text_editor::replace_selection(s, std::string());
             return true;
         case text_editor::KeyAction::PasteRequested:
-            text_editor::replace_selection(s, gui.clipboard_get_text());
+            text_editor::replace_selection(s, app.text_clipboard);
             return true;
         default:
             return false;

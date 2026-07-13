@@ -359,7 +359,7 @@ struct HoverPopupState {
 
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
-// applies to the unsaved-work prompts (CLOSE_WINDOW, REVERT_TO_BLANK).
+// applies to the unsaved-work prompt (CLOSE_WINDOW, the quit gesture).
 // ERROR_NOTICE is the dismiss-only error popup: the backstop for failures
 // the defect-resolution series does not model, plus the environmental and
 // settings-choice refusals (see GuiPrompt::open_error_notice's caller
@@ -367,7 +367,6 @@ struct HoverPopupState {
 // sole response is acknowledge/dismiss.
 enum class DialogTrigger {
     CLOSE_WINDOW,
-    REVERT_TO_BLANK,
     PASTE_CONFIRM,
     ERROR_NOTICE,
     // Forced-choice defect-resolution modal (the commit-time series driven
@@ -425,9 +424,9 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // the touched marker only in that context. `pending_validation` is the
 // funnel's once-per-tick flag plus its origin (see PendingValidation),
 // consumed by GuiInputHandler::run_commit_validation at the top of
-// on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q /
-// Ctrl+W close-or-revert prompt is up over it (the defect modal is
-// dismissed for the duration): it makes request_close_or_revert confirm
+// on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q
+// close prompt is up over it (the defect modal is dismissed for the
+// duration): it makes request_close_or_revert confirm
 // the close even when the store is clean (a load-origin series has
 // app.dirty == false), and, on cancel, is the signal that the series must
 // resume — re-queued through pending_validation with the origin derived
@@ -680,8 +679,9 @@ struct AppState {
     // editor) participate in dirty via settings_dirty. View-state keys
     // (viewport, zoom, playhead, follow_mode, active_markers_view,
     // playback_speed, trim, and the per-tab read_only flags) do NOT
-    // participate: they are silently persisted on Ctrl+S and silently
-    // discarded on Ctrl+W without save. Trim is gesture-owned, excluded from
+    // participate: they are silently persisted on Ctrl+S and not tracked as
+    // dirty, so quitting without saving simply drops them. Trim is
+    // gesture-owned, excluded from
     // undo/redo history, and render-affecting but deliberately treated as
     // transient view state.
     bool        warp_dirty           = false;
@@ -692,10 +692,6 @@ struct AppState {
     // True until the first save in this session; used to log a one-time
     // notice if the on-disk file had content the canonical form drops.
     bool        first_save_pending   = true;
-
-    // If a drop arrives mid-load, the path is stashed here and processed
-    // after the active load returns. Empty means "no pending drop."
-    std::string pending_drop_path;
 
     // For redraw-time diagnostics (acceptance criterion 15).
     std::chrono::steady_clock::time_point stats_last_report =
@@ -881,6 +877,12 @@ struct AppState {
     // confirmation prompt opens; consumed by the prompt response.
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
+
+    // Internal text clipboard (session-only, lost on app close). The GUI has
+    // no outside-world clipboard: hover-copy (Ctrl+C over a hover popup) and
+    // the bottom-strip editors' copy/cut/paste all round-trip through this
+    // one string, so a hover value pastes into a flag/settings text box.
+    std::string        text_clipboard;
 
     // Iteration mode. Toggled by plain `i` in warp view (no-op in
     // phase reset view). Session-only; survives view-switches but is lost

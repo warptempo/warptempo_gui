@@ -29,8 +29,6 @@ public:
     using WheelCallback        = std::function<void(GuiMouseButton dir, int steps, int x, int y, GuiInputState mods)>;
     using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using CloseCallback        = std::function<void()>;
-    using FileDropCallback     = std::function<void(const std::string& path)>;
-    using DropAcceptPredicate  = std::function<bool(int x, int y)>;
     // Wheel routing predicate installed by main.cpp: given pointer
     // coordinates, returns -1 (blocked) or a region code. on_pointer_frame()
     // consults it per raw pointer frame before accumulating sub-detent
@@ -51,14 +49,6 @@ public:
     void drain_events();
     void paint_now();
 
-    // Regular clipboard (CLIPBOARD selection, not PRIMARY). clipboard_set_text
-    // claims the selection with our text as the payload; clipboard_get_text
-    // returns the current selection text (our own local copy on self-paste,
-    // a bounded non-blocking pipe read for an external owner). Empty string
-    // when nothing text-shaped is available.
-    void        clipboard_set_text(const std::string& text);
-    std::string clipboard_get_text();
-
     int width()  const;
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
@@ -71,16 +61,6 @@ public:
     void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
     void set_on_close(CloseCallback cb);
-    void set_on_file_drop(FileDropCallback cb);
-    // One accept predicate, installed by main.cpp so the platform stays
-    // application-state-blind: evaluated at DnD enter/motion and re-checked
-    // at drop, carrying per-position acceptance only. It feeds
-    // wl_data_offer_accept, so the compositor renders it as cursor
-    // feedback; at data_device v3 a drag that ends unaccepted is cancelled
-    // without a drop event, which is fine — a position miss is silent by
-    // ruling. Application state never refuses a drop, so no state hook
-    // exists.
-    void set_drop_accept_predicate(DropAcceptPredicate p);
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
@@ -195,60 +175,6 @@ private:
     int  waveform_worker_completion_fd_ = -1;
     std::function<void()> on_waveform_worker_completion_;
 
-    // -- Data device (drag-and-drop) --
-    struct wl_data_device_manager* wl_data_device_manager_ = nullptr;
-    struct wl_data_device*         wl_data_device_         = nullptr;
-
-    // A newly announced offer is pending until a following enter or selection
-    // event assigns its role. Keeping it separate from current_data_offer_
-    // matters because clipboard selection changes may interleave with an
-    // active DnD session; a new selection offer must not destroy the drag.
-    struct wl_data_offer* pending_data_offer_ = nullptr;
-    bool pending_offer_has_uri_list_ = false;
-    std::string pending_offer_text_mime_;
-
-    // The active DnD offer. Destroyed on leave or after drop transfer. It is
-    // independent of both the pending announcement and clipboard_offer_.
-    struct wl_data_offer* current_data_offer_ = nullptr;
-
-    // True if the current data offer advertises text/uri-list. Set
-    // during the data_offer's offer events; cleared when the offer
-    // is destroyed.
-    bool current_offer_has_uri_list_ = false;
-
-    // The most recent serial from wl_data_device.enter, needed for
-    // wl_data_offer.accept calls during motion and on the final
-    // accept-or-not decision at drop time.
-    uint32_t dnd_enter_serial_ = 0;
-
-    // Last-known cursor position during a drag, in surface coordinates.
-    // Updated by enter and motion events; consulted by the drop-accept
-    // predicate.
-    int dnd_x_ = 0;
-    int dnd_y_ = 0;
-
-    // -- Clipboard (regular CLIPBOARD selection) --
-    // clipboard_source_ is the wl_data_source we own while we hold the
-    // selection; clipboard_send_text_ is both its on-the-wire payload and
-    // the local copy a self-paste reads (so a copy-then-paste in the same
-    // process never touches the pipe and so cannot self-deadlock).
-    // clipboard_we_own_ is true between a successful set_selection and a
-    // cancelled event (another client claiming the selection).
-    struct wl_data_source* clipboard_source_      = nullptr;
-    std::string            clipboard_send_text_;
-    bool                   clipboard_we_own_       = false;
-
-    // clipboard_offer_ is the current EXTERNAL selection offer (an offer we
-    // do not own). clipboard_offer_text_mime_ is the exact offered token to
-    // request, preferring text/plain;charset=utf-8 over text/plain.
-    struct wl_data_offer*  clipboard_offer_        = nullptr;
-    std::string            clipboard_offer_text_mime_;
-
-    // Most recent serial from an input event, required by
-    // wl_data_device.set_selection. Cached in on_keyboard_key (copy is
-    // always a Ctrl+C key event, so the serial is current at set time).
-    uint32_t               last_input_serial_      = 0;
-
     // -- Keyboard --
     struct wl_seat*     wl_seat_     = nullptr;
     uint32_t            seat_global_name_ = 0;
@@ -352,8 +278,6 @@ private:
     WheelCallback        on_wheel_;
     MotionCallback       on_motion_;
     CloseCallback        on_close_;
-    FileDropCallback     on_file_drop_;
-    DropAcceptPredicate  drop_accept_;
     WheelContextProbe    wheel_context_probe_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
@@ -368,13 +292,6 @@ private:
     void destroy_wayland_state();
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
-
-    void destroy_current_offer();
-    void destroy_pending_offer();
-    void ensure_data_device();
-    void evaluate_drop_accept();
-    std::string read_drop_data(int read_fd);
-    std::string parse_first_file_uri(const std::string& uri_list);
 
     // -- Event handlers (called from file-static dispatchers) --
     void on_registry_global(struct wl_registry* r, uint32_t name,
@@ -413,21 +330,4 @@ private:
     void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
     void on_pointer_axis_value120(uint32_t axis, int32_t value120);
     void on_pointer_frame();
-
-    // -- Data device (drag-and-drop) handlers --
-    void on_data_offer(struct wl_data_offer* offer);
-    void on_data_offer_mime_type(struct wl_data_offer* offer, const char* mime);
-    void on_dnd_enter(uint32_t serial, struct wl_surface* surface,
-                      int32_t surface_x, int32_t surface_y,
-                      struct wl_data_offer* offer);
-    void on_dnd_leave();
-    void on_dnd_motion(uint32_t time, int32_t surface_x, int32_t surface_y);
-    void on_dnd_drop();
-
-    // -- Clipboard handlers --
-    void on_data_source_send(struct wl_data_source* src,
-                             const char* mime, int fd);
-    void on_data_source_cancelled(struct wl_data_source* src);
-    void on_selection(struct wl_data_offer* offer);
-    std::string read_clipboard_data(int read_fd);
 };

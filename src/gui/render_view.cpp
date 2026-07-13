@@ -758,7 +758,7 @@ void GuiRenderView::clear_snapshot_context() {
 // The abandon arm of the render-view exit pair: restore_source_view
 // restores the stashed source view for an ordinary exit;
 // abandon_render_view tears down when the source itself is being
-// discarded (revert_to_blank), where calling restore_source_view would
+// replaced (load_file), where calling restore_source_view would
 // be too late (the source is gone by the time the view could be
 // restored) and would spuriously run its target-view ensure_ready tail
 // against the dying source. The caller resets the tab slots, the live
@@ -769,7 +769,7 @@ void GuiRenderView::clear_snapshot_context() {
 // time, so playback rebinds to it before the entry buffer is freed —
 // the device is never left bound to a freed buffer.
 void GuiRenderView::abandon_render_view() {
-    // Deliberately no cancel_archival_session on this exit: revert_to_blank's
+    // Deliberately no cancel_archival_session on this exit: load_file's
     // cancel_archival_render hook already ran the same cancel before this
     // teardown.
     if (!app.render_view.enabled && !app.render_view.entry_audio) return;
