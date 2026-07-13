@@ -296,6 +296,20 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     if (ctrl && !alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return true;
+        // Gate the live store before freezing it into an immutable snapshot.
+        // Commit validation is tick-deferred, so another input event can reach
+        // Ctrl+E after an invalidating commit but before its defect series
+        // opens. A queued snapshot cannot be repaired by resolving the live
+        // store later, and there is no per-entry queue removal surface.
+        if (!warp_render_preflight(app.warpmarkers.markers(),
+                                   app.phaseresetmarkers.markers(),
+                                   /*live_store=*/true,
+                                   app.engine_settings.scale,
+                                   app.engine_settings.output_format,
+                                   app.trim.has_begin, app.trim.begin_frame,
+                                   app.trim.has_end, app.trim.end_frame)) {
+            return true;
+        }
         app.queued_renders.push_back(snapshot_current_queued_render());
         std::fprintf(stderr,
             "warptempo_gui: queued render (%zu in queue)\n",
