@@ -841,65 +841,29 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // app.render_view.warp_markers / .phase_resets are display state
         // (the snapshot vectors adopted wholesale — disabled rows included,
         // styled as in target view — at authored-domain positions). Ctrl+Alt+C
-        // promotes the render's source-domain snapshot sidecars, so
-        // every required sidecar is validated and collected before the
-        // first mutation. The pre-mutation validation set, in order:
-        // (1) the display-identity attestation — the selected entry must be
-        // the displayed render, attested against last_path (the pre-nav
-        // refresh can clamp index onto a surviving entry when the displayed
-        // wav vanished from disk, so identity is pinned before any downstream
-        // guard validates the wrong entry against its own consistent sidecars;
-        // only a successful entry load stamps last_path); (2) the whole
-        // `.settings` snapshot through the one strict whole-file schema
-        // (read_settings_file, the same read load_render_view_at runs) — a
-        // hand-edited sidecar with ANY malformed line aborts rather than
-        // partially restoring (an absent trim key would otherwise read as
-        // "bound absent" and clear a live trim); (3) both marker sidecars
-        // through their strict loaders; then the source-load adversarial
-        // guards over the assembled candidate — (4) the past-EOF walls
-        // (first_past_eof_wall_defect), (5) the target-view/output-format
-        // rule, (6) the routing-field re-attestation (active_audio_view and
-        // active_tab_view, which ride outside the fingerprint yet steer the
-        // commit), (7) the source-clobber refusal, and (8) the snapshot
-        // fingerprint re-attestation — the recipe re-read here must still
-        // fingerprint to the displayed wav's .fingerprint, so the sidecars
-        // cannot have been edited underneath the entry between display and
-        // commit. The wall / format / collision guards stay as defense in
-        // depth even though a matching fingerprint transitively covers the
-        // marker and engine fields (they name the offending sidecar precisely,
-        // and run without a .fingerprint present); the routing pair rides
-        // outside the fingerprint, so its guard is load-bearing rather than
-        // redundant. Any failure aborts to stderr, first error only, before
-        // any mutation of markers, history, settings, trim, view state, or
-        // renders/. Walkable, GUI-committable defects (coincident markers,
-        // dangling refs, equal/inverted trim, first-marker grammar) are
-        // deliberately NOT gated here: they adopt and walk the commit series
-        // like any other commit. Adversarial input; stderr-only abort.
+        // reads the entry's frozen source-domain sidecars and adopts them
+        // wholesale: the `.settings` through the one strict whole-file schema
+        // (read_settings_file, the same read load_render_view_at runs) and
+        // both marker sidecars through their strict loaders
+        // (GuiWarpMarkers::load / GuiPhaseResetMarkers::load). A syntactically
+        // malformed sidecar aborts at its own read — a broken file genuinely
+        // cannot be promoted, first error only — and that is the ONLY abort:
+        // the entry sidecars are TRUSTED (written once at dispatch by
+        // do_render, never hand-edited between display and commit), so there is
+        // no adversarial content re-attestation of the assembled candidate. The
+        // render worker's source-clobber backstop and the engine tripwires
+        // remain the last-ditch guards on the promoted recipe. Walkable,
+        // GUI-committable defects (coincident markers, dangling refs,
+        // equal/inverted trim, first-marker grammar) adopt and walk the commit
+        // series like any other commit.
         const auto& cur_e =
             app.render_view.list[app.render_view.index];
-        // Ahead of (1): commit promotes THE DISPLAYED RENDER, but the
-        // list/index pair is rebuilt by the pre-nav refresh, which can
-        // clamp index onto a surviving entry when the displayed wav
-        // vanished from disk without loading it; every downstream guard
-        // would then validate the WRONG entry against its own consistent
-        // sidecars, so the entry's identity is attested first against
-        // last_path, which only a successful entry load stamps.
-        if (cur_e.wav_path.string() != app.render_view.last_path) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: selected entry '%s' is "
-                "not the displayed render '%s'\n",
-                cur_e.wav_path.string().c_str(),
-                app.render_view.last_path.c_str());
-            return true;
-        }
         const std::filesystem::path sidecar =
             render_view.settings_path(cur_e);
         // The entry's .settings is frozen at dispatch and never rewritten by
         // render view, so the strict read below sees the DISPATCH-TIME bytes —
         // which is the point: the commit inherits the position/tab the project
-        // had when the render was QUEUED, not the browsed one. That immutability
-        // is also what closes the fingerprint-regression class: guard 5's
-        // re-attestation compares against a file no browse ever touched.
+        // had when the render was QUEUED, not the browsed one.
         const auto settings = read_settings_file(sidecar.string());
         if (!settings) {
             std::fprintf(stderr,
@@ -940,189 +904,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             src_phase_resets = t.markers();
         }
 
-        // The complete candidate is collected. The routing values below are
-        // the ones the application code further down actually uses: the
-        // commit tab is the tab named by the snapshot's active_tab_view
-        // (the dispatch tab the entry was rendered from), and that tab's
-        // view-state band carries the recipe trim that shaped this render
-        // — the same projection load_render_view_at displays. The tab
-        // switch at the application site happens before the trim restore,
-        // so the live fields it writes belong to the commit tab.
+        // The complete candidate is collected. The commit tab is the tab
+        // named by the snapshot's active_tab_view (the dispatch tab the entry
+        // was rendered from), and that tab's view-state band carries the
+        // recipe trim that shaped this render — the same projection
+        // load_render_view_at displays. The tab switch at the application site
+        // happens before the trim restore, so the live fields it writes belong
+        // to the commit tab.
         const char commit_tab = settings->active_tab_view;
-        const SettingsFileTab& commit_tab_band =
-            (commit_tab == 'B') ? settings->tab_b : settings->tab_a;
-        const SettingsTrim& recipe_trim = commit_tab_band.trim;
-        // The candidates are SOURCE-domain, and the audio object is
-        // invariantly the source in every view (render view's displayed
-        // entry lives in its own view-owned buffer), so every wall and
-        // view-domain guard reads `audio` directly — the domain the commit
-        // actually restores into. There is no parked domain to choose.
-        const int64_t total_frames = audio.total_frames();
-        const long    sample_rate  =
-            static_cast<long>(audio.sample_rate());
-
-        // Source-load adversarial guard 1: past-EOF walls, the same shared
-        // implementation the GUI load and warptempo_cli run
-        // (first_past_eof_wall_defect, marker_store_validate.h). A canonical
-        // position past its wall is uncommittable through the GUI's gesture
-        // walls and past-EOF is not an enumerated walkable defect, so an
-        // adopted offender could only be repaired by downstream backstops —
-        // hand fabrication, hard-fail. One call per candidate file so the
-        // message names the offending sidecar; the call order (warp markers,
-        // phase resets, trim) is the validator's own internal order, so the
-        // first offender reported matches the single-call composite.
-        {
-            const std::vector<WarpMarker> cand_warp =
-                slice_to_warp_markers(src_warp);
-            const std::vector<PhaseResetMarker> cand_resets =
-                slice_to_phase_reset_markers(src_phase_resets);
-            if (auto detail = first_past_eof_wall_defect(
-                    cand_warp, {}, SettingsTrim{}, SettingsTrim{},
-                    total_frames, sample_rate)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: past-EOF wall defect "
-                    "for '%s': %s\n",
-                    wm.string().c_str(), detail->c_str());
-                return true;
-            }
-            if (auto detail = first_past_eof_wall_defect(
-                    {}, cand_resets, SettingsTrim{}, SettingsTrim{},
-                    total_frames, sample_rate)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: past-EOF wall defect "
-                    "for '%s': %s\n",
-                    tm.string().c_str(), detail->c_str());
-                return true;
-            }
-            // Both tabs' trim structs from the snapshot, the same composite
-            // the source-load guard runs. The dispatch writer emits trim
-            // only on the commit tab, but a hand-edited stray on the other
-            // tab must wall identically — only the commit tab's trim is
-            // adopted below, yet a snapshot carrying a load-fatal position
-            // anywhere is adversarial wholesale.
-            if (auto detail = first_past_eof_wall_defect(
-                    {}, {}, settings->tab_a.trim, settings->tab_b.trim,
-                    total_frames, sample_rate)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: past-EOF wall defect "
-                    "for '%s': %s\n",
-                    sidecar.string().c_str(), detail->c_str());
-                return true;
-            }
-        }
-
-        // No view-range guard here (first_view_range_defect). The inherited
-        // view values come from the entry's frozen .settings — the queue-moment
-        // position the dispatch writer clamped into this entry's map domain and
-        // validated at display (load_render_view_at's first_view_range_defect).
-        // They may still rest outside the adopted map's target extent; the
-        // runtime clamps (move_playhead_to, clamp_viewport_start) own them at
-        // first use, the restore-site convention — load-time adversarial
-        // strictness is for bytes a user could hand-edit, not the GUI's own
-        // round-tripped view.
-
-        // Source-load adversarial guard 2: target-view/output-format
-        // compatibility, validated against the ENTRY's own .settings.
-        // Entries are target-view states — the dispatch writer emits
-        // active_audio_view=T and writes a .settings for wav renders only,
-        // and commit lands in 'T' unconditionally — so a snapshot whose
-        // output_format is not wav is GUI-unproducible ('T' is available
-        // only under output_format=wav,
-        // GuiTargetRender::target_view_available): adversarial, abort.
-        if (settings->engine.output_format != "wav") {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: invalid snapshot for "
-                "'%s': active_audio_view=T requires output_format=wav\n",
-                sidecar.string().c_str());
-            return true;
-        }
-
-        // Source-load adversarial guard 3: routing-field re-attestation. The
-        // two routing keys — active_audio_view and active_tab_view — ride
-        // OUTSIDE guard 5's render fingerprint (which excludes the view keys),
-        // yet they steer this commit:
-        // active_audio_view asserts the entry is a target-view state, and
-        // active_tab_view (commit_tab above) names the tab whose recipe trim
-        // and view band the mutation below adopts. Both are pinned by the
-        // dispatch writer (active_audio_view=T always; the commit tab fixed at
-        // dispatch) and never rewritten on an entry by any GUI path, so a
-        // snapshot whose routing changed underneath the display is hand
-        // fabrication — the fingerprint cannot catch it, so the pair gets its
-        // own exact-match attestation against display-time state, aborting
-        // before the first mutation.
-        //
-        // active_audio_view: the mirror of the load guard
-        // (load_render_view_at); an entry snapshot is a target-view state by
-        // the dispatch writer's construction.
-        if (settings->active_audio_view != 'T') {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: invalid snapshot for '%s': "
-                "settings must carry active_audio_view=T\n",
-                sidecar.string().c_str());
-            return true;
-        }
-        // active_tab_view: the entry was loaded and browsed under the commit
-        // tab stashed at display (render_view.snapshot_commit_tab); a routing
-        // change underneath the display is adversarial.
-        if (settings->active_tab_view != app.render_view.snapshot_commit_tab) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: invalid snapshot for '%s': "
-                "active_tab_view changed underneath the displayed render\n",
-                sidecar.string().c_str());
-            return true;
-        }
-
-        // Source-load adversarial guard 4: the source-clobber refusal, the
-        // same shared predicate the GUI load, warptempo_cli load, and the
-        // settings editor commit run (render_output_source_collision,
-        // render_output_naming.h), with the render worker as the breach
-        // backstop. A recipe whose composed render output lands on the loaded
-        // source is GUI-unproducible — the editor refuses it at commit and
-        // both product loaders refuse it at load — so an adopted one is
-        // adversarial and must abort before the first marker or AppState
-        // mutation.
-        if (auto collision = render_output_source_collision(
-                settings->engine, app.source_audio_path)) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: settings in '%s' would make "
-                "the render output '%s' overwrite the source audio file\n",
-                sidecar.string().c_str(), collision->string().c_str());
-            return true;
-        }
-
-        // Source-load adversarial guard 5: snapshot re-attestation. Commit
-        // promotes THE DISPLAYED RENDER, but the sidecars are mutable files
-        // read fresh above — between display and commit they must still attest
-        // to the wav on screen. Recompute the fingerprint from the re-read
-        // recipe (the same render_fingerprint load_render_view_at computes in
-        // its fingerprint-mismatch block: source path + the source audio's
-        // load identity, the source sample rate, the snapshot stores, the
-        // entry's engine block, the recipe trim) and require the wav's
-        // existing .fingerprint to match. A mismatch means the recipe was
-        // edited underneath the displayed entry (adversarial): abort before
-        // the first mutation; the next navigation onto the entry refuses it
-        // through load_render_view_at's own fingerprint gate, and the user
-        // re-renders from the live project. The view keys ride outside the
-        // render fingerprint, and the entry's .settings is frozen at dispatch,
-        // so this check is against bytes no browse ever touched.
-        {
-            RenderFileIdentity source_identity;
-            source_identity.size  = audio.source_load_size();
-            source_identity.mtime = audio.source_load_mtime();
-            std::vector<uint8_t> fp = render_fingerprint(
-                app.source_audio_path, source_identity,
-                static_cast<int>(sample_rate),
-                src_warp, src_phase_resets, settings->engine,
-                recipe_trim.has_begin, recipe_trim.begin_frame,
-                recipe_trim.has_end,   recipe_trim.end_frame);
-            if (!fingerprint_sidecar_matches(cur_e.wav_path.string(), fp)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: snapshot for '%s' no "
-                    "longer matches the displayed render\n",
-                    cur_e.wav_path.string().c_str());
-                return true;
-            }
-        }
 
         // No landing-view latch: the entry's frozen .settings — the
         // dispatch-time viewport/zoom/playhead/tab — IS the session this commit
@@ -1219,8 +1008,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.tab_a = view_state_from_settings_tab(settings->tab_a);
         app.tab_b = view_state_from_settings_tab(settings->tab_b);
 
-        // active_tab_view from the file (== commit_tab, re-attested by guard
-        // 3). Set it directly — NOT switch_active_tab_view_to, which would
+        // active_tab_view from the file (== commit_tab). Set it directly —
+        // NOT switch_active_tab_view_to, which would
         // swap the live fields WITH the tab slots and re-push the authoring
         // position; both bands are already the file's, so the live fields are
         // pulled straight from the active band with no double-apply.
@@ -1241,9 +1030,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.playhead_cursor_sample = band.playhead_cursor_sample;
             // Live trim is the active band's trim, which is exactly the
             // recipe trim that shaped this render: the frozen file's per-tab
-            // trim is intact, and the commit tab's band trim IS recipe_trim
-            // (both read from the same parsed file), so the trim
-            // the guards and the fingerprint validated is the trim now live.
+            // trim is intact, and the commit tab's band trim is that recipe
+            // trim (both read from the same parsed file), so it is the trim
+            // now live.
             // A committed render lands with no trim bound focused: a parsed
             // band carries the default false/0 trim-selection fields, matching
             // the marker-selection reset.
@@ -1279,9 +1068,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         set_gui_font_size_pt(app.font_size);
         paint_handler.on_resize(app.width, app.height);
 
-        // active_audio_view from the file — 'T' by attestation (guard 3),
-        // which is also the ruled landing. The flag flip is the whole
-        // target-view entry mechanism: restore_source_view above rebound
+        // active_audio_view from the file — 'T' by the dispatch writer's
+        // construction, which is also the ruled landing. The flag flip is the
+        // whole target-view entry mechanism: restore_source_view above rebound
         // playback to the source samples (and, when the pre-commit session was
         // already in 'T', its ensure_ready funnel ran against the adopted
         // stores), and the tail's target_render.trigger() marks the buffer
