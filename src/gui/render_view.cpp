@@ -163,13 +163,6 @@ bool GuiRenderView::load_render_view_at(int index) {
         return false;
     }
     auto& e = app.render_view.list[index];
-    // Leaving target view for render view, same as the T→S toggle: cancel any
-    // in-flight target render so it does not keep pegging the cores under
-    // render-view playback and cannot rebind playback to target_buffer behind
-    // the render-view binding when it completes. No-op when nothing is updating
-    // (render-to-render navigation).
-    target_render.cancel_in_flight_update();
-
     // Decode the entry wav through the STANDARD peaks pipeline: a fresh
     // GuiAudio::load (decode + `<basename>.peaks` sidecar read beside the wav,
     // pyramid rebuild and sidecar write on a miss / stale / corrupt cache).
@@ -501,6 +494,12 @@ bool GuiRenderView::load_render_view_at(int index) {
         }
     }
 
+    // The entry is now fully attested and will install. Only at this commit
+    // boundary leave live target playback: cancelling before the strict reads
+    // made a refused entry destroy an otherwise valid in-flight target preview,
+    // contradicting the prior-state-preserved failure contract above. No-op on
+    // render-to-render navigation, where no target update can be in flight.
+    target_render.cancel_in_flight_update();
     playback.stop();
     app.playhead_scanner_active = false;
     app.playhead_scanner_restore_pending = false;
