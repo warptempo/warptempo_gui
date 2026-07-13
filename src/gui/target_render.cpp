@@ -254,7 +254,6 @@ void GuiTargetRender::dispatch_render_now() {
     // canonical encode after a successful limited target render.
     req.render_cache = &render_cache;
     req.source_samples = audio.samples_shared();
-    req.source_total_frames = audio.total_frames();
     req.source_load_size = audio.source_load_size();
     req.source_load_mtime = audio.source_load_mtime();
 

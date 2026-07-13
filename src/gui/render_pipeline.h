@@ -70,22 +70,22 @@ struct RenderRequest {
     // do_render reads engine-relevant keys exclusively from this struct.
     EngineSettings engine_settings;
 
-    // Borrowed source audio: the GUI's resident sample buffer plus its
-    // frame count, captured at dispatch. Required contract: every dispatcher
-    // populates these (attach_shared_render_resources, or the target view's
-    // direct fill); they are never absent in a program-built request, and
-    // do_render compensates for nothing — it reads the buffer directly.
-    // Shared ownership makes this safe across file loads mid-render; the
-    // transient cost of two live buffers during such a swap is accepted.
+    // Borrowed source audio: the GUI's resident sample buffer, captured at
+    // dispatch. Required contract: every dispatcher populates it
+    // (attach_shared_render_resources, or the target view's direct fill); it
+    // is never absent in a program-built request, and do_render compensates
+    // for nothing — it reads the buffer directly. The source is loaded once
+    // at launch and never replaced in-session; shared ownership keeps the
+    // buffer alive for the render's duration.
     std::shared_ptr<const std::vector<float>> source_samples;
-    int64_t source_total_frames = 0;
 
     // Load-time identity of the file backing source_samples, captured by
     // GuiAudio at decode (a load whose stat fails is refused, so a loaded
     // source always carries its identity). Required contract, same as
-    // source_samples: every dispatcher populates the pair. do_render
-    // compares it against the dispatch-time identity before rendering and
-    // before associating a borrowed-buffer render with a fingerprint.
+    // source_samples: every dispatcher populates the pair. do_render records
+    // it directly as the wav render's fingerprint source identity — the
+    // source is immutable for the process lifetime, so there is no on-disk
+    // re-stat.
     uint64_t source_load_size = 0;
     int64_t  source_load_mtime = 0;
 

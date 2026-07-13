@@ -161,7 +161,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //      which swaps into wf_cache.surface on completion. Fires
     //      on the on_tick backstop and on non-pan viewport changes
     //      (zoom, center-on-playhead, follow-scroll), plus resize,
-    //      reload, and target-view warp_frame_map changes.
+    //      the launch load, and target-view warp_frame_map changes.
     //   2. Incremental shift-and-strip — a pure horizontal pan
     //      (scroll_viewport) calls pan_waveform_incremental, which
     //      shifts the existing plate pixels by the pan delta and

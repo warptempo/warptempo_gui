@@ -75,10 +75,11 @@ bool GuiWaveformWorker::is_busy() const {
 
 void GuiWaveformWorker::wait_until_idle() {
     using clock = std::chrono::steady_clock;
-    // The expiry path is unsafe by design: the caller swaps the audio out
-    // from under any live job. This bound exists only as a last-resort hang
-    // guard, and is sized far above the two-render worst case so it does not
-    // fire in practice.
+    // The expiry path is unsafe by design: the caller (the paint path's
+    // force_synchronous_waveform_rebuild) takes over the cache surfaces from
+    // under any live job. This bound exists only as a last-resort hang guard,
+    // and is sized far above the two-render worst case so it does not fire in
+    // practice.
     const auto deadline = clock::now() + std::chrono::milliseconds(1000);
     while (true) {
         const int s = state_.load();

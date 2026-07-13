@@ -139,11 +139,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 
 // -- GuiInputHandler ----------------------------------------------------
 //
-// run_render_batch was a non-trivial lambda local to main() with three
-// callers, all inside the on_key body. It now has zero remaining callers in
-// main.cpp, so it lives on this struct as a private helper. RenderBatchResult
-// was a struct local to main() (no other callers); it is a nested type here
-// for the same reason.
+// The batch render runner lives on this struct as private helper methods
+// (start_render_batch and the ActiveBatch lifecycle), driven by the iteration
+// and BPM sweeps; ActiveBatch is a nested type on the struct.
 struct GuiInputHandler {
     AppState&                app;
     const GuiAudio&          audio;
@@ -311,10 +309,10 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
 private:
-    // ActiveBatch holds the run_render_batch state machine. Each entry is
-    // dispatched onto GuiAsyncRenderer and the next entry fires from the
-    // worker-completion callback. The GUI remains interactive between (and
-    // during) entries.
+    // ActiveBatch holds the batch render state machine (start_render_batch
+    // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and
+    // the next entry fires from the worker-completion callback. The GUI
+    // remains interactive between (and during) entries.
     struct ActiveBatch {
         std::vector<RenderRequest> reqs;
         std::string                label;
@@ -445,10 +443,11 @@ private:
     // read-only), so a refused open changes nothing.
     void arm_editor_text_drag_on_open();
 
-    // Clipboard: perform the platform I/O for a Copy/Cut/Paste editor action
-    // against editor `s`, and report whether it handled one. Copy and cut
-    // push the selection to the clipboard (cut then deletes it); paste pulls
-    // the clipboard text into the selection. Returns false for any other
+    // Clipboard: handle a Copy/Cut/Paste editor action against editor `s`
+    // using the internal session clipboard (AppState::text_clipboard; there is
+    // no Wayland clipboard), and report whether it handled one. Copy and cut
+    // push the selection to the session clipboard (cut then deletes it); paste
+    // pulls the clipboard text into the selection. Returns false for any other
     // action so the caller can fall through to its remaining branches.
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);

@@ -597,9 +597,9 @@ int main(int argc, char** argv) {
     // The shared wheel handler (handle_wheel) is a private helper method on
     // GuiInputHandler; GuiInputHandler::on_wheel is its only caller.
 
-    // The multi-render queue runner (run_render_batch + RenderBatchResult) is a
-    // private helper method on GuiInputHandler (input_handler.h); the on_key
-    // body is its only caller.
+    // The batch render runner (start_render_batch and the ActiveBatch
+    // lifecycle) is a set of private helper methods on GuiInputHandler
+    // (input_handler.h), driven by the iteration and BPM sweeps.
 
     gui.set_on_key([&](GuiKey key, GuiInputState mods) {
         input_handler.on_key(key, mods);

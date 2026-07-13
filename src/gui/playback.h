@@ -138,7 +138,7 @@ public:
                        int64_t domain_offset);
 
     // Tear down the device. Blocks until the audio callback has drained.
-    // Call before the sample buffer dies (reload, shutdown).
+    // Call before the sample buffer dies (at shutdown).
     void shutdown();
 
     // Opaque to consumers, but public so the audio callback in

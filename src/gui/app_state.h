@@ -798,20 +798,20 @@ struct AppState {
     // on_tick clamp (see main.cpp). 0 = not yet observed.
     int64_t last_tick_live_total = 0;
 
-    // Render-queue state. `queue_running` is true while any archival render
-    // dispatch is in flight (the Ctrl+Alt+R one-shot and all batch runs). The
-    // Esc handler checks it to scope the cancel binding away from normal
-    // interaction. `queue_cancel_requested` is set by Esc during a queue run
-    // and read between entries.
+    // Archival render dispatch state. `queue_running` is true while any
+    // archival render dispatch is in flight (the Ctrl+Alt+R one-shot and the
+    // iteration/BPM sweep batch runs). The Esc handler checks it to scope the
+    // cancel binding away from normal interaction. `queue_cancel_requested`
+    // is set by Esc during a run and read between batch entries.
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
-    // Non-interactive bottom-strip status text. Set by long-running
-    // operations (currently only the multi-render queue runner) so the
-    // user has visual feedback while no other UI is updating. Empty
-    // means "no status — render the timestamp normally." Mutually
-    // exclusive with prompt.active in practice (the queue runner can't
-    // fire while a prompt is up).
+    // Non-interactive bottom-strip status text, giving the user visual
+    // feedback while no other UI is updating. Driven by the shared batch
+    // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
+    // target-preview updates — not a manual queue. Empty means "no status —
+    // render the timestamp normally." Mutually exclusive with prompt.active in
+    // practice (these updates can't fire while a prompt is up).
     std::string queue_progress_text;
 
     // Transient one-line status message shown in the bottom strip after

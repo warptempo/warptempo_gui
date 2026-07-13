@@ -23,11 +23,13 @@ class GuiAudio;
 // never destroys.
 //
 // The job-payload owns no audio bytes. It carries `const GuiAudio*` whose
-// lifetime invariant is: audio outlives all in-flight jobs because (a)
-// main.cpp's GuiAudio is constructed before the worker and destroyed after
-// gui.shutdown(), and (b) load_file's `audio = std::move(next)` move-
-// assignment is preceded by GuiWaveformWorker::wait_until_idle so no
-// in-flight job is dereferencing the old audio when the move happens.
+// lifetime invariant is: audio outlives all in-flight jobs because main.cpp's
+// GuiAudio is constructed before the worker and destroyed after
+// gui.shutdown(), and the source is loaded once at launch and never replaced
+// in-session, so no move-assignment ever races a live job. The only
+// synchronous drain (GuiWaveformWorker::wait_until_idle) is the paint path's
+// force_synchronous_waveform_rebuild, which takes over the cache surfaces
+// before a one-shot rebuild.
 struct WaveformJob {
     // Fingerprint inputs the worker's render uses. The cache's fp_* fields
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
@@ -112,9 +114,10 @@ public:
     // pending but on_completion_event hasn't fired yet).
     bool is_busy() const;
 
-    // Block until state_ is Idle. Used by file_loader before swapping the
-    // GuiAudio backing buffer to guarantee no in-flight job is reading the
-    // soon-to-be-discarded audio. Caps the wait at ~100ms; if the worker
+    // Block until state_ is Idle. Used by the paint path's
+    // force_synchronous_waveform_rebuild to take over the cache surfaces
+    // before a one-shot synchronous rebuild, guaranteeing no in-flight job
+    // touches them underneath it. Caps the wait at ~100ms; if the worker
     // hasn't responded by then, logs to stderr and returns.
     void wait_until_idle();
 

@@ -50,8 +50,9 @@ struct GuiFileLoader {
     bool load_file(const std::string& path);
     void join_source_sample_cache_writer();
 
-    // The writer reads GuiAudio's sample buffer through a raw pointer.
-    // Callers join before replacing the buffer in load_file, and the
-    // destructor joins before GuiAudio is destroyed.
+    // The launch-only writer captures the source buffer by shared_ptr
+    // (samples_shared()), owning a lifetime-safe view of its own. There is no
+    // in-session replacement load, so the destructor join is the surviving
+    // synchronization before GuiAudio is destroyed.
     std::thread source_sample_cache_writer_;
 };

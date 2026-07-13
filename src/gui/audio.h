@@ -77,15 +77,16 @@ private:
 
     // Size and mtime of the source file at the moment its samples were
     // decoded into this buffer, captured through the same stat_file_identity
-    // used by the render fingerprint so the two are directly comparable. This
-    // lets the render pipeline prove a borrowed buffer still corresponds to
-    // the identity a fingerprint names. load() refuses a source it cannot
-    // stat, so both fields are valid whenever a source is loaded.
+    // used by the render fingerprint. The render pipeline records these
+    // directly as a wav render's fingerprint source identity; the source is
+    // immutable for the process lifetime, so there is no on-disk re-stat.
+    // load() refuses a source it cannot stat, so both fields are valid
+    // whenever a source is loaded.
     uint64_t load_identity_size_ = 0;
     int64_t  load_identity_mtime_ = 0;
 
     // Three fixed-stride cache levels (strides 32, 1024, 32768). Populated
-    // either from the on-disk `<basename>.peaks` v2 sidecar or by streaming
+    // either from the on-disk `<basename>.peaks` v3 sidecar or by streaming
     // over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, 3> levels_;
 };

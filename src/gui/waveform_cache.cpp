@@ -494,10 +494,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      fast-flick fallback in pan_waveform_incremental already drops to this
 //      full sync rebuild.
 //   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
-//      changes the user is not actively driving: resize, file load / reload,
-//      target-view marker drags (frozen during the drag, re-rendered on the
-//      worker at release), follow_scroll_if_needed during playback, and the
-//      on_tick safety net that catches residual fingerprint drift.
+//      changes the user is not actively driving: resize, the launch file
+//      load, target-view marker drags (frozen during the drag, re-rendered on
+//      the worker at release), follow_scroll_if_needed during playback, and
+//      the on_tick safety net that catches residual fingerprint drift.
 //
 // This is NOT "make everything synchronous." Async earns its keep for the
 // touchpad torrent and for undriven / playback-adjacent changes; the rule is
@@ -508,8 +508,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     // Drain any in-flight worker job so we own the cache surfaces.
     // Cancels a Running job and synchronously consumes a
-    // CompletionPending one (same primitive file_loader uses before
-    // swapping audio). After this the worker is Idle and will not touch
+    // CompletionPending one. After this the worker is Idle and will not touch
     // wf_cache surfaces underneath us.
     waveform_worker.wait_until_idle();
 

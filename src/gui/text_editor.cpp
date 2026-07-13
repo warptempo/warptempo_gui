@@ -155,7 +155,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // keymap (returning a handled action), so they never fall through to the
     // global dispatch; Ctrl+C/X/V are unbound globally, so no conflict. Copy
     // and cut are a no-op (plain Consumed) without a selection; paste always
-    // requests — the input handler performs the platform I/O.
+    // requests — the input handler applies the action against the internal
+    // session clipboard.
     if (ctrl && key == GuiKeys::C) {
         return has_selection(s) ? KeyAction::CopyRequested
                                 : KeyAction::Consumed;

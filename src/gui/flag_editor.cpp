@@ -258,7 +258,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
     const int idx = app.top_flag_editor.target;
     const auto& mv_const = app.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
-        // Editor target became invalid (e.g. file reload). Drop edit.
+        // Editor target became invalid (e.g. the marker was removed
+        // underneath the editor by an undo or delete). Drop edit.
         this->exit_top_flag_edit_no_commit();
         return;
     }
