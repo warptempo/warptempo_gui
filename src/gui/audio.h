@@ -14,11 +14,7 @@
 // caller wires up to its UI.
 class GuiAudio {
 public:
-    // Progress callback. Invoked with a value in [0.0, 1.0]; the return value
-    // is a continue/cancel signal — true keeps loading, false asks load() to
-    // abort at the next boundary (skipping the pyramid build, cache write, and
-    // publish). It may be empty.
-    using ProgressCallback = std::function<bool(float)>;
+    using ProgressCallback = std::function<void(float)>;
 
     // Implementation detail of the peak cache. Public only so the cache
     // reader/writer free functions in audio.cpp can name the type.
@@ -34,10 +30,7 @@ public:
     // Opens `path` via the in-tree codec library, reads all frames, and builds the pyramid.
     // Returns true on success. On failure, writes a diagnostic to stderr and
     // returns false. `on_progress` is invoked with a value in [0.0, 1.0]
-    // periodically during pyramid construction; it may be empty. When
-    // `on_progress` returns false (cancel), load() returns false WITHOUT
-    // building the rest of the pyramid, writing the cache, or publishing — a
-    // requested-exit abort, not a failure, so no diagnostic is printed.
+    // periodically during pyramid construction; it may be empty.
     bool load(const std::string& path, const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }

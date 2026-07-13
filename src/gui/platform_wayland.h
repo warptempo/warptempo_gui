@@ -45,10 +45,6 @@ public:
     void shutdown();
     void run();
     void request_exit();
-    // The run-loop exit flag (set by request_exit, WM close, or Ctrl+Q). The
-    // startup loader reads it to abort a long load after a close request
-    // instead of finishing the whole decode + pyramid + install.
-    bool exit_requested() const { return should_exit_; }
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
     void paint_now();

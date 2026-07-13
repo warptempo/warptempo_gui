@@ -129,6 +129,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // always false in blank state (the only blank state is the transient
     // pre-load window before the sole startup load completes, when nothing
     // has been loaded or edited yet).
+    //
+    // Loading is a BLOCKING, UNINTERRUPTIBLE phase: the run loop is suspended
+    // for the whole synchronous decode/pyramid/install, so a Ctrl+Q or WM
+    // close pressed during loading is not observed here at all — it is read
+    // when run() resumes after the load completes, and the deferred quit is
+    // then honored (the app quits on completion). This gate's Ctrl+Q admission
+    // is for a close queued before/around load, which still yields that
+    // deferred quit; an urgent abort is pkill / the compositor's force-close.
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.request_close();

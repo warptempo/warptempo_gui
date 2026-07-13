@@ -101,40 +101,28 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     GuiAudio next;
     const auto t0 = std::chrono::steady_clock::now();
+    // Loading is a blocking, uninterruptible phase: the run loop is suspended
+    // for the whole synchronous decode/pyramid/install, so the callback below
+    // only pumps the compositor (drain_events reads no socket fd) and never
+    // reports cancel. A Ctrl+Q / WM close pressed during loading is not
+    // observed until the load completes; the queued event is then read when
+    // run() resumes and the deferred quit is honored on completion. An urgent
+    // abort is pkill / the compositor's force-close.
     const bool ok = next.load(path, [&](float) {
         // Pump the event loop so the compositor stays responsive across a
-        // multi-frame load, then report continue/cancel: a close request
-        // (Ctrl+Q / WM close) observed during the load aborts it after the
-        // decode instead of finishing the whole pyramid build + publish.
+        // multi-frame load.
         gui.drain_events();
-        return !gui.exit_requested();
     });
     const auto t1 = std::chrono::steady_clock::now();
 
     if (!ok) {
-        // The sole source load (at launch) either failed to decode or was
-        // cancelled by a close request. A genuine decode failure already
-        // printed its reason in GuiAudio::load; a cancel (exit already
-        // requested) returns quietly. Either way there is no prior project to
-        // fall back to and no in-session way to load another, so exit — for a
-        // failure the user reads the terminal and relaunches; for a cancel the
-        // exit was what the user asked for. request_exit is idempotent.
+        // The sole source load (at launch) failed to decode. GuiAudio::load
+        // already printed the reason; there is no prior project to fall back
+        // to and no in-session way to load another, so exit — the user reads
+        // the terminal and relaunches.
         app.loading       = false;
         app.queue_progress_text.clear();
         gui.request_exit();
-        return false;
-    }
-
-    // A close request (Ctrl+Q / WM close) that arrived after the last progress
-    // callback but before install lands here: the decode published inside
-    // `next` but nothing GUI-side is installed yet. Discard `next` without
-    // installing the buffer, loading sidecars, initializing playback, or
-    // requesting any preview. request_exit is already set, so the run loop
-    // terminates on the next iteration; the source-sample-cache writer thread
-    // (started only below) never starts, so there is nothing to join.
-    if (gui.exit_requested()) {
-        app.loading       = false;
-        app.queue_progress_text.clear();
         return false;
     }
 
