@@ -1317,8 +1317,12 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
     } else if (!has_kb && wl_keyboard_) {
         wl_keyboard_release(wl_keyboard_);
         wl_keyboard_ = nullptr;
-        // Drop any in-progress repeat — the keyboard is gone.
+        // Capability loss need not be preceded by keyboard.leave. Drop both
+        // repeat and the cached modifier projection here so pointer input
+        // delivered while no keyboard exists cannot inherit a phantom chord
+        // from the last keyboard event (for example Ctrl+wheel authoring).
         repeat_key_ = 0;
+        mod_ctrl_ = mod_shift_ = mod_alt_ = false;
     }
 
     if (has_pointer && !wl_pointer_) {
