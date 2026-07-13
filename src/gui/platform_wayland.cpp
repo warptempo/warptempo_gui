@@ -1325,10 +1325,34 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_ = wl_seat_get_pointer(wl_seat_);
         wl_pointer_add_listener(wl_pointer_, &s_pointer_listener, this);
     } else if (!has_pointer && wl_pointer_) {
+        const bool left_was_held = pointer_left_held_;
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
         pointer_left_held_ = false;
+
+        // Capability loss is the hard end of this wl_pointer event stream:
+        // the protocol guarantees that no further events (and therefore no
+        // matching button release or frame boundary) arrive on this object.
+        // End a held application gesture at the last delivered coordinates,
+        // using the same release tail as an ordinary/lost-button finish, so
+        // marker/trim commits and the three navigation/text gestures cannot
+        // remain stuck until a future pointer capability happens to appear.
+        if (left_was_held && on_button_release_) {
+            on_button_release_(GuiMouseButton::Left,
+                               pointer_x_, pointer_y_, current_mods());
+        }
+
+        // A sub-detent carry and the staged half of a logical pointer frame
+        // belong to the destroyed pointer object. They must not combine with
+        // input from a later wl_pointer created when the seat regains the
+        // capability, even if cursor region and modifiers happen to match.
+        scroll_accum_       = 0.0;
+        scroll_context_key_ = 0;
+        frame_v120_accum_   = 0.0;
+        frame_axis_accum_   = 0.0;
+        frame_have_v120_    = false;
+        frame_have_axis_    = false;
     }
     // Touch capability bit remains ignored.
 }
