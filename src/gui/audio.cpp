@@ -22,15 +22,24 @@
 
 namespace {
 
-// `.peaks` v3 format -------------------------------------------------------
+// `.peaks` v4 format -------------------------------------------------------
 //
-// 32-byte preamble:
+// 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently 3)
+//   off 8  | 2  | version (uint16, currently 4)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)
 //   off 28 | 4  | sample_rate  (int32)
+//
+// Owner discriminator (length-prefixed string, immediately after the
+// preamble; same convention as the `.samples` cache):
+//   4          | owner_len (uint32, bytes; bounded, an over-long value is a
+//                miss, not a hard error)
+//   owner_len  | source basename WITH extension, exact bytes, case-sensitive
+//                (the final path component, e.g. "take.wav"). Distinguishes
+//                same-stem sources like take.wav / take.WAV that share
+//                size/mtime/rate/frames/channels.
 //
 // Body header (16 bytes):
 //   8 | total_frames    (int64)
@@ -49,8 +58,11 @@ namespace {
 // Out-of-range source peaks clip at the boundary.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-constexpr uint16_t kCacheVersion          = 3;
+constexpr uint16_t kCacheVersion          = 4;
 constexpr int      kStreamFramesPerChunk  = 65536;
+// Bounds the owner-discriminator string so a corrupt header is a cheap cache
+// miss rather than a memory-pressure event. Mirrors the `.samples` cache rule.
+constexpr uint32_t kMaxOwnerBytes         = 4096;
 constexpr int      kNumLevels             = 3;
 constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
 constexpr int      kReductionFactor       = 32;  // 1024/32 = 32; 32768/1024 = 32.
@@ -82,6 +94,13 @@ std::string cache_path_for(const std::string& source) {
     std::filesystem::path p(source);
     p.replace_extension(".peaks");
     return p.string();
+}
+
+std::string owner_name_for(const std::string& source) {
+    // The source file's final path component WITH extension, exact bytes and
+    // case-sensitive, so same-stem siblings (take.wav / take.WAV) that share
+    // size/mtime/rate/frames/channels never accept each other's peaks.
+    return std::filesystem::path(source).filename().string();
 }
 
 std::string lowercase(std::string s) {
@@ -288,6 +307,20 @@ bool try_load_cache(const std::string& source_path,
         stale(); return false;
     }
 
+    // Owner discriminator: an over-long length or a byte mismatch is a cache
+    // miss (rebuild), never a hard error and never accepting the wrong cache.
+    uint32_t hdr_owner_len = 0;
+    if (std::fread(&hdr_owner_len, sizeof(hdr_owner_len), 1, f) != 1 ||
+        hdr_owner_len > kMaxOwnerBytes) {
+        stale(); return false;
+    }
+    std::string hdr_owner(hdr_owner_len, '\0');
+    if (hdr_owner_len > 0 &&
+        std::fread(hdr_owner.data(), 1, hdr_owner_len, f) != hdr_owner_len) {
+        stale(); return false;
+    }
+    if (hdr_owner != owner_name_for(source_path)) { stale(); return false; }
+
     int64_t hdr_total_frames = 0;
     uint8_t hdr_rc = 0, hdr_nl = 0;
     char    reserved[6];
@@ -388,6 +421,13 @@ bool write_cache_to_disk(const std::string& source_path,
     if (std::fwrite(&src_mtime, sizeof(src_mtime), 1, f) != 1) return fail();
     const int32_t sr32 = static_cast<int32_t>(sample_rate);
     if (std::fwrite(&sr32, sizeof(sr32), 1, f) != 1) return fail();
+
+    // Owner discriminator: length-prefixed source basename WITH extension.
+    const std::string owner = owner_name_for(source_path);
+    const uint32_t owner_len = static_cast<uint32_t>(owner.size());
+    if (std::fwrite(&owner_len, sizeof(owner_len), 1, f) != 1) return fail();
+    if (owner_len > 0 &&
+        std::fwrite(owner.data(), 1, owner_len, f) != owner_len) return fail();
 
     const int64_t tf = total_frames;
     if (std::fwrite(&tf, sizeof(tf), 1, f) != 1) return fail();
