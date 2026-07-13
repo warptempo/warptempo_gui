@@ -946,6 +946,7 @@ bool GuiInputHandler::apply_editor_clipboard(
 
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
+                           const std::vector<GuiPhaseResetMarker>& phase_resets,
                            double scale, int sample_rate, long total_frames,
                            bool has_trim_begin, int64_t trim_begin_frame,
                            bool has_trim_end,   int64_t trim_end_frame) {
@@ -953,6 +954,22 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
     // entry-half validity predicate for target view — the keyboard S → T
     // toggle below and GuiFileLoader::load_file's active_audio_view=T
     // restore gate on exactly this walk.
+    //
+    // Raw-store walk FIRST, mirroring warp_render_preflight: enumerate the
+    // pickability defects across BOTH marker columns (the enumerator's
+    // coincidence window is deliberately wider than the parser owners'
+    // sub-frame refusals, and it is the only stage that sees the
+    // phase-reset column), first defect message wins. Guarded on
+    // sr>0 && total>0 like the preflight. A raw-invalid store cannot enter
+    // target view — the resolve/build/trim backstop below never sees it.
+    if (sample_rate > 0 && total_frames > 0) {
+        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
+            slice_to_warp_markers(markers),
+            slice_to_phase_reset_markers(phase_resets), sample_rate);
+        if (!defects.empty()) {
+            return std::unexpected(std::move(defects.front().message));
+        }
+    }
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers), sample_rate);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
@@ -1019,7 +1036,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto entry = validate_target_view_entry(
-        app.warpmarkers.markers(), app.engine_settings.scale,
+        app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+        app.engine_settings.scale,
         audio.sample_rate(), static_cast<long>(audio.total_frames()),
         entering_target && app.trim.has_begin, app.trim.begin_frame,
         entering_target && app.trim.has_end,   app.trim.end_frame);
@@ -1203,18 +1221,37 @@ void GuiInputHandler::enforce_target_view_validity() {
     // the commit's own pending-validation flag opens the series first on the
     // next tick, and this gate then defers behind that prompt like any other.
     if (any_pointer_gesture_active(app)) return;
+    const long sr    = static_cast<long>(audio.sample_rate());
+    const long total = static_cast<long>(audio.total_frames());
     const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
-        app, audio.sample_rate(), static_cast<long>(audio.total_frames()));
-    // Two kick conditions, checked in order: an invalid marker state (the
-    // cached build error) and — the trim column of the same gate — a set
-    // trim that fails validate_trim_frames against the cached map (the
-    // cache's map IS the full map, built trim-off from the live store), the
-    // live sample rate, and total frames. Either way target playback never
-    // auditions an unrenderable window. The error string is the owner's
-    // verbatim (parser's or trimmer's), consumed only by the popup backstop
-    // when the defect series does not model the failure.
+        app, audio.sample_rate(), total);
+    // Three kick conditions, checked in order. First the raw-store walk over
+    // the LIVE store's BOTH columns — enumerate_marker_store_defects under a
+    // sr>0 && total>0 guard, mirroring warp_render_preflight and the entry
+    // gate — so a state that could not ENTER target view cannot survive as a
+    // live T state either; it is the only stage that sees the phase-reset
+    // column, and its coincidence window is wider than the parser owners'
+    // sub-frame refusals (which is all the cached build error models). Then
+    // the cached warp-map build error, then — the trim column of the same
+    // gate — a set trim that fails validate_trim_frames against the cached
+    // map (the cache's map IS the full map, built trim-off from the live
+    // store), the live sample rate, and total frames. Any of the three means
+    // target playback would audition an unrenderable window. The error
+    // string is the owner's verbatim (enumerator's, parser's, or trimmer's),
+    // consumed only by the popup backstop when the defect series does not
+    // model the failure.
     std::string err;
-    if (!c.build_error.empty()) {
+    if (sr > 0 && total > 0) {
+        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
+            slice_to_warp_markers(app.warpmarkers.markers()),
+            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()), sr);
+        if (!defects.empty()) {
+            err = std::move(defects.front().message);
+        }
+    }
+    if (!err.empty()) {
+        // Raw defect already found — fall through to the shared kick tail.
+    } else if (!c.build_error.empty()) {
         // Copy before toggling: the T → S toggle path re-resolves and can
         // touch the cache the reference points into.
         err = c.build_error;

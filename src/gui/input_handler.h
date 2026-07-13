@@ -124,15 +124,23 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // If a keystroke entry would be blocked, a load restore is blocked
 // identically — the predicate changes in one place or not at all.
 //
-// The walk: resolve_warp_markers_for_render over `markers`, then
+// The walk: first the raw-store walk — enumerate_marker_store_defects over
+// BOTH marker columns (`markers` + `phase_resets`, under a sr>0 &&
+// total>0 guard), first defect message wins — so target view is reachable
+// only from a raw-valid store, mirroring warp_render_preflight's raw walk
+// and render view's load walk (the enumerator's coincidence window is
+// wider than the parser owners' sub-frame refusals, so a raw-invalid but
+// owner-clean store — e.g. two close phase resets — is refused here too).
+// Then resolve_warp_markers_for_render over `markers`, then
 // build_warp_frame_map with `scale` (the whole-song map — trim is
 // render-time, not view-time), then — only when a trim bound is set —
-// validate_trim_frames against the full map just built. Failure of any of
-// the three blocks entry. On success the built map is returned so the
+// validate_trim_frames against the full map just built. Failure of any
+// stage blocks entry. On success the built map is returned so the
 // toggle can reuse it for its viewport/playhead translation (no second
 // build); on failure the first owner's error string is returned verbatim.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
+                           const std::vector<GuiPhaseResetMarker>& phase_resets,
                            double scale, int sample_rate, long total_frames,
                            bool has_trim_begin, int64_t trim_begin_frame,
                            bool has_trim_end,   int64_t trim_end_frame);

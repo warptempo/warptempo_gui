@@ -536,27 +536,31 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Target-view validity gate, load half: restoring active_audio_view=T
     // from .settings is an entry into target view and is gated by EXACTLY
     // the predicate that gates a keyboard S → T entry —
-    // validate_target_view_entry (input_handler.h): resolve the loaded warp
-    // store, build the whole-song warp_frame_map with the loaded scale,
-    // and, when the active tab loaded a trim bound, validate_trim_frames
-    // against that map. Every input the walk consumes is in place by this
-    // point: markers (parsed above, default zero-marker seeded), engine
-    // settings (strict block above), and the active tab's trim (tab
+    // validate_target_view_entry (input_handler.h): the raw-store
+    // enumerator over BOTH marker columns (the loaded warp AND phase-reset
+    // stores) first, then resolve the loaded warp store, build the
+    // whole-song warp_frame_map with the loaded scale, and, when the active
+    // tab loaded a trim bound, validate_trim_frames against that map. Every
+    // input the walk consumes is in place by this point: markers (parsed
+    // above, default zero-marker seeded), phase resets (parsed above),
+    // engine settings (strict block above), and the active tab's trim (tab
     // activation above). On failure, force source view SILENTLY — no popup
     // and no series open here: pending_validation = Load (set below) is the
     // ruled surface and opens the defect-resolution series on the first
     // tick, now from source view, so no target render of an invalid store
-    // is ever dispatched. The gate mirrors the entry gate ONLY — defects
-    // the entry gate does not block on (coincident markers wider than the
-    // owners' sub-frame refusals, a trim bound under a map format,
-    // dangling-ref states the resolver walks) load intact and the series
-    // handles them. Forcing 'S' intentionally means a later save persists
+    // is ever dispatched. The gate mirrors the entry gate exactly — the
+    // only defect it does not block on is a trim bound under a map format
+    // (validate_target_view_entry never sees output_format); coincident
+    // markers and dangling-ref states now fail the shared raw enumerator
+    // here too, and either way the state loads intact and the series
+    // handles it. Forcing 'S' intentionally means a later save persists
     // active_audio_view=S — the same outcome the kick-back gate
     // (enforce_target_view_validity) produces for an invalidating edit made
     // in target view; the saved line reflects the view actually shown.
     if (app.active_audio_view == 'T') {
         if (!validate_target_view_entry(
-                app.warpmarkers.markers(), app.engine_settings.scale,
+                app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+                app.engine_settings.scale,
                 audio.sample_rate(), static_cast<long>(audio.total_frames()),
                 app.trim.has_begin, app.trim.begin_frame,
                 app.trim.has_end,   app.trim.end_frame)) {
