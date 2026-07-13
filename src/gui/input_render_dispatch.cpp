@@ -318,6 +318,13 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
     // and BPM sweeps) construct every RenderRequest in the batch with the
     // same batch_folder string, so reading the front entry is canonical.
     batch_.batch_folder = std::filesystem::path(reqs.front().batch_folder);
+    // Snapshot the batch's output kind the same way: render view is a WAV
+    // audio player, so the terminal auto-open runs only for a wav batch.
+    // Both sweep builders copy the live app.engine_settings.output_format
+    // into every entry, so the front request is canonical; the map formats
+    // ("generic_map" / "midi_map" / "warptempo_maps") never equal "wav".
+    batch_.wav_browseable =
+        (reqs.front().engine_settings.output_format == "wav");
 
     batch_.reqs       = std::move(reqs);
     batch_.label      = std::move(batch_label);
@@ -351,20 +358,26 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 "warptempo_gui: %s: rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
         }
-        // Show render-view at the just-rendered batch's first file. Gated
-        // on a non-cancelled terminal branch that actually produced at
-        // least one .wav on disk; a batch where every entry returned Failed
-        // leaves rendered == 0 and there is nothing to view. Render view
-        // opens only against an idle worker with nothing parked, so the
-        // auto-open — an automatic `r` — obeys the same entry gate the r key
-        // does. The completed batch is fully finalized — state cleared, then
-        // finalize_render_run — BEFORE the auto-open runs, and finalize's
-        // maybe_dispatch_pending can hand the worker to a parked archival
-        // command or a pending target render on that same beat; when the
-        // pump started new work the auto-open is skipped outright with the
-        // gate's one refusal line — the batch is on disk and in the render
-        // list for a later `r`, exactly like the modal-surface skip below.
+        // Show render-view at the just-rendered batch's first file. The
+        // auto-open runs only for a WAV-output batch (render view is a WAV
+        // audio player); a successful MAP-format batch finalizes with its
+        // artifacts on disk and no auto-open — there is nothing to audition,
+        // not an error. Otherwise gated on a non-cancelled terminal branch
+        // that actually produced at least one .wav on disk; a batch where
+        // every entry returned Failed leaves rendered == 0 and there is
+        // nothing to view. Render view opens only against an idle worker with
+        // nothing parked, so the auto-open — an automatic `r` — obeys the same
+        // entry gate the r key does. The completed batch is fully finalized —
+        // state cleared, then finalize_render_run — BEFORE the auto-open runs,
+        // and finalize's maybe_dispatch_pending can hand the worker to a
+        // parked archival command or a pending target render on that same
+        // beat; when the pump started new work the auto-open is skipped
+        // outright with the gate's one refusal line — the batch is on disk and
+        // in the render list for a later `r`, exactly like the modal-surface
+        // skip below.
         const bool success = !cancelled && batch_.rendered > 0;
+        // WAV-only: map/midi batches have nothing to audition (see above).
+        const bool auto_open = success && batch_.wav_browseable;
         // Latch the folder the auto-open consumes before the state clear.
         // auto_open_batch_at_first_file reads only its batch_folder argument
         // (all other inputs are app.* fields), and the clear below drops
@@ -391,7 +404,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // in the render list; `r` shows it once the modal closes or the
         // gesture ends. No deferral slot: skip keeps the invariant absolute
         // with no new lifecycle.
-        if (success && !modal_bottom_strip_editor_active() &&
+        if (auto_open && !modal_bottom_strip_editor_active() &&
             !app.prompt.active && !any_pointer_gesture_active(app)) {
             // Entry gate, the same refusal the r key prints: render view
             // never opens over running or parked render work.
@@ -453,7 +466,8 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 }
 
 // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
-// (base_tempo, scale) per cell and rendering one .wav per cell into
+// (base_tempo, scale) per cell and rendering one artifact set per cell (a
+// `.wav`, or the map/midi files for a map output_format) into
 // `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
 // by do_render); Ctrl+Alt+C adopts them when committing a BPM cell. The

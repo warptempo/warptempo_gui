@@ -435,9 +435,9 @@ void GuiInputHandler::commit_trim_drag() {
         // at all zooms. An untouched bound keeps its stored value bit-exact
         // (commit_drag's moved-only rule); on a rigid two-bound drag each
         // moved bound anchors to its OWN painted column independently, so the
-        // pair's span may deform by up to one frame at release — the same
-        // accepted behavior multi-marker drags have (the constant-gap phrasing
-        // at TrimDragState describes the mid-gesture active-domain motion).
+        // pair's span may deform by up to one frame at release — an accepted
+        // release-snap consequence (the constant-gap phrasing at TrimDragState
+        // describes the mid-gesture active-domain motion).
         // The map is the display context's own — identity in source view,
         // the live cached map in target view — as the trim nudge and
         // trim-end wheel anchor: markers freeze a pre-drag map because a

@@ -348,6 +348,14 @@ private:
         // is empty. All entries in a single batch share one folder,
         // so reading from reqs.front() is canonical.
         std::filesystem::path      batch_folder;
+        // Snapshotted the same way, from reqs.front()'s output_format:
+        // render view is a WAV audio player, so the terminal auto-open
+        // runs only for a wav-output batch. Every entry in a batch shares
+        // one output_format (both sweep builders copy the live
+        // app.engine_settings.output_format), and reqs is moved onto batch_
+        // before the terminal branch reads this — so the front request is
+        // the canonical read and is captured up front, like batch_folder.
+        bool                       wav_browseable = false;
     };
     ActiveBatch batch_;
 

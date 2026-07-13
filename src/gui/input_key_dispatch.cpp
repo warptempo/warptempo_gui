@@ -357,8 +357,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
     // Ctrl+Alt+I renders the Cartesian product of the per-marker iter ranges
     // authored in iteration mode. Output lands in
-    // `<source_parent>/renders/<N>_render_iterations/`, with one .wav per cell
-    // named `<seq>_<delta_csv>.wav`. The CSV holds the swept markers' deltas
+    // `<source_parent>/renders/<N>_render_iterations/`, one cell per product
+    // point with basename `<seq>_<delta_csv>`; the artifact(s) per cell depend
+    // on output_format — a `.wav` for wav output, or the map/midi sidecars for
+    // a map output_format. The CSV holds the swept markers' deltas
     // in timeline order, formatted `%+0.2f`; markers with no iter range
     // authored are excluded from the CSV and contribute one fixed value (their
     // authored tempo_cents) to the product. Per-cell progress and Esc

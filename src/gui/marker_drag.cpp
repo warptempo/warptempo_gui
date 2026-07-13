@@ -106,16 +106,15 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         if (ub < d.delta_max) d.delta_max = ub;
     }
 
-    // Viewport clamp: keep the grabbed marker within the visible strip so a
-    // mouse drag can't push it offscreen, where its precise position would be
-    // hidden. Only the grabbed marker (hit) is clamped; co-dragged markers
-    // ride the same scalar delta and stay bound by the data range alone — the
-    // same way Ctrl+Shift+drag clamps the grabbed bound but lets its partner
-    // run to the clip edge. viewport_marker_bounds is active-domain while the
-    // delta lives in source frames, so inverse-translate the edges; the
-    // domain map is monotonic, so the source clamp matches the active-pixel
-    // clamp. The grabbed marker is on-screen or within the kMarkerHitHalfPx
-    // halo (up to a few pixels past an edge) at grab: when fully on-screen
+    // Viewport clamp: hit is the sole dragged marker, so it alone is clamped
+    // to the visible strip so a mouse drag can't push it offscreen, where its
+    // precise position would be hidden — on top of the absolute data walls
+    // (delta_min/delta_max computed just above). viewport_marker_bounds is
+    // active-domain while the delta lives in source frames, so
+    // inverse-translate the edges; the domain map is monotonic, so the
+    // source clamp matches the active-pixel clamp. The grabbed marker is
+    // on-screen or within the kMarkerHitHalfPx halo (up to a few pixels past
+    // an edge) at grab: when fully on-screen
     // these bounds bracket delta = 0; when grabbed just offscreen through the
     // halo they both sit on one side of 0, so the first motion snaps the item
     // into the visible strip — that is what makes a blind offscreen-halo grab
