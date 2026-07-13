@@ -69,24 +69,6 @@ struct GuiFileLoader {
     // the wiring.
     GuiPrompt* prompt = nullptr;
 
-    // Render-view teardown hook, wired in main.cpp after GuiRenderView's
-    // construction (GuiRenderView is built after this struct, so the
-    // reference cannot be a constructor parameter — the same
-    // post-construction back-wire shape as `prompt` above). Bound to
-    // GuiRenderView::abandon_render_view: load_file calls it early, while
-    // the source audio is still alive, so playback is rebound to the source
-    // and the entry buffer freed before the source is installed. On the sole
-    // startup load there is no render view up, so the call no-ops.
-    std::function<void()> abandon_render_view;
-
-    // Archival-session cancel hook, wired in main.cpp after
-    // GuiInputHandler's construction (the same post-construction back-wire
-    // shape as `prompt` and `abandon_render_view`). Bound to
-    // GuiInputHandler::cancel_archival_session, the body behind Esc's
-    // render-cancel semantics. load_file calls it early; on the sole startup
-    // load no archival session can exist yet, so the call no-ops.
-    std::function<void()> cancel_archival_render;
-
     bool load_file(const std::string& path);
     void join_source_sample_cache_writer();
 

@@ -96,13 +96,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Pre-install teardown, cancel-then-abandon order. This is the sole
-    // (startup) load, so there is nothing to cancel or tear down — no render
-    // can have been dispatched yet — and both hooks no-op; they stay as the
-    // ordered teardown the install path funnels through.
-    if (cancel_archival_render) cancel_archival_render();
-    if (abandon_render_view) abandon_render_view();
-
     // Stop and tear down the audio device before the sample buffer it
     // borrows is replaced. Playing into a freed buffer would crash the
     // audio thread. Order (stop → shutdown → load → init) is fixed.

@@ -755,51 +755,6 @@ void GuiRenderView::clear_snapshot_context() {
     app.render_view.snapshot_commit_tab = 'A';
 }
 
-// The abandon arm of the render-view exit pair: restore_source_view
-// restores the stashed source view for an ordinary exit;
-// abandon_render_view tears down when the source itself is being
-// replaced (load_file), where calling restore_source_view would
-// be too late (the source is gone by the time the view could be
-// restored) and would spuriously run its target-view ensure_ready tail
-// against the dying source. The caller resets the tab slots, the live
-// view fields, and active_audio_view itself, so this method touches
-// none of them — it only unwinds what render view owns: the playback
-// bind, the entry buffer, the app.render_view fields, and the
-// render-view paint transients. The source audio is still alive at call
-// time, so playback rebinds to it before the entry buffer is freed —
-// the device is never left bound to a freed buffer.
-void GuiRenderView::abandon_render_view() {
-    // Deliberately no cancel_archival_session on this exit: load_file's
-    // cancel_archival_render hook already ran the same cancel before this
-    // teardown.
-    if (!app.render_view.enabled && !app.render_view.entry_audio) return;
-    playback.stop();
-    app.playhead_scanner_active = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
-    app.playhead_scanner_sample = 0;
-    viewport.clear_hover_popup();
-
-    // Rebind playback to the source samples at domain offset 0, then
-    // release the entry audio — rebind first, so the device is never left
-    // bound to a freed buffer (the same order restore_source_view uses; a
-    // worker job rendering the entry keeps its own keepalive; playback is
-    // stopped above, satisfying rebind_buffer's contract).
-    playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
-    app.render_view.entry_audio.reset();
-
-    app.render_view.enabled = false;
-    app.render_view.list.clear();
-    app.render_view.index = -1;
-    app.render_view.last_path.clear();
-    this->clear_snapshot_context();
-
-    // The displayed domain changed (the entry's axis is gone): bump the
-    // audio identity counter so the waveform / stem / flag caches
-    // invalidate, matching every other display-domain flip.
-    app.audio_generation++;
-}
-
 // Re-enumerate the renders/ folder and follow the currently-viewed entry by
 // wav_path into the refreshed list. Entries carry no per-entry persisted state
 // to migrate — a render entry is just its three path fields — so this only

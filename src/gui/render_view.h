@@ -79,18 +79,6 @@ struct GuiRenderView {
     bool load_render_view_at(int index);
     void restore_source_view();
 
-    // The abandon arm of the render-view exit pair: restore_source_view
-    // restores the stashed source view for an ordinary exit;
-    // abandon_render_view tears down when the SOURCE itself is being
-    // discarded (revert-to-blank), where restoring the stashed view would
-    // be too late (the source is going away) and restore_source_view's
-    // target-view ensure_ready tail would spuriously dispatch against the
-    // dying source. Rebinds playback to the still-alive source buffer
-    // before freeing the entry buffer, then clears every render-view
-    // field. Deliberately does NOT touch the tab slots, the live view
-    // fields, or active_audio_view — load_file resets those itself.
-    void abandon_render_view();
-
     // Re-enumerate the renders/ folder. Entries carry no per-entry state to
     // migrate, so this just rebuilds the list and updates
     // app.render_view.index to follow the currently-viewed entry by wav_path;

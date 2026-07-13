@@ -511,13 +511,6 @@ int main(int argc, char** argv) {
                               target_render);
     GuiRenderView render_view(app, audio, playback, gui, selection,
                               viewport, active_views, target_render);
-    // Back-wire the loader's render-view teardown (GuiRenderView is
-    // constructed after GuiFileLoader, so the hook can only be bound
-    // here — same post-construction shape as file_loader.prompt below).
-    // load_file calls it before installing a source (a no-op on the sole
-    // startup load, where no render view is up).
-    file_loader.abandon_render_view =
-        [&render_view]() { render_view.abandon_render_view(); };
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
@@ -543,13 +536,6 @@ int main(int argc, char** argv) {
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
-    // Back-wire the loader's archival-session cancel (same
-    // post-construction shape as file_loader.prompt above). load_file calls
-    // it before installing a source; on the sole startup load no archival
-    // session can exist yet, so it no-ops. cancel_archival_session is the
-    // same body Esc's handle_escape_cancels runs.
-    file_loader.cancel_archival_render =
-        [&input_handler]() { input_handler.cancel_archival_session(); };
 
     // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
     // requests the new waveform immediately rather than waiting for the next

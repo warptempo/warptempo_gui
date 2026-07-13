@@ -305,11 +305,9 @@ struct GuiInputHandler {
 
     // The Esc-cancel body itself, key-free: cancel the running archival
     // session (worker cancel flag + batch finalize sentinel) and disarm the
-    // parked archival command. Called by handle_escape_cancels and by
-    // GuiFileLoader's cancel_archival_render hook (main.cpp back-wire) —
-    // reverting to blank discards the source, so a session rendering it
-    // gets exactly the Esc semantics. Returns true when there was a
-    // session to cancel.
+    // parked archival command. Called by handle_escape_cancels and by the
+    // render-view Esc-cancel paths (input_render_view.cpp). Returns true
+    // when there was a session to cancel.
     bool cancel_archival_session();
 
 private:

@@ -188,10 +188,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
 }
 
 // The Esc-cancel semantics as a callable body, shared by the Esc key
-// handler below and GuiFileLoader's cancel_archival_render hook (load_file
-// calls it before installing a source; on the sole startup load no archival
-// session exists yet, so it no-ops). Requesting
-// cancellation has two effects:
+// handler below and the render-view Esc-cancel paths
+// (input_render_view.cpp). Requesting cancellation has two effects:
 //   1. async_renderer.request_cancel() sets the worker's cancel flag,
 //      which do_render passes through to the engine.
 //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
