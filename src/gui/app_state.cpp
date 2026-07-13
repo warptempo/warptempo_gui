@@ -250,7 +250,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         if (ms < vp || ms >= static_cast<double>(vp_end)) return;
         const double x_raw = (ms - vp) / spp;
         const double text_left =
-            static_cast<double>(top.x) + std::round(x_raw);
+            static_cast<double>(top.x) + std::nearbyint(x_raw);
         // Width from the cached monospace advance via the shared helper — no
         // scratch-surface measurement (that was the residual edge drift: paint
         // measured on the window surface, hit on a 1x1 scratch surface, and the

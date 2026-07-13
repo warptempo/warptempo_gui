@@ -382,7 +382,7 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 }
 
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
-    const int col = static_cast<int>(std::floor(px_x + 0.5));
+    const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());
     const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};

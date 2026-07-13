@@ -121,7 +121,7 @@ int painted_column_of_source_frame(
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The painters' exact shape (frame_to_paint_sample in render.cpp):
     // nearbyint the source frame; in the mapped domains (TargetLive,
-    // Render) forward-map and nearbyint the map output; then std::round
+    // Render) forward-map and nearbyint the map output; then std::nearbyint
     // the fractional column.
     double ms = std::nearbyint(source_frame);
     if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
@@ -129,7 +129,7 @@ int painted_column_of_source_frame(
     }
     const double x_raw =
         (ms - static_cast<double>(app.viewport_start_sample)) / spp;
-    return static_cast<int>(std::round(x_raw));
+    return static_cast<int>(std::nearbyint(x_raw));
 }
 
 int64_t authored_frame_at_column(

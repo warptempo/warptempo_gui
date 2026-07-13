@@ -211,7 +211,7 @@ void render_marker_stems_impl(
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
-        const int icol = static_cast<int>(std::round(x_raw));
+        const int icol = static_cast<int>(std::nearbyint(x_raw));
         const double x_px = waveform_area.x + icol + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
@@ -403,7 +403,7 @@ void render_playhead(cairo_t* cr,
     if (playhead_pixel_x < -static_cast<double>(playhead_half_px())) return;
     if (playhead_pixel_x > static_cast<double>(area.w - 1 + playhead_half_px())) return;
 
-    const double col  = std::floor(playhead_pixel_x + 0.5);
+    const double col  = std::nearbyint(playhead_pixel_x);
     const double x_px = area.x + col + 0.5;
 
     cairo_save(cr);
@@ -523,7 +523,7 @@ void render_trim_stems(cairo_t* cr,
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
-        const int icol = static_cast<int>(std::round(x_raw));
+        const int icol = static_cast<int>(std::nearbyint(x_raw));
         const double x_px = waveform_area.x + icol + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
@@ -599,7 +599,7 @@ void render_trim_flags(cairo_t* cr,
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
         const double text_left =
-            static_cast<double>(top_strip_area.x) + std::round(x_raw);
+            static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
         chips.push_back({text_left, selected, glyph});
     };
     if (has_begin) add_chip(trim.begin, begin_selected, "b");
@@ -873,7 +873,7 @@ void iterate_visible_flags_impl(
             (ms - static_cast<double>(viewport_start_sample)) /
             samples_per_pixel;
         const double text_left =
-            static_cast<double>(top_strip_area.x) + std::round(x_raw);
+            static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
         // Elide only on genuine overlap: a candidate is dropped only when its
         // chip left edge (text_left - flag_pad_x_px()) would fall left of the
         // previous chip's right edge. Adjacent chips may share an edge (touch)

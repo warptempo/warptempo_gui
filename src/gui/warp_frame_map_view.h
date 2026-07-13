@@ -141,7 +141,7 @@ bool render_view_position_in_window(const AppState& app, int64_t source_frame);
 // nearbyint the map output; then divide by the painters'
 // samples-per-pixel — the visible span nearbyint-quantized to whole
 // samples over the strip width — and round with the painters'
-// std::round. `warp_frame_map` is the map the item is painted through:
+// std::nearbyint. `warp_frame_map` is the map the item is painted through:
 // the live cached map at rest, the drag's frozen map at drag commit.
 // Ignored in the Source domain; an empty map in a mapped domain falls
 // back to identity, exactly like paint. Returns 0 when the strip has no

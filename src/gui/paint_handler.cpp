@@ -366,7 +366,7 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     if (spp <= 0.0) return;
     const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
 
-    // Columns: left_col uses the same std::round-to-int placement the stem
+    // Columns: left_col uses the same std::nearbyint-to-int placement the stem
     // renderer uses, so the overlay's left edge stays on the marker's column.
     // right_col is a fixed whole-pixel offset ahead of it, so the far edge
     // tracks the marker in lockstep instead of wobbling by independent
@@ -374,7 +374,7 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // pixels — an approximate but rigid forward extent, which beats an exact
     // but jittering one (the span is an authoring aid, not an engine point).
     const int left_col =
-        static_cast<int>(std::round((ms - vp_start) / spp));
+        static_cast<int>(std::nearbyint((ms - vp_start) / spp));
     const int width_px = static_cast<int>(std::round(
         static_cast<double>(kPhaseResetOverlaySamples) / spp));
 
