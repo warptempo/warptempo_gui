@@ -606,7 +606,12 @@ void render_trim_flags(cairo_t* cr,
     if (has_end)   add_chip(trim.end, end_selected, "e");
     std::sort(chips.begin(), chips.end(),
               [](const TrimChip& a, const TrimChip& b) {
-                  return a.text_left < b.text_left;
+                  if (a.text_left != b.text_left)
+                      return a.text_left < b.text_left;
+                  // Equal-column bounds use the insertion order's visible
+                  // identity explicitly: begin paints, end is elided. The hit
+                  // test applies the same tie-break before its elision walk.
+                  return std::strcmp(a.glyph, b.glyph) < 0;
               });
 
     // Greedy-pack elision, identical to iterate_visible_flags_impl: walk

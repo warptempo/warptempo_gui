@@ -8,6 +8,7 @@
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -221,20 +222,21 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
 
-    const int kMiss = std::numeric_limits<int>::max();
-
-    // Per-bound chip rect, computed exactly as render_trim_flags paints it via
-    // the shared flag_chip_rect helper: text_left at the bound's integer pixel
-    // column (top.x + round(x_raw)), the rect spanning
-    // [round(text_left), round(text_left) + round(advance + 2*flag_pad_x_px())] —
-    // the painted chip's left edge through its right pad, the same horizontal
-    // geometry compute_flag_hit_rects derives for regular flags. The vertical band (top_upper_row_area) was checked above, so only
-    // horizontal containment is tested here. Returns the bound's distance from
-    // the press to its column when the press is inside the chip (for the
-    // both-hit tie-break), else kMiss.
-    auto chip_dist = [&](int64_t frame, bool present,
-                         const char* /*glyph*/) -> int {
-        if (!present) return kMiss;
+    // Build the same visible, sorted candidate list render_trim_flags paints.
+    // The painter culls a bound whose column is outside the viewport, then
+    // greedily elides the right chip when two chip rectangles overlap. Hit
+    // testing must consume that final visible list: considering both raw
+    // rectangles lets a click on the one painted chip select the elided bound,
+    // while considering an off-viewport rectangle makes an unpainted chip
+    // reachable at the strip edge.
+    struct TrimChipHit {
+        double  text_left;
+        GuiRect rect;
+        TrimHit which;
+    };
+    std::vector<TrimChipHit> chips;
+    auto add_chip = [&](int64_t frame, bool present, TrimHit which) {
+        if (!present) return;
         const int64_t src_sample = frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
@@ -243,11 +245,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        // No viewport pre-gate: a chip whose box is partially visible at a
-        // strip edge hit-tests naturally through the horizontal-containment
-        // check below. A fully offscreen box misses by containment, which is
-        // correct — the stem halo (hit_test_trim_boundary) is the reach path
-        // for those.
+        const int64_t vp_end = app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint(spp * top.w));
+        if (ms < vp || ms >= static_cast<double>(vp_end)) return;
         const double x_raw = (ms - vp) / spp;
         const double text_left =
             static_cast<double>(top.x) + std::round(x_raw);
@@ -259,22 +259,29 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // (the vertical band was already checked via top_upper_row_area above),
         // so pass 0.0 — only rx/rw are read.
         const GuiRect cr_rect = flag_chip_rect(text_left, 1, 0.0);
-        const int rx = cr_rect.x;
-        const int rw = cr_rect.w;
-        if (mouse_x < rx || mouse_x >= rx + rw) return kMiss;
-        return std::abs(mouse_x - rx);
+        chips.push_back({text_left, cr_rect, which});
     };
 
-    const int db = chip_dist(begin_frame, has_begin, "b");
-    const int de = chip_dist(end_frame,   has_end,   "e");
+    add_chip(begin_frame, has_begin, TrimHit::Begin);
+    add_chip(end_frame,   has_end,   TrimHit::End);
+    std::sort(chips.begin(), chips.end(),
+              [](const TrimChipHit& a, const TrimChipHit& b) {
+                  if (a.text_left != b.text_left)
+                      return a.text_left < b.text_left;
+                  return a.which == TrimHit::Begin && b.which == TrimHit::End;
+              });
 
-    // Overlapping chips: the renderer elides the right one, but guard the tie
-    // by preferring the bound whose column is nearer the press, mirroring
-    // hit_test_trim_boundary.
-    if (db != kMiss && de != kMiss) return (db <= de) ? TrimHit::Begin
-                                                      : TrimHit::End;
-    if (db != kMiss) return TrimHit::Begin;
-    if (de != kMiss) return TrimHit::End;
+    const double hl_pad = flag_pad_x_px();
+    double rightmost_right_edge = -1e18;
+    for (const TrimChipHit& chip : chips) {
+        if (chip.text_left < rightmost_right_edge + hl_pad) continue;
+        rightmost_right_edge =
+            chip.text_left + monospace_advance() + hl_pad;
+        if (mouse_x >= chip.rect.x &&
+            mouse_x < chip.rect.x + chip.rect.w) {
+            return chip.which;
+        }
+    }
     return TrimHit::None;
 }
 
