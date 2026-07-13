@@ -503,7 +503,7 @@ RenderOutcome do_render(const RenderRequest& req,
     }
 
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
-    // artifacts: .fingerprint is warning-only. Ctrl+Alt+E batch wavs are
+    // artifacts: .fingerprint is warning-only. Sweep batch wavs are
     // committable artifact sets: wav plus source-domain .warpmarkers,
     // source-domain .phaseresetmarkers (including the empty-file form), and
     // .settings. Those commit-critical sidecars must publish before the wav

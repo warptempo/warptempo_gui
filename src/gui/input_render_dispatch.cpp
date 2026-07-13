@@ -20,10 +20,10 @@
 #include <vector>
 
 // GuiInputHandler render-dispatch / batch-lifecycle methods
-// (snapshot_current_authoring_state, snapshot_current_queued_render,
-// finalize_render_run, start_render_batch, dispatch_next_batch_entry,
-// on_batch_entry_complete, render_bpm_sweep), grouped here to keep
-// input_handler.cpp focused on the event entry points.
+// (snapshot_current_authoring_state, finalize_render_run,
+// start_render_batch, dispatch_next_batch_entry, on_batch_entry_complete,
+// render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
+// event entry points.
 
 // Render dispatch pre-flight. Two passes on the GUI thread, both
 // marker-count-sized and cheap.
@@ -240,20 +240,6 @@ void GuiInputHandler::attach_shared_render_resources(RenderRequest& req) {
     req.source_total_frames = audio.total_frames();
     req.source_load_size  = audio.source_load_size();
     req.source_load_mtime = audio.source_load_mtime();
-}
-
-AppState::QueuedRender GuiInputHandler::snapshot_current_queued_render() const {
-    AppState::QueuedRender q;
-    q.source_audio_path = app.source_audio_path;
-    q.warp_markers            = app.warpmarkers.markers();
-    q.phase_resets       = app.phaseresetmarkers.markers();
-    q.engine_settings    = app.engine_settings;
-    q.has_trim_begin     = app.trim.has_begin;
-    q.trim_begin_frame     = app.trim.begin_frame;
-    q.has_trim_end       = app.trim.has_end;
-    q.trim_end_frame       = app.trim.end_frame;
-    q.authoring          = snapshot_current_authoring_state();
-    return q;
 }
 
 void GuiInputHandler::finalize_render_run() {

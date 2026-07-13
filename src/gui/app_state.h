@@ -580,7 +580,7 @@ struct AppState {
     std::string phaseresetmarkers_path;
 
     // Absolute or relative path of the currently loaded audio file. Used by
-    // the render hotkeys (Ctrl+Alt+R / Ctrl+E / Ctrl+Alt+E / Ctrl+Alt+I) and
+    // the render hotkeys (Ctrl+Alt+R / Ctrl+Alt+I) and
     // the render pipeline to compute output paths. Empty when no file is
     // loaded (blank state).
     std::string source_audio_path;
@@ -822,30 +822,8 @@ struct AppState {
     // any one command, so future commands can reuse it.
     std::string transient_status_message;
 
-    // In-memory queue of pending renders. Ctrl+E pushes a
-    // snapshot of the current authoring state onto the back of this list;
-    // Ctrl+Alt+E consumes it, materializing one batch folder per execution
-    // with one rendered output per queued entry. The list is session-only:
-    // discarded on app close, never written to disk between sessions.
-    // Each entry is a complete render snapshot — markers, phase resets,
-    // engine settings, trim, and authoring view state are all captured at
-    // enqueue time, so two queued states that differ only in trim, settings,
-    // or UI state still render distinctly.
-    struct QueuedRender {
-        std::string                source_audio_path;
-        std::vector<GuiWarpMarker>     warp_markers;
-        std::vector<GuiPhaseResetMarker>  phase_resets;
-        EngineSettings              engine_settings;
-        bool                        has_trim_begin = false;
-        int64_t                     trim_begin_frame = 0;  // source frames
-        bool                        has_trim_end   = false;
-        int64_t                     trim_end_frame   = 0;  // source frames
-        AuthoringSnapshot           authoring;
-    };
-    std::vector<QueuedRender> queued_renders;
-
     // One-slot pending archival render command. An archival dispatch
-    // (Ctrl+Alt+R / Ctrl+Alt+E / the iteration or bpm sweep) that finds the
+    // (Ctrl+Alt+R / the iteration or bpm sweep) that finds the
     // worker busy kills the running render (the Esc pair: request_cancel +
     // queue_cancel_requested) and parks its fully built request set here;
     // the worker-idle pump (GuiTargetRender::maybe_dispatch_pending, via

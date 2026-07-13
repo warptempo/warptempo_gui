@@ -87,17 +87,11 @@ void GuiTargetRender::trigger() {
             async_renderer.session_fingerprint();
 
     if (!match_wait) {
-        // Kill a running archival batch (Ctrl+Alt+R / Ctrl+Alt+E /
-        // Ctrl+Alt+I / BPM-sweep). The batch state machine consults
+        // Kill a running archival batch (Ctrl+Alt+R / Ctrl+Alt+I /
+        // BPM-sweep). The batch state machine consults
         // queue_cancel_requested at on_batch_entry_complete time and
         // finalizes instead of dispatching the next entry, so setting it
-        // here is enough — no need to touch queued_renders, whose entries
-        // a running batch has already moved into batch_.reqs.
-        //
-        // Must NOT clear app.queued_renders here: that queue holds pending
-        // Ctrl+E snapshots, accumulated independently of the live target
-        // preview, and has to survive the authoring edits (this trigger())
-        // made between Ctrl+E presses.
+        // here is enough.
         app.queue_cancel_requested = true;
     }
 

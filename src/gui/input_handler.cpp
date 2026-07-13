@@ -271,8 +271,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // blocked through that deferral (read-only itself now blocks it), so the
     // save surface is Ctrl+Alt+C only.
     //
-    // The archival dispatch chords (Ctrl+S save, Ctrl+E queue-add,
-    // Ctrl+Alt+R/E/I render) are all absent — Ctrl+S drops through the
+    // The archival dispatch chords (Ctrl+S save, Ctrl+Alt+R/I render)
+    // are all absent — Ctrl+S drops through the
     // read-only deferral, the rest match no read-only allowlist predicate —
     // and the BPM sweep fires only from the BPM editor's Enter, which cannot be
     // open here. With no
@@ -385,8 +385,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-trigger chords: Ctrl+E queue-add, Ctrl+Alt+R/E/I render,
-    // Ctrl+Alt+C commit.
+    // Render-trigger chords: Ctrl+Alt+R/I render, Ctrl+Alt+C commit.
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Space / Return / KpEnter is modifier-independent.

@@ -374,12 +374,6 @@ private:
     // for the completion pump rather than dispatching here.
     void kill_running_render_and_park(AppState::PendingArchivalCommand cmd);
 
-    // Build a QueuedRender from the current live AppState: source path,
-    // markers, phase resets, engine settings, and the four trim fields.
-    // Shared by the two Ctrl+E / Ctrl+Alt+E enqueue sites so they can't
-    // drift apart in which fields they snapshot.
-    AppState::QueuedRender snapshot_current_queued_render() const;
-
     // Authoring-state sidecar snapshot: active tab/audio view, active-tab
     // trim, and the live viewport/zoom/playhead fields managed by
     // switch_active_tab_view_to.
@@ -427,9 +421,9 @@ private:
     // all surfacing through the error-notice popup with the owner's
     // error string, unmodified. Returns false on any refusal — the caller
     // must then refuse to enqueue. Called by every archival render
-    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+E queue batch —
-    // live store and each queued snapshot — Ctrl+Alt+I iteration sweep,
-    // the BPM sweep); the async pipeline's stderr failure paths stay as
+    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+I iteration
+    // sweep, the BPM sweep); the async pipeline's stderr failure paths
+    // stay as
     // the backstop for per-cell mutations the pre-flight does not model
     // (no strings are plumbed through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
@@ -484,9 +478,9 @@ private:
     // first) and before the rest of the key handlers.
     bool handle_escape_cancels(GuiKey key);
 
-    // Render-trigger chords: Ctrl+E (queue-add), Ctrl+Alt+R (single render),
-    // Ctrl+Alt+E (render queue), Ctrl+Alt+I (render iteration sweep),
-    // Ctrl+Alt+C (commit displayed render). Returns true if key+mods matched
+    // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
+    // (render iteration sweep), Ctrl+Alt+C (commit displayed render).
+    // Returns true if key+mods matched
     // one (on_key then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
 

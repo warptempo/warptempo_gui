@@ -289,38 +289,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // Ctrl+E: snapshot current authoring state into the in-memory
-    // render queue. No disk writes; on-disk authoring files are untouched.
-    // Each entry now snapshots its full render state (markers, phase
-    // resets, engine settings, trim).
-    if (ctrl && !alt && !shift &&
-        key == GuiKeys::E) {
-        if (app.source_audio_path.empty()) return true;
-        // Gate the live store before freezing it into an immutable snapshot.
-        // Commit validation is tick-deferred, so another input event can reach
-        // Ctrl+E after an invalidating commit but before its defect series
-        // opens. A queued snapshot cannot be repaired by resolving the live
-        // store later, and there is no per-entry queue removal surface.
-        if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.phaseresetmarkers.markers(),
-                                   /*live_store=*/true,
-                                   app.engine_settings.scale,
-                                   app.engine_settings.output_format,
-                                   app.trim.has_begin, app.trim.begin_frame,
-                                   app.trim.has_end, app.trim.end_frame)) {
-            return true;
-        }
-        app.queued_renders.push_back(snapshot_current_queued_render());
-        std::fprintf(stderr,
-            "warptempo_gui: queued render (%zu in queue)\n",
-            app.queued_renders.size());
-        return true;
-    }
-
     // Ctrl+Alt+R: single render into the source directory using `title`
-    // from settings. Does not consult the in-memory queue; empty
-    // batch_folder/batch_basename selects the source-directory naming
-    // convention inside do_render. A successful sibling wav publish emits
+    // from settings. Empty batch_folder/batch_basename selects the
+    // source-directory naming convention inside do_render. A successful
+    // sibling wav publish emits
     // the .fingerprint sidecar, but not batch-only sidecars
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
@@ -381,159 +353,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // failure, or cancel).
         dispatch_single_archival_render(std::move(req),
                                         std::move(fingerprint));
-        return true;
-    }
-
-    // Ctrl+Alt+E: render the in-memory queue as one batch. Each wav
-    // queued entry produces a sibling .wav plus commit-critical
-    // .warpmarkers, .phaseresetmarkers, and .settings sidecars inside
-    // a fresh batch folder
-    // `<source_parent>/renders/<index>_render_all_in_queue/`.
-    // The index is one greater than the highest pre-existing batch index
-    // in that renders folder (regardless of command tag). Filenames
-    // inside the batch are the entry position zero-padded to fit the
-    // queue size: 01..10 for 10 entries, 1..7 for 7, 001..100 for 100.
-    //
-    // Empty queue auto-enqueues the current authoring state (same shape
-    // as Ctrl+E) and dispatches a queue-of-one batch. Use Ctrl+Alt+R for
-    // single-shot rendering into the source directory; Ctrl+Alt+E always
-    // produces a batch folder under renders/.
-    //
-    // Esc (or a killing render dispatch) cancels the current render
-    // cooperatively — the worker observes the cancel flag mid-engine —
-    // and drops the remainder of the batch. The batch folder is left
-    // as-is on disk — partial batches just contain fewer files than the
-    // queue had; renders/ is transient and wiped wholesale at commit.
-    // The in-memory queue is cleared after execution whether all
-    // entries ran or the run was cut short.
-    if (ctrl && alt && !shift &&
-        key == GuiKeys::E) {
-        if (app.source_audio_path.empty()) return true;
-        if (app.queued_renders.empty()) {
-            // Pre-flight the live store BEFORE the auto-enqueue so a
-            // refused dispatch leaves nothing queued (a modeled defect
-            // opens the defect-resolution series; the rest gets the popup).
-            if (!warp_render_preflight(app.warpmarkers.markers(),
-                                       app.phaseresetmarkers.markers(),
-                                       /*live_store=*/true,
-                                       app.engine_settings.scale,
-                                       app.engine_settings.output_format,
-                                       app.trim.has_begin,
-                                       app.trim.begin_frame,
-                                       app.trim.has_end,
-                                       app.trim.end_frame)) {
-                return true;
-            }
-            app.queued_renders.push_back(snapshot_current_queued_render());
-            std::fprintf(stderr,
-                "warptempo_gui: queue empty; enqueueing current state "
-                "and rendering\n");
-        }
-
-        // Pre-flight every queued entry against its own snapshot (markers,
-        // phase resets, scale, output format, and trim — Ctrl+E snapshots
-        // may differ from the live store and from each other). A snapshot
-        // cannot be fixed by mutating the live store, so failures surface
-        // through the popup backstop, not the defect series. First failure
-        // refuses the whole batch; the queue is left intact so the user
-        // can fix and re-dispatch. Runs before the queue is moved out.
-        for (const auto& q : app.queued_renders) {
-            if (!warp_render_preflight(q.warp_markers,
-                                       q.phase_resets,
-                                       /*live_store=*/false,
-                                       q.engine_settings.scale,
-                                       q.engine_settings.output_format,
-                                       q.has_trim_begin, q.trim_begin_frame,
-                                       q.has_trim_end, q.trim_end_frame)) {
-                return true;
-            }
-        }
-
-        std::vector<AppState::QueuedRender> entries =
-            std::move(app.queued_renders);
-        app.queued_renders.clear();
-
-        std::filesystem::path src(app.source_audio_path);
-        std::filesystem::path src_parent = src.parent_path();
-        if (src_parent.empty()) src_parent = std::filesystem::path(".");
-        const std::filesystem::path queue_root = src_parent / "renders";
-
-        // Resolve the next batch index: max+1 over directory entries
-        // matching `<digits>_<anything>`. Empty / missing renders/
-        // folder seeds index 1.
-        int next_index = 1;
-        std::error_code ec;
-        if (std::filesystem::is_directory(queue_root, ec)) {
-            int max_idx = 0;
-            for (const auto& de :
-                 std::filesystem::directory_iterator(queue_root, ec)) {
-                if (!de.is_directory()) continue;
-                const std::string name = de.path().filename().string();
-                int v = 0;
-                size_t i = 0;
-                while (i < name.size() &&
-                       name[i] >= '0' && name[i] <= '9') {
-                    v = v * 10 + (name[i] - '0');
-                    ++i;
-                }
-                if (i == 0 || i >= name.size() || name[i] != '_') continue;
-                if (v > max_idx) max_idx = v;
-            }
-            next_index = max_idx + 1;
-        }
-
-        const std::string command_tag = "render_all_in_queue";
-        const std::filesystem::path batch_folder =
-            queue_root /
-            (std::to_string(next_index) + "_" + command_tag);
-        std::filesystem::create_directories(batch_folder, ec);
-        if (ec) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-all: could not create '%s': %s\n",
-                batch_folder.string().c_str(), ec.message().c_str());
-            return true;
-        }
-
-        // Width-to-fit zero-padding for filename indices. pad_width is
-        // computed from the queue size and clamped to a sane upper
-        // bound so the snprintf below has a known-bounded output.
-        const int total = static_cast<int>(entries.size());
-        int pad_width = 1;
-        for (int n = total; n >= 10; n /= 10) ++pad_width;
-        if (pad_width > 9) pad_width = 9;
-
-        std::vector<RenderRequest> reqs;
-        reqs.reserve(total);
-        for (int i = 0; i < total; ++i) {
-            const auto& q = entries[i];
-            char num_buf[16];
-            std::snprintf(num_buf, sizeof(num_buf),
-                          "%0*d", pad_width, i + 1);
-            std::fprintf(stderr,
-                "warptempo_gui: rendering entry %d of %d: %s/%s.wav\n",
-                i + 1, total,
-                batch_folder.filename().string().c_str(), num_buf);
-
-            RenderRequest req = build_render_request(
-                q.source_audio_path, q.warp_markers, q.phase_resets, q.engine_settings,
-                q.has_trim_begin, q.trim_begin_frame, q.has_trim_end, q.trim_end_frame,
-                batch_folder.string(), num_buf);
-            req.authoring = q.authoring;
-            attach_shared_render_resources(req);
-            reqs.push_back(std::move(req));
-        }
-
-        if (async_renderer.is_busy()) {
-            // A render dispatch kills the running render; a queue batch
-            // never matches a session fingerprint, so there is no wait
-            // case. Park the fully built batch for the worker-idle pump.
-            AppState::PendingArchivalCommand cmd;
-            cmd.reqs        = std::move(reqs);
-            cmd.batch_label = "render queue";
-            kill_running_render_and_park(std::move(cmd));
-            return true;
-        }
-        start_render_batch(std::move(reqs), "render queue");
         return true;
     }
 
@@ -662,7 +481,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const std::filesystem::path queue_root = src_parent / "renders";
 
         // Resolve the next batch index: max+1 over `<digits>_<anything>`
-        // entries. Mirrors render_all_in_queue's scanner.
+        // entries.
         int next_index = 1;
         std::error_code ec;
         if (std::filesystem::is_directory(queue_root, ec)) {
@@ -1486,7 +1305,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // Cancel the edit (Esc-discard: no commit, no validation), using the
     // same teardown Esc uses, then fall through (no return) so the key
     // reaches the global command dispatch below and runs. This is how every
-    // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, Ctrl+E, ...) works
+    // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, ...) works
     // mid-edit: exit first, then the command. No command list — the editor
     // owns only its editing keymap and everything else punches through.
     flag_editor.exit_top_flag_edit_no_commit();
