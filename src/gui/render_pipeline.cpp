@@ -617,10 +617,11 @@ RenderOutcome do_render(const RenderRequest& req,
         int src_sr = 0;
         int src_ch = 0;
         {
-            // Borrow the GUI's shared source buffer; shared ownership keeps
-            // mid-render file swaps safe. Trimmed renders read an
-            // offset+length view into the same buffer (pre_trim's cut), no
-            // copy.
+            // Borrow the GUI's shared source buffer — the one launch-time
+            // immutable source; shared ownership keeps the buffer alive for
+            // the render's lifetime (no mid-render swap occurs). Trimmed
+            // renders read an offset+length view into the same buffer
+            // (pre_trim's cut), no copy.
             const auto t_source_load_0 = profile::now();
             // Borrowed samples and the probed file are the same audio: the
             // loaded source is immutable for the process lifetime, so the

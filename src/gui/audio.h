@@ -47,12 +47,11 @@ public:
     // goes away (see GuiPlayback::shutdown).
     const float* samples_ptr() const { return samples_ ? samples_->data() : nullptr; }
 
-    // Shared handle to the immutable sample buffer. A render dispatch copies
-    // this handle into its RenderRequest, so a file load that installs a NEW
-    // buffer cannot invalidate a worker mid-render — the worker's handle
-    // keeps the old buffer alive until the request dies.
-    // Contract: the pointed-to vector is never mutated after publish; every
-    // refill builds a fresh vector and swaps the handle.
+    // Shared handle to the one launch-time immutable sample buffer. A render
+    // dispatch copies this handle into its RenderRequest so the worker's handle
+    // keeps the buffer alive until the request dies.
+    // Contract: the source is loaded once at launch and the pointed-to vector
+    // is never mutated after publish.
     std::shared_ptr<const std::vector<float>> samples_shared() const;
 
     // Total number of pyramid levels, counting level 0 (raw samples).
@@ -86,7 +85,7 @@ private:
     int64_t  load_identity_mtime_ = 0;
 
     // Three fixed-stride cache levels (strides 32, 1024, 32768). Populated
-    // either from the on-disk `<basename>.peaks` v3 sidecar or by streaming
+    // either from the on-disk `<basename>.peaks` v4 sidecar or by streaming
     // over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, 3> levels_;
 };

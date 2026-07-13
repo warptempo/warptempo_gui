@@ -119,9 +119,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Keep the source-sample-cache writer serialized with audio swaps.
-    join_source_sample_cache_writer();
-
     audio = std::move(next);
     app.audio_generation++;
     app.loading       = false;
@@ -215,10 +212,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
     app.scroll_drag = ScrollDragState{};
-    // Project trim is no longer cleared implicitly by the fresh-ViewState
-    // assignment (it lives on AppState now). Reset it explicitly before the
-    // line-194 initial-playhead read so an untrimmed project loaded after a
-    // trimmed one sees unset trim (playhead at sample 0, not stale begin).
+    // Project trim is not cleared implicitly by the fresh-ViewState assignment
+    // (it lives on AppState now). Reset it explicitly before the initial-playhead
+    // read so an absent trim key at launch leaves trim unset (playhead at
+    // sample 0, not a leftover begin from the base-state struct).
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
     app.trim.begin_frame  = 0;
@@ -368,9 +365,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
         app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
         app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 1.0f;
         // GUI font size, same application shape as playback_speed: absent
-        // key means the default. Loading a source can therefore change the
-        // GUI text size mid-session — the same recorded behavior class as
-        // playback_speed (see the font_size descriptor in settings_io.cpp).
+        // key means the default. The value is applied once at launch when the
+        // source loads — the same behavior class as playback_speed (see the
+        // font_size descriptor in settings_io.cpp).
         app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.

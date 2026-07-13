@@ -259,6 +259,5 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
     const size_t q = (domain_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(domain_frame);
-    return static_cast<int64_t>(
-        std::nearbyint(map_target_to_source(q, *ctx.warp_frame_map)));
+    return snap_authored_frame(map_target_to_source(q, *ctx.warp_frame_map));
 }

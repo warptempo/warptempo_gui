@@ -71,8 +71,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     // GUI-kind key, NOT an engine key: the single GUI-wide monospace text
     // size in points (pixels = points * 4/3). Valid range 6..72. Like
-    // playback_speed, loading a source applies the file's value, so a load
-    // can change the GUI text size mid-session.
+    // playback_speed, the file's value is applied once at launch when the
+    // source loads.
     { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },

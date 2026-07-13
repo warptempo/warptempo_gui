@@ -370,12 +370,13 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // renderer uses, so the overlay's left edge stays on the marker's column.
     // right_col is a fixed whole-pixel offset ahead of it, so the far edge
     // tracks the marker in lockstep instead of wobbling by independent
-    // per-endpoint rounding. width_px is the overlay span rounded to whole
-    // pixels — an approximate but rigid forward extent, which beats an exact
-    // but jittering one (the span is an authoring aid, not an engine point).
+    // per-endpoint rounding. width_px is the overlay span banker's-rounded to
+    // whole pixels — an approximate but rigid forward extent, which beats an
+    // exact but jittering one (the span is an authoring aid, not an engine
+    // point).
     const int left_col =
         static_cast<int>(std::nearbyint((ms - vp_start) / spp));
-    const int width_px = static_cast<int>(std::round(
+    const int width_px = static_cast<int>(std::nearbyint(
         static_cast<double>(kPhaseResetOverlaySamples) / spp));
 
     // Too-zoomed-out: if the fixed forward extent rounds below one pixel,
