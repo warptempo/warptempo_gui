@@ -143,6 +143,22 @@ bool GuiFileLoader::load_file(const std::string& path) {
     if (!ok) {
         app.loading       = false;
         app.queue_progress_text.clear();
+        // The replacement never installed, so the old source remains the
+        // live project. Re-create the playback client that the load attempt
+        // shut down above; otherwise the still-displayed old project becomes
+        // silently unauditionable until a later successful load. A target-
+        // view project rebinds or refreshes its target buffer through the
+        // ordinary ensure_ready path after the source client exists again.
+        if (audio.total_frames() > 0) {
+            if (!playback.init(audio.sample_rate(), audio.channels(),
+                               audio.samples_ptr(), audio.total_frames(), 0)) {
+                std::fprintf(stderr,
+                    "warptempo_gui: playback disabled; space bar will no-op.\n");
+            }
+            playback.set_speed(app.playback_speed);
+            app.playhead_scanner_sample = app.playhead_cursor_sample;
+            target_render.ensure_ready();
+        }
         gui.invalidate_region(0, 0, app.width, app.height);
         return false;
     }

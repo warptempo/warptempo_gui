@@ -622,16 +622,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     if (!arm_playback_timer()) return false;
 
     if (wl_data_device_manager_ && wl_seat_) {
-        wl_data_device_ = wl_data_device_manager_get_data_device(
-            wl_data_device_manager_, wl_seat_);
-        if (wl_data_device_) {
-            wl_data_device_add_listener(wl_data_device_,
-                                        &s_data_device_listener, this);
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: wl_data_device_manager_get_data_device "
-                "failed; file drop disabled\n");
-        }
+        ensure_data_device();
     } else {
         std::fprintf(stderr,
             "warptempo_gui: compositor did not advertise "
@@ -704,6 +695,7 @@ void GuiPlatform::destroy_wayland_state() {
         // needing the release round-trip, so this guard stays as-is.
         wl_seat_destroy(wl_seat_);
         wl_seat_ = nullptr;
+        seat_global_name_ = 0;
     }
     if (xkb_state_) {
         xkb_state_unref(xkb_state_);
@@ -1209,7 +1201,8 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             output_refresh_mhz_ = 0;  // a replacement output starts cacheless
             wl_output_add_listener(wl_output_, &s_output_listener, this);
         }
-    } else if (std::strcmp(interface, wl_seat_interface.name) == 0) {
+    } else if (std::strcmp(interface, wl_seat_interface.name) == 0 &&
+               !wl_seat_) {
         // Cap to version 8. v4 gave us key repeat; v8 adds
         // wl_pointer.axis_value120, which gives high-resolution WHEEL
         // scroll. Touchpad two-finger scroll still arrives via the legacy
@@ -1220,7 +1213,9 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
         const uint32_t v = std::min<uint32_t>(version, 8);
         wl_seat_ = static_cast<struct wl_seat*>(
             wl_registry_bind(r, name, &wl_seat_interface, v));
+        seat_global_name_ = name;
         wl_seat_add_listener(wl_seat_, &s_seat_listener, this);
+        ensure_data_device();
     } else if (std::strcmp(interface, wl_data_device_manager_interface.name) == 0) {
         // Require v3 minimum. v3 introduced the actions API and
         // wl_data_offer.finish, both of which this implementation
@@ -1239,17 +1234,48 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
 }
 
 void GuiPlatform::on_registry_global_remove(uint32_t name) {
-    if (!wl_output_ || name != output_global_name_) return;
+    if (wl_output_ && name == output_global_name_) {
+        // wl_registry.global_remove makes the bound object unavailable and
+        // asks the client to destroy its proxy. Clearing the singleton slot
+        // matters as much as destruction: a later wl_output advertisement can
+        // now bind and become the new single-monitor timing source.
+        wl_output_destroy(wl_output_);  // bound at v2; release is v3
+        wl_output_ = nullptr;
+        output_global_name_ = 0;
+        output_refresh_mhz_ = 0;
+        if (timerfd_ >= 0) (void)arm_playback_timer();  // 60 Hz fallback
+        return;
+    }
 
-    // wl_registry.global_remove makes the bound object unavailable and asks
-    // the client to destroy its proxy. Clearing the singleton slot matters as
-    // much as destruction: a later wl_output advertisement can now bind and
-    // become the new single-monitor timing source.
-    wl_output_destroy(wl_output_);  // bound at v2; wl_output.release is v3
-    wl_output_ = nullptr;
-    output_global_name_ = 0;
-    output_refresh_mhz_ = 0;
-    if (timerfd_ >= 0) (void)arm_playback_timer();  // 60 Hz fallback
+    if (!wl_seat_ || name != seat_global_name_) return;
+
+    // A registry removal is a harder seat-lifetime boundary than a
+    // capability loss: no final capabilities event is required. Run the same
+    // keyboard/pointer teardown first so held gestures get their release tail
+    // and no modifier/scroll state crosses into a replacement seat.
+    on_seat_capabilities(0);
+
+    destroy_current_offer();
+    if (clipboard_offer_) {
+        wl_data_offer_destroy(clipboard_offer_);
+        clipboard_offer_ = nullptr;
+    }
+    clipboard_offer_has_text_ = false;
+    latest_offer_has_text_ = false;
+    if (clipboard_source_) {
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_ = nullptr;
+    }
+    clipboard_we_own_ = false;
+    if (wl_data_device_) {
+        wl_data_device_release(wl_data_device_);
+        wl_data_device_ = nullptr;
+    }
+
+    wl_seat_destroy(wl_seat_);
+    wl_seat_ = nullptr;
+    seat_global_name_ = 0;
+    last_input_serial_ = 0;
 }
 
 void GuiPlatform::on_output_mode(uint32_t flags, int32_t /*width*/,
@@ -1904,6 +1930,20 @@ void GuiPlatform::on_dnd_drop() {
     const std::string path = parse_first_file_uri(uri_list);
     if (!path.empty() && on_file_drop_) {
         on_file_drop_(path);
+    }
+}
+
+void GuiPlatform::ensure_data_device() {
+    if (wl_data_device_ || !wl_data_device_manager_ || !wl_seat_) return;
+    wl_data_device_ = wl_data_device_manager_get_data_device(
+        wl_data_device_manager_, wl_seat_);
+    if (wl_data_device_) {
+        wl_data_device_add_listener(wl_data_device_,
+                                    &s_data_device_listener, this);
+    } else {
+        std::fprintf(stderr,
+            "warptempo_gui: wl_data_device_manager_get_data_device failed; "
+            "file drop disabled\n");
     }
 }
 

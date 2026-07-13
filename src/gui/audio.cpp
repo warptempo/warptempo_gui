@@ -22,14 +22,14 @@
 
 namespace {
 
-// `.peaks` v2 format -------------------------------------------------------
+// `.peaks` v3 format -------------------------------------------------------
 //
 // 32-byte preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently 2)
+//   off 8  | 2  | version (uint16, currently 3)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
-//   off 20 | 8  | source_mtime (int64, seconds)
+//   off 20 | 8  | source_mtime (int64, nanoseconds)
 //   off 28 | 4  | sample_rate  (int32)
 //
 // Body header (16 bytes):
@@ -49,7 +49,7 @@ namespace {
 // Out-of-range source peaks clip at the boundary.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-constexpr uint16_t kCacheVersion          = 2;
+constexpr uint16_t kCacheVersion          = 3;
 constexpr int      kStreamFramesPerChunk  = 65536;
 constexpr int      kNumLevels             = 3;
 constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
@@ -92,10 +92,14 @@ std::string lowercase(std::string s) {
 }
 
 bool stat_size_mtime(const std::string& path, int64_t& size, int64_t& mtime) {
-    struct stat st;
-    if (::stat(path.c_str(), &st) != 0) return false;
-    size  = static_cast<int64_t>(st.st_size);
-    mtime = static_cast<int64_t>(st.st_mtime);
+    RenderFileIdentity identity;
+    if (!stat_file_identity(path, identity) ||
+        identity.size > static_cast<uint64_t>(
+                            std::numeric_limits<int64_t>::max())) {
+        return false;
+    }
+    size  = static_cast<int64_t>(identity.size);
+    mtime = identity.mtime;
     return true;
 }
 

@@ -248,6 +248,7 @@ private:
 
     // -- Keyboard --
     struct wl_seat*     wl_seat_     = nullptr;
+    uint32_t            seat_global_name_ = 0;
     struct wl_keyboard* wl_keyboard_ = nullptr;
 
     struct xkb_context* xkb_context_ = nullptr;
@@ -366,6 +367,7 @@ private:
     bool arm_playback_timer();
 
     void destroy_current_offer();
+    void ensure_data_device();
     void evaluate_drop_accept();
     std::string read_drop_data(int read_fd);
     std::string parse_first_file_uri(const std::string& uri_list);
