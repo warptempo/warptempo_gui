@@ -199,10 +199,16 @@ private:
     struct wl_data_device_manager* wl_data_device_manager_ = nullptr;
     struct wl_data_device*         wl_data_device_         = nullptr;
 
-    // The current in-flight data offer. Compositor creates it via
-    // wl_data_device.data_offer; we destroy it on leave (drag
-    // cancelled), on drop (after the transfer completes), or when a
-    // new data_offer arrives that supersedes the previous one.
+    // A newly announced offer is pending until a following enter or selection
+    // event assigns its role. Keeping it separate from current_data_offer_
+    // matters because clipboard selection changes may interleave with an
+    // active DnD session; a new selection offer must not destroy the drag.
+    struct wl_data_offer* pending_data_offer_ = nullptr;
+    bool pending_offer_has_uri_list_ = false;
+    std::string pending_offer_text_mime_;
+
+    // The active DnD offer. Destroyed on leave or after drop transfer. It is
+    // independent of both the pending announcement and clipboard_offer_.
     struct wl_data_offer* current_data_offer_ = nullptr;
 
     // True if the current data offer advertises text/uri-list. Set
@@ -233,13 +239,10 @@ private:
     bool                   clipboard_we_own_       = false;
 
     // clipboard_offer_ is the current EXTERNAL selection offer (an offer we
-    // do not own). clipboard_offer_has_text_ records whether it advertised a
-    // text mime. latest_offer_has_text_ accumulates text-mime sightings for
-    // the in-flight data_offer; on_selection latches it onto
-    // clipboard_offer_has_text_ when the offer is claimed as the selection.
+    // do not own). clipboard_offer_text_mime_ is the exact offered token to
+    // request, preferring text/plain;charset=utf-8 over text/plain.
     struct wl_data_offer*  clipboard_offer_        = nullptr;
-    bool                   clipboard_offer_has_text_ = false;
-    bool                   latest_offer_has_text_  = false;
+    std::string            clipboard_offer_text_mime_;
 
     // Most recent serial from an input event, required by
     // wl_data_device.set_selection. Cached in on_keyboard_key (copy is
@@ -367,6 +370,7 @@ private:
     bool arm_playback_timer();
 
     void destroy_current_offer();
+    void destroy_pending_offer();
     void ensure_data_device();
     void evaluate_drop_accept();
     std::string read_drop_data(int read_fd);

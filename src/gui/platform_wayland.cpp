@@ -661,16 +661,18 @@ void GuiPlatform::destroy_wayland_state() {
     }
 
     destroy_current_offer();
+    destroy_pending_offer();
     if (clipboard_source_) {
         wl_data_source_destroy(clipboard_source_);
         clipboard_source_ = nullptr;
     }
     if (clipboard_offer_) {
-        // Detached from current_data_offer_ in on_selection, so this never
-        // double-frees what destroy_current_offer() already handled.
+        // Clipboard, active DnD, and pending offers occupy distinct slots, so
+        // none of the two destroys above can have freed this object.
         wl_data_offer_destroy(clipboard_offer_);
         clipboard_offer_ = nullptr;
     }
+    clipboard_offer_text_mime_.clear();
     if (wl_data_device_) {
         wl_data_device_release(wl_data_device_);
         wl_data_device_ = nullptr;
@@ -1256,12 +1258,12 @@ void GuiPlatform::on_registry_global_remove(uint32_t name) {
     on_seat_capabilities(0);
 
     destroy_current_offer();
+    destroy_pending_offer();
     if (clipboard_offer_) {
         wl_data_offer_destroy(clipboard_offer_);
         clipboard_offer_ = nullptr;
     }
-    clipboard_offer_has_text_ = false;
-    latest_offer_has_text_ = false;
+    clipboard_offer_text_mime_.clear();
     if (clipboard_source_) {
         wl_data_source_destroy(clipboard_source_);
         clipboard_source_ = nullptr;
@@ -1835,22 +1837,44 @@ void GuiPlatform::on_pointer_frame() {
 // ---------------------------------------------------------------------------
 
 void GuiPlatform::on_data_offer(struct wl_data_offer* offer) {
-    destroy_current_offer();
-    current_data_offer_ = offer;
-    current_offer_has_uri_list_ = false;
-    latest_offer_has_text_ = false;   // accumulates over this offer's mimes
+    // data_offer announces an unclassified object; the following enter or
+    // selection event assigns it to DnD or clipboard. Supersede only an older
+    // unclaimed announcement — never the active drag or clipboard offer.
+    destroy_pending_offer();
+    pending_data_offer_ = offer;
+    pending_offer_has_uri_list_ = false;
+    pending_offer_text_mime_.clear();
     wl_data_offer_add_listener(offer, &s_data_offer_listener, this);
 }
 
 void GuiPlatform::on_data_offer_mime_type(struct wl_data_offer* offer,
                                           const char* mime) {
-    if (offer != current_data_offer_) return;
-    if (mime && std::strcmp(mime, "text/uri-list") == 0) {
+    if (!mime) return;
+    if (offer == pending_data_offer_) {
+        if (std::strcmp(mime, "text/uri-list") == 0) {
+            pending_offer_has_uri_list_ = true;
+        }
+        if (std::strcmp(mime, "text/plain;charset=utf-8") == 0) {
+            pending_offer_text_mime_ = mime;
+        } else if (std::strcmp(mime, "text/plain") == 0 &&
+                   pending_offer_text_mime_.empty()) {
+            pending_offer_text_mime_ = mime;
+        }
+        return;
+    }
+    // The protocol normally sends all MIME events before assigning the offer,
+    // but keep the claimed slots truthful if a compositor delivers one late.
+    if (offer == current_data_offer_ &&
+        std::strcmp(mime, "text/uri-list") == 0) {
         current_offer_has_uri_list_ = true;
     }
-    if (mime && (std::strcmp(mime, "text/plain") == 0 ||
-                 std::strcmp(mime, "text/plain;charset=utf-8") == 0)) {
-        latest_offer_has_text_ = true;
+    if (offer == clipboard_offer_) {
+        if (std::strcmp(mime, "text/plain;charset=utf-8") == 0) {
+            clipboard_offer_text_mime_ = mime;
+        } else if (std::strcmp(mime, "text/plain") == 0 &&
+                   clipboard_offer_text_mime_.empty()) {
+            clipboard_offer_text_mime_ = mime;
+        }
     }
 }
 
@@ -1858,11 +1882,17 @@ void GuiPlatform::on_dnd_enter(uint32_t serial, struct wl_surface* surface,
                                int32_t surface_x, int32_t surface_y,
                                struct wl_data_offer* offer) {
     if (surface != wl_surface_) return;
-    if (offer != current_data_offer_) {
+    if (offer != pending_data_offer_) {
         // Drag is referencing an offer we don't know about. Shouldn't
         // happen per protocol but guard.
         return;
     }
+    destroy_current_offer();
+    current_data_offer_ = pending_data_offer_;
+    current_offer_has_uri_list_ = pending_offer_has_uri_list_;
+    pending_data_offer_ = nullptr;
+    pending_offer_has_uri_list_ = false;
+    pending_offer_text_mime_.clear();
     dnd_enter_serial_ = serial;
     dnd_x_ = wl_fixed_to_int(surface_x);
     dnd_y_ = wl_fixed_to_int(surface_y);
@@ -1982,6 +2012,15 @@ void GuiPlatform::destroy_current_offer() {
     dnd_enter_serial_ = 0;
 }
 
+void GuiPlatform::destroy_pending_offer() {
+    if (pending_data_offer_) {
+        wl_data_offer_destroy(pending_data_offer_);
+        pending_data_offer_ = nullptr;
+    }
+    pending_offer_has_uri_list_ = false;
+    pending_offer_text_mime_.clear();
+}
+
 std::string GuiPlatform::read_drop_data(int read_fd) {
     std::string out;
     out.reserve(4096);
@@ -2061,29 +2100,32 @@ void GuiPlatform::on_data_source_cancelled(struct wl_data_source* src) {
 }
 
 void GuiPlatform::on_selection(struct wl_data_offer* offer) {
+    if (offer == clipboard_offer_) return;
     // Supersede any previous external clipboard offer.
-    if (clipboard_offer_ && clipboard_offer_ != offer) {
+    if (clipboard_offer_) {
         wl_data_offer_destroy(clipboard_offer_);
     }
-    clipboard_offer_          = offer;          // may be null (cleared)
-    clipboard_offer_has_text_ = offer ? latest_offer_has_text_ : false;
-    // The selection offer is now owned by the clipboard slot. Detach it from
-    // the DnD current-offer slot (on_data_offer aliased them) so the next
-    // incoming data_offer's destroy_current_offer() cannot free it out from
-    // under us — that aliasing would otherwise double-free on the second
-    // external clipboard change and on a null-clear selection.
-    if (current_data_offer_ == offer) current_data_offer_ = nullptr;
+    clipboard_offer_ = offer;  // may be null (cleared)
+    clipboard_offer_text_mime_.clear();
+    if (offer && offer == pending_data_offer_) {
+        clipboard_offer_text_mime_ = pending_offer_text_mime_;
+        pending_data_offer_ = nullptr;
+        pending_offer_has_uri_list_ = false;
+        pending_offer_text_mime_.clear();
+    }
 }
 
 std::string GuiPlatform::clipboard_get_text() {
     // Self-paste: we own the selection — return the local copy, never touch
     // the pipe (this is what avoids the same-thread send-then-read deadlock).
     if (clipboard_we_own_) return clipboard_send_text_;
-    if (!clipboard_offer_ || !clipboard_offer_has_text_) return std::string();
+    if (!clipboard_offer_ || clipboard_offer_text_mime_.empty()) {
+        return std::string();
+    }
     int fds[2];
     if (pipe2(fds, O_CLOEXEC) != 0) return std::string();
     wl_data_offer_receive(clipboard_offer_,
-                          "text/plain;charset=utf-8", fds[1]);
+                          clipboard_offer_text_mime_.c_str(), fds[1]);
     ::close(fds[1]);
     wl_display_flush(wl_display_);
     std::string out = read_clipboard_data(fds[0]);
@@ -2092,23 +2134,58 @@ std::string GuiPlatform::clipboard_get_text() {
 }
 
 std::string GuiPlatform::read_clipboard_data(int read_fd) {
-    // Bounded, non-blocking read so a slow or large external source can
-    // never stall the editor. The editor truncates to the field cap
-    // afterward, so kMaxBytes is only a runaway guard.
+    // Bounded, non-blocking read. A legitimate external source gets one full
+    // second for its complete short payload; the old 50 ms per-poll cutoff
+    // could silently turn ordinary scheduler delay into an empty or truncated
+    // paste. The overall deadline still bounds an unresponsive source. The
+    // editor truncates to the field cap afterward, so kMaxBytes is only a
+    // runaway guard.
     std::string out;
     fcntl(read_fd, F_SETFL, O_NONBLOCK);
     const size_t kMaxBytes = 64 * 1024;
+    const uint64_t deadline_us = monotonic_us() + 1'000'000;
+    bool failed = false;
     char buf[4096];
     for (;;) {
+        const uint64_t now_us = monotonic_us();
+        if (now_us >= deadline_us) {
+            std::fprintf(stderr,
+                "warptempo_gui: clipboard read timed out\n");
+            failed = true;
+            break;
+        }
+        const int remaining_ms = static_cast<int>(
+            (deadline_us - now_us + 999) / 1000);
         struct pollfd pfd { read_fd, POLLIN, 0 };
-        int pr = poll(&pfd, 1, 50);          // up to 50 ms
-        if (pr <= 0) break;                  // timeout or error
+        const int pr = poll(&pfd, 1, remaining_ms);
+        if (pr == 0) {
+            std::fprintf(stderr,
+                "warptempo_gui: clipboard read timed out\n");
+            failed = true;
+            break;
+        }
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            std::fprintf(stderr,
+                "warptempo_gui: clipboard read failed: %s\n",
+                std::strerror(errno));
+            failed = true;
+            break;
+        }
         ssize_t n = ::read(read_fd, buf, sizeof buf);
-        if (n <= 0) break;                   // EOF (source closed) or would-block end
+        if (n < 0) {
+            if (errno == EINTR || errno == EAGAIN) continue;
+            std::fprintf(stderr,
+                "warptempo_gui: clipboard read failed: %s\n",
+                std::strerror(errno));
+            failed = true;
+            break;
+        }
+        if (n == 0) break;                   // EOF
         out.append(buf, static_cast<size_t>(n));
         if (out.size() >= kMaxBytes) break;
     }
-    return out;
+    return failed ? std::string() : out;
 }
 
 std::string GuiPlatform::parse_first_file_uri(const std::string& uri_list) {
