@@ -117,7 +117,7 @@ public:
     // Block until state_ is Idle. Used by the paint path's
     // force_synchronous_waveform_rebuild to take over the cache surfaces
     // before a one-shot synchronous rebuild, guaranteeing no in-flight job
-    // touches them underneath it. Caps the wait at ~100ms; if the worker
+    // touches them underneath it. Caps the wait at ~1000ms; if the worker
     // hasn't responded by then, logs to stderr and returns.
     void wait_until_idle();
 

@@ -354,8 +354,8 @@ private:
     // worker: source-directory naming (empty batch_folder/basename inside
     // do_render), session bookkeeping, and an on_done that finalizes the
     // run and re-arms target view. `fingerprint` — the command's
-    // deliverable fingerprint, possibly empty on a load-identity stat
-    // failure at build time — becomes the async renderer's session
+    // deliverable fingerprint, built from the source's captured load-time
+    // identity (no build-time re-stat) — becomes the async renderer's session
     // fingerprint, so an identical re-dispatch no-ops and a
     // fingerprint-matching target-preview trigger waits the render out
     // instead of killing it. Caller must have verified the worker is idle.

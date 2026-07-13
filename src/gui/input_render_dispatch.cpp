@@ -314,9 +314,9 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
     // batch_. Each per-entry dispatch moves a RenderRequest out of
     // batch_.reqs, so reqs.front().batch_folder is only readable here
     // — by the time the terminal success branch needs it for auto-
-    // open, it's been moved away. All three batch call sites construct
-    // every RenderRequest in the batch with the same batch_folder
-    // string, so reading the front entry is canonical.
+    // open, it's been moved away. The two batch call sites (the iteration
+    // and BPM sweeps) construct every RenderRequest in the batch with the
+    // same batch_folder string, so reading the front entry is canonical.
     batch_.batch_folder = std::filesystem::path(reqs.front().batch_folder);
 
     batch_.reqs       = std::move(reqs);

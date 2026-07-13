@@ -689,10 +689,6 @@ struct AppState {
     bool        settings_dirty       = false;
     bool        dirty                = false;
 
-    // True until the first save in this session; used to log a one-time
-    // notice if the on-disk file had content the canonical form drops.
-    bool        first_save_pending   = true;
-
     // For redraw-time diagnostics (acceptance criterion 15).
     std::chrono::steady_clock::time_point stats_last_report =
         std::chrono::steady_clock::now();
@@ -837,8 +833,8 @@ struct AppState {
         bool armed = false;
         // Ctrl+Alt+R shape: reqs holds exactly one request, dispatched
         // through dispatch_single_archival_render with `fingerprint` as the
-        // session fingerprint (possibly empty on a load-identity stat
-        // failure at build time). Batches (armed && !single) go through
+        // session fingerprint (built from the source's captured load-time
+        // identity, no build-time re-stat). Batches (armed && !single) go through
         // start_render_batch with `batch_label` and carry no fingerprint —
         // a batch session never matches a dispatch.
         bool                       single = false;

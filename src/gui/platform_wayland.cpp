@@ -33,7 +33,8 @@
 // current refresh half-period (2x vblank oversample), falling back to 60 Hz
 // while no output mode is known. The poll wakes on whichever fd becomes
 // readable first. Compositor events drive surface configure, input delivery,
-// frame callbacks, and data offers; renderer eventfds deliver async results.
+// and frame callbacks (no clipboard or drag-and-drop path exists); renderer
+// eventfds deliver async results.
 // Timer wakeups drive the periodic model/validation callback and sample the
 // monotonic key-repeat deadline.
 //

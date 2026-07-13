@@ -234,7 +234,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
     app.settings_dirty     = false;
-    app.first_save_pending = true;
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: source load aborted: invalid warp markers in "

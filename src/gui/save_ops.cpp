@@ -89,7 +89,6 @@ bool GuiSaveOps::save() {
         }
     }
 
-    app.first_save_pending = false;
     // Save rebinds the saved reference to the current timeline position
     // without touching either stack — undo still reverts the last op.
     const bool was_dirty = app.dirty;
