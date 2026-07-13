@@ -141,7 +141,10 @@ void reset_levels(std::array<GuiAudio::PyramidLevel, 3>& levels) {
 // the number of output channels in the cache (1 or 2; <= channels).
 using FrameIterator = std::function<int64_t(float*, int64_t)>;
 
-void build_pyramid_streaming(const FrameIterator& source,
+// Returns true on a completed build, false if `on_progress` asked to cancel
+// (a requested-exit abort): `out` is then left partially built and the caller
+// must not write the cache or publish it.
+bool build_pyramid_streaming(const FrameIterator& source,
                              int64_t total_frames,
                              int channels,
                              int render_channels,
@@ -201,7 +204,10 @@ void build_pyramid_streaming(const FrameIterator& source,
         if (on_progress) {
             const float p = kLevel1Share *
                 static_cast<float>(frames_done) / static_cast<float>(prog_denom);
-            on_progress(p);
+            // Cancel signal: abort the build so the caller skips the cache
+            // write and publish. A Ctrl+Q / WM close during the build is
+            // observed here.
+            if (!on_progress(p)) return false;
         }
     }
     flush_window();  // tail (may cover < kStrides[0] frames)
@@ -244,7 +250,10 @@ void build_pyramid_streaming(const FrameIterator& source,
         }
     }
 
-    if (on_progress) on_progress(1.0f);
+    // Final tick. The build is complete; its return still honors a cancel so a
+    // close request observed exactly here avoids the cache write and publish.
+    if (on_progress) return on_progress(1.0f);
+    return true;
 }
 
 // Try to populate `levels` from the disk cache. Returns true on a clean hit.
@@ -549,7 +558,11 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         return true;
     }
 
-    if (on_progress) on_progress(0.0f);
+    // Primary cancel point. The decode above is one synchronous read that
+    // pumps no events, so a Ctrl+Q / WM close pressed during it first becomes
+    // observable here — before the pyramid build. Abort without building,
+    // caching, or publishing. Not a failure, so no diagnostic.
+    if (on_progress && !on_progress(0.0f)) return false;
 
     // Cache miss: stream the fresh sample buffer through the shared pyramid builder.
     int64_t pos = 0;
@@ -563,8 +576,13 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         pos += n;
         return n;
     };
-    build_pyramid_streaming(in_memory_iter, next_total_frames, next_channels,
-                            next_render_channels, on_progress, next_levels);
+    // A false return means the callback asked to cancel mid-build: skip the
+    // cache write and publish, and return false. Not a failure, so no
+    // diagnostic. `next_levels`/`next_samples` are discarded with the frame.
+    if (!build_pyramid_streaming(in_memory_iter, next_total_frames, next_channels,
+                                 next_render_channels, on_progress, next_levels)) {
+        return false;
+    }
 
     // Persist the pyramid for next time. Failure is non-fatal — `levels_` is
     // populated either way so the current load() still succeeds.
