@@ -942,21 +942,9 @@ struct AppState {
         // audio's total_frames, already verified equal to the rendered
         // window span) — the Render display domain's total (live_total_frames
         // semantics), stored rather than recomputed from the shifted map
-        // (which no longer target-totals to it). snapshot_commit_tab is
-        // the tab the entry is browsed under, attested at commit: entry load
-        // is the only writer — render view blocks the Ctrl+Tab tab chords
-        // outright — so it is set from the entry's persisted active_tab_view at
-        // load and always names the dispatch tab of the displayed entry.
-        // Ctrl+Alt+C re-reads the .settings
-        // fresh and compares its active_tab_view against this stash: the
-        // routing keys (active_tab_view, active_audio_view) ride OUTSIDE the
-        // render fingerprint, so the fingerprint check cannot catch a routing
-        // change underneath the display; this exact-match attestation does —
-        // passing for the frozen dispatch-time file, failing for hand edits.
-        // Cleared to 'A' beside the other snapshot fields at every clear site.
+        // (which no longer target-totals to it).
         std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
         int64_t                          snapshot_display_total = 0;
-        char                             snapshot_commit_tab = 'A';
     };
     RenderViewContext render_view;
 };

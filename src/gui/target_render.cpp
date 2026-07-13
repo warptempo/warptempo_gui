@@ -12,23 +12,18 @@
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio) {
     // The fingerprint's identity bytes are the load-time pair (GuiAudio's
-    // recorded size/mtime), built only after proving the current disk stat
-    // still equals that pair — see the declaration for the full rationale.
+    // recorded size/mtime), taken directly with no on-disk re-stat: the loaded
+    // source is immutable for the process lifetime, so the captured identity is
+    // authoritative — exactly as do_render builds its own fingerprint.
     RenderFileIdentity source_identity;
-    if (stat_file_identity(app.source_audio_path, source_identity) &&
-        source_identity.size == audio.source_load_size() &&
-        source_identity.mtime == audio.source_load_mtime()) {
-        RenderFileIdentity load_time_identity;
-        load_time_identity.size  = audio.source_load_size();
-        load_time_identity.mtime = audio.source_load_mtime();
-        return render_fingerprint(
-            app.source_audio_path, load_time_identity, audio.sample_rate(),
-            app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
-            app.engine_settings,
-            app.trim.has_begin, app.trim.begin_frame,
-            app.trim.has_end,   app.trim.end_frame);
-    }
-    return {};
+    source_identity.size  = audio.source_load_size();
+    source_identity.mtime = audio.source_load_mtime();
+    return render_fingerprint(
+        app.source_audio_path, source_identity, audio.sample_rate(),
+        app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+        app.engine_settings,
+        app.trim.has_begin, app.trim.begin_frame,
+        app.trim.has_end,   app.trim.end_frame);
 }
 
 bool GuiTargetRender::target_view_available() const {
@@ -75,9 +70,8 @@ void GuiTargetRender::trigger() {
     // (maybe_dispatch_pending → dispatch_render_now) adopts the finished
     // deliverable through the cache/artifact reuse rungs with no second
     // synthesis. Batch sessions and preview renders carry no session
-    // fingerprint, so they never match; a stat/identity failure yields an
-    // empty would-be fingerprint here, which also never matches — both
-    // fall through to the kill. The fingerprint inputs are identical at
+    // fingerprint, so they never match and fall through to the kill. The
+    // fingerprint inputs are identical at
     // trigger time and at the eventual dispatch: any input change between
     // the two re-runs trigger(), which re-decides.
     const bool match_wait =
@@ -165,13 +159,11 @@ void GuiTargetRender::dispatch_render_now() {
     // hits decode the exact codec roundtrip of those samples, and archival
     // artifact loads decode the same deliverable.
     //
-    // The identity-proving computation lives in
-    // compute_live_render_fingerprint (shared with the preview match-wait
-    // and the Ctrl+Alt+R session fingerprint). On stat failure or identity
-    // mismatch the fingerprint comes back empty, both reuse rungs miss, and
-    // the flow falls through to dispatch, where do_render simply renders from
-    // the in-memory source samples — the loaded source is immutable for the
-    // process lifetime, so there is no source-changed refusal.
+    // The identity build lives in compute_live_render_fingerprint (shared with
+    // the preview match-wait and the Ctrl+Alt+R session fingerprint), using the
+    // load-time-captured source identity with no on-disk re-stat: the loaded
+    // source is immutable for the process lifetime, so do_render renders from
+    // the in-memory source samples with no source-changed refusal.
     last_fingerprint_ = compute_live_render_fingerprint(app, audio);
 
     if (!last_fingerprint_.empty() &&

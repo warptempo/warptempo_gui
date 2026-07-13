@@ -306,7 +306,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // popup. Either way the dispatch is refused.
         if (!warp_render_preflight(app.warpmarkers.markers(),
                                    app.phaseresetmarkers.markers(),
-                                   /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_frame,
@@ -318,8 +317,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // render's fingerprint equals this command's, in which case the
         // command is a no-op: the worker is already producing exactly this
         // deliverable. Only a single archival render carries a session
-        // fingerprint (a batch never matches), and an empty would-be
-        // fingerprint (load-identity stat failure) matches nothing.
+        // fingerprint (a batch never matches, its empty fingerprint matching
+        // nothing).
         std::vector<uint8_t> fingerprint =
             compute_live_render_fingerprint(app, audio);
         if (async_renderer.is_busy() && !fingerprint.empty() &&
@@ -377,7 +376,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
                                    app.phaseresetmarkers.markers(),
-                                   /*live_store=*/true,
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_frame,

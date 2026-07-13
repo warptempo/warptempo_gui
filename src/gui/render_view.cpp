@@ -556,12 +556,6 @@ bool GuiRenderView::load_render_view_at(int index) {
     }
     app.render_view.snapshot_display_total  = decoded_frames;
     app.render_view.snapshot_warp_frame_map = std::move(full_warp_frame_map);
-    // The entry's dispatch tab (settings->active_tab_view, frozen at dispatch),
-    // stashed for the Ctrl+Alt+C routing re-attestation (the key rides outside
-    // the render fingerprint). app.active_tab_view is NOT set to it — the tab
-    // stays the authoring session's throughout render view — so this is a
-    // separate stash, not a mirror of app.active_tab_view.
-    app.render_view.snapshot_commit_tab = settings->active_tab_view;
     app.render_view.index             = index;
     app.render_view.last_path         = e.wav_path.string();
 
@@ -571,12 +565,11 @@ bool GuiRenderView::load_render_view_at(int index) {
     // fixed fit-file zoom over the displayed domain, viewport 0, playhead 0,
     // and an empty selection. app.active_tab_view and app.active_markers_view
     // are deliberately NOT touched: the tab is frozen to the authoring session
-    // and W/P is global by ruling. commit_tab (bound above) still supplies
-    // snapshot_commit_tab (the recipe trim it also carries stays a load-time
-    // local — it sized the window shift and the length check, and is not
-    // stored); its view keys were validated at this load
-    // (first_view_range_defect) as the position Ctrl+Alt+C inherits, but they
-    // are not applied here. The engine block, playback_speed, follow,
+    // and W/P is global by ruling. commit_tab (bound above) supplies the
+    // recipe trim, a load-time local — it sized the window shift and the
+    // length check, and is not stored; its view keys were validated at this
+    // load (first_view_range_defect) as the position Ctrl+Alt+C inherits, but
+    // they are not applied here. The engine block, playback_speed, follow,
     // font_size, active_audio_view are likewise the commit payload only,
     // adopted by Ctrl+Alt+C, never at browse time.
     app.zoom_level             = kFitFileLevel;
@@ -752,7 +745,6 @@ void GuiRenderView::clear_snapshot_context() {
     app.render_view.phase_resets.clear();
     app.render_view.snapshot_warp_frame_map.clear();
     app.render_view.snapshot_display_total = 0;
-    app.render_view.snapshot_commit_tab = 'A';
 }
 
 // Re-enumerate the renders/ folder and follow the currently-viewed entry by

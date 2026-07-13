@@ -16,14 +16,12 @@
 // computation, over the same inputs (source path + load-time identity,
 // sample rate, both marker stores, engine settings, trim), that a dispatch
 // of the current state performs. The identity bytes are the load-time pair
-// (GuiAudio's recorded size/mtime), built only after proving the current
-// disk stat still equals that pair — so a fingerprint can never bind audio
-// for any source other than the loaded buffer, even if a different file
-// with a matching stat is later swapped in at the path. Returns empty on a
-// stat failure or identity mismatch; callers treat empty as "matches
-// nothing" and fall through to their non-reuse path. Shared by the
-// target-view reuse rungs (dispatch_render_now), the preview match-wait
-// (trigger), and the Ctrl+Alt+R no-op/session-fingerprint computation.
+// (GuiAudio's recorded size/mtime), taken directly with no on-disk
+// re-verification: the loaded source is immutable for the process lifetime,
+// so the captured identity is authoritative — exactly as do_render builds
+// its own fingerprint. Shared by the target-view reuse rungs
+// (dispatch_render_now), the preview match-wait (trigger), and the
+// Ctrl+Alt+R no-op/session-fingerprint computation.
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio);
 

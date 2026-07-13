@@ -403,32 +403,27 @@ private:
     bool render_bpm_sweep();
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
-    // First the raw-store walk — enumerate_marker_store_defects over both
-    // given marker lists plus the trim checks (crossed-or-equal and, live
-    // stores only, the map-format-with-trim conflict and
+    // Always validates the live state (`markers` / `phase_resets` / trim at
+    // dispatch time). First the raw-store walk —
+    // enumerate_marker_store_defects over both given marker lists plus the
+    // trim checks (crossed-or-equal, the map-format-with-trim conflict, and
     // validate_trim_frames), mirroring open_defect_series' predicate; on a
-    // modeled defect a live-store site (`live_store` true: `markers` /
-    // `phase_resets` / trim are the live state at dispatch time) opens the
-    // defect-resolution series while a queued-snapshot site raises the
-    // popup backstop with the first defect's message, and the dispatch is
-    // refused either way. Then the backstop chain:
+    // modeled defect the dispatch opens the defect-resolution series and is
+    // refused. Then the backstop chain:
     // resolve_warp_markers_for_render on the sliced `markers`,
     // build_warp_frame_map with `scale` and the live sample_rate /
     // total_frames, then — when a trim bound is set — the map-format
-    // refusal (trim is wav-only, ruled; the raw walk routes the live-store
-    // case into the series, so this popup serves queued snapshots and
-    // stays the backstop) and validate_trim_frames against the built map,
-    // all surfacing through the error-notice popup with the owner's
-    // error string, unmodified. Returns false on any refusal — the caller
-    // must then refuse to enqueue. Called by every archival render
-    // dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+I iteration
-    // sweep, the BPM sweep); the async pipeline's stderr failure paths
-    // stay as
-    // the backstop for per-cell mutations the pre-flight does not model
-    // (no strings are plumbed through the async callback).
+    // refusal (trim is wav-only, ruled; the raw walk routes this into the
+    // series, so this popup stays the backstop) and validate_trim_frames
+    // against the built map, all surfacing through the error-notice popup
+    // with the owner's error string, unmodified. Returns false on any
+    // refusal — the caller must then refuse to enqueue. Called by every
+    // archival render dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+I
+    // iteration sweep, the BPM sweep); the async pipeline's stderr failure
+    // paths stay as the backstop for per-cell mutations the pre-flight does
+    // not model (no strings are plumbed through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
                                const std::vector<GuiPhaseResetMarker>& phase_resets,
-                               bool live_store,
                                double scale,
                                const std::string& output_format,
                                bool has_trim_begin, int64_t trim_begin_frame,

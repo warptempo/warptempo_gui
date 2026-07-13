@@ -49,11 +49,10 @@ struct GuiPrompt {
     // surface for authoring defects; this popup is the backstop plus the
     // environmental and settings-choice refusals. Callers: the render
     // dispatch pre-flight (the resolve/build/trim backstop for failures the
-    // defect enumerator does not model, the map-format-with-trim refusal —
-    // a settings choice, not corruption — and the queued-snapshot backstop)
-    // and the target-view validity gate (entry refusal and the
-    // invalidating-edit kick, both only when the defect series does not
-    // model the failure).
+    // defect enumerator does not model, and the map-format-with-trim refusal
+    // — a settings choice, not corruption) and the target-view validity gate
+    // (entry refusal and the invalidating-edit kick, both only when the
+    // defect series does not model the failure).
     void open_error_notice(std::string text);
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
