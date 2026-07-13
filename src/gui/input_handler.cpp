@@ -126,7 +126,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
-    // always false in blank state (history is reset on revert).
+    // always false in blank state (the only blank state is the transient
+    // pre-load window before the sole startup load completes, when nothing
+    // has been loaded or edited yet).
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.request_close_or_revert(DialogTrigger::CLOSE_WINDOW);
@@ -193,8 +195,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+C while the tempo hover popup is showing copies the hovered
     // marker's effective tempo value (the pasteable "base" / "base*scale"
-    // form the flag editor accepts) to the system clipboard, for pasting the
-    // implied value of a pass or label ref into a neighbor's flag editor.
+    // form the flag editor accepts) to the internal text clipboard
+    // (AppState::text_clipboard), the same session-only clipboard the flag
+    // and settings editors use, for pasting the implied value of a pass or
+    // label ref into a neighbor's flag editor.
     // Placed below the prompt gate (line above returns while a modal is up)
     // and the two editor blocks (which return on their own Ctrl+C, keeping
     // the editor's copy-selection working while an editor owns input), so
