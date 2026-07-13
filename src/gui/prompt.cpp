@@ -126,7 +126,7 @@ void GuiPrompt::activate_response(char k) {
         if (k == '\x1b') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            // Cancel of a close/revert prompt raised over a suspended defect
+            // Cancel of a close prompt raised over a suspended defect
             // series resumes the series: re-queue the once-per-tick funnel
             // with the origin the series was opened with (derived from
             // commit_context — Commit-origin series carry it true, so the

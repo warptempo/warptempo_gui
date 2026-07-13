@@ -164,7 +164,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // bpm bracket editor) and the prompts (gated above); the top-strip
     // flag editor is deliberately non-modal. While a bottom-strip editor
     // is open, only the keys the editor itself consumes plus Esc, Ctrl+S,
-    // and Ctrl+Q/W get through (modal_editor_key_blocked); everything
+    // and Ctrl+Q get through (modal_editor_key_blocked); everything
     // else — playback, navigation, zoom, mode toggles, tab switches,
     // undo/redo, marker / trim chords — drops here, so no authoring or
     // view change can happen while the editor is up. Admitted keys route
@@ -267,7 +267,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // mutate the live tab), Shift+0..9 (playback speed). Everything else —
     // playback, the bare-key scrub / zoom / follow / center / p sub-view
     // toggle, Home/End, PageUp/PageDown paging, bare Tab marker-focus cycling,
-    // Ctrl+Q/W, the font-size step — follows the read-only gate; Ctrl+S is
+    // Ctrl+Q, the font-size step — follows the read-only gate; Ctrl+S is
     // blocked through that deferral (read-only itself now blocks it), so the
     // save surface is Ctrl+Alt+C only.
     //

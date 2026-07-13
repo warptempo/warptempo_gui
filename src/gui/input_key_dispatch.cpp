@@ -1660,23 +1660,22 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // NotConsumed: the editor does not own this key. The two kinds split
     // here. The bpm editor is a modal bottom-strip surface: the on_key
     // gate (modal_editor_key_blocked) admits only its own keys plus Esc,
-    // Ctrl+S, and Ctrl+Q/W, so a NotConsumed key is one of those three
+    // Ctrl+S, and Ctrl+Q, so a NotConsumed key is one of those three
     // chords. Ctrl+S saves with the editor (and the bpm session) left
     // open — save is not an exit; Esc and Enter are the mode's only
-    // exits. Ctrl+Q/W tear the editor and the mode down together
-    // (mode-without-editor stays unreachable) and fall through so the
-    // global dispatch runs the close / revert routing. Anything else is
+    // exits. Ctrl+Q tears the editor and the mode down together
+    // (mode-without-editor stays unreachable) and falls through so the
+    // global dispatch runs the close routing. Anything else is
     // swallowed as a backstop.
     if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         if (mods.ctrl && !mods.shift && !mods.alt && key == GuiKeys::S) {
             save_ops.save();
             return true;
         }
-        if (mods.ctrl && !mods.shift && !mods.alt &&
-            (key == GuiKeys::Q || key == GuiKeys::W)) {
+        if (mods.ctrl && !mods.shift && !mods.alt && key == GuiKeys::Q) {
             flag_editor.exit_top_flag_edit_no_commit();
             flag_editor.exit_bpm_mode();
-            return false;  // let on_key run the close / revert routing
+            return false;  // let on_key run the close routing
         }
         return true;  // modal: swallow
     }
@@ -1684,7 +1683,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // Cancel the edit (Esc-discard: no commit, no validation), using the
     // same teardown Esc uses, then fall through (no return) so the key
     // reaches the global command dispatch below and runs. This is how every
-    // command (Ctrl+Q/W/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, Ctrl+E, ...) works
+    // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, Ctrl+E, ...) works
     // mid-edit: exit first, then the command. No command list — the editor
     // owns only its editing keymap and everything else punches through.
     flag_editor.exit_top_flag_edit_no_commit();
@@ -1726,19 +1725,18 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
     }
     // NotConsumed: the settings editor is a modal bottom-strip surface —
     // the on_key gate (modal_editor_key_blocked) admits only its own keys
-    // plus Esc, Ctrl+S, and Ctrl+Q/W, so a NotConsumed key is one of those
+    // plus Esc, Ctrl+S, and Ctrl+Q, so a NotConsumed key is one of those
     // three chords. Ctrl+S saves with the editor left open (save is not an
-    // exit); Ctrl+Q/W discard the edit (Esc-discard) and fall through so
-    // the global dispatch runs the close / revert routing. Anything else
+    // exit); Ctrl+Q discards the edit (Esc-discard) and falls through so
+    // the global dispatch runs the close routing. Anything else
     // is swallowed as a backstop.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
         save_ops.save();
         return true;
     }
-    if (ctrl && !shift && !alt &&
-        (key == GuiKeys::Q || key == GuiKeys::W)) {
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
         settings_editor.exit_no_commit();
-        return false;  // let on_key run the close / revert routing
+        return false;  // let on_key run the close routing
     }
     return true;  // modal: swallow
 }

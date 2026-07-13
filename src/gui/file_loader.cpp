@@ -328,8 +328,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // is loadable in both products or neither. Any schema violation —
     // unknown key, duplicate, malformed value, off-preset playback_speed,
     // missing required engine key — aborts the load with the first error,
-    // the same shape as a corrupt audio file: revert the partial load so
-    // the user sees no half-loaded state. On top of the schema, the
+    // the same shape as a corrupt audio file: the load fails and the
+    // process exits, so the user never sees a half-loaded state. On top of the
     // context-dependent viewport/playhead range rules run at the end of
     // this block, equally load-fatal. Persisted view positions live in the
     // persisted active_audio_view's domain — while 'T' the live view fields
@@ -359,7 +359,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // the source audio itself would overwrite the source at render time.
         // The GUI editor refuses this at commit, so the state is
         // GUI-uncommittable; refuse the hand-edited file here at load, the
-        // earliest boundary, in the same abort-and-revert shape as the other
+        // earliest boundary, in the same abort-and-exit shape as the other
         // adversarial settings refusals. The shared predicate matches the
         // editor's composition exactly (single-render source-sibling paths).
         if (auto collision =

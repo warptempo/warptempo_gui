@@ -435,7 +435,7 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 // save/discard/cancel form: every state the series can show is a walkable
 // defect, hence load-legal, so a save writes a loadable file that
 // re-walks its series on the next load. Any wholesale defect_series reset
-// (load, revert) clears it; the resume path clears it explicitly.
+// (load) clears it; the resume path clears it explicitly.
 struct DefectSeriesState {
     MarkerDefect      defect;
     TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
@@ -768,8 +768,8 @@ struct AppState {
     // rather than nudging the focused warp marker's tempo.
     char   last_selected_trim  = 0;
 
-    // Bottom-strip command prompt. Active only when a close / revert /
-    // re-detect gesture fires while a confirmation is required. Originally
+    // Bottom-strip command prompt. Active only when a close / re-detect
+    // gesture fires while a confirmation is required. Originally
     // a centered modal dialog; the same modal semantics now live in the
     // bottom strip.
     PromptState prompt;

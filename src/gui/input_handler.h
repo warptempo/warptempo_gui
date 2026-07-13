@@ -240,7 +240,7 @@ struct GuiInputHandler {
     // the tracked playhead for a marker drag); scroll and playhead drags just
     // end where they are. No-op when no drag is active. Callers: the
     // drag-modal escape hatches in on_key, and the WM-close callback in
-    // main.cpp (both cancel before raising the close / revert prompt).
+    // main.cpp (both cancel before raising the close prompt).
     void cancel_active_drags();
 
     // Target-view validity gate, kick-back half. Called from on_tick every
@@ -511,14 +511,14 @@ private:
     // through, while the bpm editor (a modal bottom-strip surface) reaches
     // the tail only for the three chords the on_key modal gate admits
     // beyond its own keys — Ctrl+S runs the save with the editor left
-    // open, Ctrl+Q/W tear the editor and bpm mode down together and fall
-    // through to the close / revert routing, and anything else swallows.
+    // open, Ctrl+Q tears the editor and bpm mode down together and falls
+    // through to the close routing, and anything else swallows.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor. Same
     // consumed/command contract as handle_top_flag_editor_key's modal
-    // (bpm) tail: Ctrl+S saves with the editor left open, Ctrl+Q/W discard
-    // the edit and fall through, everything else the editor does not
+    // (bpm) tail: Ctrl+S saves with the editor left open, Ctrl+Q discards
+    // the edit and falls through, everything else the editor does not
     // consume swallows.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
@@ -610,7 +610,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape:
     // true when key+mods should be dropped while a bottom-strip editor is
     // open (admits only the keys the active editor consumes, Esc, Ctrl+S,
-    // and Ctrl+Q/W).
+    // and Ctrl+Q).
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
