@@ -159,7 +159,7 @@ enum class KeyAction {
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 
 // Clipboard primitives, used by the input handler to bridge the editor's
-// selection model to the platform clipboard. selected_text returns the
+// selection model to the session clipboard. selected_text returns the
 // highlighted substring (empty if no selection). replace_selection is the
 // paste/cut primitive: it sanitizes `raw` to printable ASCII (0x20..0x7e —
 // dropping control chars, newlines, tabs, non-ASCII), then atomically either

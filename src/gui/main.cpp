@@ -61,7 +61,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <csignal>
 #include <cstring>
 #include <ctime>
 #include <fcntl.h>
@@ -416,10 +415,6 @@ int main(int argc, char** argv) {
     }
     const char* cli_path = argv[1];
 
-    // Wayland clipboard source writes go to consumer-owned pipes.
-    // Ignoring SIGPIPE turns a vanishing consumer into EPIPE for the send loop.
-    std::signal(SIGPIPE, SIG_IGN);
-
     AppState     app;
     GuiAudio     audio;
     GuiPlayback  playback;
@@ -679,7 +674,13 @@ int main(int argc, char** argv) {
             initial_load_done = true;
             const std::string p = std::move(pending_initial_load);
             pending_initial_load.clear();
-            file_loader.load_file(p);
+            if (!file_loader.load_file(p)) {
+                // The source argument is mandatory and there is no in-session
+                // replacement surface, so every load refusal is terminal.
+                // Deeper decode/sidecar failures already request exit at the
+                // owning site; request_exit() is idempotent for those paths.
+                gui.request_exit();
+            }
             return;  // loaded state paints on the next tick
         }
 
