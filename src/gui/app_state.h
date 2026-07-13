@@ -854,8 +854,7 @@ struct AppState {
     // GUI thread. A newer command replaces an older parked one wholesale.
     // Esc during the drain disarms the slot (Esc means stop rendering, and
     // the parked command would otherwise resurrect a render right after the
-    // cancel lands); a source load drops it (cancel_for_load), since the
-    // requests were built against the torn-down source.
+    // cancel lands).
     struct PendingArchivalCommand {
         bool armed = false;
         // Ctrl+Alt+R shape: reqs holds exactly one request, dispatched

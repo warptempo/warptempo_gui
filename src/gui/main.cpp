@@ -456,8 +456,7 @@ int main(int argc, char** argv) {
     }
     // Waveform-cache rebuild runs on this dedicated worker; the
     // paint thread becomes blit-only. Must be constructed before
-    // GuiPaintHandler (which takes it as a reference) and before
-    // GuiFileLoader (which calls wait_until_idle before swapping audio).
+    // GuiPaintHandler (which takes it as a reference).
     GuiWaveformWorker waveform_worker;
     if (!waveform_worker.init()) {
         std::fprintf(stderr,
@@ -487,10 +486,10 @@ int main(int argc, char** argv) {
     // ref for the same rebuild.
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
                                   flag_cache, waveform_worker, gui);
-    // file_loader's clear sites call target_render.cancel_for_load(),
-    // so it must be constructed after target_render.
-    GuiFileLoader file_loader(app, audio, gui, playback, wf_cache, stem_cache,
-                              flag_cache, waveform_worker, viewport,
+    // file_loader holds a GuiTargetRender& (its end-of-load ensure_ready()
+    // dispatches the eager target preview), so it must be constructed after
+    // target_render.
+    GuiFileLoader file_loader(app, audio, gui, playback, viewport,
                               target_render, paint_handler);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle);
@@ -512,9 +511,6 @@ int main(int argc, char** argv) {
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle);
-    // Back-wire the loader's prompt pointer: prompt is constructed after
-    // file_loader, so the pointer is set once both exist.
-    file_loader.prompt = &prompt;
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
                                       target_render);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),

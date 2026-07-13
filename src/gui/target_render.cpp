@@ -491,46 +491,6 @@ void GuiTargetRender::leave_target_view() {
     viewport.invalidate_timestamp_area();
 }
 
-void GuiTargetRender::cancel_for_load() {
-    // file_loader entry hook. Runs on the GUI thread immediately before
-    // the live source audio is torn down. Goal: leave the target buffer
-    // in a coherent state without racing the async render worker, which
-    // may currently be appending samples into *req.output_buffer (the
-    // address of app.target_buffer).
-    //
-    // The buffer is no longer current with the soon-to-be-loaded source,
-    // regardless of which branch we take below.
-    is_dirty_ = true;
-    // Any pending target-render dispatch must not pump into the new
-    // source's worker queue. If a cancel-restart was queued behind a
-    // busy archival render, clearing the pending bit aborts the queued
-    // dispatch before maybe_dispatch_pending() can fire it.
-    pending_ = false;
-    // Same for a parked archival command: its requests were built against
-    // the source being torn down, so drop the slot before the pump can
-    // dispatch it against the new load.
-    app.pending_archival = {};
-
-    if (in_flight_) {
-        // Worker is mid-target-render, writing into target_buffer. Do NOT
-        // touch the buffer fields here — that would race vector::insert
-        // on the worker side. Set the cancel flag and let
-        // on_render_done's Cancelled branch clear target_buffer /
-        // target_buffer_frames after the worker exits. The Cancelled
-        // branch's status cleanup (invalidate_timestamp_area +
-        // queue_progress_text.clear) also covers the "updating..." text.
-        async_renderer.request_cancel();
-        return;
-    }
-
-    // Worker is idle or running an archival render (whose RenderRequest
-    // has output_buffer == nullptr, so archivals write to disk instead of a
-    // vector). Either way, no one is touching target_buffer; the synchronous
-    // clear is race-free.
-    app.target_buffer.clear();
-    app.target_buffer_frames = 0;
-}
-
 void GuiTargetRender::cancel_in_flight_update() {
     // The in-flight render is now navigated-away-from work. Cancel it and drop
     // any pending dispatch. The worker clears target_buffer / frames in

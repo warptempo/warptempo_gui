@@ -6,7 +6,6 @@
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
-#include "waveform_worker.h"
 #include "source_sample_cache.h"
 
 #include "warp_frame_map.h"
@@ -47,7 +46,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
                      : "waveform peaks cache") +
             "; open the original source audio file instead.";
         std::fprintf(stderr, "warptempo_gui: %s\n", msg.c_str());
-        if (prompt) prompt->open_error_notice(std::move(msg));
         return false;
     }
 
@@ -96,17 +94,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Stop and tear down the audio device before the sample buffer it
-    // borrows is replaced. Playing into a freed buffer would crash the
-    // audio thread. Order (stop → shutdown → load → init) is fixed.
-    playback.stop();
-    playback.shutdown();
-    app.playhead_scanner_active = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
-    app.playhead_scanner_sample = 0;
-    app.hover_popup    = HoverPopupState{};
-
     app.loading       = true;
     app.queue_progress_text = "loading...";
     gui.invalidate_region(0, 0, app.width, app.height);
@@ -132,13 +119,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         return false;
     }
 
-    // Drain any in-flight waveform render before swapping the
-    // audio's internal buffers out from under it. The worker dereferences
-    // the GuiAudio via the pointer captured in its WaveformJob, and the
-    // move-assignment below replaces audio's pyramid vectors in place —
-    // reading them mid-move is UB.
-    waveform_worker.wait_until_idle();
-
     // Keep the source-sample-cache writer serialized with audio swaps.
     join_source_sample_cache_writer();
 
@@ -157,14 +137,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
                     path.c_str());
             }
         });
-
-    // The just-loaded audio sets a fresh source-frame baseline; the
-    // target-frame cache from any prior session is stale. The target
-    // buffer is tied to the live source audio's content, so cancel any
-    // in-flight target render and clear it — the eager ensure_ready()
-    // at end-of-load will dispatch a fresh target render if the parsed
-    // .settings landed us in target view.
-    target_render.cancel_for_load();
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
@@ -609,8 +581,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // AND the loaded state passed the same validity walk that gates a
     // keyboard S → T entry (the gate above) — dispatch a fresh target
     // render now so the first Space press is ready without a first-edit
-    // wait. The target buffer was cleared by cancel_for_load above;
-    // ensure_ready's is_dirty_=true falls through to trigger(). No-op if
+    // wait. The target buffer is empty on this sole load; ensure_ready's
+    // is_dirty_=true (its construction default) falls through to
+    // trigger(). No-op if
     // active_audio_view=='S', including an invalid target-view load just
     // forced to source view: that path's surface is the load-origin defect
     // series, and the eager preview waits for a clean `t` entry.

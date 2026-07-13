@@ -129,14 +129,6 @@ struct GuiTargetRender {
     // change makes target view unavailable.
     void leave_target_view();
 
-    // File-load entry hook. Called by GuiFileLoader before it tears
-    // down the live source audio. Sets is_dirty_; clears pending_; if
-    // in_flight_, requests worker cancellation and leaves the buffer
-    // clear to on_render_done's Cancelled branch (asynchronous); else
-    // synchronously clears target_buffer / frames.
-    // Replaces an earlier inline buffer-clear.
-    void cancel_for_load();
-
 private:
     // Construct and dispatch the target RenderRequest. Caller must
     // have verified the worker is idle and we are in target view.
@@ -190,8 +182,7 @@ private:
     bool in_flight_ = false;
     // True iff app.target_buffer is potentially stale relative to the
     // current engine input. Set by trigger() (any output-affecting
-    // mutation) and by cancel_for_load() (file_loader's wholesale source
-    // invalidation). Cleared inside on_render_done's success branch
+    // mutation). Cleared inside on_render_done's success branch
     // after the rebind, where the buffer is known to match the
     // engine input that produced it. Initial value true: at
     // construction the buffer is empty and no render has run, so the

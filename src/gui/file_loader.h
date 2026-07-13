@@ -2,7 +2,7 @@
 
 #include "app_state.h"
 #include "audio.h"
-#include "paint_handler.h"   // for WaveformCache
+#include "paint_handler.h"   // for GuiPaintHandler
 #include "playback.h"
 #include "platform_wayland.h"
 #include "viewport.h"
@@ -11,9 +11,7 @@
 #include <string>
 #include <thread>
 
-class GuiWaveformWorker;
 struct GuiTargetRender;
-struct GuiPrompt;
 
 // File-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
@@ -25,10 +23,6 @@ struct GuiFileLoader {
     GuiAudio&          audio;
     GuiPlatform&       gui;
     GuiPlayback&       playback;
-    WaveformCache&     wf_cache;
-    StemCache&         stem_cache;
-    FlagCache&         flag_cache;
-    GuiWaveformWorker& waveform_worker;
     Viewport&          viewport;
     GuiTargetRender&   target_render;
     // Loading a source can change app.font_size; the load applies it
@@ -40,10 +34,6 @@ struct GuiFileLoader {
                   GuiAudio&          audio_,
                   GuiPlatform&       gui_,
                   GuiPlayback&       playback_,
-                  WaveformCache&     wf_cache_,
-                  StemCache&         stem_cache_,
-                  FlagCache&         flag_cache_,
-                  GuiWaveformWorker& waveform_worker_,
                   Viewport&          viewport_,
                   GuiTargetRender&   target_render_,
                   GuiPaintHandler&   paint_handler_)
@@ -51,23 +41,11 @@ struct GuiFileLoader {
           audio(audio_),
           gui(gui_),
           playback(playback_),
-          wf_cache(wf_cache_),
-          stem_cache(stem_cache_),
-          flag_cache(flag_cache_),
-          waveform_worker(waveform_worker_),
           viewport(viewport_),
           target_render(target_render_),
           paint_handler(paint_handler_) {}
 
     ~GuiFileLoader();
-
-    // Back-pointer, wired in main.cpp right after GuiPrompt's construction
-    // (GuiPrompt holds a GuiFileLoader&, so it is necessarily built after
-    // this struct). Carries the dismiss-only error notice for a private
-    // cache file opened by mistake. Non-null for the whole run loop: every
-    // load path — the deferred startup load included — runs on ticks, after
-    // the wiring.
-    GuiPrompt* prompt = nullptr;
 
     bool load_file(const std::string& path);
     void join_source_sample_cache_writer();
