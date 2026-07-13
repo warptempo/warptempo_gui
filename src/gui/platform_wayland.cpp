@@ -27,17 +27,15 @@
 // ---------------------------------------------------------------------------
 // Run-loop architecture
 //
-// The run loop is built on a single poll() that waits indefinitely on two
-// file descriptors: the wl_display fd, which delivers compositor events,
-// and a timerfd whose interval is the detected refresh rate's half-period
-// (2x vblank oversample, falling back to 60 Hz if the compositor advertises
-// no output mode at registry roundtrip). The poll wakes on whichever fd
-// becomes readable first. Compositor events drive every other Wayland-side
-// mechanism — surface configure, input event delivery, frame callbacks,
-// data offers. The timerfd's wakeups drive the per-tick callback (which is
-// a heartbeat: it declares damage at the current playhead position so the
-// paint cycle continues, and provides the wake cadence for text-editor
-// cursor blink and hover-popup dwell timing).
+// The run loop is built on a single poll() that waits indefinitely on the
+// wl_display fd, the idle/playback timerfd, and the two optional renderer
+// completion eventfds. The timer interval tracks the bound single output's
+// current refresh half-period (2x vblank oversample), falling back to 60 Hz
+// while no output mode is known. The poll wakes on whichever fd becomes
+// readable first. Compositor events drive surface configure, input delivery,
+// frame callbacks, and data offers; renderer eventfds deliver async results.
+// Timer wakeups drive the periodic model/validation callback and sample the
+// monotonic key-repeat deadline.
 //
 // Paint pacing is separate from tick pacing. wl_surface.frame is a request
 // the client makes after each commit asking the compositor to deliver a
@@ -183,7 +181,10 @@ struct WaylandListeners {
                                 uint32_t version) {
         static_cast<GuiPlatform*>(data)->on_registry_global(r, name, interface, version);
     }
-    static void registry_global_remove(void*, struct wl_registry*, uint32_t) {}
+    static void registry_global_remove(void* data, struct wl_registry*,
+                                       uint32_t name) {
+        static_cast<GuiPlatform*>(data)->on_registry_global_remove(name);
+    }
 
     // xdg_wm_base
     static void wm_base_ping(void*, struct xdg_wm_base* base, uint32_t serial) {
@@ -210,6 +211,11 @@ struct WaylandListeners {
         static_cast<GuiPlatform*>(data)->on_output_mode(flags, width, height, refresh_mhz);
     }
     static void output_done(void*, struct wl_output*) {}
+    // Scaling-unaware by design: the main surface keeps wl_surface's default
+    // buffer scale 1, so the compositor scales its buffer while application
+    // paint and pointer coordinates remain in one surface-local pixel space.
+    // A scale change that also changes logical window dimensions arrives via
+    // xdg_toplevel.configure and takes the normal resize/cancel path.
     static void output_scale(void*, struct wl_output*, int32_t) {}
     static void output_name(void*, struct wl_output*, const char*) {}
     static void output_description(void*, struct wl_output*, const char*) {}
@@ -607,25 +613,13 @@ bool GuiPlatform::init(int width, int height, const char* title) {
         // Non-fatal — the binary can still run, just without keyboard input.
     }
 
-    playback_tick_ms_ = detect_refresh_rate_ms();
     timerfd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     if (timerfd_ < 0) {
         std::fprintf(stderr, "warptempo_gui: timerfd_create failed: %s\n",
                      std::strerror(errno));
         return false;
     }
-    {
-        struct itimerspec its{};
-        its.it_value.tv_sec     = playback_tick_ms_ / 1000;
-        its.it_value.tv_nsec    = (playback_tick_ms_ % 1000) * 1000000L;
-        its.it_interval.tv_sec  = its.it_value.tv_sec;
-        its.it_interval.tv_nsec = its.it_value.tv_nsec;
-        if (timerfd_settime(timerfd_, 0, &its, nullptr) < 0) {
-            std::fprintf(stderr, "warptempo_gui: timerfd_settime failed: %s\n",
-                         std::strerror(errno));
-            return false;
-        }
-    }
+    if (!arm_playback_timer()) return false;
 
     if (wl_data_device_manager_ && wl_seat_) {
         wl_data_device_ = wl_data_device_manager_get_data_device(
@@ -773,6 +767,7 @@ void GuiPlatform::destroy_wayland_state() {
     if (wl_output_) {
         wl_output_destroy(wl_output_);
         wl_output_ = nullptr;
+        output_global_name_ = 0;
     }
     if (wl_shm_) {
         wl_shm_destroy(wl_shm_);
@@ -1164,6 +1159,23 @@ int GuiPlatform::detect_refresh_rate_ms() {
     return t;
 }
 
+bool GuiPlatform::arm_playback_timer() {
+    playback_tick_ms_ = detect_refresh_rate_ms();
+    if (timerfd_ < 0) return true;
+
+    struct itimerspec its{};
+    its.it_value.tv_sec     = playback_tick_ms_ / 1000;
+    its.it_value.tv_nsec    = (playback_tick_ms_ % 1000) * 1000000L;
+    its.it_interval.tv_sec  = its.it_value.tv_sec;
+    its.it_interval.tv_nsec = its.it_value.tv_nsec;
+    if (timerfd_settime(timerfd_, 0, &its, nullptr) < 0) {
+        std::fprintf(stderr, "warptempo_gui: timerfd_settime failed: %s\n",
+                     std::strerror(errno));
+        return false;
+    }
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Wayland event handlers
 // ---------------------------------------------------------------------------
@@ -1193,6 +1205,8 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             const uint32_t v = std::min<uint32_t>(version, 2);
             wl_output_ = static_cast<struct wl_output*>(
                 wl_registry_bind(r, name, &wl_output_interface, v));
+            output_global_name_ = name;
+            output_refresh_mhz_ = 0;  // a replacement output starts cacheless
             wl_output_add_listener(wl_output_, &s_output_listener, this);
         }
     } else if (std::strcmp(interface, wl_seat_interface.name) == 0) {
@@ -1224,13 +1238,30 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
     }
 }
 
+void GuiPlatform::on_registry_global_remove(uint32_t name) {
+    if (!wl_output_ || name != output_global_name_) return;
+
+    // wl_registry.global_remove makes the bound object unavailable and asks
+    // the client to destroy its proxy. Clearing the singleton slot matters as
+    // much as destruction: a later wl_output advertisement can now bind and
+    // become the new single-monitor timing source.
+    wl_output_destroy(wl_output_);  // bound at v2; wl_output.release is v3
+    wl_output_ = nullptr;
+    output_global_name_ = 0;
+    output_refresh_mhz_ = 0;
+    if (timerfd_ >= 0) (void)arm_playback_timer();  // 60 Hz fallback
+}
+
 void GuiPlatform::on_output_mode(uint32_t flags, int32_t /*width*/,
                                  int32_t /*height*/, int32_t refresh_mhz) {
-    // WL_OUTPUT_MODE_CURRENT (bit 0) marks the active mode; among modes
-    // reported, take the highest refresh rate (typical: only one CURRENT
-    // mode is reported, so this is a single update).
+    // WL_OUTPUT_MODE_CURRENT (bit 0) marks the active mode. The protocol makes
+    // the most recently reported CURRENT mode authoritative, including a
+    // transition to a lower refresh rate, so replace rather than max-merge.
     if ((flags & WL_OUTPUT_MODE_CURRENT) == 0) return;
-    if (refresh_mhz > output_refresh_mhz_) output_refresh_mhz_ = refresh_mhz;
+    output_refresh_mhz_ = refresh_mhz;
+    // The initial mode burst precedes timerfd creation. Later mode changes or
+    // a replacement output re-arm the idle/playback/input-repeat tick now.
+    if (timerfd_ >= 0) (void)arm_playback_timer();
 }
 
 void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,

@@ -114,6 +114,7 @@ private:
     struct xdg_wm_base*   xdg_wm_base_    = nullptr;
     struct zxdg_decoration_manager_v1* xdg_decoration_manager_ = nullptr;
     struct wl_output*     wl_output_      = nullptr;
+    uint32_t              output_global_name_ = 0;
 
     // -- Surface objects --
     struct wl_surface*       wl_surface_       = nullptr;
@@ -173,9 +174,10 @@ private:
     // additional damage without producing a spurious extra commit.
     bool in_pre_paint_ = false;
 
-    // Highest-refresh wl_output mode reported during the registry
-    // roundtrip, in millihertz. Zero means no output advertised a mode;
-    // detect_refresh_rate_ms() then falls back to 60 Hz.
+    // The bound single wl_output's latest CURRENT mode, in millihertz.
+    // Replaced on mode changes and cleared on output removal. Zero means no
+    // output advertised a usable mode; detect_refresh_rate_ms() then falls
+    // back to 60 Hz.
     int  output_refresh_mhz_ = 0;
 
     // -- Idle-tick timing --
@@ -361,6 +363,7 @@ private:
     void paint_one_frame();
     void destroy_wayland_state();
     int  detect_refresh_rate_ms();
+    bool arm_playback_timer();
 
     void destroy_current_offer();
     void evaluate_drop_accept();
@@ -370,6 +373,7 @@ private:
     // -- Event handlers (called from file-static dispatchers) --
     void on_registry_global(struct wl_registry* r, uint32_t name,
                             const char* interface, uint32_t version);
+    void on_registry_global_remove(uint32_t name);
     void on_output_mode(uint32_t flags, int32_t width, int32_t height,
                         int32_t refresh_mhz);
     void on_xdg_surface_configure(struct xdg_surface* xs, uint32_t serial);
