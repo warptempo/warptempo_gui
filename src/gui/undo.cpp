@@ -30,6 +30,7 @@ void Undo::recompute_dirty() {
         const int n  = -h.saved_distance;
         const int us = static_cast<int>(h.undo_stack.size());
         for (int i = std::max(0, us - n); i < us; ++i) {
+            if (!h.undo_stack[i].affects_persistence) continue;
             const char m = h.undo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
@@ -44,6 +45,7 @@ void Undo::recompute_dirty() {
         const int n  = h.saved_distance;
         const int rs = static_cast<int>(h.redo_stack.size());
         for (int i = std::max(0, rs - n); i < rs; ++i) {
+            if (!h.redo_stack[i].affects_persistence) continue;
             const char m = h.redo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
@@ -53,7 +55,8 @@ void Undo::recompute_dirty() {
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
-void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last) {
+void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
+                          bool affects_persistence) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
@@ -61,6 +64,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last) {
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
+    e.affects_persistence = affects_persistence;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     // Commit funnel: one commit = one history entry, so the push helpers
@@ -287,6 +291,7 @@ void Undo::do_undo() {
     redo_entry.op_mode            = entry.op_mode;
     redo_entry.tab                = entry.tab;
     redo_entry.hint_last_selected = entry.hint_last_selected;
+    redo_entry.affects_persistence = entry.affects_persistence;
     std::vector<GuiWarpMarker>    before_w = redo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = redo_entry.phase_reset_snapshot;
 
@@ -396,6 +401,7 @@ void Undo::do_redo() {
     undo_entry.op_mode            = entry.op_mode;
     undo_entry.tab                = entry.tab;
     undo_entry.hint_last_selected = entry.hint_last_selected;
+    undo_entry.affects_persistence = entry.affects_persistence;
     std::vector<GuiWarpMarker>    before_w = undo_entry.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = undo_entry.phase_reset_snapshot;
 

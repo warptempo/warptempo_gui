@@ -486,7 +486,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 
     if (store_changed) {
-        undo.push_undo_warp(std::move(pre_state), hint_last);
+        undo.push_undo_warp(std::move(pre_state), hint_last,
+                            /*affects_persistence=*/canonical_changed);
     }
 
     text_editor::deactivate(app.top_flag_editor);
@@ -529,7 +530,8 @@ void GuiFlagEditor::wipe_iter_state() {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state), hint_last,
+                        /*affects_persistence=*/false);
 }
 
 // Wipe every marker's session-only bpm state — owner flag, beats, bracket

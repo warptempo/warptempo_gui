@@ -39,7 +39,8 @@ struct Undo {
           target_render(target_render_) {}
 
     void recompute_dirty();
-    void push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last);
+    void push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
+                        bool affects_persistence = true);
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              int hint_last);
     // tab_override attributes entries pushed on behalf of a tab the caller is

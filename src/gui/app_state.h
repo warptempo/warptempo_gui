@@ -93,6 +93,10 @@ struct UndoEntry {
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
     int                       hint_last_selected   = -1;
+    // False for an iteration-bracket-only snapshot. Iteration brackets are
+    // session state and never serialize, so crossing such an entry must not
+    // make recompute_dirty report a warp-file difference.
+    bool                      affects_persistence  = true;
 };
 
 // Ctrl+drag state. `active` gates motion handling; the rest captures the
@@ -200,13 +204,27 @@ struct UndoHistory {
     bool saved_valid    = true;
 
     // Push the pre-mutation entry. Clears the redo stack. If the saved
-    // reference was on the redo stack, it's orphaned (saved_valid = false).
+    // reference was on the redo stack, it is orphaned only when the path back
+    // to it crosses a persistence-affecting entry. A path made solely of
+    // session-only iteration-bracket entries is persistence-equivalent to the
+    // current cursor, so collapse the saved reference here before clearing it.
     // If pushing would evict the bottom of the undo stack and the saved
     // reference pointed at or below the evicted entry, it's pinned to the
     // new bottom — that's the least-surprising user-facing behavior even
     // though it's not strictly correct.
     void push(UndoEntry entry) {
-        if (saved_valid && saved_distance > 0) saved_valid = false;
+        if (saved_valid && saved_distance > 0) {
+            const int rs = static_cast<int>(redo_stack.size());
+            bool path_affects_persistence = false;
+            for (int i = std::max(0, rs - saved_distance); i < rs; ++i) {
+                if (redo_stack[i].affects_persistence) {
+                    path_affects_persistence = true;
+                    break;
+                }
+            }
+            if (path_affects_persistence) saved_valid = false;
+            else                          saved_distance = 0;
+        }
         redo_stack.clear();
         if (saved_valid) saved_distance -= 1;
         undo_stack.push_back(std::move(entry));
@@ -647,15 +665,15 @@ struct AppState {
 
     // Undo/redo history for marker mutations. The dirty flags below are
     // derived from it (Undo::recompute_dirty walks saved_distance against
-    // each entry's op_mode). Save/load reshape the saved reference rather
-    // than touching the flags directly.
+    // each persistence-affecting entry's op_mode). Save/load reshape the
+    // saved reference rather than touching the flags directly.
     UndoHistory history;
 
     // True if any authoring-class file has changes since the last save.
     // app.dirty = warp_dirty || phase_reset_dirty || settings_dirty,
-    // recomputed after every push/undo/redo by walking saved_distance
-    // against each entry's op_mode. Drives both the unsaved-work dialog
-    // and the dirty-dot.
+    // recomputed after every persistent push/undo/redo by walking
+    // saved_distance against each persistence-affecting entry's op_mode.
+    // Drives both the unsaved-work dialog and the dirty-dot.
     //
     // Authoring-class settings (engine, scale, N, limiter, title,
     // audio_input, plus any free-form non-view key typed into the settings
