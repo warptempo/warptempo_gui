@@ -79,7 +79,7 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // on top would defeat that purpose. The persistent app.playback_speed
 // is left untouched; toggling back to source view restores it
 // naturally because set_playback_speed refuses writes in target view.
-void GuiPlaybackLifecycle::toggle_playback() {
+void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     if (playback.is_playing()) {
         playback.stop();
         restore_playhead_to_lsp();
@@ -107,12 +107,17 @@ void GuiPlaybackLifecycle::toggle_playback() {
         // (Mode logic — "has a successful target render populated the
         // buffer" — not domain math; the domain range policy follows.)
         if (app.target_buffer_frames <= 0) return;
-        // Playhead outside the bound target buffer's target-domain extent
-        // is a silent no-op. Mirrors the "playhead at or past trim_end
-        // is a silent no-op" pattern below for source view.
-        if (app.playhead_cursor_sample < playback.domain_begin()) return;
-        if (app.playhead_cursor_sample >= playback.domain_end()) return;
-        start = app.playhead_cursor_sample;
+        // Launch = cursor + launch_offset. The offset is 0 for plain Space and
+        // +N/2 for the Shift+Space lead-in audition; the resting cursor is never
+        // moved either way, so stop snaps the scanner back onto it. Validate the
+        // OFFSET launch (not the bare cursor) against the bound target buffer's
+        // target-domain extent: a launch outside it — including cursor + N/2 at
+        // or past the buffer end — is a silent no-op, nothing to audition.
+        // Mirrors the "playhead at or past trim_end is a silent no-op" pattern
+        // below for source view.
+        start = app.playhead_cursor_sample + launch_offset;
+        if (start < playback.domain_begin()) return;
+        if (start >= playback.domain_end()) return;
         end   = playback.domain_end();
     } else {
         end = viewport.trim_end_sample();

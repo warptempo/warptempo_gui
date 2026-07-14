@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "engine/engine_geometry.h"  // kN
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "playback_speed_presets.h"
@@ -406,6 +407,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Render-trigger chords: Ctrl+Alt+R/I render, Ctrl+Alt+C commit.
     if (handle_render_dispatch_keys(key, mods)) return;
 
+    // Shift+Space in actual target view, phase-reset mode: non-destructive
+    // audition of the OLA/Hann synthesis lead-in. Launches the playback scanner
+    // N/2 output samples AHEAD of the resting playhead (full-scale point of a
+    // reset dropped at the playhead) without moving the cursor, so stop snaps
+    // the scanner back to where it was. Placed BEFORE the modifier-independent
+    // is_play_pause_key block, which would otherwise swallow Shift+Space and run
+    // a plain toggle. Restricted to Space (not Return/KpEnter). Source view,
+    // warp mode, and render view fall through to the normal toggle below.
+    if (key == GuiKeys::Space && shift && !ctrl && !alt &&
+        app.active_markers_view == 'P' &&
+        app.active_audio_view == 'T' && !app.render_view.enabled) {
+        // Mirror the plain-Space target gate: refuse Space-to-play while a
+        // target render is in flight or before any successful render populated
+        // the buffer. Space-to-stop (playing) is always honored.
+        if (!playback.is_playing()) {
+            if (target_render.is_updating()) return;
+            if (app.target_buffer_frames <= 0) return;
+        }
+        playback_lifecycle.toggle_playback(kN / 2);
+        return;
+    }
+
     // Space / Return / KpEnter is modifier-independent.
     if (is_play_pause_key(key)) {
         // Target-view playback gating: refuse Space-to-play while a
@@ -491,6 +514,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (ctrl && !shift)              save_ops.save();
         else if (!ctrl && !shift &&
                  app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
+        // Shift+S in actual target view, phase-reset mode: drop a reset N/2
+        // before the playhead so its lead-in output reaches full scale at the
+        // playhead (the perceived transient). Target view only — the output-
+        // domain overlay/lead-in this aligns to does not exist in source view,
+        // where Shift+S in P-mode stays a no-op (falls through).
+        else if (!ctrl && shift &&
+                 app.active_markers_view == 'P' &&
+                 app.active_audio_view == 'T' && !app.render_view.enabled)
+            phase_resets.drop_phase_reset_lead_in_at_playhead();
         else if (!ctrl && shift &&
                  app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
         else if (!ctrl && !shift &&

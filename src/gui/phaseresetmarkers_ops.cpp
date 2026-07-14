@@ -1,6 +1,7 @@
 #include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
+#include "engine/engine_geometry.h"  // kN
 #include "gui_display_context.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -64,6 +65,26 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
     // Playhead drops produce integer-valued frame positions.
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    drop_phase_reset_at_position(static_cast<double>(src_frame));
+}
+
+// Target-view lead-in drop: place a phase reset N/2 output samples BEFORE the
+// playhead. The OLA/Hann synthesis lead-in makes a reset's output ramp up over
+// ~N/2 samples, reaching full scale ~N/2 after its authored frame; offsetting
+// by -N/2 places the reset so its full-scale output lands on the playhead (the
+// perceived transient). N/2 is measured in the target/output paint domain,
+// matching the output-domain phase-reset overlay, then mapped to a source
+// frame. kN/2 is an exact integer and the playhead is an integer frame, so the
+// offset is plain integer arithmetic (no snap needed); clamped to 0. Reuses
+// drop_phase_reset_at_position so the created reset takes the full create path
+// — walls, coincidence/defect modal, undo, selection — unchanged; only the
+// seed frame is offset. The gesture is gated to target view (input_handler.cpp),
+// where the overlay/lead-in exist.
+void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
+    if (audio.sample_rate() <= 0) return;
+    const int64_t ph =
+        std::max<int64_t>(0, app.playhead_cursor_sample - kN / 2);
+    const int64_t src_frame = active_domain_to_source_frame(app, audio, ph);
     drop_phase_reset_at_position(static_cast<double>(src_frame));
 }
 

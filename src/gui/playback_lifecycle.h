@@ -33,7 +33,15 @@ struct GuiPlaybackLifecycle {
     void stop_playback_if_playing();
     void hold_natural_end_scanner(int64_t endpoint_sample);
     void restore_playhead_to_lsp();
-    void toggle_playback();
+    // launch_offset shifts the SCANNER's launch position (and the play() launch
+    // bound) forward in the active paint domain WITHOUT moving the resting
+    // cursor, so stop snaps the scanner back onto the unmoved cursor. Non-zero
+    // only for the target-view Shift+Space audition (start from cursor + N/2);
+    // the default 0 keeps plain Space and every other caller byte-identical.
+    // The offset is applied only in the target-view branch; the offset launch
+    // is re-validated against the target buffer's domain, so an offset landing
+    // at or past the buffer end is a silent no-op.
+    void toggle_playback(int64_t launch_offset = 0);
     void set_playback_speed(float s);
 
     // Reseek the active playback session to a new starting sample, keeping

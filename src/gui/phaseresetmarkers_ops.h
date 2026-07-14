@@ -39,6 +39,7 @@ struct GuiPhaseResetMarkersOps {
 
     void drop_phase_reset_at_position(double time_frame);
     void drop_phase_reset_at_playhead();
+    void drop_phase_reset_lead_in_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();
     void nudge_selected_phase_resets(int direction);
