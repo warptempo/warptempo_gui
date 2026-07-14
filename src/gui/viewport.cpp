@@ -447,6 +447,7 @@ void Viewport::recompute_hover_at_cursor() {
         app.scroll_drag.active ||
         app.trim_drag.active ||
         text_editor::is_active(app.settings_editor) ||
+        text_editor::is_active(app.commit_editor) ||
         text_editor::is_active(app.top_flag_editor) ||
         app.queue_running) {
         clear_hover_popup();

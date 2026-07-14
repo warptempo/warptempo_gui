@@ -63,6 +63,10 @@ inline int timestamp_pad_x() {
 // never drift from the painted prefix.
 constexpr const char* kSettingsEditorPrefix = "setting: ";
 constexpr const char* kBpmEditorPrefix      = "bpm: ";
+// The render-commit prompt (Shift+.) label. The typed entry identifier —
+// `<batch_dir>/<basename>` relative to renders/ — renders directly after the
+// trailing slash, so the prefix carries no trailing space.
+constexpr const char* kCommitEditorPrefix   = "commit: ./renders/";
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //

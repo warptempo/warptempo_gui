@@ -167,6 +167,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // through it unchanged.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
+           text_editor::is_active(app.commit_editor) ||
            (text_editor::is_active(app.top_flag_editor) &&
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
@@ -211,13 +212,19 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_settings_autocomplete =
         (text_editor::is_active(app.settings_editor) &&
          key == GuiKeys::Tab && !ctrl && !shift && !alt);
+    // The render-commit editor's bare-Tab entry-name autocomplete
+    // (handle_commit_editor_key intercepts it before handle_key), the sibling
+    // of the settings editor's value autocomplete.
+    const bool is_commit_autocomplete =
+        (text_editor::is_active(app.commit_editor) &&
+         key == GuiKeys::Tab && !ctrl && !shift && !alt);
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     return !(is_esc || is_commit || is_editor_ctrl_chord ||
              is_editor_motion_or_edit || is_printable ||
-             is_settings_autocomplete ||
+             is_settings_autocomplete || is_commit_autocomplete ||
              is_save || is_ctrl_q);
 }
 
@@ -952,6 +959,363 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
     return false;
+}
+
+// Identify a render entry by its path relative to renders/:
+// `<batch_dir>/<basename>` (e.g. `0_render_iterations/01`), unique across
+// batches. The Shift+. commit editor resolves the typed identifier against
+// these strings; a relative id always contains exactly one '/', a bare
+// basename never does, so the editor's two match classes never collide.
+static std::string render_entry_relative_id(
+        const AppState::RenderViewEntry& e) {
+    return e.batch_folder.filename().string() + "/" + e.basename;
+}
+
+// -- Standalone render-entry adoption (the Shift+. commit editor) --------
+//
+// Adopt render entry `e`'s frozen sidecar recipe as the new authoring
+// baseline, view-agnostic: callable from source OR target authoring view,
+// NOT from render view. This is the SAME wholesale application Ctrl+Alt+C
+// performs from inside render view (handle_render_dispatch_keys above),
+// minus the render-view-exit steps.
+//
+// TRANSIENT DUPLICATION: the two adopts coexist until render view is retired,
+// at which point Ctrl+Alt+C's copy is deleted and this becomes the sole
+// adopt. Keep the two application bodies in sync while both live; the only
+// deliberate differences are that this one takes an explicit entry (never
+// reads render_view.index), calls no render-view-exit routine
+// (restore_source_view / clear_snapshot_context / list / index / last_path),
+// and stays SILENT on a read failure (the caller red-flashes).
+//
+// Reads-then-checks BEFORE any mutation: the entry wav must exist and all
+// three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
+// validate. On ANY failure — missing wav, or a malformed / unreadable
+// sidecar — return false with NO stderr and NO state mutation, so a failure
+// leaves authoring untouched. The entry sidecars are trusted (written once at
+// dispatch), so a genuine read failure is the only refusal. Returns true
+// after the recipe is applied and renders/ wiped.
+bool GuiInputHandler::adopt_render_entry(
+        const AppState::RenderViewEntry& e) {
+    // The bottom-strip modal already froze playback at the editor's open;
+    // stop explicitly so this is correct from any caller.
+    playback_lifecycle.stop_playback_if_playing();
+
+    // -- Read + validate every input BEFORE touching a store. --
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(e.wav_path, ec)) return false;
+
+    const std::filesystem::path sidecar = render_view.settings_path(e);
+    const auto settings = read_settings_file(sidecar.string());
+    if (!settings) return false;
+
+    std::vector<GuiWarpMarker>       src_warp;
+    std::vector<GuiPhaseResetMarker> src_phase_resets;
+    {
+        GuiWarpMarkers m;
+        const std::filesystem::path wm =
+            e.batch_folder / (e.basename + ".warpmarkers");
+        auto r = m.load(wm.string());
+        if (!r) return false;
+        src_warp = m.markers();
+    }
+    {
+        GuiPhaseResetMarkers t;
+        const std::filesystem::path tm =
+            e.batch_folder / (e.basename + ".phaseresetmarkers");
+        auto r = t.load(tm.string());
+        if (!r) return false;
+        src_phase_resets = t.markers();
+    }
+
+    // Every input is in hand and valid. Apply the recipe wholesale, mirroring
+    // the Ctrl+Alt+C body step for step (only the render-view-exit calls are
+    // omitted). The commit tab is the tab the entry was dispatched from; its
+    // view-state band carries the recipe trim that shaped this render.
+    const char commit_tab = settings->active_tab_view;
+
+    std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
+    std::vector<GuiPhaseResetMarker> phase_reset_pre =
+        app.phaseresetmarkers.markers();
+    const int hint_last = app.last_selected_marker;
+
+    app.warpmarkers.markers_mut()       = std::move(src_warp);
+    app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
+    app.selected_markers.clear();
+    app.last_selected_marker = -1;
+    // Wholesale authoring reset: every per-tab per-mode selection slot
+    // referencing the replaced marker stores is stale.
+    {
+        auto clear_marker_slots = [](ViewState& t) {
+            t.warp_selected.clear();
+            t.warp_last_selected        = -1;
+            t.phase_reset_selected.clear();
+            t.phase_reset_last_selected = -1;
+        };
+        clear_marker_slots(app.tab_a);
+        clear_marker_slots(app.tab_b);
+    }
+
+    // One cross-file undo entry: the marker pair plus the pre-commit engine
+    // settings (captured inside push_undo_both). The inherited prefs and view
+    // state ride OUTSIDE undo — the same convention that keeps view state and
+    // trim out of history.
+    const char commit_marker_mode = app.active_markers_view;
+    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
+                        commit_marker_mode, hint_last, commit_tab);
+    undo.recompute_dirty();
+
+    // Full engine-settings adopt.
+    app.engine_settings = settings->engine;
+
+    const std::filesystem::path src(app.source_audio_path);
+    std::filesystem::path src_parent = src.parent_path();
+    if (src_parent.empty()) src_parent = std::filesystem::path(".");
+    const std::filesystem::path renders_root = src_parent / "renders";
+
+    // Wholesale authoring reset: clear every marker's session-only iteration
+    // state and the bpm state, and turn off both sweep modes' visibility.
+    {
+        auto& mv = app.warpmarkers.markers_mut();
+        for (auto& m : mv) {
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
+        }
+    }
+    flag_editor.wipe_bpm_state();
+    app.iteration_mode_enabled = false;
+    app.bpm_mode_enabled       = false;
+
+    // Both tab bands from the file (view_state_from_settings_tab: viewport /
+    // zoom / playhead, read_only, and the trim pair; a parsed band carries no
+    // selection, matching the marker-selection reset above).
+    app.tab_a = view_state_from_settings_tab(settings->tab_a);
+    app.tab_b = view_state_from_settings_tab(settings->tab_b);
+
+    // active_tab_view from the file (== commit_tab). Both bands are already
+    // the file's, so pull the live fields straight from the active band with
+    // no double-apply (NOT switch_active_tab_view_to).
+    app.active_tab_view = commit_tab;
+    {
+        const ViewState& band = (commit_tab == 'B') ? app.tab_b : app.tab_a;
+        app.viewport_start_sample  = band.viewport_start_sample;
+        app.zoom_level             = band.zoom_level;
+        // Deliberately unclamped (restore-site convention): move_playhead_to
+        // owns the value at first use.
+        app.playhead_cursor_sample = band.playhead_cursor_sample;
+        app.trim                = band.trim;
+        app.trim_begin_selected = band.trim_begin_selected;
+        app.trim_end_selected   = band.trim_end_selected;
+        app.last_selected_trim  = band.last_selected_trim;
+        app.last_sel_group      = band.last_sel_group;
+    }
+
+    // Session prefs from the file (has_X ? X : default). Recorded asymmetry:
+    // active_markers_view is deliberately NOT applied — W/P is global by
+    // ruling, so the LIVE mode survives the commit, unlike playback_speed,
+    // follow, font_size, active_audio_view, and both tab bands.
+    app.follow_mode    = settings->has_follow ? settings->follow : true;
+    app.playback_speed = settings->has_playback_speed
+        ? settings->playback_speed : 1.0f;
+    playback.set_speed(app.playback_speed);
+    app.font_size = settings->has_font_size ? settings->font_size : 11.0;
+    set_gui_font_size_pt(app.font_size);
+    paint_handler.on_resize(app.width, app.height);
+
+    app.active_audio_view = settings->has_active_audio_view
+        ? settings->active_audio_view : 'S';
+
+    if (!app.playhead_scanner_active) {
+        app.playhead_scanner_sample = app.playhead_cursor_sample;
+    }
+    clamp_viewport_start(app, audio);
+    viewport.clear_hover_popup();
+    viewport.kick_waveform_sync();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+
+    // The tail's trigger owns the rebind for a 'T' landing, exactly as in
+    // Ctrl+Alt+C: it marks the buffer stale and dispatches the adopted target
+    // preview, which rebinds playback on completion.
+    target_render.trigger();
+
+    // Wipe renders/ AFTER the successful adopt. The committed render survives
+    // through the render cache, not as a folder artifact.
+    if (std::filesystem::is_directory(renders_root, ec)) {
+        std::filesystem::remove_all(renders_root, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-view: wipe failed for '%s': %s\n",
+                renders_root.string().c_str(), ec.message().c_str());
+        }
+    }
+
+    std::fprintf(stderr,
+        "warptempo_gui: render-view: committed render and wiped renders/\n");
+    gui.invalidate_region(0, 0, app.width, app.height);
+    return true;
+}
+
+// Open the Shift+. render-commit prompt. No-op with no source loaded or over
+// render view (which keeps its own Ctrl+Alt+C). An empty renders/ reports a
+// one-line bottom-strip status and does not open.
+void GuiInputHandler::open_commit_editor() {
+    if (text_editor::is_active(app.commit_editor)) return;
+    if (app.source_audio_path.empty()) return;
+    if (app.render_view.enabled) return;
+    // Running-render guard, the same the render-view entry uses: adopt wipes
+    // renders/, which would race a background sweep writing into it. Refuse,
+    // don't cancel — a running batch may be irreplaceable queued work; Esc is
+    // the explicit cancel.
+    if (app.queue_running || app.pending_archival.armed) {
+        app.transient_status_message = "render running; Esc cancels it";
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+    std::vector<AppState::RenderViewEntry> list =
+        render_view.enumerate_render_view_list();
+    if (list.empty()) {
+        app.transient_status_message = "no renders to commit";
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+    text_editor::enter(app.commit_editor,
+                       /*target=*/0,
+                       /*locked_prefix=*/"",
+                       /*initial_pending=*/"",
+                       text_editor::Kind::RenderCommit);
+    viewport.invalidate_timestamp_area();
+}
+
+void GuiInputHandler::commit_editor_exit_no_commit() {
+    if (!text_editor::is_active(app.commit_editor)) return;
+    viewport.invalidate_timestamp_area();
+    text_editor::deactivate(app.commit_editor);
+}
+
+// Tab handler: extend the pending to the longest common prefix of the entry
+// identifiers that start with it. No-op when nothing matches or when the
+// common prefix does not advance past what is already typed (mirrors the
+// settings editor's no-op-on-ambiguity Tab). A unique matching candidate
+// completes fully — its whole string is the common prefix of the singleton.
+void GuiInputHandler::commit_editor_autocomplete() {
+    if (!text_editor::is_active(app.commit_editor)) return;
+    const std::string pending = app.commit_editor.pending;
+
+    std::vector<AppState::RenderViewEntry> list =
+        render_view.enumerate_render_view_list();
+
+    std::string lcp;
+    bool have = false;
+    for (const auto& e : list) {
+        const std::string c = render_entry_relative_id(e);
+        if (c.size() < pending.size() ||
+            c.compare(0, pending.size(), pending) != 0) continue;
+        if (!have) { lcp = c; have = true; }
+        else {
+            const size_t n = std::min(lcp.size(), c.size());
+            size_t i = 0;
+            while (i < n && lcp[i] == c[i]) ++i;
+            lcp.resize(i);
+        }
+    }
+    if (!have) return;                          // no candidate has this prefix
+    if (lcp.size() <= pending.size()) return;   // common prefix does not advance
+
+    app.commit_editor.pending          = std::move(lcp);
+    app.commit_editor.cursor_pos       =
+        static_cast<int>(app.commit_editor.pending.size());
+    app.commit_editor.selection_anchor = -1;
+    app.commit_editor.red              = false;
+    viewport.invalidate_timestamp_area();
+}
+
+// Enter handler: resolve the pending to exactly one entry and adopt it.
+// Resolution accepts an exact relative-identifier match (unique across
+// batches), else an exact match on a globally-unique bare basename. On a
+// unique resolve, adopt_render_entry runs; a true result closes the editor, a
+// false result (bad sidecar / missing wav) red-flashes and stays open. Zero
+// or ambiguous resolution red-flashes and stays open.
+void GuiInputHandler::commit_editor_commit() {
+    if (!text_editor::is_active(app.commit_editor)) return;
+    const std::string pending = app.commit_editor.pending;
+
+    auto reject = [&]() {
+        app.commit_editor.red = true;
+        viewport.invalidate_timestamp_area();
+    };
+
+    std::vector<AppState::RenderViewEntry> list =
+        render_view.enumerate_render_view_list();
+
+    const AppState::RenderViewEntry* found = nullptr;
+    for (const auto& e : list) {
+        if (render_entry_relative_id(e) == pending) { found = &e; break; }
+    }
+    if (!found) {
+        int base_count = 0;
+        for (const auto& e : list) {
+            if (e.basename == pending) { found = &e; ++base_count; }
+        }
+        if (base_count != 1) found = nullptr;   // zero or ambiguous
+    }
+    if (!found) { reject(); return; }
+
+    // Copy the entry before adopting: adopt wipes renders/ at its tail, and
+    // the copy is self-contained (paths + basename), so it stays valid.
+    const AppState::RenderViewEntry entry = *found;
+    if (adopt_render_entry(entry)) {
+        viewport.invalidate_timestamp_area();
+        text_editor::deactivate(app.commit_editor);
+    } else {
+        reject();
+    }
+}
+
+// Routes a key to the active render-commit editor. Same consumed/command
+// contract as handle_settings_editor_key's modal tail: bare Tab
+// autocompletes the entry identifier, Ctrl+S saves with the editor left open,
+// Ctrl+Q discards and falls through, everything else the editor does not
+// consume swallows.
+bool GuiInputHandler::handle_commit_editor_key(GuiKey key,
+                                               GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    if (key == GuiKeys::Tab && !ctrl && !shift && !alt) {
+        commit_editor_autocomplete();
+        return true;
+    }
+    const auto action = text_editor::handle_key(
+        app.commit_editor, key, mods);
+    if (action == text_editor::KeyAction::CommitRequested) {
+        commit_editor_commit();
+        return true;
+    }
+    if (action == text_editor::KeyAction::CancelRequested) {
+        commit_editor_exit_no_commit();
+        return true;
+    }
+    if (apply_editor_clipboard(action, app.commit_editor)) {
+        viewport.invalidate_timestamp_area();
+        return true;
+    }
+    if (action == text_editor::KeyAction::Consumed) {
+        viewport.invalidate_timestamp_area();
+        return true;
+    }
+    // NotConsumed: modal bottom-strip surface — the on_key gate admits only
+    // Esc, Ctrl+S, Ctrl+Q beyond the editor's own keys. Ctrl+S saves with the
+    // editor open; Ctrl+Q discards and falls through so on_key runs the close
+    // routing; anything else swallows.
+    if (ctrl && !shift && !alt && key == GuiKeys::S) {
+        save_ops.save();
+        return true;
+    }
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+        commit_editor_exit_no_commit();
+        return false;  // let on_key run the close routing
+    }
+    return true;  // modal: swallow
 }
 
 // P / I / M letter-key handlers. See the declaration for the chord list.

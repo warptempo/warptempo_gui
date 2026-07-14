@@ -65,6 +65,11 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         g.text_left = static_cast<double>(timestamp_pad_x()) +
             std::strlen(kSettingsEditorPrefix) * adv;
         g.bottom_strip = true;
+    } else if (text_editor::is_active(app.commit_editor)) {
+        g.ed = &app.commit_editor;
+        g.text_left = static_cast<double>(timestamp_pad_x()) +
+            std::strlen(kCommitEditorPrefix) * adv;
+        g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         g.ed = &app.top_flag_editor;
@@ -160,6 +165,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
 
     if (text_editor::is_active(app.settings_editor)) return;
+    if (text_editor::is_active(app.commit_editor)) return;
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         // The BPM editor is a bottom-strip modal owner (like the settings
@@ -488,6 +494,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
+    if (text_editor::is_active(app.commit_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.scroll_drag.active) {
         if (playback.is_playing()) playback.resync_predictor();
@@ -553,7 +560,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    if (text_editor::is_active(app.settings_editor)) {
+    if (text_editor::is_active(app.settings_editor) ||
+        text_editor::is_active(app.commit_editor)) {
         viewport.clear_hover_popup();
         return;
     }

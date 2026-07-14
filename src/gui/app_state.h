@@ -828,6 +828,17 @@ struct AppState {
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
+    // Render-commit prompt editor. Opens on `Shift+.` from an authoring view,
+    // takes a render entry's identifier relative to renders/
+    // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
+    // Enter adopts that render's frozen sidecar recipe as the new authoring
+    // baseline (GuiInputHandler::adopt_render_entry) — the same commit
+    // Ctrl+Alt+C performs from inside render view, reachable directly from
+    // authoring without browsing. A bottom-strip modal like the settings
+    // editor; separate State so the two paint regions stay independent.
+    text_editor::State commit_editor;
+    bool commit_editor_blink_last = false;
+
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
     int64_t last_tick_live_total = 0;

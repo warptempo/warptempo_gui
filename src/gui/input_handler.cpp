@@ -212,6 +212,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
+    // Render-commit prompt editor (`Shift+.` opener). Same modal shape as the
+    // settings editor block above; the two are mutually exclusive in practice
+    // (each opener no-ops while the other owns the keyboard). Routed before the
+    // queue/drag/playhead Esc handlers so Esc cancels the edit first.
+    if (text_editor::is_active(app.commit_editor)) {
+        if (handle_commit_editor_key(key, mods)) return;
+    }
+
     // Ctrl+C while the tempo hover popup is showing copies the hovered
     // marker's effective tempo value (the pasteable "base" / "base*scale"
     // form the flag editor accepts) to the internal text clipboard
@@ -644,6 +652,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Semicolon && shift && !ctrl && !alt) {
         playback_lifecycle.stop_playback_if_playing();
         settings_editor.open();
+        return;
+    }
+
+    // `Shift+.` opens the render-commit prompt in the bottom strip: commit a
+    // chosen render as the new authoring baseline by NAME, without browsing
+    // render view. Keyboard-only. A modal bottom-strip surface: stop playback
+    // at its open (Space is inside the modal blocked set, so playback cannot
+    // restart until the editor closes). open_commit_editor owns the no-source
+    // / render-view / empty-renders guards.
+    if (key == GuiKeys::Period && shift && !ctrl && !alt) {
+        playback_lifecycle.stop_playback_if_playing();
+        open_commit_editor();
         return;
     }
 

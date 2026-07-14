@@ -696,6 +696,15 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    kSettingsEditorPrefix,
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
+    } else if (text_editor::is_active(app.commit_editor)) {
+        // Render-commit prompt overlay: "commit: ./renders/<pending>"
+        // through the same shared bottom-strip editor helper as the settings
+        // branch above. Fill is kBackground normally, kAccent on an
+        // unresolved / bad commit (handled inside the helper).
+        render_bottom_strip_editor(cr, app.commit_editor,
+                                   kCommitEditorPrefix,
+                                   static_cast<double>(timestamp_pad_x()),
+                                   upper_baseline);
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind ==
                    text_editor::Kind::BpmBracket) {

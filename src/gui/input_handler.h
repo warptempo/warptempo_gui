@@ -535,6 +535,34 @@ private:
     // consume swallows.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
+    // Render-commit prompt (Shift+.). A bottom-strip modal editor, structural
+    // sibling of the settings editor: it takes a render entry's identifier
+    // relative to renders/ and, on Enter, adopts that render's frozen sidecar
+    // recipe as the new authoring baseline through adopt_render_entry.
+    //
+    // open_commit_editor: Shift+. opener (no-op with no source or over render
+    // view; refuses to open over an empty renders/). commit_editor_autocomplete:
+    // bare-Tab longest-common-prefix completion over the entry identifiers.
+    // commit_editor_commit: resolve the pending to exactly one entry and adopt.
+    // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:
+    // the key router, same modal contract as handle_settings_editor_key.
+    void open_commit_editor();
+    void commit_editor_autocomplete();
+    void commit_editor_commit();
+    void commit_editor_exit_no_commit();
+    bool handle_commit_editor_key(GuiKey key, GuiInputState mods);
+
+    // adopt_render_entry: apply render entry `e`'s frozen sidecar recipe
+    // (.settings + the marker pair) as the new authoring baseline, view-
+    // agnostic (source OR target authoring view; NOT render view). Reads and
+    // validates the wav's existence and all three sidecars BEFORE mutating any
+    // store, and returns false leaving authoring untouched (silent) on any
+    // missing/malformed input; otherwise applies the recipe wholesale, wipes
+    // renders/, and returns true. The same wholesale application Ctrl+Alt+C
+    // performs from inside render view, minus the render-view-exit steps —
+    // transient duplication until render view is retired (see the definition).
+    bool adopt_render_entry(const AppState::RenderViewEntry& e);
+
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };
 

@@ -784,6 +784,15 @@ int main(int argc, char** argv) {
                 invalidate_timestamp_area();
             }
         }
+        // Same shape for the bottom-strip render-commit prompt.
+        if (text_editor::is_active(app.commit_editor)) {
+            const bool now_visible =
+                text_editor::cursor_visible_now(app.commit_editor);
+            if (now_visible != app.commit_editor_blink_last) {
+                app.commit_editor_blink_last = now_visible;
+                invalidate_timestamp_area();
+            }
+        }
 
         if (app.loading || audio.total_frames() <= 0) return;
 

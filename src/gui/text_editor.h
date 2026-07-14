@@ -48,19 +48,26 @@ constexpr int kMaxPendingCharsBpm = 60;
 // and persists unchanged, and can be shortened, but the editor will not grow
 // any pending past the cap.
 constexpr int kMaxPendingCharsSettings = 1024;
+// Render-commit prompt (Shift+.). Holds a render entry's identifier relative
+// to renders/ — `<batch_dir>/<basename>` (e.g. `0_render_iterations/01`) or a
+// bare basename. Program-written batch/entry names are short; 256 is a
+// generous ceiling for the relative path a user types or Tab-completes.
+constexpr int kMaxPendingCharsRenderCommit = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
-// edit different payload shapes; the kind selects which keys produce a
-// printable character. The flag editor uses FlagPayload (digits,
-// letters, `.`, `*`, `:`); the iteration popup uses IterationBracket
-// (digits, `.`, `+`, `-`, `,`, `[`, `]`); the BPM popup uses
-// BpmBracket (digits, `@`, `,`, `[`, `]`); the settings-prompt editor
-// uses SettingsAssignment (letters, digits, `.`, `=`, `_`, `-`, `:`).
+// edit different payload shapes; the kind now selects only the length cap
+// (handle_key accepts any printable ASCII and defers grammar to the
+// commit-time validator). The flag editor uses FlagPayload (payload text);
+// the iteration popup uses IterationBracket; the BPM popup uses BpmBracket;
+// the settings-prompt editor uses SettingsAssignment (`key=value`); the
+// render-commit prompt uses RenderCommit (a render entry's relative-path
+// identifier, resolved against the renders/ listing at commit).
 enum class Kind {
     FlagPayload,
     IterationBracket,
     BpmBracket,
     SettingsAssignment,
+    RenderCommit,
 };
 
 // State for a single editable rect.
