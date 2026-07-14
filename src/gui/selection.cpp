@@ -24,6 +24,7 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
+    ++app.selection_gen;   // user reselection: breaks any gesture-coalesce burst
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
@@ -46,6 +47,7 @@ void Selection::clear_selection() {
         !app.selected_markers.empty() || app.last_selected_marker != -1;
     if (!had_trim && !had_markers) return;   // nothing selected anywhere
 
+    ++app.selection_gen;   // user reselection: breaks any gesture-coalesce burst
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     app.trim_begin_selected = false;
@@ -61,6 +63,7 @@ void Selection::clear_selection() {
 
 bool Selection::toggle_selection_membership(int idx) {
     if (idx < 0) return false;
+    ++app.selection_gen;   // user reselection: breaks any gesture-coalesce burst
     app.last_sel_group = LastSelGroup::Markers;
     bool added;
     auto it = app.selected_markers.find(idx);
@@ -332,6 +335,13 @@ void Selection::cycle_selection(bool forward) {
 
     if (land_marker < 0 && land_bound == 0) return;   // nothing ahead
 
+    // A Tab / Shift+Tab that actually moves the focus is a user reselection:
+    // break any gesture-coalesce burst. Bumped here, past the nothing-ahead
+    // guard, so a no-op cycle does not touch it. The marker branch below
+    // delegates to set_single_selection, which bumps again — harmless, the
+    // generation is monotonic and compared only for equality.
+    ++app.selection_gen;
+
     // Selection only. Viewport positioning is owned entirely by the sole
     // caller (cycle_marker_focus_with_recenter), which centers the focused
     // stop in one write. A scroll-into-view here would be a redundant
@@ -454,6 +464,8 @@ void Selection::select_trim_bound(char which) {
     if (!has) return;
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
+
+    ++app.selection_gen;   // user reselection: breaks any gesture-coalesce burst
 
     // The bound is the sole selection (group Trim); any marker selection is
     // dropped so exactly one thing is selected, matching the Tab walk where a

@@ -38,6 +38,7 @@ struct GestureCoalesce {
     char          tab     = 'A';
     uint64_t      last_ms = 0;   // steady_clock ms of the previous commit
     uint64_t      epoch   = 0;   // app.history.undo_epoch at the previous commit
+    uint64_t      selection_gen = 0;  // app.selection_gen at the previous commit
 };
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.

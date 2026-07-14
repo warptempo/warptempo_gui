@@ -639,6 +639,18 @@ struct AppState {
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
+    // Monotonic gesture-context / selection generation. Bumped on every
+    // user-facing context or selection transition — a tab switch, a W/P
+    // switch, a render-view enter/leave, and each user reselection through the
+    // Selection ops. Session-only, never serialized. The rapid-gesture
+    // undo-coalesce guard records it per eligible commit and refuses to merge
+    // once it changed, so an away-and-back excursion (tab A->B->A, column
+    // W->P->W, reselect M->N->M, a render-view round trip) that returns the
+    // set/tab/epoch to their old values still breaks the burst where
+    // current-value equality alone could not tell "never left" from "left and
+    // returned".
+    uint64_t      selection_gen = 0;
+
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
     // hit-tested and which color set is used for the playhead and selected

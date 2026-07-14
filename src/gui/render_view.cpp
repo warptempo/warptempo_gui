@@ -576,6 +576,10 @@ bool GuiRenderView::load_render_view_at(int index) {
     app.viewport_start_sample  = 0;
     app.playhead_cursor_sample = 0;
     clamp_viewport_start(app, audio);
+    // Entering render view is a context transition that drops the live
+    // authoring selection — break any gesture-coalesce burst so a nudge on
+    // either side of a render-view round trip never merges across it.
+    ++app.selection_gen;
     app.selected_markers.clear();
     app.last_selected_marker = -1;
 
@@ -674,6 +678,11 @@ void GuiRenderView::restore_source_view() {
     app.viewport_start_sample  = t.viewport_start_sample;
     app.zoom_level             = t.zoom_level;
     app.playhead_cursor_sample = t.playhead_cursor_sample;
+    // Leaving render view restores the authoring selection — a context
+    // transition, so break any gesture-coalesce burst. Together with the enter
+    // bump this closes a render-view enter/leave round trip (covers
+    // exit_render_view_and_clear too, which routes through here).
+    ++app.selection_gen;
     // Load the matching-mode slot into the
     // live pair. Live pair held render-view selection while
     // render-view was active; restoring the authoring view requires

@@ -64,6 +64,11 @@ ViewState* GuiActiveViews::active_view_state() {
 // run; this helper just shuffles the AppState fields.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
+    // A real W/P switch is a context transition — the visible selection slot
+    // changes under both the render-view arm and the normal arm — so break any
+    // gesture-coalesce burst. Placed past the no-op guard so a switch to the
+    // current mode does not touch it.
+    ++app.selection_gen;
     if (app.render_view.enabled) {
         // Render view keeps no per-display selection slot to stash into or
         // restore from — every entry display resets selection to empty — and
@@ -109,6 +114,10 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
 // already left render view (app.render_view.enabled cleared), so it is a plain
 // authoring switch.
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
+    // A tab switch restores the destination tab's selection slot — a context
+    // transition, so break any gesture-coalesce burst (Ctrl+Tab always moves to
+    // the other tab, so this is unconditional).
+    ++app.selection_gen;
     // Mirror toggle_playback's stop branch: tab switch is not a
     // navigational commit, so the leaving tab's snapshot should
     // capture the Space-launch position rather than the run-time

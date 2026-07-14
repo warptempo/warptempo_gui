@@ -141,11 +141,18 @@ bool Undo::coalesce_gesture(GestureKind kind) const {
     // drag/paste/undo/redo, or a history-less modal [R]eset/[Delete]) never
     // merges. The selection equality — the PRE-mutation set here — catches a
     // non-committing reselection (a click) that time alone cannot tell apart.
+    // The selection_gen equality closes the away-and-back gap the value
+    // equalities cannot see: a context/selection excursion that returns tab
+    // and set to their old values (tab A->B->A, W->P->W, reselect M->N->M, a
+    // render-view round trip) advances app.selection_gen past c.selection_gen,
+    // so the following press starts a fresh entry. The conjunction only
+    // narrows the merge, never widens it.
     return c.kind == kind
         && c.tab  == app.active_tab_view
         && c.target == app.selected_markers
         && (gesture_steady_ms() - c.last_ms) <= kGestureCoalesceMs
         && c.epoch == app.history.undo_epoch
+        && c.selection_gen == app.selection_gen
         && !app.history.undo_stack.empty();
 }
 
@@ -156,6 +163,11 @@ void Undo::record_gesture(GestureKind kind) {
         app.active_tab_view,
         gesture_steady_ms(),
         app.history.undo_epoch,
+        app.selection_gen,        // post-gesture: the eligible handlers collapse
+                                  // the selection with direct field writes, not
+                                  // the bumped Selection ops, so a burst does
+                                  // not self-bump; recording it after the commit
+                                  // is the safety net if that ever changes.
     };
 }
 
