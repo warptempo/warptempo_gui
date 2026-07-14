@@ -36,6 +36,16 @@
 // this TU can reach them; render_bpm_sweep() is the sole caller.
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
+    // Command-adjacency counter: one bump per discrete user command, here and
+    // at the other two dispatch entry points (on_button_press, on_wheel). The
+    // undo-coalesce guard merges an eligible press only when it is the
+    // immediately-next command, so any intervening keypress — even a swallowed
+    // or unhandled one — breaks a same-gesture burst. The platform delivers
+    // here only on key PRESS (releases return early) and drops bare modifiers
+    // and F-keys before delivery, so this never fires for a held modifier;
+    // key-repeat re-enters through the same path as consecutive commands, which
+    // correctly coalesce.
+    ++app.command_seq;
     if constexpr (kDebugPerf) {
         app.last_input_event_time = std::chrono::steady_clock::now();
     }
@@ -925,6 +935,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
 // situations the platform refuses to accumulate remainder in.
 void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
                                GuiInputState mods) {
+    // Command-adjacency bump (see on_key). The platform delivers one on_wheel
+    // per pointer frame carrying the net detent count, and the Ctrl+wheel tempo
+    // path calls adjust_tempo_cents once with that summed delta, so one wheel
+    // frame is one command and one bump — a burst of same-frame detents is a
+    // single command, distinct wheel frames are consecutive commands that
+    // coalesce.
+    ++app.command_seq;
     if constexpr (kDebugPerf) {
         app.last_input_event_time = std::chrono::steady_clock::now();
     }

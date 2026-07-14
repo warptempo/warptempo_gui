@@ -138,8 +138,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
-    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
-    // selection — the merge key compares the PRE-mutation selection.
+    // Undo-coalescing decision. coalesce_gesture keys off command adjacency
+    // (app.command_seq, bumped once at the on_key dispatch entry that reached
+    // this handler); it just has to run before record_gesture stamps this
+    // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::PhaseResetNudge);
     // Fine-tuning op: collapse the selection to the focused marker,
     // mirroring nudge_selected_markers (warpmarkers_ops.cpp). Phase resets

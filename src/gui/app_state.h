@@ -202,18 +202,6 @@ struct UndoHistory {
     std::vector<UndoEntry> redo_stack;
     int  saved_distance = 0;
     bool saved_valid    = true;
-    // Monotonic counter bumped on EVERY undo-stack mutation (push, do_undo,
-    // do_redo, reset) AND on mark_saved. The rapid-gesture undo-coalesce guard
-    // (Undo::coalesce_gesture) records this value at each eligible commit and
-    // refuses to merge a later press once it has changed — so a
-    // drag/paste/undo/redo/reset between two nudges breaks the burst even when
-    // the presses are fast and same-target. mark_saved bumps it too because
-    // saving moves the saved baseline: a coalesced burst must not span a save,
-    // or the next merge press would skip its push (that's how one burst stays
-    // one undo entry) and leave saved_distance stale at the pre-save value,
-    // mis-reporting a post-save mutation as clean. Session-only, never
-    // serialized.
-    uint64_t undo_epoch = 0;
 
     // Push the pre-mutation entry. Clears the redo stack. If the saved
     // reference was on the redo stack, it is orphaned only when the path back
@@ -225,7 +213,6 @@ struct UndoHistory {
     // new bottom — that's the least-surprising user-facing behavior even
     // though it's not strictly correct.
     void push(UndoEntry entry) {
-        ++undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
         if (saved_valid && saved_distance > 0) {
             const int rs = static_cast<int>(redo_stack.size());
             bool path_affects_persistence = false;
@@ -253,7 +240,6 @@ struct UndoHistory {
     void mark_saved() {
         saved_distance = 0;
         saved_valid    = true;
-        ++undo_epoch;  // new saved baseline: breaks any gesture-coalesce burst
     }
 
     void reset() {
@@ -261,7 +247,6 @@ struct UndoHistory {
         redo_stack.clear();
         saved_distance = 0;
         saved_valid    = true;
-        ++undo_epoch;  // full history wipe: no gesture-coalesce burst survives
     }
 };
 
@@ -639,17 +624,18 @@ struct AppState {
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
-    // Monotonic gesture-context / selection generation. Bumped on every
-    // user-facing context or selection transition — a tab switch, a W/P
-    // switch, a render-view enter/leave, and each user reselection through the
-    // Selection ops. Session-only, never serialized. The rapid-gesture
-    // undo-coalesce guard records it per eligible commit and refuses to merge
-    // once it changed, so an away-and-back excursion (tab A->B->A, column
-    // W->P->W, reselect M->N->M, a render-view round trip) that returns the
-    // set/tab/epoch to their old values still breaks the burst where
-    // current-value equality alone could not tell "never left" from "left and
-    // returned".
-    uint64_t      selection_gen = 0;
+    // Monotonic command-adjacency counter, bumped once per discrete user
+    // command at the three command-dispatch entry points (GuiInputHandler's
+    // on_key, on_button_press, on_wheel). The rapid-gesture undo-coalesce guard
+    // (Undo::coalesce_gesture) records it at each eligible commit and merges a
+    // later eligible press only when its command is the immediately-next one
+    // (command_seq == recorded + 1) — so ANY intervening command (a click, Tab,
+    // paste, save, undo/redo, tab/column switch, render-view round trip, or an
+    // unhandled key) advances the counter an extra step and breaks the burst.
+    // A rapid same-gesture burst is, by definition, consecutive presses with no
+    // other command between them, so adjacency alone captures it. Session-only,
+    // never serialized.
+    uint64_t      command_seq = 0;
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /

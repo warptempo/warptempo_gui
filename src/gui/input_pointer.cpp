@@ -104,6 +104,11 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // private method on this struct.
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
+    // Command-adjacency bump (see on_key): a pointer button press is a discrete
+    // command, so it breaks a same-gesture nudge/tempo-step burst. NOT bumped
+    // on release or motion — those are not discrete commands, and a drag is
+    // already fenced by the press that began it here.
+    ++app.command_seq;
     if constexpr (kDebugPerf) {
         app.last_input_event_time = std::chrono::steady_clock::now();
     }

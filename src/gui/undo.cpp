@@ -135,39 +135,29 @@ uint64_t gesture_steady_ms() {
 
 bool Undo::coalesce_gesture(GestureKind kind) const {
     const GestureCoalesce& c = gesture_coalesce;
-    // The undo_epoch equality is the whole correctness story: every push,
-    // undo, redo, and history reset since the previous eligible commit bumps
-    // it, so a fast same-target press that follows some OTHER commit (a
-    // drag/paste/undo/redo, or a history-less modal [R]eset/[Delete]) never
-    // merges. The selection equality — the PRE-mutation set here — catches a
-    // non-committing reselection (a click) that time alone cannot tell apart.
-    // The selection_gen equality closes the away-and-back gap the value
-    // equalities cannot see: a context/selection excursion that returns tab
-    // and set to their old values (tab A->B->A, W->P->W, reselect M->N->M, a
-    // render-view round trip) advances app.selection_gen past c.selection_gen,
-    // so the following press starts a fresh entry. The conjunction only
-    // narrows the merge, never widens it.
+    // Command adjacency is the whole correctness story. app.command_seq is
+    // bumped once per discrete user command at the three dispatch entry points,
+    // so this eligible press's own command is exactly c.command_seq + 1 iff NO
+    // other command ran since the previous eligible commit. Any intervening
+    // command — a click, Tab, paste, save, undo/redo, tab/column switch, a
+    // render-view round trip, or an unhandled key — advances the counter an
+    // extra step and breaks the burst, which subsumes "same selection / same
+    // tab / same history": none of those can change without a command in
+    // between. `kind` still separates nudge from tempo-step even when adjacent;
+    // the window still splits a rapid burst from two adjacent-but-slow commands;
+    // the non-empty-stack guard covers a stack cleared by a load/reset (which
+    // does not advance command_seq).
     return c.kind == kind
-        && c.tab  == app.active_tab_view
-        && c.target == app.selected_markers
         && (gesture_steady_ms() - c.last_ms) <= kGestureCoalesceMs
-        && c.epoch == app.history.undo_epoch
-        && c.selection_gen == app.selection_gen
+        && app.command_seq == c.command_seq + 1
         && !app.history.undo_stack.empty();
 }
 
 void Undo::record_gesture(GestureKind kind) {
     gesture_coalesce = GestureCoalesce{
         kind,
-        app.selected_markers,     // post-mutation set
-        app.active_tab_view,
         gesture_steady_ms(),
-        app.history.undo_epoch,
-        app.selection_gen,        // post-gesture: the eligible handlers collapse
-                                  // the selection with direct field writes, not
-                                  // the bumped Selection ops, so a burst does
-                                  // not self-bump; recording it after the commit
-                                  // is the safety net if that ever changes.
+        app.command_seq,          // this eligible press's command
     };
 }
 
@@ -341,7 +331,6 @@ bool Undo::can_undo() const {
 
 void Undo::do_undo() {
     if (!can_undo()) return;   // authoritative guard; see can_undo's comment
-    ++app.history.undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());
@@ -452,7 +441,6 @@ void Undo::do_redo() {
                                             : app.tab_a.read_only;
         if (target_ro) return;
     }
-    ++app.history.undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.redo_stack.back());

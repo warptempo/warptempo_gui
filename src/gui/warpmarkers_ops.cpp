@@ -358,10 +358,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
-    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
-    // selection — the merge key compares the PRE-mutation selection. Both the
-    // Ctrl+Up/Down and the Ctrl+wheel routes reach here with kind TempoStep,
-    // so a burst mixing the two coalesces on one target as intended.
+    // Undo-coalescing decision. coalesce_gesture keys off command adjacency
+    // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry
+    // that reached this handler), so it is order-independent of the
+    // focus-collapse below; it just has to run before record_gesture stamps
+    // this command. Both the Ctrl+Up/Down and the Ctrl+wheel routes reach here
+    // with kind TempoStep, so a burst mixing the two coalesces as intended.
     const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
@@ -467,8 +469,10 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
-    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
-    // selection — the merge key compares the PRE-mutation selection.
+    // Undo-coalescing decision. coalesce_gesture keys off command adjacency
+    // (app.command_seq, bumped once at the on_key dispatch entry that reached
+    // this handler); it just has to run before record_gesture stamps this
+    // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::WarpNudge);
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
