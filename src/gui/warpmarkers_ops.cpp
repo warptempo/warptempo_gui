@@ -100,6 +100,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     target_render.trigger();
 }
 
+// `s` (W view): drop a plain neutral 1.00 owner at the playhead.
 void GuiWarpMarkersOps::drop_marker_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     // Playhead drops produce integer-valued frame positions.
@@ -110,7 +111,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
                 /*scale=*/std::nullopt);
 }
 
-// `s` (W view): drop an explicit owner that copies the immediate-prior
+// `Shift+S` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
 // used by the hover popup.
 // Exception: when the prior marker is a label ref, the copy is skipped and a

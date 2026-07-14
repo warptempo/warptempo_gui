@@ -523,9 +523,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                  app.active_markers_view == 'P' &&
                  app.active_audio_view == 'T' && !app.render_view.enabled)
             phase_resets.drop_phase_reset_lead_in_at_playhead();
-        else if (!ctrl && shift &&
-                 app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
+        // Warp view: bare `s` drops a plain neutral 1.00 owner, Shift+S
+        // drops an augmented owner that copies the immediate-prior
+        // marker's effective tempo — the same bare/Shift plain/augmented
+        // split as the phase-reset branches above.
         else if (!ctrl && !shift &&
+                 app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
+        else if (!ctrl && shift &&
                  app.active_markers_view == 'W') warpops.drop_copy_previous_at_playhead();
         return;
     }
