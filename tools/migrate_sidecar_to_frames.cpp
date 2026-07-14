@@ -8,14 +8,22 @@
 // other byte. A legacy time field is an MM:SS.mmm timestamp optionally
 // followed by a signed seconds offset (+S.mmm or -S.mmm, exactly three
 // decimals), applied in seconds before the rounding conversion: effective
-// seconds = parse_timestamp(ts) + offset, frames = nearbyint(effective *
-// sample_rate) — banker's rounding to the nearest whole frame, the same
-// rounding rule the GUI uses everywhere fractional values meet an integer
-// domain — serialized via format_authored_frame (plain integer text). Migrated
-// positions therefore match the integer frames the GUI's own gestures author.
-// The shift from the exact product is at most half a frame (about 11
-// microseconds at 44.1 kHz), so a render from a migrated file is NOT
-// byte-identical to a pre-migration render of the same authoring, by design.
+// seconds = parse_timestamp(ts) + offset, then to whole source frames via
+// banker's rounding (std::nearbyint) — the same rounding rule the GUI uses
+// everywhere fractional values meet an integer domain — serialized via
+// format_authored_frame (plain integer text). MARKER positions
+// (.warpmarkers, .phaseresetmarkers) are additionally SNAPPED to the GUI
+// zoom-level-2 frame grid: the nearest pixel column at sample_rate * 1.25 /
+// 1000 frames per pixel, anchored at frame 0 (55.125 frames at 44.1 kHz), so a
+// migrated marker sits exactly where a GUI-authored marker at that zoom would
+// land. .settings trim values are NOT snapped — they keep plain whole-frame
+// rounding. Migrated marker positions therefore match the integer frames the
+// GUI's own zoom-level-2 gestures author. The snap widens the shift from the
+// exact product beyond the old half-frame bound (up to about half a pixel
+// column, ~28 frames / 0.6 ms at 44.1 kHz), so a render from a migrated file is
+// NOT byte-identical to a pre-migration render of the same authoring, by
+// design — within the accepted migration tolerance (migrated renders do not
+// cmp-null against pre-migration renders).
 //
 // Strictness note: every field that SHOULD convert must parse as a valid
 // timestamp (is_valid_timestamp_format); anything else is a hard error that
@@ -64,6 +72,12 @@ void usage() {
 // settings trim values carry it as the whole value token.
 constexpr size_t kTimestampLen = 9;
 
+// The GUI zoom pixel scale that migrated MARKER frames snap to. Mirrors
+// src/gui/main.cpp's kZoomMsPerPixel[2] (the GUI zoom table is the source of
+// truth); at 44.1 kHz this is a 55.125-frame grid (sample_rate * 1.25 / 1000
+// frames per pixel).
+constexpr double kMarkerSnapMsPerPx = 1.25;   // GUI zoom level 2
+
 // A time-field offset is a single token — sign, one or more digits, a dot, and
 // exactly three digits — matching [+-][0-9]+[.][0-9]{3} in full. It follows the
 // nine-character timestamp and must span exactly to the field end, so a partial
@@ -74,19 +88,36 @@ bool is_valid_offset_token(const std::string& s) {
     return std::regex_match(s, re);
 }
 
-// Convert one legacy time field to its whole-frame integer text, rounded to
-// the nearest whole frame (banker's rounding, matching every other fractional-to-
-// integer-domain conversion in the project). The field is a nine-character
-// MM:SS.mmm timestamp optionally followed by a signed seconds offset that spans
-// exactly to the field end; effective seconds = parse_timestamp(ts) + offset.
-// Shared by the marker and settings converters. Returns true and sets
-// `frame_text` on success; on a hard error returns false and sets `reason` to a
-// short parenthetical detail (no timestamp, a malformed/over-long offset, or a
-// negative effective time — the last refused because parse_authored_frame
-// treats
-// negative positions as malformed at load, so the tool must never write one).
+// Snap an exact source-sample position to the frame grid that GUI authoring
+// produces at a given zoom pixel scale, viewport anchored at frame 0: the
+// nearest pixel column's frame. snap_ms_per_px <= 0 means "no snap" (plain
+// nearbyint of the sample), used for settings trim values.
+int64_t snap_frame_to_grid(double exact_sample, double sample_rate,
+                           double snap_ms_per_px) {
+    if (snap_ms_per_px <= 0.0)
+        return static_cast<int64_t>(std::nearbyint(exact_sample));
+    const double spp = sample_rate * snap_ms_per_px / 1000.0;
+    const double col = std::nearbyint(exact_sample / spp);
+    return static_cast<int64_t>(std::nearbyint(col * spp));
+}
+
+// Convert one legacy time field to its whole-frame integer text. The field is a
+// nine-character MM:SS.mmm timestamp optionally followed by a signed seconds
+// offset that spans exactly to the field end; effective seconds =
+// parse_timestamp(ts) + offset. The effective sample position is then routed
+// through snap_frame_to_grid: with snap_ms_per_px > 0 the result is snapped to
+// that GUI zoom grid (nearest pixel column's frame, anchored at frame 0), and
+// with snap_ms_per_px <= 0 it is plain-rounded to the nearest whole frame
+// (banker's rounding, matching every other fractional-to-integer-domain
+// conversion in the project). Shared by the marker and settings converters.
+// Returns true and sets `frame_text` on success; on a hard error returns false
+// and sets `reason` to a short parenthetical detail (no timestamp, a
+// malformed/over-long offset, or a negative effective time — the last refused
+// because parse_authored_frame treats negative positions as malformed at load,
+// so the tool must never write one).
 bool convert_time_field(const std::string& field, double sample_rate,
-                        std::string& frame_text, std::string& reason) {
+                        double snap_ms_per_px, std::string& frame_text,
+                        std::string& reason) {
     // is_valid_timestamp_format matches only exactly nine characters, so a pass
     // here guarantees field.size() >= 9 and the offset substr below is in range.
     const std::string ts = field.substr(0, kTimestampLen);
@@ -107,8 +138,8 @@ bool convert_time_field(const std::string& field, double sample_rate,
         reason = "negative effective time";
         return false;
     }
-    frame_text = format_authored_frame(static_cast<int64_t>(
-        std::nearbyint(seconds * sample_rate)));
+    frame_text = format_authored_frame(
+        snap_frame_to_grid(seconds * sample_rate, sample_rate, snap_ms_per_px));
     return true;
 }
 
@@ -168,7 +199,8 @@ std::string join_lines(const std::vector<Line>& lines) {
 // which case `error_detail` carries the "line <n>: <content>" detail (with a
 // short single-space parenthetical reason when the field itself is malformed).
 bool convert_marker_line(const Line& in, double sample_rate,
-                         int line_number, Line& out, std::string& error_detail) {
+                         double snap_ms_per_px, int line_number, Line& out,
+                         std::string& error_detail) {
     const std::string& s = in.content;
     out.had_newline = in.had_newline;
 
@@ -204,7 +236,8 @@ bool convert_marker_line(const Line& in, double sample_rate,
 
     std::string frame_text;
     std::string reason;
-    if (!convert_time_field(field, sample_rate, frame_text, reason)) {
+    if (!convert_time_field(field, sample_rate, snap_ms_per_px, frame_text,
+                            reason)) {
         error_detail = "line " + std::to_string(line_number) + ": " + s +
                        " (" + reason + ")";
         return false;
@@ -232,8 +265,9 @@ std::string trim_ws_copy(const std::string& s) {
     return s.substr(b, e - b + 1);
 }
 
-bool convert_settings_line(const Line& in, double sample_rate, int line_number,
-                           Line& out, std::string& error_detail) {
+bool convert_settings_line(const Line& in, double sample_rate,
+                           double snap_ms_per_px, int line_number, Line& out,
+                           std::string& error_detail) {
     const std::string& s = in.content;
     out.had_newline = in.had_newline;
 
@@ -260,7 +294,8 @@ bool convert_settings_line(const Line& in, double sample_rate, int line_number,
     const std::string token = right.substr(tok_b, tok_e - tok_b + 1);
     std::string frame_text;
     std::string reason;
-    if (!convert_time_field(token, sample_rate, frame_text, reason)) {
+    if (!convert_time_field(token, sample_rate, snap_ms_per_px, frame_text,
+                            reason)) {
         error_detail = "line " + std::to_string(line_number) + ": " + s +
                        " (" + reason + ")";
         return false;
@@ -331,17 +366,21 @@ int main(int argc, char** argv) {
     std::vector<Line> lines = split_lines(data);
     std::vector<Line> out_lines;
     out_lines.reserve(lines.size());
+    // Marker columns snap to the GUI zoom-level-2 grid; settings trim values do
+    // not (0.0 disables the snap in convert_time_field).
+    const double snap_ms_per_px =
+        (kind == Kind::Settings) ? 0.0 : kMarkerSnapMsPerPx;
     for (size_t i = 0; i < lines.size(); ++i) {
         const int line_number = static_cast<int>(i + 1);
         Line out_line;
         std::string detail;
         bool ok;
         if (kind == Kind::Settings) {
-            ok = convert_settings_line(lines[i], sample_rate, line_number,
-                                       out_line, detail);
+            ok = convert_settings_line(lines[i], sample_rate, snap_ms_per_px,
+                                       line_number, out_line, detail);
         } else {
-            ok = convert_marker_line(lines[i], sample_rate, line_number,
-                                     out_line, detail);
+            ok = convert_marker_line(lines[i], sample_rate, snap_ms_per_px,
+                                     line_number, out_line, detail);
         }
         if (!ok) {
             diag("convert", path, detail);
