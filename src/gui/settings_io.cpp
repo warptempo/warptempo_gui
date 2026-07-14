@@ -26,6 +26,7 @@ enum class SettingKind {
     PlaybackSpeedFloat,
     FollowFlag,
     FontSizePt,
+    AudioPlayerPath,
     TrimBegin_A,
     TrimEnd_A,
     TrimBegin_B,
@@ -74,6 +75,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // playback_speed, the file's value is applied once at launch when the
     // source loads.
     { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
+    // GUI-kind launch preference, NOT an engine key: an optional external
+    // audio player for the `l` render-listen command. nullptr default so the
+    // first-open template omits it (optional, like the trim keys); the writer
+    // emits the line only when a value is set.
+    { "audio_player",                SettingKind::AudioPlayerPath,      EngineField::Title,                   nullptr },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
@@ -193,6 +199,7 @@ bool write_settings_file(
     char active_tab_view,
     float playback_speed,
     double font_size,
+    const std::string& audio_player,
     const EngineSettings& engine) {
     std::string data;
     char buf[64];
@@ -243,6 +250,18 @@ bool write_settings_file(
                 data += '=';
                 data += buf;
                 data += '\n';
+                break;
+            case SettingKind::AudioPlayerPath:
+                // Optional: emit only when a player is set (empty = absent),
+                // mirroring the trim conditional-omit, so an unset preference
+                // leaves the line out entirely rather than writing a
+                // malformed `audio_player=` the strict reader would reject.
+                if (!audio_player.empty()) {
+                    data += desc.key;
+                    data += '=';
+                    data += audio_player;
+                    data += '\n';
+                }
                 break;
             case SettingKind::TrimBegin_A:
                 if (tab_a.trim.has_begin) {

@@ -406,6 +406,13 @@ RenderOutcome do_render(const RenderRequest& req,
                                          req.authoring.active_tab,
                                          req.authoring.playback_speed,
                                          req.authoring.font_size,
+                                         // audio_player is deliberately omitted
+                                         // from a render entry's .settings: it
+                                         // is a global launch preference, not
+                                         // part of the per-render recipe a
+                                         // Ctrl+Alt+C adopt restores. Empty ->
+                                         // the writer leaves the line out.
+                                         /*audio_player=*/std::string(),
                                          req.engine_settings)) {
                     note_failure(st_path);
                     return result;

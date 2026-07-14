@@ -582,6 +582,14 @@ struct AppState {
     // those application points.
     double  font_size               = 11.0;
 
+    // GUI-kind launch preference: the external audio player the `l`
+    // ("Listen to renders") command spawns with the rendered wavs. Loaded
+    // from the source `.settings` at file load (absent = empty = no player
+    // set) and persisted on Ctrl+S. Not engine input and not editable via the
+    // settings editor; consumed only by the `l` launcher. Empty means the
+    // command reports "no audio_player set" and does nothing.
+    std::string audio_player;
+
     // One-shot stash of the scanner's last painted pixel-x under the
     // OLD viewport, set by viewport-mutating operations during
     // playback. The next pre-paint reads this in place of computing

@@ -14,6 +14,8 @@
 #include "time_format.h"
 #include "warpmarkers.h"
 
+#include <spawn.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -29,6 +31,38 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+
+// The child's environment for the external audio-player spawn below. POSIX
+// exposes the process environment through this global; passing it as
+// posix_spawnp's envp gives the launched player the GUI's own environment.
+extern char** environ;
+
+namespace {
+
+// Launch `player` DETACHED with `wavs` as its arguments, searching $PATH so a
+// bare binary name (e.g. `audacious`) works and an absolute path works too.
+// Fire-and-forget: the GUI neither tracks nor waits on the child (SIGCHLD is
+// SIG_IGN from startup, so it auto-reaps). posix_spawnp wants a
+// NULL-terminated char* const argv[]; the backing std::strings (player and the
+// wavs vector) stay alive across the call, so const_cast'ing their c_str()
+// pointers is safe — POSIX does not modify them. Returns true iff the spawn
+// started.
+bool spawn_audio_player(const std::string& player,
+                        const std::vector<std::string>& wavs) {
+    std::vector<char*> argv;
+    argv.reserve(wavs.size() + 2);
+    argv.push_back(const_cast<char*>(player.c_str()));
+    for (const std::string& w : wavs) {
+        argv.push_back(const_cast<char*>(w.c_str()));
+    }
+    argv.push_back(nullptr);
+    pid_t pid = 0;
+    const int rc = posix_spawnp(&pid, player.c_str(), nullptr, nullptr,
+                                argv.data(), environ);
+    return rc == 0;
+}
+
+}  // namespace
 
 // Source-view read-only allowlist, and the base gate render_view_key_blocked
 // defers to. True when key+mods is not on the allowlist and should be dropped.
@@ -1076,6 +1110,38 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             if (app.selected_markers.insert(s).second) restored = true;
         }
         if (restored) viewport.invalidate_top_strip();
+        return true;
+    }
+
+    // `l` (no modifiers): "Listen to renders" — launch the external audio
+    // player (the audio_player setting) with every rendered wav under
+    // <source_parent>/renders/, in the same numeric order render view lists
+    // them. Fire-and-forget; the GUI's own playback is unaffected. The modal /
+    // editor / render-view / read-only gates in on_key run before this handler,
+    // so `l` is inert while any of them owns the keyboard (like p/i/m). A
+    // missing player or an empty render set reports a one-line bottom-strip
+    // status and does nothing.
+    if (key == GuiKeys::L && !ctrl && !shift && !alt) {
+        if (app.audio_player.empty()) {
+            app.transient_status_message = "no audio_player set";
+            viewport.invalidate_timestamp_area();
+            return true;
+        }
+        std::vector<AppState::RenderViewEntry> list =
+            render_view.enumerate_render_view_list();
+        if (list.empty()) {
+            app.transient_status_message = "no renders to play";
+            viewport.invalidate_timestamp_area();
+            return true;
+        }
+        std::vector<std::string> wavs;
+        wavs.reserve(list.size());
+        for (const auto& e : list) wavs.push_back(e.wav_path.string());
+        if (!spawn_audio_player(app.audio_player, wavs)) {
+            std::fprintf(stderr,
+                "warptempo_gui: could not launch audio_player '%s'\n",
+                app.audio_player.c_str());
+        }
         return true;
     }
 

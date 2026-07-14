@@ -58,6 +58,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -404,6 +405,14 @@ GuiRect timestamp_invalidate_rect(const AppState& a) {
 
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
+
+    // Auto-reap the fire-and-forget external audio players the `l`
+    // ("Listen to renders") command spawns — the product's only subprocess.
+    // Ignoring SIGCHLD makes the kernel discard child exit status so the
+    // detached players never linger as zombies; set once here, never
+    // per-press. No other code forks or waits, so nothing depends on the
+    // default disposition.
+    std::signal(SIGCHLD, SIG_IGN);
 
     // A source is loaded only from the command line: the GUI has no
     // in-session file open or drag-and-drop (open the next source by

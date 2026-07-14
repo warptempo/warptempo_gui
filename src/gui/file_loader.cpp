@@ -376,6 +376,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // source loads — the same behavior class as playback_speed (see the
         // font_size descriptor in settings_io.cpp).
         app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
+        // GUI launch preference for the `l` render-listen command. Applied
+        // only when the key is present: it is a global preference with no
+        // per-source default to reset (absence leaves the empty default from
+        // construction, i.e. "no player set"). load_file is the sole loader,
+        // invoked once at launch, so no earlier value can survive here.
+        if (sf.has_audio_player) app.audio_player = sf.audio_player;
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.
         if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }

@@ -94,6 +94,10 @@ struct SettingsFile {
     float  playback_speed          = 1.0f;  // preset vocabulary only
     bool   has_font_size           = false;
     double font_size               = 11.0;  // points, [6, 72]
+    // Optional GUI-kind launcher for the `l` render-listen command: a
+    // non-empty external player name or path. Absent = no player set.
+    bool        has_audio_player   = false;
+    std::string audio_player;
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable

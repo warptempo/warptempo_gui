@@ -502,9 +502,10 @@ private:
     // one (on_key then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
 
-    // P / I / M letter-key handlers: Ctrl+P-family phase-reset clipboard ops,
-    // `p` view toggle, `i` iteration mode, `m` bpm mode. Returns true if
-    // key+mods matched one (on_key then returns), false otherwise.
+    // P / I / M / L letter-key handlers: Ctrl+P-family phase-reset clipboard
+    // ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `l` listen-to-
+    // renders launcher. Returns true if key+mods matched one (on_key then
+    // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
 
     // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /

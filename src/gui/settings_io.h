@@ -58,4 +58,5 @@ bool write_settings_file(
     char active_tab_view,
     float playback_speed,
     double font_size,
+    const std::string& audio_player,
     const EngineSettings& engine);

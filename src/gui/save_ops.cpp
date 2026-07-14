@@ -81,6 +81,7 @@ bool GuiSaveOps::save() {
                                  app.active_tab_view,
                                  app.playback_speed,
                                  app.font_size,
+                                 app.audio_player,
                                  app.engine_settings)) {
             std::fprintf(stderr,
                 "warptempo_gui: settings save failed: %s\n",

@@ -227,6 +227,18 @@ std::expected<SettingsFile, std::string> read_settings_file(
             }
             out.has_font_size = true;
             out.font_size = v;
+        } else if (key == "audio_player") {
+            // Optional GUI-kind launcher for the `l` render-listen command:
+            // an external player binary name or path. Any non-empty string is
+            // accepted (no path/binary grammar — it is user-supplied); an
+            // empty value is a malformed-value schema error, consistent with
+            // the other keys' malformed-value handling.
+            if (value.empty()) {
+                return bad_value(ln, key, value,
+                                 "must be a non-empty player name or path");
+            }
+            out.has_audio_player = true;
+            out.audio_player = value;
         } else {
             return prefix_line_error(ln, "unknown key '" + key + "'");
         }
