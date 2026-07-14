@@ -317,10 +317,9 @@ struct GuiInputHandler {
     // GuiTargetRender's dispatch_pending_archival hook on every
     // worker-completion path. Dispatches the parked archival command
     // (app.pending_archival) when one is armed and the worker is idle: the
-    // Ctrl+Alt+R shape through dispatch_single_archival_render (re-arming
-    // the session fingerprint), a batch through start_render_batch.
-    // Returns true iff a session was started, so the caller leaves its own
-    // pending preview queued behind it.
+    // Ctrl+Alt+R shape through dispatch_single_archival_render, a batch
+    // through start_render_batch. Returns true iff a session was started, so
+    // the caller leaves its own pending preview queued behind it.
     bool dispatch_pending_archival_command();
 
     // The Esc-cancel body itself, key-free: cancel the running archival
@@ -383,14 +382,9 @@ private:
     // Dispatch a single archival render (the Ctrl+Alt+R shape) on an idle
     // worker: source-directory naming (empty batch_folder/basename inside
     // do_render), session bookkeeping, and an on_done that finalizes the
-    // run and re-arms target view. `fingerprint` — the command's
-    // deliverable fingerprint, built from the source's captured load-time
-    // identity (no build-time re-stat) — becomes the async renderer's session
-    // fingerprint, so an identical re-dispatch no-ops and a
-    // fingerprint-matching target-preview trigger waits the render out
-    // instead of killing it. Caller must have verified the worker is idle.
-    void dispatch_single_archival_render(RenderRequest req,
-                                         std::vector<uint8_t> fingerprint);
+    // run and re-arms target view. Caller must have verified the worker is
+    // idle.
+    void dispatch_single_archival_render(RenderRequest req);
 
     // The busy half of the dispatch rule: kill the running render with the
     // Esc pair (request_cancel interrupts the current render mid-stream;

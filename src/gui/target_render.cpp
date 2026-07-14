@@ -63,31 +63,12 @@ void GuiTargetRender::trigger() {
         app.playhead_scanner_sample = app.playhead_cursor_sample;
     }
 
-    // Match-wait: a running single archival render whose session
-    // fingerprint equals this preview's would-be dispatch is already
-    // synthesizing exactly the audio the preview needs. Leave it running
-    // and just stay pending_ — the worker-idle pump
-    // (maybe_dispatch_pending → dispatch_render_now) adopts the finished
-    // deliverable through the cache/artifact reuse rungs with no second
-    // synthesis. Batch sessions and preview renders carry no session
-    // fingerprint, so they never match and fall through to the kill. The
-    // fingerprint inputs are identical at
-    // trigger time and at the eventual dispatch: any input change between
-    // the two re-runs trigger(), which re-decides.
-    const bool match_wait =
-        async_renderer.is_busy() &&
-        !async_renderer.session_fingerprint().empty() &&
-        compute_live_render_fingerprint(app, audio) ==
-            async_renderer.session_fingerprint();
-
-    if (!match_wait) {
-        // Kill a running archival batch (Ctrl+Alt+R / Ctrl+Alt+I /
-        // BPM-sweep). The batch state machine consults
-        // queue_cancel_requested at on_batch_entry_complete time and
-        // finalizes instead of dispatching the next entry, so setting it
-        // here is enough.
-        app.queue_cancel_requested = true;
-    }
+    // A render dispatch kills the running render. Any running archival
+    // render (Ctrl+Alt+R / Ctrl+Alt+I / BPM-sweep) is on some other output;
+    // kill it. The batch state machine consults queue_cancel_requested at
+    // on_batch_entry_complete time and finalizes instead of dispatching the
+    // next entry, so setting it here is enough.
+    app.queue_cancel_requested = true;
 
     // Surface the target-render status through queue_progress_text.
     // "rendering..." (archival) and "updating..." (target render) share
@@ -97,12 +78,10 @@ void GuiTargetRender::trigger() {
 
     pending_ = true;
     if (async_renderer.is_busy()) {
-        if (!match_wait) {
-            // Worker is mid-render on some other output. Cancel; the
-            // existing on_done path will call maybe_dispatch_pending()
-            // once the worker exits.
-            async_renderer.request_cancel();
-        }
+        // Worker is mid-render on some other output. Cancel; the existing
+        // on_done path will call maybe_dispatch_pending() once the worker
+        // exits.
+        async_renderer.request_cancel();
         return;
     }
     // Worker is idle. Dispatch immediately.
@@ -187,8 +166,7 @@ void GuiTargetRender::dispatch_render_now() {
     // hits decode the exact codec roundtrip of those samples, and archival
     // artifact loads decode the same deliverable.
     //
-    // The identity build lives in compute_live_render_fingerprint (shared with
-    // the preview match-wait and the Ctrl+Alt+R session fingerprint), using the
+    // The identity build lives in compute_live_render_fingerprint, using the
     // load-time-captured source identity with no on-disk re-stat: the loaded
     // source is immutable for the process lifetime, so do_render renders from
     // the in-memory source samples with no source-changed refusal.

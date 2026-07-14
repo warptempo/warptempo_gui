@@ -861,14 +861,11 @@ struct AppState {
     // cancel lands).
     struct PendingArchivalCommand {
         bool armed = false;
-        // Ctrl+Alt+R shape: reqs holds exactly one request, dispatched
-        // through dispatch_single_archival_render with `fingerprint` as the
-        // session fingerprint (built from the source's captured load-time
-        // identity, no build-time re-stat). Batches (armed && !single) go through
-        // start_render_batch with `batch_label` and carry no fingerprint —
-        // a batch session never matches a dispatch.
+        // Ctrl+Alt+R shape (single): reqs holds exactly one request,
+        // dispatched through dispatch_single_archival_render. Batches
+        // (armed && !single) go through start_render_batch with
+        // `batch_label`.
         bool                       single = false;
-        std::vector<uint8_t>       fingerprint;
         std::vector<RenderRequest> reqs;
         std::string                batch_label;
     };

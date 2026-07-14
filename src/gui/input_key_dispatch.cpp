@@ -313,19 +313,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             return true;
         }
 
-        // A render dispatch kills the running render — unless the running
-        // render's fingerprint equals this command's, in which case the
-        // command is a no-op: the worker is already producing exactly this
-        // deliverable. Only a single archival render carries a session
-        // fingerprint (a batch never matches, its empty fingerprint matching
-        // nothing).
-        std::vector<uint8_t> fingerprint =
-            compute_live_render_fingerprint(app, audio);
-        if (async_renderer.is_busy() && !fingerprint.empty() &&
-            fingerprint == async_renderer.session_fingerprint()) {
-            return true;
-        }
-
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render.
         RenderRequest req = build_render_request(
@@ -337,11 +324,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         attach_shared_render_resources(req);
 
         if (async_renderer.is_busy()) {
-            // Kill the running render and park this command; the
-            // worker-idle pump dispatches it once the cancellation drains.
+            // A render dispatch kills the running render. Park this command;
+            // the worker-idle pump dispatches it once the cancellation drains.
             AppState::PendingArchivalCommand cmd;
             cmd.single      = true;
-            cmd.fingerprint = std::move(fingerprint);
             cmd.reqs.push_back(std::move(req));
             kill_running_render_and_park(std::move(cmd));
             return true;
@@ -350,8 +336,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // The dispatch hands the request to the worker thread; on_done
         // fires on the GUI thread when the render finishes (success,
         // failure, or cancel).
-        dispatch_single_archival_render(std::move(req),
-                                        std::move(fingerprint));
+        dispatch_single_archival_render(std::move(req));
         return true;
     }
 
@@ -599,9 +584,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         if (async_renderer.is_busy()) {
-            // A render dispatch kills the running render; a sweep never
-            // matches a session fingerprint, so there is no wait case.
-            // Park the fully built batch for the worker-idle pump.
+            // A render dispatch kills the running render. Park the fully
+            // built batch for the worker-idle pump.
             AppState::PendingArchivalCommand cmd;
             cmd.reqs        = std::move(reqs);
             cmd.batch_label = "render iterations";
@@ -810,10 +794,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         app.bpm_mode_enabled       = false;
 
         // Deliberately no cancel_archival_session on this exit: the tail's
-        // target_render.trigger() already stops or adopts a running rebuild
-        // through its kill/match-wait — a rebuild whose session fingerprint
-        // matches the just-committed state is ADOPTED as the preview,
-        // deliberate reuse, not a leak.
+        // target_render.trigger() already stops a running rebuild (a render
+        // dispatch kills the running render), and the follow-up preview
+        // re-derives, adopting the just-committed deliverable through
+        // dispatch_render_now's cache/artifact reuse rungs — deliberate
+        // reuse, not a leak.
         render_view.restore_source_view();
 
         // Full inheritance (the ruled shape): the entry's frozen .settings —

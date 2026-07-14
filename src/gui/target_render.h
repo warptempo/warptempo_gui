@@ -19,9 +19,7 @@
 // (GuiAudio's recorded size/mtime), taken directly with no on-disk
 // re-verification: the loaded source is immutable for the process lifetime,
 // so the captured identity is authoritative — exactly as do_render builds
-// its own fingerprint. Shared by the target-view reuse rungs
-// (dispatch_render_now), the preview match-wait (trigger), and the
-// Ctrl+Alt+R no-op/session-fingerprint computation.
+// its own fingerprint. Keys the target-view reuse rungs (dispatch_render_now).
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio);
 

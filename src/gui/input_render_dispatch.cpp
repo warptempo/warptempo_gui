@@ -240,8 +240,7 @@ void GuiInputHandler::finalize_render_run() {
     target_render.maybe_dispatch_pending();
 }
 
-void GuiInputHandler::dispatch_single_archival_render(
-        RenderRequest req, std::vector<uint8_t> fingerprint) {
+void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
     app.queue_progress_text    = "rendering...";
@@ -275,10 +274,6 @@ void GuiInputHandler::dispatch_single_archival_render(
                 target_render.ensure_ready();
             }
         });
-    // dispatch() cleared the session fingerprint; re-arm it for this
-    // single-render session so an identical re-dispatch no-ops and a
-    // fingerprint-matching target-preview trigger waits the render out.
-    async_renderer.set_session_fingerprint(std::move(fingerprint));
 }
 
 void GuiInputHandler::kill_running_render_and_park(
@@ -298,8 +293,7 @@ bool GuiInputHandler::dispatch_pending_archival_command() {
     // must report false so the caller's own pending work still runs.
     if (cmd.reqs.empty()) return false;
     if (cmd.single) {
-        dispatch_single_archival_render(std::move(cmd.reqs.front()),
-                                        std::move(cmd.fingerprint));
+        dispatch_single_archival_render(std::move(cmd.reqs.front()));
     } else {
         start_render_batch(std::move(cmd.reqs), std::move(cmd.batch_label));
     }
@@ -685,9 +679,8 @@ bool GuiInputHandler::render_bpm_sweep() {
     }
 
     if (async_renderer.is_busy()) {
-        // A render dispatch kills the running render; a sweep never
-        // matches a session fingerprint, so there is no wait case. Park
-        // the fully built batch for the worker-idle pump.
+        // A render dispatch kills the running render. Park the fully built
+        // batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
         cmd.batch_label = "bpm";
