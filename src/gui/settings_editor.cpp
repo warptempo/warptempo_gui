@@ -107,6 +107,20 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
+    // audio_player is the one GUI-kind key settable here: it is a launcher path
+    // with no dedicated gesture, so the settings editor is its authoring
+    // surface. Set it directly (an empty value unsets it — the writer omits an
+    // empty audio_player). A launch preference like font_size: no undo history,
+    // no dirty tracking, silently persisted on Ctrl+S.
+    if (key == "audio_player") {
+        app.audio_player = value;
+        std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
+            value.c_str());
+        viewport.invalidate_timestamp_area();
+        text_editor::deactivate(app.settings_editor);
+        return;
+    }
+
     // 3a. View-state key check. These have dedicated gestures and are
     // not settable through this editor — silently maintaining a parallel
     // pathway here would create two ways to mutate the same thing. This is
