@@ -5,6 +5,7 @@
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <set>
@@ -121,6 +122,49 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     // validity (validate_trim_frames runs inside the series' trim column)
     // and output_format participates in the map-format-with-trim conflict,
     // so a settings commit can create a walked defect.
+    app.defect_series.pending_validation = PendingValidation::Commit;
+}
+
+namespace {
+uint64_t gesture_steady_ms() {
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+}  // namespace
+
+bool Undo::coalesce_gesture(GestureKind kind) const {
+    const GestureCoalesce& c = gesture_coalesce;
+    // The undo_epoch equality is the whole correctness story: every push,
+    // undo, redo, and history reset since the previous eligible commit bumps
+    // it, so a fast same-target press that follows some OTHER commit (a
+    // drag/paste/undo/redo, or a history-less modal [R]eset/[Delete]) never
+    // merges. The selection equality — the PRE-mutation set here — catches a
+    // non-committing reselection (a click) that time alone cannot tell apart.
+    return c.kind == kind
+        && c.tab  == app.active_tab_view
+        && c.target == app.selected_markers
+        && (gesture_steady_ms() - c.last_ms) <= kGestureCoalesceMs
+        && c.epoch == app.history.undo_epoch
+        && !app.history.undo_stack.empty();
+}
+
+void Undo::record_gesture(GestureKind kind) {
+    gesture_coalesce = GestureCoalesce{
+        kind,
+        app.selected_markers,     // post-mutation set
+        app.active_tab_view,
+        gesture_steady_ms(),
+        app.history.undo_epoch,
+    };
+}
+
+void Undo::note_coalesced_commit() {
+    // Mirror the funnel side effects of the push_undo_* helpers, minus the
+    // history push the merge deliberately suppresses: the store changed, so
+    // defect validation must still run this press (a continuation nudge can
+    // move a marker into a fresh coincidence), and the hover popup clears.
+    viewport.clear_hover_popup();
     app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
@@ -285,6 +329,7 @@ bool Undo::can_undo() const {
 
 void Undo::do_undo() {
     if (!can_undo()) return;   // authoritative guard; see can_undo's comment
+    ++app.history.undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.undo_stack.back());
@@ -395,6 +440,7 @@ void Undo::do_redo() {
                                             : app.tab_a.read_only;
         if (target_ro) return;
     }
+    ++app.history.undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(app.history.redo_stack.back());

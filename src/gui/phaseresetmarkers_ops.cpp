@@ -138,6 +138,9 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
+    // selection — the merge key compares the PRE-mutation selection.
+    const bool merge = undo.coalesce_gesture(GestureKind::PhaseResetNudge);
     // Fine-tuning op: collapse the selection to the focused marker,
     // mirroring nudge_selected_markers (warpmarkers_ops.cpp). Phase resets
     // carry no tempo, so there is no inherit/tempo analog to collapse —
@@ -198,7 +201,13 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // reads last_selected below.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+    // Coalesce a rapid burst: the first press already pushed the pre-burst
+    // snapshot, so a continuation press skips its redundant push and one
+    // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation
+    // (reordered) selection.
+    if (merge) undo.note_coalesced_commit();
+    else       undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+    undo.record_gesture(GestureKind::PhaseResetNudge);
     selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();

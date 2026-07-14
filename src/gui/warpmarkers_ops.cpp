@@ -358,6 +358,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
+    // selection — the merge key compares the PRE-mutation selection. Both the
+    // Ctrl+Up/Down and the Ctrl+wheel routes reach here with kind TempoStep,
+    // so a burst mixing the two coalesces on one target as intended.
+    const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
@@ -410,7 +415,13 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     std::vector<GuiWarpMarker> pre_state = mv_const;
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    // Coalesce a rapid tempo-step burst: continuation presses skip the
+    // redundant push so one Ctrl+Z reverts the whole burst (the first entry's
+    // pre-state also carries any iteration bracket this step clears, so the
+    // bracket is restored together with the tempo).
+    if (merge) undo.note_coalesced_commit();
+    else       undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.record_gesture(GestureKind::TempoStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
@@ -456,6 +467,9 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // Decide undo-coalescing BEFORE the focus-collapse below mutates the
+    // selection — the merge key compares the PRE-mutation selection.
+    const bool merge = undo.coalesce_gesture(GestureKind::WarpNudge);
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
@@ -512,7 +526,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // reads last_selected below.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    // Coalesce a rapid burst: the first press already pushed the pre-burst
+    // snapshot, so a continuation press skips its redundant push and one
+    // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation
+    // (reordered) selection.
+    if (merge) undo.note_coalesced_commit();
+    else       undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.record_gesture(GestureKind::WarpNudge);
     selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();

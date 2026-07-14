@@ -202,6 +202,13 @@ struct UndoHistory {
     std::vector<UndoEntry> redo_stack;
     int  saved_distance = 0;
     bool saved_valid    = true;
+    // Monotonic counter bumped on EVERY undo-stack mutation (push, do_undo,
+    // do_redo, reset). The rapid-gesture undo-coalesce guard
+    // (Undo::coalesce_gesture) records this value at each eligible commit and
+    // refuses to merge a later press once it has changed — so a
+    // drag/paste/undo/redo/reset between two nudges breaks the burst even when
+    // the presses are fast and same-target. Session-only, never serialized.
+    uint64_t undo_epoch = 0;
 
     // Push the pre-mutation entry. Clears the redo stack. If the saved
     // reference was on the redo stack, it is orphaned only when the path back
@@ -213,6 +220,7 @@ struct UndoHistory {
     // new bottom — that's the least-surprising user-facing behavior even
     // though it's not strictly correct.
     void push(UndoEntry entry) {
+        ++undo_epoch;  // stack mutation: breaks any gesture-coalesce burst
         if (saved_valid && saved_distance > 0) {
             const int rs = static_cast<int>(redo_stack.size());
             bool path_affects_persistence = false;
@@ -247,6 +255,7 @@ struct UndoHistory {
         redo_stack.clear();
         saved_distance = 0;
         saved_valid    = true;
+        ++undo_epoch;  // full history wipe: no gesture-coalesce burst survives
     }
 };
 

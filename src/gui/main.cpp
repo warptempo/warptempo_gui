@@ -677,6 +677,9 @@ int main(int argc, char** argv) {
                 // owning site; request_exit() is idempotent for those paths.
                 gui.request_exit();
             }
+            // Fresh source = fresh history (load_file cleared it): no gesture
+            // burst can span the load.
+            undo.clear_gesture_coalesce();
             return;  // loaded state paints on the next tick
         }
 

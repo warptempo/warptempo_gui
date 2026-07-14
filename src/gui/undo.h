@@ -6,9 +6,39 @@
 #include "selection.h"
 #include "viewport.h"
 
+#include <chrono>
+#include <cstdint>
+#include <set>
 #include <vector>
 
 struct GuiTargetRender;
+
+// Rapid-gesture undo coalescing. A burst of same-target eligible keyboard
+// gestures — warp / phase-reset nudges (Ctrl+Left/Right) and tempo cent steps
+// (Ctrl+Up/Down and Ctrl+wheel) — that land within kGestureCoalesceMs of each
+// other on the SAME gesture-kind, selection, and tab collapses into ONE undo
+// entry: the burst's first press pushes the pre-burst snapshot and every
+// continuation press SKIPS its own push, so a single Ctrl+Z reverts the whole
+// burst. The visible move, defect validation, reorder/remap, dirty tracking,
+// and the target-view preview stay per-press and unchanged — only the
+// redundant history push is suppressed.
+enum class GestureKind { None, WarpNudge, PhaseResetNudge, TempoStep };
+
+// Coalesce window. Presses farther apart than this start a fresh undo entry.
+// Named so it is easy to tune.
+inline constexpr uint64_t kGestureCoalesceMs = 150;
+
+// The previous eligible commit's coalesce key. The current press's
+// PRE-mutation selection is compared against this to decide the merge; it is
+// re-recorded (with the POST-mutation selection) after every eligible commit.
+// Session-only, never serialized.
+struct GestureCoalesce {
+    GestureKind   kind    = GestureKind::None;
+    std::set<int> target;    // selection the previous eligible commit rested on
+    char          tab     = 'A';
+    uint64_t      last_ms = 0;   // steady_clock ms of the previous commit
+    uint64_t      epoch   = 0;   // app.history.undo_epoch at the previous commit
+};
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
@@ -65,4 +95,26 @@ struct Undo {
     bool can_undo() const;
     void do_undo();
     void do_redo();
+
+    // Rapid-gesture undo-coalescing state (see GestureCoalesce above).
+    GestureCoalesce gesture_coalesce;
+
+    // Whether the current eligible gesture press of `kind` coalesces into the
+    // burst's existing undo entry. Reads app.selected_markers as the
+    // PRE-mutation selection, so it MUST be called at handler entry, before the
+    // focus-collapse. When it returns true the caller SKIPS its undo push (and
+    // calls note_coalesced_commit for the per-press commit funnel); either way
+    // the caller then calls record_gesture with the post-mutation selection.
+    bool coalesce_gesture(GestureKind kind) const;
+    // Record this eligible press as the burst's latest: post-mutation
+    // selection, current tab, now, and the current undo_epoch. Call after the
+    // push / skip.
+    void record_gesture(GestureKind kind);
+    // Per-press commit funnel for a coalesced (push-skipped) press: the store
+    // still changed, so run the same defect-validation flag and hover-popup
+    // clear that the push_undo_* helpers do, minus the history push.
+    void note_coalesced_commit();
+    // Break any in-progress burst. Called when a defect modal opens and on
+    // source load.
+    void clear_gesture_coalesce() { gesture_coalesce = GestureCoalesce{}; }
 };

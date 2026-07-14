@@ -147,6 +147,7 @@ bool GuiInputHandler::present_defect_pre_step(const std::string& defect_summary)
     // [Y]es re-enumerates and re-stashes — so defect / trim_defect_kind reset
     // to benign defaults here.
     playback_lifecycle.stop_playback_if_playing();
+    undo.clear_gesture_coalesce();  // a modal opening ends any gesture burst
     app.prompt.active          = true;
     app.prompt.text            = defect_summary + question;
     app.prompt.response_keys   = {'y'};
@@ -215,6 +216,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
             // while the prompt is up, so playback cannot restart until the
             // series closes.
             playback_lifecycle.stop_playback_if_playing();
+            undo.clear_gesture_coalesce();  // a modal opening ends any gesture burst
             app.prompt.active          = true;
             app.prompt.text            = d.message;  // enumerator's, verbatim
             app.prompt.response_keys   = std::move(keys);
@@ -311,6 +313,7 @@ bool GuiInputHandler::open_defect_series(bool commit_context) {
                 // A modal surface is opening: stop playback (same rule as
                 // the marker-defect open above).
                 playback_lifecycle.stop_playback_if_playing();
+                undo.clear_gesture_coalesce();  // a modal opening ends any gesture burst
                 app.prompt.active          = true;
                 app.prompt.text            = std::move(trim_msg);
                 app.prompt.response_keys   = std::move(keys);
