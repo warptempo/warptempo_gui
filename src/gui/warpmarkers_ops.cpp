@@ -92,7 +92,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // Discrete warp_frame_map change while target view is displayed: the plate
     // must re-warp. Route this one-shot jump through the synchronous
     // rebuild — the same fix applied to tab cycling (Tab / Shift+Tab /
-    // Ctrl+Shift+Tab) and render-view entry — so the re-warped waveform,
+    // Ctrl+Shift+Tab) — so the re-warped waveform,
     // stems, flags, and playhead all land in one frame instead of
     // flashing across the async worker's rebuild window. Source view
     // skips it: marker edits don't change source-domain waveform pixels.

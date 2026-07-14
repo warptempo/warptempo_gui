@@ -44,9 +44,7 @@ struct WaveformJob {
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the value paint-side computed (or
     // app.drag.frozen_warp_frame_map during a target-view drag). Empty in
-    // source view and render view: render view paints the entry artifact's own
-    // samples on an identity plate; its shifted snapshot map belongs only to
-    // the marker/flag overlays. The worker reads — never builds — this.
+    // source view. The worker reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
 
     // Surface to render into. Owned by the cache (the cache's pending-slot
@@ -55,13 +53,9 @@ struct WaveformJob {
     cairo_surface_t* surface = nullptr;
     int channel_count = 0;     // 1 for mono, 2 for stereo
 
-    // Audio handle the render reads (see lifetime invariant above). In
-    // source/target view this is main.cpp's long-lived source audio and
-    // `audio_keepalive` stays null (the lifetime invariant covers it). In
-    // render view it is the view-owned entry audio, whose shared_ptr can be
-    // swapped out by a navigation while this job is still in flight — so
-    // `audio_keepalive` holds a copy of that shared_ptr, keeping the entry
-    // GuiAudio (and its samples/pyramid) alive until the job is destroyed.
+    // Audio handle the render reads (see lifetime invariant above). This is
+    // main.cpp's long-lived source audio and `audio_keepalive` stays null
+    // (the lifetime invariant covers it; the keepalive is vestigial).
     const GuiAudio* audio = nullptr;
     std::shared_ptr<const GuiAudio> audio_keepalive;
 };

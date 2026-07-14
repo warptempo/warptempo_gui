@@ -139,8 +139,8 @@ bool Undo::coalesce_gesture(GestureKind kind) const {
     // bumped once per discrete user command at the three dispatch entry points,
     // so this eligible press's own command is exactly c.command_seq + 1 iff NO
     // other command ran since the previous eligible commit. Any intervening
-    // command — a click, Tab, paste, save, undo/redo, tab/column switch, a
-    // render-view round trip, or an unhandled key — advances the counter an
+    // command — a click, Tab, paste, save, undo/redo, tab/column switch, or an
+    // unhandled key — advances the counter an
     // extra step and breaks the burst, which subsumes "same selection / same
     // tab / same history": none of those can change without a command in
     // between. `kind` still separates nudge from tempo-step even when adjacent;
@@ -306,11 +306,8 @@ void Undo::apply_post_restore_rules_phase_reset(
 
 // True when do_undo would actually act — do_undo's authoritative guard, and
 // the predicate the defect-resolution [U]ndo offer consults so the option
-// appears only when it will act. Three ways undo is a silent no-op:
+// appears only when it will act. Two ways undo is a silent no-op:
 //   - empty undo stack;
-//   - render view enabled: render view is its own read-only modality, so
-//     undo/redo do not mutate the hidden source-view marker lists behind the
-//     user's back while the UI says render view is read-only;
 //   - the top entry's TARGET tab is currently read-only. When the ACTIVE tab
 //     is read-only Ctrl+Z is already dropped at the keyboard gate
 //     (read_only_key_blocked); this catches the remaining cross-tab path — the
@@ -318,11 +315,9 @@ void Undo::apply_post_restore_rules_phase_reset(
 //     Read-only is a reversible per-tab toggle, so honored-ness is decided by
 //     the target tab's state now, not when the action was recorded.
 // Each bail leaves the entry on the stack and the view unchanged, so unlocking
-// the tab / leaving render view makes the history reachable again with nothing
-// lost.
+// the tab makes the history reachable again with nothing lost.
 bool Undo::can_undo() const {
     if (app.history.undo_stack.empty()) return false;
-    if (app.render_view.enabled) return false;
     const char tt = app.history.undo_stack.back().tab;
     const bool target_ro = (tt == 'B') ? app.tab_b.read_only
                                         : app.tab_a.read_only;
@@ -431,7 +426,6 @@ void Undo::do_undo() {
 
 void Undo::do_redo() {
     if (app.history.redo_stack.empty()) return;
-    if (app.render_view.enabled) return;
     // Symmetric to do_undo: peek the entry on top of the redo stack and bail
     // silently if its target tab is currently read-only. Entry stays on the
     // stack; unlocking the tab restores reachability.

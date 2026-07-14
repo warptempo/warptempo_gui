@@ -194,8 +194,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     const int     sr       = audio.sample_rate();
 
-    const bool is_target = (app.active_audio_view == 'T') &&
-                           !app.render_view.enabled;
+    const bool is_target = (app.active_audio_view == 'T');
     std::vector<WarpFrameMapSegment> target_warp_frame_map;
     uint64_t target_warp_frame_map_hash = 0;
     if (is_target) {
@@ -209,21 +208,8 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
             target_warp_frame_map_hash = c.hash;
         }
     }
-    // Render view: the plate is IDENTITY over the entry audio — the rendered
-    // artifact's own samples, its own timeline — not a deformation of the
-    // source. So no warp_frame_map (empty) and is_target false; the audio
-    // source flips to the entry audio below. The stem / flag caches still lay
-    // markers onto the window axis through app.render_view.snapshot_warp_frame_map
-    // (the shifted map), independent of this identity plate. The dirty-detect
-    // fingerprint needs no new key: audio_generation bumps on every entry load
-    // and on every render-view enter/exit, which already keys the identity flip
-    // (audio source + map both change together).
     const GuiAudio* audio_source = &audio;
     std::shared_ptr<const GuiAudio> audio_keepalive;
-    if (app.render_view.enabled && app.render_view.entry_audio) {
-        audio_source   = app.render_view.entry_audio.get();
-        audio_keepalive = app.render_view.entry_audio;
-    }
 
     in.vp_start      = vp_start;
     in.vp_end        = vp_end;
@@ -326,8 +312,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.warp_frame_map        = std::move(in.warp_frame_map);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = in.channel_count;
-    // The audio the worker reads: source audio outside render view, the entry
-    // audio in render view (keepalive holds its shared_ptr across a nav-away).
+    // The audio the worker reads: always the source audio (the keepalive is
+    // vestigial and stays empty — the source outlives every job).
     job.audio          = in.audio;
     job.audio_keepalive = std::move(in.audio_keepalive);
 
@@ -399,9 +385,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
-        // The superseded audio source (entry audio in render view, else the
-        // source); channel_count reads from it since the two may differ across
-        // a render-view enter/exit that superseded a job.
+        // The superseded audio source (the source audio, or the recorded
+        // supersede pointer); channel_count reads from it.
         const GuiAudio* sup_audio =
             wf_cache.supersede_audio ? wf_cache.supersede_audio : &audio;
         job.channel_count  = sup_audio->render_channels();
@@ -474,15 +459,14 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // state change updates the overlays inline but defers the plate to the async
 // worker, the overlays jump to their new positions one or two frames before the
 // plate catches up — a cross-layer desync that surfaced as zoom lag, the A/B-tab
-// and Tab recenter jump, the source/target toggle smear, and the render-view
-// enter/exit jump.
+// and Tab recenter jump, and the source/target toggle smear.
 //
 // The rule, realized three ways — render the correct frame before painting:
 //   1. One-shot discrete viewport/view jumps render synchronously, through this
 //      function. The jumps this governs: zoom, center-on-playhead, the
 //      viewport-shift playhead moves (Home / End and navigate-to-marker), the
-//      A/B tab switch, the source/target toggle, render-view enter / exit /
-//      navigate, and undo / redo. They arrive at a bounded rate: pointer detents
+//      A/B tab switch, the source/target toggle, and undo / redo. They arrive
+//      at a bounded rate: pointer detents
 //      coalesce to one action per pointer frame, and key repeat is compositor-
 //      throttled, so a full inline render per event is affordable. The pyramid
 //      bounds per-column cost, so the render is O(area_width) at any zoom level.
@@ -536,8 +520,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.height = in.area_h;
     }
 
-    // in.audio is the source audio outside render view, the entry audio in
-    // render view (identity plate over the artifact's own samples).
+    // in.audio is the source audio.
     render_waveform_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
@@ -832,7 +815,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const bool     drag_active = app.drag.active;
     const char     mv          = app.active_markers_view;
-    const bool     rve         = app.render_view.enabled;
     const uint64_t sel_hash    = hash_selection(app.selected_markers,
                                                 app.last_selected_marker);
 
@@ -864,7 +846,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_drag_overlay_hash       == drag_hash &&
         stem_cache.fp_drag_active             == drag_active &&
         stem_cache.fp_active_markers_view     == mv &&
-        stem_cache.fp_render_view_enabled     == rve &&
         stem_cache.fp_selection_hash          == sel_hash &&
         stem_cache.fp_trim_has_begin          == trim_has_begin &&
         stem_cache.fp_trim_has_end            == trim_has_end &&
@@ -913,23 +894,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // Target-view stems consume the displayed warp_frame_map (the one baked
     // into the live waveform pixels), not a freshly-built one — keeps
     // stem positions consistent with the displayed waveform during the
-    // worker's rebuild window. Render-view stems translate the
-    // authored-domain display stores through the entry's TARGET-SHIFTED
-    // snapshot map, so they land on the WINDOW axis of the entry wav's own
-    // identity plate; out-of-window rows never reach a paintable column (the
-    // stem-loop clips to [vp_start, vp_end), which the window-bounded viewport
-    // holds inside [0, snapshot_display_total) — the same membership
-    // render_view_position_in_window enforces at the pickable surfaces). The
-    // snapshot is immutable while displayed and every entry load bumps
-    // audio_generation (fp_audio_gen), so the existing fingerprint already
-    // keys it — no new field. The drag-frozen override cannot occur here:
-    // drags are gated out of render view.
+    // worker's rebuild window.
     const std::vector<WarpFrameMapSegment>* tmap_arg =
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
-    if (rve && !app.render_view.snapshot_warp_frame_map.empty()) {
-        tmap_arg = &app.render_view.snapshot_warp_frame_map;
-    }
 
     // Drag overlay: pass through only when a drag is live. During a
     // drag the fingerprint mismatches every tick on the drag-overlay
@@ -958,18 +926,14 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         wf_cache.surface);
 
     if (mv == 'P') {
-        const auto& list = rve
-            ? app.render_view.phase_resets
-            : app.phaseresetmarkers.markers();
+        const auto& list = app.phaseresetmarkers.markers();
         render_phaseresetmarkers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
             app.selected_markers, tmap_arg, drag_overlay,
             wf_cache.surface);
     } else {
-        const auto& list = rve
-            ? app.render_view.warp_markers
-            : app.warpmarkers.markers();
+        const auto& list = app.warpmarkers.markers();
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
@@ -993,7 +957,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_drag_overlay_hash         = drag_hash;
     stem_cache.fp_drag_active               = drag_active;
     stem_cache.fp_active_markers_view       = mv;
-    stem_cache.fp_render_view_enabled       = rve;
     stem_cache.fp_selection_hash            = sel_hash;
     stem_cache.fp_trim_has_begin            = trim_has_begin;
     stem_cache.fp_trim_has_end              = trim_has_end;
@@ -1057,12 +1020,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    const bool      rve        = app.render_view.enabled;
-    // Iteration mode only affects warp-view (non-render) flags; the mode may
-    // persist inert through render view, so the explicit !rve makes this false
-    // there.
+    // Iteration mode only affects warp-view flags.
     const bool      iter_on    = app.iteration_mode_enabled &&
-                                 mv == 'W' && !rve;
+                                 mv == 'W';
 
     // FlagPayload editor target drives the skip-guard (cache leaves a
     // hole for the live editor render to fill). The IterationBracket /
@@ -1093,7 +1053,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_render_view_enabled     == rve &&
         flag_cache.fp_flag_editor_target      == flag_target &&
         flag_cache.fp_iteration_mode_enabled  == iter_on &&
         flag_cache.fp_trim_begin              == dtrim.begin &&
@@ -1134,15 +1093,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         (is_target && !wf_cache.fp_warp_frame_map.empty())
             ? &wf_cache.fp_warp_frame_map : nullptr;
 
-    // Render-view flags translate through the entry's target-shifted snapshot
-    // map onto the window axis, mirroring the stem cache (same
-    // immutable-snapshot / audio_gen fingerprint argument; out-of-window rows
-    // clip off; drags cannot occur in render view).
-    const std::vector<WarpFrameMapSegment>* rv_tmap_arg = nullptr;
-    if (rve && !app.render_view.snapshot_warp_frame_map.empty()) {
-        rv_tmap_arg = &app.render_view.snapshot_warp_frame_map;
-    }
-
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (app.drag.active) {
@@ -1158,28 +1108,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     FlagEditorOverlay cache_overlay;
     cache_overlay.marker_index        = flag_target;
 
-    if (rve) {
-        if (mv == 'P') {
-            render_phase_reset_flags(
-                ccr, local_top_strip,
-                app.render_view.phase_resets,
-                vp_start, vp_end, sr,
-                flag_font_size_px(),
-                app.selected_markers,
-                rv_tmap_arg,
-                drag_overlay);
-        } else {
-            render_flags(ccr, local_top_strip,
-                         app.render_view.warp_markers,
-                         vp_start, vp_end, sr,
-                         flag_font_size_px(),
-                         app.selected_markers,
-                         cache_overlay,
-                         rv_tmap_arg,
-                         drag_overlay,
-                         /*iteration_on=*/false);
-        }
-    } else if (mv == 'P') {
+    if (mv == 'P') {
         render_phase_reset_flags(
             ccr, local_top_strip,
             app.phaseresetmarkers.markers(),
@@ -1201,9 +1130,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     }
 
     // The b/e trim chips cap their stems in the upper top row. Painted
-    // in both 'W' and 'P' views (like the stems) in the AUTHORING views only;
-    // render view displays the rendered artifact and has no trim overlay, so
-    // compute_displayed_trim returns nothing set there and this no-ops.
+    // in both 'W' and 'P' views (like the stems) in the AUTHORING views.
     // The real waveform_area sets the upper-row chip bottom; the top strip's
     // screen origin equals the cache surface origin (0,0), so local_top_strip
     // and the real waveform rect need no translation.
@@ -1228,7 +1155,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
-    flag_cache.fp_render_view_enabled     = rve;
     flag_cache.fp_flag_editor_target      = flag_target;
     flag_cache.fp_iteration_mode_enabled  = iter_on;
     flag_cache.fp_trim_begin              = dtrim.begin;

@@ -7,32 +7,26 @@
 
 // The active display context: a description of the domain the GUI is
 // currently displaying, produced by active_display_context below. The
-// GUI has three display DOMAINS — source view (identity), live target
-// view (the memoized live map), and render view (the displayed entry's
-// snapshot map) — and the composite rule for which
-// domain is on screen (active_audio_view AND render_view.enabled
-// together) lives in exactly one place: the accessor is the ONLY reader
-// of app.active_audio_view / app.render_view.enabled for DOMAIN QUERIES
-// (position translation, domain totals, hit-test positioning).
-// Mode-logic reads — gesture gating, view toggles, persistence, playback
-// lifecycle — are outside this rule and keep their own flag reads.
+// GUI has two display DOMAINS — source view (identity) and live target
+// view (the memoized live map) — and the rule for which domain is on
+// screen (active_audio_view) lives in exactly one place: the accessor is
+// the ONLY reader of app.active_audio_view for DOMAIN QUERIES (position
+// translation, domain totals, hit-test positioning). Mode-logic reads —
+// gesture gating, view toggles, persistence, playback lifecycle — are
+// outside this rule and keep their own flag reads.
 
-enum class GuiDisplayDomain { Source, TargetLive, Render };
+enum class GuiDisplayDomain { Source, TargetLive };
 
 struct GuiDisplayContext {
     GuiDisplayDomain domain = GuiDisplayDomain::Source;
     // Translation map for source-position -> displayed-domain-position.
     // NEVER null; points at an empty vector when the displayed domain is
     // the source timeline (identity), or when the target map cannot
-    // build (the existing empty-map identity fallthrough). In the Render
-    // domain it aliases the entry's TARGET-SHIFTED snapshot map
-    // (app.render_view.snapshot_warp_frame_map — window axis), built once at
-    // entry load and immutable while displayed.
+    // build (the existing empty-map identity fallthrough).
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr;
     // The displayed domain's total frames (live_total_frames semantics):
-    // the source total in Source, the live target map's target total in
-    // TargetLive, and the ENTRY FRAME COUNT (snapshot_display_total, stored,
-    // NOT re-derived from the shifted map) in Render.
+    // the source total in Source, and the live target map's target total in
+    // TargetLive.
     int64_t domain_total_frames = 0;
     int sample_rate = 0;
 };

@@ -129,13 +129,12 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                 app.top_flag_editor);
     }
 
-    // Live editor flag: only paints in W marker-view and not render-view
-    // (FlagPayload editor isn't available in either 'P' or render-view paths).
-    // The cache leaves a hole over the editor target via the skip-guard in
-    // render_flags, so this fill is mandatory whenever overlay.marker_index
-    // >= 0 — otherwise that flag's pixels would be missing entirely.
+    // Live editor flag: only paints in W marker-view (the FlagPayload editor
+    // isn't available in the 'P' path). The cache leaves a hole over the editor
+    // target via the skip-guard in render_flags, so this fill is mandatory
+    // whenever overlay.marker_index >= 0 — otherwise that flag's pixels would
+    // be missing entirely.
     if (overlay.marker_index >= 0 &&
-        !app.render_view.enabled &&
         app.active_markers_view != 'P') {
         render_one_editor_flag(
             cr, top_strip,
@@ -249,67 +248,25 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 // refills the exposed region every frame, so the fill composites over fresh
 // pixels and never accumulates.
 //
-// Painted in TARGET view and RENDER view, never source view, and this is a
+// Painted in TARGET view, never source view, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
 // recorded here per CLAUDE.md). The span is a fixed target/output-domain
-// width, so it is constant in target time. Both target and render view are
-// target/output-domain displays: render view's window axis is the full
-// target axis shifted by the window origin, and a uniform shift preserves
-// spans, so the constant target-time width is exactly as honest on the window
-// axis as on the live target axis. Source view would show a map-dependent,
-// varying width — misrepresenting a constant span — so the overlay is not
-// drawn there. The reset's local take-hold stretch is a phase-reset-only
-// concept, so there is nothing on the warp axis to mirror.
+// width, so it is constant in target time. Source view would show a
+// map-dependent, varying width — misrepresenting a constant span — so the
+// overlay is not drawn there. The reset's local take-hold stretch is a
+// phase-reset-only concept, so there is nothing on the warp axis to mirror.
 void GuiPaintHandler::paint_phase_reset_overlay(
     cairo_t* cr, const GuiRect& area) {
     // Visibility: always-on for the focused enabled marker while the global
-    // W/P mode is on P, in target view AND render view; never source view.
-    // The two arms below differ only in gates, marker store, and map
-    // selection; everything downstream is domain-agnostic and shared.
+    // W/P mode is on P, in target view; never source view. Everything
+    // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return;
     if (area.w <= 0 || area.h <= 0) return;
 
     // Paint sample: the exact expression render.cpp's file-local
     // frame_to_paint_sample uses, so marker and overlay can never disagree.
-    // Each arm resolves the focused reset's window/target-axis position `ms`.
     double ms;
-    if (app.render_view.enabled) {
-        // Render arm: active_audio_view is NOT consulted — it can rest at 'S'
-        // or 'T' through render view, but the display domain is render either
-        // way (the same reason active_display_context's render arm ignores
-        // it). The store is the display snapshot, indexed by
-        // last_selected_marker like every render-view selection consumer.
-        const auto& markers = app.render_view.phase_resets;
-        const int idx = app.last_selected_marker;
-        if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
-        const auto& marker = markers[idx];
-        // Mirror the phase-reset stem renderer, which skips disabled markers
-        // identically in both views (render_phaseresetmarkers' is_disabled
-        // reads `disabled` off the same display store).
-        if (marker.disabled) return;
-
-        // A focused marker in render view is in-window by construction: the
-        // hit tests, the Tab walk, and sweep-select all cull out-of-window
-        // rows through render_view_position_in_window (verified at those
-        // sites), so no redundant membership check is needed here — and the
-        // horizontal clip at the tail makes an offscreen paint harmless if
-        // one ever slipped through. Translate through the TARGET-SHIFTED
-        // window-axis snapshot map the render-view stem painters use; no
-        // live-authoring or drag-freeze map is meaningful here (marker drags
-        // are gated out of render view — handle_render_view_press claims the
-        // press before begin_drag runs — so app.drag with drag_mode 'P' is
-        // unreachable). Identity when the map is empty (matching the stem
-        // fallback).
-        const auto& map = app.render_view.snapshot_warp_frame_map;
-        if (!map.empty()) {
-            const size_t src_frame =
-                static_cast<size_t>(std::nearbyint(
-                    static_cast<double>(marker.time_frame)));
-            ms = std::nearbyint(map_source_to_target(src_frame, map));
-        } else {
-            ms = std::nearbyint(static_cast<double>(marker.time_frame));
-        }
-    } else {
+    {
         if (app.active_audio_view != 'T') return;
 
         const auto& markers = app.phaseresetmarkers.markers();
@@ -500,13 +457,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         static_cast<int64_t>(std::nearbyint(dbg_spp * area.w));
 
     const std::vector<WarpFrameMapSegment>* dbg_tmap_arg = nullptr;
-    if (app.render_view.enabled) {
-        // Render view: the entry's snapshot map, mirroring hit_test_flag's
-        // Render arm (no drag-frozen override — drags are gated out of
-        // render view).
-        if (!app.render_view.snapshot_warp_frame_map.empty())
-            dbg_tmap_arg = &app.render_view.snapshot_warp_frame_map;
-    } else if (app.active_audio_view == 'T') {
+    if (app.active_audio_view == 'T') {
         if (app.drag.active) {
             if (!app.drag.frozen_warp_frame_map.empty())
                 dbg_tmap_arg = &app.drag.frozen_warp_frame_map;
@@ -525,22 +476,12 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
         dbg_drag = &dbg_drag_storage;
     }
 
-    // This four-way branch chain must stay in step with hit_test_flag's
+    // This two-way branch chain must stay in step with hit_test_flag's
     // production builder (app_state.cpp): the debug overlay validates the
     // same rects the pointer hit-tests, so every arm here mirrors an arm
-    // there (render-view P, render-view warp, live P, live warp).
+    // there (live P, live warp).
     std::vector<FlagHitRect> dbg_rects;
-    if (app.render_view.enabled && app.active_markers_view == 'P') {
-        dbg_rects = compute_phase_reset_flag_hit_rects(
-            top_strip, app.render_view.phase_resets,
-            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
-            dbg_tmap_arg, dbg_drag);
-    } else if (app.render_view.enabled) {
-        dbg_rects = compute_flag_hit_rects(
-            top_strip, app.render_view.warp_markers,
-            dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
-            dbg_tmap_arg, dbg_drag, /*iteration_on=*/false);
-    } else if (app.active_markers_view == 'P') {
+    if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
             top_strip, app.phaseresetmarkers.markers(),
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
@@ -594,32 +535,17 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 
     // --- Lower row: status line (always on). One assembled field
     //     drawn in a single pass; elements are space-separated and
-    //     paint uniformly in kText. Two branches:
-    //
-    //     Authoring views (render view off): timestamp, S/T, W/P, A/B,
-    //     then the literal "(read-only)" token when the active A/B tab
-    //     carries the read-only flag.
-    //
-    //     Render view: timestamp, W/P, then the literal
-    //     "(permanent read only)" token. No S/T — the display axis is
-    //     the artifact's own timeline, not a source/target selection.
-    //     No A/B — the tab chords are blocked in render view. W/P
-    //     paints because it is the one global mode that still works
-    //     here (the p toggle drives it). "(permanent read only)" names
-    //     render view's own modality, distinct from the per-tab
-    //     "(read-only)" flag token of authoring views.
+    //     paint uniformly in kText: timestamp, S/T, W/P, A/B, then the
+    //     literal "(read-only)" token when the active A/B tab carries the
+    //     read-only flag.
     //
     //     The dirty * and transient message appendices follow the
-    //     tokens in BOTH branches — they are status, not view letters.
+    //     tokens — they are status, not view letters.
     //
-    //     In source-view, sr is the loaded file's sample rate and the
-    //     playhead samples are source-frames. In render-view the
-    //     playhead is render-frame coords and sr is still the source's
-    //     (the audio object is invariantly the source; the render's rate
-    //     equals it by construction, verified at entry decode). The same
-    //     arithmetic suffices. Split-playhead: track the scanner
-    //     during playback (what the user hears), the cursor otherwise
-    //     (equal by invariant when the scanner is inactive).
+    //     sr is the loaded file's sample rate and the playhead samples are
+    //     source-frames. Split-playhead: track the scanner during playback
+    //     (what the user hears), the cursor otherwise (equal by invariant when
+    //     the scanner is inactive).
     {
         const int64_t ts_sample = app.playhead_scanner_active
             ? app.playhead_scanner_sample
@@ -633,23 +559,16 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (seconds > 5999.999) seconds = 5999.999;
 
         std::string assembled = format_timestamp(seconds);
-        if (app.render_view.enabled) {
+        assembled += ' ';
+        assembled += (app.active_audio_view == 'T'
+                        ? 'T' : 'S');
+        assembled += ' ';
+        assembled += app.active_markers_view;
+        assembled += ' ';
+        assembled += app.active_tab_view;
+        if (active_view_state(app).read_only) {
             assembled += ' ';
-            assembled += app.active_markers_view;
-            assembled += ' ';
-            assembled += "(permanent read only)";
-        } else {
-            assembled += ' ';
-            assembled += (app.active_audio_view == 'T'
-                            ? 'T' : 'S');
-            assembled += ' ';
-            assembled += app.active_markers_view;
-            assembled += ' ';
-            assembled += app.active_tab_view;
-            if (active_view_state(app).read_only) {
-                assembled += ' ';
-                assembled += "(read-only)";
-            }
+            assembled += "(read-only)";
         }
         if (app.dirty) {
             assembled += ' ';
@@ -723,23 +642,6 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
             app.hover_popup.cached_text, kText, flag_font_size_px());
-    } else if (app.render_view.enabled &&
-               app.render_view.index >= 0 &&
-               app.render_view.index <
-                   static_cast<int>(app.render_view.list.size())) {
-        // Lowest-priority tier: the displayed render entry's name,
-        // <batch_folder>/<basename>.wav, shown only when nothing else
-        // claims the row. The lower row used to carry this; it moves
-        // here so the lower row is free for the status tokens (which in
-        // render view are the timestamp, W/P, and "(permanent read only)").
-        const auto& e = app.render_view.list[app.render_view.index];
-        std::string assembled = e.batch_folder.filename().string();
-        assembled += '/';
-        assembled += e.basename;
-        assembled += ".wav";
-        text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            assembled, kText, flag_font_size_px());
     }
 
     return t_ts_ms;
@@ -923,15 +825,6 @@ GuiPaintHandler::DisplayedTrim
 GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
 
-    if (app.render_view.enabled) {
-        // Render view displays the rendered ARTIFACT — the entry wav's own
-        // timeline — so there is no trim overlay: return a default
-        // DisplayedTrim (nothing set). compute_out_of_trim_rects then no-ops
-        // via its unset-both early-out, and the b/e stems and chips do not
-        // paint.
-        return out;
-    }
-
     // has-set + selected bits come live from the active tab's trim.
     out.has_begin      = app.trim.has_begin;
     out.has_end        = app.trim.has_end;
@@ -983,9 +876,6 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
 
     // Frames in the same paint domain the trim stems use. begin/end are
     // already mapped through the displayed warp_frame_map in target view.
-    // Render view has no trim overlay — compute_displayed_trim returns nothing
-    // set there — so the unset-both early-out below no-ops it (no dim region
-    // over the artifact).
     const DisplayedTrim dtrim = compute_displayed_trim();
     if (!dtrim.has_begin && !dtrim.has_end) return out;
 

@@ -512,8 +512,7 @@ int main(int argc, char** argv) {
                               target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
-    GuiRenderView render_view(app, audio, playback, gui, selection,
-                              viewport, active_views, target_render);
+    GuiRenderView render_view(app);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
@@ -853,7 +852,6 @@ int main(int argc, char** argv) {
         if (app.playhead_scanner_active) {
             const int64_t endpoint =
                 (app.active_audio_view == 'T' &&
-                 !app.render_view.enabled &&
                  app.target_buffer_frames > 0)
                     ? playback.domain_end()
                     : viewport.trim_end_sample();
@@ -875,9 +873,8 @@ int main(int argc, char** argv) {
         //
         // playback.cursor() reports the bound buffer's own domain: the
         // domain offset travels with the bind (playback.h), so this is
-        // full-target-frame when the target buffer is bound, the source
-        // frame (offset 0) when source.wav is bound, and the render entry's
-        // own-timeline coordinate (offset 0) when a render-view wav is bound —
+        // full-target-frame when the target buffer is bound and the source
+        // frame (offset 0) when source.wav is bound —
         // exactly app.playhead_scanner_sample's domain, no translation here. A
         // paint racing a target dispatch reads whatever buffer is
         // actually bound, with that buffer's own offset; a stale bias

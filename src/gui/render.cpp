@@ -74,7 +74,7 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
 
 // Forward-translate a per-marker effective position (a source-frame
 // double) to the paint-sample position used by the stem, flag, and
-// hit-rect loops. In target and render view (warp_frame_map
+// hit-rect loops. In target view (warp_frame_map
 // non-null/non-empty) the source-frame is rounded with banker's
 // nearbyint and looked up through map_source_to_target, and that lookup
 // is itself rounded with nearbyint; in source view (null/empty
@@ -199,7 +199,7 @@ void render_marker_stems_impl(
                   static_cast<int>(i), m.time_frame)
             : m.time_frame;
         // Translate per-marker source-frame to the displayed axis: map in
-        // target/render view (warp_frame_map non-null/non-empty), identity
+        // target view (warp_frame_map non-null/non-empty), identity
         // otherwise.
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);
@@ -850,7 +850,7 @@ void iterate_visible_flags_impl(
                   static_cast<int>(i), m.time_frame)
             : m.time_frame;
         // Translate per-marker source-frame to the displayed axis (map in
-        // target/render view, identity otherwise). Pack/elision walk
+        // target view, identity otherwise). Pack/elision walk
         // left-to-right against post-translation positions.
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);

@@ -70,7 +70,7 @@ struct Viewport {
     // either way.
     //
     // Callers are the discrete, one-shot repositioning events: view swaps
-    // (tab / marker navigation, render-view enter/exit), viewport recenters,
+    // (tab / marker navigation), viewport recenters,
     // undo/redo, and the structural target-view marker ops (drop / delete /
     // commit_drag) whose warp_frame_map re-warp shifts the whole plate. Without the
     // inline rebuild the overlays (playhead, markers, flags) land a frame ahead

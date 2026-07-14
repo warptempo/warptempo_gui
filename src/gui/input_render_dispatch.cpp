@@ -254,7 +254,6 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             }
             finalize_render_run();
             if (success && app.active_audio_view == 'T' &&
-                !app.render_view.enabled &&
                 !target_render.is_updating()) {
                 // ensure_ready() may fill from the shared cache when the
                 // just-rendered fingerprint is already registered, or
@@ -262,15 +261,6 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // a longer-than-RAM-tier entry is still registering on the
                 // writer thread. That miss is benign; if finalize_render_run
                 // just launched a pending target render, leave it alone.
-                //
-                // Gated on !render_view.enabled: with render view open the
-                // flag can be 'T' while the displayed audio is a render wav
-                // (R does not touch active_audio_view), and ensure_ready
-                // would rebind playback to target_buffer (clean path) or
-                // trigger a preview against the displayed render (dirty
-                // path) beneath the open view. Under render view the
-                // T-entry funnel re-runs at the next real T entry
-                // (restore_source_view's own ensure_ready).
                 target_render.ensure_ready();
             }
         });
@@ -304,22 +294,6 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
                                          std::string batch_label) {
     if (reqs.empty()) return;
 
-    // Snapshot the batch's destination folder before moving reqs onto
-    // batch_. Each per-entry dispatch moves a RenderRequest out of
-    // batch_.reqs, so reqs.front().batch_folder is only readable here
-    // — by the time the terminal success branch needs it for auto-
-    // open, it's been moved away. The two batch call sites (the iteration
-    // and BPM sweeps) construct every RenderRequest in the batch with the
-    // same batch_folder string, so reading the front entry is canonical.
-    batch_.batch_folder = std::filesystem::path(reqs.front().batch_folder);
-    // Snapshot the batch's output kind the same way: render view is a WAV
-    // audio player, so the terminal auto-open runs only for a wav batch.
-    // Both sweep builders copy the live app.engine_settings.output_format
-    // into every entry, so the front request is canonical; the map formats
-    // ("generic_map" / "midi_map" / "warptempo_maps") never equal "wav".
-    batch_.wav_browseable =
-        (reqs.front().engine_settings.output_format == "wav");
-
     batch_.reqs       = std::move(reqs);
     batch_.label      = std::move(batch_label);
     batch_.next_index = 0;
@@ -352,65 +326,13 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 "warptempo_gui: %s: rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
         }
-        // Show render-view at the just-rendered batch's first file. The
-        // auto-open runs only for a WAV-output batch (render view is a WAV
-        // audio player); a successful MAP-format batch finalizes with its
-        // artifacts on disk and no auto-open — there is nothing to audition,
-        // not an error. Otherwise gated on a non-cancelled terminal branch
-        // that actually produced at least one .wav on disk; a batch where
-        // every entry returned Failed leaves rendered == 0 and there is
-        // nothing to view. Render view opens only against an idle worker with
-        // nothing parked, so the auto-open — an automatic `r` — obeys the same
-        // entry gate the r key does. The completed batch is fully finalized —
-        // state cleared, then finalize_render_run — BEFORE the auto-open runs,
-        // and finalize's maybe_dispatch_pending can hand the worker to a
-        // parked archival command or a pending target render on that same
-        // beat; when the pump started new work the auto-open is skipped
-        // outright with the gate's one refusal line — the batch is on disk and
-        // in the render list for a later `r`, exactly like the modal-surface
-        // skip below.
-        const bool success = !cancelled && batch_.rendered > 0;
-        // WAV-only: map/midi batches have nothing to audition (see above).
-        const bool auto_open = success && batch_.wav_browseable;
-        // Latch the folder the auto-open consumes before the state clear.
-        // auto_open_batch_at_first_file reads only its batch_folder argument
-        // (all other inputs are app.* fields), and the clear below drops
-        // batch_.reqs and active while finalize_render_run pumps the worker.
-        const std::filesystem::path completed_batch_folder =
-            batch_.batch_folder;
+        // A finished batch just leaves its artifacts on disk; nothing
+        // auto-opens. The user presses `l` to listen or Shift+. to commit an
+        // entry by name.
         batch_.active = false;
         batch_.reqs.clear();
         batch_.reqs.shrink_to_fit();
         finalize_render_run();
-        // Modal-surface and gesture guard (architect-ruled SKIP): a
-        // completion callback
-        // must never mutate the view stack underneath a modal surface — a
-        // bottom-strip editor or any prompt. Auto-opening render view here
-        // would flip the displayed domain and rebind playback under an open
-        // bpm/settings session, or re-enter the view under a defect series.
-        // A completion callback likewise never flips the displayed domain
-        // beneath an in-flight pointer gesture: the release of a drag begun
-        // in the authoring view must commit in that view's display context
-        // (the pixel-anchoring helpers select their arm from the current
-        // context), so a domain flip mid-drag would commit the release
-        // through the wrong axis. When a modal is up or a gesture is in
-        // flight the auto-open is skipped outright — the batch is on disk and
-        // in the render list; `r` shows it once the modal closes or the
-        // gesture ends. No deferral slot: skip keeps the invariant absolute
-        // with no new lifecycle.
-        if (auto_open && !modal_bottom_strip_editor_active() &&
-            !app.prompt.active && !any_pointer_gesture_active(app)) {
-            // Entry gate, the same refusal the r key prints: render view
-            // never opens over running or parked render work.
-            if (app.queue_running || app.pending_archival.armed) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render view refused: a render is running "
-                    "(Esc cancels it, then r)\n");
-            } else {
-                render_view.auto_open_batch_at_first_file(
-                    completed_batch_folder);
-            }
-        }
         return;
     }
 

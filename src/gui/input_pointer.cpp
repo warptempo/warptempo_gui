@@ -40,9 +40,8 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
-// sweep_select_interval (the Shift playhead-drag sweep) lives in app_state.h
-// so input_render_view.cpp can call it too; the source/target sweeps below
-// resolve it from there.
+// sweep_select_interval (the Shift playhead-drag sweep) lives in app_state.h;
+// the source/target sweeps below resolve it from there.
 
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /
@@ -195,28 +194,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
 
-    // Render-view mouse gate. Left-click on a marker line
-    // (in the waveform area) or a flag rect (in the top strip)
-    // toggles selection and jumps the playhead to the marker;
-    // left-click elsewhere in the waveform area positions the
-    // playhead (with playback stop) and clears the selection unless
-    // Shift is held. All wheel chords (zoom, Alt pan) are pure viewport
-    // ops and pass through unchanged. Drag-create and top-strip playhead
-    // movement are silent no-ops so the read-only invariant on
-    // marker state is preserved. Render view runs no hover popup — the
-    // motion handler clears any popup still showing from source view
-    // (a recorded asymmetry at handle_render_view_motion's tail).
     // Target-view mouse authoring is unblocked. Fall through
     // to the source-view handler; the input-to-source-frame boundary
     // translation lives in the per-gesture writers (drag
     // begin/motion, etc.) and in the active_domain_to_source_frame
     // helper used by those writers.
-
-    if (app.render_view.enabled) {
-        handle_render_view_press(button, x, y, inside_top, inside_waveform,
-                                 mods);
-        return;
-    }
 
     if (button == GuiMouseButton::Left) {
         // Top-strip clicks stop playback first: they can open the iter/
@@ -593,11 +575,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Trim-boundary drag motion. Handled before the render-view
-    // and marker-drag branches; active in BOTH views (begin_trim_drag has
-    // no view gate, and update_trim_drag / commit_trim_drag carry the
-    // target-view cached-map machinery). A lost button commits at the
-    // current position, mirroring the marker-drag motion handler.
+    // Trim-boundary drag motion. Handled before the marker-drag branch;
+    // active in BOTH views (begin_trim_drag has no view gate, and
+    // update_trim_drag / commit_trim_drag carry the target-view cached-map
+    // machinery). A lost button commits at the current position, mirroring the
+    // marker-drag motion handler.
     if (app.trim_drag.active) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {
@@ -611,16 +593,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // to source-view's drag / playhead-drag / hover handling; per-site
     // translation (drag anchor capture, motion delta conversion, hit
     // tests) lives in the handlers below.
-    // Render-view motion handler with playhead-drag snap support:
-    // when a drag is in flight, snap the
-    // playhead to the visible sub-view's markers (3px epsilon),
-    // matching source-view's gesture. Otherwise run hover popup
-    // detection against render_view.warp_markers (suppressed in phase reset
-    // sub-view because hit_test_flag short-circuits to -1).
-    if (app.render_view.enabled) {
-        handle_render_view_motion(mouse_x, mouse_y, mods);
-        return;
-    }
     if (app.playhead_drag.active) {
         viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —

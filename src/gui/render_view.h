@@ -1,122 +1,22 @@
 #pragma once
 
-#include "active_views.h"
 #include "app_state.h"
-#include "audio.h"
-#include "playback.h"
-#include "selection.h"
-#include "viewport.h"
-#include "platform_wayland.h"
 
-#include <cstdint>
 #include <filesystem>
-#include <utility>
 #include <vector>
 
-struct GuiTargetRender;
-
-// Render-view cluster, extracted from main.cpp's inline lambdas.
-// Covers the directory enumeration of <source_parent>/renders/<batch>/<basename>.wav,
-// the strict entry load (markers, engine scale, recipe trim, and the frozen
-// .settings — validated but never rewritten), the entry-audio decode-and-bind
-// path, and the authoring-position restore on exit. A render entry's sidecar
-// set is written ONCE at dispatch and never touched again: render view is an
-// audio player with no per-entry memory, so every display resets to
-// fit-file/0/0 with an empty selection and the only transfer out is Ctrl+Alt+C.
-// clear_hover_popup is reached through viewport;
-// refresh_active_tab_view_from_app is reached through active_views.
-//
-// The audio-domain invariant: the GuiAudio object (`audio`) is ALWAYS the
-// source — it never swaps, in any view. Render view DISPLAYS the rendered
-// artifact: the entry wav's own timeline (which IS the trimmed window when
-// the recipe was trimmed). The view-owned entry audio
-// (app.render_view.entry_audio, a fresh GuiAudio decoded from the entry wav
-// through the standard peaks pipeline) supplies the waveform pixels from its
-// OWN samples and binds to playback at domain offset 0. Markers paint on the
-// window axis through the target-shifted snapshot map; markers whose image
-// falls outside the rendered window are absent, like the audio they annotate.
+// Renders-folder enumeration. What remains of the retired render view: the
+// directory scan of <source_parent>/renders/<batch>/<basename>.wav and the
+// per-entry .settings path helper. Both are consumed by the `l`
+// listen-to-renders launcher and the Shift+. commit editor (adopt_render_entry
+// in input_key_dispatch.cpp). Reads only AppState (the source path); holds no
+// audio, playback, or view state.
 struct GuiRenderView {
-    AppState&         app;
-    GuiAudio&         audio;
-    GuiPlayback&      playback;
-    GuiPlatform&      gui;
-    Selection&        selection;
-    Viewport&         viewport;
-    GuiActiveViews&   active_views;
-    GuiTargetRender&  target_render;
+    AppState& app;
 
-    GuiRenderView(AppState&         app_,
-                  GuiAudio&         audio_,
-                  GuiPlayback&      playback_,
-                  GuiPlatform&      gui_,
-                  Selection&        selection_,
-                  Viewport&         viewport_,
-                  GuiActiveViews&   active_views_,
-                  GuiTargetRender&  target_render_)
-        : app(app_),
-          audio(audio_),
-          playback(playback_),
-          gui(gui_),
-          selection(selection_),
-          viewport(viewport_),
-          active_views(active_views_),
-          target_render(target_render_) {}
+    explicit GuiRenderView(AppState& app_) : app(app_) {}
 
     std::vector<AppState::RenderViewEntry> enumerate_render_view_list();
     std::filesystem::path settings_path(
         const AppState::RenderViewEntry& e);
-
-    // Load the entry at `index`. A render entry's sidecars are frozen at
-    // dispatch and never rewritten, so render view keeps no per-entry browse
-    // memory: EVERY display — render-view entry and entry-to-entry navigation
-    // alike — resets to a fixed fit-file zoom, viewport 0, playhead 0, and an
-    // empty selection. The .settings is still strict-read and fully validated
-    // (schema, entry invariants, fingerprint, entry-length), and its view keys
-    // are validated as the position Ctrl+Alt+C will inherit, but they are not
-    // applied at browse time. The tab letter and W/P mode stay the authoring
-    // session's (tab frozen, W/P global). Rationale at the definition's reset
-    // block.
-    bool load_render_view_at(int index);
-    void restore_source_view();
-
-    // Re-enumerate the renders/ folder. Entries carry no per-entry state to
-    // migrate, so this just rebuilds the list and updates
-    // app.render_view.index to follow the currently-viewed entry by wav_path;
-    // if the current entry was deleted, the index clamps to the closest
-    // surviving original position. Returns true if the list is non-empty after
-    // refresh; false if the refresh produces an empty list (caller should exit
-    // render-view in that case). load_render_view_at is NOT performed by this
-    // method — callers do that at the appropriate boundary.
-    bool refresh_render_view_list();
-
-    // Tear down render-view state and restore the source view. Mirrors
-    // the toggle-off branch of the R key handler. Used by the
-    // navigation handlers when refresh_render_view_list returns false
-    // (renders/ folder emptied externally).
-    void exit_render_view_and_clear();
-
-    // Clear exactly the snapshot-context fields of the RenderViewContext:
-    // the display marker/reset vectors, the shifted snapshot warp frame map,
-    // and the snapshot display total. Deliberately does
-    // NOT touch enabled, list, index, or last_path — those are selection and
-    // lifecycle state whose handling legitimately differs per exit, so each
-    // clear site keeps its own lines for them. Exists so a new snapshot field
-    // gets ONE clear site instead of four hand-maintained lists; the
-    // app_state.h declaration comment promising every snapshot field is
-    // cleared at every clear site is made true by routing all four exits
-    // through this method.
-    void clear_snapshot_context();
-
-    // Show the first .wav of the just-rendered batch. Called from
-    // GuiInputHandler::dispatch_next_batch_entry's terminal success
-    // branch after a batch finishes uncancelled with at least one
-    // render on disk, behind the render-view entry gate (render view
-    // opens only against an idle worker with nothing parked). Mirrors
-    // the R-key toggle-on entry sequence, targeting the first list
-    // entry whose batch_folder matches instead of render_view.last_path.
-    // A completion under an OPEN render view is unreachable under the
-    // entry-gated contract — rationale at the definition — so this
-    // method only ever enters fresh.
-    void auto_open_batch_at_first_file(
-        const std::filesystem::path& batch_folder);
 };

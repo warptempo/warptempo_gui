@@ -120,9 +120,8 @@ int painted_column_of_source_frame(
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The painters' exact shape (frame_to_paint_sample in render.cpp):
-    // nearbyint the source frame; in the mapped domains (TargetLive,
-    // Render) forward-map and nearbyint the map output; then std::nearbyint
-    // the fractional column.
+    // nearbyint the source frame; in the TargetLive domain forward-map and
+    // nearbyint the map output; then std::nearbyint the fractional column.
     double ms = std::nearbyint(source_frame);
     if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
@@ -155,24 +154,9 @@ int64_t authored_frame_at_column(
     return snap_authored_frame(t_active);
 }
 
-bool render_view_position_in_window(const AppState& app, int64_t source_frame) {
-    // nearbyint(map_source_to_target(source_frame, shifted_map)) — the same
-    // math source_frame_to_active_domain runs in the Render domain, inlined
-    // here to read app.render_view directly (no audio handle needed) and to
-    // keep this the single membership authority. The shifted map already
-    // subtracts T_b, so the result is the window-axis image; the half-open
-    // rule and rationale live at the declaration in warp_frame_map_view.h.
-    const size_t q = (source_frame < 0)
-        ? static_cast<size_t>(0)
-        : static_cast<size_t>(source_frame);
-    const int64_t image = static_cast<int64_t>(std::nearbyint(
-        map_source_to_target(q, app.render_view.snapshot_warp_frame_map)));
-    return image >= 0 && image < app.render_view.snapshot_display_total;
-}
-
-// The single reader of app.active_audio_view / app.render_view.enabled
-// for DOMAIN QUERIES (see gui_display_context.h for the ruling and the
-// mode-logic carve-out). The three arms are the composite view rule.
+// The single reader of app.active_audio_view for DOMAIN QUERIES (see
+// gui_display_context.h for the ruling and the mode-logic carve-out). The
+// two arms are the view rule.
 const GuiDisplayContext& active_display_context(const AppState& app,
                                                 const GuiAudio& audio) {
     // Function-local static storage, refreshed on every call. The GUI
@@ -181,31 +165,7 @@ const GuiDisplayContext& active_display_context(const AppState& app,
     // a changed-key rebuild.
     static GuiDisplayContext ctx;
     static const std::vector<WarpFrameMapSegment> kIdentityMap;
-    if (app.render_view.enabled) {
-        // Render view is a display DOMAIN, whatever active_audio_view
-        // says — it displays the RENDERED ARTIFACT: the entry wav's own
-        // timeline, which is the trimmed WINDOW when the recipe was trimmed.
-        // The domain is that window: the map is the TARGET-SHIFTED snapshot
-        // map (each segment's tgt_frame shifted by -T_b at entry load), so
-        // map_source_to_target yields window-axis positions directly, and the
-        // displayed total is the entry frame count (snapshot_display_total,
-        // stored — NOT re-derived from the shifted map). This arm behaves
-        // like the TargetLive arm below with a different map source: forward /
-        // inverse map math over the shifted map. Markers whose window-axis
-        // image falls outside [0, snapshot_display_total) are absent (see
-        // render_view_position_in_window). The flag can persist as 'T' or 'S'
-        // through render view — the TargetLive arm below is reached only when
-        // render view is off, and the live target-map cache is never consulted
-        // here. With no entry loaded the snapshot member is empty and the
-        // stores are empty, so nothing translates while the map pointer stays
-        // valid. The GuiAudio object is invariantly the SOURCE, so the
-        // displayed total lives context-side; sample_rate stays
-        // audio.sample_rate() — the render's rate equals the source's by
-        // construction, verified at entry load.
-        ctx.domain = GuiDisplayDomain::Render;
-        ctx.warp_frame_map = &app.render_view.snapshot_warp_frame_map;
-        ctx.domain_total_frames = app.render_view.snapshot_display_total;
-    } else if (app.active_audio_view == 'T') {
+    if (app.active_audio_view == 'T') {
         // Live target view: the memoized target-view map is the
         // translation, and the displayed total is the built map's target
         // total — source total when the map cannot build (the cache's
@@ -229,18 +189,17 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 }
 
 // Translate through the active display context. A Source-domain context
-// is identity outright; the mapped domains (TargetLive, Render) inline
-// the forward / inverse map math (map_source_to_target /
-// map_target_to_source) against the context's map. Inlining, not routing
-// through to_domain_frame, is deliberate here for a different reason than
-// the domain predicate (to_domain_frame now decides its own domain off the
-// display context too): these wrappers translate against the CONTEXT'S OWN
-// map, while to_domain_frame serves explicit non-live maps (the drag's
-// frozen-map sites) supplied by the caller. Keeping the two separate lets
-// each own its map source without re-selecting one. The empty-map path
-// (the unbuildable-target fallthrough, and render view with no entry
-// loaded) stays identity — map_source_to_target / map_target_to_source are
-// identity on an empty map.
+// is identity outright; the TargetLive domain inlines the forward / inverse
+// map math (map_source_to_target / map_target_to_source) against the
+// context's map. Inlining, not routing through to_domain_frame, is
+// deliberate here for a different reason than the domain predicate
+// (to_domain_frame now decides its own domain off the display context too):
+// these wrappers translate against the CONTEXT'S OWN map, while
+// to_domain_frame serves explicit non-live maps (the drag's frozen-map
+// sites) supplied by the caller. Keeping the two separate lets each own its
+// map source without re-selecting one. The empty-map path (the
+// unbuildable-target fallthrough) stays identity — map_source_to_target /
+// map_target_to_source are identity on an empty map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);

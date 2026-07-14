@@ -73,15 +73,14 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 
 // Forward-translate a source-frame coordinate into the active display
 // domain's frame coordinates against a CALLER-SUPPLIED map. Source
-// domain: identity. Mapped domains (TargetLive, Render):
-// `map_source_to_target` through `warp_frame_map`. The domain decision
-// comes from the active display context (active_display_context), while
-// the map stays the explicit one the caller passes — its live purpose is
-// explicit-map translation for the drag's frozen-map regime (the playhead
-// tracks the grabbed stem through the same frozen coordinate system paint
-// walks). An empty map is identity in a mapped domain. For live-map
-// translation use source_frame_to_active_domain below, which owns the
-// context's own map.
+// domain: identity. TargetLive domain: `map_source_to_target` through
+// `warp_frame_map`. The domain decision comes from the active display
+// context (active_display_context), while the map stays the explicit one
+// the caller passes — its live purpose is explicit-map translation for the
+// drag's frozen-map regime (the playhead tracks the grabbed stem through
+// the same frozen coordinate system paint walks). An empty map is identity
+// in the mapped domain. For live-map translation use
+// source_frame_to_active_domain below, which owns the context's own map.
 class GuiAudio;
 int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
                         int64_t source_frame,
@@ -92,10 +91,9 @@ int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
 // the active display domain through the active display context. Source view:
 // identity, no map built. Target view: the memoized
 // target_view_warp_frame_map_cached, so even repeated calls (e.g. inside a
-// loop) cost only a cache-key comparison after the first build. Render view:
-// the displayed entry's snapshot map — the same forward/inverse map math as
-// target view, over a different map source. Use these at every input /
-// playhead boundary that translates against the live displayed domain.
+// loop) cost only a cache-key comparison after the first build. Use these at
+// every input / playhead boundary that translates against the live displayed
+// domain.
 //
 // NOT for sites translating against a non-live map — a drag's
 // app.drag.frozen_warp_frame_map, or a proposed (pre-commit) marker list. Those keep
@@ -104,20 +102,6 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
-
-// Render-view out-of-window membership, ONE definition. A marker or phase
-// reset is DISPLAYED in render view iff its window-axis image lies in
-// [0, snapshot_display_total). The image is
-// nearbyint(map_source_to_target(source_frame, snapshot_warp_frame_map)) over
-// the TARGET-SHIFTED snapshot map — the exact expression every render-view
-// display consumer (painters, hit tests, Tab walk) computes a position with —
-// so a marker before the window maps negative and one past it at or beyond
-// the window total. Half-open: a marker exactly at the window end (image ==
-// snapshot_display_total) annotates a sample the entry wav does not contain
-// (the window is [T_b, T_e); the wav holds T_e - T_b frames), so it is culled
-// with everything past the end. Callers must gate on app.render_view.enabled;
-// this reads app.render_view directly and is meaningful only there.
-bool render_view_position_in_window(const AppState& app, int64_t source_frame);
 
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the Ctrl+Left/Right nudges on both
@@ -136,12 +120,11 @@ bool render_view_position_in_window(const AppState& app, int64_t source_frame);
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,
 // computed with the painters' own math (render_marker_stems_impl /
-// render_trim_stems): nearbyint the frame; in the mapped domains
-// (TargetLive, Render) forward-map it through `warp_frame_map` and
-// nearbyint the map output; then divide by the painters'
-// samples-per-pixel — the visible span nearbyint-quantized to whole
-// samples over the strip width — and round with the painters'
-// std::nearbyint. `warp_frame_map` is the map the item is painted through:
+// render_trim_stems): nearbyint the frame; in the TargetLive domain
+// forward-map it through `warp_frame_map` and nearbyint the map output;
+// then divide by the painters' samples-per-pixel — the visible span
+// nearbyint-quantized to whole samples over the strip width — and round
+// with the painters' std::nearbyint. `warp_frame_map` is the map the item is painted through:
 // the live cached map at rest, the drag's frozen map at drag commit.
 // Ignored in the Source domain; an empty map in a mapped domain falls
 // back to identity, exactly like paint. Returns 0 when the strip has no
@@ -152,11 +135,11 @@ int painted_column_of_source_frame(
 
 // authored_frame_at_column: the authored source-frame value of pixel
 // column `col` under the same coordinate system — active-domain time =
-// viewport start + col * the painters' samples-per-pixel; in the mapped
-// domains (TargetLive, Render) that time is quantized to an integer
-// target frame (llrint, floored at 0 — the same quantization the
-// target-view nudges have always applied) and inverse-mapped through
-// `warp_frame_map` at full precision. The
+// viewport start + col * the painters' samples-per-pixel; in the
+// TargetLive domain that time is quantized to an integer target frame
+// (llrint, floored at 0 — the same quantization the target-view nudges
+// have always applied) and inverse-mapped through `warp_frame_map` at full
+// precision. The
 // result returns through snap_authored_frame, so it is a whole source
 // frame in the authored int64 domain; callers apply their own walls
 // AFTER — the walls win over the

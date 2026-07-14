@@ -59,48 +59,25 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     const double vp = static_cast<double>(app.viewport_start_sample);
     int best_hit = -1;
     int best_dist = kMarkerHitHalfPx + 1;
-    const bool rv = app.render_view.enabled;
-    // In render-view, the visible sub-view's list drives hit-testing (the
-    // stores hold AUTHORED whole int64 frames; the context translation
-    // below carries them onto the render's displayed axis).
-    const bool rv_phase_reset = rv && app.active_markers_view == 'P';
-    const int n =
-        rv_phase_reset
-            ? static_cast<int>(app.render_view.phase_resets.size())
-            : rv
-                ? static_cast<int>(app.render_view.warp_markers.size())
-                : (app.active_markers_view == 'P')
-                    ? static_cast<int>(app.phaseresetmarkers.markers().size())
-                    : static_cast<int>(app.warpmarkers.markers().size());
+    const int n = (app.active_markers_view == 'P')
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
     // The mapped views paint marker stems at map_source_to_target
     // translated positions; the hit test must walk the same warp_frame_map so
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
     // The active display context owns the composite view rule: its map is
-    // the live target map in target view, the entry's snapshot map in
-    // render view, and empty (identity) in source view or when the
-    // target map cannot build.
+    // the live target map in target view, and empty (identity) in source
+    // view or when the target map cannot build.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
     for (int i = 0; i < n; ++i) {
-        int64_t src_sample;
-        if (rv_phase_reset) {
-            src_sample = app.render_view.phase_resets[i].time_frame;
-        } else if (rv) {
-            src_sample = app.render_view.warp_markers[i].time_frame;
-        } else if (app.active_markers_view == 'P') {
-            src_sample = app.phaseresetmarkers.markers()[i].time_frame;
-        } else {
-            src_sample = app.warpmarkers.markers()[i].time_frame;
-        }
-        // Out-of-window culling: a render-view marker whose window-axis image
-        // falls outside the entry wav is absent from paint, so it must be
-        // unpickable too (else a marker just past the window edge would be
-        // grabbable through the halo at the boundary column). One definition,
-        // render_view_position_in_window; no-op outside render view.
-        if (rv && !render_view_position_in_window(app, src_sample)) continue;
+        int64_t src_sample =
+            (app.active_markers_view == 'P')
+                ? app.phaseresetmarkers.markers()[i].time_frame
+                : app.warpmarkers.markers()[i].time_frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
             const size_t q = (src_sample < 0)
@@ -132,11 +109,8 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
-    // Trim bounds hit-test like markers in the AUTHORING views only, against
-    // the active A/B tab's live bounds. Render view displays the rendered
-    // artifact — there is no trim overlay and no trim pick — so it returns
-    // None outright.
-    if (app.render_view.enabled) return TrimHit::None;
+    // Trim bounds hit-test like markers in the AUTHORING views, against
+    // the active A/B tab's live bounds.
     const bool has_begin = app.trim.has_begin;
     const bool has_end   = app.trim.has_end;
     if (!has_begin && !has_end) return TrimHit::None;
@@ -153,8 +127,8 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in the mapped
-    // views. The context's map is empty (identity) in source view, the live
-    // map in target view, and the entry's snapshot map in render view.
+    // views. The context's map is empty (identity) in source view and the
+    // live map in target view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -192,9 +166,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Same bound sourcing as hit_test_trim_boundary: the active A/B tab's live
-    // bounds in the AUTHORING views only; render view has no trim overlay and
-    // returns None outright. Only set bounds are testable.
-    if (app.render_view.enabled) return TrimHit::None;
+    // bounds in the AUTHORING views. Only set bounds are testable.
     const bool has_begin = app.trim.has_begin;
     const bool has_end   = app.trim.has_end;
     if (!has_begin && !has_end) return TrimHit::None;
@@ -216,8 +188,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same translation as hit_test_trim_boundary so the chip column lands
     // where the stem (and chip) are painted in the mapped views: the
-    // context's map is empty (identity) in source view, the live map in
-    // target view, and the entry's snapshot map in render view.
+    // context's map is empty (identity) in source view and the live map in
+    // target view.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -299,9 +271,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // base (its map is empty — identity — in source view); in target view
     // the drag-frozen map is a paint-regime override of the context's
     // translation map so hit-rect positions match the frozen-coord paint
-    // (the paint surfaces carry the same override). In render view the
-    // context supplies the entry's snapshot map; the drag-frozen override
-    // cannot occur there — drags are gated out of render view.
+    // (the paint surfaces carry the same override).
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
     if (ctx.domain == GuiDisplayDomain::TargetLive) {
@@ -311,8 +281,6 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         } else if (!ctx.warp_frame_map->empty()) {
             tmap_arg = ctx.warp_frame_map;
         }
-    } else if (ctx.domain == GuiDisplayDomain::Render) {
-        if (!ctx.warp_frame_map->empty()) tmap_arg = ctx.warp_frame_map;
     }
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
@@ -321,33 +289,18 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay_storage.times   = &app.drag.moveable_times;
         drag_overlay = &drag_overlay_storage;
     }
-    // This four-way branch chain must stay in step with the debug rect
+    // This two-way branch chain must stay in step with the debug rect
     // builder (paint_debug_hit_rects, paint_handler.cpp), which strokes the
     // same rects this hit test consumes.
     std::vector<FlagHitRect> rects;
-    if (app.render_view.enabled && app.active_markers_view == 'P') {
-        // Render-view P sub-view: hit-test the snapshot's phase-reset chips
-        // over the same tmap_arg the Render arm derived. The phase-reset rect
-        // builder has no iteration parameter (iteration is warp-only), so this
-        // mirrors the live 'P' branch's call shape.
-        rects = compute_phase_reset_flag_hit_rects(
-            top, app.render_view.phase_resets,
-            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
-            tmap_arg, drag_overlay);
-    } else if (app.render_view.enabled) {
-        rects = compute_flag_hit_rects(
-            top, app.render_view.warp_markers,
-            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
-            tmap_arg, drag_overlay, /*iteration_on=*/false);
-    } else if (app.active_markers_view == 'P') {
+    if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             top, app.phaseresetmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             tmap_arg, drag_overlay);
     } else {
         // Warp hit-rects must track the bracketed flag width so
-        // clicks land on the iteration-mode chip. This branch is reached
-        // only in warp view (not render view, not 'P').
+        // clicks land on the iteration-mode chip.
         rects = compute_flag_hit_rects(
             top, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
@@ -355,30 +308,6 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             app.iteration_mode_enabled);
     }
     for (const auto& r : rects) {
-        // Out-of-window culling: a render-view flag whose window-axis image
-        // falls outside the entry wav is absent from paint, so its chip is
-        // unpickable too (one definition, render_view_position_in_window). The
-        // rect's marker_index indexes the render-view store the rects were
-        // built from.
-        if (app.render_view.enabled) {
-            int64_t src_frame;
-            if (app.active_markers_view == 'P') {
-                if (r.marker_index < 0 ||
-                    r.marker_index >=
-                        static_cast<int>(app.render_view.phase_resets.size()))
-                    continue;
-                src_frame =
-                    app.render_view.phase_resets[r.marker_index].time_frame;
-            } else {
-                if (r.marker_index < 0 ||
-                    r.marker_index >=
-                        static_cast<int>(app.render_view.warp_markers.size()))
-                    continue;
-                src_frame =
-                    app.render_view.warp_markers[r.marker_index].time_frame;
-            }
-            if (!render_view_position_in_window(app, src_frame)) continue;
-        }
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {
             return r.marker_index;
@@ -391,14 +320,6 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // reference is now an explicit argument.
 bool popup_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;
-    if (app.render_view.enabled) {
-        // Render view computes no hover popups: the motion handler
-        // (handle_render_view_motion) and the viewport hover recompute
-        // (recompute_hover_at_cursor) both gate render view out before
-        // eligibility is consulted. This guard keeps the function honest if
-        // a new caller forgets the gate.
-        return false;
-    }
     if (app.active_markers_view != 'W') return false;
     if (app.iteration_mode_enabled) return false;
     const auto& mv = app.warpmarkers.markers();

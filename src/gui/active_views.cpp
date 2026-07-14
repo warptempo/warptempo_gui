@@ -17,10 +17,7 @@
 // slot is restored into the live fields on switch. During normal editing
 // only the live fields move and the backing slot is intentionally stale
 // until the next boundary. active_view_state() resolves the active
-// AUTHORING tab's slot; render view has no backing slot (it keeps no
-// per-display selection or view memory), so switch_active_markers_view_to
-// handles the render-view case with an explicit early arm that never
-// reaches active_view_state.
+// AUTHORING tab's slot.
 
 // Overwrite the active tab's snapshot with the live AppState viewport /
 // zoom / playhead. Shared by Ctrl+Tab (pre-flip) and Ctrl+S (pre-write)
@@ -49,10 +46,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 }
 
 // Returns the active AUTHORING tab's ViewState slot — the slot that holds
-// the inactive-mode selection. Authoring-only by ruling: render view keeps
-// no per-display selection or view memory, so it has no backing slot, and
-// switch_active_markers_view_to short-circuits the render-view case before
-// ever calling this. Every caller is therefore in source view.
+// the inactive-mode selection.
 ViewState* GuiActiveViews::active_view_state() {
     return (app.active_tab_view == 'B') ? &app.tab_b : &app.tab_a;
 }
@@ -64,18 +58,6 @@ ViewState* GuiActiveViews::active_view_state() {
 // run; this helper just shuffles the AppState fields.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
-    if (app.render_view.enabled) {
-        // Render view keeps no per-display selection slot to stash into or
-        // restore from — every entry display resets selection to empty — and
-        // W/P is GLOBAL by ruling: one mode binary flipping all views alike.
-        // So there is nothing to swap: flip the mode, drop the live marker
-        // selection, clear the hover popup, done.
-        app.active_markers_view = target_mode;
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        viewport.clear_hover_popup();
-        return;
-    }
     ViewState* vs = this->active_view_state();
     if (!vs) return;
     if (app.active_markers_view == 'P') {
@@ -100,14 +82,7 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
 // dirty.
 //
 // This is the AUTHORING tab switch: it swaps the live view fields WITH the
-// per-tab slots (app.tab_a / app.tab_b). It is NOT reachable inside render
-// view — render view blocks the Ctrl+Tab / Ctrl+Shift+Tab chords outright at
-// its key gate (render_view_key_blocked's EXTRA BLOCKS), because those slots
-// are the exit stash and the A/B tab is authoring view state the immutable
-// entry may not touch. The only render-view-adjacent call is the Ctrl+Alt+C
-// commit's switch to the commit tab, which runs AFTER restore_source_view has
-// already left render view (app.render_view.enabled cleared), so it is a plain
-// authoring switch.
+// per-tab slots (app.tab_a / app.tab_b).
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // Mirror toggle_playback's stop branch: tab switch is not a
     // navigational commit, so the leaving tab's snapshot should

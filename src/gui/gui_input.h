@@ -66,8 +66,8 @@ namespace GuiKeys {
 }
 
 // True for the keys that toggle playback (Space / Return / keypad Enter).
-// Shared by the on_key dispatch (input_handler.cpp) and the render-view
-// allowlist predicate (input_render_view.cpp); inline so both TUs see it.
+// Shared by the on_key dispatch (input_handler.cpp) and the read-only
+// allowlist predicate (input_key_dispatch.cpp); inline so both TUs see it.
 inline bool is_play_pause_key(GuiKey key) {
     return key == GuiKeys::Space
         || key == GuiKeys::Return

@@ -161,7 +161,6 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/input_handler.cpp
         src/gui/input_trim.cpp
         src/gui/input_defect_series.cpp
-        src/gui/input_render_view.cpp
         src/gui/input_render_dispatch.cpp
         src/gui/input_pointer.cpp
         src/gui/input_key_dispatch.cpp

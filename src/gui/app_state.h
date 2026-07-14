@@ -379,7 +379,7 @@ enum class DialogTrigger {
 
 // In-window modal prompt state. When `active` is true, the bottom strip
 // overlays the prompt's text and response options in place of the
-// timestamp / tab letter / dirty indicator / render-view filename.
+// timestamp / tab letter / dirty indicator.
 // Input is owned by the prompt: only the response keys (and Esc, which
 // activates the rightmost response) do anything; everything else is
 // swallowed. `response_keys` holds lowercase letters; the activator
@@ -415,16 +415,15 @@ enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
 
 // Pre-remedy funnel stage for the defect-resolution series. A mutating remedy
 // ([U]ndo / [R]eset / [Delete]) may only be presented in an editable
-// source-authoring context. When the series would open over render view (the
-// source stores are hidden and [U]ndo a no-op there) or a read-only tab
+// source-authoring context. When the series would open over a read-only tab
 // ([U]ndo silently refuses, and [R]eset/[Delete] would mutate a locked store)
-// — both reachable only by a near-impossible commit-then-toggle race —
-// open_defect_series first presents a forced single-[Y]es prompt to leave that
-// context, and the response handler re-enters the funnel after acting. None
+// — reachable only by a near-impossible commit-then-toggle race —
+// open_defect_series first presents a forced single-[Y]es prompt to disable
+// read-only, and the response handler re-enters the funnel after acting. None
 // means the current DEFECT_RESOLUTION prompt is the real remedy. Every
 // open_defect_series pass sets this field; the wholesale DefectSeriesState
 // reset restores None.
-enum class DefectPreStep { None, LeaveRenderView, DisableReadOnly };
+enum class DefectPreStep { None, DisableReadOnly };
 
 // Defect-resolution series state (DialogTrigger::DEFECT_RESOLUTION). The
 // series holds only the CURRENT defect; every resolution re-enumerates the
@@ -450,8 +449,8 @@ enum class DefectPreStep { None, LeaveRenderView, DisableReadOnly };
 // re-walks its series on the next load. Any wholesale defect_series reset
 // (load) clears it; the resume path clears it explicitly. `pre_step` names the
 // funnel stage the current prompt belongs to (see DefectPreStep): None for the
-// real remedy, LeaveRenderView / DisableReadOnly for the forced [Y]es
-// pre-modals that clear the way to an editable context.
+// real remedy, DisableReadOnly for the forced [Y]es pre-modal that clears the
+// way to an editable context.
 struct DefectSeriesState {
     MarkerDefect      defect;
     TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
@@ -543,8 +542,8 @@ struct AppState {
     // playhead here, plus selected_markers / last_selected_marker below).
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
-    // these constantly, and the active backing store varies (source tab A/B
-    // vs the active render-view entry), so reading through active_view_state()
+    // these constantly, and the active backing store varies (source tab A/B),
+    // so reading through active_view_state()
     // on every access would be both hot and conditional. The slot is synced
     // to/from these fields only at view-switch boundaries (see active_views).
     // Do not collapse this into a projection — the duplication is the design.
@@ -638,7 +637,7 @@ struct AppState {
     // (Undo::coalesce_gesture) records it at each eligible commit and merges a
     // later eligible press only when its command is the immediately-next one
     // (command_seq == recorded + 1) — so ANY intervening command (a click, Tab,
-    // paste, save, undo/redo, tab/column switch, render-view round trip, or an
+    // paste, save, undo/redo, tab/column switch, or an
     // unhandled key) advances the counter an extra step and breaks the burst.
     // A rapid same-gesture burst is, by definition, consecutive presses with no
     // other command between them, so adjacency alone captures it. Session-only,
@@ -656,8 +655,7 @@ struct AppState {
     // active_markers_view ('W'/'P'): `t` toggles S/T, `p` toggles
     // W/P. While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
-    // interpretation flips on toggle. Render-view leaves this
-    // unchanged — `t` is dropped in render-view. Target view was
+    // interpretation flips on toggle. Target view was
     // formerly read-only; the target-render audio subsystem makes target
     // view playable with live engine output.
     char active_audio_view = 'S';
@@ -832,10 +830,9 @@ struct AppState {
     // takes a render entry's identifier relative to renders/
     // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
     // Enter adopts that render's frozen sidecar recipe as the new authoring
-    // baseline (GuiInputHandler::adopt_render_entry) — the same commit
-    // Ctrl+Alt+C performs from inside render view, reachable directly from
-    // authoring without browsing. A bottom-strip modal like the settings
-    // editor; separate State so the two paint regions stay independent.
+    // baseline (GuiInputHandler::adopt_render_entry). A bottom-strip modal like
+    // the settings editor; separate State so the two paint regions stay
+    // independent.
     text_editor::State commit_editor;
     bool commit_editor_blink_last = false;
 
@@ -917,78 +914,18 @@ struct AppState {
     // the flag at a time, maintained as an invariant by the toggle.
     bool bpm_mode_enabled = false;
 
-    // One entry in the flat list of valid renders enumerated on toggle-in.
-    // Just the three path fields: an entry carries NO per-entry persisted
-    // view state and NO per-entry selection memory. A render entry's sidecar
-    // set (.warpmarkers / .phaseresetmarkers / .settings) is written ONCE at
-    // queue/dispatch and never touched again; render view is an audio player
-    // with no per-entry memory, so every display resets to a fixed
-    // fit-file/0/0 position with an empty selection (load_render_view_at), and
-    // the only transfer out of render view is Ctrl+Alt+C.
+    // One entry in the flat list of valid renders under
+    // <source_parent>/renders/, produced by
+    // GuiRenderView::enumerate_render_view_list. Just the three path fields;
+    // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
+    // .settings) is written ONCE at queue/dispatch and never touched again.
+    // Consumed by the `l` listen-to-renders launcher and the Shift+. commit
+    // editor (adopt_render_entry).
     struct RenderViewEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
     };
-
-    // Render analysis mode. Plain `r` toggles between source-view
-    // (authoring) and render-view (read-only auditioning of rendered
-    // outputs from <source_parent>/renders/). All authoring state above
-    // is preserved untouched while render-view is active; this struct
-    // holds the parallel context that drives render-view's display.
-    struct RenderViewContext {
-        bool enabled = false;
-        // Path to the last-displayed render's .wav, persisted across toggle
-        // off/on cycles within a session. Empty before the first entry; reset
-        // to whatever path was active when the previous toggle-off fired.
-        std::string last_path;
-        std::vector<RenderViewEntry> list;
-        int                          index = -1;     // -1 = unset
-        // The displayed entry's decoded audio: a fresh GuiAudio loaded from
-        // the entry wav at load_render_view_at through the standard peaks
-        // pipeline (decode + `<basename>.peaks` sidecar read/rebuild beside
-        // the wav). The waveform plate paints from THIS audio's own samples
-        // — the rendered artifact's own timeline — and playback binds this
-        // buffer at domain offset 0. shared_ptr so an in-flight waveform
-        // worker job and the playback callback can hold a keepalive across a
-        // navigation that swaps the pointer. Null before the first entry and
-        // after every render-view exit. The source `audio` object still
-        // stays the source in every view; this is the view-owned entry
-        // handle, not a swap of `audio`.
-        std::shared_ptr<GuiAudio>        entry_audio;
-        // The current render's display markers + phase resets: the entry's
-        // snapshot stores WHOLESALE (entry load reads the sibling snapshot
-        // set `<basename>.warpmarkers` / `.phaseresetmarkers` /
-        // `.settings`), disabled rows and label defs included, with
-        // time_frame at the AUTHORED whole-frame values. Render view displays
-        // the rendered artifact: the entry wav's own timeline. Markers paint
-        // at their positions on that WINDOW axis (the authored frame
-        // forward-mapped through the target-shifted snapshot map below), and
-        // a marker whose image falls outside the rendered window is simply
-        // absent — like the audio it annotates. Every in-window consumer
-        // translates these positions live through the display context (the
-        // shifted map below), exactly as target view translates through the
-        // live map.
-        std::vector<GuiWarpMarker>       warp_markers;
-        std::vector<GuiPhaseResetMarker>    phase_resets;
-        // Snapshot display geometry: built once from the entry's snapshot
-        // at load (read-only view — no invalidation), cleared wherever the
-        // display stores above are cleared. snapshot_warp_frame_map is the
-        // full snapshot map with every segment's tgt_frame shifted by -T_b
-        // (T_b = llrint of the trim begin's target image, 0 untrimmed), so
-        // map_source_to_target over it yields WINDOW-axis positions directly
-        // — a marker before the window maps negative, one past it at or
-        // beyond the window total. The Render display context
-        // (active_display_context) aliases this shifted map.
-        // snapshot_display_total is the ENTRY FRAME COUNT (the decoded entry
-        // audio's total_frames, already verified equal to the rendered
-        // window span) — the Render display domain's total (live_total_frames
-        // semantics), stored rather than recomputed from the shifted map
-        // (which no longer target-totals to it).
-        std::vector<WarpFrameMapSegment> snapshot_warp_frame_map;
-        int64_t                          snapshot_display_total = 0;
-    };
-    RenderViewContext render_view;
 };
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
@@ -1005,9 +942,9 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The explicit-domain form of current_samples_per_pixel: spp at a zoom
 // level against a caller-chosen domain total (fit-file zoom divides the
 // total by the width; numeric levels are total-independent). For callers
-// that need a domain OTHER than the active display context's — render-view
-// entry computes the pre-entry source-view spp after the render display
-// context is already installed.
+// that need a domain OTHER than the active display context's (e.g. the
+// dispatch preflight clamping queue-moment view keys against a cell's own
+// map domain).
 double  samples_per_pixel_at(int zoom_level,
                              int waveform_width_px,
                              int64_t total_frames,
@@ -1155,12 +1092,10 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 
-// Free-function form of GuiActiveViews::active_view_state() restricted to
-// source-view (the A/B tab pair). The renderer / the b/e/u
-// handlers don't have access to GuiActiveViews but need to reach the active
-// tab's view-state from an AppState reference alone. Source-view-only:
-// render-view callers must keep using GuiActiveViews::active_view_state(),
-// which handles the render-entry case.
+// Free-function form of GuiActiveViews::active_view_state(): the active A/B
+// tab's view-state slot. The renderer / the b/e/u handlers don't have access
+// to GuiActiveViews but need to reach the active tab's view-state from an
+// AppState reference alone.
 inline ViewState& active_view_state(AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
 }
@@ -1179,16 +1114,15 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // and pull in cairo + paint_handler.h for the popup-rect math; the
 // signatures stay free of cairo so the header keeps a clean include list.
 //
-// hit_test_marker_line: scan the active list (render-view markers in
-// render-view; phase resets in 'P' mode; warp markers otherwise) and return
-// the index whose pixel column is within kMarkerHitHalfPx of `mouse_x`,
-// or -1 if no marker line is within reach.
+// hit_test_marker_line: scan the active list (phase resets in 'P' mode; warp
+// markers otherwise) and return the index whose pixel column is within
+// kMarkerHitHalfPx of `mouse_x`, or -1 if no marker line is within reach.
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                          int mouse_x);
 
 // hit_test_flag: scan the active flag-pack rects in the top strip and
 // return the marker index under (mouse_x, mouse_y), or -1. Returns -1
-// in render-view's phase reset sub-view (no flag rects there).
+// in the phase reset sub-view (no flag rects there).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
@@ -1196,9 +1130,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
-// column is within kMarkerHitHalfPx of `mouse_x`, or None. AUTHORING views
-// only — the active tab's live pair; render view has no trim overlay and
-// returns None outright. Walks the same warp_frame_map as
+// column is within kMarkerHitHalfPx of `mouse_x`, or None. AUTHORING views —
+// the active tab's live pair. Walks the same warp_frame_map as
 // hit_test_marker_line in target view so the hit lands on the visually-drawn
 // stem. Trim is project-level, and applies in both 'W' and 'P' views. When
 // both bounds are within reach, the nearer wins.
@@ -1220,10 +1153,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 // Promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
 // display a numeric tempo (pass markers and label_ref markers qualify;
-// owning markers don't). Render-view honors the loaded render's
-// markers regardless of the pre-toggle mode; source-view requires warp
-// view with iteration mode off. Always false in phase reset view (no
-// pass concept).
+// owning markers don't). Requires warp view with iteration mode off.
+// Always false in phase reset view (no pass concept).
 bool popup_eligible_marker(const AppState& app, int idx);
 
 // Sweep-select every marker in the time-ordered `markers` list whose
@@ -1234,14 +1165,10 @@ bool popup_eligible_marker(const AppState& app, int idx);
 // lands on the most recently passed marker. Skips press_marker_idx (preserves
 // the Shift-press toggle non-re-add guarantee) and already-selected indices.
 // Mutates app's selection set / focus / last_sel_group; returns true if
-// anything was added. Shared by the source/target and render-view playhead-drag
-// Shift sweeps (input_handler.cpp / input_render_view.cpp); templated on the
-// vector element type because the two stores hold different marker types that
-// both expose time_frame. In render view the inclusive source interval can
-// contain a marker whose rounded window-axis image is the exclusive end (the
-// inverse of the last displayed frame can round to the trim-end source frame),
-// so add() applies the same explicit window-membership rule as hit-test and
-// Tab. O(log n + scanned) per call.
+// anything was added. Used by the source/target playhead-drag Shift sweeps
+// (input_handler.cpp); templated on the vector element type because the two
+// stores hold different marker types that both expose time_frame.
+// O(log n + scanned) per call.
 template <typename MarkerVec>
 bool sweep_select_interval(AppState& app, const MarkerVec& markers,
                            double lo_t, double hi_t, bool forward,
@@ -1262,10 +1189,6 @@ bool sweep_select_interval(AppState& app, const MarkerVec& markers,
     bool changed = false;
     auto add = [&](int idx) {
         if (idx == press_marker_idx) return;
-        if (app.render_view.enabled &&
-            !render_view_position_in_window(app, markers[idx].time_frame)) {
-            return;
-        }
         const bool newly = app.selected_markers.insert(idx).second;
         if (newly || app.last_selected_marker != idx) changed = true;
         app.last_selected_marker = idx;

@@ -231,8 +231,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the editor's copy-selection working while an editor owns input), so
     // reaching here means neither a modal nor an editor is active. Fires only
     // while the popup is visible, in which case copy_payload is non-empty.
-    // Ctrl+Alt+C (render-view commit) carries Alt and is unaffected; Ctrl+C
-    // was otherwise unbound globally.
+    // Ctrl+C was otherwise unbound globally.
     if (ctrl && !shift && !alt && key == GuiKeys::C &&
         app.hover_popup.visible) {
         app.text_clipboard = app.hover_popup.copy_payload;
@@ -270,11 +269,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // at the scrubbed playhead. Ctrl+S (save) stays swallowed, and
         // the position-editing drags (marker, trim, scroll) swallow
         // these too — dropping a marker mid-marker-drag would fight the
-        // gesture. In render view the S key still falls through here but
-        // the render-view authoring gate below drops it, so scrubbing a
-        // render never authors. The four drag states are mutually
-        // exclusive, so playhead_only is belt-and-suspenders that keeps
-        // the intent explicit.
+        // gesture. The four drag states are mutually exclusive, so
+        // playhead_only is belt-and-suspenders that keeps the intent
+        // explicit.
         const bool playhead_only =
             app.playhead_drag.active && !app.drag.active &&
             !app.trim_drag.active && !app.scroll_drag.active;
@@ -283,49 +280,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Render-view input gate. Render view IS the read-only modality, so
-    // render_view_key_blocked is read_only_key_blocked plus a small named
-    // delta (full per-chord rationale at the predicate in
-    // input_render_view.cpp). Render-view-specific ADMITS: r (toggle off),
-    // Shift+Left/Right (prev/next render), Shift+Home/End (first/last,
-    // clamped), Ctrl+Alt+C (commit). EXTRA BLOCKS on top of read-only: t
-    // (S/T toggle), o (read-only flag), the Ctrl+Tab / Ctrl+Shift+Tab A/B
-    // switch (render view displays one immutable rendered artifact and may not
-    // mutate the live tab), Shift+0..9 (playback speed). Everything else —
-    // playback, the bare-key scrub / zoom / follow / center / p sub-view
-    // toggle, Home/End, PageUp/PageDown paging, bare Tab marker-focus cycling,
-    // Ctrl+Q, the font-size step — follows the read-only gate; Ctrl+S is
-    // blocked through that deferral (read-only itself now blocks it), so the
-    // save surface is Ctrl+Alt+C only.
-    //
-    // The archival dispatch chords (Ctrl+S save, Ctrl+Alt+R/I render)
-    // are all absent — Ctrl+S drops through the
-    // read-only deferral, the rest match no read-only allowlist predicate —
-    // and the BPM sweep fires only from the BPM editor's Enter, which cannot be
-    // open here. With no
-    // archival dispatch chord admitted and render-view entry gated on an idle
-    // worker with nothing parked (handle_render_view_toggle), no batch can be
-    // running or start while the view is up, so a batch completion — and its
-    // terminal auto-open — only ever happens with render view closed.
-    //
-    // Shift+0..9 is an EXTRA BLOCK rather than a deferral because render-view
-    // playback is pinned to 1x by toggle_playback's force_one_x (the audible
-    // result must match the rendered warp, not the warp scaled by an extra
-    // factor); admitting the chord would let a press change the entry's
-    // playback speed and then have the next Space press silently snap it
-    // back to 1x. Read-only mode has no such pin, so it admits Shift+0..9.
-    if (app.render_view.enabled && render_view_key_blocked(key, mods)) {
-        return;
-    }
-
-    // Per-tab read-only keyboard gate. Mirrors the render-view gate
-    // above structurally: a permitted-keys allowlist that filters out
-    // every authoring chord while admitting navigation, playback,
+    // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
+    // out every authoring chord while admitting navigation, playback,
     // view-switching, the close-prompt routing, and the bare-o
-    // toggle-off escape chord. Only runs when render-view is off and
-    // the active tab's ViewState carries read_only = true. Render-view
-    // is its own read-only modality that supersedes everything else,
-    // so this gate sits second.
+    // toggle-off escape chord. Runs when the active tab's ViewState carries
+    // read_only = true.
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
@@ -365,7 +324,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // wheel and pointer guards (wheel and mouse events never pass through
     // on_key). Full rationale at read_only_key_blocked in
     // input_key_dispatch.cpp.
-    if (!app.render_view.enabled && active_view_state(app).read_only &&
+    if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;
     }
@@ -377,10 +336,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
     // phase reset edit handlers so the toggle wins over any future
-    // bare-t binding; placed after the prompt / editor / render-view
-    // / queue gates so those still own the keyboard when active.
-    // Render-view drops bare `t` via the gate above (target view is
-    // unreachable from render-view; render-view exits via `r`).
+    // bare-t binding; placed after the prompt / editor / queue gates so
+    // those still own the keyboard when active.
     if (key == GuiKeys::T && !ctrl && !shift && !alt) {
         handle_active_audio_view_toggle();
         return;
@@ -388,9 +345,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Bare `o` toggles the active tab's read-only flag. Always admitted
     // by the read-only allowlist above (the locked-out user must be
-    // able to unlock) and dropped by the render-view allowlist (the
-    // flag is irrelevant while render-view is its own read-only
-    // modality). Pure view-state mutation: not undoable, not dirty;
+    // able to unlock). Pure view-state mutation: not undoable, not dirty;
     // silently persisted on the next Ctrl+S from a writable surface (Ctrl+S
     // drops at the read-only gate, so a tab just locked here reaches disk from
     // the other, unlocked tab — or after a bare-o unlock). The bottom-strip dim
@@ -421,11 +376,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // reset dropped at the playhead) without moving the cursor, so stop snaps
     // the scanner back to where it was. Placed BEFORE the modifier-independent
     // is_play_pause_key block, which would otherwise swallow Shift+Space and run
-    // a plain toggle. Restricted to Space (not Return/KpEnter). Source view,
-    // warp mode, and render view fall through to the normal toggle below.
+    // a plain toggle. Restricted to Space (not Return/KpEnter). Source view and
+    // warp mode fall through to the normal toggle below.
     if (key == GuiKeys::Space && shift && !ctrl && !alt &&
         app.active_markers_view == 'P' &&
-        app.active_audio_view == 'T' && !app.render_view.enabled) {
+        app.active_audio_view == 'T') {
         // Mirror the plain-Space target gate: refuse Space-to-play while a
         // target render is in flight or before any successful render populated
         // the buffer. Space-to-stop (playing) is always honored.
@@ -447,13 +402,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // practice. The empty-target-buffer case (no successful target
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
-        // target-view binding. Source view AND render view fall through
-        // unchanged: render view plays its own loaded render buffer, not
-        // target_buffer, so this in-flight / empty-buffer target gating must
-        // not apply to it. render_view.enabled overrides active_audio_view
-        // here, matching the "actually in target view" idiom in
-        // playback_lifecycle (active_audio_view == 'T' && !render_view.enabled).
-        if (app.active_audio_view == 'T' && !app.render_view.enabled &&
+        // target-view binding. Source view falls through unchanged.
+        if (app.active_audio_view == 'T' &&
             !playback.is_playing()) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
@@ -512,9 +462,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // bpm mode).
     if (handle_mode_keys(key, mods)) return;
 
-    // Plain `r` toggles render analysis mode (see handle_render_view_toggle).
-    if (handle_render_view_toggle(key, mods)) return;
-
     // The platform boundary case-folds letters and delivers the
     // unshifted GuiKey, so a Shift+letter press arrives as the lowercase
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
@@ -529,7 +476,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // where Shift+S in P-mode stays a no-op (falls through).
         else if (!ctrl && shift &&
                  app.active_markers_view == 'P' &&
-                 app.active_audio_view == 'T' && !app.render_view.enabled)
+                 app.active_audio_view == 'T')
             phase_resets.drop_phase_reset_lead_in_at_playhead();
         // Warp view: bare `s` drops a plain neutral 1.00 owner, Shift+S
         // drops an augmented owner that copies the immediate-prior
@@ -656,34 +603,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // `Shift+.` opens the render-commit prompt in the bottom strip: commit a
-    // chosen render as the new authoring baseline by NAME, without browsing
-    // render view. Keyboard-only. A modal bottom-strip surface: stop playback
-    // at its open (Space is inside the modal blocked set, so playback cannot
-    // restart until the editor closes). open_commit_editor owns the no-source
-    // / render-view / empty-renders guards.
+    // chosen render as the new authoring baseline by NAME. Keyboard-only. A
+    // modal bottom-strip surface: stop playback at its open (Space is inside
+    // the modal blocked set, so playback cannot restart until the editor
+    // closes). open_commit_editor owns the no-source / empty-renders guards.
     if (key == GuiKeys::Period && shift && !ctrl && !alt) {
         playback_lifecycle.stop_playback_if_playing();
         open_commit_editor();
         return;
     }
 
-    // Render-view list navigation:
-    // Shift+Left / Shift+Right -> previous / next render, with wraparound
-    // Shift+Home / Shift+End -> first / last render, clamped, no wraparound
-    // These chords bind ONLY inside render view. Outside render view
-    // handle_render_view_nav returns false and the Shift-held arrow reaches
-    // the bare-key dispatch gate below, which drops any modifier-held chord —
-    // so it is an unbound no-op, not a fall-through to a source-view handler.
-    if (handle_render_view_nav(key, mods)) return;
-
     // Ctrl+Left / Ctrl+Right: nudge the last-selected group by one pixel of
     // time. Routes like Delete and Ctrl+wheel — a last-selected trim bound
     // (Trim group) nudges the bound; otherwise the marker/phase-reset nudge
-    // runs. No render-view branch: the chord drops at the render-view key
-    // gate (it matches no render admit and is not on the read-only
-    // allowlist), so this dispatch is unreachable in render view — unlike
-    // the Ctrl+wheel trim path, which keeps its own render-view refusal
-    // because wheel events bypass the keyboard gate.
+    // runs.
     if (ctrl && !shift && !alt && key == GuiKeys::Left) {
         if (app.last_sel_group == LastSelGroup::Trim) {
             if ((app.trim_begin_selected && app.trim.has_begin) ||
@@ -711,8 +644,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // PageUp / PageDown: step the viewport back / forward by exactly the
     // Alt-wheel step (samples_visible / 10). PageUp goes back, PageDown
-    // forward. Pure active-display navigation, so the read-only and render-view
-    // allowlists both admit it.
+    // forward. Pure active-display navigation, so the read-only allowlist
+    // admits it.
     if (!ctrl && !alt && !shift &&
         (key == GuiKeys::PageDown || key == GuiKeys::PageUp)) {
         const int64_t step = std::max<int64_t>(
@@ -753,26 +686,18 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
         const int idx = app.last_selected_marker;
         if (idx < 0) return;
         if (app.active_markers_view == 'P') {
-            // Render-view recenters on the render_view display stores
-            // (authored-domain positions); authoring recenters on the
-            // live store.
-            const auto& tv = app.render_view.enabled
-                ? app.render_view.phase_resets
-                : app.phaseresetmarkers.markers();
+            const auto& tv = app.phaseresetmarkers.markers();
             if (idx >= static_cast<int>(tv.size())) return;
             src_sample = tv[idx].time_frame;
         } else {
-            const auto& mv = app.render_view.enabled
-                ? app.render_view.warp_markers
-                : app.warpmarkers.markers();
+            const auto& mv = app.warpmarkers.markers();
             if (idx >= static_cast<int>(mv.size())) return;
             src_sample = mv[idx].time_frame;
         }
     }
-    // Mapped views: forward-translate the marker's source-frame through
-    // the display context (target view's live map; render view's snapshot
-    // map) so the playhead lands on the marker's
-    // displayed position; the viewport recenter below also uses this
+    // Target view: forward-translate the marker's source-frame through
+    // the display context (the live map) so the playhead lands on the
+    // marker's displayed position; the viewport recenter below also uses this
     // displayed value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     // Playhead domain clamp: Tab mirrors move_playhead_to exactly — both
@@ -850,11 +775,10 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (ctrl && !shift && !alt) {
         // Ctrl+wheel: when the begin trim bound is last-selected, move the end
         // bound. Otherwise nudge the focused warp marker's tempo. Refused in
-        // render-view and read-only (both paths — the trim-end move was
-        // read-only-mobile while trim was one unified setting across both
-        // tabs; with per-tab trim that rationale is gone, so the bound
-        // refuses exactly like the marker tempo nudge, a silent no-op).
-        if (app.render_view.enabled) return;
+        // read-only (the trim-end move was read-only-mobile while trim was one
+        // unified setting across both tabs; with per-tab trim that rationale is
+        // gone, so the bound refuses exactly like the marker tempo nudge, a
+        // silent no-op).
         if (app.last_sel_group == LastSelGroup::Trim &&
             app.last_selected_trim == 'B' &&
             app.trim.has_begin && app.trim.has_end) {
@@ -1283,8 +1207,6 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 // modal wins the beat and this gate defers behind it like any prompt.
 void GuiInputHandler::enforce_target_view_validity() {
     if (app.loading || audio.total_frames() <= 0) return;
-    if (app.render_view.enabled) return;   // render-view lists come from
-                                           // files, not the live store
     if (app.active_audio_view != 'T') return;
     // Another prompt owning the bottom strip means no edit can be in
     // flight (prompts are modal); defer the kick a tick rather than

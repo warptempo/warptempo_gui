@@ -64,8 +64,8 @@ bool spawn_audio_player(const std::string& player,
 
 }  // namespace
 
-// Source-view read-only allowlist, and the base gate render_view_key_blocked
-// defers to. True when key+mods is not on the allowlist and should be dropped.
+// Source-view read-only allowlist. True when key+mods is not on the allowlist
+// and should be dropped.
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
 // deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gestures
 // (x / Shift+X), Delete, and every propagate command all drop at this gate.
@@ -228,9 +228,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
              is_save || is_ctrl_q);
 }
 
-// The Esc-cancel semantics as a callable body, shared by the Esc key
-// handler below and the render-view Esc-cancel paths
-// (input_render_view.cpp). Requesting cancellation has two effects:
+// The Esc-cancel semantics as a callable body, used by the Esc key
+// handler below. Requesting cancellation has two effects:
 //   1. async_renderer.request_cancel() sets the worker's cancel flag,
 //      which do_render passes through to the engine.
 //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
@@ -593,8 +592,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 // render path (stderr) is the backstop. Base and delta live
                 // in the one integer-cents domain, so the sum is plain
                 // integer addition and the cell sidecar's N.NN spelling
-                // re-parses to exactly this value — Ctrl+Alt+C promotion
-                // stays closed under the grammar by type.
+                // re-parses to exactly this value — render-entry promotion
+                // (Shift+.) stays closed under the grammar by type.
                 cell_warp_markers[mi].tempo_cents =
                     base_warp_markers[mi].tempo_cents +
                     per_marker_delta_cents[k][indices[k]];
@@ -650,314 +649,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // in the bottom-strip BPM editor after a successful commit; there is no
     // key-dispatch handler for it here.
 
-    // Ctrl+Alt+C commits the displayed render by INHERITING its .settings
-    // wholesale. The mechanism is the file, which is FROZEN at dispatch and
-    // never rewritten by render view: the handler strict-reads the entry's
-    // dispatch-time bytes and applies the WHOLE of it as the new session —
-    // both tab bands (viewport/zoom/playhead/read_only/trim), active_tab_view,
-    // active_audio_view, playback_speed, follow, font_size, and the engine
-    // block — alongside the source-domain marker pair the commit adopts. Render
-    // entries are target-view states, so commit lands in 'T' on the entry's
-    // dispatch tab at exactly the QUEUE-MOMENT zoom / viewport / playhead (the
-    // browsed position is deliberately not preserved — render view is an audio
-    // player with no per-entry memory). With the file immutable and the A/B tab
-    // chords blocked in render view, the fingerprint-regression class is closed
-    // by construction: nothing can drift the entry's sidecars between dispatch
-    // and commit.
-    // One carve-out from the wholesale inheritance: active_markers_view is NOT
-    // applied — W/P is global by ruling, so the LIVE mode survives the commit
-    // (recorded at the prefs block below).
-    // Undo scope is unchanged: marker/reset promotion plus the pre-commit
-    // engine settings are one cross-file undo entry; the inherited prefs and
-    // view state stay outside undo by the same standing convention that keeps
-    // view state and trim out of history (recorded at the undo push below).
-    // After the commit succeeds: render-view exits (playback rebinds to the
-    // always-source audio object; the entry buffer frees; the tail's preview
-    // trigger then dispatches the adopted target buffer), and
-    // <source_parent>/renders/ is recursively wiped. The committed render
-    // survives through the render cache, not as a folder artifact. Silent
-    // no-op outside render-view.
-    if (ctrl && alt && !shift &&
-        key == GuiKeys::C) {
-        if (!app.render_view.enabled) return true;
-        if (app.render_view.index < 0) return true;
-
-        // app.render_view.warp_markers / .phase_resets are display state
-        // (the snapshot vectors adopted wholesale — disabled rows included,
-        // styled as in target view — at authored-domain positions). Ctrl+Alt+C
-        // reads the entry's frozen source-domain sidecars and adopts them
-        // wholesale: the `.settings` through the one strict whole-file schema
-        // (read_settings_file, the same read load_render_view_at runs) and
-        // both marker sidecars through their strict loaders
-        // (GuiWarpMarkers::load / GuiPhaseResetMarkers::load). A syntactically
-        // malformed sidecar aborts at its own read — a broken file genuinely
-        // cannot be promoted, first error only — and that is the ONLY abort:
-        // the entry sidecars are TRUSTED (written once at dispatch by
-        // do_render, never hand-edited between display and commit), so there is
-        // no adversarial content re-attestation of the assembled candidate. The
-        // render worker's source-clobber backstop and the engine tripwires
-        // remain the last-ditch guards on the promoted recipe. Walkable,
-        // GUI-committable defects (coincident markers, dangling refs,
-        // equal/inverted trim, first-marker grammar) adopt and walk the commit
-        // series like any other commit.
-        const auto& cur_e =
-            app.render_view.list[app.render_view.index];
-        const std::filesystem::path sidecar =
-            render_view.settings_path(cur_e);
-        // The entry's .settings is frozen at dispatch and never rewritten by
-        // render view, so the strict read below sees the DISPATCH-TIME bytes —
-        // which is the point: the commit inherits the position/tab the project
-        // had when the render was QUEUED, not the browsed one.
-        const auto settings = read_settings_file(sidecar.string());
-        if (!settings) {
-            std::fprintf(stderr,
-                "warptempo_gui: commit aborted: settings read "
-                "failed for '%s': %s\n",
-                sidecar.string().c_str(),
-                settings.error().c_str());
-            return true;
-        }
-        std::vector<GuiWarpMarker>    src_warp;
-        std::vector<GuiPhaseResetMarker> src_phase_resets;
-        const std::filesystem::path wm =
-            cur_e.batch_folder / (cur_e.basename + ".warpmarkers");
-        const std::filesystem::path tm =
-            cur_e.batch_folder / (cur_e.basename + ".phaseresetmarkers");
-        {
-            GuiWarpMarkers m;
-            auto r = m.load(wm.string());
-            if (!r) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: load failed for '%s': "
-                    "%s\n",
-                    wm.string().c_str(), r.error().c_str());
-                return true;
-            }
-            src_warp = m.markers();
-        }
-        {
-            GuiPhaseResetMarkers t;
-            auto r = t.load(tm.string());
-            if (!r) {
-                std::fprintf(stderr,
-                    "warptempo_gui: commit aborted: load failed for '%s': "
-                    "%s\n",
-                    tm.string().c_str(), r.error().c_str());
-                return true;
-            }
-            src_phase_resets = t.markers();
-        }
-
-        // The complete candidate is collected. The commit tab is the tab
-        // named by the snapshot's active_tab_view (the dispatch tab the entry
-        // was rendered from), and that tab's view-state band carries the
-        // recipe trim that shaped this render — the same projection
-        // load_render_view_at displays. The tab switch at the application site
-        // happens before the trim restore, so the live fields it writes belong
-        // to the commit tab.
-        const char commit_tab = settings->active_tab_view;
-
-        // No landing-view latch: the entry's frozen .settings — the
-        // dispatch-time viewport/zoom/playhead/tab — IS the session this commit
-        // inherits wholesale below (both tab bands, active_tab_view,
-        // active_audio_view, the prefs, and the engine block; active_markers_view
-        // is the one carve-out — W/P is global, so the live mode survives).
-        // restore_source_view still runs the exit arm, but the post-restore
-        // block overwrites its stash restore with the parsed file, so the exit
-        // stash is transient here.
-        std::vector<GuiWarpMarker>    warp_pre  = app.warpmarkers.markers();
-        std::vector<GuiPhaseResetMarker> phase_reset_pre = app.phaseresetmarkers.markers();
-        const int                 hint_last = app.last_selected_marker;
-
-        app.warpmarkers.markers_mut()    = std::move(src_warp);
-        app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        // Commit is a wholesale authoring reset. Every per-tab per-mode slot
-        // referencing the replaced marker stores is stale.
-        {
-            auto clear_marker_slots = [](ViewState& t) {
-                t.warp_selected.clear();
-                t.warp_last_selected        = -1;
-                t.phase_reset_selected.clear();
-                t.phase_reset_last_selected = -1;
-            };
-            clear_marker_slots(app.tab_a);
-            clear_marker_slots(app.tab_b);
-        }
-
-        // Attribute the entry to the mode the commit was performed in so undo/redo restore the user's context and interpret post-restore hints against that marker store.
-        const char commit_marker_mode = app.active_markers_view;
-        undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                       commit_marker_mode, hint_last, commit_tab);
-        undo.recompute_dirty();
-        // Undo scope, unchanged by the full inheritance: this entry captures
-        // the marker pair and the pre-commit engine settings only
-        // (capture_current_settings, snapshotted just now inside
-        // push_undo_both). The inherited session prefs (playback_speed,
-        // follow, font_size) and the whole view state (both tab bands,
-        // active_tab_view, active_audio_view, the live position) ride OUTSIDE
-        // undo — the same standing convention that
-        // keeps view state and trim out of history. Ctrl+Z restores the
-        // pre-commit stores and engine block exactly as before; it does not
-        // roll back the adopted prefs or landing view. Grow this payload only
-        // deliberately.
-
-        // Full engine-settings commit. The whole snapshot was validated
-        // before marker mutation, so commit can adopt the typed recipe
-        // without degrading to the previous live settings.
-        app.engine_settings = settings->engine;
-
-        const std::filesystem::path src(app.source_audio_path);
-        std::filesystem::path src_parent = src.parent_path();
-        if (src_parent.empty()) src_parent = std::filesystem::path(".");
-        const std::filesystem::path renders_root =
-            src_parent / "renders";
-
-        // Committing a render is a wholesale authoring reset. Clear every
-        // marker's session-only iteration and bpm state and turn off both
-        // sweep modes' visibility. A bpm sweep already wiped its state on
-        // dispatch, but the reset wipes unconditionally so a render committed
-        // from any path leaves no session-only state behind.
-        // No separate undo entry: the commit pushes its own cross-file undo
-        // and wipes renders/; iter and bpm values are session-only, never
-        // serialized (wipe_bpm_state is history-less by design). A full-window
-        // repaint at the tail covers both strips the wipes touch.
-        {
-            auto& mv = app.warpmarkers.markers_mut();
-            for (auto& m : mv) {
-                m.iter_start_cents.reset();
-                m.iter_end_cents.reset();
-            }
-        }
-        flag_editor.wipe_bpm_state();
-        app.iteration_mode_enabled = false;
-        app.bpm_mode_enabled       = false;
-
-        // Deliberately no cancel_archival_session on this exit: the tail's
-        // target_render.trigger() already stops a running rebuild (a render
-        // dispatch kills the running render), and the follow-up preview
-        // re-derives, adopting the just-committed deliverable through
-        // dispatch_render_now's cache/artifact reuse rungs — deliberate
-        // reuse, not a leak.
-        render_view.restore_source_view();
-
-        // Full inheritance (the ruled shape): the entry's frozen .settings —
-        // the dispatch-time view — is the whole session now, the
-        // same SettingsFileTab-to-live application a source load performs.
-        // Both tab bands come from the file (view_state_from_settings_tab, the
-        // shared band conversion: viewport/zoom/playhead, read_only, and the
-        // trim pair; a parsed band carries no selection, matching the
-        // wholesale marker-selection reset above). This replaces the exit
-        // stash restore_source_view just applied — the stash was transient.
-        app.tab_a = view_state_from_settings_tab(settings->tab_a);
-        app.tab_b = view_state_from_settings_tab(settings->tab_b);
-
-        // active_tab_view from the file (== commit_tab). Set it directly —
-        // NOT switch_active_tab_view_to, which would
-        // swap the live fields WITH the tab slots and re-push the authoring
-        // position; both bands are already the file's, so the live fields are
-        // pulled straight from the active band with no double-apply.
-        app.active_tab_view = commit_tab;
-        {
-            const ViewState& band =
-                (commit_tab == 'B') ? app.tab_b : app.tab_a;
-            // Live viewport/zoom/playhead from the active band land at the
-            // dispatch-time (queue-moment) position the entry was written with.
-            // The render display axis IS the full target axis of the snapshot
-            // map, so this lands at that position with no translation; zoom
-            // levels share one vocabulary across views.
-            app.viewport_start_sample  = band.viewport_start_sample;
-            app.zoom_level             = band.zoom_level;
-            // Deliberately unclamped, the restore-site convention: the
-            // dispatch-time playhead may rest outside the adopted map's target
-            // extent; move_playhead_to owns the value at first use.
-            app.playhead_cursor_sample = band.playhead_cursor_sample;
-            // Live trim is the active band's trim, which is exactly the
-            // recipe trim that shaped this render: the frozen file's per-tab
-            // trim is intact, and the commit tab's band trim is that recipe
-            // trim (both read from the same parsed file), so it is the trim
-            // now live.
-            // A committed render lands with no trim bound focused: a parsed
-            // band carries the default false/0 trim-selection fields, matching
-            // the marker-selection reset.
-            app.trim                = band.trim;
-            app.trim_begin_selected = band.trim_begin_selected;
-            app.trim_end_selected   = band.trim_end_selected;
-            app.last_selected_trim  = band.last_selected_trim;
-            app.last_sel_group      = band.last_sel_group;
-        }
-
-        // Session prefs from the file, the same application path a source
-        // load uses (has_X ? X : default; a program-written entry carries
-        // every key). These ride OUTSIDE undo — see the undo-scope note above.
-        //
-        // Recorded asymmetry: active_markers_view is deliberately NOT applied
-        // from the file. W/P is global by ruling — one mode binary affecting
-        // every view alike — so the LIVE mode survives the commit (a `p` flip
-        // made while auditioning stays put), unlike playback_speed, follow,
-        // font_size, active_audio_view, and both tab bands, which all adopt
-        // from the file here.
-        app.follow_mode    = settings->has_follow ? settings->follow : true;
-        app.playback_speed = settings->has_playback_speed
-            ? settings->playback_speed : 1.0f;
-        // Push the inherited speed to the engine so playback picks it up, the
-        // same call load_file makes after the parse.
-        playback.set_speed(app.playback_speed);
-        // font_size through the gesture's live-apply route: the renderer
-        // file-scope state plus the resize-path geometry rebuild
-        // (set_gui_font_size_pt + on_resize), exactly as load_file applies a
-        // parsed font_size. The full-window repaint at this handler's tail
-        // supplies the damage.
-        app.font_size = settings->has_font_size ? settings->font_size : 11.0;
-        set_gui_font_size_pt(app.font_size);
-        paint_handler.on_resize(app.width, app.height);
-
-        // active_audio_view from the file — 'T' by the dispatch writer's
-        // construction, which is also the ruled landing. The flag flip is the
-        // whole target-view entry mechanism: restore_source_view above rebound
-        // playback to the source samples (and, when the pre-commit session was
-        // already in 'T', its ensure_ready funnel ran against the adopted
-        // stores), and the tail's target_render.trigger() marks the buffer
-        // stale and dispatches the adopted preview, which rebinds playback on
-        // completion — superseding any buffer the funnel bound.
-        app.active_audio_view = settings->has_active_audio_view
-            ? settings->active_audio_view : 'S';
-
-        if (!app.playhead_scanner_active) {
-            app.playhead_scanner_sample = app.playhead_cursor_sample;
-        }
-        clamp_viewport_start(app, audio);
-        viewport.clear_hover_popup();
-        viewport.kick_waveform_sync();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-
-        target_render.trigger();
-
-        app.render_view.list.clear();
-        render_view.clear_snapshot_context();
-        app.render_view.index             = -1;
-        app.render_view.last_path.clear();
-
-        std::error_code ec;
-        if (std::filesystem::is_directory(renders_root, ec)) {
-            std::filesystem::remove_all(renders_root, ec);
-            if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-view: wipe failed for '%s': "
-                    "%s\n",
-                    renders_root.string().c_str(),
-                    ec.message().c_str());
-            }
-        }
-
-        std::fprintf(stderr,
-            "warptempo_gui: render-view: committed render and wiped "
-            "renders/\n");
-        gui.invalidate_region(0, 0, app.width, app.height);
-        return true;
-    }
     return false;
 }
 
@@ -974,18 +665,9 @@ static std::string render_entry_relative_id(
 // -- Standalone render-entry adoption (the Shift+. commit editor) --------
 //
 // Adopt render entry `e`'s frozen sidecar recipe as the new authoring
-// baseline, view-agnostic: callable from source OR target authoring view,
-// NOT from render view. This is the SAME wholesale application Ctrl+Alt+C
-// performs from inside render view (handle_render_dispatch_keys above),
-// minus the render-view-exit steps.
-//
-// TRANSIENT DUPLICATION: the two adopts coexist until render view is retired,
-// at which point Ctrl+Alt+C's copy is deleted and this becomes the sole
-// adopt. Keep the two application bodies in sync while both live; the only
-// deliberate differences are that this one takes an explicit entry (never
-// reads render_view.index), calls no render-view-exit routine
-// (restore_source_view / clear_snapshot_context / list / index / last_path),
-// and stays SILENT on a read failure (the caller red-flashes).
+// baseline, view-agnostic: callable from source OR target authoring view. It
+// takes an explicit entry and stays SILENT on a read failure (the caller
+// red-flashes).
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
 // three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
@@ -1027,10 +709,9 @@ bool GuiInputHandler::adopt_render_entry(
         src_phase_resets = t.markers();
     }
 
-    // Every input is in hand and valid. Apply the recipe wholesale, mirroring
-    // the Ctrl+Alt+C body step for step (only the render-view-exit calls are
-    // omitted). The commit tab is the tab the entry was dispatched from; its
-    // view-state band carries the recipe trim that shaped this render.
+    // Every input is in hand and valid. Apply the recipe wholesale. The commit
+    // tab is the tab the entry was dispatched from; its view-state band carries
+    // the recipe trim that shaped this render.
     const char commit_tab = settings->active_tab_view;
 
     std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
@@ -1133,9 +814,9 @@ bool GuiInputHandler::adopt_render_entry(
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 
-    // The tail's trigger owns the rebind for a 'T' landing, exactly as in
-    // Ctrl+Alt+C: it marks the buffer stale and dispatches the adopted target
-    // preview, which rebinds playback on completion.
+    // The tail's trigger owns the rebind for a 'T' landing: it marks the
+    // buffer stale and dispatches the adopted target preview, which rebinds
+    // playback on completion.
     target_render.trigger();
 
     // Wipe renders/ AFTER the successful adopt. The committed render survives
@@ -1144,28 +825,25 @@ bool GuiInputHandler::adopt_render_entry(
         std::filesystem::remove_all(renders_root, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render-view: wipe failed for '%s': %s\n",
+                "warptempo_gui: commit: wipe failed for '%s': %s\n",
                 renders_root.string().c_str(), ec.message().c_str());
         }
     }
 
     std::fprintf(stderr,
-        "warptempo_gui: render-view: committed render and wiped renders/\n");
+        "warptempo_gui: commit: committed render and wiped renders/\n");
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
 
-// Open the Shift+. render-commit prompt. No-op with no source loaded or over
-// render view (which keeps its own Ctrl+Alt+C). An empty renders/ reports a
-// one-line bottom-strip status and does not open.
+// Open the Shift+. render-commit prompt. No-op with no source loaded. An empty
+// renders/ reports a one-line bottom-strip status and does not open.
 void GuiInputHandler::open_commit_editor() {
     if (text_editor::is_active(app.commit_editor)) return;
     if (app.source_audio_path.empty()) return;
-    if (app.render_view.enabled) return;
-    // Running-render guard, the same the render-view entry uses: adopt wipes
-    // renders/, which would race a background sweep writing into it. Refuse,
-    // don't cancel — a running batch may be irreplaceable queued work; Esc is
-    // the explicit cancel.
+    // Running-render guard: adopt wipes renders/, which would race a background
+    // sweep writing into it. Refuse, don't cancel — a running batch may be
+    // irreplaceable queued work; Esc is the explicit cancel.
     if (app.queue_running || app.pending_archival.armed) {
         app.transient_status_message = "render running; Esc cancels it";
         viewport.invalidate_timestamp_area();
@@ -1378,9 +1056,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // `p` (no modifiers) toggles phase reset view globally.
-    // Render-view shares the global active_markers_view flag, so a
-    // single handler serves both views. Render-view inherits the
-    // engine precondition check from toggle_active_markers_view.
     if (key == GuiKeys::P && !ctrl && !shift && !alt) {
         active_views.toggle_active_markers_view();
         return true;
@@ -1479,12 +1154,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // `l` (no modifiers): "Listen to renders" — launch the external audio
     // player (the audio_player setting) with every rendered wav under
-    // <source_parent>/renders/, in the same numeric order render view lists
-    // them. Fire-and-forget; the GUI's own playback is unaffected. The modal /
-    // editor / render-view / read-only gates in on_key run before this handler,
-    // so `l` is inert while any of them owns the keyboard (like p/i/m). A
-    // missing player or an empty render set reports a one-line bottom-strip
-    // status and does nothing.
+    // <source_parent>/renders/, in the numeric order enumerate_render_view_list
+    // returns them. Fire-and-forget; the GUI's own playback is unaffected. The
+    // modal / editor / read-only gates in on_key run before this handler, so
+    // `l` is inert while any of them owns the keyboard (like p/i/m). A missing
+    // player or an empty render set reports a one-line bottom-strip status and
+    // does nothing.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         if (app.audio_player.empty()) {
             app.transient_status_message = "no audio_player set";
@@ -1523,11 +1198,6 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // target tab. Does not mark the document dirty. Alt-strict: an Alt
     // held alongside makes the chord an unbound no-op, never this binding.
     if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
-        // Render view blocks Ctrl+Tab outright at the key gate
-        // (render_view_key_blocked's EXTRA BLOCKS), so this arm runs only in
-        // authoring views: the A/B tab is authoring view state and render view
-        // may not mutate the live tab. The trigger dispatches a target-view
-        // preview, always safe here for the same reason.
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         target_render.trigger();
         return true;
@@ -1535,9 +1205,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
-    // march paired tabs forward in lockstep with one chord. Render view blocks
-    // this chord at the key gate (like Ctrl+Tab), so this arm is authoring-only;
-    // cycle_marker_focus_with_recenter survives unchanged for those views.
+    // march paired tabs forward in lockstep with one chord.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus_with_recenter(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');

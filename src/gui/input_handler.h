@@ -128,7 +128,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // BOTH marker columns (`markers` + `phase_resets`, under a sr>0 &&
 // total>0 guard), first defect message wins — so target view is reachable
 // only from a raw-valid store, mirroring warp_render_preflight's raw walk
-// and render view's load walk (the enumerator's coincidence window is
+// (the enumerator's coincidence window is
 // wider than the parser owners' sub-frame refusals, so a raw-invalid but
 // owner-clean store — e.g. two close phase resets — is refused here too).
 // Then resolve_warp_markers_for_render over `markers`, then
@@ -250,8 +250,8 @@ struct GuiInputHandler {
     void cancel_active_drags();
 
     // Target-view validity gate, kick-back half. Called from on_tick every
-    // event-loop iteration: while target view is displayed (and render-view
-    // is off), consult the memoized target-view map cache; if the last
+    // event-loop iteration: while target view is displayed,
+    // consult the memoized target-view map cache; if the last
     // rebuild failed (invalidating edit — first-marker grammar violation,
     // dangling label ref, tie, ...) or a set trim fails validate_trim_frames,
     // toggle back to source view through the same T→S path bare `t` uses,
@@ -263,8 +263,7 @@ struct GuiInputHandler {
     // one tick at a time) while another prompt is up; edits are impossible
     // mid-prompt, so the pending kick survives until dismissal —
     // run_commit_validation runs first on the same tick, so a commit's own
-    // modal wins the beat. No-op in source view, render-view, blank/loading
-    // state.
+    // modal wins the beat. No-op in source view, blank/loading state.
     void enforce_target_view_validity();
 
     // Defect-resolution modal series (bodies in input_defect_series.cpp).
@@ -295,18 +294,16 @@ struct GuiInputHandler {
 
     // present_defect_pre_step: the pre-remedy funnel gate, called by
     // open_defect_series with the first defect's own message once a defect is
-    // known but before the [U]ndo/[R]eset/[Delete] remedy is built. If render
-    // view is enabled or the active tab is read-only, sets
-    // defect_series.pre_step and presents a forced single-[Y]es prompt to leave
-    // that context ("<summary>. Leave render view to resolve?" /
-    // "<summary>. Disable read-only?"), returning true so the caller returns
-    // without building the remedy. Otherwise clears pre_step to None and
-    // returns false, so the caller builds the real remedy in the now-editable
-    // context.
+    // known but before the [U]ndo/[R]eset/[Delete] remedy is built. If the
+    // active tab is read-only, sets defect_series.pre_step and presents a
+    // forced single-[Y]es prompt to disable it ("<summary>. Disable
+    // read-only?"), returning true so the caller returns without building the
+    // remedy. Otherwise clears pre_step to None and returns false, so the
+    // caller builds the real remedy in the now-editable context.
     bool present_defect_pre_step(const std::string& defect_summary);
 
-    // handle_defect_response: a pre-step [Y]es (pre_step != None) leaves render
-    // view / disables read-only with NO history and re-enters the funnel;
+    // handle_defect_response: a pre-step [Y]es (pre_step != None) disables
+    // read-only with NO history and re-enters the funnel;
     // otherwise apply the chosen resolution ([U]ndo / [R]eset / [Delete] per
     // defect kind), then re-open the series with the same commit-context flag —
     // re-validate from scratch; next defect or done. Keys not offered by the
@@ -324,8 +321,7 @@ struct GuiInputHandler {
 
     // The Esc-cancel body itself, key-free: cancel the running archival
     // session (worker cancel flag + batch finalize sentinel) and disarm the
-    // parked archival command. Called by handle_escape_cancels and by the
-    // render-view Esc-cancel paths (input_render_view.cpp). Returns true
+    // parked archival command. Called by handle_escape_cancels. Returns true
     // when there was a session to cancel.
     bool cancel_archival_session();
 
@@ -340,21 +336,6 @@ private:
         int                        next_index = 0;
         int                        rendered   = 0;
         bool                       active     = false;
-        // Snapshotted at start_render_batch time from reqs.front()
-        // because each entry's RenderRequest::batch_folder is moved
-        // out during dispatch — by the time the terminal success
-        // branch needs the folder for auto-open, reqs[0].batch_folder
-        // is empty. All entries in a single batch share one folder,
-        // so reading from reqs.front() is canonical.
-        std::filesystem::path      batch_folder;
-        // Snapshotted the same way, from reqs.front()'s output_format:
-        // render view is a WAV audio player, so the terminal auto-open
-        // runs only for a wav-output batch. Every entry in a batch shares
-        // one output_format (both sweep builders copy the live
-        // app.engine_settings.output_format), and reqs is moved onto batch_
-        // before the terminal branch reads this — so the front request is
-        // the canonical read and is captured up front, like batch_folder.
-        bool                       wav_browseable = false;
     };
     ActiveBatch batch_;
 
@@ -476,7 +457,7 @@ private:
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
-    // Shared wheel handler covering source-view and render-view; on_wheel is
+    // Shared wheel handler for source and target view; on_wheel is
     // its only caller. Exact-match modifiers: plain = zoom, Alt = pan (10% of
     // the visible span per detent), Ctrl = nudge the focused warp marker's base
     // tempo by 0.01 per detent. Any other combination (Shift+wheel,
@@ -497,8 +478,7 @@ private:
     bool handle_escape_cancels(GuiKey key);
 
     // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
-    // (render iteration sweep), Ctrl+Alt+C (commit displayed render).
-    // Returns true if key+mods matched
+    // (render iteration sweep). Returns true if key+mods matched
     // one (on_key then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
 
@@ -554,13 +534,11 @@ private:
 
     // adopt_render_entry: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
-    // agnostic (source OR target authoring view; NOT render view). Reads and
-    // validates the wav's existence and all three sidecars BEFORE mutating any
-    // store, and returns false leaving authoring untouched (silent) on any
-    // missing/malformed input; otherwise applies the recipe wholesale, wipes
-    // renders/, and returns true. The same wholesale application Ctrl+Alt+C
-    // performs from inside render view, minus the render-view-exit steps —
-    // transient duplication until render view is retired (see the definition).
+    // agnostic (source OR target authoring view). Reads and validates the wav's
+    // existence and all three sidecars BEFORE mutating any store, and returns
+    // false leaving authoring untouched (silent) on any missing/malformed
+    // input; otherwise applies the recipe wholesale, wipes renders/, and
+    // returns true.
     bool adopt_render_entry(const AppState::RenderViewEntry& e);
 
     // Side-parameterized helpers shared by the trim entry points below.
@@ -622,29 +600,14 @@ private:
     // zoom_level through the current warp_frame_map in place and enters target
     // view only when target view is available. target-view playback is
     // allowed once the target buffer is ready; target render
-    // update-in-progress gates playback elsewhere. Silent no-op while
-    // render-view is active — the render-view gate above this dispatcher
-    // already drops bare `t`.
+    // update-in-progress gates playback elsewhere.
     void handle_active_audio_view_toggle();
 
-    // Render-view input helpers. Extracted verbatim from the mega event
-    // handlers (on_key / on_button_press / on_motion); each is a cohesive,
-    // behavior-preserving lift of one render-view-only block. They live on
-    // the class so their definitions can move to input_render_view.cpp.
-    //
-    // render_view_key_blocked: the render-view key gate as a predicate — true
-    // when `key`+`mods` is NOT permitted while render-view is active (so the
-    // caller drops it with an early return). Expressed as read_only_key_blocked
-    // plus a small named delta (render-view-specific admits and extra blocks)
-    // so the two gates cannot drift; the delta is documented at the definition.
-    bool render_view_key_blocked(GuiKey key, GuiInputState mods);
-
-    // Source-view read-only allowlist, and the base gate render_view_key_blocked
-    // defers to. Returns true if key+mods is NOT on the allowlist of navigation
-    // / playback / zoom / view-switch / close-prompt / save keys honored in a
-    // read-only source tab — i.e. should be dropped. Authoring-mutation chords
-    // (trim gestures, Delete, undo/redo, the propagate commands) are blocked
-    // here at the gate.
+    // Source-view read-only allowlist. Returns true if key+mods is NOT on the
+    // allowlist of navigation / playback / zoom / view-switch / close-prompt /
+    // save keys honored in a read-only source tab — i.e. should be dropped.
+    // Authoring-mutation chords (trim gestures, Delete, undo/redo, the
+    // propagate commands) are blocked here at the gate.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // Bottom-strip modal-editor predicate + key gate (bodies in
@@ -657,34 +620,4 @@ private:
     // and Ctrl+Q).
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
-
-    // handle_render_view_toggle: the bare-R enter/exit handler. Returns false
-    // if the chord is not bare R (caller falls through); otherwise performs
-    // the enter (enumerate, migrate persisted selection, load) or exit (stash
-    // entry view state + selection, restore source, clear render-view state)
-    // and returns true.
-    bool handle_render_view_toggle(GuiKey key, GuiInputState mods);
-
-    // handle_render_view_nav: render-view list navigation. Handles both
-    // Shift+Left/Right (wraparound) and Shift+Home / Shift+End (clamp, no wrap).
-    // Returns true when it handled the chord (so the caller returns); false
-    // when neither chord matches (or render-view is off), so the caller falls
-    // through to the source-view handlers.
-    bool handle_render_view_nav(GuiKey key, GuiInputState mods);
-
-    // handle_render_view_press: the on_button_press render-view block. Fully
-    // terminating (the caller returns after it). Handles Left-only gating, the
-    // phase-reset top-strip no-op, marker hit-test + selection bookkeeping,
-    // playhead move, and waveform-press playhead-drag arming. Recomputes its
-    // own cheap geometry; derives `shift` from `mods`.
-    void handle_render_view_press(GuiMouseButton button, int x, int y,
-                                  bool inside_top, bool inside_waveform,
-                                  GuiInputState mods);
-
-    // handle_render_view_motion: the on_motion render-view block. Fully
-    // terminating (caller returns after it). During a playhead drag, snaps the
-    // playhead to the visible sub-view's markers (3px epsilon) with Shift
-    // sweep-select; otherwise runs hover-popup detection over the render-view
-    // markers. Recomputes its own cheap geometry.
-    void handle_render_view_motion(int mouse_x, int mouse_y, GuiInputState mods);
 };

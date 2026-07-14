@@ -345,14 +345,10 @@ RenderOutcome do_render(const RenderRequest& req,
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
                 // This file is written ONCE here and never touched again: the
-                // entry loader validates it (and resets its own display to
-                // fit-file/0/0 — render view keeps no per-entry browse memory),
-                // and Ctrl+Alt+C reads the whole frozen file back as the
-                // session, so these keys land in the committed target view
-                // THROUGH the file — the commit adopts the file, never a
-                // separate live latch. Render-view browsing itself always
-                // starts at fit-file/0/0, independent of these keys. Those keys
-                // are captured on
+                // Shift+. commit (adopt_render_entry) reads the whole frozen
+                // file back as the session, so these keys land in the committed
+                // target view THROUGH the file — the commit adopts the file,
+                // never a separate live latch. Those keys are captured on
                 // the LIVE map's axis; a sweep cell rewrites its markers per
                 // cell, giving the cell a different (possibly shorter) target
                 // axis, so the values are CLAMPED into this entry's own map
@@ -480,9 +476,9 @@ RenderOutcome do_render(const RenderRequest& req,
             return RenderOutcome::Failed;
         }
         // The fingerprint plus the commit-critical sidecars just
-        // (re)published above are the whole reuse condition: render view
-        // derives its display live from the snapshot set, so there is
-        // nothing else the entry needs on disk.
+        // (re)published above are the whole reuse condition: the Shift+.
+        // commit derives everything it adopts from the snapshot set, so there
+        // is nothing else the entry needs on disk.
         return finish_success("reused_up_to_date");
     }
 
@@ -518,9 +514,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // the attestation that the artifact set is complete, so a fingerprint
     // match on a later render implies those files exist. Process death
     // after the wav rename lands on disk but before those sidecars finish
-    // can leave an orphan wav that render-view enumerates and offers;
-    // Ctrl+Alt+C's validate-before-mutate path refuses that entry cleanly.
-    // That residual crash window is the accepted design.
+    // can leave an orphan wav that enumerate_render_view_list surfaces;
+    // adopt_render_entry's validate-before-mutate path refuses that entry
+    // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
@@ -1006,7 +1002,7 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    // Non-wav batch artifacts are not render-view commit candidates. Preserve
+    // Non-wav batch artifacts are not Shift+. commit candidates. Preserve
     // their existing warning-only sidecar behavior, while still writing the
     // source-domain phase-reset companion as an empty file when the list is
     // empty.

@@ -237,7 +237,7 @@ std::vector<uint8_t> render_fingerprint(
     // doubles, so archival sidecars stay valid. The tempo is integer cents
     // widened through tempo_from_cents for the same reason: the conversion
     // is bit-identical to the double the old parse stored, so every
-    // existing entry's fingerprint still verifies and render view never
+    // existing entry's fingerprint still verifies and the change never
     // invalidates the corpus.
     put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
     for (const auto& m : warp_markers) {

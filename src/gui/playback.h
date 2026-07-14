@@ -10,10 +10,8 @@
 //
 // One bind API, and the domain offset travels with the buffer: init() and
 // rebind_buffer() take the bound buffer's domain offset — the displayed-domain
-// coordinate that buffer frame 0 represents (0 for source.wav, 0 for a
-// render-view wav — render view displays the rendered artifact's own timeline,
-// so the entry buffer IS its own domain — and the trim-mapped
-// full-target-frame anchor for the target buffer) — and
+// coordinate that buffer frame 0 represents (0 for source.wav, and the
+// trim-mapped full-target-frame anchor for the target buffer) — and
 // store it in the same moment as the buffer pointer, under the same
 // refuse-while-playing conditions, so the pair can never be observed
 // inconsistent. Every public position surface (play()'s bounds, cursor(),

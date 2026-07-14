@@ -14,16 +14,6 @@
 
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
-    if (app.render_view.enabled) {
-        // Render view displays the rendered ARTIFACT — the entry wav's own
-        // timeline — and playback binds the whole entry buffer at offset 0, so
-        // the artifact IS the playable range: [0, entry frames). No trim
-        // overlay, no window mapping. The entry-length check at load makes
-        // snapshot_display_total (the entry frame count) equal the bound
-        // buffer's exclusive domain end, so Home/End land at 0 / total
-        // naturally.
-        return {0, app.render_view.snapshot_display_total};
-    }
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store
         // whole int64 source frames via inverse-translation in
@@ -436,8 +426,7 @@ void Viewport::clear_hover_popup() {
 // viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
 // so a stationary cursor's hover state tracks the rects that just slid under
 // it. The suppression set matches on_motion's hover path: prompt, editors,
-// pointer gestures, render queue, render view, non-warp marker view, and iter
-// mode.
+// pointer gestures, render queue, non-warp marker view, and iter mode.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     if (app.prompt.active ||
@@ -450,12 +439,6 @@ void Viewport::recompute_hover_at_cursor() {
         text_editor::is_active(app.commit_editor) ||
         text_editor::is_active(app.top_flag_editor) ||
         app.queue_running) {
-        clear_hover_popup();
-        return;
-    }
-    if (app.render_view.enabled) {
-        // Render-view is read-only display, no hover popups — same rule as
-        // handle_render_view_motion.
         clear_hover_popup();
         return;
     }

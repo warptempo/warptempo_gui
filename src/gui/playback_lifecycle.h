@@ -46,9 +46,9 @@ struct GuiPlaybackLifecycle {
 
     // Reseek the active playback session to a new starting sample, keeping
     // audio alive. The sample is expressed in the active playhead domain
-    // (source-domain in source view; target-domain in target view; render-
-    // domain in render-view). Handles the target-view target_buffer
-    // translation internally. Caller is responsible for the entry-state
+    // (source-domain in source view; target-domain in target view). Handles
+    // the target-view target_buffer translation internally. Caller is
+    // responsible for the entry-state
     // check (was_playing AND sample != playhead_at_entry); this function
     // unconditionally reseeks when called. For target view, samples
     // outside the target buffer's range fall back to playback.stop() —

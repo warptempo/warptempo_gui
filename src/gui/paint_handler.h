@@ -145,8 +145,8 @@ struct WaveformCache {
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
     // Audio the superseding job will read (see WaveformJob.audio). Carried so
     // the deferred redispatch names the same audio the superseded viewport
-    // change was computed against — the entry audio in render view, the
-    // source audio otherwise; the keepalive holds a render-view entry alive.
+    // change was computed against — the source audio; the keepalive is
+    // vestigial and stays empty.
     const GuiAudio* supersede_audio = nullptr;
     std::shared_ptr<const GuiAudio> supersede_audio_keepalive;
 
@@ -198,7 +198,7 @@ struct WaveformCache {
 //      key off the same set of displayed-viewport values, which the
 //      waveform's swap callback publishes atomically.
 //   2. Marker-driven inputs (warpmarker/phase_reset generations, drag
-//      overlay hash/active, marker view, render-view flag): read live
+//      overlay hash/active, marker view): read live
 //      from app state. These have no waveform coupling, so the stem
 //      layer reacts to them immediately on the next tick. The drag
 //      overlay is hashed (not generation-counted) so future mutations
@@ -229,7 +229,6 @@ struct StemCache {
     uint64_t  fp_drag_overlay_hash           = 0;
     bool      fp_drag_active                 = false;
     char      fp_active_markers_view         = '\0';
-    bool      fp_render_view_enabled         = false;
     uint64_t  fp_selection_hash              = 0;
 
     // Trim boundary stems share this cache. The begin/end frame
@@ -296,7 +295,6 @@ struct FlagCache {
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
-    bool      fp_render_view_enabled      = false;
     int       fp_flag_editor_target       = -1;
     // Iteration mode splices the inline bracket into eligible
     // flags. Toggling `i` changes the painted text without bumping any
@@ -406,7 +404,7 @@ struct GuiPaintHandler {
     // waveform's completion swap. Reads displayed-viewport inputs from
     // wf_cache.fp_*; reads marker-driven inputs (warpmarker / phase_reset
     // generations, drag-overlay hash, selection hash, marker-view,
-    // render-view flag, editor targets) live from app state. Rebuilds are
+    // editor targets) live from app state. Rebuilds are
     // synchronous (sub-millisecond at observed flag counts).
     void maybe_rebuild_flag_cache();
 
@@ -445,13 +443,10 @@ private:
         uint64_t warp_frame_map_hash  = 0;
         int      channel_count = 0;
         // The translation map: the target-view map in target view, empty in
-        // source view AND in render view (the render-view plate is identity
-        // over the entry audio — the rendered artifact's own samples — not a
-        // deformation of the source).
+        // source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
-        // The audio the plate reads from: the source audio outside render
-        // view, the view-owned entry audio in render view (audio_keepalive
-        // holds its shared_ptr alive across a nav-away that swaps it). Set by
+        // The audio the plate reads from: the source audio (audio_keepalive is
+        // vestigial and stays empty). Set by
         // compute_waveform_render_inputs; routed into WaveformJob.audio /
         // .audio_keepalive and into the synchronous / pan render paths.
         const GuiAudio* audio = nullptr;
@@ -470,12 +465,7 @@ private:
     // bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
-    // stems' coordinate system. In render view the displayed trim is the
-    // SNAPSHOT trim through the snapshot map — the entry's rendered window,
-    // painted (stems, chips, dim) and selectable like the snapshot markers
-    // (mouse pick through the trim hit tests, Tab focus through
-    // cycle_selection; the selected bits track both) but immutable — no
-    // gesture ever moves a snapshot bound.
+    // stems' coordinate system.
     struct DisplayedTrim {
         int64_t begin          = 0;
         int64_t end            = 0;
@@ -487,7 +477,7 @@ private:
     DisplayedTrim compute_displayed_trim() const;
 
     // Out-of-trim dim rects in SCREEN coordinates for the current frame, or
-    // an empty result when nothing should dim (no trim, render view, or an
+    // an empty result when nothing should dim (no trim, or an
     // INVERTED trim — begin strictly later than end in the displayed domain
     // shades nothing; the render boundary's refusal is the signal).
     // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the

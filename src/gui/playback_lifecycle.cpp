@@ -73,8 +73,8 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // public API speaks the bound buffer's domain (playback.h), so the
 // bounds pass straight through: [domain_begin(), domain_end()) is the
 // target buffer's full-target-frame extent and play() takes the
-// validated cursor position unchanged. Speed is forced to 1.0 here
-// (sibling case to render view): target view's whole purpose is that
+// validated cursor position unchanged. Speed is forced to 1.0 here:
+// target view's whole purpose is that
 // audio plays the user's authored warp, so an extra speed multiplier
 // on top would defeat that purpose. The persistent app.playback_speed
 // is left untouched; toggling back to source view restores it
@@ -92,14 +92,13 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     app.playhead_scanner_endpoint_painted = false;
     // Both `start` (playback.play()'s launch bound) and the scanner's
     // launch position below are in the active PAINT domain
-    // (full-target-frame in target view; source/render-frame otherwise)
+    // (full-target-frame in target view; source-frame otherwise)
     // — playback's API takes domain coordinates, so the same value
     // serves both, and follow_scroll_if_needed compares the scanner
     // against the full-domain viewport with no wrong-domain leak.
     int64_t start;
     int64_t end;
-    if (app.active_audio_view == 'T' &&
-        !app.render_view.enabled) {
+    if (app.active_audio_view == 'T') {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet
         // — Space's outer gate in input_handler.cpp already checks this,
@@ -141,20 +140,19 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // mode's same-shape check is sufficient regardless of whether the
     // user has follow mode toggled on, so always run it on press.
     viewport.follow_scroll_if_needed();
-    const bool force_one_x =
-        app.render_view.enabled || app.active_audio_view == 'T';
+    const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     playback.play(start, end);
 }
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
-// stop-and-restart visual glitch. All three arms mirror toggle_playback's
+// stop-and-restart visual glitch. Both arms mirror toggle_playback's
 // range policy: source view against [trim_begin_sample(), trim_end_sample()),
-// target and render view against the bound buffer's [domain_begin(),
+// target view against the bound buffer's [domain_begin(),
 // domain_end()). `sample` is a paint-domain coordinate, the same domain
 // playback's public API speaks in every view. Called from the PRESS handlers
-// only (input_pointer.cpp and input_render_view.cpp) during a playhead-drag
-// when playback was alive at press time — the motion handlers do not call it.
+// only (input_pointer.cpp) during a playhead-drag when playback was alive at
+// press time — the motion handlers do not call it.
 // An out-of-range position in any arm falls back to a MANUAL stop with
 // immediate scanner teardown (stop_playback_if_playing), never the natural-end
 // scanner flash. No follow-scroll at the reseek site: the user's click is a
@@ -166,24 +164,8 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // run move_playhead_to before), so the reset is a harmless transient — the
 // caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
-    if (app.active_audio_view == 'T' && !app.render_view.enabled) {
+    if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }
-        if (sample < playback.domain_begin() ||
-            sample >= playback.domain_end()) {
-            stop_playback_if_playing();
-            return;
-        }
-        playback.play(sample, playback.domain_end());
-        return;
-    }
-    if (app.render_view.enabled) {
-        // The audio device is bound to the entry wav at offset 0, and render
-        // view displays that wav's OWN timeline — so [domain_begin(),
-        // domain_end()) is [0, entry frames), the WHOLE displayed domain. The
-        // playhead always rests inside it, so this bound-buffer range check is
-        // defensively unreachable in practice; it is kept as the shared shape
-        // of the three reseek arms (a stray out-of-range value falls back to a
-        // clean manual stop rather than a bad play()).
         if (sample < playback.domain_begin() ||
             sample >= playback.domain_end()) {
             stop_playback_if_playing();

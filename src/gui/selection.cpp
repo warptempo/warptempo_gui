@@ -91,17 +91,11 @@ void Selection::sanitize_selection_after_restore(int n) {
 void Selection::cycle_selection(bool forward) {
     const bool phase_reset = (app.active_markers_view == 'P');
 
-    // Render-view cycles the displayed entry's authored-domain snapshot
-    // collections; normal authoring cycles the live authoring stores.
-    // Mirrors the branch in prune_live_selection. Bind const refs once so
-    // the count, frame_of, and is_disabled reads below all index the same
-    // vectors.
-    const std::vector<GuiWarpMarker>& warp_vec =
-        app.render_view.enabled ? app.render_view.warp_markers
-                                : app.warpmarkers.markers();
+    // Bind const refs once so the count, frame_of, and is_disabled reads below
+    // all index the same live authoring stores.
+    const std::vector<GuiWarpMarker>& warp_vec = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
-        app.render_view.enabled ? app.render_view.phase_resets
-                                : app.phaseresetmarkers.markers();
+        app.phaseresetmarkers.markers();
 
     const int n = phase_reset
         ? static_cast<int>(phase_reset_vec.size())
@@ -111,10 +105,10 @@ void Selection::cycle_selection(bool forward) {
     // [0, n), so n == 0 simply yields no marker candidate.
 
     // Helper to read frame-of-index in the active domain. Source view:
-    // marker source-frame == active-domain frame (identity). Target and
-    // render view: forward-translate through the display context (live
-    // map, or snapshot map) so frame_of values are
-    // comparable to playhead_cursor_sample / viewport_start_sample below.
+    // marker source-frame == active-domain frame (identity). Target view:
+    // forward-translate through the display context (the live map) so
+    // frame_of values are comparable to playhead_cursor_sample /
+    // viewport_start_sample below.
     auto frame_of = [&](int i) -> int64_t {
         int64_t src_f;
         if (phase_reset) {
@@ -128,20 +122,8 @@ void Selection::cycle_selection(bool forward) {
     };
 
     // Disabled-skip predicate. Warp side respects label_ref cascade via
-    // effective_disabled; phase reset has no cascade and reads the bool. In
-    // render view a row whose window-axis image falls outside the entry wav is
-    // absent from the display, so it is not a Tab stop either — fold the
-    // membership rule (render_view_position_in_window) in here, the one hook
-    // every scan below already honors (frame scan, in-group step,
-    // first_marker_at_ph). Without it a pre-window marker (negative image) or a
-    // past-window one could be selected by the frame scan.
+    // effective_disabled; phase reset has no cascade and reads the bool.
     auto is_disabled = [&](int i) -> bool {
-        if (app.render_view.enabled) {
-            const int64_t src_f = phase_reset
-                ? phase_reset_vec[i].time_frame
-                : warp_vec[i].time_frame;
-            if (!render_view_position_in_window(app, src_f)) return true;
-        }
         if (phase_reset) {
             return phase_reset_vec[i].disabled;
         }
@@ -157,22 +139,19 @@ void Selection::cycle_selection(bool forward) {
     // Disabled markers are skipped as if absent from the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
 
-    // Trim stops are AUTHORING-only: trim is a project-level authoring tool,
-    // orthogonal to the marker list, and render view displays the rendered
-    // artifact with no trim overlay and no trim pick — so its stops are gated
-    // off entirely there (has_b / has_e forced false). The authoring views walk
-    // the live app.trim pair; each set bound has one active-domain frame,
-    // projected through source_frame_to_active_domain exactly as the marker
-    // frames are. The group-order comment below (begin bound, end bound, then
-    // markers; the half-open [begin, end) rationale) applies to the authoring
-    // views.
+    // Trim stops: trim is a project-level authoring tool, orthogonal to the
+    // marker list. The authoring views walk the live app.trim pair; each set
+    // bound has one active-domain frame, projected through
+    // source_frame_to_active_domain exactly as the marker frames are. The
+    // group-order comment below (begin bound, end bound, then markers; the
+    // half-open [begin, end) rationale) applies to the authoring views.
     auto bound_frame = [&](char which) -> int64_t {
         const int64_t src_f = (which == 'B') ? app.trim.begin_frame
                                              : app.trim.end_frame;
         return source_frame_to_active_domain(app, audio, src_f);
     };
-    const bool has_b = !app.render_view.enabled && app.trim.has_begin;
-    const bool has_e = !app.render_view.enabled && app.trim.has_end;
+    const bool has_b = app.trim.has_begin;
+    const bool has_e = app.trim.has_end;
     const int64_t bf = has_b ? bound_frame('B') : 0;
     const int64_t ef = has_e ? bound_frame('E') : 0;
 
@@ -359,16 +338,9 @@ void Selection::select_next_marker() { cycle_selection(true);  }
 void Selection::select_prev_marker() { cycle_selection(false); }
 
 void Selection::prune_live_selection() {
-    int n = 0;
-    if (app.render_view.enabled) {
-        n = (app.active_markers_view == 'P')
-            ? static_cast<int>(app.render_view.phase_resets.size())
-            : static_cast<int>(app.render_view.warp_markers.size());
-    } else {
-        n = (app.active_markers_view == 'P')
-            ? static_cast<int>(app.phaseresetmarkers.markers().size())
-            : static_cast<int>(app.warpmarkers.markers().size());
-    }
+    const int n = (app.active_markers_view == 'P')
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
     for (auto it = app.selected_markers.begin();
          it != app.selected_markers.end();) {
         if (*it < 0 || *it >= n) {
@@ -388,10 +360,6 @@ void Selection::prune_live_selection() {
 }
 
 void Selection::sync_playhead_to_last_selected(bool edge_follow) {
-    // Callers are authoring mutations and never run in render view; this guard
-    // keeps the authoring-store choice locally safe.
-    if (app.render_view.enabled) return;
-
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const int last = app.last_selected_marker;

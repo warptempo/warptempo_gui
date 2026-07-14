@@ -451,9 +451,9 @@ void render_playhead(cairo_t* cr,
 // dim, via on_redraw's ATOP overlay (see kWaveformDimmed). The global
 // out-of-trim dim was retired and it stays retired for stems.
 // `warp_frame_map` (default null) shifts marker positioning into the mapped
-// display domain (target view's live map, render view's snapshot map): each
-// marker's source-frame position is run through `map_source_to_target` before
-// viewport clipping and column placement. Null warp_frame_map = identity.
+// display domain (target view's live map): each marker's source-frame position
+// is run through `map_source_to_target` before viewport clipping and column
+// placement. Null warp_frame_map = identity.
 void render_markers(cairo_t* cr,
                     GuiRect waveform_area,
                     const std::vector<GuiWarpMarker>& markers,
@@ -553,8 +553,8 @@ struct FlagEditorOverlay {
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
-// live map in target view, the snapshot map in render view). The greedy pack
-// and elision still walk left-to-right, so in the mapped views the pack rule
+// live map in target view). The greedy pack and elision still walk
+// left-to-right, so in target view the pack rule
 // is applied against post-translation positions (a region the warp_frame_map
 // stretches may un-elide flags that were elided in source view; a region the
 // warp_frame_map compresses may elide flags that were visible there).
@@ -578,7 +578,7 @@ void render_flags(cairo_t* cr,
 // index` selects which flag emits paint; non-matching emit_indices are
 // skipped. Intended caller path: in on_redraw, after the flag-cache
 // blit, when overlay.marker_index >= 0 and the active marker-view
-// admits FlagPayload editing (not 'P', not render-view). The flag-
+// admits FlagPayload editing (not 'P'). The flag-
 // cache itself passes the editor target into the skip-guard inside
 // render_flags so the cache leaves a transparent hole over the editor
 // target's column; this helper fills the hole with fresh pixels every
@@ -603,12 +603,11 @@ void render_one_editor_flag(
 // caller uses these for hit-testing. No cairo context is needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
-// `warp_frame_map` mirrors render_flags so the two stay in sync. In the
-// mapped views the flags paint at translated positions, so this helper is
+// `warp_frame_map` mirrors render_flags so the two stay in sync. In target
+// view the flags paint at translated positions, so this helper is
 // called with a non-null warp_frame_map and the hit-rects walk the same map
-// (see app_state's hit-test path): the live map in target view, the entry's
-// snapshot map in render view. In source view it is null and positions are
-// untranslated.
+// (see app_state's hit-test path): the live map in target view. In source view
+// it is null and positions are untranslated.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     const std::vector<GuiWarpMarker>& markers,

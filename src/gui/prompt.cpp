@@ -4,9 +4,6 @@
 
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
-    // A render entry's sidecars are frozen at dispatch, so a close under an
-    // open render view has nothing to persist — renders/ survives regardless.
-    // No render-view teardown on the CLOSE_WINDOW arm: the process is exiting.
     case DialogTrigger::CLOSE_WINDOW:
         gui.request_exit();
         break;
