@@ -203,11 +203,16 @@ struct UndoHistory {
     int  saved_distance = 0;
     bool saved_valid    = true;
     // Monotonic counter bumped on EVERY undo-stack mutation (push, do_undo,
-    // do_redo, reset). The rapid-gesture undo-coalesce guard
+    // do_redo, reset) AND on mark_saved. The rapid-gesture undo-coalesce guard
     // (Undo::coalesce_gesture) records this value at each eligible commit and
     // refuses to merge a later press once it has changed — so a
     // drag/paste/undo/redo/reset between two nudges breaks the burst even when
-    // the presses are fast and same-target. Session-only, never serialized.
+    // the presses are fast and same-target. mark_saved bumps it too because
+    // saving moves the saved baseline: a coalesced burst must not span a save,
+    // or the next merge press would skip its push (that's how one burst stays
+    // one undo entry) and leave saved_distance stale at the pre-save value,
+    // mis-reporting a post-save mutation as clean. Session-only, never
+    // serialized.
     uint64_t undo_epoch = 0;
 
     // Push the pre-mutation entry. Clears the redo stack. If the saved
@@ -248,6 +253,7 @@ struct UndoHistory {
     void mark_saved() {
         saved_distance = 0;
         saved_valid    = true;
+        ++undo_epoch;  // new saved baseline: breaks any gesture-coalesce burst
     }
 
     void reset() {
