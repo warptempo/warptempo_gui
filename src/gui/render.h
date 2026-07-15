@@ -558,8 +558,13 @@ struct FlagEditorOverlay {
 // is applied against post-translation positions (a region the warp_frame_map
 // stretches may un-elide flags that were elided in source view; a region the
 // warp_frame_map compresses may elide flags that were visible there).
+// `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
+// column-mapping denominator; chips share the marker stems' samples-per-pixel
+// so they stay column-aligned with the stems below them at every window width
+// (it differs from top_strip_area.w only at a non-multiple-of-16 window).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
+                  int waveform_width,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
                   long long viewport_end_sample,
@@ -584,9 +589,13 @@ void render_flags(cairo_t* cr,
 // target's column; this helper fills the hole with fresh pixels every
 // paint, owning the ephemeral cursor blink and pending-text width
 // changes without dragging the cache fingerprint.
+// `waveform_width` is the effective waveform width (see render_flags), the
+// column-mapping denominator, so the live editor flag lands at the same
+// column the cache rendered the other flags at.
 void render_one_editor_flag(
     cairo_t* cr,
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -608,8 +617,12 @@ void render_one_editor_flag(
 // called with a non-null warp_frame_map and the hit-rects walk the same map
 // (see app_state's hit-test path): the live map in target view. In source view
 // it is null and positions are untranslated.
+// `waveform_width` is the effective waveform width (see render_flags): the
+// hit rects must use the SAME column-mapping denominator as the paint so the
+// clickable rect coincides with the painted chip.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -639,8 +652,11 @@ void render_phaseresetmarkers(cairo_t* cr,
 // states only: default fill `kMarker`, selected fill `kSelected`. No editor,
 // no parse-fail state. Trim membership has no effect — flags always
 // paint full-brightness.
+// `waveform_width` is the effective waveform width (see render_flags), the
+// column-mapping denominator shared with the phase-reset stems.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
+                            int waveform_width,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
                             long long viewport_end_sample,
@@ -650,8 +666,10 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 
+// `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     long long viewport_start_sample,
     long long viewport_end_sample,

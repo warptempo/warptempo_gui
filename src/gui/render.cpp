@@ -555,8 +555,13 @@ void render_trim_flags(cairo_t* cr,
 
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
+    // Map columns against the EFFECTIVE waveform width (this rect's own .w),
+    // not the strip's full width, so the b/e chips share the trim stems'
+    // samples-per-pixel and stay column-aligned with them at every window
+    // width (they differ only at a non-multiple-of-16 window, where the
+    // waveform floors to an effective width; a no-op at 1920/2560/3840).
     const double samples_per_pixel =
-        span / static_cast<double>(top_strip_area.w);
+        span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
     cairo_save(cr);
@@ -793,6 +798,7 @@ namespace {
 template <typename MarkerVec, typename FlagTextFn, typename Emit>
 void iterate_visible_flags_impl(
     GuiRect top_strip_area,
+    int waveform_width,
     const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -802,7 +808,15 @@ void iterate_visible_flags_impl(
     Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(top_strip_area.w);
+    // Map columns against the EFFECTIVE waveform width, not the strip's own
+    // full width, so a chip shares the marker stem's samples-per-pixel and
+    // stays column-aligned with it at every window width (they diverge only
+    // when the two widths differ — a non-multiple-of-16 window, where the
+    // waveform floors to an effective width and leaves an inert right gutter;
+    // at 1920/2560/3840 the two widths are equal and this is a no-op). The
+    // strip rect still supplies the chip's x origin and vertical placement.
+    const double samples_per_pixel =
+        span / static_cast<double>(waveform_width);
     if (samples_per_pixel <= 0.0) return;
 
     // Place the rect's bottom edge exactly at the flag chip bottom (the
@@ -942,6 +956,7 @@ void paint_one_flag_with_overlay(
 
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
+                  int waveform_width,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
                   long long viewport_end_sample,
@@ -981,7 +996,7 @@ void render_flags(cairo_t* cr,
         std::string          text;
     };
     std::vector<FlagEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, markers,
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
         [&](int i) {
@@ -1013,6 +1028,7 @@ void render_flags(cairo_t* cr,
 void render_one_editor_flag(
     cairo_t* cr,
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -1036,7 +1052,7 @@ void render_one_editor_flag(
 
     const double hl_pad = flag_pad_x_px();
 
-    iterate_visible_flags_impl(top_strip_area, markers,
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
         [&](int i) {
@@ -1058,6 +1074,7 @@ namespace {
 template <typename MarkerVec, typename FlagTextFn>
 std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     GuiRect top_strip_area,
+    int waveform_width,
     const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -1076,7 +1093,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // register consistently across flag types. The rect comes from the shared
     // flag_chip_rect helper, the same one render_editor_text_box fills, so the
     // painted chip and this hit rect are the same rectangle by construction.
-    iterate_visible_flags_impl(top_strip_area, markers,
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
         std::forward<FlagTextFn>(get_flag_text),
@@ -1100,6 +1117,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
 
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -1108,7 +1126,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     bool iteration_on) {
-    return compute_flag_hit_rects_impl(top_strip_area, markers,
+    return compute_flag_hit_rects_impl(top_strip_area, waveform_width, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate, font_size, warp_frame_map, drag_overlay,
         [&](int i) {
@@ -1177,6 +1195,7 @@ void render_phaseresetmarkers(cairo_t* cr,
 
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
+                            int waveform_width,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
                             long long viewport_end_sample,
@@ -1206,7 +1225,7 @@ void render_phase_reset_flags(cairo_t* cr,
         std::string          text;
     };
     std::vector<PhaseResetEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, phase_resets,
+    iterate_visible_flags_impl(top_strip_area, waveform_width, phase_resets,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
         [&](int i) {
@@ -1228,6 +1247,7 @@ void render_phase_reset_flags(cairo_t* cr,
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
+    int waveform_width,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     long long viewport_start_sample,
     long long viewport_end_sample,
@@ -1235,7 +1255,7 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay) {
-    return compute_flag_hit_rects_impl(top_strip_area, phase_resets,
+    return compute_flag_hit_rects_impl(top_strip_area, waveform_width, phase_resets,
         viewport_start_sample, viewport_end_sample,
         sample_rate, font_size, warp_frame_map, drag_overlay,
         [&](int i) {

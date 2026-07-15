@@ -137,7 +137,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     if (overlay.marker_index >= 0 &&
         app.active_markers_view != 'P') {
         render_one_editor_flag(
-            cr, top_strip,
+            cr, top_strip, waveform_area(app).w,
             app.warpmarkers.markers(),
             vp_start_disp, vp_end_disp, sr,
             flag_font_size_px(),
@@ -483,12 +483,12 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
     std::vector<FlagHitRect> dbg_rects;
     if (app.active_markers_view == 'P') {
         dbg_rects = compute_phase_reset_flag_hit_rects(
-            top_strip, app.phaseresetmarkers.markers(),
+            top_strip, area.w, app.phaseresetmarkers.markers(),
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
             dbg_tmap_arg, dbg_drag);
     } else {
         dbg_rects = compute_flag_hit_rects(
-            top_strip, app.warpmarkers.markers(),
+            top_strip, area.w, app.warpmarkers.markers(),
             dbg_vp_start, dbg_vp_end, sr, flag_font_size_px(),
             dbg_tmap_arg, dbg_drag,
             app.iteration_mode_enabled);

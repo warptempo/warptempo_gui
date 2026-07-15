@@ -193,7 +193,17 @@ GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     const int sh = strip_h(a);
-    return GuiRect{0, sh, w, h - 2 * sh};
+    // Effective waveform width: the largest multiple of the grid step not
+    // exceeding the window width, leaving a <=15 px inert right gutter. The
+    // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
+    // sample rates (every standard rate's step divides 16), so at a
+    // multiple-of-16 width p·W is integral at every numeric zoom and painter
+    // samples-per-pixel equals the logical spp exactly — the grid the pixel-
+    // anchored commits and the migration tool both target. A gutter appears
+    // only at a non-multiple-of-16 width (never at 1920/2560/3840).
+    constexpr int kGridStepPx = 16;
+    const int effective_w = w - (w % kGridStepPx);
+    return GuiRect{0, sh, effective_w, h - 2 * sh};
 }
 
 // Top strip rows, counted down from the window top with all gaps now zero:

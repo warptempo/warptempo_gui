@@ -180,6 +180,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
+    // Effective waveform width: the trim chip's visibility cull must match the
+    // painter's viewport extent (render_trim_flags maps against this width),
+    // so a gutter column at a non-multiple-of-16 window is culled the same in
+    // paint and hit-test. Equal to top.w at 1920/2560/3840.
+    const int wave_w = waveform_area(app).w;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return TrimHit::None;
     const int sr = audio.sample_rate();
@@ -218,7 +223,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
         const int64_t vp_end = app.viewport_start_sample +
-            static_cast<int64_t>(std::nearbyint(spp * top.w));
+            static_cast<int64_t>(std::nearbyint(spp * wave_w));
         if (ms < vp || ms >= static_cast<double>(vp_end)) return;
         const double x_raw = (ms - vp) / spp;
         const double text_left =
@@ -295,14 +300,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
-            top, app.phaseresetmarkers.markers(),
+            top, area.w, app.phaseresetmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             tmap_arg, drag_overlay);
     } else {
         // Warp hit-rects must track the bracketed flag width so
         // clicks land on the iteration-mode chip.
         rects = compute_flag_hit_rects(
-            top, app.warpmarkers.markers(),
+            top, area.w, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);

@@ -1087,6 +1087,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // surface rect. The blit at on_redraw time positions the surface back
     // at screen (0, 0).
     const GuiRect local_top_strip{0, 0, surface_w, surface_h};
+    // Effective waveform width: the flag column mapping shares the stem
+    // cache's samples-per-pixel (both divide the same displayed span by this
+    // width), so chips stay column-aligned with the stems below them. The
+    // surface stays full-strip width; a non-multiple-of-16 window leaves the
+    // gutter columns unpainted.
+    const int wave_w = waveform_area(app).w;
     const int sr = audio.sample_rate();
 
     const std::vector<WarpFrameMapSegment>* tmap_arg =
@@ -1110,7 +1116,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     if (mv == 'P') {
         render_phase_reset_flags(
-            ccr, local_top_strip,
+            ccr, local_top_strip, wave_w,
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
             flag_font_size_px(),
@@ -1118,7 +1124,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             tmap_arg,
             drag_overlay);
     } else {
-        render_flags(ccr, local_top_strip,
+        render_flags(ccr, local_top_strip, wave_w,
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
                      flag_font_size_px(),
