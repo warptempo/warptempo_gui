@@ -9,7 +9,6 @@
 
 #include <functional>
 #include <string>
-#include <thread>
 
 struct GuiTargetRender;
 
@@ -45,16 +44,7 @@ struct GuiFileLoader {
           target_render(target_render_),
           paint_handler(paint_handler_) {}
 
-    ~GuiFileLoader();
-
     bool load_file(const std::string& path);
-    void join_source_sample_cache_writer();
-
-    // The launch-only writer captures the source buffer by shared_ptr
-    // (samples_shared()), owning a lifetime-safe view of its own. There is no
-    // in-session replacement load, so the destructor join is the surviving
-    // synchronization before GuiAudio is destroyed.
-    std::thread source_sample_cache_writer_;
 };
 
 // Apply a parsed settings file's engine block and the scalar session prefs

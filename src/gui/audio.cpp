@@ -1,6 +1,5 @@
 #include "audio.h"
 #include "render_cache.h"
-#include "source_sample_cache.h"
 
 #include "audio_reader.h"
 
@@ -33,7 +32,7 @@ namespace {
 //   off 28 | 4  | sample_rate  (int32)
 //
 // Owner discriminator (length-prefixed string, immediately after the
-// preamble; same convention as the `.samples` cache):
+// preamble):
 //   4          | owner_len (uint32, bytes; bounded, an over-long value is a
 //                miss, not a hard error)
 //   owner_len  | source basename WITH extension, exact bytes, case-sensitive
@@ -61,7 +60,7 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 constexpr uint16_t kCacheVersion          = 4;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
-// miss rather than a memory-pressure event. Mirrors the `.samples` cache rule.
+// miss rather than a memory-pressure event.
 constexpr uint32_t kMaxOwnerBytes         = 4096;
 constexpr int      kNumLevels             = 3;
 constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
@@ -504,26 +503,17 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
                      next_channels, path.c_str());
     }
 
-    const int64_t claimed = info->frames;
-    std::vector<float> next_samples;
-    int64_t next_total_frames = 0;
-    if (read_full_source_from_source_sample_cache(path, *info, next_samples)) {
-        next_total_frames = claimed;
-        std::fprintf(stderr, "warptempo_gui: source sample cache hit for %s\n",
-                     path.c_str());
-    } else {
-        auto full = audio_read_full(path);
-        if (!full) {
-            std::fprintf(stderr,
-                         "warptempo_gui: could not read '%s': %s\n",
-                         path.c_str(), full.error().c_str());
-            return false;
-        }
-        next_samples = std::move(*full);
-        next_total_frames =
-            static_cast<int64_t>(next_samples.size() /
-                                 static_cast<size_t>(next_channels));
+    auto full = audio_read_full(path);
+    if (!full) {
+        std::fprintf(stderr,
+                     "warptempo_gui: could not read '%s': %s\n",
+                     path.c_str(), full.error().c_str());
+        return false;
     }
+    std::vector<float> next_samples = std::move(*full);
+    const int64_t next_total_frames =
+        static_cast<int64_t>(next_samples.size() /
+                             static_cast<size_t>(next_channels));
 
     std::array<PyramidLevel, 3> next_levels;
     reset_levels(next_levels);

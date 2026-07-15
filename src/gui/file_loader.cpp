@@ -6,7 +6,6 @@
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
-#include "source_sample_cache.h"
 
 #include "warp_frame_map.h"
 #include "time_format.h"
@@ -21,16 +20,6 @@
 #include <string>
 #include <system_error>
 #include <utility>
-
-GuiFileLoader::~GuiFileLoader() {
-    join_source_sample_cache_writer();
-}
-
-void GuiFileLoader::join_source_sample_cache_writer() {
-    if (source_sample_cache_writer_.joinable()) {
-        source_sample_cache_writer_.join();
-    }
-}
 
 void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.engine_settings = sf.engine;
@@ -52,18 +41,18 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {
-    // Opening a private cache file is a careless wrong-file slip, so it
+    // Opening the private peaks cache is a careless wrong-file slip, so it
     // refuses loudly at this earliest surface — a dismiss-only notice, no
     // load. It is never silently redirected to a guessed owner path:
     // silently doing a different operation than the one requested is
-    // correction, not refusal, and the caches are derived state the user
-    // never legitimately opens.
-    if (is_source_sample_cache_path(path) || is_peaks_cache_path(path)) {
-        const bool samples = is_source_sample_cache_path(path);
-        std::string msg = "'" + path + "' is a " +
-            (samples ? "private source sample cache"
-                     : "waveform peaks cache") +
-            "; open the original source audio file instead.";
+    // correction, not refusal, and the peaks cache is derived state the user
+    // never legitimately opens. A stray `.samples` file (no live producer
+    // since the FLAC-reload source cache was retired) has no RIFF magic, so it
+    // takes the generic unknown-magic refusal below — no special-cased handling.
+    if (is_peaks_cache_path(path)) {
+        std::string msg = "'" + path +
+            "' is a waveform peaks cache; open the original source audio file "
+            "instead.";
         std::fprintf(stderr, "warptempo_gui: %s\n", msg.c_str());
         return false;
     }
@@ -148,18 +137,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     audio = std::move(next);
     app.audio_generation++;
     app.loading       = false;
-
-    source_sample_cache_writer_ = std::thread(
-        [path, source_info, samples = audio.samples_shared(),
-         frames = audio.total_frames(), channels = audio.channels()] {
-            if (!ensure_source_sample_cache_from_buffer(
-                    path, *source_info, samples ? samples->data() : nullptr,
-                    frames, channels)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: source sample cache write skipped for %s\n",
-                    path.c_str());
-            }
-        });
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;

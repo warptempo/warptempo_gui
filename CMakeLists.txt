@@ -5,14 +5,13 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build configuration. The GUI is the canonical product and builds by default;
-# warptempo_cli is the headless insurance render path and the audio_io test
-# binary is opt-in. The GUI's Wayland/Cairo/JACK toolchain is optional, so a
-# headless host with none of the GUI platform packages can still configure and
-# build warptempo_cli. Turning WARPTEMPO_BUILD_GUI OFF skips all GUI dependency
-# discovery and the warptempo_gui executable.
+# warptempo_cli is the headless insurance render path and is opt-in. The GUI's
+# Wayland/Cairo/JACK toolchain is optional, so a headless host with none of the
+# GUI platform packages can still configure and build warptempo_cli. Turning
+# WARPTEMPO_BUILD_GUI OFF skips all GUI dependency discovery and the
+# warptempo_gui executable.
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
-option(WARPTEMPO_BUILD_AUDIO_IO_TEST "Build the audio_io self-test binary" OFF)
 
 # --- FFTW: needed by the engine sources, so required unconditionally. The GUI
 # default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
@@ -146,7 +145,6 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/active_views.cpp
         src/gui/target_render.cpp
         src/gui/render_cache.cpp
-        src/gui/source_sample_cache.cpp
         src/gui/paint_handler.cpp
         src/gui/waveform_cache.cpp
         src/gui/input_handler.cpp
@@ -220,29 +218,6 @@ if(WARPTEMPO_BUILD_CLI)
     )
 endif()
 
-# ============================================================
-#  warptempo_audio_io_test — the project's single test binary.
-#  It covers the audio_io container surface and the GUI-side .samples cache
-#  admission and path logic, compiling source_sample_cache.cpp directly into
-#  the target to keep the executable count flat. Draws the audio_io and parser sources (the
-#  parser side is what source_sample_cache leans on).
-# ============================================================
-if(WARPTEMPO_BUILD_AUDIO_IO_TEST)
-    add_executable(warptempo_audio_io_test
-        src/audio_io/test_main.cpp
-        src/gui/source_sample_cache_selftest.cpp
-        src/gui/source_sample_cache.cpp
-        ${WARPTEMPO_AUDIO_IO_SOURCES}
-        ${WARPTEMPO_PARSER_SOURCES}
-    )
-    target_include_directories(warptempo_audio_io_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/parser
-        ${CMAKE_SOURCE_DIR}/src/audio_io
-        ${CMAKE_SOURCE_DIR}/src/gui
-    )
-endif()
-
 # --- Compiler Optimizations ---
 # Applied identically to every target that exists in this configuration. The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
@@ -254,9 +229,6 @@ if(WARPTEMPO_BUILD_GUI)
 endif()
 if(WARPTEMPO_BUILD_CLI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_cli)
-endif()
-if(WARPTEMPO_BUILD_AUDIO_IO_TEST)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_audio_io_test)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})

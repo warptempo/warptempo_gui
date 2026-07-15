@@ -20,8 +20,7 @@ struct RenderFileIdentity {
 
 // Render fingerprints identify the source by size and mtime only. Folding in
 // content identity would bump the fingerprint content version and invalidate
-// every archival sidecar, so content-level source trust lives in the .samples
-// cache identity instead.
+// every archival sidecar, so size and mtime are the source trust boundary.
 bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 
 // Canonical content fingerprint over everything the engine reads for a
