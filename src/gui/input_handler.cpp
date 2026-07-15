@@ -328,8 +328,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+I iteration
-    // sweep. (The render-commit chord is Shift+., handled separately below.)
+    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+E miscellaneous
+    // render, Ctrl+Alt+I iteration sweep. (The render-commit chord is Shift+.,
+    // handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Shift+Space in actual target view, phase-reset mode: non-destructive

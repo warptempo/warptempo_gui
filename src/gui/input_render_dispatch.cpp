@@ -23,6 +23,31 @@
 // render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
 // event entry points.
 
+GuiInputHandler::RendersBatchScan
+GuiInputHandler::max_renders_batch_index(
+        const std::filesystem::path& renders_dir) {
+    RendersBatchScan scan;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(renders_dir, ec)) return scan;
+    for (const auto& de :
+         std::filesystem::directory_iterator(renders_dir, ec)) {
+        if (!de.is_directory()) continue;
+        const std::string name = de.path().filename().string();
+        int v = 0;
+        size_t i = 0;
+        while (i < name.size() && name[i] >= '0' && name[i] <= '9') {
+            v = v * 10 + (name[i] - '0');
+            ++i;
+        }
+        if (i == 0 || i >= name.size() || name[i] != '_') continue;
+        if (v > scan.max_index) {
+            scan.max_index             = v;
+            scan.max_index_folder_name = name;
+        }
+    }
+    return scan;
+}
+
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     AuthoringSnapshot s;
     s.active_tab        = app.active_tab_view;
@@ -263,7 +288,7 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 
 // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
 // (base_tempo, scale) per cell and rendering one `.wav` per cell into
-// `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell engine
+// `<source_parent>/renders/<N>_bpm/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
 // by do_render); the Shift+. render-commit (adopt_render_entry) adopts them
 // when committing a BPM cell. The
@@ -340,28 +365,10 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (src_parent.empty()) src_parent = std::filesystem::path(".");
     const std::filesystem::path queue_root = src_parent / "renders";
 
-    int next_index = 1;
     std::error_code ec;
-    if (std::filesystem::is_directory(queue_root, ec)) {
-        int max_idx = 0;
-        for (const auto& de :
-             std::filesystem::directory_iterator(queue_root, ec)) {
-            if (!de.is_directory()) continue;
-            const std::string name = de.path().filename().string();
-            int v = 0;
-            size_t i = 0;
-            while (i < name.size() &&
-                   name[i] >= '0' && name[i] <= '9') {
-                v = v * 10 + (name[i] - '0');
-                ++i;
-            }
-            if (i == 0 || i >= name.size() || name[i] != '_') continue;
-            if (v > max_idx) max_idx = v;
-        }
-        next_index = max_idx + 1;
-    }
+    const int next_index = max_renders_batch_index(queue_root).max_index + 1;
 
-    const std::string command_tag = "render_bpm_iterations";
+    const std::string command_tag = "bpm";
     const std::filesystem::path batch_folder =
         queue_root /
         (std::to_string(next_index) + "_" + command_tag);

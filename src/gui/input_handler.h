@@ -272,6 +272,24 @@ private:
     };
     ActiveBatch batch_;
 
+    // Result of one walk over the renders/ batch root: the highest
+    // leading-index `<digits>_...` folder, and that folder's filename.
+    struct RendersBatchScan {
+        int         max_index = 0;             // 0 when none / dir missing
+        std::string max_index_folder_name;     // filename of the max-index
+                                               // folder; empty when none
+    };
+
+    // Scan `renders_dir` for the highest leading-index batch folder. The three
+    // batch-dispatch sites share this one walk: the iteration and BPM sweeps
+    // use `max_index + 1` for their next batch folder (a missing/empty dir
+    // yields max_index 0, so the first folder is index 1 — the pre-factor
+    // convention), and Ctrl+Alt+E additionally reads `max_index_folder_name`
+    // to decide append-vs-new. A tie keeps the first `<digits>_` folder at
+    // that index (strict `>` update), exact for the always->=1 product folders.
+    static RendersBatchScan max_renders_batch_index(
+        const std::filesystem::path& renders_dir);
+
     // Start a multi-entry batch. Snapshots reqs + label, sets queue_running,
     // clears the cancel flag, dispatches the first entry. The on_done
     // callback advances the state machine. Empty reqs is a silent no-op.
@@ -325,7 +343,7 @@ private:
 
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
-    // cell into `<source_parent>/renders/<N>_render_bpm_iterations/`. The
+    // cell into `<source_parent>/renders/<N>_bpm/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
     // gate; it is now fired by Enter in the bottom-strip BPM editor (after
     // a successful commit). Returns true if the batch was accepted —
