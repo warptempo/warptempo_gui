@@ -524,7 +524,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // the attestation that the artifact set is complete, so a fingerprint
     // match on a later render implies those files exist. Process death
     // after the wav rename lands on disk but before those sidecars finish
-    // can leave an orphan wav that enumerate_render_view_list surfaces;
+    // can leave an orphan wav that enumerate_render_entries surfaces;
     // adopt_render_entry's validate-before-mutate path refuses that entry
     // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {

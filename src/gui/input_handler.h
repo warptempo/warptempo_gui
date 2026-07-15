@@ -8,7 +8,7 @@
 #include "playback_lifecycle.h"
 #include "prompt.h"
 #include "render_pipeline.h"
-#include "render_view.h"
+#include "renders_dir.h"
 #include "save_ops.h"
 #include "selection.h"
 #include "active_views.h"
@@ -156,7 +156,7 @@ struct GuiInputHandler {
     GuiPhaseResetMarkersOps& phase_resets;
     MarkerDragOps&           marker_drag;
     GuiFlagEditor&           flag_editor;
-    GuiRenderView&           render_view;
+    GuiRendersDir&           renders_dir;
     GuiActiveViews&          active_views;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
@@ -178,7 +178,7 @@ struct GuiInputHandler {
                     GuiPhaseResetMarkersOps& phase_resets_,
                     MarkerDragOps&           marker_drag_,
                     GuiFlagEditor&           flag_editor_,
-                    GuiRenderView&           render_view_,
+                    GuiRendersDir&           renders_dir_,
                     GuiActiveViews&          active_views_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
@@ -199,7 +199,7 @@ struct GuiInputHandler {
           phase_resets(phase_resets_),
           marker_drag(marker_drag_),
           flag_editor(flag_editor_),
-          render_view(render_view_),
+          renders_dir(renders_dir_),
           active_views(active_views_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
@@ -338,28 +338,6 @@ private:
     // already closed on commit and the mode is exactly its editor session.
     bool render_bpm_sweep();
 
-    // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
-    // Always validates the live state (`markers` at dispatch time):
-    // resolve_warp_markers_for_render on the sliced `markers` (the resolver
-    // normalizes ambiguous arrangements to tempo 1.00, one stderr line per
-    // timestamp, and never refuses an authored store), then
-    // build_warp_frame_map with `scale` and the live sample_rate /
-    // total_frames (the tripwire-class backstop: engine metadata,
-    // non-positive tempo product), surfacing through the error-notice popup
-    // with the owner's error string, unmodified. Trim never refuses a
-    // dispatch: crossed/equal bounds cannot rest (the commit and load
-    // auto-clears), an ambiguous trim at render time falls back to the
-    // full, untrimmed deliverable inside do_render, and the map formats
-    // silently ignore any set trim (they always write the FULL maps).
-    // Returns false on any refusal — the caller must then refuse to
-    // enqueue. Called by every archival render dispatch site (Ctrl+Alt+R
-    // single render, Ctrl+Alt+I iteration sweep, the BPM sweep); the async
-    // pipeline's stderr failure paths stay as the backstop for per-cell
-    // mutations the pre-flight does not model (no strings are plumbed
-    // through the async callback).
-    bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
-                               double scale);
-
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back
     // to a plain caret (no selection), repaints the active editor's strip,
@@ -467,7 +445,7 @@ private:
     // false leaving authoring untouched (silent) on any missing/malformed
     // input; otherwise applies the recipe wholesale, wipes renders/, and
     // returns true.
-    bool adopt_render_entry(const AppState::RenderViewEntry& e);
+    bool adopt_render_entry(const AppState::RenderEntry& e);
 
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };

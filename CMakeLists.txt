@@ -139,7 +139,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/marker_drag.cpp
         src/gui/file_loader.cpp
         src/gui/flag_editor.cpp
-        src/gui/render_view.cpp
+        src/gui/renders_dir.cpp
         src/gui/save_ops.cpp
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp

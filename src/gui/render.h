@@ -728,34 +728,8 @@ double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
 
-// One-line toggle for the render-path perf instrumentation. When
-// false, all perf_counters increments and [dbg perf] stderr emissions in
-// the redraw path are compiled out.
-constexpr bool kDebugPerf = false;
-
 // Diagnostic (F-flaggeom follow-up): when true, on_redraw strokes the flag
 // hit rectangles — recomputed via the SAME path hit_test_flag uses — over the
 // painted chips, so any paint-vs-hit coordinate divergence is visible. Off in
 // normal builds. Remove once the edge-alignment diagnosis is complete.
 constexpr bool kDebugHitRects = false;
-
-// Hot-loop counters for perf instrumentation. Incremented by the render
-// helpers on every relevant inner-loop step; the caller zeroes them with
-// perf_counters::reset() before a measured pass and reads the totals
-// afterwards. Single-threaded, no synchronization.
-//
-// The wf_cols / wf_pyramid_samples increments may fire from the waveform
-// worker thread when kDebugPerf=true. The counters are not thread-safe —
-// diagnostic use only.
-namespace perf_counters {
-    extern int wf_cols;              // pixel columns drawn by render_waveform
-    extern int wf_pyramid_samples;   // peak-pyramid samples read
-    extern int flag_drawn;           // flags emitted (not elided)
-    extern int flag_elided;          // viewport-hit flags skipped by greedy pack
-    inline void reset() {
-        wf_cols = 0;
-        wf_pyramid_samples = 0;
-        flag_drawn = 0;
-        flag_elided = 0;
-    }
-}

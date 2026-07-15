@@ -29,9 +29,7 @@
 // the waveform worker thread when the main path goes through GuiWaveformWorker;
 // the function itself is thread-agnostic — it touches only the dest surface
 // the caller passed in, the audio handle's peak pyramid (read-only after
-// load), and the warp_frame_map snapshot the caller built. perf_counters
-// increments inside render_waveform fire from the worker thread when
-// kDebugPerf=true; see the comment in render.h.
+// load), and the warp_frame_map snapshot the caller built.
 
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,

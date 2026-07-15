@@ -8,7 +8,6 @@
 #include "text_editor.h"
 #include "warpmarkers.h"
 
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -132,9 +131,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on release or motion — those are not discrete commands, and a drag is
     // already fenced by the press that began it here.
     ++app.command_seq;
-    if constexpr (kDebugPerf) {
-        app.last_input_event_time = std::chrono::steady_clock::now();
-    }
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
@@ -526,9 +522,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
 // compute_hover_popup_text, waveform_area, current_samples_per_pixel,
 // playhead_pixel_x, text_editor::is_active) keep their original spelling.
 void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
-    if constexpr (kDebugPerf) {
-        app.last_input_event_time = std::chrono::steady_clock::now();
-    }
     // Record latest cursor coords so viewport mutators can re-evaluate hover
     // at the cursor's last position.
     app.last_mouse_x = mouse_x;

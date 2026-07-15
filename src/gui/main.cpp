@@ -30,7 +30,7 @@
 #include "playback_lifecycle.h"
 #include "render.h"
 #include "render_pipeline.h"
-#include "render_view.h"
+#include "renders_dir.h"
 #include "active_views.h"
 #include "save_ops.h"
 #include "selection.h"
@@ -566,7 +566,7 @@ int main(int argc, char** argv) {
                               target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
-    GuiRenderView render_view(app);
+    GuiRendersDir renders_dir(app);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
@@ -583,7 +583,7 @@ int main(int argc, char** argv) {
                                   viewport, selection, undo,
                                   warpops, phase_resets, marker_drag,
                                   flag_editor,
-                                  render_view, active_views,
+                                  renders_dir, active_views,
                                   phase_reset_propagate,
                                   async_renderer,
                                   playback_lifecycle, save_ops, prompt,

@@ -8,9 +8,7 @@
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kRs
 
-#include <chrono>
 #include <cmath>
-#include <cstdio>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -511,9 +509,7 @@ void GuiPaintHandler::paint_debug_hit_rects(cairo_t* cr,
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
-double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    using clock = std::chrono::steady_clock;
-
+void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // Bottom strip: two text rows of equal height mirroring
     // the top strip. The status line lives on the lower (outer) row and
     // paints UNCONDITIONALLY — it is no longer the trailing else of a
@@ -525,7 +521,6 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // and owns the upper row; status stays visible under it (harmless
     // context). Each row's baseline is derived from its row rect, not
     // from the window bottom.
-    double t_ts_ms = 0.0;
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
     const double lower_baseline =
@@ -579,13 +574,9 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             assembled += app.transient_status_message;
         }
 
-        const auto s0 = clock::now();
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), lower_baseline,
             assembled, kText, flag_font_size_px());
-        const auto s1 = clock::now();
-        t_ts_ms =
-            std::chrono::duration<double, std::milli>(s1 - s0).count();
     }
 
     // --- Upper row: transient / modal chain. ---
@@ -643,27 +634,12 @@ double GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
             app.hover_popup.cached_text, kText, flag_font_size_px());
     }
-
-    return t_ts_ms;
 }
 
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
-    using clock = std::chrono::steady_clock;
-    const auto t_start = clock::now();
-
     init_monospace_grid_metrics(cr);
-
-    if constexpr (kDebugPerf) perf_counters::reset();
-
-    double t_waveform_ms = 0.0;
-    double t_markers_ms  = 0.0;
-    double t_flags_ms    = 0.0;
-    double t_playhead_ms = 0.0;
-    double t_ts_ms       = 0.0;
-    double t_dirty_ms    = 0.0;
-    double t_flush_ms    = 0.0;
 
     cairo_save(cr);
     cairo_rectangle(cr, x, y, w, h);
@@ -694,14 +670,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // not in on_redraw, which reads wf_cache.fp_* for displayed-viewport
         // inputs and treats every strip as a blit-then-overlay path.
 
-        {
-            const auto wf0 = clock::now();
-            if (rects_intersect(exposed, area)) {
-                paint_waveform_plate(cr, area);
-            }
-            const auto wf1 = clock::now();
-            t_waveform_ms =
-                std::chrono::duration<double, std::milli>(wf1 - wf0).count();
+        if (rects_intersect(exposed, area)) {
+            paint_waveform_plate(cr, area);
         }
 
         // Markers: vertical stems in the waveform area, beneath the
@@ -721,32 +691,20 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             area.h + stem_overhang
         };
         if (rects_intersect(exposed, marker_paint_rect)) {
-            const auto m0 = clock::now();
             // Over the plate and dim, under the stems: the phase reset
             // overlay lightens the span ahead of the focused phase reset,
             // then the stems paint on top so the focused stem stays crisp.
             paint_phase_reset_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
-            const auto m1 = clock::now();
-            t_markers_ms =
-                std::chrono::duration<double, std::milli>(m1 - m0).count();
         }
 
         if (rects_intersect(exposed, top_strip)) {
-            const auto f0 = clock::now();
             paint_flag_annotations(cr, top_strip, sr);
-            const auto f1 = clock::now();
-            t_flags_ms =
-                std::chrono::duration<double, std::milli>(f1 - f0).count();
         }
 
         if (rects_intersect(exposed, area) ||
             rects_intersect(exposed, top_strip)) {
-            const auto p0 = clock::now();
             paint_playheads(cr, area);
-            const auto p1 = clock::now();
-            t_playhead_ms =
-                std::chrono::duration<double, std::milli>(p1 - p0).count();
         }
 
         if constexpr (kDebugHitRects) {
@@ -755,68 +713,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         const GuiRect bottom_strip = timestamp_invalidate_rect(app);
         if (rects_intersect(exposed, bottom_strip)) {
-            t_ts_ms = paint_bottom_strip(cr, sr);
+            paint_bottom_strip(cr, sr);
         }
     }
 
     cairo_restore(cr);
 
-    // Force any pending Cairo ops out to the X server so the flush cost
-    // is captured here rather than attributed elsewhere. The subsequent
-    // flush in GuiPlatform::dispatch_event is a cheap no-op.
-    {
-        const auto fl0 = clock::now();
-        cairo_surface_flush(cairo_get_target(cr));
-        const auto fl1 = clock::now();
-        t_flush_ms =
-            std::chrono::duration<double, std::milli>(fl1 - fl0).count();
-    }
-
-    const auto t_end = clock::now();
-    const double elapsed_ms =
-        std::chrono::duration<double, std::milli>(t_end - t_start).count();
-
-    if constexpr (kDebugPerf) {
-        if (elapsed_ms > 3.0) {
-            double e2e_ms = -1.0;
-            if (app.last_input_event_time.time_since_epoch().count() != 0) {
-                e2e_ms = std::chrono::duration<double, std::milli>(
-                    t_end - app.last_input_event_time).count();
-            }
-            std::fprintf(stderr,
-                "[dbg perf] total=%.2f ms waveform=%.2f markers=%.2f "
-                "flags=%.2f playhead=%.2f ts=%.2f dirty=%.2f flush=%.2f "
-                "pixel_area=%dx%d wf_cols=%d wf_pyramid_samples=%d "
-                "flag_drawn=%d flag_elided=%d "
-                "e2e=%.2f\n",
-                elapsed_ms, t_waveform_ms, t_markers_ms, t_flags_ms,
-                t_playhead_ms, t_ts_ms, t_dirty_ms, t_flush_ms,
-                w, h,
-                perf_counters::wf_cols, perf_counters::wf_pyramid_samples,
-                perf_counters::flag_drawn, perf_counters::flag_elided,
-                e2e_ms);
-        }
-    }
-
-    if constexpr (kDebugPerf) {
-        if (elapsed_ms > app.stats_max_redraw_ms)
-            app.stats_max_redraw_ms = elapsed_ms;
-        if (elapsed_ms > 1.0) app.stats_over_1ms_count++;
-        const double since_last = std::chrono::duration<double>(
-            t_end - app.stats_last_report).count();
-        if (since_last >= 1.0) {
-            if (app.stats_max_redraw_ms > 1.0) {
-                std::fprintf(stderr,
-                    "warptempo_gui: redraw max=%.2fms in last %.1fs "
-                    "(%d redraws > 1ms)\n",
-                    app.stats_max_redraw_ms, since_last,
-                    app.stats_over_1ms_count);
-            }
-            app.stats_max_redraw_ms = 0.0;
-            app.stats_over_1ms_count = 0;
-            app.stats_last_report = t_end;
-        }
-    }
+    // Force any pending Cairo ops out to the X server. The subsequent flush
+    // in GuiPlatform::dispatch_event is then a cheap no-op.
+    cairo_surface_flush(cairo_get_target(cr));
 }
 
 // -- Out-of-trim geometry (displayed trim + dim rects) -------------------

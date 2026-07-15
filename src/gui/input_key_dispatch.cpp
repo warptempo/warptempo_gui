@@ -354,15 +354,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
 
-        // Pre-flight the live state on the GUI thread: a tripwire-class
-        // build failure raises the popup and the dispatch is refused.
-        // Marker arrangements never refuse — the resolver normalizes them —
-        // and trim never refuses (crossed cannot rest, an ambiguous trim
-        // falls back to untrimmed inside do_render, maps ignore trim).
-        if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale)) {
-            return true;
-        }
+        // Dispatch validates nothing: the render worker's own resolve->build
+        // chain is the tripwire surface (the resolver normalizes ambiguous
+        // marker arrangements to tempo 1.00, and trim never refuses — crossed
+        // cannot rest, an ambiguous trim falls back to untrimmed inside
+        // do_render, maps ignore trim), with its stderr as the backstop.
 
         // Empty batch_folder/basename selects the source-dir naming
         // convention inside do_render.
@@ -407,14 +403,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live state: a tripwire-class build failure refuses
-        // the whole sweep with the popup (trim never refuses a dispatch;
-        // see warp_render_preflight). Per-cell tempo_cents mutations
-        // remain on the async stderr backstop.
-        if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale)) {
-            return true;
-        }
+        // Dispatch validates nothing: the render worker's own resolve->build
+        // chain is the tripwire surface (marker arrangements normalize to
+        // tempo 1.00, trim never refuses), and its per-cell tempo_cents
+        // mutations stay on the async stderr backstop.
 
         // Snapshot markers in timeline order (the GuiWarpMarkers store is
         // sorted by time_frame, with ties legal). For each owning marker
@@ -666,8 +658,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 // The Shift+. commit editor resolves the typed identifier against these
 // strings.
 static std::string render_entry_wav_id(
-        const AppState::RenderViewEntry& e,
-        const std::vector<AppState::RenderViewEntry>& list) {
+        const AppState::RenderEntry& e,
+        const std::vector<AppState::RenderEntry>& list) {
     const std::string bare = e.basename + ".wav";
     int count = 0;
     for (const auto& o : list) if (o.basename + ".wav" == bare) ++count;
@@ -690,7 +682,7 @@ static std::string render_entry_wav_id(
 // dispatch), so a genuine read failure is the only refusal. Returns true
 // after the recipe is applied and renders/ wiped.
 bool GuiInputHandler::adopt_render_entry(
-        const AppState::RenderViewEntry& e) {
+        const AppState::RenderEntry& e) {
     // Self-guard on the standalone mutator: a successful adopt wipes renders/,
     // which must never race a batch publishing into it. The Shift+. opener
     // already refuses on this same condition, so the keyboard route never
@@ -705,7 +697,7 @@ bool GuiInputHandler::adopt_render_entry(
     std::error_code ec;
     if (!std::filesystem::is_regular_file(e.wav_path, ec)) return false;
 
-    const std::filesystem::path sidecar = render_view.settings_path(e);
+    const std::filesystem::path sidecar = renders_dir.settings_path(e);
     const auto settings = read_settings_file(sidecar.string());
     if (!settings) return false;
 
@@ -873,8 +865,8 @@ void GuiInputHandler::open_commit_editor() {
         viewport.invalidate_timestamp_area();
         return;
     }
-    std::vector<AppState::RenderViewEntry> list =
-        render_view.enumerate_render_view_list();
+    std::vector<AppState::RenderEntry> list =
+        renders_dir.enumerate_render_entries();
     if (list.empty()) {
         app.transient_status_message = "no renders to commit";
         viewport.invalidate_timestamp_area();
@@ -909,8 +901,8 @@ void GuiInputHandler::commit_editor_autocomplete() {
     if (!text_editor::is_active(app.commit_editor)) return;
     const std::string pending = app.commit_editor.pending;
 
-    std::vector<AppState::RenderViewEntry> list =
-        render_view.enumerate_render_view_list();
+    std::vector<AppState::RenderEntry> list =
+        renders_dir.enumerate_render_entries();
 
     std::string lcp;
     bool have = false;
@@ -953,10 +945,10 @@ void GuiInputHandler::commit_editor_commit() {
         viewport.invalidate_timestamp_area();
     };
 
-    std::vector<AppState::RenderViewEntry> list =
-        render_view.enumerate_render_view_list();
+    std::vector<AppState::RenderEntry> list =
+        renders_dir.enumerate_render_entries();
 
-    const AppState::RenderViewEntry* found = nullptr;
+    const AppState::RenderEntry* found = nullptr;
     int match_count = 0;
     for (const auto& e : list) {
         const std::string full =
@@ -971,7 +963,7 @@ void GuiInputHandler::commit_editor_commit() {
 
     // Copy the entry before adopting: adopt wipes renders/ at its tail, and
     // the copy is self-contained (paths + basename), so it stays valid.
-    const AppState::RenderViewEntry entry = *found;
+    const AppState::RenderEntry entry = *found;
     if (adopt_render_entry(entry)) {
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.commit_editor);
@@ -1185,7 +1177,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // `l` (no modifiers): "Listen to renders" — launch the external audio
     // player (the audio_player setting) with every rendered wav under
-    // <source_parent>/renders/, in the numeric order enumerate_render_view_list
+    // <source_parent>/renders/, in the numeric order enumerate_render_entries
     // returns them. Fire-and-forget; the GUI's own playback is unaffected. The
     // modal / editor / read-only gates in on_key run before this handler, so
     // `l` is inert while any of them owns the keyboard (like p/i/m). A missing
@@ -1197,8 +1189,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             viewport.invalidate_timestamp_area();
             return true;
         }
-        std::vector<AppState::RenderViewEntry> list =
-            render_view.enumerate_render_view_list();
+        std::vector<AppState::RenderEntry> list =
+            renders_dir.enumerate_render_entries();
         if (list.empty()) {
             app.transient_status_message = "no renders to play";
             viewport.invalidate_timestamp_area();

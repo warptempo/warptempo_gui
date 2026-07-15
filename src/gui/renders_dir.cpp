@@ -1,4 +1,4 @@
-#include "render_view.h"
+#include "renders_dir.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -8,16 +8,15 @@
 #include <vector>
 
 // Renders-folder enumeration: the flat list of valid render entries under
-// <source_parent>/renders/, plus the per-entry .settings path helper. These
-// are the sole survivors of the retired render view; the `l` launcher and the
-// Shift+. commit editor call them.
+// <source_parent>/renders/, plus the per-entry .settings path helper. The `l`
+// launcher and the Shift+. commit editor call them.
 
-// Enumerate the flat render-view list under <source_parent>/renders/.
+// Enumerate the flat render-entry list under <source_parent>/renders/.
 // Returns an empty vector if no source path is set or if the renders root
 // contains no valid entries.
-std::vector<AppState::RenderViewEntry>
-GuiRenderView::enumerate_render_view_list() {
-    std::vector<AppState::RenderViewEntry> out;
+std::vector<AppState::RenderEntry>
+GuiRendersDir::enumerate_render_entries() {
+    std::vector<AppState::RenderEntry> out;
     if (app.source_audio_path.empty()) return out;
     std::filesystem::path src(app.source_audio_path);
     std::filesystem::path src_parent = src.parent_path();
@@ -76,7 +75,7 @@ GuiRenderView::enumerate_render_view_list() {
                       return a.idx < b.idx;
                   });
         for (auto& w : wavs) {
-            AppState::RenderViewEntry e;
+            AppState::RenderEntry e;
             e.batch_folder = b.path;
             e.basename     = std::move(w.basename);
             e.wav_path     = std::move(w.path);
@@ -90,7 +89,7 @@ GuiRenderView::enumerate_render_view_list() {
 // is frozen at dispatch (the dispatch writer writes it once, seeding the
 // queue/dispatch-moment tab/zoom/viewport/playhead/W-P) and never rewritten;
 // the Shift+. commit reads it to inherit that queue-moment recipe wholesale.
-std::filesystem::path GuiRenderView::settings_path(
-        const AppState::RenderViewEntry& e) {
+std::filesystem::path GuiRendersDir::settings_path(
+        const AppState::RenderEntry& e) {
     return e.batch_folder / (e.basename + ".settings");
 }

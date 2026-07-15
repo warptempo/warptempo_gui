@@ -23,47 +23,6 @@
 // render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
 // event entry points.
 
-// Render dispatch pre-flight. One pass on the GUI thread,
-// marker-count-sized and cheap. Always validates the LIVE state
-// (app.warpmarkers at dispatch time).
-//
-// The resolve-then-build chain the render worker runs —
-// resolve_warp_markers_for_render (which normalizes ambiguous marker
-// arrangements to tempo 1.00, one stderr line per timestamp, and never
-// refuses an authored store) then build_warp_frame_map — runs against the
-// given marker list and scale. The chain is the tripwire-class backstop
-// (effectively the engine-metadata and non-positive-tempo-product class),
-// surfacing through the error-notice popup with the owner's error string,
-// unmodified. Trim never refuses a dispatch: crossed/equal bounds cannot
-// rest (the commit and load auto-clears), an ambiguous trim at render time
-// falls back to the full, untrimmed deliverable inside do_render (one
-// stderr line), and the map formats silently ignore any set trim (they
-// always write the FULL maps). The async pipeline's existing stderr
-// failure paths remain the backstop for what the pre-flight never sees
-// (per-cell tempo/scale mutations in the sweep batches); the popup never
-// blocks the render thread and no strings flow through the async callback.
-bool GuiInputHandler::warp_render_preflight(
-        const std::vector<GuiWarpMarker>& markers,
-        double scale) {
-    const long sr    = static_cast<long>(audio.sample_rate());
-    const long total = static_cast<long>(audio.total_frames());
-
-    auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers), sr, total);
-    if (!resolved) {
-        prompt.open_error_notice(std::move(resolved.error()));
-        return false;
-    }
-    auto built = build_warp_frame_map(
-        *resolved, scale, audio.sample_rate(),
-        static_cast<long>(audio.total_frames()));
-    if (!built) {
-        prompt.open_error_notice(std::move(built.error()));
-        return false;
-    }
-    return true;
-}
-
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     AuthoringSnapshot s;
     s.active_tab        = app.active_tab_view;
@@ -97,8 +56,8 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
         // per cell and diverges, which the wav-arm writer clamp brings back
         // in-domain. If the live map cannot build (tripwire-class only),
         // fall back to the untranslated live values: the writer clamp keeps
-        // them in-domain, and such a dispatch is already refused upstream
-        // by preflight.
+        // them in-domain, and such a dispatch would surface the worker's own
+        // resolve->build stderr refusal.
         const int64_t src_total = audio.total_frames();
         const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
@@ -323,19 +282,12 @@ bool GuiInputHandler::render_bpm_sweep() {
     const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
 
-    // Pre-flight before any cell work. This base site validates the LIVE
-    // state at dispatch time — base_warp_markers is a just-taken copy of
-    // app.warpmarkers — so a tripwire-class build failure refuses with the
-    // popup (trim never refuses a dispatch; see warp_render_preflight).
-    // Per-cell scale/tempo mutations stay on the async stderr backstop. The
-    // bpm editor session is modal — nothing can mutate the stores or
-    // settings between mode entry and this dispatch — so a refusal here is
-    // a backstop, not a reachable path.
-    if (!warp_render_preflight(base_warp_markers,
-                               app.engine_settings.scale)) {
-        return false;
-    }
-
+    // Dispatch validates nothing: the render worker's own resolve->build
+    // chain (resolve_warp_markers_for_render, which normalizes ambiguous
+    // marker arrangements to tempo 1.00, then build_warp_frame_map) is the
+    // tripwire surface, and its per-cell scale/tempo mutations stay on the
+    // async stderr backstop. Trim never refuses (crossed/equal bounds cannot
+    // rest; an ambiguous trim renders untrimmed).
     int owner_idx = -1;
     for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
         if (base_warp_markers[i].bpm_owner) {

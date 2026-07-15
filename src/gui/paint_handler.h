@@ -499,8 +499,7 @@ private:
     OutOfTrimRects compute_out_of_trim_rects(const GuiRect& area) const;
 
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
-    // the rects_intersect gates and the perf-timing wrappers and calls these
-    // in place.
+    // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
@@ -508,5 +507,5 @@ private:
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_debug_hit_rects(cairo_t* cr, const GuiRect& area,
                                const GuiRect& top_strip, int sr);
-    double paint_bottom_strip(cairo_t* cr, int sr);
+    void paint_bottom_strip(cairo_t* cr, int sr);
 };

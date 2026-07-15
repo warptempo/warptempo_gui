@@ -12,13 +12,6 @@
 #include <string>
 #include <vector>
 
-namespace perf_counters {
-    int wf_cols              = 0;
-    int wf_pyramid_samples   = 0;
-    int flag_drawn           = 0;
-    int flag_elided          = 0;
-}
-
 // kFlagBottomLiftPx and kStemAboveWaveformPx now live in
 // render.h so the iter/BPM popups in main.cpp and the stem blit in
 // paint_handler.cpp can reference the same values.
@@ -342,22 +335,6 @@ void render_waveform(cairo_t* cr,
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         const double min_val = mm.first;
         const double max_val = mm.second;
-
-        if constexpr (kDebugPerf) {
-            perf_counters::wf_cols++;
-            if (level <= 0) {
-                perf_counters::wf_pyramid_samples +=
-                    static_cast<int>(s1 - s0);
-            } else {
-                // Strides match audio.cpp's kStrides[].
-                constexpr long long kCacheStrides[] = { 0, 32, 1024, 32768 };
-                const long long stride = kCacheStrides[level];
-                const long long i0 = s0 / stride;
-                const long long i1 = (s1 + stride - 1) / stride;
-                perf_counters::wf_pyramid_samples +=
-                    static_cast<int>(i1 - i0);
-            }
-        }
 
         int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
         int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
@@ -894,7 +871,6 @@ void iterate_visible_flags_impl(
         // without being elided — there is no inter-chip gutter. Reintroducing
         // one is a single added term on the right-hand side here.
         if (text_left < rightmost_right_edge + flag_pad_x_px()) {
-            if constexpr (kDebugPerf) perf_counters::flag_elided++;
             continue;
         }
 
@@ -948,8 +924,6 @@ void paint_one_flag_with_overlay(
     box.cursor_visible  = is_editing && editor.cursor_visible;
     box.cursor_pos      = editor.cursor_pos;
     render_editor_text_box(cr, box);
-
-    if constexpr (kDebugPerf) perf_counters::flag_drawn++;
 }
 
 } // namespace
@@ -1166,8 +1140,6 @@ void paint_one_phase_reset_flag(
     box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
     render_editor_text_box(cr, box);
-
-    if constexpr (kDebugPerf) perf_counters::flag_drawn++;
 }
 
 } // namespace

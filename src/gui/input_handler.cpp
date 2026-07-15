@@ -14,7 +14,6 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -30,7 +29,7 @@
 
 // Keyboard input handler event entry points (on_key, the pointer handlers,
 // on_wheel), dispatching into the operation structs through the reference
-// members (warpops, phase_resets, flag_editor, render_view, active_views,
+// members (warpops, phase_resets, flag_editor, renders_dir, active_views,
 // playback_lifecycle, save_ops, prompt, selection, undo, viewport).
 // compute_base_tempo_scale + BaseTempoScale live in input_handler.h so
 // this TU can reach them; render_bpm_sweep() is the sole caller.
@@ -46,9 +45,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // key-repeat re-enters through the same path as consecutive commands, which
     // correctly coalesce.
     ++app.command_seq;
-    if constexpr (kDebugPerf) {
-        app.last_input_event_time = std::chrono::steady_clock::now();
-    }
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -889,9 +885,6 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // single command, distinct wheel frames are consecutive commands that
     // coalesce.
     ++app.command_seq;
-    if constexpr (kDebugPerf) {
-        app.last_input_event_time = std::chrono::steady_clock::now();
-    }
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,

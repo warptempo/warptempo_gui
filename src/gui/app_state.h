@@ -648,17 +648,6 @@ struct AppState {
     bool        settings_dirty       = false;
     bool        dirty                = false;
 
-    // For redraw-time diagnostics (acceptance criterion 15).
-    std::chrono::steady_clock::time_point stats_last_report =
-        std::chrono::steady_clock::now();
-    double  stats_max_redraw_ms = 0.0;
-    int     stats_over_1ms_count = 0;
-
-    // Timestamp of the most recent user input event (key/button/motion).
-    // Read by the perf-instrumentation path to compute event-to-paint
-    // latency (e2e). Default-constructed (epoch zero) means "no input yet."
-    std::chrono::steady_clock::time_point last_input_event_time{};
-
     // Identity counter for the currently loaded audio. Bumped on every
     // successful file load. Used by the waveform cache as part of its
     // invalidation fingerprint so a file swap forces a re-render.
@@ -836,12 +825,12 @@ struct AppState {
 
     // One entry in the flat list of valid renders under
     // <source_parent>/renders/, produced by
-    // GuiRenderView::enumerate_render_view_list. Just the three path fields;
+    // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
     // Consumed by the `l` listen-to-renders launcher and the Shift+. commit
     // editor (adopt_render_entry).
-    struct RenderViewEntry {
+    struct RenderEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
@@ -863,7 +852,7 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // level against a caller-chosen domain total (fit-file zoom divides the
 // total by the width; numeric levels are total-independent). For callers
 // that need a domain OTHER than the active display context's (e.g. the
-// dispatch preflight clamping queue-moment view keys against a cell's own
+// dispatch-time snapshot clamping queue-moment view keys against a cell's own
 // map domain).
 double  samples_per_pixel_at(int zoom_level,
                              int waveform_width_px,

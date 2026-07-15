@@ -149,9 +149,7 @@ private:
 // callers that need to render synchronously outside the worker).
 //
 // Render runs on the worker thread; nothing in this function
-// touches main-thread cairo state. perf_counters increments inside
-// render_waveform fire from the worker thread when kDebugPerf=true — see
-// the comment in render.h.
+// touches main-thread cairo state.
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
