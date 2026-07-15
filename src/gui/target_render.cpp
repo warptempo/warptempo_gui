@@ -157,11 +157,24 @@ void GuiTargetRender::dispatch_render_now() {
         // on_render_done()'s Success tail with no async render; in_flight_
         // stays false since no worker round trip is pending. Live state IS the
         // request state on this synchronous rung, so the stamp is exact.
-        dispatched_buffer_start_frame_ =
+        const BufferStartVerdict verdict =
             compute_buffer_start_frame_for(app.trim.has_begin,
                                            app.trim.begin_frame,
                                            app.trim.has_end,
                                            app.trim.end_frame);
+        dispatched_buffer_start_frame_ = verdict.start_frame;
+        // Reuse skips do_render, whose trim-plan block owns the fallback
+        // line on fresh dispatches — so the ruled one-line-per-resolve
+        // signal prints here instead. This rung cannot see plan_trim's
+        // error string; the span case is the only refusal a resting live
+        // store can reach (crossed/equal cannot rest, past-EOF is
+        // adversarial load-fatal), so the wording below is exactly the line
+        // validate_trim_frames produces for it.
+        if (verdict.trim_fell_back) {
+            std::fprintf(stderr,
+                "warptempo_gui: trim target span rounds below one output "
+                "sample; rendering untrimmed\n");
+        }
         complete_successful_buffer();
         return;
     }
@@ -186,11 +199,20 @@ void GuiTargetRender::dispatch_render_now() {
                               audio.sample_rate(), app.target_buffer)) {
             // Live state IS the request state on this synchronous rung, so the
             // stamp is exact.
-            dispatched_buffer_start_frame_ =
+            const BufferStartVerdict verdict =
                 compute_buffer_start_frame_for(app.trim.has_begin,
                                                app.trim.begin_frame,
                                                app.trim.has_end,
                                                app.trim.end_frame);
+            dispatched_buffer_start_frame_ = verdict.start_frame;
+            // Reuse skips do_render's trim-plan block; print the fallback
+            // signal here — same rationale as the cache rung above (this is
+            // the only other pre-do_render return).
+            if (verdict.trim_fell_back) {
+                std::fprintf(stderr,
+                    "warptempo_gui: trim target span rounds below one output "
+                    "sample; rendering untrimmed\n");
+            }
             complete_successful_buffer();
             std::fprintf(stderr,
                 "warptempo_gui: target view loaded from archival render: %s\n",
@@ -226,10 +248,14 @@ void GuiTargetRender::dispatch_render_now() {
     // snapshot is immutable while app.trim is not: a trim drag mutates the live
     // authored store before its release commits, so the async completion
     // consumes this stamp rather than recomputing the origin from a store that
-    // may have drifted mid-render.
+    // may have drifted mid-render. No fallback print here even when the
+    // verdict says fell-back: this fresh dispatch runs do_render, whose own
+    // trim-plan block prints the one line per resolve — printing at this
+    // stamp too would double it.
     dispatched_buffer_start_frame_ =
         compute_buffer_start_frame_for(app.trim.has_begin, app.trim.begin_frame,
-                                       app.trim.has_end,   app.trim.end_frame);
+                                       app.trim.has_end,   app.trim.end_frame)
+            .start_frame;
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
@@ -323,7 +349,8 @@ void GuiTargetRender::complete_successful_buffer() {
     app.queue_progress_text.clear();
 }
 
-int64_t GuiTargetRender::compute_buffer_start_frame_for(
+GuiTargetRender::BufferStartVerdict
+GuiTargetRender::compute_buffer_start_frame_for(
     bool has_begin, int64_t begin_frame,
     bool has_end, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
@@ -334,25 +361,27 @@ int64_t GuiTargetRender::compute_buffer_start_frame_for(
     // llrint(T_b) in full-target coordinates and the exact authored
     // begin/end display falls out.
     //
-    // Fallback mirror (do_render decoupling): a trim plan_trim refuses
-    // renders the FULL, untrimmed buffer, so its anchor is 0, not
-    // llrint(T_b). This is the one downstream read that must distinguish "a
-    // trim bound was set" from "a trim plan exists", and it cannot see the
-    // worker's plan — so it re-derives the survival verdict from the same
-    // exact-double images through the same map: the render is trimmed iff
-    // llrint(T_e) - llrint(T_b) >= 1 (validate_trim_frames' span rule, the
-    // only refusal reachable from a live store — crossed/equal cannot rest
-    // and past-EOF is adversarial load-fatal; a crossed pair would fail
-    // this same compare anyway, T being monotone). Callers pass the trim
-    // pair the produced samples embody and stamp the result at production
-    // time, so no buffer-frames gate: the buffer may still be empty at the
-    // stamp.
-    if (has_begin && audio.sample_rate() > 0 && audio.total_frames() > 0) {
+    // Survival verdict (do_render decoupling; rationale at the struct in
+    // target_render.h): a trim plan_trim refuses renders the FULL, untrimmed
+    // buffer, so its anchor is 0, not llrint(T_b), and trim_fell_back
+    // carries that outcome to the reuse rungs' diagnostic. The render is
+    // trimmed iff llrint(T_e) - llrint(T_b) >= 1 (validate_trim_frames'
+    // span rule, the only refusal reachable from a live store —
+    // crossed/equal cannot rest and past-EOF is adversarial load-fatal; a
+    // crossed pair would fail this same compare anyway, T being monotone).
+    // The bound-unset defaults — begin 0, end total — are
+    // validate_trim_frames' own, so an end-only trim reaches the same
+    // verdict do_render's plan does. Callers pass the trim pair the
+    // produced samples embody and stamp the result at production time, so
+    // no buffer-frames gate: the buffer may still be empty at the stamp.
+    if ((has_begin || has_end) &&
+        audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
         const double begin_source_frame =
-            begin_frame < 0 ? 0.0 : static_cast<double>(begin_frame);
+            (!has_begin || begin_frame < 0) ? 0.0
+                                            : static_cast<double>(begin_frame);
         const double end_source_frame = has_end
             ? static_cast<double>(end_frame)
             : static_cast<double>(audio.total_frames());
@@ -361,10 +390,15 @@ int64_t GuiTargetRender::compute_buffer_start_frame_for(
         const int64_t t_end = std::llrint(map_source_to_target(
             end_source_frame < 0.0 ? 0.0 : end_source_frame,
             target_warp_frame_map));
-        if (t_end - t_begin < 1) return 0;  // fallback: untrimmed render
-        return t_begin;
+        if (t_end - t_begin < 1) {
+            return {0, true};  // fallback: the FULL deliverable, anchor 0
+        }
+        // Begin unset anchors at 0 (the surviving window starts at the
+        // domain origin); a set begin anchors at its target image — the
+        // same llrint(T_b) expression as ever, bit-identical.
+        return {has_begin ? t_begin : 0, false};
     }
-    return 0;
+    return {0, false};
 }
 
 void GuiTargetRender::ensure_ready() {
