@@ -648,11 +648,6 @@ struct AppState {
     bool        settings_dirty       = false;
     bool        dirty                = false;
 
-    // Identity counter for the currently loaded audio. Bumped on every
-    // successful file load. Used by the waveform cache as part of its
-    // invalidation fingerprint so a file swap forces a re-render.
-    long long audio_generation = 0;
-
     // Target-view live audio buffer. The render pipeline appends
     // synthesised samples here via RenderRequest::output_buffer when the
     // target_render.trigger() helper dispatches a render in target view.

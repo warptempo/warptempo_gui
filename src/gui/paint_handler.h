@@ -93,7 +93,10 @@ struct WaveformCache {
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
-    long long fp_audio_gen   = -1;     // -1 = never rendered
+    // false until the first worker completion (or synchronous rebuild) has
+    // published live pixels. The stem/flag caches gate on it — they hold no
+    // sensible displayed-viewport values before the first waveform paint.
+    bool      fp_rendered    = false;
     bool      fp_target      = false;
     uint64_t  fp_warp_frame_map_hash = 0;
 
@@ -119,7 +122,6 @@ struct WaveformCache {
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
-    long long pending_fp_audio_gen   = -1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -139,16 +141,12 @@ struct WaveformCache {
     int64_t   supersede_vp_end      = 0;
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
-    long long supersede_audio_gen   = -1;
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
-    // Audio the superseding job will read (see WaveformJob.audio). Carried so
-    // the deferred redispatch names the same audio the superseded viewport
-    // change was computed against — the source audio; the keepalive is
-    // vestigial and stays empty.
-    const GuiAudio* supersede_audio = nullptr;
-    std::shared_ptr<const GuiAudio> supersede_audio_keepalive;
+    // The superseding job always reads the one process-immortal source audio
+    // (WaveformJob.audio), so the slot carries no audio pointer or keepalive —
+    // the deferred redispatch just names &audio.
 
     // `dirty` no longer drives the dispatch decision (the
     // pending_fp_* comparison does). It remains as a startup/clear flag:
@@ -172,12 +170,13 @@ struct WaveformCache {
         pending_width  = 0;
         pending_height = 0;
         dirty  = true;
-        fp_audio_gen         = -1;
-        pending_fp_audio_gen = -1;
+        fp_rendered = false;
+        // Poison the pending fingerprint so the next maybe_enqueue tick sees a
+        // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
+        // any valid render (compute_waveform_render_inputs rejects area.w <= 0).
+        pending_fp_area_w = -1;
         supersede = false;
         supersede_warp_frame_map.clear();
-        supersede_audio = nullptr;
-        supersede_audio_keepalive.reset();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
     }
@@ -192,7 +191,7 @@ struct WaveformCache {
 // the marker counts the editor admits). The fingerprint is split into two
 // halves:
 //   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/warp_frame_map_hash/
-//      area dimensions/audio_gen): read from wf_cache.fp_*, NOT from
+//      area dimensions): read from wf_cache.fp_*, NOT from
 //      current app state. This is how the stem layer snaps together with
 //      the waveform layer at the worker's completion swap — both sides
 //      key off the same set of displayed-viewport values, which the
@@ -214,7 +213,6 @@ struct StemCache {
     int              width   = 0;
     int              height  = 0;
 
-    long long fp_audio_gen        = -1;     // -1 = never rendered
     int64_t   fp_vp_start         = 0;
     int64_t   fp_vp_end           = 0;
     int64_t   fp_trim_begin       = 0;
@@ -252,7 +250,6 @@ struct StemCache {
         width  = 0;
         height = 0;
         dirty  = true;
-        fp_audio_gen = -1;
     }
 
     ~StemCache() { destroy_surface(); }
@@ -282,7 +279,6 @@ struct FlagCache {
     int              width   = 0;
     int              height  = 0;
 
-    long long fp_audio_gen           = -1;
     int64_t   fp_vp_start            = 0;
     int64_t   fp_vp_end              = 0;
     int       fp_area_w              = 0;
@@ -326,7 +322,6 @@ struct FlagCache {
         width  = 0;
         height = 0;
         dirty  = true;
-        fp_audio_gen = -1;
     }
 
     ~FlagCache() { destroy_surface(); }
@@ -445,12 +440,10 @@ private:
         // The translation map: the target-view map in target view, empty in
         // source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
-        // The audio the plate reads from: the source audio (audio_keepalive is
-        // vestigial and stays empty). Set by
-        // compute_waveform_render_inputs; routed into WaveformJob.audio /
-        // .audio_keepalive and into the synchronous / pan render paths.
+        // The audio the plate reads from: always the one process-immortal
+        // source audio. Set by compute_waveform_render_inputs; routed into
+        // WaveformJob.audio and into the synchronous / pan render paths.
         const GuiAudio* audio = nullptr;
-        std::shared_ptr<const GuiAudio> audio_keepalive;
         bool     valid         = false;        // false if degenerate / loading
     };
 

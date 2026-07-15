@@ -7,11 +7,12 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
 #include <vector>
+// <memory> is intentionally not included: the job carries a raw GuiAudio*,
+// no shared_ptr (the source audio is process-immortal and needs no keepalive).
 
 class GuiAudio;
 
@@ -37,7 +38,6 @@ struct WaveformJob {
     int64_t   vp_end           = 0;
     int       area_w           = 0;
     int       area_h           = 0;
-    long long audio_gen        = -1;
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
 
@@ -53,11 +53,12 @@ struct WaveformJob {
     cairo_surface_t* surface = nullptr;
     int channel_count = 0;     // 1 for mono, 2 for stereo
 
-    // Audio handle the render reads (see lifetime invariant above). This is
-    // main.cpp's long-lived source audio and `audio_keepalive` stays null
-    // (the lifetime invariant covers it; the keepalive is vestigial).
+    // Audio handle the render reads (see lifetime invariant above). Always
+    // main.cpp's single long-lived source audio — the one GuiAudio for the
+    // process lifetime. It outlives every in-flight job, so the job needs no
+    // shared_ptr keepalive to pin the audio: a raw pointer is sufficient (the
+    // former audio-identity / lifetime-pinning axis is retired).
     const GuiAudio* audio = nullptr;
-    std::shared_ptr<const GuiAudio> audio_keepalive;
 };
 
 class GuiWaveformWorker {

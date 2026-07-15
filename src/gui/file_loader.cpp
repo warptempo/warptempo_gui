@@ -135,7 +135,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     }
 
     audio = std::move(next);
-    app.audio_generation++;
     app.loading       = false;
 
     app.playhead_cursor_sample       = 0;
