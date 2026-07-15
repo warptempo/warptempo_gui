@@ -343,9 +343,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 dst.zoom_level = src.zoom;
             }
             if (src.has_playhead) {
-                // Deliberately unclamped: persisted view scratch, not
-                // authored data, applied verbatim. The runtime clamp
-                // (move_playhead_to) owns any out-of-range value at first use.
+                // Applied verbatim here; the live-domain clamp runs on both
+                // tab snapshots after this settings block, once the persisted
+                // S/T domain is computable (the clamp site below).
                 dst.playhead_cursor_sample = src.playhead;
             }
         };
@@ -371,8 +371,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
         // Persisted viewport/playhead positions are display scratch, not
         // authored data: they apply verbatim (above) with no load-range
-        // check. The runtime clamps (clamp_viewport_start, and the playhead
-        // clamp at first use) own any out-of-range value harmlessly.
+        // check. The runtime clamps own any out-of-range value harmlessly —
+        // clamp_viewport_start for the viewport, and the live-domain
+        // playhead clamp (clamp_playhead_to_live_domain, both tab snapshots)
+        // immediately after this block.
     }
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the
@@ -381,6 +383,22 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // to populate here — a file that *opens* in target view gets the
     // correct deformed length on first read, same as the S→T toggle path.
 
+    // Persisted playheads clamp into the live domain HERE — the earliest
+    // point the persisted S/T domain is computable (active_audio_view and
+    // the markers/engine settings the target total derives from are all
+    // applied above; both tabs live in that one global domain, so one
+    // total clamps both). Load-lenient stays: clamping is the ruling, not
+    // a refusal — in-domain values pass through unchanged, and the
+    // historically load-legal playhead == total silently rests at
+    // total - 1, the ruled rest domain ([0, total - 1],
+    // move_playhead_to). This bounds the value BEFORE any consumer's
+    // translation arithmetic (the S/T toggle's double->int64 conversion,
+    // Shift+Space's launch offset) rather than at first gesture use.
+    app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        app.tab_a.playhead_cursor_sample, app, audio);
+    app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        app.tab_b.playhead_cursor_sample, app, audio);
+
     // Activate the parsed-tab: copy its snapshot into the live AppState
     // fields. active_tab_view was set from the parsed-settings block above.
     {
@@ -388,9 +406,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
                                       ? app.tab_b : app.tab_a;
         app.viewport_start_sample = parsed_tab.viewport_start_sample;
         app.zoom_level            = parsed_tab.zoom_level;
-        // Deliberately unclamped: persisted view scratch, not authored data.
-        // The runtime clamp (move_playhead_to) owns any out-of-range value at
-        // first use.
+        // Already clamped into the live domain by the tab-snapshot clamp
+        // above, so the live copy is in [0, total - 1] by construction.
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         app.trim                = parsed_tab.trim;
         app.trim_begin_selected = parsed_tab.trim_begin_selected;
@@ -525,14 +542,21 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 audio.sample_rate(),
                 static_cast<long>(audio.total_frames()))) {
             app.active_audio_view = 'S';
-            // The tab-activation clamp above ran against the target-domain
-            // total (live_total_frames consults the target map cache while
-            // active_audio_view=='T'); with the view forced back to source
-            // the source total governs, so re-clamp — cheap insurance for
-            // the forced-S path (with the map unbuildable the earlier clamp
-            // already fell back to the source total, so this is usually a
-            // no-op).
+            // The tab-activation and playhead clamps above ran against the
+            // target-domain total (live_total_frames consults the target map
+            // cache while active_audio_view=='T'); with the view forced back
+            // to source the source total governs, so re-clamp the viewport
+            // and both tabs' playheads plus the live copy — cheap insurance
+            // for the forced-S path (with the map unbuildable the earlier
+            // clamps already fell back to the source total, so this is
+            // usually a no-op).
             clamp_viewport_start(app, audio);
+            app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
+                app.tab_a.playhead_cursor_sample, app, audio);
+            app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
+                app.tab_b.playhead_cursor_sample, app, audio);
+            app.playhead_cursor_sample = clamp_playhead_to_live_domain(
+                app.playhead_cursor_sample, app, audio);
         }
     }
 

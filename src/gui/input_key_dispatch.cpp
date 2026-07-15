@@ -791,6 +791,20 @@ bool GuiInputHandler::adopt_render_entry(
     // an empty selection, exactly as a fresh load's empty-selection state.
     apply_settings_engine_and_prefs(app, *settings);
 
+    // Clamp both adopted tab bands' playheads into the live domain (the
+    // shared chokepoint, clamp_playhead_to_live_domain), mirroring the source
+    // load's tab-snapshot clamp at the same point in the sequence: the
+    // adopted S/T domain is computable here (active_audio_view and the
+    // markers/engine settings the target total derives from are all applied
+    // above; one global domain, one total clamps both). Entry sidecars are
+    // trusted (written once at dispatch from an in-domain live state), so
+    // this is a no-op there — it keeps the adopt 1:1 with a source load of
+    // the same sidecars, which clamps at this point too.
+    app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        app.tab_a.playhead_cursor_sample, app, audio);
+    app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        app.tab_b.playhead_cursor_sample, app, audio);
+
     // Activate the file's tab band. active_tab_view was just set by the shared
     // routine (== commit_tab) and both bands are already the file's, so pull
     // the live fields straight from the active band with no double-apply (NOT
@@ -800,8 +814,8 @@ bool GuiInputHandler::adopt_render_entry(
                                 ? app.tab_b : app.tab_a;
         app.viewport_start_sample  = band.viewport_start_sample;
         app.zoom_level             = band.zoom_level;
-        // Deliberately unclamped (restore-site convention): move_playhead_to
-        // owns the value at first use.
+        // Already clamped into the live domain by the band clamp above, so
+        // the live copy is in [0, total - 1] by construction.
         app.playhead_cursor_sample = band.playhead_cursor_sample;
         app.trim                = band.trim;
         app.trim_begin_selected = band.trim_begin_selected;

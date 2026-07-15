@@ -114,9 +114,18 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // or past the buffer end — is a silent no-op, nothing to audition.
         // Mirrors the "playhead at or past trim_end is a silent no-op" pattern
         // below for source view.
+        //
+        // The end check runs on the cursor against the offset-SHIFTED end,
+        // BEFORE the sum is formed: cursor + launch_offset can exceed int64
+        // for an extreme cursor value, while domain_end() - launch_offset
+        // cannot (the offset is 0 or +N/2 at both call sites and domain_end
+        // is a modest buffer extent), and a cursor that passes the check
+        // bounds the sum below domain_end(). Same verdicts as summing first
+        // wherever the sum was defined.
+        if (app.playhead_cursor_sample >=
+            playback.domain_end() - launch_offset) return;
         start = app.playhead_cursor_sample + launch_offset;
         if (start < playback.domain_begin()) return;
-        if (start >= playback.domain_end()) return;
         end   = playback.domain_end();
     } else {
         end = viewport.trim_end_sample();

@@ -999,28 +999,29 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
                                app.viewport_start_sample) / cur_spp)
         : 0.0;
 
-    int64_t new_playhead = app.playhead_cursor_sample;
+    // The translated playhead stays a DOUBLE until clamp_dest below: the
+    // int64 conversion happens only inside the clamp, whose bound is the
+    // post-flip destination total.
+    double new_playhead_d = static_cast<double>(app.playhead_cursor_sample);
 
     bool going_to_target = false;
     if (app.active_audio_view == 'S') {
         // S → T: forward-translate the playhead. The deformed-domain
         // total is derived from the warp_frame_map cache by live_total_frames,
         // so the post-flip viewport math needs no cached total here.
-        const double tph = map_source_to_target(
+        new_playhead_d = map_source_to_target(
             static_cast<size_t>(app.playhead_cursor_sample < 0
                                 ? 0 : app.playhead_cursor_sample),
             warp_frame_map);
-        new_playhead = static_cast<int64_t>(std::nearbyint(tph));
 
         app.active_audio_view = 'T';
         going_to_target = true;
     } else {
         // T → S: inverse-translate the playhead.
-        const double sph = map_target_to_source(
+        new_playhead_d = map_target_to_source(
             static_cast<size_t>(app.playhead_cursor_sample < 0
                                 ? 0 : app.playhead_cursor_sample),
             warp_frame_map);
-        new_playhead = static_cast<int64_t>(std::nearbyint(sph));
 
         app.active_audio_view              = 'S';
     }
@@ -1050,23 +1051,37 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // clamp_viewport_start) reads; move_playhead_to holds the domain
     // ruling ([0, total - 1]). Both tabs live in the one global domain, so
     // one total clamps both.
+    //
+    // The clamp runs in the DOUBLE domain, before the nearbyint/int64
+    // conversion: the cast's domain must be guaranteed at the cast itself,
+    // not by callers' store hygiene — a translated extreme value (the map's
+    // identity tail extrapolates any query, and float→int64 conversion of a
+    // result at or past 2^63 is undefined) is defused here regardless of
+    // how it got in. For every finite input whose old post-cast conversion
+    // was defined this is byte-identical: the bound double(dest_total - 1)
+    // is an exact integer double for any product-reachable total, so
+    // nearbyint(clamp(v)) == clamp(nearbyint(v)) — in-domain values are
+    // unchanged. The `!(v >= 0.0)` spelling also rests a NaN at 0.
     const int64_t dest_total = live_total_frames(app, audio);
-    const auto clamp_dest = [dest_total](int64_t s) -> int64_t {
-        if (s < 0) return 0;
-        if (dest_total > 0 && s >= dest_total) return dest_total - 1;
-        return s;
+    const auto clamp_dest = [dest_total](double v) -> int64_t {
+        const double hi =
+            static_cast<double>(dest_total > 0 ? dest_total - 1 : 0);
+        if (!(v >= 0.0)) v = 0.0;
+        if (v > hi) v = hi;
+        return static_cast<int64_t>(std::nearbyint(v));
     };
-    new_playhead = clamp_dest(new_playhead);
+    const int64_t new_playhead = clamp_dest(new_playhead_d);
 
     {
         ViewState& other = (app.active_tab_view == 'B') ? app.tab_a : app.tab_b;
 
-        const auto xlate = [&](int64_t s) -> int64_t {
+        // Returns the raw translated DOUBLE; the int64 conversion happens
+        // only inside clamp_dest (the double-domain guard above).
+        const auto xlate = [&](int64_t s) -> double {
             const size_t q = static_cast<size_t>(s < 0 ? 0 : s);
-            const double r = going_to_target
+            return going_to_target
                 ? map_source_to_target(q, warp_frame_map)
                 : map_target_to_source(q, warp_frame_map);
-            return static_cast<int64_t>(std::nearbyint(r));
         };
 
         const int64_t other_old_ph = other.playhead_cursor_sample;

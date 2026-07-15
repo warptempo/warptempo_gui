@@ -99,12 +99,16 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     const ViewState& target = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;
     app.viewport_start_sample = target.viewport_start_sample;
     app.zoom_level            = target.zoom_level;
-    // Deliberately unclamped: a tab restore of a previously-resting value —
-    // both tabs share the one global domain and the S/T re-express clamps
-    // both tabs' playheads, so the stash is in [0, total - 1] (the load
-    // path's persisted-scratch leniency aside; move_playhead_to owns the
-    // value at first use).
-    app.playhead_cursor_sample       = target.playhead_cursor_sample;
+    // Clamp the restored playhead through the shared live-domain chokepoint
+    // (clamp_playhead_to_live_domain, app_state.h) before it goes live: the
+    // parked tab's stash can be stale against a CHANGED live domain — marker
+    // or scale edits made in target view move the target total between tab
+    // switches, and the S/T re-express only translates the values it sees at
+    // toggle time. In the common case — both tabs share the one global
+    // domain and every stash boundary captures an in-domain live value —
+    // the stash is already in [0, total - 1] and the clamp is a no-op.
+    app.playhead_cursor_sample       = clamp_playhead_to_live_domain(
+        target.playhead_cursor_sample, app, audio);
     // Restore the active selection from the destination tab's
     // current-mode slot. Mode itself is per-AppState (not per-tab),
     // so the destination tab's other-mode slot stays warm for any
