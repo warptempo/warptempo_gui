@@ -103,6 +103,18 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
 
+// The stem painters' samples-per-pixel and the single source of truth for the
+// on-screen column grid: the visible span nearbyint-quantized to whole samples
+// (matching the vp_end the waveform cache carries, vp_start +
+// nearbyint(spp * area.w)) divided back over the strip width. The
+// pixel-anchoring pair below and the viewport snap in clamp_viewport_start
+// (main.cpp) all take their `q` from here, so the viewport grid and the marker
+// grid are one grid at any window width (not just multiples of 8). Returns 0.0
+// on degenerate geometry (no strip width / no zoom).
+struct GuiRect;
+double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
+                                 const GuiRect& area);
+
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the Ctrl+Left/Right nudges on both
 // marker columns and the trim bounds, the Ctrl+wheel trim end-move) or

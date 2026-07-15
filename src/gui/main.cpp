@@ -339,6 +339,22 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     if (a.viewport_start_sample < 0) a.viewport_start_sample = 0;
     const int64_t max_start = total - visible;
     if (a.viewport_start_sample > max_start) a.viewport_start_sample = max_start;
+    // Snap the viewport to a whole-pixel (grid) boundary: warp-marker commits then
+    // land on the frame-0 authoring grid (migration-tool agreement to within +/-1
+    // frame from the two roundings), and the waveform rests pixel-aligned. The same
+    // painter spp authored_frame_at_column uses, so viewport grid and marker grid
+    // are one grid. Nearest grid point, re-clamped into [0, max_start]; the extreme
+    // right edge may rest off-grid so the file end stays flush.
+    if (a.zoom_level != kFitFileLevel) {
+        const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
+        if (q > 0.0) {
+            int64_t snapped = static_cast<int64_t>(
+                std::nearbyint(std::nearbyint(
+                    static_cast<double>(a.viewport_start_sample) / q) * q));
+            snapped = std::clamp<int64_t>(snapped, 0, max_start);
+            a.viewport_start_sample = snapped;
+        }
+    }
 }
 
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio,

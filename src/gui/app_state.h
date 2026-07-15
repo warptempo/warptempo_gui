@@ -326,9 +326,6 @@ struct ScrollDragState {
     bool   active   = false;
     // Pointer x (px) at the previous motion event, seeded at the ctrl+press.
     int    last_x   = 0;
-    // Fractional sample-domain remainder carried between motion events so the
-    // 1:1 pixel pan tracks exactly without drifting over a long drag.
-    double accum_samples = 0.0;
 };
 
 // Hover popup state. A popup-eligible warp marker (pass marker or

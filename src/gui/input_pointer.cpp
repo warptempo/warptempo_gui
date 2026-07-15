@@ -308,9 +308,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // rather than signaling a stop, unlike the marker / trim / playhead
             // drags, which override follow for the session.
             if (inside_waveform) {
-                app.scroll_drag.active        = true;
-                app.scroll_drag.last_x        = x;
-                app.scroll_drag.accum_samples = 0.0;
+                app.scroll_drag.active = true;
+                app.scroll_drag.last_x = x;
             }
             return;
         }
@@ -548,12 +547,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // Ctrl+drag on empty waveform: continuous 1:1 viewport pan. Each motion
-    // event pans by its exact pixel delta (dx * samples-per-pixel); the
-    // fractional sample remainder is carried in accum_samples so a long drag
-    // does not drift off 1:1. scroll_viewport drives the incremental
-    // shift-and-strip fast-path, so per-event work is a memmove plus a dx-wide
-    // strip render. The wheel keeps its quantized detent step; only the drag is
-    // continuous.
+    // event pans by its per-event pixel delta, nearbyint(dx * samples-per-
+    // pixel). The viewport snaps to whole pixels in clamp_viewport_start
+    // (reached through scroll_viewport), so a per-event pan re-anchored by that
+    // snap tracks the cursor 1:1 without drift — no carried sample remainder.
+    // scroll_viewport drives the incremental shift-and-strip fast-path, so
+    // per-event work is a memmove plus a dx-wide strip render. The wheel keeps
+    // its quantized detent step; only the drag is continuous.
     if (app.scroll_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (playback.is_playing()) playback.resync_predictor();
@@ -563,14 +563,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const double spp = current_samples_per_pixel(app, audio);
         const int    dx  = mouse_x - app.scroll_drag.last_x;
         app.scroll_drag.last_x = mouse_x;
-        app.scroll_drag.accum_samples += static_cast<double>(dx) * spp;
-        const int64_t whole =
-            static_cast<int64_t>(app.scroll_drag.accum_samples);  // trunc to 0
-        if (whole != 0) {
-            app.scroll_drag.accum_samples -= static_cast<double>(whole);
-            // Grab-pan: drag right (dx > 0) reveals earlier content, so the
-            // viewport moves left.
-            viewport.scroll_viewport(-whole, /*continuous=*/true);
+        const int64_t delta =
+            static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
+        if (delta != 0) {
+            // Grab-pan: drag right (dx>0) reveals earlier content, viewport moves left.
+            viewport.scroll_viewport(-delta, /*continuous=*/true);
         }
         viewport.clear_hover_popup();
         return;

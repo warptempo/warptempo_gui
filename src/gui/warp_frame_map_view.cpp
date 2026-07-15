@@ -95,13 +95,10 @@ int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
         std::nearbyint(map_source_to_target(q, warp_frame_map)));
 }
 
-namespace {
-// The stem painters' samples-per-pixel: the visible span quantized to
-// whole samples (the vp_end the waveform-cache inputs carry is
-// vp_start + nearbyint(spp * area.w)) divided back over the strip width.
-// Both pixel-anchoring helpers below use this same value in both
-// directions, so a committed column time round-trips to its own column.
-// Returns 0.0 on degenerate geometry (no strip width / no zoom).
+// Definition; the descriptive comment lives at the declaration in
+// warp_frame_map_view.h. Exposed (non-anonymous) so main.cpp's viewport snap
+// in clamp_viewport_start takes its `q` from the same source as the
+// pixel-anchoring helpers below — one grid for viewport and markers.
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area) {
     if (area.w <= 0) return 0.0;
@@ -110,7 +107,6 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
     return std::nearbyint(spp * static_cast<double>(area.w)) /
            static_cast<double>(area.w);
 }
-}  // namespace
 
 int painted_column_of_source_frame(
     const AppState& app, const GuiAudio& audio, double source_frame,
