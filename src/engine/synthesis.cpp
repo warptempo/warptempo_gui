@@ -1,8 +1,6 @@
 #include "synthesis.h"
-#include "profile_util.h"
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <condition_variable>
 #include <cmath>
 #include <complex>
@@ -35,41 +33,18 @@ void Synthesis::synthesize_full(
     const int wend   = num_frames;
     const int wcount = wend;
 
-    // --- Env-gated sub-stage profiling --------------------------------------
-    // Per-channel ns counters (held in chprof, below), summed across the channel
-    // threads after the per-channel passes complete, plus a single output_append
-    // timer for the one interleaved write_cb. Because the channels run
-    // concurrently, the summed work_sum reads ~channel-count times the real
-    // elapsed time; wall (measured below) is the true elapsed ms of the threaded
-    // compute+write region, so the two can't be confused. The [profile] line is
-    // emitted to std::cerr only when WARPTEMPO_PROFILE is set (runtime env gating
-    // only — no compile-time macro).
-    //
-    // CAVEAT: the two now() reads per sub-stage per frame slightly inflate the
-    // cheapest stages (synthspec, ola) relative to the expensive ones. The
-    // FFT (ifft, analysis) and heap figures are the accurate ones and the ones
-    // we care about; this is acceptable for a first-cut breakdown.
-    const bool prof = profile::enabled();
-    using prof_clock = std::chrono::steady_clock;
-    auto prof_ns = [](prof_clock::time_point a, prof_clock::time_point b) {
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count();
-    };
-
     const int64_t src_frames = stft.src_info.frames;
     // Planar source: channel-contiguous float copy of the whole source,
     // deinterleaved once directly from the caller-owned interleaved buffer.
     // Bit-identical: same floats, just resident in RAM.
     std::vector<float> planar(static_cast<size_t>(channels) *
                               static_cast<size_t>(src_frames));
-    double wt_deinterleave_ms = 0.0;
     {
-        const auto _deint0 = prof ? profile::now() : prof_clock::time_point{};
         const float* src = stft.src_samples;
         for (int64_t f = 0; f < src_frames; ++f)
             for (int ch = 0; ch < channels; ++ch)
                 planar[static_cast<size_t>(ch) * src_frames + f] =
                     src[static_cast<size_t>(f) * channels + ch];
-        if (prof) wt_deinterleave_ms = profile::ms(_deint0, profile::now());
     }
 
     // Emitted output length: (wcount-1)*R_s plus the N/2 the reduced head trim
@@ -91,10 +66,6 @@ void Synthesis::synthesize_full(
     // only at the end. Each channel's pipeline state is fully local to
     // run_channel so each channel can be handed to its own thread.
     std::vector<std::vector<float>> mono(channels);
-    struct ChProf {
-        int64_t analysis=0, prep=0, wait=0, heap=0, synthspec=0, ifft=0, ola=0;
-    };
-    std::vector<ChProf> chprof(channels);
     std::vector<char> ch_cancelled(channels, 0);
 
     const int kAnalysisRingDepth = 4;
@@ -195,7 +166,7 @@ void Synthesis::synthesize_full(
 
     // Per-channel synthesis pass. Touches only read-only shared inputs (planar,
     // fm, stft.phase_reset_placements, stft.fft_ws[ch],
-    // stft.window/synth_window) and writes only mono[ch], chprof[ch],
+    // stft.window/synth_window) and writes only mono[ch] and
     // ch_cancelled[ch]. Analysis runs on a per-channel producer thread, while
     // synthesis-side inter-frame state stays consumer-local. The RNG is
     // consumer-only, so quiet-bin draws stay in frame/bin order. Forward and
@@ -272,23 +243,13 @@ void Synthesis::synthesize_full(
             analysis_thread = std::thread([&, ch, psrc] {
                 std::vector<double> ph_prev_prod(K2,0.0), ph_cur_prod(K2,0.0), ph_nxt_prod(K2,0.0);
                 std::vector<double> mag_prev_prod(K2,0.0), mag_cur_prod(K2,0.0), mag_nxt_prod(K2,0.0);
-                // With profiling enabled, this producer writes analysis/prep
-                // while the consumer writes wait/heap/synthspec/ifft/ola;
-                // those are separate ChProf scalar members.
                 for (int aidx = 0; aidx <= wend; ++aidx) {
                     if (analysis_ring.abort_requested() || cancel_requested()) {
                         analysis_ring.request_abort();
                         return;
                     }
-                    if (prof) {
-                        const auto _a0 = prof_clock::now();
-                        stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames,
-                                           mag_nxt_prod, ph_nxt_prod);
-                        chprof[ch].analysis += prof_ns(_a0, prof_clock::now());
-                    } else {
-                        stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames,
-                                           mag_nxt_prod, ph_nxt_prod);
-                    }
+                    stft.analyze_frame(ch, psrc, ta_for(aidx), src_frames,
+                                       mag_nxt_prod, ph_nxt_prod);
                     AnalysisRing::Slot* slot = analysis_ring.begin_push();
                     if (!slot) return;
                     slot->mag = mag_nxt_prod;
@@ -300,19 +261,10 @@ void Synthesis::synthesize_full(
                         const int64_t ta_back = ta_for(f);
                         const int64_t R_a_back = (f > 0) ? (ta_back - ta_for(f - 1)) : 0;
                         const int64_t R_a_fwd = ta_for(f + 1) - ta_back;
-                        if (prof) {
-                            const auto _p0 = prof_clock::now();
-                            stft.pghi_prep(f == 0, R_a_back, R_a_fwd,
-                                           mag_prev_prod, mag_cur_prod,
-                                           ph_prev_prod, ph_cur_prod, ph_nxt_prod,
-                                           slot->dt, slot->df, slot->quiet);
-                            chprof[ch].prep += prof_ns(_p0, prof_clock::now());
-                        } else {
-                            stft.pghi_prep(f == 0, R_a_back, R_a_fwd,
-                                           mag_prev_prod, mag_cur_prod,
-                                           ph_prev_prod, ph_cur_prod, ph_nxt_prod,
-                                           slot->dt, slot->df, slot->quiet);
-                        }
+                        stft.pghi_prep(f == 0, R_a_back, R_a_fwd,
+                                       mag_prev_prod, mag_cur_prod,
+                                       ph_prev_prod, ph_cur_prod, ph_nxt_prod,
+                                       slot->dt, slot->df, slot->quiet);
                     }
                     if (!analysis_ring.finish_push()) return;
                     ph_prev_prod.swap(ph_cur_prod);
@@ -328,12 +280,6 @@ void Synthesis::synthesize_full(
                                 std::vector<double>& dt,
                                 std::vector<double>& df,
                                 std::vector<char>& quiet) -> bool {
-            if (prof) {
-                const auto _w0 = prof_clock::now();
-                const bool ok = analysis_ring.pop(md, pd, dt, df, quiet);
-                chprof[ch].wait += prof_ns(_w0, prof_clock::now());
-                return ok;
-            }
             return analysis_ring.pop(md, pd, dt, df, quiet);
         };
 
@@ -422,66 +368,32 @@ void Synthesis::synthesize_full(
             const bool    frame0     = (frame_idx == 0);
             const bool    seed_heap  = frame0 || phase_reset_fired;
 
-            if (prof) {
-                const auto _h0 = prof_clock::now();
-                stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
-                                    mag_prev, mag_cur, ph_cur,
-                                    th_prev, dt_prev, dt_in, df_in, quiet_in,
-                                    theta, done_scratch, heap_scratch, rng);
-                chprof[ch].heap += prof_ns(_h0, prof_clock::now());
-            } else {
-                stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
-                                    mag_prev, mag_cur, ph_cur,
-                                    th_prev, dt_prev, dt_in, df_in, quiet_in,
-                                    theta, done_scratch, heap_scratch, rng);
-            }
+            stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
+                                mag_prev, mag_cur, ph_cur,
+                                th_prev, dt_prev, dt_in, df_in, quiet_in,
+                                theta, done_scratch, heap_scratch, rng);
             // dt_in (this frame's dt) becomes the next frame's dt_prev.
             dt_prev.swap(dt_in);
 
-            if (prof) {
-                const auto _s0 = prof_clock::now();
-                stft.populate_synth_spectrum(ch, mag_cur, theta);
-                chprof[ch].synthspec += prof_ns(_s0, prof_clock::now());
-            } else {
-                stft.populate_synth_spectrum(ch, mag_cur, theta);
-            }
+            stft.populate_synth_spectrum(ch, mag_cur, theta);
 
             // IFFT length M; un-shift the centered frame back into the [0, N)
             // OLA window (the inverse of analyze_frame's placement). With n in
             // [0, N) and Mfft = 2N the index resolves to two contiguous ranges,
             // so the split below replaces the per-sample modulo with no change to
             // the loads, multiplies, or accumulation order.
-            if (prof) {
-                const auto _i0 = prof_clock::now();
-                fftw_execute(stft.fft_ws[ch].plan_inv);
-                chprof[ch].ifft += prof_ns(_i0, prof_clock::now());
-            } else {
-                fftw_execute(stft.fft_ws[ch].plan_inv);
-            }
+            fftw_execute(stft.fft_ws[ch].plan_inv);
 
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             const double* io = stft.fft_ws[ch].ifft_out;
-            if (prof) {
-                const auto _o0 = prof_clock::now();
-                for (int n = 0; n < half; ++n) {
-                    const double v = io[n + Mfft - half];
-                    ola[n] += (v * inv_M) * stft.synth_window[n];
-                }
-                for (int n = half; n < N; ++n) {
-                    const double v = io[n - half];
-                    ola[n] += (v * inv_M) * stft.synth_window[n];
-                }
-                chprof[ch].ola += prof_ns(_o0, prof_clock::now());
-            } else {
-                for (int n = 0; n < half; ++n) {
-                    const double v = io[n + Mfft - half];
-                    ola[n] += (v * inv_M) * stft.synth_window[n];
-                }
-                for (int n = half; n < N; ++n) {
-                    const double v = io[n - half];
-                    ola[n] += (v * inv_M) * stft.synth_window[n];
-                }
+            for (int n = 0; n < half; ++n) {
+                const double v = io[n + Mfft - half];
+                ola[n] += (v * inv_M) * stft.synth_window[n];
+            }
+            for (int n = half; n < N; ++n) {
+                const double v = io[n - half];
+                ola[n] += (v * inv_M) * stft.synth_window[n];
             }
 
             // End-of-frame per-channel state shift. theta -> th_prev (a swap:
@@ -549,7 +461,6 @@ void Synthesis::synthesize_full(
     // All per-channel state is private to run_channel and fft_ws[ch] is
     // per-channel, so the passes are independent. Join before the interleave
     // below.
-    const auto _wall0 = prof ? prof_clock::now() : prof_clock::time_point{};
     {
         std::vector<std::thread> workers;
         workers.reserve(static_cast<size_t>(std::max(0, channels - 1)));
@@ -571,68 +482,15 @@ void Synthesis::synthesize_full(
     // All channels emit out_frames samples; the downstream write_cb is
     // order-preserving and chunk-agnostic, so a single call is equivalent to
     // any chunking.
-    int64_t t_write = 0;
-    double wt_interleave_ms = 0.0;
     if (out_frames > 0) {
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
-        const auto _inter0 = prof ? profile::now() : prof_clock::time_point{};
         for (int ch = 0; ch < channels; ++ch) {
             const std::vector<float>& m = mono[ch];
             assert(static_cast<int64_t>(m.size()) >= out_frames);
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
-        if (prof) wt_interleave_ms = profile::ms(_inter0, profile::now());
-        if (prof) {
-            const auto _w0 = prof_clock::now();
-            write_cb(inter.data(), static_cast<size_t>(out_frames));
-            t_write += prof_ns(_w0, prof_clock::now());
-        } else {
-            write_cb(inter.data(), static_cast<size_t>(out_frames));
-        }
-    }
-
-    if (prof) {
-        const int64_t t_wall = prof_ns(_wall0, prof_clock::now());
-        int64_t t_analysis=0, t_prep=0, t_wait=0, t_heap=0, t_synthspec=0, t_ifft=0, t_ola=0;
-        for (int ch = 0; ch < channels; ++ch) {
-            t_analysis += chprof[ch].analysis; t_prep += chprof[ch].prep; t_wait += chprof[ch].wait;
-            t_heap += chprof[ch].heap;
-            t_synthspec += chprof[ch].synthspec; t_ifft += chprof[ch].ifft;
-            t_ola += chprof[ch].ola;
-        }
-        const int64_t work_sum = t_analysis + t_prep + t_wait + t_heap + t_synthspec +
-                                 t_ifft + t_ola + t_write;
-        const double denom = work_sum > 0 ? static_cast<double>(work_sum) : 1.0;
-        auto pct = [&](int64_t v) { return 100.0 * v / denom; };
-        std::cerr << "[profile] synth:"
-                  << " analysis=" << (t_analysis / 1e6) << "(" << pct(t_analysis) << "%)"
-                  << " prep="     << (t_prep     / 1e6) << "(" << pct(t_prep)     << "%)"
-                  << " wait="     << (t_wait     / 1e6) << "(" << pct(t_wait)     << "%)"
-                  << " heap="     << (t_heap     / 1e6) << "(" << pct(t_heap)     << "%)"
-                  << " synthspec="<< (t_synthspec/ 1e6) << "(" << pct(t_synthspec)<< "%)"
-                  << " ifft="     << (t_ifft     / 1e6) << "(" << pct(t_ifft)     << "%)"
-                  << " ola="      << (t_ola      / 1e6) << "(" << pct(t_ola)      << "%)"
-                  << " output_append=" << (t_write / 1e6) << "(" << pct(t_write) << "%)"
-                  << " work_sum=" << (work_sum / 1e6)
-                  << " wall="     << (t_wall    / 1e6)
-                  << "  (work_sum = per-stage ms summed over " << channels
-                  << " channel threads; wall = elapsed ms of the compute+write"
-                  << " region. work_sum exceeds wall by about the channel count"
-                  << " when threading is healthy.)\n";
-        const unsigned long long source_bytes =
-            static_cast<unsigned long long>(src_frames) *
-            static_cast<unsigned long long>(channels) *
-            static_cast<unsigned long long>(sizeof(float));
-        std::cerr << "[profile] synth_summary"
-                  << " source_frames=" << src_frames
-                  << " target_frames=" << out_frames
-                  << " channels=" << channels
-                  << " deinterleave_ms=" << wt_deinterleave_ms
-                  << " interleave_ms=" << wt_interleave_ms
-                  << " output_append_ms=" << (t_write / 1e6)
-                  << " approx_source_mb=" << profile::bytes_to_mb(source_bytes)
-                  << "\n";
+        write_cb(inter.data(), static_cast<size_t>(out_frames));
     }
 }
 

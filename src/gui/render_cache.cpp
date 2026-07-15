@@ -1,5 +1,4 @@
 #include "render_cache.h"
-#include "profile_util.h"
 
 #include "wav_io.h"
 
@@ -603,8 +602,6 @@ struct RenderCache::WriterJob {
     int channels = 0;
     int sample_rate = 0;
     int64_t frame_count = 0;
-    bool prof = false;
-    profile::Clock::time_point t0{};
     // EncodeMasterThenRoute only: the dispatching render's per-dispatch
     // session cancel token (never reset after creation, so a load of it
     // names exactly that session). Null for WriteBlobToDisk jobs.
@@ -614,8 +611,6 @@ struct RenderCache::WriterJob {
 void RenderCache::insert(const std::vector<uint8_t>& fp,
                          const std::vector<char>& blob,
                          int channels, int sample_rate, int64_t frame_count) {
-    const bool prof = profile::enabled();
-    const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
     if (!enabled_) {
         return;
     }
@@ -630,15 +625,7 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     const bool to_ram =
         frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
     if (to_ram) {
-        const bool inserted = insert_ram(h, fp, blob, channels, sample_rate);
-        if (prof && inserted) {
-            const auto t1 = profile::now();
-            std::fprintf(stderr,
-                "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",
-                profile::ms(t0, t1),
-                static_cast<long long>(frame_count),
-                static_cast<unsigned long long>(bytes));
-        }
+        insert_ram(h, fp, blob, channels, sample_rate);
         return;
     }
 
@@ -672,8 +659,6 @@ void RenderCache::insert_master_floats(
     job.channels = channels;
     job.sample_rate = sample_rate;
     job.frame_count = frame_count;
-    job.prof = profile::enabled();
-    job.t0 = job.prof ? profile::now() : profile::Clock::time_point{};
     job.cancel_token = std::move(cancel_token);
     start_writer_job(std::move(job));
 }
@@ -716,9 +701,6 @@ void RenderCache::evict_ram_until(uint64_t target_max) {
 bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               const std::vector<char>& blob,
                               int64_t frame_count) {
-    const bool prof = profile::enabled();
-    const auto t0 = prof ? profile::now() : profile::Clock::time_point{};
-
     WriterJob job;
     job.kind = WriterJob::Kind::WriteBlobToDisk;
     job.h = h;
@@ -727,8 +709,6 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     job.path = dir_ + "/" + job.fname;
     job.blob = blob;
     job.frame_count = frame_count;
-    job.prof = prof;
-    job.t0 = t0;
     start_writer_job(std::move(job));
     return true;
 }
@@ -760,7 +740,7 @@ void RenderCache::start_writer_job(WriterJob job) {
     }
 
     std::thread new_writer([this, job = std::move(job)]() mutable {
-        auto write_disk_blob = [this, &job](uint64_t blob_bytes) {
+        auto write_disk_blob = [this, &job]() {
             uint64_t written = 0;
             if (!write_file(job.path, job.fp, job.blob,
                             job.frame_count, written)) {
@@ -777,17 +757,6 @@ void RenderCache::start_writer_job(WriterJob job) {
                 disk_index_[job.h] = std::move(e);
                 disk_bytes_   += written;
                 evict_disk_until(kDiskBudgetBytes);
-            }
-
-            if (job.prof) {
-                const auto t1 = profile::now();
-                // For target-sample jobs, this elapsed time includes the
-                // writer-thread PCM_24 encode before the disk write.
-                std::fprintf(stderr,
-                    "[profile] cache_insert enabled=yes inserted=yes tier=disk ms=%.3f frames=%lld bytes=%llu\n",
-                    profile::ms(job.t0, t1),
-                    static_cast<long long>(job.frame_count),
-                    static_cast<unsigned long long>(blob_bytes));
             }
         };
 
@@ -824,19 +793,8 @@ void RenderCache::start_writer_job(WriterJob job) {
             const bool to_ram =
                 job.frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
             if (to_ram) {
-                const bool inserted = insert_ram(job.h, job.fp, job.blob,
-                                                 job.channels,
-                                                 job.sample_rate);
-                if (job.prof && inserted) {
-                    const auto t1 = profile::now();
-                    // For target-sample jobs, this elapsed time includes the
-                    // writer-thread PCM_24 encode before tier registration.
-                    std::fprintf(stderr,
-                        "[profile] cache_insert enabled=yes inserted=yes tier=ram ms=%.3f frames=%lld bytes=%llu\n",
-                        profile::ms(job.t0, t1),
-                        static_cast<long long>(job.frame_count),
-                        static_cast<unsigned long long>(bytes));
-                }
+                insert_ram(job.h, job.fp, job.blob,
+                           job.channels, job.sample_rate);
                 return;
             }
 
@@ -849,12 +807,11 @@ void RenderCache::start_writer_job(WriterJob job) {
                 }
             }
             remove_disk_pair(job.path);
-            write_disk_blob(bytes);
+            write_disk_blob();
             return;
         }
 
-        const uint64_t blob_bytes = static_cast<uint64_t>(job.blob.size());
-        write_disk_blob(blob_bytes);
+        write_disk_blob();
     });
     {
         std::lock_guard<std::mutex> lock(mutex_);

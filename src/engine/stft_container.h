@@ -143,11 +143,6 @@ struct AudioSTFT {
     // Spectral limiter
     LimiterParams limiter_params;
 
-    // Mirrors EngineParams::limiter_verbose: gates the spectral limiter's
-    // stdout header and per-peak residual lines (suppressed on the
-    // target-view scrub path).
-    bool limiter_verbose = true;
-
     // Per-synthesis-frame source read schedule, evaluated once in
     // engine.cpp and reused by every pass. source_frame_positions[m] is the
     // source read position for synthesis frame m -- map_target_to_source

@@ -33,10 +33,6 @@ struct EngineParams {
     int    N                          = 4096;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
-    // When false, the spectral limiter's stdout header and per-peak residual
-    // lines are suppressed (the target-view scrub path); the pass-structure
-    // prints are unaffected.
-    bool   limiter_verbose            = true;
 
     // Phase reset position list. Each entry is an exact double position in
     // the engine's origin-centered query domain, produced by the parser's

@@ -30,7 +30,6 @@
 #include "stft_container.h"
 #include "limiter.h"
 #include "synthesis.h"
-#include "profile_util.h"
 
 namespace {
 
@@ -162,18 +161,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
-    // Env-gated pass-level profiling. Timers accumulate unconditionally (the
-    // now() overhead is negligible against a full render); the [profile] line
-    // is emitted to std::cerr only when WARPTEMPO_PROFILE is set. Runtime env
-    // gating only — no compile-time macro — so it toggles without a rebuild.
-    const bool prof = profile::enabled();
     init_fftw_threads(audio_stft);
 
     auto& lp = audio_stft.limiter_params;
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
-
-    audio_stft.limiter_verbose = p.limiter_verbose;
 
     if (audio_stft.N <= 0 || audio_stft.N % 4 != 0) {
         std::cerr << "Error: N must be a positive multiple of 4.\n";
@@ -299,10 +291,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     Limiter        limiter;
     Synthesis      synthesis;
 
-    double p1_ms = 0.0, p2_ms = 0.0, p3_ms = 0.0;
-
     // Pass 1: phase reset placement.
-    auto t_p1_0 = profile::now();
     audio_stft.phase_reset_placements.clear();
     audio_stft.phase_reset_placements.reserve(p.phase_reset_frame_map.size());
     const auto& fm = audio_stft.source_frame_positions;
@@ -325,37 +314,11 @@ EngineResult run_warptempo_engine(const EngineParams& p,
               << "] Phase reset placement............. "
               << audio_stft.phase_reset_placements.size()
               << " phase resets\n";
-    auto t_p1_1 = profile::now();
-    p1_ms = profile::ms(t_p1_0, t_p1_1);
-    std::cout << "  (" << static_cast<long long>(profile::ms(t_p1_0, t_p1_1)) << " ms)\n";
-    if (prof) {
-        std::cerr << "[profile] engine_pass name=phase_reset_placement ms="
-                  << p1_ms
-                  << " phase_reset_count=" << p.phase_reset_frame_map.size()
-                  << " placed_count=" << audio_stft.phase_reset_placements.size()
-                  << "\n";
-    }
 
     // Pass 2: synthesis (clean render) into the caller-owned output buffer.
     // synthesize_full applies no attenuation; the spectral limiter (Pass 3
     // below) then runs in place on this buffer.
-    auto t_p2_0 = profile::now();
     synthesis.process_to_buffer(audio_stft, p.output_buffer);
-    auto t_p2_1 = profile::now();
-    p2_ms = profile::ms(t_p2_0, t_p2_1);
-    std::cout << "  (" << static_cast<long long>(profile::ms(t_p2_0, t_p2_1)) << " ms)\n";
-    if (prof) {
-        const size_t out_samples = p.output_buffer->size();
-        const size_t out_frames = (audio_stft.channels > 0)
-            ? out_samples / static_cast<size_t>(audio_stft.channels) : 0;
-        std::cerr << "[profile] engine_pass name=synthesis ms="
-                  << p2_ms
-                  << " source_frames=" << p.source_audio_frames
-                  << " target_frames=" << audio_stft.emit_sample_cap
-                  << " channels=" << audio_stft.channels
-                  << " output_frames=" << out_frames
-                  << "\n";
-    }
     // Pass boundaries check the raw flag alongside cancellation_observed: a
     // kill that lands after a pass's last internal check must still stop the
     // render here rather than letting the remaining passes run to a Success
@@ -374,33 +337,13 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // The peak stage and the encode both live orchestrator-side, downstream
     // of the engine.
     {
-        auto t_p3_0 = profile::now();
         std::vector<float>& buf = *p.output_buffer;
-        const size_t limiter_input_frames = (audio_stft.channels > 0)
-            ? buf.size() / static_cast<size_t>(audio_stft.channels) : 0;
         limiter.process(audio_stft, buf);          // spectral -0.3
         if (cancel_pending()) {
             std::cerr << "[Cancelled]\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
         }
-        auto t_p3_1 = profile::now();
-        p3_ms = profile::ms(t_p3_0, t_p3_1);
-        std::cout << "  (" << static_cast<long long>(profile::ms(t_p3_0, t_p3_1)) << " ms)\n";
-        if (prof) {
-            std::cerr << "[profile] engine_pass name=limiter ms="
-                      << p3_ms
-                      << " sample_frames=" << limiter_input_frames
-                      << " channels=" << audio_stft.channels
-                      << "\n";
-        }
-    }
-
-    if (prof) {
-        std::cerr << "[profile] passes:"
-                  << " P1=" << p1_ms
-                  << " P2=" << p2_ms
-                  << " P3=" << p3_ms << "\n";
     }
 
     if (cancel_pending()) {

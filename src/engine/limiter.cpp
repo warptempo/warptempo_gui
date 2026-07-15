@@ -1,9 +1,7 @@
 #include "limiter.h"
-#include "profile_util.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
-#include <cstdio>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -219,8 +217,6 @@ All allocations are function-local and freed at every return; nothing persists
 across renders.
 */
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
-    const bool prof = profile::enabled();
-    const auto t_total_0 = profile::now();
     auto& lp = stft.limiter_params;
 
     const int channels    = stft.channels;
@@ -300,15 +296,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         if (!(stft.cancel_flag && stft.cancel_flag->load())) return false;
         stft.cancellation_observed = true;
         destroy();
-        if (prof) {
-            const auto t_total_1 = profile::now();
-            std::cerr << "[profile] limiter_summary ms="
-                      << profile::ms(t_total_0, t_total_1)
-                      << " sample_frames=" << render_frames
-                      << " channels=" << channels
-                      << " peak_count=0 iteration_count=0"
-                      << " active=yes outcome=cancelled\n";
-        }
         return true;
     };
 
@@ -387,21 +374,10 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
 
     if (observed_cancel()) return;
     if (queue.empty()) {
-        if (stft.limiter_verbose) {
-            std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
-        }
+        std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
         destroy();
-        if (prof) {
-            const auto t_total_1 = profile::now();
-            std::cerr << "[profile] limiter_summary ms="
-                      << profile::ms(t_total_0, t_total_1)
-                      << " sample_frames=" << render_frames
-                      << " channels=" << channels
-                      << " peak_count=0 iteration_count=0 active=no bypass=no_attenuation\n";
-        }
         return;   // render left untouched (no round-trip applied)
     }
-    const size_t initial_peak_count = queue.size();
 
     auto cmp_desc = [](const Peak& a, const Peak& b) {
         if (a.magnitude != b.magnitude) return a.magnitude > b.magnitude;
@@ -410,9 +386,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::sort(queue.begin(), queue.end(), cmp_desc);
 
     std::vector<Peak>   resolved;
-    std::vector<double> residual_db_list;
     resolved.reserve(queue.size());
-    residual_db_list.reserve(queue.size());
 
     std::vector<float>  rescan_slice;
     std::vector<int>    frames_cov;
@@ -427,16 +401,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         if (stft.cancel_flag && stft.cancel_flag->load()) {
             stft.cancellation_observed = true;
             destroy();
-            if (prof) {
-                const auto t_total_1 = profile::now();
-                std::cerr << "[profile] limiter_summary ms="
-                          << profile::ms(t_total_0, t_total_1)
-                          << " sample_frames=" << render_frames
-                          << " channels=" << channels
-                          << " peak_count=" << initial_peak_count
-                          << " iteration_count=" << iterations
-                          << " active=yes outcome=cancelled\n";
-            }
             return;
         }
         Peak peak = queue.front();
@@ -504,7 +468,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             // Already conforming under the current map (neighbor attenuations
             // resolved this peak indirectly).
             resolved.push_back(peak);
-            residual_db_list.push_back(20.0 * std::log10(std::abs(ref_val) / ceiling));
             continue;
         }
         double ref_sign = (ref_val >= 0.0) ? 1.0 : -1.0;
@@ -585,8 +548,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                 gain_map[m][b] = best_map[i][b];
         }
 
-        double residual_db = 20.0 * std::log10(std::abs(best_val) / ceiling);
-
         // -- Rescan region (pre coords) --
         int64_t reg_start = peak.sample_idx - static_cast<int64_t>(RESCAN_HALF_WIDTH_FRAMES) * R_s_lim;
         int64_t reg_end   = peak.sample_idx + static_cast<int64_t>(RESCAN_HALF_WIDTH_FRAMES) * R_s_lim;
@@ -662,13 +623,11 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
                 // Cap-retired: permanently dropped, its post-spectral residual
                 // (still over ceiling) is handed to the peak limiter backstop.
                 resolved.push_back(np);
-                residual_db_list.push_back(20.0 * std::log10(np.magnitude / ceiling));
             }
         }
         std::sort(queue.begin(), queue.end(), cmp_desc);
 
         resolved.push_back(peak);
-        residual_db_list.push_back(residual_db);
     }
 
     if (kCidSelfCheck)
@@ -685,39 +644,10 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             render[dst + ch] = meas_ola[src + ch];
     }
 
-    // The [Pass 3/3] header and per-peak residual loop go to stdout. On the
-    // target-view buffer path that would spam every scrub, so both are gated
-    // on the caller's limiter_verbose flag (false on the scrub path).
-    const bool verbose = stft.limiter_verbose;
-    if (verbose) {
-        std::cout << "[Pass 3/3] Spectral limiter................. "
-                  << resolved.size() << " peaks, " << iterations
-                  << " iterations, done\n";
-
-        // -- Per-peak terminal diagnostic (drives the MAX_PEAK_RESOLVE_PASSES
-        //    sweep). time = post coords / sample_rate; residual > 0 is the bit
-        //    handed to the peak limiter. --
-        for (size_t i = 0; i < resolved.size(); ++i) {
-            int64_t post = resolved[i].sample_idx - N_lim;
-            double  sec  = static_cast<double>(post) / sample_rate;
-            char ln[160];
-            std::snprintf(ln, sizeof ln,
-                          "  peak @ %.3f s (sample %lld)  residual %+.2f dB\n",
-                          sec, static_cast<long long>(post), residual_db_list[i]);
-            std::cout << ln;
-        }
-    }
+    // The [Pass 3/3] progress header goes to stdout.
+    std::cout << "[Pass 3/3] Spectral limiter................. "
+              << resolved.size() << " peaks, " << iterations
+              << " iterations, done\n";
 
     destroy();
-    if (prof) {
-        const auto t_total_1 = profile::now();
-        std::cerr << "[profile] limiter_summary ms="
-                  << profile::ms(t_total_0, t_total_1)
-                  << " sample_frames=" << render_frames
-                  << " channels=" << channels
-                  << " peak_count=" << initial_peak_count
-                  << " resolved_peak_count=" << resolved.size()
-                  << " iteration_count=" << iterations
-                  << " active=yes bypass=no\n";
-    }
 }
