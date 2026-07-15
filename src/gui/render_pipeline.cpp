@@ -123,7 +123,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // grid).
     auto phase_reset_source_frames_r =
         build_phase_reset_source_frames(
-            slice_to_phase_reset_markers(req.phase_resets), total_frames);
+            slice_to_phase_reset_markers(req.phase_resets), sample_rate,
+            total_frames);
     if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                      phase_reset_source_frames_r.error().c_str());
@@ -145,7 +146,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // the pipeline.
     auto resolved_warp_markers =
         resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
-                                        sample_rate);
+                                        sample_rate, total_frames);
     if (!resolved_warp_markers) {
         std::fprintf(stderr,
             "warptempo_gui: render error: %s\n",

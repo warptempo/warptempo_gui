@@ -978,7 +978,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
         }
     }
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers), sample_rate);
+        slice_to_warp_markers(markers), sample_rate, total_frames);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
     auto r = build_warp_frame_map(*resolved, scale, sample_rate, total_frames);
     if (!r) return std::unexpected(std::move(r.error()));

@@ -134,8 +134,13 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // Version 6: the synthesis write now snaps the DC and Nyquist bins to their
 // nearest legal real phase (endpoint bins have no imaginary degree of
 // freedom), changing every render's bytes, so prior-DSP artifacts must stop
-// matching and re-render rather than pose as current-DSP renders.
-constexpr uint32_t kFingerprintVersion = 6;
+// matching and re-render rather than pose as current-DSP renders. Version 7:
+// the resolver normalizes a label ref whose implied effective tempo lies
+// outside the authored per-marker envelope [0.125, 8.0] to a plain 1.00
+// owner instead of rendering the unclamped implied ratio — a
+// previously-valid input whose bytes change, so prior artifacts must stop
+// matching and re-render.
+constexpr uint32_t kFingerprintVersion = 7;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

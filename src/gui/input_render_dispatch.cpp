@@ -116,7 +116,7 @@ bool GuiInputHandler::warp_render_preflight(
     }
 
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers), sr);
+        slice_to_warp_markers(markers), sr, total);
     if (!resolved) {
         prompt.open_error_notice(std::move(resolved.error()));
         return false;

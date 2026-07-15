@@ -58,11 +58,16 @@ struct MarkerEffective {
 // the first violated condition (a concise lowercase reason; callers add their
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
-// src_frame > total_frames, src_frame - prev_src_frame < 1, tempo <= 0
+// src_frame > total_frames, src_frame - prev_src_frame < 1 (unreachable
+// from the resolver, whose coincidence collapse guarantees >= 1-frame
+// spacing; kept as the map-artifact contract guard for hand-assembled
+// input), tempo <= 0
 // (a zero or negative effective product divides by zero or flips sign in the
-// segment arithmetic), and — in Pass 2, after all of the above — a label
-// ref with no matching label def (the render-boundary refusal for a
-// reference whose definition was deleted; such files load intact).
+// segment arithmetic; reachable — the ruled async-stderr backstop for the
+// sweep batches' per-cell computed tempo mutations), and — in Pass 2,
+// after all of the above — a label ref with no matching label def (an
+// internal tripwire: the resolver normalizes dangling refs first, so only
+// hand-assembled input reaches it).
 // Builds the full untrimmed map unconditionally; trim is applied downstream
 // by the prepost trimmer (plan_trim translates this map into the cut's
 // coordinates), never here. Scale participates here and not in
@@ -133,15 +138,10 @@ std::vector<bool> warp_markers_render_keep_mask(
 // 1.0 fallback). Rules: the list must be non-empty; markers[0] must sit at
 // exactly frame 0, must not be disabled, must not be a pass
 // (tempo_inherits), and must not be a label reference. A label definition on
-// markers[0] is legal. This check is mandatory correctness, not politeness:
-// build_warp_frame_map never reads markers[0].time_frame — it seeds the
-// map at {0,0} and attributes the opening segment to the first resolved
-// marker wherever it actually sits — so without it a moved, disabled, or
-// pass/ref first marker renders SILENTLY WRONG deliverable bytes rather than
-// failing. Violating files load intact (the save/reload round trip can never
-// lock the user out); every render path refuses them here via
-// resolve_warp_markers_for_render's leading call. Kept public so display-side
-// validity gates can consult the verdict directly without building. On
+// markers[0] is legal. Called only by the transitional defect enumerator
+// (enumerate_marker_store_defects) and scheduled for deletion with it — the
+// render resolver normalizes a missing frame-0 owner (its silent 1.00 seed)
+// instead of refusing. On
 // failure the one-line message names the failed rule and, when two or more
 // markers share markers[0].time_frame exactly, appends a coincident-marker
 // count with the formatted timestamp so the recovery path (Tab-select,
@@ -161,55 +161,82 @@ validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
 // enabled ref whose def is disabled — the same cascade
 // warp_markers_render_keep_mask publishes and marker_effective's source_idx
 // walk uses); when the immediate prior surviving marker is an enabled label
-// ref, refuse: the inherited value comes from the nearest true owner (refs
-// are transparent to resolve_inherited_tempo) while the hover provenance
-// names the ref — two disagreeing definitions — so the arrangement misleads
-// and can never rest. A pass with no surviving prior at all passes here
-// (that is the first-marker grammar's territory), and in a pass-pass-ref
+// ref, refuse: the inherited value comes from the nearest true owner while
+// the hover provenance names the ref — two disagreeing definitions. A pass
+// with no surviving prior at all passes here, and in a pass-pass-ref
 // chain only the pass adjacent to the ref refuses. On failure the one-line
 // message names both positions ("pass marker at <t> inherits from the label
-// ref at <t>", display timestamps). resolve_warp_markers_for_render calls
-// this when materializing each pass, and the defect enumerator mirrors it
-// verbatim (MarkerDefectKind::PassAfterLabelRef) — the same owner/mirror
-// sharing as validate_first_marker_render_grammar. Kept public for that
-// mirror.
+// ref at <t>", display timestamps). Called only by the transitional defect
+// enumerator (MarkerDefectKind::PassAfterLabelRef) and scheduled for
+// deletion with it — the render resolver's ref-opaque inheritance walk
+// normalizes the arrangement to tempo 1.00 instead of refusing.
 std::expected<void, std::string>
 validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
                                  size_t index, long sample_rate);
 
-// Resolve each WarpMarker to a MarkerForRender. Callers in the GUI slice
-// their GuiWarpMarker store to std::vector<WarpMarker> first (the resolver
-// is parser-domain and reads no GUI-only fields). Validates the first-marker
-// render grammar first (validate_first_marker_render_grammar above, on the
-// raw pre-resolution list) and returns its message unchanged on failure, so
-// no render path can skip the check — this resolver is the chokepoint every
-// caller passes through before build_warp_frame_map. Likewise refuses, when
-// materializing each pass, a pass whose immediate prior surviving marker is
-// an enabled label ref (validate_pass_inheritance_source above, message
-// unchanged). Filters on
-// warp_markers_render_keep_mask above — the participation verdict's single
-// owner — dropping disabled label-definition markers (and thereby all refs
-// to them) and disabled markers generally. The inherit walk-back is applied
-// here so MarkerForRender carries a concrete tempo_cents / tempo_scale —
-// same rule as resolve_inherited_tempo. Both the engine-bound render
-// pipeline and the target view's warp_frame_map recompute go through this single
-// resolver so the visible deformity matches what the engine would emit.
+// Resolve each WarpMarker to a MarkerForRender — the normalization
+// chokepoint every render path passes through before build_warp_frame_map
+// (both the engine-bound render pipeline and the target view's
+// warp_frame_map recompute, so the visible deformity matches what the
+// engine would emit). Callers in the GUI slice their GuiWarpMarker store to
+// std::vector<WarpMarker> first (the resolver is parser-domain and reads no
+// GUI-only fields).
+//
+// Every marker arrangement resolves: an ambiguous tempo is never refused,
+// it normalizes to 1.00 with one stderr line per affected timestamp per
+// resolve (no dedup across resolves — a resting ambiguous state re-prints
+// on every recompute, the intended signal). The staged pipeline:
+//   1. filter to the survivors of warp_markers_render_keep_mask above —
+//      the participation verdict's single owner — dropping disabled
+//      markers and cascade-disabled refs;
+//   2. collapse each group of 2+ survivors sharing one exact time_frame
+//      (positions are whole int64 frames, so exact equality is the whole
+//      coincidence predicate) into ONE plain enabled 1.00 owner with no
+//      labels, one line per group;
+//   3. when no survivor sits at exactly frame 0, silently prepend a plain
+//      enabled 1.00 owner there (the documented default, not ambiguity);
+//   4. materialize each pass through resolve_inherited_tempo(_scale)'s
+//      ref-opaque walk below — a walk terminated by a surviving enabled
+//      label ref yields the 1.00 fallback, with a line;
+//   5. normalize label refs: a dangling ref (no def among the survivors)
+//      or a ref whose implied effective tempo lies outside the authored
+//      per-marker envelope [0.125, 8.0] becomes a plain 1.00 owner at its
+//      own frame, each with a line;
+//   6. emit MarkerForRender.
+// Output invariants: non-empty; strictly increasing whole frames; the
+// first element sits at exactly frame 0 and is enabled (a plain 1.00 owner
+// when seeded); every surviving label_ref is resolvable and its implied
+// tempo in-band. Input that normalizes to itself — no coincident
+// survivors, a survivor at frame 0, no ref-terminated walks, every ref
+// resolvable and in-band — yields the identical resolved list the
+// pre-normalization filter produced, so build_warp_frame_map's output is
+// byte-for-byte unchanged for such input. The std::expected return shape
+// is shared with the map builder's callers; the normalization itself
+// produces no errors. sample_rate feeds only the stderr timestamps;
+// total_frames only the envelope check's last-segment distance.
 std::expected<std::vector<MarkerForRender>, std::string>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate);
+                                long sample_rate, long total_frames);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
-// false, not a label reference, and not disabled. Disabled markers are skipped
-// because the engine drops them before resolution, so a disabled marker
-// contributes no tempo downstream. Returns 100 cents (tempo 1.00) / nullopt
-// (scale) if none is found. Inheritance is a pure value copy — cents copy
-// exactly. This is the single canonical inheritance walk: resolve_warp_markers_for_render
-// and compute_hover_popup_text both call it, so the popup display always
-// matches the tempo the engine resolves.
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
+// false, not a label reference, and not disabled. Disabled markers and
+// cascade-disabled refs are skipped because the engine drops them before
+// resolution, so they contribute no tempo downstream. A SURVIVING enabled
+// label ref (non-empty label_ref, not marker_effectively_disabled)
+// terminates the walk with the fallback and, when `inherited_from_ref` is
+// non-null, sets it true — the resolver prints its normalization line from
+// that signal; display callers pass nothing. Returns 100 cents (tempo
+// 1.00) / nullopt (scale) when no owner is reached. Inheritance is a pure
+// value copy — cents copy exactly. This is the single canonical
+// inheritance walk: resolve_warp_markers_for_render and the hover surfaces
+// (marker_effective / compute_hover_popup_text) both call it, so the popup
+// display always matches the tempo the engine resolves.
+int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
+                                bool* inherited_from_ref = nullptr);
 std::optional<double> resolve_inherited_tempo_scale(
-    const std::vector<WarpMarker>& markers, int index);
+    const std::vector<WarpMarker>& markers, int index,
+    bool* inherited_from_ref = nullptr);
 
 // Effective (base_cents, scale, source) a marker resolves to, for
 // display/authoring callers in hover/popup and marker operation paths.
@@ -226,12 +253,15 @@ std::optional<double> resolve_inherited_tempo_scale(
 //   label_ref -> the label-definition marker (def_idx); base/scale are the
 //                def's effective base and the combined "~=" multiplier —
 //                a full double with no display ceiling.
-// A pass whose immediate prior surviving marker is an enabled label ref is
-// observable only transiently (at rest the arrangement is a walked commit
-// defect, refused at the render boundary by
-// validate_pass_inheritance_source); on such a transiently-unresolved store
-// source_idx names the ref (the visible immediate prior), base/scale still
-// the resolved owner's.
+// Normalization fallbacks mirror the render resolver and report as
+// {base_cents 100, scale nullopt, source_idx -1} — no visible source,
+// because the value is a fallback, not inherited from anywhere:
+//   - a pass whose inheritance walk terminated on a surviving enabled
+//     label ref (attributing the 1.00 to the ref would mislead);
+//   - a label ref with no definition anywhere in the list;
+//   - a label ref whose implied effective tempo lies outside the authored
+//     per-marker envelope [0.125, 8.0] (the same band the resolver
+//     normalizes at).
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
@@ -244,22 +274,32 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // marker's own popup or flag shows, not its raw stored fields, which are
 // inert for a pass or a label_ref — TIME its time_frame). If SOURCE's own
 // resolution is unresolvable (base 0.0), the suffix is dropped entirely and
-// the popup shows just the resolved tempo. Label_ref markers emit
+// the popup shows just the resolved tempo. A pass whose inheritance walk
+// terminated on a surviving enabled label ref reads "= 1.00 (ctrl+c to
+// copy)" — the render's fallback, with no provenance. Label_ref markers emit
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
 // tempo value via format_tempo_cents; COMBINED_SCALE = def_scale * multiplier
 // when the def has a typed scale, else multiplier, printed as a scale-like
 // value at min 4 decimals with no ceiling — the "~=" marks an implied,
 // geometry-dependent value, while a pass popup's "=" marks an exact
 // inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
-// marker). TIME is formatted with format_timestamp
+// marker). A label ref the render normalizes reads the exact literal it
+// renders as — "=" not "~=", nothing geometry-implied remains:
+// "= 1.00 (undefined label, ctrl+c to copy)" when its label names no
+// definition, "= 1.00 (extreme label ratio, ctrl+c to copy)" when its
+// implied effective tempo lies outside the [0.125, 8.0] envelope; both
+// copy "1.00". TIME is formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
 // The hover-copy hint is added to every qualifying readout. When the readout
 // carries a provenance parenthetical the hint folds inside it after a comma:
 // "(from SOURCE @ TIME, ctrl+c to copy)". When the readout has no provenance
 // (a first-marker pass, or one whose source is unresolvable) the hint is its
 // own trailing "(ctrl+c to copy)".
-// Returns "" when the marker does not qualify (owning, missing def,
-// malformed). GUI callers slice their GuiWarpMarker store to WarpMarker
+// Returns "" when the marker does not qualify (owning, malformed, or a
+// last-segment ref with no surviving successor — the popup cannot know
+// total_frames, so such a ref shows no readout even where the resolver's
+// band check, which has total_frames, may normalize it). GUI callers slice
+// their GuiWarpMarker store to WarpMarker
 // (slice_to_warp_markers) before calling.
 //
 // When `copy_payload_out` is non-null and the marker qualifies, it receives

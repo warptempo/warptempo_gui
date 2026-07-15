@@ -1,15 +1,24 @@
 #include "phase_reset_frame_map_build.h"
 
 #include "engine/engine_geometry.h"  // kN
+#include "time_format.h"             // format_timestamp
 
 #include <cstddef>
+#include <cstdio>
 #include <string>
 #include <vector>
 
 std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, int64_t total_frames) {
+    const std::vector<PhaseResetMarker>& markers, long sample_rate,
+    int64_t total_frames) {
+    // sample_rate is display-only: it renders the collapse line's timestamp
+    // as format_timestamp(frame / sr).
+    const double sr_d = static_cast<double>(sample_rate);
     std::vector<double> out;
     out.reserve(markers.size());
+    // Whether out.back()'s timestamp has already printed its collapse line —
+    // a coincident group of any size collapses with ONE line.
+    bool reported_back = false;
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         if (m.disabled) continue;
@@ -27,26 +36,28 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
                 "phase reset time exceeds source length at marker "
                 + std::to_string(i));
         }
-        // Sub-frame refusal, mirroring the warp column's shape
-        // (build_warp_frame_map's src_frame - src_f_prev < 1.0 check). The
-        // raw-store rule (marker_store_validate.h) prohibits same-column markers
-        // closer than one deepest-zoom pixel of time on both columns — a wider
-        // window than this sub-frame check, since the GUI cannot let the user
-        // mouse-pick markers on one pixel column apart. This sub-frame
-        // in-function check is the breach backstop for hand-edited input
-        // reaching the build directly, past the marker parser and the store's
-        // enumerator. Input marker times are non-decreasing (the load parser
-        // rejects decreasing times; the GUI store is time-sorted), so a pair
-        // this close refuses here; the surviving output stays strictly
-        // increasing by construction, which the derivation (a constant N/2
-        // shift of the input plus participation drops) preserves, so the
-        // engine's strict-ascent init validator holds.
-        if (!out.empty() && src_frame - out.back() < 1.0) {
-            return std::unexpected(
-                "phase reset markers under one source frame apart at marker "
-                + std::to_string(i));
+        // Exact-coincidence collapse, the phase-reset sibling of the warp
+        // resolver's stage-2 normalization: authored positions are whole
+        // source frames, so sub-frame spacing IS exact equality, and
+        // equal-frame enabled resets are one event — the group collapses to
+        // one reset with one stderr line per collapsed timestamp, printed
+        // on every resolve. Input marker times are non-decreasing (the load
+        // parser rejects decreasing times; the GUI store is time-sorted),
+        // so equal frames are adjacent and the surviving output stays
+        // strictly increasing by construction, which the derivation (a
+        // constant N/2 shift of the input plus participation drops)
+        // preserves, so the engine's strict-ascent init validator holds.
+        if (!out.empty() && src_frame == out.back()) {
+            if (!reported_back) {
+                std::fprintf(stderr,
+                    "coincident phase reset markers at %s collapse to one reset\n",
+                    format_timestamp(src_frame / sr_d).c_str());
+                reported_back = true;
+            }
+            continue;
         }
         out.push_back(src_frame);
+        reported_back = false;
     }
     return out;
 }

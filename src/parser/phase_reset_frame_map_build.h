@@ -30,11 +30,12 @@
 // markers included) as adversarial input — a reset file applies only to the
 // audio it was authored against. Ordering: the load parser rejects only
 // DECREASING times (equal times load intact), so the input here is
-// non-decreasing; two resets closer than one deepest-zoom pixel of time are
-// prohibited by the raw-store rule (marker_store_validate.h) on both columns —
-// a wider window than this build's sub-frame check, which refuses only the
-// narrower sub-frame pairs as the breach backstop for hand-edited input, so the
-// output is strictly increasing by construction, and the engine's strict-ascent
+// non-decreasing, and positions are whole frames — sub-frame spacing IS
+// exact equality. Equal-frame enabled resets are one event and collapse to
+// ONE reset, with one stderr line per collapsed timestamp (the same
+// exact-coincidence normalization the warp resolver applies; sample_rate is
+// display-only, rendering that line's timestamp), so the output is strictly
+// increasing by construction, and the engine's strict-ascent
 // hardfail still covers raw phaseresetframemap inputs that bypass the marker
 // parser. The
 // result is the authored (undisplaced) source-frame intermediate consumed by
@@ -44,7 +45,8 @@
 // reset markers carry no inheritance, labels, or references — a timestamp
 // and a disabled flag are the whole grammar.
 std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
-    const std::vector<PhaseResetMarker>& markers, int64_t total_frames);
+    const std::vector<PhaseResetMarker>& markers, long sample_rate,
+    int64_t total_frames);
 
 // Authored -> engine derivation chain: authored (undisplaced) phase-reset
 // source positions -> the engine's origin-centered query domain, always

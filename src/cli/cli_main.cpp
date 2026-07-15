@@ -243,7 +243,8 @@ int main(int argc, char** argv) {
             sf.has_active_audio_view ? sf.active_audio_view : 'S';
         if (persisted_audio_view == 'T') {
             auto view_resolved =
-                resolve_warp_markers_for_render(markers, sample_rate);
+                resolve_warp_markers_for_render(markers, sample_rate,
+                                                total_frames);
             if (!view_resolved) {
                 run_view_check = false;
             } else if (auto view_map = build_warp_frame_map(
@@ -289,7 +290,8 @@ int main(int argc, char** argv) {
     // --- full (untrimmed) frame map, do_render's full_warp_frame_map: the
     // parser knows nothing of trim; a trimmed render hands the engine the
     // prepost trimmer's translated maps derived from this one below. ---
-    auto resolved = resolve_warp_markers_for_render(markers, sample_rate);
+    auto resolved = resolve_warp_markers_for_render(markers, sample_rate,
+                                                    total_frames);
     if (!resolved) {
         std::fprintf(stderr, "warptempo_cli: %s\n", resolved.error().c_str());
         return 1;
@@ -307,7 +309,7 @@ int main(int argc, char** argv) {
     // --- full deliverable-form phase reset derivation, built once beside
     // the full map exactly as do_render builds it. ---
     auto phase_reset_source_frames_r =
-        build_phase_reset_source_frames(resets, total_frames);
+        build_phase_reset_source_frames(resets, sample_rate, total_frames);
     if (!phase_reset_source_frames_r) {
         std::fprintf(stderr, "warptempo_cli: %s\n",
                      phase_reset_source_frames_r.error().c_str());

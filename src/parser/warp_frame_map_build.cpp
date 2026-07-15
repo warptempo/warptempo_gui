@@ -29,6 +29,20 @@ struct LabelCacheEntry {
     double delta_tgt = 0.0;
 };
 
+// The authored per-marker effective-tempo envelope, the band the label-ref
+// normalization checks an implied effective tempo against: marker tempo is
+// bracketed to [kTempoMinCents, kTempoMaxCents] = [0.25, 4.00] and marker
+// scale to [kScaleMin, kScaleMax] = [0.5, 2] (value_format.h, the SoT), so
+// any effective tempo a single authored marker can express lies in
+// [0.25 * 0.5, 4.00 * 2] = [0.125, 8.0]. A ref whose implied ratio leaves
+// this band could never have been authored as a direct marker and
+// normalizes to 1.00. The settings scale is deliberately excluded from the
+// implied quantity: it divides every segment uniformly and cancels, which
+// keeps the check computable identically by the hover popup (which cannot
+// see settings scale).
+const double kRefImpliedTempoMin = tempo_from_cents(kTempoMinCents) * kScaleMin;
+const double kRefImpliedTempoMax = tempo_from_cents(kTempoMaxCents) * kScaleMax;
+
 // marker_effectively_disabled (the shared cascade template in
 // warp_frame_map_build.h) is the participation verdict:
 // warp_markers_render_keep_mask publishes it per index (and
@@ -138,58 +152,205 @@ validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
 
 std::expected<std::vector<MarkerForRender>, std::string>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate) {
+                                long sample_rate, long total_frames) {
+    // Normalization pipeline: stages 1-5 build a normalized WarpMarker
+    // intermediate, stage 6 emits MarkerForRender. Ambiguity resolves to
+    // tempo 1.00 with one stderr line per affected timestamp, printed on
+    // every resolve (no dedup or session state — a resting ambiguous state
+    // re-prints on each recompute, the intended signal). Contract and
+    // output invariants in warp_frame_map_build.h. sample_rate is
+    // display-only (the stderr timestamps); total_frames feeds only the
+    // envelope check's last-segment distance.
+    const double sr_d = static_cast<double>(sample_rate);
 
-    // Render grammar first, on the raw pre-resolution list — after
-    // resolution a leading pass is indistinguishable from a numeric owner
-    // because of resolve_inherited_tempo's 1.0 fallback. Every render path
-    // funnels through this resolver, so none can skip the check.
-    // sample_rate feeds only the grammar message's display timestamps.
-    if (auto v = validate_first_marker_render_grammar(src, sample_rate); !v) {
-        return std::unexpected(std::move(v.error()));
+    // Stage 1 — filter to the survivors of warp_markers_render_keep_mask
+    // (the participation verdict's single owner): disabled markers, and
+    // refs whose def is disabled, are dropped. Everything below operates on
+    // the survivors-only intermediate — all enabled, cascade applied.
+    const std::vector<bool> keep = warp_markers_render_keep_mask(src);
+    std::vector<WarpMarker> norm;
+    norm.reserve(src.size() + 1);
+    for (size_t i = 0; i < src.size(); ++i) {
+        if (keep[i]) norm.push_back(src[i]);
     }
 
-    // Inherited-tempo resolution for pass markers is the canonical
-    // resolve_inherited_tempo / resolve_inherited_tempo_scale (defined below,
-    // declared in warp_frame_map_build.h) — the same walk the hover popup uses. Called
-    // directly at the tempo_inherits branch.
+    // Stage 2 — exact-coincidence collapse. Positions are whole int64
+    // frames, so exact frame equality is the complete coincidence
+    // predicate, and marker times are non-decreasing (the load parser
+    // rejects decreasing times; the GUI store is time-sorted), so a group
+    // is a run of adjacent equal frames. A group of 2+ survivors is
+    // ambiguous wholesale — no member's tempo outranks another's — and is
+    // replaced by ONE plain enabled 1.00 owner with no labels: a label def
+    // inside a collapsed group dies with it, and refs to it go dangling,
+    // which stage 5 then normalizes with their own stderr line — a
+    // deterministic cascade rather than a guess at which member to keep.
+    {
+        std::vector<WarpMarker> collapsed;
+        collapsed.reserve(norm.size());
+        size_t i = 0;
+        while (i < norm.size()) {
+            size_t j = i + 1;
+            while (j < norm.size() &&
+                   norm[j].time_frame == norm[i].time_frame) {
+                ++j;
+            }
+            if (j - i >= 2) {
+                WarpMarker owner;  // defaults: enabled 1.00 owner, no labels
+                owner.time_frame = norm[i].time_frame;
+                collapsed.push_back(owner);
+                std::fprintf(stderr,
+                    "coincident warp markers at %s render as tempo 1.00\n",
+                    format_timestamp(
+                        static_cast<double>(owner.time_frame) / sr_d).c_str());
+            } else {
+                collapsed.push_back(norm[i]);
+            }
+            i = j;
+        }
+        norm = std::move(collapsed);
+    }
 
-    const std::vector<bool> keep = warp_markers_render_keep_mask(src);
+    // Stage 3 — first-marker seed, mandatory correctness: when no SURVIVING
+    // marker sits at exactly frame 0, prepend a plain enabled 1.00 owner
+    // there. The surviving list is the basis by ruling — a disabled marker
+    // at frame 0, or an enabled ref whose def is disabled, does not count
+    // as existing — because build_warp_frame_map never reads
+    // markers[0].time_frame: it seeds the map at {0,0} and attributes the
+    // opening segment to the first resolved marker wherever it sits, so
+    // without this seed a filtered-away frame-0 marker would silently
+    // attribute the next owner's tempo from frame 0. SILENT — no stderr:
+    // this is the documented default (the same 0|1.00 a fresh source load
+    // seeds), not ambiguity.
+    if (norm.empty() || norm.front().time_frame != 0) {
+        WarpMarker seed;  // defaults: frame 0, enabled 1.00 owner, no labels
+        norm.insert(norm.begin(), seed);
+    }
 
+    // Stage 4 — pass materialization through the ref-opaque inheritance
+    // walk (resolve_inherited_tempo / resolve_inherited_tempo_scale below,
+    // the same walk the hover surfaces use, so render and hover cannot
+    // disagree). Resolutions are computed against the pre-materialization
+    // intermediate — passes stay transparent to each other's walks, exactly
+    // as the hover's raw-store walk sees them — then applied, so in a
+    // pass-pass-ref chain EVERY pass whose walk reaches the ref resolves to
+    // the 1.00 fallback and prints its own line.
+    {
+        struct PassResolution {
+            size_t                idx;
+            int64_t               cents;
+            std::optional<double> scale;
+            bool                  from_ref;
+        };
+        std::vector<PassResolution> resolutions;
+        for (size_t i = 0; i < norm.size(); ++i) {
+            if (!norm[i].label_ref.empty() || !norm[i].tempo_inherits) {
+                continue;
+            }
+            bool from_ref = false;
+            const int gi = static_cast<int>(i);
+            PassResolution pr;
+            pr.idx      = i;
+            pr.cents    = resolve_inherited_tempo(norm, gi, &from_ref);
+            pr.scale    = resolve_inherited_tempo_scale(norm, gi);
+            pr.from_ref = from_ref;
+            resolutions.push_back(std::move(pr));
+        }
+        for (const PassResolution& pr : resolutions) {
+            WarpMarker& p = norm[pr.idx];
+            p.tempo_inherits = false;
+            p.tempo_cents    = pr.cents;
+            p.tempo_scale    = pr.scale;
+            // label_def survives materialization: a `pass:LABEL` def is
+            // concrete from here on, so stage 5 measures it like any owner.
+            if (pr.from_ref) {
+                std::fprintf(stderr,
+                    "pass marker at %s inherits from a label ref; "
+                    "renders as tempo 1.00\n",
+                    format_timestamp(
+                        static_cast<double>(p.time_frame) / sr_d).c_str());
+            }
+        }
+    }
+
+    // Stage 5 — label-ref normalization (after stage 4, so defs that were
+    // passes are concrete). Each ref is checked independently: normalizing
+    // one replaces it in place with a plain 1.00 owner at its own frame,
+    // changing no positions and no label defs, hence no other ref's
+    // geometry or resolvability. The def search mirrors
+    // build_warp_frame_map's pass-1 label cache (defs on non-ref markers;
+    // duplicate defs are load-fatal, so a match is the one definition),
+    // which is what makes the builder's pass-2 dangling-lookup tripwire
+    // unreachable from here. The implied effective tempo is the exact
+    // build/hover quantity with the settings scale excluded (it cancels —
+    // see the envelope constants above): the def's effective tempo times
+    // the segment-distance ratio, where each distance runs to the NEXT
+    // marker in the normalized intermediate or to total_frames for the
+    // last. Denominators are safe: post-collapse frames are strictly
+    // increasing, so distinct markers differ by >= 1 frame.
+    {
+        auto next_frame = [&](size_t k) -> int64_t {
+            return (k + 1 < norm.size()) ? norm[k + 1].time_frame
+                                         : static_cast<int64_t>(total_frames);
+        };
+        for (size_t i = 0; i < norm.size(); ++i) {
+            if (norm[i].label_ref.empty()) continue;
+            const std::string name = norm[i].label_ref;
+
+            size_t def_idx = norm.size();
+            for (size_t j = 0; j < norm.size(); ++j) {
+                if (norm[j].label_ref.empty() &&
+                    !norm[j].label_def.empty() &&
+                    norm[j].label_def == name) {
+                    def_idx = j;
+                    break;
+                }
+            }
+
+            bool        normalize = false;
+            const char* reason    = nullptr;
+            if (def_idx == norm.size()) {
+                normalize = true;
+                reason    = "has no label definition";
+            } else {
+                const WarpMarker& d = norm[def_idx];
+                const double implied =
+                    tempo_from_cents(d.tempo_cents) *
+                    d.tempo_scale.value_or(1.0) *
+                    static_cast<double>(next_frame(i) - norm[i].time_frame) /
+                    static_cast<double>(next_frame(def_idx) - d.time_frame);
+                if (implied < kRefImpliedTempoMin ||
+                    implied > kRefImpliedTempoMax) {
+                    normalize = true;
+                    reason    = "implies an extreme ratio";
+                }
+            }
+            if (!normalize) continue;
+
+            WarpMarker plain;  // defaults: enabled 1.00 owner, no labels
+            plain.time_frame = norm[i].time_frame;
+            norm[i] = plain;
+            std::fprintf(stderr,
+                "label reference %s at %s %s; renders as tempo 1.00\n",
+                name.c_str(),
+                format_timestamp(
+                    static_cast<double>(plain.time_frame) / sr_d).c_str(),
+                reason);
+        }
+    }
+
+    // Stage 6 — emit MarkerForRender from the normalized intermediate.
+    // Passes were materialized in stage 4, so every marker is either a ref
+    // (tempo fields inert, label_ref carried) or a concrete owner.
     std::vector<MarkerForRender> out;
-    out.reserve(src.size());
-    for (size_t i = 0; i < src.size(); ++i) {
-        // `disabled` is allowed on any marker; whatever its kind, a disabled
-        // marker's tempo is silenced. The label_ref cascade is a separate path
-        // (the ref itself is not disabled but its target is). With trim moved
-        // to settings, a disabled marker has no reason to survive into the
-        // resolved list.
-        if (!keep[i]) continue;
-
-        const auto& g = src[i];
+    out.reserve(norm.size());
+    for (const WarpMarker& g : norm) {
         MarkerForRender m;
-        m.time_frame  = g.time_frame;
-        m.label_def     = g.label_def;
-        m.label_ref     = g.label_ref;
-
+        m.time_frame = g.time_frame;
+        m.label_def  = g.label_def;
+        m.label_ref  = g.label_ref;
         if (!g.label_ref.empty()) {
             m.tempo_cents = 0;
             m.tempo_scale.reset();
-        } else if (g.tempo_inherits) {
-            // A pass whose immediate prior surviving marker is an enabled
-            // label ref can never rest: the inherited value comes from the
-            // nearest true owner (resolve_inherited_tempo treats refs as
-            // transparent) while the hover provenance names the ref — two
-            // disagreeing definitions. The arrangement is a walked commit
-            // defect, refused here at the chokepoint; the enumerator mirrors
-            // this exact check (MarkerDefectKind::PassAfterLabelRef).
-            if (auto v = validate_pass_inheritance_source(src, i,
-                                                          sample_rate); !v) {
-                return std::unexpected(std::move(v.error()));
-            }
-            const int gi = static_cast<int>(i);
-            m.tempo_cents = resolve_inherited_tempo(src, gi);
-            m.tempo_scale = resolve_inherited_tempo_scale(src, gi);
         } else {
             m.tempo_cents = g.tempo_cents;
             m.tempo_scale = g.tempo_scale;
@@ -199,46 +360,63 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     return out;
 }
 
-// Contract: the backward walk stops only at a non-disabled owner; label
-// refs, passes, and disabled markers are transparent. This skip-ref walk
-// is the total display-time resolution: no geometry enters the resolver,
-// so no cycle is possible, and every marker list — including
-// transiently-unresolved stores (a just-loaded file whose defect series
-// has not walked yet, mid-series states) — resolves to a definite value,
-// the single source of its meaning across render, warpframemap,
-// miditempomap, and hover. The misleading at-rest arrangement the skip
-// once permitted is now impossible: a pass whose immediate prior
-// surviving marker is an enabled label ref is a walked commit defect
-// (validate_pass_inheritance_source, mirrored by the enumerator as
-// PassAfterLabelRef) refused at the render chokepoint, so the skip across
-// a ref can only be observed transiently. Passes deliberately never
-// inherit through a ref: a ref owns a duration equation, not a rate, and
-// its implied rate depends on segment geometry including the position of
-// the very marker that follows it, so inheriting it would make a pass's
-// tempo drift under unrelated position edits. Pass values must stay
+// Contract: the backward walk stops at the nearest non-disabled owner, or
+// at the nearest SURVIVING enabled label ref — the ref-hit returns the
+// 100-cents / nullopt fallback and reports it through inherited_from_ref
+// (the resolver prints its normalization line from that signal; display
+// callers pass nothing). Passes, disabled markers, and cascade-disabled
+// refs stay transparent (render-inert, they contribute no tempo
+// downstream). This walk is the total display-time resolution: no geometry
+// enters it, so no cycle is possible, and every marker list resolves to a
+// definite value, the single source of its meaning across render,
+// warpframemap, miditempomap, and hover — a pass at rest behind a
+// surviving enabled ref renders AND displays as tempo 1.00, and because
+// the walk itself owns that verdict the two surfaces cannot disagree.
+// Passes deliberately never inherit THROUGH a ref: a ref owns a duration
+// equation, not a rate, and its implied rate depends on segment geometry
+// including the position of the very marker that follows it, so
+// inheriting it would make a pass's tempo drift under unrelated position
+// edits — which is exactly why the ambiguity resolves to the 1.00
+// fallback instead of the ref's implied rate. Pass values must stay
 // literal, grammar-exact owner fields so that freezing a pass (tempo
 // nudge, Ctrl+N) is lossless.
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
+int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
+                                bool* inherited_from_ref) {
+    if (inherited_from_ref) *inherited_from_ref = false;
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
-        if (!m.tempo_inherits && m.label_ref.empty() && !m.disabled) {
+        if (!m.label_ref.empty()) {
+            if (!marker_effectively_disabled(markers, static_cast<size_t>(i))) {
+                if (inherited_from_ref) *inherited_from_ref = true;
+                return 100;
+            }
+            continue;
+        }
+        if (!m.tempo_inherits && !m.disabled) {
             return m.tempo_cents;
         }
     }
-    // Reachable: a leading pass with no owner before it loads fine (the
-    // first-marker grammar is a render-boundary rule, not a load rule) and
-    // resolves to this fallback on display surfaces (hover popup). The
-    // render boundary refuses such a list via
-    // validate_first_marker_render_grammar before the fallback can shape
-    // deliverable bytes.
+    // Reachable: a leading pass with no owner before it resolves to this
+    // fallback on every surface — the hover popup, and the render (where
+    // the resolver's frame-0 seed becomes the owner such a pass inherits,
+    // the same 1.00).
     return 100;
 }
 
 std::optional<double> resolve_inherited_tempo_scale(
-    const std::vector<WarpMarker>& markers, int index) {
+    const std::vector<WarpMarker>& markers, int index,
+    bool* inherited_from_ref) {
+    if (inherited_from_ref) *inherited_from_ref = false;
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
-        if (!m.tempo_inherits && m.label_ref.empty() && !m.disabled) {
+        if (!m.label_ref.empty()) {
+            if (!marker_effectively_disabled(markers, static_cast<size_t>(i))) {
+                if (inherited_from_ref) *inherited_from_ref = true;
+                return std::nullopt;
+            }
+            continue;
+        }
+        if (!m.tempo_inherits && !m.disabled) {
             return m.tempo_scale;
         }
     }
@@ -256,13 +434,24 @@ MarkerEffective marker_effective(
         // idx+1 lets it return idx's resolved tempo if idx is the only
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
-        r.base_cents = resolve_inherited_tempo(mv, walk);
+        bool from_ref = false;
+        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref);
         r.scale      = resolve_inherited_tempo_scale(mv, walk);
+        // A walk terminated by a surviving enabled label ref is the render's
+        // 1.00 fallback, not a value inherited from the ref — attributing it
+        // to the ref would mislead — so it reports with no visible source,
+        // mirroring the resolver's normalization.
+        if (from_ref) {
+            r.source_idx = -1;
+            return r;
+        }
         // source_idx is the immediate prior render-surviving marker — the
         // visible source of the inherited value, not necessarily the owning
         // marker if there is a chain of passes; cascade-disabled refs are
         // skipped because they are render-inert and carry no tempo payload, so
-        // they can never be the visible source.
+        // they can never be the visible source. (A surviving enabled ref
+        // cannot be reached here either: were the first surviving prior a
+        // ref, the walk above would have terminated on it.)
         for (int i = idx - 1; i >= 0; --i) {
             if (!marker_effectively_disabled(mv, static_cast<size_t>(i))) {
                 r.source_idx = i;
@@ -280,14 +469,26 @@ MarkerEffective marker_effective(
                 break;
             }
         }
-        if (def_idx < 0) return r;
+        if (def_idx < 0) {
+            // Dangling ref: the render resolver normalizes it to the plain
+            // 1.00 owner, so the display reports the same exact literal —
+            // base 100, no scale, no visible source (the value is a
+            // fallback, not taken from anywhere).
+            r.base_cents = 100;
+            r.scale.reset();
+            r.source_idx = -1;
+            return r;
+        }
 
         // Render measures each segment to the next marker that survives into
         // the resolved list, so the reference and definition distances must run
         // to the next surviving successor, not the raw adjacent marker: a
         // disabled marker (or a cascade-disabled ref) parked immediately after
         // either endpoint would otherwise skew the implied multiplier while
-        // leaving the frame map untouched.
+        // leaving the frame map untouched. This walk reads the raw store
+        // while the resolver's band check walks its post-collapse
+        // intermediate; the distances agree because the collapse preserves
+        // the set of distinct surviving frames.
         auto next_surviving = [&](int from) -> int {
             for (int i = from + 1; i < static_cast<int>(mv.size()); ++i) {
                 if (!marker_effectively_disabled(mv, static_cast<size_t>(i)))
@@ -299,7 +500,10 @@ MarkerEffective marker_effective(
         const int def_next = next_surviving(def_idx);
         // No surviving successor means render gives that segment a duration
         // running to the end of the source, which this function cannot know
-        // without total_frames. No popup is the existing contract for that case.
+        // without total_frames. No popup is the existing contract for that
+        // case — a recorded asymmetry: the resolver's band check, which HAS
+        // total_frames, may normalize a last-segment ref to 1.00 while the
+        // hover shows no readout for it.
         if (idx_next < 0 || def_next < 0) return r;
 
         // Frame-native segment distances: authored positions are whole
@@ -346,6 +550,19 @@ MarkerEffective marker_effective(
         // tempo.
         const double multiplier =
             (lr_src_dist * def_eff_tempo) / (def_base * def_src_dist);
+        // Envelope check, mirroring the resolver's band: base * multiplier
+        // is the ref's implied effective tempo with the settings scale
+        // excluded (it cancels — the envelope constants above), the same
+        // quantity the resolver's stage-5 check computes. Out-of-band means
+        // the render normalizes this ref to the plain 1.00 owner, so the
+        // display reports that exact literal with no visible source.
+        const double implied = def_base * multiplier;
+        if (implied < kRefImpliedTempoMin || implied > kRefImpliedTempoMax) {
+            r.base_cents = 100;
+            r.scale.reset();
+            r.source_idx = -1;
+            return r;
+        }
         // The combined multiplier is carried unclamped — values are full
         // doubles with no display ceiling; the render's ref handling is
         // delta-based and never reads this.
@@ -399,8 +616,9 @@ std::string compute_hover_popup_text(
         // A first-marker pass resolves to the 1.00 default and has no prior
         // marker to attribute, so source_idx stays negative; the popup shows
         // just the resolved tempo ("= 1.00") without a provenance suffix. The
-        // same guard covers a pass whose priors are all disabled, should that
-        // state be reachable.
+        // same guard covers a pass whose priors are all disabled, and a pass
+        // whose inheritance walk terminated on a surviving enabled label ref
+        // (the render's 1.00 fallback — a fallback has no source to name).
         if (eff.source_idx < 0) return out + kCopyHint;
 
         // Provenance: the immediate prior marker's own resolved displayed
@@ -414,11 +632,11 @@ std::string compute_hover_popup_text(
             marker_effective(mv, eff.source_idx);
         if (src_eff.base_cents == 0) return out + kCopyHint;
 
-        // The visible immediate prior can be an enabled label ref only on a
-        // transiently-unresolved store (at rest that arrangement is the
-        // walked pass-after-label-ref defect); its combined multiplier then
-        // prints in full like the ref's own popup — values carry no display
-        // ceiling.
+        // The visible immediate prior is never an enabled label ref here:
+        // were the first surviving prior a ref, the inheritance walk would
+        // have terminated on it and the source_idx<0 return above fired. A
+        // prior pass's own resolution prints in full — values carry no
+        // display ceiling.
         std::string descriptor = format_tempo_cents(src_eff.base_cents);
         if (src_eff.scale.has_value()) {
             descriptor += "*";
@@ -435,6 +653,28 @@ std::string compute_hover_popup_text(
     if (!m.label_ref.empty()) {
         const MarkerEffective eff = marker_effective(mv, idx);
         if (eff.base_cents == 0) return "";
+
+        // A ref the render normalizes (marker_effective's dangling and
+        // extreme-ratio fallbacks, source_idx -1) reads the exact literal it
+        // renders as — a hard "=", not "~=": nothing geometry-implied
+        // remains once the value is the 1.00 owner. The two cases share the
+        // fallback shape, so the def search (the same one marker_effective
+        // ran) distinguishes the parenthetical: no def is the dangling case.
+        if (eff.source_idx < 0) {
+            bool has_def = false;
+            for (const auto& d : mv) {
+                if (d.label_def == m.label_ref) {
+                    has_def = true;
+                    break;
+                }
+            }
+            std::string out = "= ";
+            out += format_tempo_cents(eff.base_cents);
+            if (copy_payload_out) *copy_payload_out = out.substr(2);
+            out += has_def ? " (extreme label ratio, ctrl+c to copy)"
+                           : " (undefined label, ctrl+c to copy)";
+            return out;
+        }
 
         const std::string base_text = format_tempo_cents(eff.base_cents);
         // "~=" marks an implied, geometry-dependent multiplier (contrast the
@@ -491,6 +731,12 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             return std::unexpected("marker time exceeds source length at marker "
                                    + std::to_string(i));
         }
+        // Sub-frame segments are unreachable from the resolver: its
+        // exact-coincidence collapse guarantees >= 1-frame spacing between
+        // resolved markers (positions are whole frames). The check survives
+        // as the map-artifact contract guard (strictly ascending source
+        // column) at the sole producer, for hand-assembled marker lists that
+        // reach the build directly.
         if (src_frame - src_f_prev < 1.0) {
             return std::unexpected("marker segment < 1 frame at marker "
                                    + std::to_string(i));
@@ -556,14 +802,13 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         double target_frame = 0.0;
 
         if (!m.label_ref.empty()) {
-            // Label resolvability is a render-boundary verdict: a reference
-            // whose definition was deleted (or never existed) is an ordinary
-            // user-reachable state — such files load intact, and this error
-            // is the loud refusal the GUI surfaces (the stderr path in
-            // render_pipeline.cpp prints the returned message; popup wiring
-            // arrives with the GUI-side validity gate). Definition
-            // uniqueness is still load-enforced, so a found entry is the
-            // one definition.
+            // Internal tripwire, unreachable from program input: the
+            // resolver normalizes dangling refs into plain 1.00 owners
+            // before the build, so every ref arriving here has a def among
+            // the resolved markers. Kept as the loud refusal for
+            // hand-assembled marker lists reaching the build directly.
+            // Definition uniqueness is load-enforced, so a found entry is
+            // the one definition.
             const auto lbl_it = label_cache.find(m.label_ref);
             if (lbl_it == label_cache.end()) {
                 return std::unexpected("label ref has no matching label def: '"
