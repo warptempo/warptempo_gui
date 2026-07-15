@@ -130,6 +130,62 @@ void GuiInputHandler::attach_shared_render_resources(RenderRequest& req) {
     req.source_load_mtime = audio.source_load_mtime();
 }
 
+bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
+                                                  std::string& out_basename) {
+    // The source path is process-immutable, so deriving renders/ here equals
+    // deriving it at command time.
+    std::filesystem::path src(app.source_audio_path);
+    std::filesystem::path src_parent = src.parent_path();
+    if (src_parent.empty()) src_parent = std::filesystem::path(".");
+    const std::filesystem::path queue_root = src_parent / "renders";
+
+    // Append into the most-recent misc folder, else start a new one at the
+    // shared first-index convention (max_index + 1 == 1 when empty).
+    const RendersBatchScan scan = max_renders_batch_index(queue_root);
+    std::filesystem::path target_folder;
+    if (!scan.max_index_folder_name.empty() &&
+        scan.max_index_folder_name.ends_with("_miscellaneous")) {
+        target_folder = queue_root / scan.max_index_folder_name;
+    } else {
+        target_folder = queue_root /
+            (std::to_string(scan.max_index + 1) + "_miscellaneous");
+    }
+
+    std::error_code ec;
+    std::filesystem::create_directories(target_folder, ec);
+    if (ec) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-miscellaneous: could not create "
+            "'%s': %s\n",
+            target_folder.string().c_str(), ec.message().c_str());
+        return false;
+    }
+
+    // Next cell index inside the target folder: max+1 over `<digits>.wav`,
+    // starting at 1. Non-numeric wav names are ignored (misc cells are
+    // authored only here, always bare-integer names).
+    int max_cell = 0;
+    for (const auto& fe :
+         std::filesystem::directory_iterator(target_folder, ec)) {
+        if (!fe.is_regular_file()) continue;
+        if (fe.path().extension() != ".wav") continue;
+        const std::string stem = fe.path().stem().string();
+        if (stem.empty()) continue;
+        bool all_digits = true;
+        int  v          = 0;
+        for (char c : stem) {
+            if (c < '0' || c > '9') { all_digits = false; break; }
+            v = v * 10 + (c - '0');
+        }
+        if (!all_digits) continue;
+        if (v > max_cell) max_cell = v;
+    }
+
+    out_folder   = target_folder.string();
+    out_basename = std::to_string(max_cell + 1);
+    return true;
+}
+
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
@@ -188,6 +244,17 @@ bool GuiInputHandler::dispatch_pending_archival_command() {
     // must report false so the caller's own pending work still runs.
     if (cmd.reqs.empty()) return false;
     if (cmd.single) {
+        if (cmd.miscellaneous) {
+            // Late-bind the output cell now that the worker is idle — the
+            // killed render can no longer be mid-publication, so this scan is
+            // exact (see allocate_miscellaneous_cell). A creation failure
+            // drops the command (stderr already printed) and reports false so
+            // the caller's own pending target preview still gets the idle beat.
+            std::string folder, basename;
+            if (!allocate_miscellaneous_cell(folder, basename)) return false;
+            cmd.reqs.front().batch_folder   = std::move(folder);
+            cmd.reqs.front().batch_basename = std::move(basename);
+        }
         dispatch_single_archival_render(std::move(cmd.reqs.front()));
     } else {
         start_render_batch(std::move(cmd.reqs), std::move(cmd.batch_label));

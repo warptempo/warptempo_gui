@@ -791,6 +791,17 @@ struct AppState {
         bool                       single = false;
         std::vector<RenderRequest> reqs;
         std::string                batch_label;
+        // A parked Ctrl+Alt+E command late-binds its output folder/cell at
+        // the worker-idle pump, not at command time: a command-time scan can
+        // be invalidated by the very render this command kills (that render
+        // may still publish into renders/ during its cancellation drain,
+        // after the scan but before the cancel flag lands, stealing the
+        // scanned cell name). Set only by the Ctrl+Alt+E park site; the pump
+        // allocates the folder/cell here. Because Esc disarming the slot
+        // (the wholesale `pending_archival = {}` reset) clears this flag with
+        // everything else, a parked-then-abandoned misc command creates no
+        // folder at all — the allocation never runs.
+        bool                       miscellaneous = false;
     };
     PendingArchivalCommand pending_archival;
 

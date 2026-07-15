@@ -333,6 +333,21 @@ private:
     // switch_active_tab_view_to.
     AuthoringSnapshot snapshot_current_authoring_state() const;
 
+    // Allocate the Ctrl+Alt+E miscellaneous output cell: derive renders/
+    // from the (process-immutable) source path, decide append-into-the-most-
+    // recent `_miscellaneous` folder vs. a new `<max+1>_miscellaneous`,
+    // create the folder, and scan it for the next `<N>.wav` cell. Writes the
+    // folder path into `out_folder` and `<max_cell+1>` into `out_basename`;
+    // returns false after printing the one stderr line on directory-creation
+    // failure. MUST only run when the render worker is idle: renders/ is
+    // written solely by the worker, so an idle-moment scan cannot race a
+    // publication — the command-time scan it replaces could, because a
+    // cancelled render may still publish into renders/ during its
+    // cancellation drain, after the scan but before the cancel flag lands,
+    // stealing the scanned cell name.
+    bool allocate_miscellaneous_cell(std::string& out_folder,
+                                     std::string& out_basename);
+
     // Attach the process-wide render resources to an assembled request:
     // the single RenderCache (constructed in main, reached through
     // target_render's reference), the GUI's shared source buffer, and the

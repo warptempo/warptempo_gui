@@ -392,16 +392,30 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // into a numbered cell inside a `_miscellaneous` batch folder under
     // renders/. This is Ctrl+Alt+R with an extra mkdir and a different output
     // location: no queue, no batch runner, one request through the same
-    // single-dispatch path. Folder logic: look at the most-recent folder BY
-    // INDEX in renders/; if it is a `_miscellaneous` folder, append into it;
-    // otherwise (or renders/ empty/missing) create `<max+1>_miscellaneous`.
-    // The cell is the next `<N>.wav` inside that folder. Because the target is
-    // a batch folder, do_render writes the FULL entry sidecar set (.warpmarkers
-    // / .phaseresetmarkers / .settings / .fingerprint), so each misc cell is a
+    // single-dispatch path. Folder logic (in allocate_miscellaneous_cell):
+    // look at the most-recent folder BY INDEX in renders/; if it is a
+    // `_miscellaneous` folder, append into it; otherwise (or renders/
+    // empty/missing) create `<max+1>_miscellaneous`. The cell is the next
+    // `<N>.wav` inside that folder. Because the target is a batch folder,
+    // do_render writes the FULL entry sidecar set (.warpmarkers /
+    // .phaseresetmarkers / .settings / .fingerprint), so each misc cell is a
     // first-class `l`-auditionable, `Shift+.`-adoptable entry. Repeat presses
     // with unchanged state are DELIBERATE — each is an explicit command that
     // produces one more cell; identical bytes come cheap from do_render's reuse
     // rungs (render_cache, then the on-disk artifact against its .fingerprint).
+    //
+    // The AUTHORING recipe (markers, settings, trim, snapshot, resources) is
+    // frozen here at command time; only the OUTPUT naming (batch_folder /
+    // batch_basename) is late-bound, at dispatch-to-worker time, on BOTH
+    // routes. Late binding is load-bearing on the busy route: the running
+    // render this command kills can still publish into renders/ during its
+    // cancellation drain (after any command-time scan but before the cancel
+    // flag lands, through do_render's reuse-rung renames), so a cell name
+    // scanned at command time could be stolen and then overwritten — two
+    // successful publications collapsing to one pathname. Allocating only
+    // once the worker is confirmed idle (renders/ is written solely by the
+    // worker) makes the scan exact. The idle route allocates here inline for
+    // the same one implementation.
     if (ctrl && alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return true;
@@ -409,62 +423,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // Dispatch validates nothing (same as Ctrl+Alt+R): the render worker's
         // own resolve->build chain is the tripwire surface.
 
-        std::filesystem::path src(app.source_audio_path);
-        std::filesystem::path src_parent = src.parent_path();
-        if (src_parent.empty()) src_parent = std::filesystem::path(".");
-        const std::filesystem::path queue_root = src_parent / "renders";
-
-        // Append into the most-recent misc folder, else start a new one at
-        // the shared first-index convention (max_index + 1 == 1 when empty).
-        const RendersBatchScan scan = max_renders_batch_index(queue_root);
-        std::filesystem::path target_folder;
-        if (!scan.max_index_folder_name.empty() &&
-            scan.max_index_folder_name.ends_with("_miscellaneous")) {
-            target_folder = queue_root / scan.max_index_folder_name;
-        } else {
-            target_folder = queue_root /
-                (std::to_string(scan.max_index + 1) + "_miscellaneous");
-        }
-
-        std::error_code ec;
-        std::filesystem::create_directories(target_folder, ec);
-        if (ec) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-miscellaneous: could not create "
-                "'%s': %s\n",
-                target_folder.string().c_str(), ec.message().c_str());
-            return true;
-        }
-
-        // Next cell index inside the target folder: max+1 over `<digits>.wav`,
-        // starting at 1. Non-numeric wav names are ignored (misc cells are
-        // authored only here, always bare-integer names).
-        int max_cell = 0;
-        for (const auto& fe :
-             std::filesystem::directory_iterator(target_folder, ec)) {
-            if (!fe.is_regular_file()) continue;
-            if (fe.path().extension() != ".wav") continue;
-            const std::string stem = fe.path().stem().string();
-            if (stem.empty()) continue;
-            bool all_digits = true;
-            int  v          = 0;
-            for (char c : stem) {
-                if (c < '0' || c > '9') { all_digits = false; break; }
-                v = v * 10 + (c - '0');
-            }
-            if (!all_digits) continue;
-            if (v > max_cell) max_cell = v;
-        }
-        const std::string basename = std::to_string(max_cell + 1);
-
-        // Build EXACTLY the Ctrl+Alt+R request, except batch_folder/basename
-        // select the in-folder naming and the full entry sidecar set.
+        // Build EXACTLY the Ctrl+Alt+R request; batch_folder/basename stay
+        // empty here and are assigned at dispatch-to-worker time.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
             app.trim.has_begin, app.trim.begin_frame,
-            app.trim.has_end,   app.trim.end_frame,
-            target_folder.string(), basename);
+            app.trim.has_end,   app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
 
@@ -472,11 +437,19 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // park (newest-wins) when busy, else dispatch now.
         if (async_renderer.is_busy()) {
             AppState::PendingArchivalCommand cmd;
-            cmd.single = true;
+            cmd.single        = true;
+            cmd.miscellaneous = true;   // late-bind the cell at the pump
             cmd.reqs.push_back(std::move(req));
             kill_running_render_and_park(std::move(cmd));
             return true;
         }
+        std::string folder, basename;
+        if (!allocate_miscellaneous_cell(folder, basename)) {
+            // Folder creation failed; the stderr line is already printed.
+            return true;
+        }
+        req.batch_folder   = std::move(folder);
+        req.batch_basename = std::move(basename);
         dispatch_single_archival_render(std::move(req));
         return true;
     }
