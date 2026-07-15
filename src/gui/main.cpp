@@ -348,23 +348,53 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     }
     if (a.viewport_start_sample < 0) a.viewport_start_sample = 0;
     const int64_t max_start = total - visible;
-    if (a.viewport_start_sample > max_start) a.viewport_start_sample = max_start;
+
+    // Fit-file: no grid (spp is total/width, not the marker grid) — clamp to
+    // the exact max_start as before.
+    if (a.zoom_level == kFitFileLevel) {
+        if (a.viewport_start_sample > max_start)
+            a.viewport_start_sample = max_start;
+        return;
+    }
+
+    const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
+    if (q <= 0.0) {
+        if (a.viewport_start_sample > max_start)
+            a.viewport_start_sample = max_start;
+        return;
+    }
+
     // Snap the viewport to a whole-pixel (grid) boundary: warp-marker commits then
     // land on the frame-0 authoring grid (migration-tool agreement to within +/-1
     // frame from the two roundings), and the waveform rests pixel-aligned. The same
     // painter spp authored_frame_at_column uses, so viewport grid and marker grid
-    // are one grid. Nearest grid point, re-clamped into [0, max_start]; the extreme
-    // right edge may rest off-grid so the file end stays flush.
-    if (a.zoom_level != kFitFileLevel) {
-        const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
-        if (q > 0.0) {
-            int64_t snapped = static_cast<int64_t>(
-                std::nearbyint(std::nearbyint(
-                    static_cast<double>(a.viewport_start_sample) / q) * q));
-            snapped = std::clamp<int64_t>(snapped, 0, max_start);
-            a.viewport_start_sample = snapped;
-        }
-    }
+    // are one grid.
+    //
+    // Rightmost ON-grid viewport: the smallest grid point >= max_start. Grid
+    // points g(k)=nearbyint(k*q) are strictly increasing at numeric zoom
+    // (q >> 1), so starting at floor(max_start/q) and stepping up finds it in
+    // O(1). Resting here shows <1 px of inert padding past EOF (subsumed in
+    // the last column; get_peak_range clamps past-EOF reads to silence), so
+    // the flush-right viewport is a true grid point — unlike the off-grid
+    // max_start it replaces, this keeps exact-grid marker commits and pixel
+    // anchoring simultaneously valid at maximum scroll.
+    int64_t k = static_cast<int64_t>(std::floor(max_start / q));
+    if (k < 0) k = 0;
+    auto grid = [q](int64_t kk) {
+        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
+    };
+    while (grid(k) < max_start) ++k;
+    const int64_t max_start_grid = grid(k);
+
+    // Snap the viewport to its nearest grid point, then clamp into
+    // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
+    // max_start first — that would pull a valid flush-right grid rest back
+    // off-grid.)
+    int64_t snapped = grid(static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(a.viewport_start_sample) / q)));
+    if (snapped < 0)               snapped = 0;
+    if (snapped > max_start_grid)  snapped = max_start_grid;
+    a.viewport_start_sample = snapped;
 }
 
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio,
