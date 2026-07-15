@@ -392,9 +392,6 @@ void Undo::do_undo() {
     // below still owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
-    if (!target_render.target_view_available()) {
-        target_render.leave_target_view();
-    }
     // Every undo restores engine input (markers, phase resets, or
     // settings) — fire a target render in target view. No-op in
     // source view.
@@ -481,9 +478,6 @@ void Undo::do_redo() {
     // below still owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
-    if (!target_render.target_view_available()) {
-        target_render.leave_target_view();
-    }
     // Every redo restores engine input — fire a target render in
     // target view. No-op in source view.
     target_render.trigger();

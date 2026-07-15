@@ -24,10 +24,8 @@
 // disk and/or hand the buffer to the caller.
 // Full renders bypass the trimmer completely — both stages.
 //
-// Trim is output_format=wav ONLY (ruled): the map formats (warptempo_maps,
-// generic_map, midi_map) silently ignore any set trim bound and always write
-// the FULL maps — trim is a render window, never an artifact shape. The
-// .settings vocabulary is unchanged.
+// Trim is a render window, never an artifact shape: the cache-dir framemap
+// pair the render drops is always the FULL maps regardless of any set bound.
 //
 // Vocabulary is pre_trim / post_trim, as in pre-/post-processing. One
 // computation (plan_trim) yields both stages, so the source view, the

@@ -127,6 +127,15 @@ public:
     // Safe if init() failed or never ran.
     void shutdown();
 
+    // Absolute path of this process's cache directory
+    // (<cache home>/warptempo_gui/<pid>), or an empty string when the store is
+    // disabled (no cache home / unmakeable directory). The archival render
+    // pipeline drops the full framemap pair here as future-proofing: the
+    // directory is removed at shutdown and orphan-swept at the next launch, so
+    // the pair rests only between a render and program close and nothing
+    // accumulates. Read-only; set once at init before any render dispatches.
+    std::string process_dir() const;
+
     // Confirmed lookup. Returns true only on hash match AND exact
     // fingerprint-blob compare AND matching channels/sample_rate, filling
     // out_samples with interleaved float32 audio and bumping the entry's LRU

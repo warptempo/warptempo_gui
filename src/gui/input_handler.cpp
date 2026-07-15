@@ -934,10 +934,6 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // this, but the helper is defensive in case future callers reach
     // it from elsewhere.)
     if (audio.total_frames() <= 0) return;
-    if (app.active_audio_view == 'S' &&
-        !target_render.target_view_available()) {
-        return;
-    }
 
     // Build the current warp_frame_map from the live warp marker store.
     // Same resolve-then-build pipeline the render pipeline runs, so the

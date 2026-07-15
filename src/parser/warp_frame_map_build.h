@@ -14,11 +14,6 @@
 // Pass 1 and Pass 2; the full untrimmed map is built unconditionally and trim
 // is applied downstream, never here.
 
-struct MidiTempoMapEntry {
-    double target_time_sec;
-    double multiplier;
-};
-
 // Minimal POD the warp_frame_map math needs. The GUI's `GuiWarpMarker` resolves into
 // this: tempo_inherits markers are walked back to their nearest owning
 // ancestor and their effective tempo_cents / tempo_scale are copied forward.
@@ -90,23 +85,6 @@ struct MarkerEffective {
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames);
-
-// Derive the midi tempo map from a finished warp frame map. Each consecutive
-// pair (a, b) with a positive target duration contributes an entry at
-// a.tgt_frame / sample_rate whose multiplier is
-// (b.src_frame - a.src_frame) / (b.tgt_frame - a.tgt_frame); after the walk a
-// final entry at map.back().tgt_frame / sample_rate carries the last valid
-// multiplier (1.0 when no pair produced one). The > 0 comparison is division
-// safety only, not a size threshold — segment target durations have no floor —
-// and the last valid multiplier carries across skips. The arithmetic reads the
-// map's stored doubles exactly as written: entries are serialized at seventeen
-// significant digits, so any reassociation would change deliverable bytes. An
-// empty map returns the single entry {0.0, 1.0} (unreachable from program
-// paths, since the build always emits the seed anchor; kept so the back()
-// access is unconditionally safe).
-std::vector<MidiTempoMapEntry> derive_midi_tempo_map(
-    const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    long sample_rate);
 
 // Single source of truth for "does this raw marker survive into the
 // render list". A marker is silenced either by its own disabled flag or,
@@ -329,10 +307,9 @@ std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate,
     long total_frames, std::string* copy_payload_out = nullptr);
 
-// The map artifacts are always the FULL maps — trim is a wav-only render
-// window, never an artifact shape (the map formats silently ignore a set
-// trim and always write the full maps), so no windowed derivation exists
-// here. Artifact convention: the target column is deliverable-relative
-// (first pair's target exactly zero) and the source column is absolute
-// undisplaced source frames, matching the project-wide convention shared by
-// marker files and render-entry sidecars.
+// The framemap pair the render pipeline drops into the cache dir is always
+// the FULL map — trim is a render window, never an artifact shape — so no
+// windowed derivation exists here. Artifact convention: the target column is
+// deliverable-relative (first pair's target exactly zero) and the source
+// column is absolute undisplaced source frames, matching the project-wide
+// convention shared by marker files and render-entry sidecars.

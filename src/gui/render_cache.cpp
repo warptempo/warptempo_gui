@@ -141,8 +141,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // matching and re-render. Version 8: the limiter became unconditional and
 // left the settings vocabulary, so the `limiter` field no longer participates
 // in the fingerprint — prior artifacts, whose keys still carried that byte,
-// must re-render rather than pose as current recipes.
-constexpr uint32_t kFingerprintVersion = 8;
+// must re-render rather than pose as current recipes. Version 9: output_format
+// left the settings vocabulary (wav is the only product), so the
+// `output_format` field no longer participates in the fingerprint — prior
+// artifacts, whose keys still carried that string, must re-render.
+constexpr uint32_t kFingerprintVersion = 9;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -219,7 +222,6 @@ std::vector<uint8_t> render_fingerprint(
     // change audio; including them only costs a re-render on a provenance edit
     // (which the live path already does) and guarantees a hit when undone.
     put_str(fp, s.title);
-    put_str(fp, s.output_format);
     put_f64(fp, s.scale);
     put_str(fp, s.bpm);
     put_str(fp, s.notes);
@@ -436,6 +438,10 @@ void RenderCache::shutdown() {
         std::filesystem::remove_all(dir_, ec);
     }
     enabled_ = false;
+}
+
+std::string RenderCache::process_dir() const {
+    return enabled_ ? dir_ : std::string();
 }
 
 void RenderCache::join_writer() {

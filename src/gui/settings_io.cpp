@@ -61,7 +61,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "notes",                       SettingKind::EnginePassthrough,    EngineField::Notes,                   nullptr },
     { "url",                         SettingKind::EnginePassthrough,    EngineField::Url,                     nullptr },
     { "cover",                       SettingKind::EnginePassthrough,    EngineField::Cover,                   nullptr },
-    { "output_format",               SettingKind::EnginePassthrough,    EngineField::OutputFormat,            nullptr },
     // GUI view-state band begins: non-tab keys, then all tab A keys,
     // then all tab B keys.
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },

@@ -313,7 +313,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
         const SettingsFile& sf = *sf_r;
         // Source-clobber guard, adversarial and load-fatal: a hand-edited
-        // sidecar whose title/output_format composes a render output path onto
+        // sidecar whose title composes a render output path onto
         // the source audio itself would overwrite the source at render time.
         // The GUI editor refuses this at commit, so the state is
         // GUI-uncommittable; refuse the hand-edited file here at load, the
@@ -374,16 +374,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // check. The runtime clamps (clamp_viewport_start, and the playhead
         // clamp at first use) own any out-of-range value harmlessly.
     }
-    if (app.active_audio_view == 'T' &&
-        !target_render.target_view_available()) {
-        std::fprintf(stderr,
-            "warptempo_gui: source load aborted: invalid settings in '%s': "
-            "active_audio_view=T requires output_format=wav\n",
-            app.settings_path.c_str());
-        gui.request_exit();
-        return false;
-    }
-
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the
     // warp_frame_map cache by live_total_frames (the markers and engine_settings

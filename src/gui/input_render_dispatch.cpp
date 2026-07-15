@@ -262,8 +262,7 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 }
 
 // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
-// (base_tempo, scale) per cell and rendering one artifact set per cell (a
-// `.wav`, or the map/midi files for a map output_format) into
+// (base_tempo, scale) per cell and rendering one `.wav` per cell into
 // `<source_parent>/renders/<N>_render_bpm_iterations/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
 // by do_render); the Shift+. render-commit (adopt_render_entry) adopts them

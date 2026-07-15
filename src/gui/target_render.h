@@ -68,11 +68,6 @@ struct GuiTargetRender {
     // cancels the previous in-flight target render.
     void trigger();
 
-    // Target view is a preview of the PGHI wav path only. Non-wav output
-    // formats intentionally request sidecar data, so target view and target
-    // renders are unavailable for them.
-    bool target_view_available() const;
-
     // Pumped from finalize_render_run / on_batch_entry_complete /
     // render on_done. Offers the worker-idle beat to the parked archival
     // command first (dispatch_pending_archival below), then dispatches the
@@ -117,11 +112,6 @@ struct GuiTargetRender {
     // ensure_ready() is "we just entered target view, is the buffer
     // current?".
     void ensure_ready();
-
-    // Force target view back to source view, preserving the playhead's screen
-    // column and cancelling any target render work. Used when an engine setting
-    // change makes target view unavailable.
-    void leave_target_view();
 
 private:
     // Construct and dispatch the target RenderRequest. Caller must

@@ -350,7 +350,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // downstream). This walk is the total display-time resolution: no geometry
 // enters it, so no cycle is possible, and every marker list resolves to a
 // definite value, the single source of its meaning across render,
-// warpframemap, miditempomap, and hover — a pass at rest behind a
+// warpframemap, and hover — a pass at rest behind a
 // surviving enabled ref renders AND displays as tempo 1.00, and because
 // the walk itself owns that verdict the two surfaces cannot disagree.
 // Passes deliberately never inherit THROUGH a ref: a ref owns a duration
@@ -1005,46 +1005,6 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         src_f_prev = src_frame;
         tgt_f_prev = target_frame;
     }
-
-    return out;
-}
-
-std::vector<MidiTempoMapEntry> derive_midi_tempo_map(
-    const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    long sample_rate) {
-    std::vector<MidiTempoMapEntry> out;
-    double last_valid_multiplier = 1.0;
-
-    // Empty-map guard: unreachable from program paths (the build always emits
-    // the seed anchor), kept so the back() access below is unconditionally
-    // safe.
-    if (warp_frame_map.empty()) {
-        out.push_back({0.0, last_valid_multiplier});
-        return out;
-    }
-
-    for (size_t i = 0; i + 1 < warp_frame_map.size(); ++i) {
-        const WarpFrameMapSegment& a = warp_frame_map[i];
-        const WarpFrameMapSegment& b = warp_frame_map[i + 1];
-        const double seg_tgt_dur = b.tgt_frame - a.tgt_frame;
-        // Every positive target segment gets a miditempomap entry: segment target
-        // durations have no floor (tempo products have no ceiling), and the
-        // frame map represents the segment, so the miditempomap must agree. The
-        // > 0 comparison is division safety only, not a size threshold; the
-        // last valid multiplier carries across skips.
-        if (seg_tgt_dur > 0.0) {
-            const double seg_src_dur = b.src_frame - a.src_frame;
-            const double effective_multiplier = seg_src_dur / seg_tgt_dur;
-            last_valid_multiplier = effective_multiplier;
-            const double seg_start_time =
-                a.tgt_frame / static_cast<double>(sample_rate);
-            out.push_back({seg_start_time, effective_multiplier});
-        }
-    }
-
-    const double final_tgt_sec =
-        warp_frame_map.back().tgt_frame / static_cast<double>(sample_rate);
-    out.push_back({final_tgt_sec, last_valid_multiplier});
 
     return out;
 }

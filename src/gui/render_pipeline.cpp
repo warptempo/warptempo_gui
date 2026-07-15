@@ -41,9 +41,10 @@ struct CommitCriticalSidecars {
     std::vector<std::string> created_paths;
 };
 
-// write_warp_frame_map and write_midi_tempo_map live in the parser
-// (map_output.cpp) so the GUI render pipeline and the headless parser CLI
-// emit byte-identical artifacts from one implementation.
+// write_warp_frame_map and write_phase_reset_frame_map live in the parser
+// (map_output.cpp) so the GUI render pipeline's cache-dir framemap pair and
+// the headless parser CLI emit byte-identical artifacts from one
+// implementation.
 
 // resolve_warp_markers_for_render lives in warp_frame_map_build.cpp (public
 // function) so the target-view paint can reach it without crossing the
@@ -82,8 +83,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // --- Read settings (typed; the live app.engine_settings is mutated
     // through strict-validated authoring paths, so every field is in
-    // range by construction here). ---
-    const std::string& output_format = req.engine_settings.output_format;
+    // range by construction here). Wav is the only render product. ---
     const double scale               = req.engine_settings.scale;
     const int    N_fft               = kN;
     const int    R_s                 = kRs;
@@ -150,75 +150,98 @@ RenderOutcome do_render(const RenderRequest& req,
         std::move(*rfull);
 
     // The full deliverable-form phase reset derivation, built once per
-    // render beside the full map: the untrimmed engine input, the map-format
-    // pair's phase reset column, and plan_trim's translate/filter source are
-    // all this one list.
+    // render beside the full map: the untrimmed engine input, the cache-dir
+    // framemap pair's phase reset column, and plan_trim's translate/filter
+    // source are all this one list.
     const std::vector<double> full_phase_reset_frame_map =
         derive_phase_reset_frame_map(phase_reset_source_frames,
                                      full_warp_frame_map);
 
-    // --- Compose the full output-path list. ---
-    // One entry per extension of the format, composed co-equally from a
-    // directory and a stem (render_output_naming.h). Batch renders name into
-    // the batch folder with the batch basename; source-sibling renders name
-    // into the source's parent with render_output_stem. The warptempo_maps
-    // pair is the two entries of one list, warp column first by the extension
-    // list's order.
+    // --- Compose the wav output path. ---
+    // Batch renders name into the batch folder with the batch basename;
+    // source-sibling renders name into the source's parent with
+    // render_output_stem (the title). Wav is the only product, so a render
+    // composes exactly one path.
     const bool batch_render = !req.batch_folder.empty();
-    auto compose_source_sibling_paths = [&]() {
-        return compose_render_output_paths(
+    auto compose_source_sibling_path = [&]() {
+        return compose_render_output_path(
             render_output_directory(req.source_audio_path),
-            render_output_stem(
-                req.engine_settings,
-                std::filesystem::path(req.source_audio_path).stem().string()),
-            output_format);
+            render_output_stem(req.engine_settings));
     };
-    const std::vector<std::filesystem::path> output_paths =
+    const std::filesystem::path output_path =
         batch_render
-            ? compose_render_output_paths(req.batch_folder, req.batch_basename,
-                                          output_format)
-            : compose_source_sibling_paths();
-    const std::string final_output_path = output_paths.front().string();
+            ? compose_render_output_path(req.batch_folder, req.batch_basename)
+            : compose_source_sibling_path();
+    const std::string final_output_path = output_path.string();
     // Hard refusal: never overwrite the source audio itself. Overwriting a
     // previous render with the same title is intended behavior; the source
     // is the one path that must survive every dispatch. equivalent() is an
     // inode-level match and only succeeds when both paths exist — if the
-    // output path doesn't exist yet it cannot be the source. Every output
-    // path of the format is checked, so the warptempo_maps pair's second
-    // file is covered by the same refusal — and each path's
-    // render_staging_path sibling is checked too: the staging name is opened
-    // with a truncating write before the render completes, so an existing
-    // staging file resolving to the source (a symlink or hard link, or the
-    // source literally named `<final>.tmp`) would destroy it just as surely.
-    // This is the render-time inode backstop, so it also covers batch-folder
-    // stagings, whose finals are composed from the batch folder rather than
-    // the source siblings.
-    for (const std::filesystem::path& out_path : output_paths) {
-        for (const std::filesystem::path& candidate :
-                 {out_path,
-                  std::filesystem::path(
-                      render_staging_path(out_path.string()))}) {
-            std::error_code ec;
-            if (std::filesystem::exists(candidate, ec) &&
-                std::filesystem::equivalent(candidate,
-                                            req.source_audio_path, ec)) {
+    // output path doesn't exist yet it cannot be the source. The output
+    // path's render_staging_path sibling is checked too: the staging name is
+    // opened with a truncating write before the render completes, so an
+    // existing staging file resolving to the source (a symlink or hard link,
+    // or the source literally named `<final>.tmp`) would destroy it just as
+    // surely. This is the render-time inode backstop, so it also covers
+    // batch-folder stagings, whose finals are composed from the batch folder
+    // rather than the source sibling.
+    for (const std::filesystem::path& candidate :
+             {output_path,
+              std::filesystem::path(
+                  render_staging_path(output_path.string()))}) {
+        std::error_code ec;
+        if (std::filesystem::exists(candidate, ec) &&
+            std::filesystem::equivalent(candidate,
+                                        req.source_audio_path, ec)) {
+            std::fprintf(stderr,
+                "warptempo_gui: render error: output '%s' resolves to "
+                "the source audio file; refusing to overwrite the "
+                "source. Change the title setting.\n",
+                candidate.string().c_str());
+            return RenderOutcome::Failed;
+        }
+    }
+
+    // --- Cache-dir framemap pair (future-proofing; GUI archival disk route
+    // only). Drop the FULL warp frame map and its phase-reset column into the
+    // RenderCache per-process dir, named by the final wav's basename stem —
+    // together exactly the engine's input for the FULL render (deliverable-
+    // relative target column, absolute source frames, always untrimmed). The
+    // dir is removed at shutdown and orphans
+    // are swept at the next launch, so the pair rests only between a render
+    // and program close and nothing accumulates. Buffer-route previews and the
+    // CLI deliberately skip. This write is non-fatal — a failure prints one
+    // stderr line and the render proceeds — and needs no staging/rename dance
+    // (these are cache files, not deliverables) or cancel gating (a cancelled
+    // render leaving a pair in the swept pid dir is harmless). ---
+    if (!req.output_buffer) {
+        const std::string pid_dir = req.render_cache->process_dir();
+        if (!pid_dir.empty()) {
+            const std::string stem =
+                std::filesystem::path(final_output_path).stem().string();
+            const std::filesystem::path warp_map_path =
+                std::filesystem::path(pid_dir) / (stem + ".warpframemap");
+            const std::filesystem::path phase_reset_map_path =
+                std::filesystem::path(pid_dir) / (stem + ".phaseresetframemap");
+            if (auto w = write_warp_frame_map(warp_map_path.string(),
+                                              full_warp_frame_map); !w) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render error: output '%s' resolves to "
-                    "the source audio file; refusing to overwrite the "
-                    "source. Change the title setting.\n",
-                    candidate.string().c_str());
-                return RenderOutcome::Failed;
+                    "warptempo_gui: render warning: cache framemap write "
+                    "skipped: %s\n", w.error().c_str());
+            } else if (auto w2 = write_phase_reset_frame_map(
+                           phase_reset_map_path.string(),
+                           full_phase_reset_frame_map); !w2) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: cache framemap write "
+                    "skipped: %s\n", w2.error().c_str());
             }
         }
     }
 
     // Staging path (render_staging_path: final path plus ".tmp") for the
-    // atomic rename used by the wav engine path, the reuse rungs, and the
-    // single-file map formats (generic_map, midi_map): every publication
-    // writes staging first, gates on cancel, then renames to the final name,
-    // so a cancel never lands a partial file under a final name. The
-    // warptempo_maps pair stages both of its files under their own
-    // render_staging_path names for the same reason.
+    // atomic rename used by the wav engine path and the reuse rungs: every
+    // publication writes staging first, gates on cancel, then renames to the
+    // final name, so a cancel never lands a partial file under a final name.
     const std::string staging_output_path =
         render_staging_path(final_output_path);
 
@@ -321,11 +344,8 @@ RenderOutcome do_render(const RenderRequest& req,
 
             // `.settings` sidecar: the SAME standard whole-file schema a
             // source carries, so the Shift+. render-commit (adopt_render_entry)
-            // adopts it with plain load semantics. Written only for wav
-            // renders: an entry adopts as target view (active_audio_view =
-            // 'T'), and 'T' requires output_format = wav, so map-format
-            // artifacts get no .settings.
-            if (output_format == "wav") {
+            // adopts it with plain load semantics.
+            {
                 // The commit tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
@@ -405,8 +425,7 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Success;
     };
 
-    // Trim plan (wav only; the map formats silently ignore any set trim and
-    // always write the FULL maps). plan_trim validates the authored bounds
+    // Trim plan. plan_trim validates the authored bounds
     // first — validate_trim_frames stays the sole author of the
     // trim-validity vocabulary — then derives the source cut, the
     // translated maps, and the output crop in one computation. A refusal is
@@ -428,7 +447,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // unchanged on purpose: under the fallback that recipe genuinely
     // renders the full bytes, so the attestation stays honest.
     std::optional<TrimPlan> trim_plan;
-    if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
+    if (req.has_trim_begin || req.has_trim_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
                               req.has_trim_begin, req.trim_begin_frame,
                               req.has_trim_end, req.trim_end_frame,
@@ -448,24 +467,18 @@ RenderOutcome do_render(const RenderRequest& req,
     // The fingerprint's source identity is built directly from the request's
     // load-time-captured identity (req.source_load_size/mtime): the loaded
     // source is immutable for the process lifetime, so no on-disk re-stat is
-    // needed. fingerprint is non-empty exactly when output_format is wav; the
-    // map formats compute none.
+    // needed. Every render is wav, so the fingerprint is always computed.
     RenderFileIdentity source_identity;
-    std::vector<uint8_t> fingerprint;
-    if (output_format == "wav") {
-        source_identity.size = req.source_load_size;
-        source_identity.mtime = req.source_load_mtime;
-        fingerprint = render_fingerprint(
-            req.source_audio_path, source_identity,
-            static_cast<int>(sample_rate), req.warp_markers, req.phase_resets,
-            req.engine_settings,
-            req.has_trim_begin, req.trim_begin_frame,
-            req.has_trim_end, req.trim_end_frame);
-    }
+    source_identity.size = req.source_load_size;
+    source_identity.mtime = req.source_load_mtime;
+    const std::vector<uint8_t> fingerprint = render_fingerprint(
+        req.source_audio_path, source_identity,
+        static_cast<int>(sample_rate), req.warp_markers, req.phase_resets,
+        req.engine_settings,
+        req.has_trim_begin, req.trim_begin_frame,
+        req.has_trim_end, req.trim_end_frame);
     if (cancel_requested()) return cancelled_outcome();
-    // Fingerprint emptiness doubles as a map-format gate on this shared
-    // pre-branch path: non-wav formats compute no fingerprint.
-    if (!req.output_buffer && !fingerprint.empty() &&
+    if (!req.output_buffer &&
         fingerprint_sidecar_matches(final_output_path, fingerprint)) {
         std::fprintf(stderr,
             "warptempo_gui: render up to date (fingerprint match): %s\n",
@@ -505,10 +518,9 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        // An empty fingerprint here means the format computed none — the map
-        // formats never build one; write no attestation then.
-        if (!fingerprint.empty() &&
-            !write_fingerprint_sidecar(final_output_path, fingerprint)) {
+        // The fingerprint is the attestation that the artifact set is
+        // complete; every render is wav, so it is always written here.
+        if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
                 "warptempo_gui: fingerprint sidecar write skipped for %s\n",
                 final_output_path.c_str());
@@ -519,11 +531,10 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Reuse rungs, in trust order, above the engine: a project artifact
     // byte-copy, then a render-cache wav-byte publish. Both run before any
-    // source-load or engine work; an empty fingerprint (non-wav formats
-    // compute no fingerprint) skips both exactly as it already skips the
-    // up-to-date check above.
+    // source-load or engine work; the buffer route (target-view preview)
+    // skips them.
     if (cancel_requested()) return cancelled_outcome();
-    if (!req.output_buffer && !fingerprint.empty()) {
+    if (!req.output_buffer) {
         // Rung: project artifact candidate. A batch entry whose fixed
         // archival sibling already holds a validated artifact for this
         // exact fingerprint is published by byte copy — the highest-
@@ -531,7 +542,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // the candidate, this rung is the up-to-date check above and has
         // already run.
         const std::string artifact_candidate =
-            compose_source_sibling_paths().front().string();
+            compose_source_sibling_path().string();
         if (artifact_candidate != final_output_path &&
             fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
             std::error_code ec;
@@ -581,10 +592,10 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    std::fprintf(stderr, "warptempo_gui: rendering %s -> %s\n",
-                 output_format.c_str(), final_output_path.c_str());
+    std::fprintf(stderr, "warptempo_gui: rendering -> %s\n",
+                 final_output_path.c_str());
 
-    if (output_format == "wav") {
+    {
         const float* src_sample_data = nullptr;
         size_t src_sample_frames = 0;
         int src_sr = 0;
@@ -714,10 +725,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 ? static_cast<int64_t>(req.output_buffer->size() /
                                        static_cast<size_t>(src_ch))
                 : 0;
-            // fingerprint is non-empty on every wav path (computed
-            // unconditionally, never cleared); the insert additionally
+            // The fingerprint is always computed; the insert additionally
             // requires a non-empty buffer.
-            if (!fingerprint.empty() && inserted_frames > 0) {
+            if (inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
                     inserted_frames, cancel_token);
@@ -753,10 +763,8 @@ RenderOutcome do_render(const RenderRequest& req,
             // just published. The insert races nothing: the rename above
             // already landed, the cache's writer thread copies its own job
             // data, and a concurrent lookup that misses because the write
-            // hasn't landed yet simply re-renders. fingerprint is non-empty on
-            // every wav path (computed unconditionally, never cleared); the
-            // guard stays as a defensive check.
-            if (!fingerprint.empty()) {
+            // hasn't landed yet simply re-renders.
+            {
                 std::vector<char> wav_blob;
                 if (!read_file_bytes(final_output_path, wav_blob)) {
                     std::fprintf(stderr,
@@ -770,156 +778,12 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             return finalize_published_wav("success");
         }
-    } else {
-        // Map formats: output_format == "warptempo_maps", "generic_map", or
-        // "midi_map". No engine, no limiter, and no trim: a set trim is
-        // SILENTLY ignored (ruled) — trim is a wav-only render window,
-        // never an artifact shape, so the map formats only ever write the
-        // FULL maps regardless of any set bounds (no popup, no stderr, no
-        // refusal anywhere on the map path).
-        // These exports carry deliverable-relative targets and absolute
-        // source frames, so a consumer reads the original source audio
-        // directly and no companion audio is written.
-        if (cancel_requested()) return cancelled_outcome();
-        // The full midi tempo map is derived here, on the only path that
-        // consumes it; the wav branch never needs it. The phase reset column
-        // is the pipeline's full deliverable-form derivation, computed
-        // against the very map shipped beside it, so the warptempo_maps pair
-        // is self-consistent: an engine fed the pair renders that map's
-        // geometry exactly.
-        const std::vector<MidiTempoMapEntry> full_midi_tempo_map =
-            derive_midi_tempo_map(full_warp_frame_map, sample_rate);
-        if (output_format == "warptempo_maps") {
-            // The pair: the warp frame map plus the phase reset frame map,
-            // TWO files, together exactly the engine's input — the full map
-            // and the full deliverable-form derivation built once for this
-            // render above. Both
-            // columns always ship — an empty reset list
-            // still writes the empty .phaseresetframemap file, mirroring
-            // the marker sidecars' empty-file convention.
-            // output_paths' order comes from the extension list: entry 0 is
-            // the warp column, entry 1 the phase reset column.
-            const std::string warp_final = output_paths.front().string();
-            const std::string phase_reset_final = output_paths.back().string();
-            const std::string warp_staging = render_staging_path(warp_final);
-            const std::string phase_reset_staging =
-                render_staging_path(phase_reset_final);
-            // Stage-first, gate, forfeit, publish: both staging files are
-            // written to their ".tmp" names FIRST, before any old final is
-            // touched. A staging-write failure or a cancel landing during the
-            // stage now leaves the old pair fully intact — both stale finals
-            // are still present, so a consumer reading them mid-render sees a
-            // consistent previous generation, not a half pair. Only after both
-            // stagings exist and the cancel gate has passed are the two old
-            // finals unlinked (the old pair forfeited) and the stagings
-            // rename-published, warp first, phase reset second. Between the two
-            // renames there is deliberately no cancel check: once the first
-            // rename lands, completing the pair beats leaving a half pair — the
-            // same accepted-tail spirit as the post-WAV-rename attestations.
-            // The forfeit window is thus just the two renames; a cancel or a
-            // staging failure before it leaves the old pair untouched. The
-            // mixed-generation invariant still holds: staging writes are not
-            // final names, so the stale finals are gone before the first new
-            // byte becomes visible UNDER A FINAL NAME. If a rename or process
-            // death strikes inside the two-rename window, at most one column is
-            // present, so an engine consumer refuses loudly at init on the
-            // missing column. In-process the arms still tidy up — a staging-
-            // write failure unlinks both stagings, and a second-rename failure
-            // pulls back the just-published warp final.
-            bool staged_ok = true;
-            if (auto w = write_warp_frame_map(warp_staging,
-                                              full_warp_frame_map); !w) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             w.error().c_str());
-                staged_ok = false;
-            } else if (auto w2 = write_phase_reset_frame_map(
-                           phase_reset_staging,
-                           full_phase_reset_frame_map); !w2) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             w2.error().c_str());
-                staged_ok = false;
-            }
-            if (!staged_ok) {
-                unlink_silent(warp_staging);
-                unlink_silent(phase_reset_staging);
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-            // Both stagings are on disk; a cancel here still publishes nothing
-            // and leaves the old pair intact. Past this gate the forfeit
-            // begins.
-            if (cancel_requested()) {
-                unlink_silent(warp_staging);
-                unlink_silent(phase_reset_staging);
-                return cancelled_outcome();
-            }
-            // Forfeit the old pair, then publish:
-            unlink_silent(warp_final);
-            unlink_silent(phase_reset_final);
-            std::error_code ec;
-            std::filesystem::rename(warp_staging, warp_final, ec);
-            if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render error: rename failed for '%s' -> "
-                    "'%s': %s\n",
-                    warp_staging.c_str(), warp_final.c_str(),
-                    ec.message().c_str());
-                unlink_silent(warp_staging);
-                unlink_silent(phase_reset_staging);
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-            std::filesystem::rename(phase_reset_staging, phase_reset_final, ec);
-            if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render error: rename failed for '%s' -> "
-                    "'%s': %s\n",
-                    phase_reset_staging.c_str(), phase_reset_final.c_str(),
-                    ec.message().c_str());
-                // A half pair must never land: pull back the just-published
-                // warp file along with the remaining staging.
-                unlink_silent(warp_final);
-                unlink_silent(phase_reset_staging);
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-        } else {
-            // Single-file map formats: stage to staging_output_path (the
-            // final path plus ".tmp", covered by cleanup_all) so a cancel
-            // landing during the write publishes nothing. Write staging,
-            // re-check the cancel flag, then rename to the final name.
-            auto map_write = (output_format == "generic_map")
-                ? write_warp_frame_map(staging_output_path,
-                                       full_warp_frame_map)
-                : write_midi_tempo_map(staging_output_path,
-                                       full_midi_tempo_map);
-            if (!map_write) {
-                std::fprintf(stderr, "warptempo_gui: render error: %s\n",
-                             map_write.error().c_str());
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-            if (cancel_requested()) return cancelled_outcome();
-            std::error_code ec;
-            std::filesystem::rename(staging_output_path, final_output_path, ec);
-            if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render error: rename failed for '%s' -> "
-                    "'%s': %s\n",
-                    staging_output_path.c_str(), final_output_path.c_str(),
-                    ec.message().c_str());
-                cleanup_all();
-                return RenderOutcome::Failed;
-            }
-        }
     }
 
-    // Non-wav batch artifacts are not Shift+. commit candidates. Preserve
-    // their existing warning-only sidecar behavior, while still writing the
-    // source-domain phase-reset companion as an empty file when the list is
-    // empty.
-    publish_commit_critical_batch_sidecars(/*hard_fail=*/false);
-
+    // Only the buffer route (target-view preview) reaches here: the disk
+    // route always returns inside the block above (finalize_published_wav or
+    // an error return). The buffer already holds the synthesised audio; there
+    // is no staging file to publish and no batch sidecar to write.
     cleanup_all();
     return finish_success("success");
 }

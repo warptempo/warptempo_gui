@@ -164,21 +164,19 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // Source-clobber guard. The single-render output lands beside the source
-    // (the wav deliverable named by title, the map artifacts by the source
-    // stem — render_output_stem); an edit that makes any of the format's
-    // output paths resolve to the source file itself would overwrite the
+    // Source-clobber guard. The single-render wav output lands beside the
+    // source, named by title (render_output_stem); an edit that makes the
+    // output path resolve to the source file itself would overwrite the
     // source on the next Ctrl+Alt+R. The shared predicate composes and checks
-    // every path of the format — the warptempo_maps pair's second file is
-    // covered by the same refusal. Refuse it here so the colliding value never
-    // reaches app.engine_settings.
+    // that path. Refuse it here so the colliding value never reaches
+    // app.engine_settings.
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
             "warptempo_gui: settings edit rejected: this would make the "
             "render output overwrite the source file (%s); choose a "
-            "different title or output_format\n",
+            "different title\n",
             std::filesystem::path(app.source_audio_path)
                 .filename().string().c_str());
         return;
@@ -206,9 +204,6 @@ void GuiSettingsEditor::commit() {
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
-    if (key == "output_format" && !target_render.target_view_available()) {
-        target_render.leave_target_view();
-    }
 
     std::fprintf(stderr,
         "warptempo_gui: setting applied: %s=%s\n",
@@ -217,8 +212,6 @@ void GuiSettingsEditor::commit() {
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
     // Engine settings are engine input — fire target render.
-    // Non-wav output_format leaves target view above, so trigger() marks the
-    // buffer dirty but does not dispatch until target view is available again.
     target_render.trigger();
 }
 

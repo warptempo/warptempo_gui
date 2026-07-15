@@ -15,7 +15,6 @@
 // unvalidated, never read by the engine or acted on by the GUI.
 struct EngineSettings {
     std::string title;
-    std::string output_format            = "wav";
     double      scale                    = 1.0;
     std::string bpm;   // BPM render descriptor, e.g.
                        // "36 beats @ 220 bpm from 00:32.008 to 00:46.562".
@@ -40,11 +39,10 @@ enum class EngineField {
     Notes,
     Url,
     Cover,
-    OutputFormat,
 };
 
 // True iff `key` is one of the canonical engine setting keys
-// (title, scale, bpm, notes, url, cover, output_format).
+// (title, scale, bpm, notes, url, cover).
 bool is_canonical_engine_key(const std::string& key);
 
 // The default render title for a source: the source stem plus "-rendered".
@@ -56,7 +54,7 @@ std::string default_render_title(const std::string& source_stem);
 // Validate (key, value) per the canonical engine rules and assign to the
 // corresponding EngineSettings field on success. On failure, leaves `out`
 // untouched and fills `reason` with a short human constraint string
-// (e.g. "must be one of {wav, warptempo_maps, generic_map, midi_map}").
+// (e.g. "must be a finite double within [0.5000, 2.0000]").
 // Caller wraps with
 // the surrounding "key 'X' has invalid value 'Y':" prefix. Used by the
 // whole-file schema reader (read_settings_file) and

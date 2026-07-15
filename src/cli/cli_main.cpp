@@ -5,6 +5,8 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
+#include "map_output.h"                 // write_warp_frame_map,
+                                        // write_phase_reset_frame_map
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
 #include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
@@ -14,7 +16,7 @@
                                         // validate_render_projection
 #include "render_output_naming.h"       // render_output_directory,
                                         // render_output_stem,
-                                        // compose_render_output_paths,
+                                        // compose_render_output_path,
                                         // render_staging_path
 #include "source_audio_io.h"            // load_source_range_to_buffer
 
@@ -24,9 +26,11 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -36,6 +40,31 @@ void unlink_silent(const std::string& path) {
     if (path.empty()) return;
     std::error_code ec;
     std::filesystem::remove(path, ec);
+}
+
+// Per-process cache directory for the framemap pair, resolved by the same
+// convention the GUI's RenderCache uses — $XDG_CACHE_HOME (else $HOME/.cache)
+// + "/warptempo_gui/<pid>/" — WITHOUT linking the GUI's RenderCache: this CLI
+// only creates the directories and writes the pair. It never sweeps or
+// removes the dir — its pid dir becomes a dead-PID orphan the GUI's
+// next-launch sweep_orphans removes. Returns the pid-dir path, or an empty
+// string when no cache home resolves or the directories cannot be created
+// (the caller skips the write silently then).
+std::string cache_framemap_dir() {
+    std::string base;
+    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg && xdg[0]) {
+        base = xdg;
+    } else if (const char* home = std::getenv("HOME"); home && home[0]) {
+        base = std::string(home) + "/.cache";
+    } else {
+        return {};
+    }
+    const std::string dir = base + "/warptempo_gui/" +
+        std::to_string(static_cast<long>(::getpid()));
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    if (ec) return {};
+    return dir;
 }
 
 void usage(const char* argv0) {
@@ -66,7 +95,7 @@ int main(int argc, char** argv) {
     // --- settings: required, like the two marker sidecars below. The strict
     // whole-file reader refuses an unopenable file with its own could-not-open
     // diagnostic, which surfaces verbatim through the print below.
-    // output_format, title, and the applied trim all come from it. ---
+    // title and the applied trim come from it. ---
     EngineSettings es;
     SettingsFile   sf;
     SettingsTrim   trim;
@@ -93,7 +122,7 @@ int main(int argc, char** argv) {
     }
 
     // --- source-clobber guard, adversarial and load-fatal: a hand-edited
-    // sidecar whose title/output_format composes a render output path onto the
+    // sidecar whose title composes a render output path onto the
     // source audio itself would overwrite the source. The GUI editor refuses
     // this at commit and the GUI loader refuses the hand-edited file at load;
     // refuse it here too, first-error and stderr-only, so a file set is
@@ -107,26 +136,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- engine-only: this CLI renders wav. The map formats
-    // (warptempo_maps/generic_map/midi_map) are produced by the GUI (the
-    // engine never runs for those). ---
-    if (es.output_format != "wav") {
-        std::fprintf(stderr,
-            "warptempo_cli: output_format '%s' is not a wav render "
-            "(this CLI renders wav only; the GUI produces "
-            "warptempo_maps/generic_map/midi_map)\n",
-            es.output_format.c_str());
-        return 1;
-    }
-
-    // --- output path: the shared composer's single wav entry, title-named
-    // beside the source — exactly where the GUI writes the same project's
-    // deliverable. ---
+    // --- output path: the shared composer's wav path, title-named beside the
+    // source — exactly where the GUI writes the same project's deliverable.
+    // Wav is the only render product. ---
     const std::string out_path =
-        compose_render_output_paths(render_output_directory(source_path),
-                                    render_output_stem(es, stem),
-                                    es.output_format)
-            .front()
+        compose_render_output_path(render_output_directory(source_path),
+                                   render_output_stem(es))
             .string();
 
     // --- markers: required. parse_warpmarkers_file refuses an unopenable file
@@ -258,6 +273,44 @@ int main(int argc, char** argv) {
     const std::vector<double> full_phase_reset_frame_map =
         derive_phase_reset_frame_map(*phase_reset_source_frames_r,
                                      full_warp_frame_map);
+
+    // --- Cache-dir framemap pair (future-proofing; 1:1 with the GUI's
+    // archival disk-route write in do_render — this CLI is disk-only). Drop
+    // the FULL untrimmed warp frame map and its phase-reset column, through
+    // the shared map_output writers, into the cache pid dir, named by the
+    // final wav's basename stem — together exactly the engine's input for the
+    // FULL render (deliverable-relative target column, absolute source
+    // frames). Written here, once the final path and both full maps are in
+    // hand and before synthesis, matching the GUI's placement. Non-fatal: a
+    // failure prints one stderr line and the render proceeds; no
+    // staging/rename dance (cache files, not deliverables). The CLI never
+    // removes the dir — it rests as a dead-PID orphan until the GUI's
+    // next-launch sweep_orphans deletes it. ---
+    {
+        const std::string pair_dir = cache_framemap_dir();
+        if (!pair_dir.empty()) {
+            const std::string pair_stem =
+                std::filesystem::path(out_path).stem().string();
+            const std::filesystem::path warp_map_path =
+                std::filesystem::path(pair_dir) /
+                (pair_stem + ".warpframemap");
+            const std::filesystem::path phase_reset_map_path =
+                std::filesystem::path(pair_dir) /
+                (pair_stem + ".phaseresetframemap");
+            if (auto w = write_warp_frame_map(warp_map_path.string(),
+                                              full_warp_frame_map); !w) {
+                std::fprintf(stderr,
+                    "warptempo_cli: cache framemap write skipped: %s\n",
+                    w.error().c_str());
+            } else if (auto w2 = write_phase_reset_frame_map(
+                           phase_reset_map_path.string(),
+                           full_phase_reset_frame_map); !w2) {
+                std::fprintf(stderr,
+                    "warptempo_cli: cache framemap write skipped: %s\n",
+                    w2.error().c_str());
+            }
+        }
+    }
 
     // --- trim plan. plan_trim validates the authored bounds first
     // (validate_trim_frames stays the sole author of the trim-validity

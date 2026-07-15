@@ -81,8 +81,7 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // and the in-process render derives its engine-input list through this same
 // form — pair and render coincide by construction. An empty map yields an
 // empty list (unreachable from program paths: the full-map builder always
-// emits the seed anchor; kept so the back() access is unconditionally safe,
-// as in derive_midi_tempo_map).
+// emits the seed anchor; kept so the back() access is unconditionally safe).
 std::vector<double> derive_phase_reset_frame_map(
     const std::vector<double>& source_frames,
     const std::vector<WarpFrameMapSegment>& deliverable_map);

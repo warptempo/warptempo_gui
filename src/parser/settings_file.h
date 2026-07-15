@@ -20,7 +20,7 @@
 // the FIRST error only: an unknown key, a keyless non-comment line, a
 // duplicate of ANY key, a malformed or out-of-vocabulary value (an
 // off-preset playback_speed included), and a missing required engine key
-// (title, output_format, scale) all refuse. Blank lines and '#'
+// (title, scale) all refuse. Blank lines and '#'
 // comment lines stay skippable — the long-standing settings line grammar.
 // Absent optional keys are legal (has_* stays false; callers apply their
 // defaults): older sidecars carry fewer keys and remain loadable.
@@ -77,8 +77,8 @@ struct SettingsFileTab {
 };
 
 struct SettingsFile {
-    // The typed engine block; the three required keys are guaranteed
-    // present, the provenance keys default empty.
+    // The typed engine block; the required keys (title, scale) are
+    // guaranteed present, the provenance keys default empty.
     EngineSettings engine;
 
     SettingsFileTab tab_a;
@@ -130,7 +130,7 @@ using SettingsLineFn = std::function<std::expected<void, std::string>(
 // whitespace trim, blank and '#' comment skip, first-'=' split, empty-key
 // and keyless-line refusal, duplicate-key refusal against a seen set — and
 // invoke `on_pair` once per meaningful line. After the loop, enforce the
-// three required engine keys (title, output_format, scale). Returns
+// required engine keys (title, scale). Returns
 // the first error (lexical, callback, or missing-required-key), or success.
 std::expected<void, std::string> scan_settings_file(std::istream& in,
                                                     const SettingsLineFn& on_pair);

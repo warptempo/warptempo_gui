@@ -21,23 +21,6 @@ std::expected<void, std::string> write_warp_frame_map(
     return {};
 }
 
-std::expected<void, std::string> write_midi_tempo_map(
-    const std::string& path, const std::vector<MidiTempoMapEntry>& entries) {
-    std::ofstream of(path);
-    if (!of) {
-        return std::unexpected("could not write miditempomap '" + path + "'");
-    }
-    of << std::setprecision(17);
-    for (const auto& e : entries) {
-        of << e.target_time_sec << " " << e.multiplier << "\n";
-    }
-    of.close();
-    if (!of) {
-        return std::unexpected("could not write miditempomap '" + path + "' (I/O error)");
-    }
-    return {};
-}
-
 std::expected<void, std::string> write_phase_reset_frame_map(
     const std::string& path, const std::vector<double>& engine_query_frames) {
     std::ofstream of(path);

@@ -102,11 +102,10 @@ struct RenderRequest {
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
-    // counterparts. Trim is wav-only: the wav arm forwards these bounds to
-    // the prepost trimmer (plan_trim: cut source view, translated maps,
-    // output crop; a plan refusal falls back to the full, untrimmed
-    // deliverable with one stderr line), and the map formats silently
-    // ignore any set bounds — they always write the FULL maps.
+    // counterparts. do_render forwards these bounds to the prepost trimmer
+    // (plan_trim: cut source view, translated maps, output crop; a plan
+    // refusal falls back to the full, untrimmed deliverable with one stderr
+    // line). Trim is a render window, never an artifact shape.
     bool    has_trim_begin = false;
     int64_t trim_begin_frame = 0;    // source frames
     bool    has_trim_end   = false;
@@ -114,29 +113,25 @@ struct RenderRequest {
 
     AuthoringSnapshot authoring;
 
-    // Nullable. When non-null and output_format is "wav", do_render routes
-    // the render to this buffer instead of a staged .wav file. Skips the
-    // atomic rename and every batch sidecar write (.warpmarkers /
-    // .phaseresetmarkers / .settings). The post-engine chain
+    // Nullable. When non-null, do_render routes the render to this buffer
+    // instead of a staged .wav file. Skips the atomic rename and every batch
+    // sidecar write (.warpmarkers / .phaseresetmarkers / .settings) and the
+    // cache-dir framemap pair. The post-engine chain
     // (post_trim crop when trimmed, then the always-on spectral + peak
     // limited chain, exactly as on the disk path) runs in place on this
     // buffer; the buffer is then quantized to the deliverable PCM_24 lattice
-    // in place. Defaults to nullptr; the existing wav-to-disk path is taken
+    // in place. Defaults to nullptr; the wav-to-disk path is taken
     // when null. Reserved for target-view target rendering; not
-    // authoring-facing. Non-wav output_format branches silently ignore this
-    // field.
+    // authoring-facing.
     std::vector<float>* output_buffer = nullptr;
 
     // Batch render output. When `batch_folder` is non-empty, do_render
-    // writes its final output to `<batch_folder>/<batch_basename>` with the
-    // selected output-format extension (.wav for wav, .warpframemap for
-    // generic_map and for warptempo_maps — whose .phaseresetframemap
-    // sibling lands beside it — .miditempomap for midi_map)
+    // writes its final `.wav` to `<batch_folder>/<batch_basename>.wav`
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
-    // and (wav only) `.settings` sidecars in the same folder. For wav
-    // renders, those sidecars are commit-critical to success;
-    // `.fingerprint` is an optional cache artifact.
+    // and `.settings` sidecars in the same folder. Those sidecars are
+    // commit-critical to success; `.fingerprint` is an optional cache
+    // artifact.
     // The folder must already exist; do_render does not create it. When
     // `batch_folder` is empty, do_render uses the
     // source-directory title naming used by the
@@ -168,10 +163,10 @@ RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token =
                             nullptr);
 
-// Output-path composition (render_output_extensions / render_output_stem /
-// compose_render_output_paths) lives parser-side in render_output_naming.h so
-// the GUI render pipeline and the headless CLI binaries compose byte-identical
-// paths from one implementation.
+// Output-path composition (render_output_stem / compose_render_output_path)
+// lives parser-side in render_output_naming.h so the GUI render pipeline and
+// the headless CLI binaries compose byte-identical paths from one
+// implementation.
 
 // Assemble a RenderRequest from GUI authoring state. Single construction point
 // shared by every dispatch path (single render, queue batch, BPM-sweep batch,

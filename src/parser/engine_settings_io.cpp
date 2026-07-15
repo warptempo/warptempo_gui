@@ -25,7 +25,6 @@ constexpr EngineKeyEntry kEngineKeys[] = {
     { "notes",         EngineField::Notes },
     { "url",           EngineField::Url },
     { "cover",         EngineField::Cover },
-    { "output_format", EngineField::OutputFormat },
 };
 
 } // namespace
@@ -72,25 +71,6 @@ bool validate_engine_setting(const std::string& key,
             return false;
         }
         out.title = std::move(v);
-        return true;
-    }
-    if (key == "output_format") {
-        // wav is the finished-audio render; the three map formats write
-        // artifacts instead of audio: warptempo_maps is the warp frame map
-        // plus phase reset frame map pair (together exactly the engine's
-        // input), generic_map the warp frame map alone
-        // for generic external stretch consumers, midi_map the midi tempo
-        // map for DAW hosts. There is no reset-alone format because a phase
-        // reset frame map is meaningful only against the exact warp frame
-        // map it was derived beside, so the reset artifact ships only inside
-        // the warptempo_maps pair, while the warp map alone serves generic
-        // consumers.
-        if (value != "wav" && value != "warptempo_maps" &&
-            value != "generic_map" && value != "midi_map") {
-            reason = "must be one of {wav, warptempo_maps, generic_map, midi_map}";
-            return false;
-        }
-        out.output_format = value;
         return true;
     }
     if (key == "scale") {
@@ -146,9 +126,6 @@ std::string format_engine_field_value(const EngineSettings& es,
     switch (field) {
         case EngineField::Title:
             out = es.title;
-            break;
-        case EngineField::OutputFormat:
-            out = es.output_format;
             break;
         case EngineField::Scale:
             // Scale-like value form: padded shortest round-trip, min 4
