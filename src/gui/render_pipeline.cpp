@@ -175,10 +175,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // --- Compose the full output-path list. ---
     // One entry per extension of the format, composed co-equally from a
     // directory and a stem (render_output_naming.h). Batch renders name into
-    // the batch folder with the batch basename and no clean-float prefix;
-    // source-sibling renders name into the source's parent with
-    // render_output_stem. The warptempo_maps pair is the two entries of one
-    // list, warp column first by the extension list's order.
+    // the batch folder with the batch basename; source-sibling renders name
+    // into the source's parent with render_output_stem. The warptempo_maps
+    // pair is the two entries of one list, warp column first by the extension
+    // list's order.
     const bool batch_render = !req.batch_folder.empty();
     auto compose_source_sibling_paths = [&]() {
         return compose_render_output_paths(

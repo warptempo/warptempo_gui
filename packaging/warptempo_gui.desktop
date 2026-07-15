@@ -6,5 +6,5 @@ Exec=warptempo_gui %f
 Icon=audio-x-generic
 Terminal=false
 Categories=AudioVideo;Audio;AudioVideoEditing;
-MimeType=audio/x-wav;audio/flac;
+MimeType=audio/x-wav;
 StartupWMClass=warptempo_gui

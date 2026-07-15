@@ -37,7 +37,7 @@ void Synthesis::synthesize_full(
 
     // --- Env-gated sub-stage profiling --------------------------------------
     // Per-channel ns counters (held in chprof, below), summed across the channel
-    // threads after the per-channel passes complete, plus a single write/limiter
+    // threads after the per-channel passes complete, plus a single output_append
     // timer for the one interleaved write_cb. Because the channels run
     // concurrently, the summed work_sum reads ~channel-count times the real
     // elapsed time; wall (measured below) is the true elapsed ms of the threaded
@@ -613,7 +613,7 @@ void Synthesis::synthesize_full(
                   << " synthspec="<< (t_synthspec/ 1e6) << "(" << pct(t_synthspec)<< "%)"
                   << " ifft="     << (t_ifft     / 1e6) << "(" << pct(t_ifft)     << "%)"
                   << " ola="      << (t_ola      / 1e6) << "(" << pct(t_ola)      << "%)"
-                  << " write/limiter=" << (t_write / 1e6) << "(" << pct(t_write) << "%)"
+                  << " output_append=" << (t_write / 1e6) << "(" << pct(t_write) << "%)"
                   << " work_sum=" << (work_sum / 1e6)
                   << " wall="     << (t_wall    / 1e6)
                   << "  (work_sum = per-stage ms summed over " << channels

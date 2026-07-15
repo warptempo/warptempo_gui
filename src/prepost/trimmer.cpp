@@ -167,7 +167,7 @@ std::expected<void, std::string> validate_trim_frames(
 //     retry cap retires its peak WITHOUT a gain update — so whether a peak
 //     near either window edge is acted on can depend on peaks far outside
 //     any finite cut, and the coupling chains transitively, so no finite
-//     margin can close it. With the limiter on, the null is guaranteed
+//     margin can close it. The limiter is unconditional, so the null is guaranteed
 //     only when no over-spectral-ceiling peak lies within lineage-coupling
 //     range of either window edge; in practice trim bounds sit in quiet
 //     seams (the audition's meat is at the window's center), and the null

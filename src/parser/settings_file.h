@@ -77,7 +77,7 @@ struct SettingsFileTab {
 };
 
 struct SettingsFile {
-    // The typed engine block; the four required keys are guaranteed
+    // The typed engine block; the three required keys are guaranteed
     // present, the provenance keys default empty.
     EngineSettings engine;
 

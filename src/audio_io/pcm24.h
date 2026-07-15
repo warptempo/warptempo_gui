@@ -25,6 +25,6 @@ int32_t pcm24_code_from_float(float x);
 // float32, making the decode direction exact by construction.
 float pcm24_float_from_code(int32_t c);
 
-// Snap a float onto the signed 24-bit lattice. The exhaustive codec self-test
-// proves quantize/dequantize identity over all 2^24 codes.
+// Snap a float onto the signed 24-bit lattice. Quantize/dequantize identity
+// holds by construction over all 2^24 codes.
 float pcm24_quantize(float x);
