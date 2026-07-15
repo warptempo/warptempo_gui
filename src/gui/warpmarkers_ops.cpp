@@ -149,13 +149,10 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     const auto& mv = app.warpmarkers.markers();
 
     // Validate the batch for stale indices only. Any marker is deletable:
-    // the first-marker grammar (enabled, tempo-owning numeric marker at
-    // exactly frame 0) is a render-boundary rule enforced by
-    // validate_first_marker_render_grammar, and deleting a label_def its
-    // refs outlive is legal too — dangling refs load and are refused at
-    // the render / target-view validity gate with a popup. The default
-    // zero marker created at source load plus that gate are the user's
-    // tools; the GUI allows every state. Shift+Delete
+    // the parser resolver normalizes whatever arrangement remains at
+    // render/preview time (a missing frame-0 owner gets the silent 1.00
+    // seed; a dangling ref becomes a plain 1.00 owner with one stderr line
+    // per timestamp), so the GUI allows every state. Shift+Delete
     // (force_delete_selected_marker) remains the cascade convenience for
     // taking a def's refs along with it.
     for (int idx : app.selected_markers) {
@@ -191,10 +188,10 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 // into the deletion batch, so the user doesn't have to hand-pick each
 // ref before deleting the def. The cascade is a convenience, not a
 // guard: plain Delete on a def is equally legal and simply leaves its
-// refs dangling (loads fine; refused at the render boundary). Any
-// marker — including one at time 0 — may be in the batch; the
-// first-marker grammar is validate_first_marker_render_grammar's
-// render-boundary rule, not a gesture gate.
+// refs dangling (loads fine; the resolver normalizes each to a plain
+// 1.00 owner at render/preview time). Any marker — including one at
+// time 0 — may be in the batch; the resolver normalizes the remaining
+// arrangement, so nothing gates the gesture.
 void GuiWarpMarkersOps::force_delete_selected_marker() {
     if (app.selected_markers.empty()) return;
     const auto& mv = app.warpmarkers.markers();
@@ -263,11 +260,10 @@ void GuiWarpMarkersOps::force_delete_selected_marker() {
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
 //   - label_ref → pass: clear the ref; inert defaults.
-// The first marker is togglable like any other: the requirement that the
-// marker at frame 0 own its tempo is a render-boundary rule
-// (validate_first_marker_render_grammar), and a pass first marker is
-// refused there — surfaced by the defect-resolution series at the commit
-// funnel, render dispatch, and target-view gate — not at this gesture.
+// The first marker is togglable like any other: a pass at frame 0 is
+// normalized by the parser resolver at render/preview time (the
+// inheritance walk falls back to tempo 1.00 when no owner precedes it) —
+// nothing gates this gesture.
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -321,10 +317,9 @@ void GuiWarpMarkersOps::toggle_disabled() {
     if (app.selected_markers.empty()) return;
     const auto& mv_const = app.warpmarkers.markers();
     // Any marker may be disabled, including the one at time 0. A disabled
-    // first marker violates the first-marker render grammar, which is
-    // enforced at the render boundary (validate_first_marker_render_grammar)
-    // and surfaced by the defect-resolution series at the commit funnel,
-    // render dispatch, and target-view gate, never here.
+    // first marker leaves frame 0 ownerless, and the parser resolver
+    // normalizes that at render/preview time (the silent 1.00 seed takes
+    // the frame-0 slot) — nothing gates this gesture.
     std::vector<GuiWarpMarker> proposed = mv_const;
     const int              hint_last = app.last_selected_marker;
     bool changed = false;
@@ -484,8 +479,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
 
     const auto& mv = app.warpmarkers.markers();
     // Stale-index check only: every marker is nudgeable, including the
-    // one at time 0 (the first-marker grammar is the render boundary's
-    // rule, not a gesture pin).
+    // one at time 0 (the parser resolver normalizes the resulting
+    // arrangement at render/preview time; there is no gesture pin).
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
     }

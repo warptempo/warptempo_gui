@@ -44,12 +44,10 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     drag_set.insert(hit);
 
     // No first-marker pin, either column: every marker is draggable,
-    // including a warp marker at time 0. The first-marker grammar
-    // (enabled, tempo-owning numeric marker at exactly frame 0) is a
-    // render-boundary rule — validate_first_marker_render_grammar refuses
-    // it at render dispatch and at the target-view validity gate — and the
-    // default marker created at source load is the recovery tool, so the
-    // GUI never pins the gesture.
+    // including a warp marker at time 0. Whatever arrangement results, the
+    // parser resolver normalizes it at render/preview time (ambiguity
+    // resolves to tempo 1.00, one stderr line per timestamp), so the GUI
+    // never pins the gesture.
 
     DragState d;
     d.active = true;

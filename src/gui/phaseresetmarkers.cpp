@@ -34,12 +34,11 @@ namespace {
 // parser, which accepts non-decreasing times; only a DECREASING
 // sequence — impossible from the sorted store, so evidence of a
 // future op bug — fails the next load with a loud line-numbered
-// parse error. Coincident stacks are legal in the store only until
-// their commit modal resolves — the commit funnel walks them as
-// defects — so this serializer never refuses them;
-// build_phase_reset_source_frames' sub-frame refusal is the breach
-// backstop for hand-edited input, and build_warp_frame_map refuses
-// warp ties. Positions are authored whole source frames and persist
+// parse error. Coincident stacks are legal in the store — the parser
+// normalizes them at render/preview time (equal-frame enabled resets
+// collapse to one event, one stderr line per collapsed timestamp) —
+// so this serializer never refuses them. Positions are authored whole
+// source frames and persist
 // through the authored pair (frame_format.h), so a saved store
 // reloads bit-identically under the authored parse.
 bool save_impl(const std::string& path,

@@ -77,7 +77,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
 // frame. kN/2 is an exact integer and the playhead is an integer frame, so the
 // offset is plain integer arithmetic (no snap needed); clamped to 0. Reuses
 // drop_phase_reset_at_position so the created reset takes the full create path
-// — walls, coincidence/defect modal, undo, selection — unchanged; only the
+// — walls, undo, selection — unchanged; only the
 // seed frame is offset. The gesture is gated to target view (input_handler.cpp),
 // where the overlay/lead-in exist.
 void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {

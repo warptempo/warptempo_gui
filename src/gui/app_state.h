@@ -357,21 +357,14 @@ struct HoverPopupState {
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
 // applies to the unsaved-work prompt (CLOSE_WINDOW, the quit gesture).
-// ERROR_NOTICE is the dismiss-only error popup: the backstop for failures
-// the defect-resolution series does not model, plus the environmental and
-// settings-choice refusals (see GuiPrompt::open_error_notice's caller
-// list). Its text is the owner's own error string, unmodified, and its
-// sole response is acknowledge/dismiss.
+// ERROR_NOTICE is the dismiss-only error popup for the environmental,
+// settings-choice, and tripwire-class refusals (see
+// GuiPrompt::open_error_notice's caller list). Its text is the owner's own
+// error string, unmodified, and its sole response is acknowledge/dismiss.
 enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
     ERROR_NOTICE,
-    // Forced-choice defect-resolution modal (the commit-time series driven
-    // by GuiInputHandler::open_defect_series). Esc is SWALLOWED rather than
-    // activating the rightmost response — a recorded deviation from the
-    // other prompts' Esc rule — because every offered option mutates or
-    // rewinds authored state and the state must not silently rest invalid.
-    DEFECT_RESOLUTION,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom strip
@@ -389,74 +382,6 @@ struct PromptState {
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 
-// Origin of a pending defect-series validation (DefectSeriesState below).
-// Commit: the commit funnel — set by the history push helpers / do_redo
-// (undo.cpp) and by trim's history-less commit sites. Load: set at the end
-// of a successful source load (file_loader.cpp), so file-borne defects get
-// their modal walk on the first tick after the load. Consumed by
-// GuiInputHandler::run_commit_validation, which opens the series with
-// commit context iff the origin is Commit; a Load-origin series offers no
-// [U]ndo naturally — the loader clears history, so the
-// undo_stack-non-empty condition already yields none.
-enum class PendingValidation { None, Commit, Load };
-
-// Which trim-column defect the current modal shows. ClearBounds covers
-// crossed-or-equal and every validate_trim_frames refusal — all sharing
-// the single delete-both-bounds resolution. MapFormatConflict is the
-// cross-domain map-format-with-trim conflict (trim is wav-only): its
-// resolutions are [U]ndo / [R]eset (output_format back to wav, trim
-// survives) / [Delete] (both bounds cleared, format survives), so the
-// response handler must tell it apart from the delete-both-bounds-only
-// kinds.
-enum class TrimDefectKind { None, ClearBounds, MapFormatConflict };
-
-// Pre-remedy funnel stage for the defect-resolution series. A mutating remedy
-// ([U]ndo / [R]eset / [Delete]) may only be presented in an editable
-// source-authoring context. When the series would open over a read-only tab
-// ([U]ndo silently refuses, and [R]eset/[Delete] would mutate a locked store)
-// — reachable only by a near-impossible commit-then-toggle race —
-// open_defect_series first presents a forced single-[Y]es prompt to disable
-// read-only, and the response handler re-enters the funnel after acting. None
-// means the current DEFECT_RESOLUTION prompt is the real remedy. Every
-// open_defect_series pass sets this field; the wholesale DefectSeriesState
-// reset restores None.
-enum class DefectPreStep { None, DisableReadOnly };
-
-// Defect-resolution series state (DialogTrigger::DEFECT_RESOLUTION). The
-// series holds only the CURRENT defect; every resolution re-enumerates the
-// stores from scratch (one undo can fix several defects at once), so a
-// stale defect queue cannot exist. `defect` is meaningful only while a
-// marker-defect modal is showing; a non-None `trim_defect_kind` marks a
-// trim-column defect instead — trim defects have no MarkerDefect shape
-// (trim is not a marker store). `commit_context` records whether the
-// series was opened by a commit; the coincident-group delete narrows to
-// the touched marker only in that context. `pending_validation` is the
-// funnel's once-per-tick flag plus its origin (see PendingValidation),
-// consumed by GuiInputHandler::run_commit_validation at the top of
-// on_tick. `suspended_for_close` marks a series parked while a Ctrl+Q
-// close prompt is up over it (the defect modal is dismissed for the
-// duration): it makes request_close confirm
-// the close even when the store is clean (a load-origin series has
-// app.dirty == false), and, on cancel, is the signal that the series must
-// resume — re-queued through pending_validation with the origin derived
-// from commit_context, so the same defect (and its coincident-group
-// narrowing) reappears. The close prompt is the ordinary
-// save/discard/cancel form: every state the series can show is a walkable
-// defect, hence load-legal, so a save writes a loadable file that
-// re-walks its series on the next load. Any wholesale defect_series reset
-// (load) clears it; the resume path clears it explicitly. `pre_step` names the
-// funnel stage the current prompt belongs to (see DefectPreStep): None for the
-// real remedy, DisableReadOnly for the forced [Y]es pre-modal that clears the
-// way to an editable context.
-struct DefectSeriesState {
-    MarkerDefect      defect;
-    TrimDefectKind    trim_defect_kind   = TrimDefectKind::None;
-    DefectPreStep     pre_step           = DefectPreStep::None;
-    bool              commit_context     = false;
-    bool              suspended_for_close = false;
-    PendingValidation pending_validation = PendingValidation::None;
-};
-
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
 // whole source frames in int64_t, exactly like marker times (a fractional
@@ -468,26 +393,24 @@ struct DefectSeriesState {
 // (end-at-EOF is valid, so the GUI must be able to represent it) — plain
 // integer compares, the load guard's own comparison — so past-EOF
 // cannot be gestured. There are NO partner walls — a bound crosses its
-// partner freely during any gesture — but crossed and equal can no longer
-// REST past a commit or a load: the funnel's defect-resolution series opens
-// on the offending commit (or on the first tick after a load that carried
-// them), and the delete-both-bounds resolution clears them. The zero floor
+// partner freely during any gesture — and crossed or equal bounds may
+// REST: nothing gates or modals a trim commit; the render boundary refuses
+// them when they matter. The zero floor
 // is now subsumed by the per-bound walls, but it remains the reason the
 // floor exists at all: a negative position is unrepresentable in the
 // authored frame form the .settings file persists (parse_authored_frame
 // rejects negatives as malformed) — a format-representability floor, not a
 // validity rule. Loaded values mostly bypass this: the loader stays
-// lenient for crossed and equal bounds (there is no trim corruption tripwire
-// — those load intact), and the Load-origin defect walk
-// demands their resolution on the first tick after the load. A past-EOF
+// lenient for crossed and equal bounds (there is no trim corruption
+// tripwire — those load intact). A past-EOF
 // bound is the exception — it is adversarial (the gesture walls make it
 // uncommittable and a .settings applies only to its own audio, so a
 // past-EOF bound means the audio was swapped outside the GUI), hard-failed
 // at the load boundary (file_loader / CLI) like a corrupt audio file. The
-// render boundary owns validity beneath the series: validate_trim_frames
+// render boundary owns trim validity: validate_trim_frames
 // (trimmer.h) issues every trim refusal — at render dispatch preflight, at
-// the target-view gate, and as the breach backstop for hand-edited
-// artifacts — and the GUI informs and demands resolution, it never guards a
+// the target-view entry gate, and as the breach backstop for hand-edited
+// artifacts — surfacing through the error-notice popup; it never guards a
 // gesture. Readers must not assume begin <= end.
 struct TrimState {
     int64_t begin_frame = 0;    // whole source frame (int64_t)
@@ -804,10 +727,6 @@ struct AppState {
     // bottom strip.
     PromptState prompt;
 
-    // Defect-resolution series (see DefectSeriesState above). Lives beside
-    // the prompt it drives.
-    DefectSeriesState defect_series;
-
     // Top-flag text editor. Active only when editing a flag rect
     // in warp view. The editor owns the keyboard while active and
     // overlays a custom rect + cursor on top of render_flags.
@@ -976,16 +895,10 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a Ctrl marker
 // drag, a trim drag, a scroll drag, a playhead drag, or an editor text
-// drag. Consumed by the deferral and skip gates that must never fire
-// mid-gesture: the batch auto-open skip, the run_commit_validation deferral,
-// the enforce_target_view_validity deferral, and the wheel_context predicate
-// (on_wheel's completed-detent gate and the platform's per-frame sub-detent
-// accumulator probe both route through it).
-// The load-bearing rationale is the "nothing pops mid-gesture" boundary and,
-// for the asynchronous batch completion specifically, that flipping the
-// displayed domain under a live drag would make the drag's release commit
-// through the wrong display context (the pixel-anchoring helpers select
-// their arm from the current context).
+// drag. Consumed by the wheel_context predicate (on_wheel's
+// completed-detent gate and the platform's per-frame sub-detent
+// accumulator probe both route through it), the gate that must never fire
+// mid-gesture: the "nothing pops mid-gesture" boundary.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.scroll_drag.active || app.playhead_drag.active ||

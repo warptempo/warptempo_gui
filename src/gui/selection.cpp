@@ -133,9 +133,10 @@ void Selection::cycle_selection(bool forward) {
     // The playhead frame is the sole cycle anchor. Strict frame inequalities
     // in the scan below prevent re-landing on the stop we are standing on;
     // markers and trim bounds sharing one active-domain frame are traversed
-    // by the in-group step so every member is Tab-reachable — legal stacks
-    // exist (loaded-but-unresolved states before their defect series runs;
-    // cross-column and trim-on-marker ties, which impair no picking).
+    // by the in-group step so every member is Tab-reachable — stacks are
+    // legal at rest (same-column coincidences, which the parser resolver
+    // normalizes at render/preview time; cross-column and trim-on-marker
+    // ties, which impair no picking).
     // Disabled markers are skipped as if absent from the active mode's list.
     const int64_t ph_f = app.playhead_cursor_sample;
 

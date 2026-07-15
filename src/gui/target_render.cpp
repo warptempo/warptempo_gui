@@ -128,33 +128,11 @@ void GuiTargetRender::dispatch_render_now() {
     // starts from a clean slate.
     app.queue_cancel_requested = false;
 
-    // Raw-store admission gate for the preview. A target-view commit can
-    // leave the live store raw-invalid (a coincident pair on EITHER column,
-    // wider than the parser owners' sub-frame refusals) in the interval
-    // before the tick-deferred validity kick (enforce_target_view_validity)
-    // fires. Refuse to enqueue preview work for such a store — silently, as
-    // this is a background preview, not a user command; the commit/load
-    // defect series remains the user-facing remedy. Mirrors
-    // warp_render_preflight and validate_target_view_entry:
-    // enumerate_marker_store_defects over BOTH columns under a sr>0 &&
-    // total>0 guard, decline on the first defect BEFORE the reuse rungs and
-    // synthesis so target_buffer stays untouched (the preview is left
-    // un-updated). Clear the "updating..." status trigger() staged.
-    {
-        const long sr    = static_cast<long>(audio.sample_rate());
-        const long total = static_cast<long>(audio.total_frames());
-        if (sr > 0 && total > 0 &&
-            !enumerate_marker_store_defects(
-                 slice_to_warp_markers(app.warpmarkers.markers()),
-                 slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
-                 sr).empty()) {
-            if (app.queue_progress_text == "updating...") {
-                viewport.invalidate_timestamp_area();
-                app.queue_progress_text.clear();
-            }
-            return;
-        }
-    }
+    // The preview always proceeds from here: the parser resolver normalizes
+    // ambiguous marker arrangements to tempo 1.00 at resolve time (one
+    // stderr line per timestamp), so there is no store state to refuse; a
+    // build failure is tripwire-class and the existing failure path handles
+    // it.
 
     // Consult the render cache before synthesizing. The only callers
     // (trigger()'s idle branch and maybe_dispatch_pending()) reach here only

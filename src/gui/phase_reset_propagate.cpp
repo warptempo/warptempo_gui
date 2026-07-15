@@ -264,13 +264,11 @@ void PhaseResetPropagate::paste_apply() {
     // by a longer destination block, a near-end placement scaled by a
     // shorter one), possibly coinciding exactly with surviving
     // pre-existing resets or with each other (a strongly shrunken block,
-    // or the zero clamp). Coincident resets simply stack: they are legal
-    // in the store only until their commit modal resolves — the commit
-    // funnel walks them as defects (this paste is a commit site) — and
-    // insert_marker keeps the in-memory list sorted;
-    // build_phase_reset_source_frames' sub-frame refusal is the breach
-    // backstop for hand-edited input, and the render boundary owns
-    // everything else.
+    // or the zero clamp). Coincident resets simply stack and are legal in
+    // the store: the parser normalizes them at render/preview time
+    // (equal-frame enabled resets collapse to one event, one stderr line
+    // per collapsed timestamp), and insert_marker keeps the in-memory list
+    // sorted.
     const int64_t reset_wall = target_render.audio.total_frames() - 1;
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
@@ -305,10 +303,10 @@ void PhaseResetPropagate::paste_apply() {
     // touches no dirty/render state. A placement rescaled OUTSIDE the
     // cleared windows (the lead-in / near-end cases) stacks a duplicate
     // next to its surviving occupant on self-paste — legal in the store
-    // only until the commit modal walk resolves it (this paste is a
-    // commit site; build_phase_reset_source_frames' sub-frame refusal
-    // stays the breach backstop) — so the store genuinely changes and
-    // the undo entry is a real state change.
+    // (the parser collapses equal-frame enabled resets to one event at
+    // render/preview time, one stderr line per collapsed timestamp) — so
+    // the store genuinely changes and the undo entry is a real state
+    // change.
     // Compare before pre_state is moved into the push. The stop message
     // and the always-switch-to-P rule below still run.
     bool store_changed = out.size() != pre_state.size();

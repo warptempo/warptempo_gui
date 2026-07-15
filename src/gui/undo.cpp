@@ -68,11 +68,6 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
     e.affects_persistence = affects_persistence;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
-    // Commit funnel: one commit = one history entry, so the push helpers
-    // are where every marker commit site funnels. Flag the once-per-tick
-    // defect validation (GuiInputHandler::run_commit_validation) instead of
-    // editing every call site.
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
@@ -86,8 +81,6 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
-    // Commit funnel (see push_undo_warp).
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
@@ -102,8 +95,6 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
-    // Commit funnel (see push_undo_warp).
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 void Undo::push_settings_undo(SettingsSnapshot pre_state) {
@@ -117,12 +108,6 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     recompute_dirty();
-    // Commit funnel (see push_undo_warp). Settings entries cannot move
-    // marker times, but scale participates in the trim target-span
-    // validity (validate_trim_frames runs inside the series' trim column)
-    // and output_format participates in the map-format-with-trim conflict,
-    // so a settings commit can create a walked defect.
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 namespace {
@@ -162,12 +147,10 @@ void Undo::record_gesture(GestureKind kind) {
 }
 
 void Undo::note_coalesced_commit() {
-    // Mirror the funnel side effects of the push_undo_* helpers, minus the
-    // history push the merge deliberately suppresses: the store changed, so
-    // defect validation must still run this press (a continuation nudge can
-    // move a marker into a fresh coincidence), and the hover popup clears.
+    // Mirror the side effects of the push_undo_* helpers, minus the history
+    // push the merge deliberately suppresses: the hover popup clears
+    // per-press.
     viewport.clear_hover_popup();
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }
 
 namespace {
@@ -304,9 +287,8 @@ void Undo::apply_post_restore_rules_phase_reset(
         });
 }
 
-// True when do_undo would actually act — do_undo's authoritative guard, and
-// the predicate the defect-resolution [U]ndo offer consults so the option
-// appears only when it will act. Two ways undo is a silent no-op:
+// True when do_undo would actually act — do_undo's authoritative guard.
+// Two ways undo is a silent no-op:
 //   - empty undo stack;
 //   - the top entry's TARGET tab is currently read-only. When the ACTIVE tab
 //     is read-only Ctrl+Z is already dropped at the keyboard gate
@@ -417,11 +399,6 @@ void Undo::do_undo() {
     // settings) — fire a target render in target view. No-op in
     // source view.
     target_render.trigger();
-    // Undo is deliberately NOT a gated commit site (no pending_validation
-    // flag): it can only land on states that were previously accepted —
-    // either the modal series validated them or they predate the offending
-    // commit — so undoing out of a defect must close the series, not
-    // re-open it.
 }
 
 void Undo::do_redo() {
@@ -510,8 +487,4 @@ void Undo::do_redo() {
     // Every redo restores engine input — fire a target render in
     // target view. No-op in source view.
     target_render.trigger();
-    // Redo IS a gated commit site, unlike undo just above: it re-applies a
-    // commit that may have been the offending one, so the defect modal must
-    // re-fire on the re-applied state.
-    app.defect_series.pending_validation = PendingValidation::Commit;
 }

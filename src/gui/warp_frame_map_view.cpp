@@ -29,14 +29,12 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // same segment list. This overload always builds directly and is the entry
     // point for hypothetical (non-live) marker lists; live-state consumers go
     // through target_view_warp_frame_map_cached.
-    // A resolve failure (first-marker render grammar, tie, dangling label
-    // ref) or a build failure returns the empty map and reports the message
-    // through error_out. The empty map still paints as identity for the
-    // frame or two it stays displayed, but it is no longer a silent
-    // dead-end: the cache records the error and the target-view validity
-    // gate (GuiInputHandler::enforce_target_view_validity) kicks back to
-    // source view on the next tick and opens the defect-resolution series
-    // (or the error-notice popup for the non-modeled class).
+    // A resolve or build failure (tripwire-class only — the resolver
+    // normalizes ambiguous marker arrangements to tempo 1.00 rather than
+    // refusing) returns the empty map and reports the message through
+    // error_out. The empty map paints as identity; the cache records the
+    // error so readers can tell the failed build apart from a legitimate
+    // identity state.
     if (error_out) error_out->clear();
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers), sample_rate, total_frames);

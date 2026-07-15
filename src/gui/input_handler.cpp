@@ -90,40 +90,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         } else if (key == GuiKeys::Escape) {
             k = '\x1b';
         }
-        // Defect-resolution modal: route the lowercased key to the series'
-        // own dispatcher (which acts only on the offered keys) and swallow
-        // Esc entirely — see the DialogTrigger::DEFECT_RESOLUTION comment
-        // in app_state.h for why this prompt has no Esc response.
-        if (app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
-            // Ctrl+S saves and returns to the series unchanged. Every state
-            // the series can be showing is a walkable defect, which is by
-            // construction load-legal: the save writes a file that reloads
-            // and re-walks its own series, so persisting mid-resolution is
-            // safe. This is the plain-Ctrl+S path (save_ops.save); the modal
-            // stays up and the walk continues from where it was.
-            if (ctrl && !shift && !alt && key == GuiKeys::S) {
-                save_ops.save();
-                return;
-            }
-            // Ctrl+Q does not resolve the defect; it opens the close prompt
-            // in its normal save/discard/cancel form over the parked series
-            // (walkable defects are load-legal, so the save option writes a
-            // loadable file that re-walks on reload). Suspend the series
-            // (commit_context stays on defect_series and drives both the
-            // resume origin and the same defect's reappearance on cancel),
-            // dismiss this modal, and route to the shared funnel.
-            // request_close refuses re-entry while a prompt is
-            // active, so the defect prompt is cleared first.
-            if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-                app.defect_series.suspended_for_close = true;
-                app.prompt.active = false;
-                viewport.invalidate_all();
-                prompt.request_close();
-                return;
-            }
-            if (k != 0 && k != '\x1b') handle_defect_response(k);
-            return;
-        }
         if (k != 0) {
             for (char rk : app.prompt.response_keys) {
                 if (k == rk) {
@@ -833,11 +799,6 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
-            // Trim commit site (see handle_trim_set_autoset in
-            // input_trim.cpp): each wheel frame's end-bound move is its own
-            // commit, so a move across the begin bound opens the defect
-            // series on the next tick.
-            app.defect_series.pending_validation = PendingValidation::Commit;
             return;
         }
         if (active_view_state(app).read_only) return;
@@ -953,30 +914,16 @@ bool GuiInputHandler::apply_editor_clipboard(
 
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
-                           const std::vector<GuiPhaseResetMarker>& phase_resets,
                            double scale, int sample_rate, long total_frames,
                            bool has_trim_begin, int64_t trim_begin_frame,
                            bool has_trim_end,   int64_t trim_end_frame) {
     // Contract and caller list in input_handler.h: this is the shared
     // entry-half validity predicate for target view — the keyboard S → T
     // toggle below and GuiFileLoader::load_file's active_audio_view=T
-    // restore gate on exactly this walk.
-    //
-    // Raw-store walk FIRST, mirroring warp_render_preflight: enumerate the
-    // pickability defects across BOTH marker columns (the enumerator's
-    // coincidence window is deliberately wider than the parser owners'
-    // sub-frame refusals, and it is the only stage that sees the
-    // phase-reset column), first defect message wins. Guarded on
-    // sr>0 && total>0 like the preflight. A raw-invalid store cannot enter
-    // target view — the resolve/build/trim backstop below never sees it.
-    if (sample_rate > 0 && total_frames > 0) {
-        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
-            slice_to_warp_markers(markers),
-            slice_to_phase_reset_markers(phase_resets), sample_rate);
-        if (!defects.empty()) {
-            return std::unexpected(std::move(defects.front().message));
-        }
-    }
+    // restore gate on exactly this walk. The resolver normalizes ambiguous
+    // marker arrangements to tempo 1.00 (one stderr line per timestamp), so
+    // entry effectively gates only on trim validity and the tripwire-class
+    // build failures.
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers), sample_rate, total_frames);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
@@ -1014,36 +961,34 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // viewport / playhead / total_frames across the whole song against it —
     // see the matching comment in paint_handler.cpp's per-paint recompute.
     //
-    // Validity gate, entry half: entering target view (S → T) with a
-    // render-invalid marker state (first-marker grammar, dangling label
-    // ref, tie) or a set trim failing validate_trim_frames stays in source
-    // view — target view is blocked while invalid, and target playback
-    // must never audition an unrenderable window. The predicate is
+    // Validity gate, entry half: entering target view (S → T) gates only on
+    // trim validity and the tripwire-class build failures — marker
+    // arrangements always enter, because the parser resolver normalizes
+    // ambiguous arrangements to tempo 1.00 at resolve time (one stderr line
+    // per timestamp); nothing gates or modals in the GUI. The predicate is
     // validate_target_view_entry (definition above): resolve, then build,
     // then — trim bound set — validate_trim_frames against the full
     // trim-off map just built (the same construction the target-view cache
     // holds); it returns that map, so entry validation and the translation
     // map below are one build. GuiFileLoader::load_file gates its
     // active_audio_view=T restore on the SAME predicate — a load restore
-    // and a keystroke entry block identically. The defect-resolution
-    // series is the surface: it opens on the modeled defect, the user
-    // resolves, and pressing `t` again enters (no auto-proceed). The
-    // error-notice popup remains only for failures the series does not
-    // model — after the enumerator that is effectively the engine-metadata
-    // and non-positive-tempo-product class, unreachable from
-    // program-written input — kept as the loud backstop.
+    // and a keystroke entry block identically. A refusal — a set trim
+    // failing validate_trim_frames, or the engine-metadata /
+    // non-positive-tempo-product class, unreachable from program-written
+    // input — surfaces through the error-notice popup with the owner's
+    // error string; target playback must never audition an unrenderable
+    // window.
     //
     // Leaving target view (T → S) never gates: the trim column is masked
     // off from the predicate call and a resolve/build failure is ignored —
-    // the kick-back path (enforce_target_view_validity) rides this same
-    // T → S branch while the map is invalid, so the exit falls back to the
-    // empty map — identity translation for the playhead/viewport — and
-    // always succeeds (a valid map with an invalid trim keeps the built
-    // map for the exit translation, exactly as before).
+    // the exit falls back to the empty map — identity translation for the
+    // playhead/viewport — and always succeeds (a valid map with an invalid
+    // trim keeps the built map for the exit translation, exactly as
+    // before).
     const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto entry = validate_target_view_entry(
-        app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+        app.warpmarkers.markers(),
         app.engine_settings.scale,
         audio.sample_rate(), static_cast<long>(audio.total_frames()),
         entering_target && app.trim.has_begin, app.trim.begin_frame,
@@ -1051,9 +996,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     if (entry) {
         warp_frame_map = std::move(*entry);
     } else if (entering_target) {
-        if (!open_defect_series(/*commit_context=*/false)) {
-            prompt.open_error_notice(std::move(entry.error()));
-        }
+        prompt.open_error_notice(std::move(entry.error()));
         return;
     }
 
@@ -1193,90 +1136,5 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // playback to source.wav. No replacement dispatch — source
         // view's playback reads source.wav across archival renders.
         target_render.rebind_to_source();
-    }
-}
-
-// Validity gate, kick-back half (the entry half lives at the top of
-// handle_active_audio_view_toggle). Runs once per event-loop tick from
-// main.cpp's on_tick, before the tick's waveform dirty-detect, so the
-// kick lands on the first tick after an invalidating edit — the same
-// beat as the edit's own repaint, never lazily later. The memoized cache
-// makes the steady-state check a generation compare; the rebuild that
-// actually detects the failure is the one the invalidating edit forces.
-// The kick lands T → S first, THEN the defect-resolution series opens on
-// the modeled defect (the popup remains only for the non-modeled class);
-// run_commit_validation runs earlier on the same tick, so a commit's own
-// modal wins the beat and this gate defers behind it like any prompt.
-void GuiInputHandler::enforce_target_view_validity() {
-    if (app.loading || audio.total_frames() <= 0) return;
-    if (app.active_audio_view != 'T') return;
-    // Another prompt owning the bottom strip means no edit can be in
-    // flight (prompts are modal); defer the kick a tick rather than
-    // clobber it. The error state persists in the cache, so the kick
-    // fires on the first tick after dismissal.
-    if (app.prompt.active) return;
-    // An active pointer gesture defers the kick the same way. Gestures are
-    // free by ruling: transient state (a crossed trim held mid-drag) may be
-    // render-invalid while the button is down, and kicking T → S there would
-    // both violate the nothing-pops-mid-gesture boundary and strand the drag
-    // across a modal — motion and release are dropped while a prompt is up,
-    // and the drag's anchor coordinates, captured in target space, would go
-    // stale across the domain flip. Deferral is one tick at a time until the
-    // gesture ends, the same shape as run_commit_validation's. After release
-    // the commit's own pending-validation flag opens the series first on the
-    // next tick, and this gate then defers behind that prompt like any other.
-    if (any_pointer_gesture_active(app)) return;
-    const long sr    = static_cast<long>(audio.sample_rate());
-    const long total = static_cast<long>(audio.total_frames());
-    const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
-        app, audio.sample_rate(), total);
-    // Three kick conditions, checked in order. First the raw-store walk over
-    // the LIVE store's BOTH columns — enumerate_marker_store_defects under a
-    // sr>0 && total>0 guard, mirroring warp_render_preflight and the entry
-    // gate — so a state that could not ENTER target view cannot survive as a
-    // live T state either; it is the only stage that sees the phase-reset
-    // column, and its coincidence window is wider than the parser owners'
-    // sub-frame refusals (which is all the cached build error models). Then
-    // the cached warp-map build error, then — the trim column of the same
-    // gate — a set trim that fails validate_trim_frames against the cached
-    // map (the cache's map IS the full map, built trim-off from the live
-    // store), the live sample rate, and total frames. Any of the three means
-    // target playback would audition an unrenderable window. The error
-    // string is the owner's verbatim (enumerator's, parser's, or trimmer's),
-    // consumed only by the popup backstop when the defect series does not
-    // model the failure.
-    std::string err;
-    if (sr > 0 && total > 0) {
-        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
-            slice_to_warp_markers(app.warpmarkers.markers()),
-            slice_to_phase_reset_markers(app.phaseresetmarkers.markers()), sr);
-        if (!defects.empty()) {
-            err = std::move(defects.front().message);
-        }
-    }
-    if (!err.empty()) {
-        // Raw defect already found — fall through to the shared kick tail.
-    } else if (!c.build_error.empty()) {
-        // Copy before toggling: the T → S toggle path re-resolves and can
-        // touch the cache the reference points into.
-        err = c.build_error;
-    } else if (app.trim.has_begin || app.trim.has_end) {
-        if (auto v = validate_trim_frames(
-                app.trim.has_begin, app.trim.begin_frame,
-                app.trim.has_end,   app.trim.end_frame,
-                static_cast<int64_t>(audio.total_frames()),
-                c.warp_frame_map);
-            !v) {
-            err = std::move(v.error());
-        }
-    }
-    if (err.empty()) return;
-    handle_active_audio_view_toggle();   // T → S: unconditional, identity
-                                         // fallback for the playhead math
-    if (!open_defect_series(/*commit_context=*/false)) {
-        // Backstop for failures the series does not model — effectively
-        // the engine-metadata / non-positive-tempo-product class,
-        // unreachable from program-written input.
-        prompt.open_error_notice(err);
     }
 }

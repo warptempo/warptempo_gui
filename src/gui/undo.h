@@ -18,7 +18,7 @@ struct GuiTargetRender;
 // SAME gesture-kind AS CONSECUTIVE COMMANDS collapses into ONE undo entry: the
 // burst's first press pushes the pre-burst snapshot and every continuation
 // press SKIPS its own push, so a single Ctrl+Z reverts the whole burst. The
-// visible move, defect validation, reorder/remap, dirty tracking, and the
+// visible move, reorder/remap, dirty tracking, and the
 // target-view preview stay per-press and unchanged — only the redundant
 // history push is suppressed. Any intervening command breaks the burst (see
 // command-adjacency below), so "same target / same tab / same history" all
@@ -88,9 +88,7 @@ struct Undo {
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
     // True when do_undo would actually act (non-empty stack, top entry's
-    // target tab writable). do_undo's authoritative guard, and the
-    // predicate the defect-resolution [U]ndo offer consults so the option
-    // appears only when it will act.
+    // target tab writable). do_undo's authoritative guard.
     bool can_undo() const;
     void do_undo();
     void do_redo();
@@ -100,16 +98,15 @@ struct Undo {
 
     // Whether the current eligible gesture press of `kind` coalesces into the
     // burst's existing undo entry. When it returns true the caller SKIPS its
-    // undo push (and calls note_coalesced_commit for the per-press commit
-    // funnel); either way the caller then calls record_gesture. Call at handler
+    // undo push (and calls note_coalesced_commit for the per-press side
+    // effects); either way the caller then calls record_gesture. Call at handler
     // entry — after the on_key/on_wheel command_seq bump the eligible press
     // itself carries, so its own command is the one adjacency compares.
     bool coalesce_gesture(GestureKind kind) const;
     // Record this eligible press as the burst's latest: its kind, now, and the
     // current app.command_seq. Call after the push / skip.
     void record_gesture(GestureKind kind);
-    // Per-press commit funnel for a coalesced (push-skipped) press: the store
-    // still changed, so run the same defect-validation flag and hover-popup
-    // clear that the push_undo_* helpers do, minus the history push.
+    // Per-press side effects for a coalesced (push-skipped) press: the same
+    // hover-popup clear the push_undo_* helpers do, minus the history push.
     void note_coalesced_commit();
 };

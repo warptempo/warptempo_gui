@@ -37,9 +37,9 @@ struct AppState;
 // rebuild, so the waveform-cache fingerprint reads it instead of
 // rehashing per tick. A failed build is cached too (empty warp_frame_map,
 // hash 0, build_error carrying the resolve/build message) — display
-// callers treat the empty map as identity for the frame or two before the
-// validity gate reacts, and the gate reads build_error to tell "empty
-// because invalid" apart from a legitimately empty/identity state.
+// callers treat the empty map as identity, and readers consult
+// build_error to tell "empty because the build failed" apart from a
+// legitimately empty/identity state.
 struct TargetWarpFrameMapCache {
     bool      valid        = false;
     long long markers_gen  = -1;
@@ -51,9 +51,11 @@ struct TargetWarpFrameMapCache {
 
     // Empty when the last rebuild succeeded; otherwise the
     // resolve_warp_markers_for_render / build_warp_frame_map error string
-    // verbatim. Consumed by GuiInputHandler::enforce_target_view_validity
-    // (the target-view kick-back), which opens the defect-resolution series
-    // or, for the non-modeled class, the error-notice popup with this text.
+    // verbatim (tripwire-class only — the resolver normalizes ambiguous
+    // marker arrangements rather than refusing). Consumed by the callers
+    // that must skip target-domain math when no map is in effect (the
+    // load-time view-range check, the dispatch snapshot's playhead
+    // translation).
     std::string build_error;
 
     // Deformed-timeline length: the source total forward-translated

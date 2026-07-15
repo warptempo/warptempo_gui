@@ -354,12 +354,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
 
-        // Pre-flight the live store on the GUI thread: a modeled defect
-        // (a trimmed map-format render included) opens the
-        // defect-resolution series; a non-modeled failure raises the
-        // popup. Either way the dispatch is refused.
+        // Pre-flight the live state on the GUI thread: a trim refusal (a
+        // trimmed map-format render included) or a tripwire-class build
+        // failure raises the popup and the dispatch is refused. Marker
+        // arrangements never refuse — the resolver normalizes them.
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.phaseresetmarkers.markers(),
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_frame,
@@ -410,13 +409,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live store: a modeled defect (a trimmed
-        // map-format render included) opens the defect-resolution series
-        // and refuses the whole sweep; a non-modeled failure refuses with
-        // the popup. Per-cell tempo_cents mutations remain on the async
-        // stderr backstop.
+        // Pre-flight the live state: a trim refusal (a trimmed map-format
+        // render included) or a tripwire-class build failure refuses the
+        // whole sweep with the popup. Per-cell tempo_cents mutations
+        // remain on the async stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.phaseresetmarkers.markers(),
                                    app.engine_settings.scale,
                                    app.engine_settings.output_format,
                                    app.trim.has_begin, app.trim.begin_frame,
@@ -1351,7 +1348,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 // carrying bpm state and the next M on this marker seeds
                 // []. A guard-bail (return false) is an environmental
                 // backstop — batch-folder creation failure, no valid
-                // cells; the stale-endpoint / store-defect classes are
+                // cells; the stale-endpoint class is
                 // unreachable because the modal bpm session freezes the
                 // store between mode entry and this dispatch. The commit
                 // already closed the editor, and bpm mode is exactly its

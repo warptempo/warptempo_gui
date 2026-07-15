@@ -45,14 +45,13 @@ struct GuiPrompt {
     // `text` is displayed verbatim — callers pass the owner's own error
     // string, unmodified. While active it is modal exactly like the other
     // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
-    // The defect-resolution modal series (DEFECT_RESOLUTION) is the primary
-    // surface for authoring defects; this popup is the backstop plus the
-    // environmental and settings-choice refusals. Callers: the render
-    // dispatch pre-flight (the resolve/build/trim backstop for failures the
-    // defect enumerator does not model, and the map-format-with-trim refusal
-    // — a settings choice, not corruption) and the target-view validity gate
-    // (entry refusal and the invalidating-edit kick, both only when the
-    // defect series does not model the failure).
+    // Covers the environmental, settings-choice, and tripwire-class
+    // refusals. Callers: the render dispatch pre-flight (the
+    // resolve/build/trim chain — trim refusals plus the engine-metadata /
+    // non-positive-tempo-product class, and the map-format-with-trim
+    // refusal — a settings choice, not corruption) and the target-view
+    // entry gate (trim validity and the same tripwire class; marker
+    // arrangements always enter — the parser resolver normalizes them).
     void open_error_notice(std::string text);
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the

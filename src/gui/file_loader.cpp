@@ -223,16 +223,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phaseresetmarkers.clear();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    // A fresh load replaces the stores wholesale: drop any pending
-    // validation and dismiss an open defect-resolution prompt. This
-    // wholesale reset must run BEFORE the Load-origin pending flag set at
-    // the end of a successful load — order matters, or the reset would
-    // clear the very flag that opens the load-time walk.
-    app.defect_series = DefectSeriesState{};
-    if (app.prompt.active &&
-        app.prompt.trigger == DialogTrigger::DEFECT_RESOLUTION) {
-        app.prompt.active = false;
-    }
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
@@ -331,8 +321,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // writes such values). A position past its own domain's total is
     // adversarial exactly like a past-EOF marker (the sidecar was authored
     // against this audio's frame grid). Trim bound ordering stays
-    // deliberately unchecked — equal/inverted bounds load intact and walk
-    // the defect series; the render boundary owns trim refusals.
+    // deliberately unchecked — equal/inverted bounds load intact; the
+    // render boundary owns trim refusals.
     {
         auto sf_r = read_settings_file(app.settings_path);
         if (!sf_r) {
@@ -410,13 +400,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // bounds, so the load-time wall and the runtime domain always agree
         // (the markers and engine scale the cache derives from are both in
         // place by this point). When 'T' is persisted but the map cannot
-        // build (the marker store carries walkable defects, which load
-        // intact by design), SKIP this validation entirely: there is no
-        // target total to wall against, refusing would lock out a
-        // legitimately saved session whose sidecar was later hand-edited
-        // into a walkable state, and the runtime viewport clamps plus the
-        // target-view validity gates (validate_target_view_entry below,
-        // enforce_target_view_validity per tick) own the values then.
+        // build (the tripwire class — the resolver normalizes marker
+        // arrangements, so it never refuses), SKIP this validation
+        // entirely: there is no target total to wall against, and the
+        // runtime viewport clamps plus the target-view entry gate
+        // (validate_target_view_entry below) own the values then.
         {
             bool    run_view_check = true;
             int64_t domain_total   = audio.total_frames();
@@ -555,30 +543,27 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Target-view validity gate, load half: restoring active_audio_view=T
     // from .settings is an entry into target view and is gated by EXACTLY
     // the predicate that gates a keyboard S → T entry —
-    // validate_target_view_entry (input_handler.h): the raw-store
-    // enumerator over BOTH marker columns (the loaded warp AND phase-reset
-    // stores) first, then resolve the loaded warp store, build the
-    // whole-song warp_frame_map with the loaded scale, and, when the active
-    // tab loaded a trim bound, validate_trim_frames against that map. Every
-    // input the walk consumes is in place by this point: markers (parsed
-    // above, default zero-marker seeded), phase resets (parsed above),
-    // engine settings (strict block above), and the active tab's trim (tab
-    // activation above). On failure, force source view SILENTLY — no popup
-    // and no series open here: pending_validation = Load (set below) is the
-    // ruled surface and opens the defect-resolution series on the first
-    // tick, now from source view, so no target render of an invalid store
-    // is ever dispatched. The gate mirrors the entry gate exactly — the
-    // only defect it does not block on is a trim bound under a map format
-    // (validate_target_view_entry never sees output_format); coincident
-    // markers and dangling-ref states now fail the shared raw enumerator
-    // here too, and either way the state loads intact and the series
-    // handles it. Forcing 'S' intentionally means a later save persists
-    // active_audio_view=S — the same outcome the kick-back gate
-    // (enforce_target_view_validity) produces for an invalidating edit made
-    // in target view; the saved line reflects the view actually shown.
+    // validate_target_view_entry (input_handler.h): resolve the loaded warp
+    // store (the resolver normalizes ambiguous arrangements to tempo 1.00,
+    // one stderr line per timestamp — marker arrangements always enter),
+    // build the whole-song warp_frame_map with the loaded scale, and, when
+    // the active tab loaded a trim bound, validate_trim_frames against that
+    // map. Every input the walk consumes is in place by this point: markers
+    // (parsed above, default zero-marker seeded), engine settings (strict
+    // block above), and the active tab's trim (tab activation above). On
+    // failure — trim validity or the tripwire-class build failures — force
+    // source view SILENTLY (a load is not a user command; the next `t`
+    // entry surfaces the refusal through the popup), so no target render of
+    // an unrenderable window is ever dispatched. The gate mirrors the entry
+    // gate exactly — the only refusal it does not carry is a trim bound
+    // under a map format (validate_target_view_entry never sees
+    // output_format; the render dispatch popup owns that conflict).
+    // Forcing 'S' intentionally means a later save persists
+    // active_audio_view=S — the saved line reflects the view actually
+    // shown.
     if (app.active_audio_view == 'T') {
         if (!validate_target_view_entry(
-                app.warpmarkers.markers(), app.phaseresetmarkers.markers(),
+                app.warpmarkers.markers(),
                 app.engine_settings.scale,
                 audio.sample_rate(), static_cast<long>(audio.total_frames()),
                 app.trim.has_begin, app.trim.begin_frame,
@@ -601,25 +586,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // render now so the first Space press is ready without a first-edit
     // wait. The target buffer is empty on this sole load; ensure_ready's
     // is_dirty_=true (its construction default) falls through to
-    // trigger(). No-op if
-    // active_audio_view=='S', including an invalid target-view load just
-    // forced to source view: that path's surface is the load-origin defect
-    // series, and the eager preview waits for a clean `t` entry.
+    // trigger(). No-op if active_audio_view=='S', including an invalid
+    // target-view load just forced to source view: the eager preview waits
+    // for a clean `t` entry. A load just loads — whatever the marker
+    // stores hold, the parser resolver normalizes ambiguous arrangements
+    // to tempo 1.00 when they first resolve (one stderr line per
+    // timestamp); nothing gates or modals in the GUI.
     target_render.ensure_ready();
-
-    // Load-origin defect walk: a loaded file set with GUI-committable
-    // defects (coincident markers, bad first marker, dangling refs,
-    // crossed trim, a trim bound under a map format) gets its modal walk
-    // on the first tick after the load, not first at render dispatch or
-    // target-view entry — if the GUI would allow the state, the GUI forces
-    // its resolution at the earliest surface, and load is that surface for
-    // file-borne defects. The tick gate (run_commit_validation: prompt not
-    // active, not loading, no gesture in flight) opens the walk; the
-    // wholesale defect_series reset above already ran, so this flag
-    // survives to that tick. A Load-origin series offers no [U]ndo —
-    // history was cleared above. A blank/missing marker file seeds the
-    // default marker and produces no defects, so its walk closes silently.
-    app.defect_series.pending_validation = PendingValidation::Load;
 
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;

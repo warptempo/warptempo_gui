@@ -9,10 +9,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
-    case DialogTrigger::DEFECT_RESOLUTION:
-        // All three are dispatched outside proceed: the first two directly
-        // by activate_response, the defect series by
-        // GuiInputHandler::handle_defect_response.
+        // Both are dispatched directly by activate_response, outside
+        // proceed.
         break;
     }
 }
@@ -28,17 +26,12 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
     // machinery remains a vector<char> match.
     //
-    // One form for every open, including a close requested out of a
-    // suspended defect series. Every state the series can be showing is a
-    // walkable defect, and the walkable set is by definition the loads-intact
-    // set: the honest invariant is that the GUI never writes a LOAD-invalid
-    // state, and a mid-series save satisfies it. The marker serializer writes
+    // [S]ave always writes a loadable file: the marker serializer writes
     // the time-sorted store (equal times reload legal), trim bounds persist
-    // whatever the store holds (inverted bounds reload and re-walk), and
-    // settings persist the committed state — so [S]ave writes a loadable file
-    // that re-walks its own series on the next load. [S]ave / [Delete]
-    // (discard-and-proceed) / [Esc] (cancel; resumes the series when one is
-    // suspended for this close).
+    // whatever the store holds (inverted bounds reload intact), and
+    // settings persist the committed state — the honest invariant is that
+    // the GUI never writes a LOAD-invalid state. [S]ave / [Delete]
+    // (discard-and-proceed) / [Esc] (cancel).
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
     app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
     app.prompt.trigger         = t;
@@ -123,24 +116,6 @@ void GuiPrompt::activate_response(char k) {
         if (k == '\x1b') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            // Cancel of a close prompt raised over a suspended defect
-            // series resumes the series: re-queue the once-per-tick funnel
-            // with the origin the series was opened with (derived from
-            // commit_context — Commit-origin series carry it true, so the
-            // coincident-group narrowing is preserved on reopen; a
-            // Load/target-entry series carries it false). run_commit_validation
-            // re-opens on the next tick, re-validating from scratch, so the
-            // same defect reappears — one tick of ordinary-looking UI in
-            // between is acceptable, matching how the funnel already defers.
-            // [U]ndo availability is origin-independent (open_defect_series
-            // offers it purely on the undo_stack-non-empty rule).
-            if (app.defect_series.suspended_for_close) {
-                app.defect_series.pending_validation =
-                    app.defect_series.commit_context
-                        ? PendingValidation::Commit
-                        : PendingValidation::Load;
-                app.defect_series.suspended_for_close = false;
-            }
             return;
         }
         return;
@@ -153,19 +128,12 @@ void GuiPrompt::cancel_paste_confirmation() {
     viewport.invalidate_all();
 }
 
-// Route a close gesture through the prompt when history is dirty or a
-// defect series is suspended for this close; otherwise proceed
-// immediately. Centralizes the decision so Ctrl+Q and the WM-close
-// callback share identical behavior. A suspended series is
-// mid-resolution of a walkable defect — its store can be clean (a
-// load-origin series has app.dirty == false), yet the close must still
-// be confirmed, so it gates on suspended_for_close. The prompt is the
-// ordinary save/discard/cancel form: walkable defects are load-legal, so
-// the save writes a loadable file that re-walks its series on the next
-// load, and Esc still resumes the suspended series.
+// Route a close gesture through the prompt when history is dirty;
+// otherwise proceed immediately. Centralizes the decision so Ctrl+Q and
+// the WM-close callback share identical behavior.
 void GuiPrompt::request_close() {
     if (app.prompt.active) return; // already gated; ignore re-entry
-    if (app.dirty || app.defect_series.suspended_for_close)
+    if (app.dirty)
         open_unsaved(DialogTrigger::CLOSE_WINDOW);
     else
         proceed(DialogTrigger::CLOSE_WINDOW);

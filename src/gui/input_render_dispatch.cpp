@@ -1,6 +1,5 @@
 #include "input_handler.h"
 
-#include "marker_store_validate.h"
 #include "phaseresetmarkers.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -25,95 +24,31 @@
 // render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
 // event entry points.
 
-// Render dispatch pre-flight. Two passes on the GUI thread, both
-// marker-count-sized and cheap. Always validates the LIVE store
-// (app.warpmarkers / app.phaseresetmarkers / app.trim at dispatch time).
+// Render dispatch pre-flight. One pass on the GUI thread,
+// marker-count-sized and cheap. Always validates the LIVE state
+// (app.warpmarkers / app.trim at dispatch time).
 //
-// First the raw-store walk: enumerate_marker_store_defects over both marker
-// columns plus the trim checks (frame-level crossed-or-equal, then the
-// map-format-with-trim conflict and, when the marker walk is clean and the
-// live map builds, validate_trim_frames, mirroring open_defect_series' trim
-// column). On any modeled defect the dispatch opens the defect-resolution
-// series — the primary surface; the user resolves and re-triggers the
-// dispatch. Either way the dispatch is refused and the site enqueues
-// nothing.
-//
-// When the raw walk is clean, the resolve-then-build chain the render worker
-// runs — resolve_warp_markers_for_render (which validates the first-marker
-// render grammar first) then build_warp_frame_map — runs against the given
-// marker list and scale, plus, when a trim bound is set, the map-format
-// refusal (trim is wav-only, ruled; the raw walk above already routes this
-// into the series, so this popup stays the backstop beneath everything) and
-// validate_trim_frames against the built map. This chain is the loud
-// backstop for anything the enumerator does not model (effectively the
-// engine-metadata and non-positive-tempo-product class), surfacing through
-// the error-notice popup with the owner's error string, unmodified. The
-// async pipeline's existing stderr failure paths remain the backstop for
-// what the pre-flight never sees (per-cell tempo/scale mutations in the
-// sweep batches); the popup never blocks the render thread and no strings
-// flow through the async callback.
+// The resolve-then-build chain the render worker runs —
+// resolve_warp_markers_for_render (which normalizes ambiguous marker
+// arrangements to tempo 1.00, one stderr line per timestamp, and never
+// refuses an authored store) then build_warp_frame_map — runs against the
+// given marker list and scale, plus, when a trim bound is set, the
+// map-format refusal (trim is wav-only, ruled) and validate_trim_frames
+// against the built map. The chain is the tripwire-class backstop
+// (effectively the engine-metadata and non-positive-tempo-product class),
+// surfacing through the error-notice popup with the owner's error string,
+// unmodified. The async pipeline's existing stderr failure paths remain
+// the backstop for what the pre-flight never sees (per-cell tempo/scale
+// mutations in the sweep batches); the popup never blocks the render
+// thread and no strings flow through the async callback.
 bool GuiInputHandler::warp_render_preflight(
         const std::vector<GuiWarpMarker>& markers,
-        const std::vector<GuiPhaseResetMarker>& phase_resets,
         double scale,
         const std::string& output_format,
         bool has_trim_begin, int64_t trim_begin_frame,
         bool has_trim_end, int64_t trim_end_frame) {
     const long sr    = static_cast<long>(audio.sample_rate());
     const long total = static_cast<long>(audio.total_frames());
-
-    // Raw-store walk: find the first modeled defect (chronological within
-    // the marker walk; trim after). Mirrors open_defect_series' predicate
-    // so a live-store refusal here always has a series to open.
-    std::string first_defect;
-    if (sr > 0 && total > 0) {
-        std::vector<MarkerDefect> defects = enumerate_marker_store_defects(
-            slice_to_warp_markers(markers),
-            slice_to_phase_reset_markers(phase_resets), sr);
-        if (!defects.empty()) {
-            first_defect = std::move(defects.front().message);
-        }
-        if (first_defect.empty() && (has_trim_begin || has_trim_end)) {
-            // Exact integer compare on the authored bounds — the bounds are
-            // whole int64 source frames, matching validate_trim_frames' own
-            // e_src <= b_src check.
-            if (has_trim_begin && has_trim_end &&
-                trim_end_frame <= trim_begin_frame) {
-                first_defect = "trim bounds crossed or equal";
-            } else if (output_format != "wav") {
-                // Map-format-with-trim conflict: modeled by the series'
-                // trim column, so the dispatch opens the walk (its
-                // [U]ndo/[R]eset/[Delete] modal) instead of reaching the
-                // resolve-chain's plain popup below.
-                first_defect =
-                    "map formats take no trim; clear the trim or render wav";
-            } else {
-                // validate_trim_frames under the series' guard (clean
-                // markers, built map): the memoized target-view cache is
-                // keyed on the live store, so this reuses the cheap map.
-                const TargetWarpFrameMapCache& c =
-                    target_view_warp_frame_map_cached(
-                        app, audio.sample_rate(), total);
-                if (c.build_error.empty()) {
-                    if (auto v = validate_trim_frames(
-                            has_trim_begin, trim_begin_frame,
-                            has_trim_end,   trim_end_frame,
-                            static_cast<int64_t>(total),
-                            c.warp_frame_map); !v) {
-                        first_defect = std::move(v.error());
-                    }
-                }
-            }
-        }
-    }
-    if (!first_defect.empty()) {
-        // The defect series IS the surface. It re-enumerates from scratch
-        // and walks the defects chronologically, one modal per defect; a
-        // refused dispatch enqueues nothing, and the user re-triggers the
-        // render after the series resolves (no auto-proceed).
-        open_defect_series(/*commit_context=*/false);
-        return false;
-    }
 
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers), sr, total);
@@ -175,10 +110,10 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
         // the live stores equal the request's stores for plain dispatches,
         // so the live map IS the entry's axis; a sweep cell rewrites markers
         // per cell and diverges, which the wav-arm writer clamp brings back
-        // in-domain. If the live map cannot build (walkable-defect store),
+        // in-domain. If the live map cannot build (tripwire-class only),
         // fall back to the untranslated live values: the writer clamp keeps
-        // them in-domain, and a dispatch from a defective store is already
-        // refused upstream by preflight.
+        // them in-domain, and such a dispatch is already refused upstream
+        // by preflight.
         const int64_t src_total = audio.total_frames();
         const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
@@ -404,17 +339,15 @@ bool GuiInputHandler::render_bpm_sweep() {
         app.warpmarkers.markers();
 
     // Pre-flight before any cell work. This base site validates the LIVE
-    // store at dispatch time — base_warp_markers is a just-taken copy of
+    // state at dispatch time — base_warp_markers is a just-taken copy of
     // app.warpmarkers, and the settings/trim arguments read the live state
-    // directly — so a modeled defect (a trimmed map-format render
-    // included) opens the defect-resolution series; a non-modeled failure
-    // refuses with the popup. Per-cell scale/tempo mutations stay on the
-    // async stderr backstop. The bpm editor session is modal — nothing can
-    // mutate the stores, settings, or trim between mode entry and this
-    // dispatch, and the entry state rested through the commit-validation
-    // funnel — so a store defect here is a backstop, not a reachable path.
+    // directly — so a trim refusal (a trimmed map-format render included)
+    // or a tripwire-class build failure refuses with the popup. Per-cell
+    // scale/tempo mutations stay on the async stderr backstop. The bpm
+    // editor session is modal — nothing can mutate the stores, settings,
+    // or trim between mode entry and this dispatch — so a refusal here is
+    // a backstop, not a reachable path.
     if (!warp_render_preflight(base_warp_markers,
-                               app.phaseresetmarkers.markers(),
                                app.engine_settings.scale,
                                app.engine_settings.output_format,
                                app.trim.has_begin, app.trim.begin_frame,

@@ -97,11 +97,7 @@ namespace {
 // previous. kZoomTableSize (in app_state.h) is the size of this table.
 constexpr double kZoomMsPerPixel[] = {
     -1.0,    // [0]  fit-file sentinel
-     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only. This value in
-             //      seconds is the marker coincidence window
-             //      (kCoincidenceWindowSeconds, marker_store_validate.h): two
-             //      same-column markers closer than one pixel here cannot be
-             //      picked apart. A change here must change there.
+     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only.
      1.25,   // [2]  2.4 s  — snap level (kSnapZoomLevel)
      2.5,    // [3]  4.8 s
      5.0,    // [4]  9.6 s
@@ -744,23 +740,6 @@ int main(int argc, char** argv) {
             }
             return;  // loaded state paints on the next tick
         }
-
-        // Pending defect validation: when a commit or a completed source
-        // load flagged it, open the forced-choice defect-resolution
-        // series. Runs immediately before the target-view gate so the
-        // modal opens on the same beat as the commit's (or the load's) own
-        // repaint, and so the series (not the kick-back popup) owns a
-        // commit that invalidated target view.
-        input_handler.run_commit_validation();
-
-        // Target-view validity kick-back: an invalidating edit made while
-        // target view is displayed (delete marker zero, remove a
-        // referenced def, ...) flips the view back to source and opens the
-        // defect-resolution series (the error-notice popup remains for the
-        // non-modeled class). Runs before the waveform dirty-detect so
-        // the tick's rebuild work happens against the post-kick (source)
-        // view. Cheap in the steady state: a memoized-cache key compare.
-        input_handler.enforce_target_view_validity();
 
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either

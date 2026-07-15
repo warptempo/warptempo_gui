@@ -124,23 +124,19 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // If a keystroke entry would be blocked, a load restore is blocked
 // identically — the predicate changes in one place or not at all.
 //
-// The walk: first the raw-store walk — enumerate_marker_store_defects over
-// BOTH marker columns (`markers` + `phase_resets`, under a sr>0 &&
-// total>0 guard), first defect message wins — so target view is reachable
-// only from a raw-valid store, mirroring warp_render_preflight's raw walk
-// (the enumerator's coincidence window is
-// wider than the parser owners' sub-frame refusals, so a raw-invalid but
-// owner-clean store — e.g. two close phase resets — is refused here too).
-// Then resolve_warp_markers_for_render over `markers`, then
+// The walk: resolve_warp_markers_for_render over `markers` (the resolver
+// normalizes ambiguous arrangements to tempo 1.00 — one stderr line per
+// timestamp — so it never refuses an authored store), then
 // build_warp_frame_map with `scale` (the whole-song map — trim is
 // render-time, not view-time), then — only when a trim bound is set —
 // validate_trim_frames against the full map just built. Failure of any
-// stage blocks entry. On success the built map is returned so the
-// toggle can reuse it for its viewport/playhead translation (no second
-// build); on failure the first owner's error string is returned verbatim.
+// stage blocks entry — after the normalizing resolver that is trim
+// validity plus the tripwire-class build failures. On success the built
+// map is returned so the toggle can reuse it for its viewport/playhead
+// translation (no second build); on failure the first owner's error
+// string is returned verbatim.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
-                           const std::vector<GuiPhaseResetMarker>& phase_resets,
                            double scale, int sample_rate, long total_frames,
                            bool has_trim_begin, int64_t trim_begin_frame,
                            bool has_trim_end,   int64_t trim_end_frame);
@@ -249,67 +245,6 @@ struct GuiInputHandler {
     // main.cpp (both cancel before raising the close prompt).
     void cancel_active_drags();
 
-    // Target-view validity gate, kick-back half. Called from on_tick every
-    // event-loop iteration: while target view is displayed,
-    // consult the memoized target-view map cache; if the last
-    // rebuild failed (invalidating edit — first-marker grammar violation,
-    // dangling label ref, tie, ...) or a set trim fails validate_trim_frames,
-    // toggle back to source view through the same T→S path bare `t` uses,
-    // then open the defect-resolution series on the modeled defect (the
-    // error-notice popup remains only as the backstop for the non-modeled
-    // class). The cache rebuild is keyed on the marker-store generation, so
-    // this fires on the first tick after the invalidating edit — i.e.
-    // before/with its first paint — not lazily later. Deferred (silently,
-    // one tick at a time) while another prompt is up; edits are impossible
-    // mid-prompt, so the pending kick survives until dismissal —
-    // run_commit_validation runs first on the same tick, so a commit's own
-    // modal wins the beat. No-op in source view, blank/loading state.
-    void enforce_target_view_validity();
-
-    // Defect-resolution modal series (bodies in input_defect_series.cpp).
-    //
-    // run_commit_validation: the once-per-tick funnel check, run from
-    // main.cpp's on_tick immediately before enforce_target_view_validity.
-    // When the pending-validation flag is set — Commit origin from the
-    // history push helpers / do_redo in undo.cpp and trim's history-less
-    // commit sites, Load origin from the end of a successful source load —
-    // and no prompt is up and nothing is loading, clears the flag and
-    // opens the series (commit context iff the origin is Commit) — so the
-    // modal opens on the same beat as the commit's or the load's own
-    // repaint, never mid-gesture. While a prompt is already up the flag is
-    // kept for the next tick (the same deferral shape
-    // enforce_target_view_validity uses).
-    void run_commit_validation();
-
-    // open_defect_series: slice the live stores, enumerate marker defects
-    // (both columns; chronological), then — when the marker list is clean —
-    // walk the trim column: the frame-level crossed-or-equal check, the
-    // map-format-with-trim conflict (any set bound under a non-wav
-    // output_format), then the full validate_trim_frames against the
-    // memoized target-view map when that map builds. Fills app.prompt
-    // (DialogTrigger::DEFECT_RESOLUTION) with the current defect and returns
-    // true; when everything is clean, closes any open defect prompt and
-    // returns false.
-    bool open_defect_series(bool commit_context);
-
-    // present_defect_pre_step: the pre-remedy funnel gate, called by
-    // open_defect_series with the first defect's own message once a defect is
-    // known but before the [U]ndo/[R]eset/[Delete] remedy is built. If the
-    // active tab is read-only, sets defect_series.pre_step and presents a
-    // forced single-[Y]es prompt to disable it ("<summary>. Disable
-    // read-only?"), returning true so the caller returns without building the
-    // remedy. Otherwise clears pre_step to None and returns false, so the
-    // caller builds the real remedy in the now-editable context.
-    bool present_defect_pre_step(const std::string& defect_summary);
-
-    // handle_defect_response: a pre-step [Y]es (pre_step != None) disables
-    // read-only with NO history and re-enters the funnel;
-    // otherwise apply the chosen resolution ([U]ndo / [R]eset / [Delete] per
-    // defect kind), then re-open the series with the same commit-context flag —
-    // re-validate from scratch; next defect or done. Keys not offered by the
-    // current defect are swallowed.
-    void handle_defect_response(char k);
-
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
     // worker-completion path. Dispatches the parked archival command
@@ -406,18 +341,14 @@ private:
     bool render_bpm_sweep();
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
-    // Always validates the live state (`markers` / `phase_resets` / trim at
-    // dispatch time). First the raw-store walk —
-    // enumerate_marker_store_defects over both given marker lists plus the
-    // trim checks (crossed-or-equal, the map-format-with-trim conflict, and
-    // validate_trim_frames), mirroring open_defect_series' predicate; on a
-    // modeled defect the dispatch opens the defect-resolution series and is
-    // refused. Then the backstop chain:
-    // resolve_warp_markers_for_render on the sliced `markers`,
-    // build_warp_frame_map with `scale` and the live sample_rate /
-    // total_frames, then — when a trim bound is set — the map-format
-    // refusal (trim is wav-only, ruled; the raw walk routes this into the
-    // series, so this popup stays the backstop) and validate_trim_frames
+    // Always validates the live state (`markers` / trim at
+    // dispatch time): resolve_warp_markers_for_render on the sliced
+    // `markers` (the resolver normalizes ambiguous arrangements to tempo
+    // 1.00, one stderr line per timestamp, and never refuses an authored
+    // store), build_warp_frame_map with `scale` and the live sample_rate /
+    // total_frames (the tripwire-class backstop: engine metadata,
+    // non-positive tempo product), then — when a trim bound is set — the
+    // map-format refusal (trim is wav-only, ruled) and validate_trim_frames
     // against the built map, all surfacing through the error-notice popup
     // with the owner's error string, unmodified. Returns false on any
     // refusal — the caller must then refuse to enqueue. Called by every
@@ -426,7 +357,6 @@ private:
     // paths stay as the backstop for per-cell mutations the pre-flight does
     // not model (no strings are plumbed through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
-                               const std::vector<GuiPhaseResetMarker>& phase_resets,
                                double scale,
                                const std::string& output_format,
                                bool has_trim_begin, int64_t trim_begin_frame,
