@@ -285,22 +285,17 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // unknown key, duplicate, malformed value, off-preset playback_speed,
     // missing required engine key — aborts the load with the first error,
     // the same shape as a corrupt audio file: the load fails and the
-    // process exits, so the user never sees a half-loaded state. On top of the
-    // context-dependent viewport/playhead range rules run at the end of
-    // this block, equally load-fatal. Persisted view positions live in the
-    // persisted active_audio_view's domain — while 'T' the live view fields
-    // carry target-frame values and the S/T toggle translates BOTH tabs
-    // together, so the domain is global to the file — and the wall is that
-    // domain's total: 'S' or absent walls at the source total; 'T' walls at
-    // the built warp frame map's deformed target total, which a slowing map
-    // legitimately puts past the source total (Ctrl+S from target view
-    // writes such values). A position past its own domain's total is
-    // adversarial exactly like a past-EOF marker (the sidecar was authored
-    // against this audio's frame grid). Trim bound ordering is normalized,
-    // not checked: a per-tab pair with end <= begin clears both of that
-    // tab's bounds after the adversarial walls run (the auto-clear block
-    // below the past-EOF guard), and the render's ambiguous-trim fallback
-    // renders untrimmed — never a refusal.
+    // process exits, so the user never sees a half-loaded state. Persisted
+    // viewport/playhead positions are display scratch, not authored data:
+    // they carry no audio-relative range check and apply verbatim, the
+    // runtime clamps owning any out-of-range value — clamp_viewport_start for
+    // the viewport, and the live-domain playhead clamp
+    // (clamp_playhead_to_live_domain, both tab snapshots) at the end of this
+    // block, the earliest point the persisted S/T domain is computable. Trim
+    // bound ordering is normalized, not checked: a per-tab pair with end <=
+    // begin clears both of that tab's bounds after the adversarial walls run
+    // (the auto-clear block below the past-EOF guard), and the render's
+    // ambiguous-trim fallback renders untrimmed — never a refusal.
     {
         auto sf_r = read_settings_file(app.settings_path);
         if (!sf_r) {

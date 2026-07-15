@@ -41,10 +41,10 @@ struct CommitCriticalSidecars {
     std::vector<std::string> created_paths;
 };
 
-// write_warp_frame_map and write_phase_reset_frame_map live in the parser
-// (map_output.cpp) so the GUI render pipeline's cache-dir framemap pair and
-// the headless parser CLI emit byte-identical artifacts from one
-// implementation.
+// write_frame_map_pair (over write_warp_frame_map / write_phase_reset_frame_map)
+// lives in the parser (map_output.cpp) so the GUI render pipeline's cache-dir
+// framemap pair and the headless parser CLI emit byte-identical artifacts, and
+// share the one all-or-nothing write-or-clean home, from one implementation.
 
 // resolve_warp_markers_for_render lives in warp_frame_map_build.cpp (public
 // function) so the target-view paint can reach it without crossing the
@@ -210,33 +210,39 @@ RenderOutcome do_render(const RenderRequest& req,
     // dir is removed at shutdown and orphans
     // are swept at the next launch, so the pair rests only between a render
     // and program close and nothing accumulates. Buffer-route previews
-    // deliberately skip; the CLI writes the same pair through the same
-    // writers into the same cache convention, its pid dir swept as a
-    // dead-PID orphan by the GUI's next launch. This write is non-fatal — a
+    // deliberately skip; the CLI writes the same pair through the same shared
+    // write_frame_map_pair into the same cache convention, its pid dir swept as
+    // a dead-PID orphan by the GUI's next launch. This write is non-fatal — a
     // failure prints one stderr line and the render proceeds — and needs no
     // staging/rename dance
     // (these are cache files, not deliverables) or cancel gating (a cancelled
-    // render leaving a pair in the swept pid dir is harmless). ---
+    // render leaving a pair in the swept pid dir is harmless).
+    //   Collision namespace: batch cells in DIFFERENT numbered batch folders
+    // legitimately reuse basenames (e.g. 1_+0.00.wav), so a flat <pid>/<stem>.*
+    // would let a re-run sweep clobber an earlier batch's pair while both wavs
+    // stay addressable under renders/. A batch cell therefore mirrors its batch
+    // folder name as a subdir — retrieval walks <pid>/<batch-folder-name>/
+    // <stem>.* — created here (creation failure just makes the write fail into
+    // the existing non-fatal skip). A source-dir single (empty batch_folder)
+    // stays flat <pid>/<stem>.* — one source per process, no collision. ---
     if (!req.output_buffer) {
         const std::string pid_dir = req.render_cache->process_dir();
         if (!pid_dir.empty()) {
+            std::filesystem::path target_dir = pid_dir;
+            if (!req.batch_folder.empty()) {
+                target_dir /=
+                    std::filesystem::path(req.batch_folder).filename();
+                std::error_code mkec;
+                std::filesystem::create_directories(target_dir, mkec);
+            }
             const std::string stem =
                 std::filesystem::path(final_output_path).stem().string();
-            const std::filesystem::path warp_map_path =
-                std::filesystem::path(pid_dir) / (stem + ".warpframemap");
-            const std::filesystem::path phase_reset_map_path =
-                std::filesystem::path(pid_dir) / (stem + ".phaseresetframemap");
-            if (auto w = write_warp_frame_map(warp_map_path.string(),
-                                              full_warp_frame_map); !w) {
+            if (auto w = write_frame_map_pair(
+                    target_dir.string(), stem,
+                    full_warp_frame_map, full_phase_reset_frame_map); !w) {
                 std::fprintf(stderr,
                     "warptempo_gui: render warning: cache framemap write "
                     "skipped: %s\n", w.error().c_str());
-            } else if (auto w2 = write_phase_reset_frame_map(
-                           phase_reset_map_path.string(),
-                           full_phase_reset_frame_map); !w2) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: cache framemap write "
-                    "skipped: %s\n", w2.error().c_str());
             }
         }
     }

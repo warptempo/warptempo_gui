@@ -5,8 +5,7 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
-#include "map_output.h"                 // write_warp_frame_map,
-                                        // write_phase_reset_frame_map
+#include "map_output.h"                 // write_frame_map_pair
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
 #include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
@@ -277,37 +276,30 @@ int main(int argc, char** argv) {
     // --- Cache-dir framemap pair (future-proofing; 1:1 with the GUI's
     // archival disk-route write in do_render — this CLI is disk-only). Drop
     // the FULL untrimmed warp frame map and its phase-reset column, through
-    // the shared map_output writers, into the cache pid dir, named by the
-    // final wav's basename stem — together exactly the engine's input for the
-    // FULL render (deliverable-relative target column, absolute source
-    // frames). Written here, once the final path and both full maps are in
-    // hand and before synthesis, matching the GUI's placement. Non-fatal: a
-    // failure prints one stderr line and the render proceeds; no
-    // staging/rename dance (cache files, not deliverables). The CLI never
-    // removes the dir — it rests as a dead-PID orphan until the GUI's
-    // next-launch sweep_orphans deletes it. ---
+    // the shared write_frame_map_pair (the all-or-nothing write-or-clean home),
+    // into the cache pid dir, named by the final wav's basename stem —
+    // together exactly the engine's input for the FULL render
+    // (deliverable-relative target column, absolute source frames). Written
+    // here, once the final path and both full maps are in hand and before
+    // synthesis, matching the GUI's placement. Non-fatal: a failure prints one
+    // stderr line and the render proceeds; no staging/rename dance (cache
+    // files, not deliverables). The CLI never removes the dir — it rests as a
+    // dead-PID orphan until the GUI's next-launch sweep_orphans deletes it.
+    // This is a single source-dir render (one source per invocation, no batch
+    // folder), so the pair stays FLAT in the pid dir — no per-batch subdir, no
+    // basename collision possible; the GUI's batch-folder namespacing does not
+    // apply here. ---
     {
         const std::string pair_dir = cache_framemap_dir();
         if (!pair_dir.empty()) {
             const std::string pair_stem =
                 std::filesystem::path(out_path).stem().string();
-            const std::filesystem::path warp_map_path =
-                std::filesystem::path(pair_dir) /
-                (pair_stem + ".warpframemap");
-            const std::filesystem::path phase_reset_map_path =
-                std::filesystem::path(pair_dir) /
-                (pair_stem + ".phaseresetframemap");
-            if (auto w = write_warp_frame_map(warp_map_path.string(),
-                                              full_warp_frame_map); !w) {
+            if (auto w = write_frame_map_pair(
+                    pair_dir, pair_stem,
+                    full_warp_frame_map, full_phase_reset_frame_map); !w) {
                 std::fprintf(stderr,
                     "warptempo_cli: cache framemap write skipped: %s\n",
                     w.error().c_str());
-            } else if (auto w2 = write_phase_reset_frame_map(
-                           phase_reset_map_path.string(),
-                           full_phase_reset_frame_map); !w2) {
-                std::fprintf(stderr,
-                    "warptempo_cli: cache framemap write skipped: %s\n",
-                    w2.error().c_str());
             }
         }
     }

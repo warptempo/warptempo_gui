@@ -192,7 +192,7 @@ endif()
 #  warptempo_cli — headless wav render binary (insurance render path).
 #  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes the
 #  warped wav the GUI would render for the same project. Runs the full PGHI
-#  engine; output_format must be wav. Compiles the parser and engine sources
+#  engine; renders are wav-only. Compiles the parser and engine sources
 #  directly, needing no Wayland/Cairo/JACK toolchain.
 # ============================================================
 if(WARPTEMPO_BUILD_CLI)

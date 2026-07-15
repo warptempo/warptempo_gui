@@ -912,8 +912,8 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // are unreachable from authored input; all are kept as loud
             // refusals guarding the map artifact contract (finite, strictly
             // ascending values on both columns) at the sole producer, since
-            // the map output formats ship the artifact without any engine
-            // pass.
+            // the cache-dir framemap pair ships the artifact without any
+            // engine pass.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " +
                                        format_value_double(tempo_val, 2)

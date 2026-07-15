@@ -32,3 +32,20 @@ std::expected<void, std::string> write_warp_frame_map(
 // this writer applies no policy: it does not displace, sort, or dedupe.
 std::expected<void, std::string> write_phase_reset_frame_map(
     const std::string& path, const std::vector<double>& engine_query_frames);
+
+// Write both columns of the pair into `dir`, named `<stem>.warpframemap` /
+// `<stem>.phaseresetframemap` — the single write-or-clean home shared by the
+// GUI render pipeline and the headless CLI so neither drifts. The pair is
+// all-or-nothing: on ANY writer failure (a first-writer failure included, so an
+// old complete pair can never pose as the new render's) BOTH names are removed
+// (std::filesystem::remove, errors swallowed — these are cache files), leaving
+// the observable state as exactly a current complete pair or no pair, never a
+// mixed generation. Callers compose `dir` (a source-dir single writes the flat
+// per-process dir; a batch cell writes a per-batch-folder subdir it created);
+// the byte serializers above are untouched. Returns the writer's error string
+// on failure — the caller prints it as one non-fatal stderr line and the render
+// proceeds — and {} on success.
+std::expected<void, std::string> write_frame_map_pair(
+    const std::string& dir, const std::string& stem,
+    const std::vector<WarpFrameMapSegment>& warp_segs,
+    const std::vector<double>& phase_reset_engine_query_frames);
