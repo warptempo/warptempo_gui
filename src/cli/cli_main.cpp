@@ -5,7 +5,8 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
-#include "marker_store_validate.h"      // enumerate_marker_store_defects
+#include "marker_store_validate.h"      // first_past_eof_wall_defect,
+                                        // first_view_range_defect
 #include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
@@ -231,10 +232,10 @@ int main(int argc, char** argv) {
     // (warp_frame_map_view.cpp) exactly, over the same resolve-then-build
     // the render performs below — built early here for the check only, the
     // render's own build and its refusal messages stay untouched. When the
-    // map cannot build (the marker store carries walkable defects, which
-    // load intact by design) the check is SKIPPED entirely, matching the
-    // GUI's skip: the defect listing below and the render-boundary owners
-    // refuse then. ---
+    // map cannot build (the tripwire class — the resolver normalizes marker
+    // arrangements, so it never refuses) the check is SKIPPED entirely,
+    // matching the GUI's skip: there is no target total to wall against, and
+    // the render-boundary owners refuse then. ---
     {
         const int64_t total = static_cast<int64_t>(total_frames);
         bool    run_view_check = true;
@@ -262,23 +263,6 @@ int main(int argc, char** argv) {
                 std::fprintf(stderr, "warptempo_cli: %s\n", detail->c_str());
                 return 1;
             }
-        }
-    }
-
-    // --- raw-store defect listing: enumerate every render-invalidating
-    // authoring defect across both columns and print all of them, one stderr
-    // line each, before the single-error render-boundary owners downstream
-    // refuse on the first. The CLI is an insurance policy, not an editing
-    // route, so the complete listing is preferred here; the downstream
-    // refusals stay untouched as the backstop. ---
-    {
-        const std::vector<MarkerDefect> defects =
-            enumerate_marker_store_defects(markers, resets, sample_rate);
-        if (!defects.empty()) {
-            for (const MarkerDefect& d : defects) {
-                std::fprintf(stderr, "warptempo_cli: %s\n", d.message.c_str());
-            }
-            return 1;
         }
     }
 

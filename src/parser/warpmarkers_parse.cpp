@@ -295,14 +295,14 @@ parse_warpmarkers_file(const std::string& path) {
 
     // ----- Build markers ---------------------------------------------------
 
-    // The first-marker grammar — an enabled, tempo-owning numeric marker at
-    // exactly frame 0 — is a render-boundary requirement validated by
-    // validate_first_marker_render_grammar (warp_frame_map_build.h), not a
-    // load rule. Files violating it (a moved, disabled, pass, or label-ref
-    // first marker — or no markers at all: an empty file parses to an empty
-    // vector) load intact so the save/reload round trip can never lock the
-    // user out; every render path refuses them with a pointed message
-    // instead.
+    // A missing frame-0 tempo owner is not a load rule. Files with no owner
+    // at exactly frame 0 (a moved, disabled, pass, or label-ref first marker
+    // — or no markers at all: an empty file parses to an empty vector) load
+    // intact so the save/reload round trip can never lock the user out. The
+    // render resolver (resolve_warp_markers_for_render) normalizes them: a
+    // survivor at frame 0 is required, so when none exists it silently
+    // prepends a plain enabled 1.00 owner there, and every render path
+    // proceeds.
     int64_t last_time = -1;
 
     // Track which line first defined each label (for duplicate errors).
@@ -343,31 +343,28 @@ parse_warpmarkers_file(const std::string& path) {
 
         // Load rejects only DECREASING times. Equal-time (and other closely
         // spaced) markers load deliberately: the GUI may author them, so the
-        // save/reload round trip must never lock the user out. Coincidence is
-        // a render-boundary verdict now — the shared raw-store enumerator
-        // (enumerate_marker_store_defects, marker_store_validate.h) reports
-        // any two same-column markers under one deepest-zoom pixel of time
-        // apart, which the GUI walks as forced modals and the CLI lists to
-        // stderr; build_warp_frame_map's narrower "marker segment < 1 frame"
-        // error stays the render backstop. Decreasing stays load-fatal as a
-        // corruption tripwire — the GUI always saves its time-sorted store,
-        // so a decreasing file can only be a hand-edit error or corruption.
+        // save/reload round trip must never lock the user out. The render
+        // resolver (resolve_warp_markers_for_render) normalizes them — a
+        // group of 2+ survivors sharing one exact frame collapses to one
+        // plain enabled 1.00 owner, with one stderr line per group at every
+        // resolve — so any equal-time arrangement renders. Decreasing stays
+        // load-fatal as a corruption tripwire — the GUI always saves its
+        // time-sorted store, so a decreasing file can only be a hand-edit
+        // error or corruption.
         if (last_time >= 0 && m.time_frame < last_time)
             return fail(line_number,
                 "time decreasing: " + time_raw);
 
         // Cross-marker validation. A pass following a label ref loads
         // intact — the GUI may author it and the save/reload round trip must
-        // never lock the user out — but it is render-invalid: the resolver
-        // would inherit from the nearest true owner (backward walk, skipping
-        // label refs and disabled markers) while the ref names a different
-        // provenance, so validate_pass_inheritance_source owns the refusal
-        // and the shared enumerator (enumerate_marker_store_defects) reports
-        // it for the GUI modal walk / CLI listing. A label reference without
-        // a matching definition is likewise authorable now (the GUI permits
-        // deleting a definition its refs outlive), loads intact, is
-        // enumerated as a dangling ref, and is refused at the render boundary
-        // by build_warp_frame_map.
+        // never lock the user out. The render resolver normalizes it: a pass
+        // whose inheritance walk terminates on a surviving enabled label ref
+        // resolves to tempo 1.00, with one stderr line per timestamp at every
+        // resolve. A label reference without a matching definition is
+        // likewise authorable now (the GUI permits deleting a definition its
+        // refs outlive), loads intact, and the resolver normalizes the
+        // dangling ref to a plain 1.00 owner at its own frame, with its own
+        // line.
         if (!m.label_def.empty()) {
             if (seen_def.count(m.label_def))
                 return fail(line_number,

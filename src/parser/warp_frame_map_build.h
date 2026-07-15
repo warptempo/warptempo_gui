@@ -132,48 +132,6 @@ bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
-// Render-boundary grammar check for the first warp marker, operating on the
-// RAW marker list, pre-resolution (after resolution a leading pass is
-// indistinguishable from a numeric owner because of resolve_inherited_tempo's
-// 1.0 fallback). Rules: the list must be non-empty; markers[0] must sit at
-// exactly frame 0, must not be disabled, must not be a pass
-// (tempo_inherits), and must not be a label reference. A label definition on
-// markers[0] is legal. Called only by the transitional defect enumerator
-// (enumerate_marker_store_defects) and scheduled for deletion with it — the
-// render resolver normalizes a missing frame-0 owner (its silent 1.00 seed)
-// instead of refusing. On
-// failure the one-line message names the failed rule and, when two or more
-// markers share markers[0].time_frame exactly, appends a coincident-marker
-// count with the formatted timestamp so the recovery path (Tab-select,
-// delete one by one, recreate the first marker) is legible from the error
-// alone.
-std::expected<void, std::string>
-validate_first_marker_render_grammar(const std::vector<WarpMarker>& markers,
-                                     long sample_rate);
-
-// Render-boundary check for one marker's pass-inheritance source, operating
-// on the RAW marker list. Trivially passes unless markers[index] is an
-// enabled pass (tempo_inherits, empty label_ref, own disabled flag false —
-// a disabled pass is render-inert and never fires, the same participation
-// rule as the first-marker grammar; the coincidence rule, by contrast,
-// deliberately includes disabled markers). For an enabled pass, walk
-// backward skipping every effectively-disabled marker (own flag, or an
-// enabled ref whose def is disabled — the same cascade
-// warp_markers_render_keep_mask publishes and marker_effective's source_idx
-// walk uses); when the immediate prior surviving marker is an enabled label
-// ref, refuse: the inherited value comes from the nearest true owner while
-// the hover provenance names the ref — two disagreeing definitions. A pass
-// with no surviving prior at all passes here, and in a pass-pass-ref
-// chain only the pass adjacent to the ref refuses. On failure the one-line
-// message names both positions ("pass marker at <t> inherits from the label
-// ref at <t>", display timestamps). Called only by the transitional defect
-// enumerator (MarkerDefectKind::PassAfterLabelRef) and scheduled for
-// deletion with it — the render resolver's ref-opaque inheritance walk
-// normalizes the arrangement to tempo 1.00 instead of refusing.
-std::expected<void, std::string>
-validate_pass_inheritance_source(const std::vector<WarpMarker>& markers,
-                                 size_t index, long sample_rate);
-
 // Resolve each WarpMarker to a MarkerForRender — the normalization
 // chokepoint every render path passes through before build_warp_frame_map
 // (both the engine-bound render pipeline and the target view's

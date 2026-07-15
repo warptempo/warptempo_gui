@@ -57,12 +57,12 @@ struct WarpMarker {
 // Parse a .warpmarkers file in the canonical GUI-authored format. Never
 // throws. Returns the parsed markers on success; on the first malformed
 // line, or an unopenable file, returns a one-line diagnostic (line-tagged
-// where line-specific). An empty file parses to an empty vector, and the
-// first-marker render grammar (an enabled, tempo-owning numeric marker at
-// exactly frame 0) is NOT a load rule — it is validated at the render
-// boundary by validate_first_marker_render_grammar (warp_frame_map_build.h),
-// so any state the GUI can save loads back. This is the canonical
-// .warpmarkers reader for both the GUI store and the headless CLI.
+// where line-specific). An empty file parses to an empty vector, and a
+// missing frame-0 tempo owner is NOT a load rule — the render resolver
+// (resolve_warp_markers_for_render) normalizes it, silently seeding a plain
+// enabled 1.00 owner at frame 0, so any state the GUI can save loads back and
+// renders. This is the canonical .warpmarkers reader for both the GUI store
+// and the headless CLI.
 std::expected<std::vector<WarpMarker>, std::string>
 parse_warpmarkers_file(const std::string& path);
 
