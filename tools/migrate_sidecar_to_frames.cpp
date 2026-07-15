@@ -14,16 +14,25 @@
 // format_authored_frame (plain integer text). MARKER positions
 // (.warpmarkers, .phaseresetmarkers) are additionally SNAPPED to the GUI
 // zoom-level-2 frame grid: the nearest pixel column at sample_rate * 1.25 /
-// 1000 frames per pixel, anchored at frame 0 (55.125 frames at 44.1 kHz), so a
-// migrated marker sits exactly where a GUI-authored marker at that zoom would
-// land. .settings trim values are NOT snapped — they keep plain whole-frame
-// rounding. Migrated marker positions therefore match the integer frames the
-// GUI's own zoom-level-2 gestures author. The snap widens the shift from the
-// exact product beyond the old half-frame bound (up to about half a pixel
-// column, ~28 frames / 0.6 ms at 44.1 kHz), so a render from a migrated file is
-// NOT byte-identical to a pre-migration render of the same authoring, by
-// design — within the accepted migration tolerance (migrated renders do not
-// cmp-null against pre-migration renders).
+// 1000 frames per pixel, anchored at frame 0 (55.125 frames at 44.1 kHz).
+// .settings trim values are NOT snapped — they keep plain whole-frame
+// rounding. Migrated marker positions therefore land on the SAME frame-0
+// zoom-2 grid the GUI's own authoring gestures land on: exactly for a marker
+// authored from the file start (viewport 0), and to within +/-1 frame for a
+// marker authored at a scrolled viewport (the residue is the GUI's two
+// roundings of nearbyint(viewport + col*spp), while the tool computes the
+// grid point directly and carries no such residue). That agreement holds
+// because the GUI viewport itself is now snapped to this grid
+// (clamp_viewport_start / painter_samples_per_pixel), which requires the
+// window width to make painter_samples_per_pixel equal the logical spp — true
+// whenever the width is a multiple of 8 (55.125 = 441/8), including the 1920
+// and 1400 widths in use. The tool cannot know the runtime width, so it uses
+// the logical spp: the canonical frame-0 grid the GUI now agrees with. The
+// snap widens the shift from the exact product beyond the old half-frame
+// bound (up to about half a pixel column, ~28 frames / 0.6 ms at 44.1 kHz),
+// so a render from a migrated file is NOT byte-identical to a pre-migration
+// render of the same authoring, by design — within the accepted migration
+// tolerance (migrated renders do not cmp-null against pre-migration renders).
 //
 // Strictness note: every field that SHOULD convert must parse as a valid
 // timestamp (is_valid_timestamp_format); anything else is a hard error that
