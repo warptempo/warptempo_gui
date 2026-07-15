@@ -27,7 +27,7 @@ enum class GestureKind { None, WarpNudge, PhaseResetNudge, TempoStep };
 
 // Coalesce window. Presses farther apart than this start a fresh undo entry.
 // Named so it is easy to tune.
-inline constexpr uint64_t kGestureCoalesceMs = 150;
+inline constexpr uint64_t kGestureCoalesceMs = 500;
 
 // The previous eligible commit's coalesce key: its gesture-kind, its steady
 // timestamp, and the command_seq it committed at. A later press merges only
