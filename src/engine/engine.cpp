@@ -68,17 +68,18 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // Strictness is the right predicate on both lists because the engine
 // validates pre-quantization doubles, and every program path produces
 // strictly increasing ones. Authored marker files load with equal times
-// permitted, but neither column lets a tie reach the engine: strict
-// ascent of the phase reset input is guaranteed by the raw-store
-// coincidence refusal (marker_store_validate.h, at commit and load) plus
-// build_phase_reset_source_frames' sub-frame refusal and the parser's
-// derivation (engine query positions are the authored source frames
-// shifted by the constant N/2, so the strictly increasing authored list
-// carries strict ascent through unchanged; the render-end drop only
-// shortens the list), with .phaseresetframemap artifacts written from that same
-// derivation; warp ordering degeneracy is refused at build_warp_frame_map
-// (its sub-frame segment error) before any engine input exists. Equal
-// values here therefore always mean a breach. No epsilon band on either.
+// permitted, but neither column lets a tie reach the engine. Authored
+// positions are whole int64 source frames; build_phase_reset_source_frames
+// drops disabled markers and collapses exact-equal enabled resets to one
+// event, so its output is strictly increasing by construction, and the
+// parser's derivation (a constant N/2 shift plus render-end drops) carries
+// that strict ascent through unchanged, with .phaseresetframemap artifacts
+// written from that same derivation. On the warp column the render resolver
+// collapses exact-same-frame surviving markers to one 1.00 owner,
+// guaranteeing >= 1-frame spacing between resolved markers before the build;
+// build_warp_frame_map's sub-frame segment error survives as the
+// map-artifact contract tripwire. Equal values here therefore always mean a
+// breach. No epsilon band on either.
 //
 // Finiteness is checked explicitly on EVERY entry — including entry zero,
 // which the ascent loops never inspect — because the ascent comparisons
