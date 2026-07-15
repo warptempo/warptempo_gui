@@ -134,7 +134,7 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     std::optional<double> scale;
     if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
         const MarkerEffective eff = marker_effective(
-            slice_to_warp_markers(mv), prev_idx);
+            slice_to_warp_markers(mv), prev_idx, audio.total_frames());
         base_cents = eff.base_cents;
         scale      = eff.scale;
     }

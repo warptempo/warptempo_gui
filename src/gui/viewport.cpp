@@ -465,7 +465,8 @@ void Viewport::recompute_hover_at_cursor() {
             popup_eligible_marker(app, hit)
                 ? compute_hover_popup_text(
                       slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                      audio.sample_rate(), &app.hover_popup.copy_payload)
+                      audio.sample_rate(), audio.total_frames(),
+                      &app.hover_popup.copy_payload)
                 : std::string();
         app.hover_popup.visible = !app.hover_popup.cached_text.empty();
         if (was_visible || app.hover_popup.visible) invalidate_timestamp_area();

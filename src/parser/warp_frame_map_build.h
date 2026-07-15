@@ -41,6 +41,14 @@ struct MarkerForRender {
 // Effective tempo a marker resolves to, for display/authoring callers (not
 // fed to the render path). See marker_effective() below.
 struct MarkerEffective {
+    // Why a label ref resolved to the normalized 1.00 fallback (source_idx
+    // -1): the popup picks its parenthetical from this instead of
+    // re-searching the raw store, which would name the wrong case for a
+    // def that died in a coincidence collapse (present raw, dangling in
+    // the projection). None for every non-fallback result and for pass
+    // fallbacks.
+    enum class NormalizedReason { None, UndefinedLabel, ExtremeRatio };
+
     int64_t     base_cents = 0;     // integer tempo cents; 0 means "could
                                     // not resolve"
     std::optional<double> scale;    // nullopt means no typed scale (treated
@@ -51,7 +59,12 @@ struct MarkerEffective {
     int         source_idx = -1;    // marker this value was taken from; -1
                                     // means no visible source (e.g. a
                                     // first-marker pass resolving to the
-                                    // 1.00 default)
+                                    // 1.00 default, or a value taken from
+                                    // a synthetic projection marker — a
+                                    // collapsed group's replacement owner
+                                    // or the frame-0 seed — that no raw
+                                    // index can honestly name)
+    NormalizedReason reason = NormalizedReason::None;
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -172,6 +185,16 @@ std::vector<bool> warp_markers_render_keep_mask(
 // is shared with the map builder's callers; the normalization itself
 // produces no errors. sample_rate feeds only the stderr timestamps;
 // total_frames only the envelope check's last-segment distance.
+// Stages 1-3 live in one shared projection function
+// (normalized_surviving_markers, internal to warp_frame_map_build.cpp):
+// the resolver runs it with the stderr lines on, and the display side
+// (marker_effective / compute_hover_popup_text) runs the SAME function
+// silently to resolve surviving passes and refs against what actually
+// renders — one implementation, so the two surfaces cannot drift. The
+// stage-5 band check likewise classifies through the same
+// label_ref_implied_effective_tempo helper the display's band verdict
+// uses, in one fixed operation order, because the envelope edges are
+// inclusive and IEEE-reassociated equivalents can disagree exactly there.
 std::expected<std::vector<MarkerForRender>, std::string>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                                 long sample_rate, long total_frames);
@@ -196,45 +219,74 @@ std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index,
     bool* inherited_from_ref = nullptr);
 
-// Effective (base_cents, scale, source) a marker resolves to, for
+// Effective (base_cents, scale, source, reason) a marker resolves to, for
 // display/authoring callers in hover/popup and marker operation paths.
 // base_cents == 0 means "could not resolve" (mirrors
 // compute_hover_popup_text's "" guards). scale == nullopt means no typed
-// scale (treated as 1.0 by callers).
+// scale (treated as 1.0 by callers). total_frames is the source length in
+// frames; it bounds the last projection segment (the resolver's own rule),
+// so a last-segment ref resolves and classifies exactly as it renders.
+//
+// Resolution basis, in order:
+//   - an OWNER resolves to its own fields — coincident group members
+//     included, the accepted authored-display split (the render collapses
+//     a 2+-survivor exact-frame group to one plain 1.00 owner, but the
+//     members themselves keep their authored readouts by ruling);
+//   - an effectively-disabled marker, or a pass/ref that is itself a
+//     member of a 2+-survivor exact-frame group, resolves against the RAW
+//     store (disabled markers do not render at all; group members are the
+//     ruled split above);
+//   - every other pass/ref — surviving and un-collapsed — resolves against
+//     the silent projection (the render resolver's stages 1-3, no stderr),
+//     so its value is what actually renders even when other markers were
+//     collapsed away or the frame-0 seed was inserted, and the band
+//     verdict comes from the shared resolver-order classification helper.
 // source_idx names the marker the value is visibly taken from:
 //   owner     -> idx itself (its own tempo_cents / tempo_scale).
-//   pass      -> the nearest non-disabled marker strictly before idx (the
-//                immediate prior marker the value is inherited from — NOT
-//                necessarily the owning marker if there's a chain of passes).
+//   pass      -> the immediate prior surviving marker the value is
+//                inherited from (NOT necessarily the owning marker if
+//                there's a chain of passes); on the projection path this
+//                is the prior projection entry mapped back to its raw
+//                index, and a SYNTHETIC prior — a collapsed group's
+//                replacement 1.00 owner or the frame-0 seed — reports -1
+//                (attributing it to any single raw marker would mislead;
+//                the popup then shows the bare resolved value).
 //                base/scale are still the fully-resolved owner values via
 //                resolve_inherited_tempo(_scale).
-//   label_ref -> the label-definition marker (def_idx); base/scale are the
-//                def's effective base and the combined "~=" multiplier —
-//                a full double with no display ceiling.
+//   label_ref -> the label-definition marker's raw index (a projection
+//                def is never synthetic — synthetic owners carry no
+//                labels); base/scale are the def's effective base and the
+//                combined "~=" multiplier — a full double with no display
+//                ceiling.
 // Normalization fallbacks mirror the render resolver and report as
 // {base_cents 100, scale nullopt, source_idx -1} — no visible source,
 // because the value is a fallback, not inherited from anywhere:
 //   - a pass whose inheritance walk terminated on a surviving enabled
 //     label ref (attributing the 1.00 to the ref would mislead);
-//   - a label ref with no definition anywhere in the list;
+//   - a label ref with no definition on its resolution basis (projection
+//     path: a def that died in a coincidence collapse is dangling, the
+//     render's own verdict) — reason UndefinedLabel;
 //   - a label ref whose implied effective tempo lies outside the authored
-//     per-marker envelope [0.125, 8.0] (the same band the resolver
-//     normalizes at).
-MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
+//     per-marker envelope [0.125, 8.0] (the shared classification helper,
+//     resolver operation order) — reason ExtremeRatio.
+MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
+                                 long total_frames);
 
 // Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
-// parser-domain string/math — computes the same resolution the engine uses
-// when emitting the warpframemap, so the popup matches what will be
-// rendered. Pass
+// parser-domain string/math — resolves through marker_effective above (the
+// silent projection for surviving un-collapsed passes/refs, the raw store
+// for the carve-outs), so the popup matches what will be rendered. Pass
 // markers emit "= TEMPO (from SOURCE @ TIME)" or "= TEMPO*SCALE (from SOURCE @
 // TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
 // immediate prior marker's own resolved displayed tempo — matching what that
 // marker's own popup or flag shows, not its raw stored fields, which are
 // inert for a pass or a label_ref — TIME its time_frame). If SOURCE's own
-// resolution is unresolvable (base 0.0), the suffix is dropped entirely and
-// the popup shows just the resolved tempo. A pass whose inheritance walk
-// terminated on a surviving enabled label ref reads "= 1.00 (ctrl+c to
-// copy)" — the render's fallback, with no provenance. Label_ref markers emit
+// resolution is unresolvable (base 0.0), or the value's visible source is a
+// synthetic projection marker (source_idx -1), the suffix is dropped
+// entirely and the popup shows just the resolved tempo. A pass whose
+// inheritance walk terminated on a surviving enabled label ref reads
+// "= 1.00 (ctrl+c to copy)" — the render's fallback, with no provenance.
+// Label_ref markers emit
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
 // tempo value via format_tempo_cents; COMBINED_SCALE = def_scale * multiplier
 // when the def has a typed scale, else multiplier, printed as a scale-like
@@ -243,10 +295,16 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
 // marker). A label ref the render normalizes reads the exact literal it
 // renders as — "=" not "~=", nothing geometry-implied remains:
-// "= 1.00 (undefined label, ctrl+c to copy)" when its label names no
-// definition, "= 1.00 (extreme label ratio, ctrl+c to copy)" when its
-// implied effective tempo lies outside the [0.125, 8.0] envelope; both
-// copy "1.00". TIME is formatted with format_timestamp
+// "= 1.00 (undefined label, ctrl+c to copy)" when its resolution basis has
+// no definition (MarkerEffective::NormalizedReason::UndefinedLabel — a def
+// that died in a coincidence collapse counts as undefined, the render's
+// verdict), "= 1.00 (extreme label ratio, ctrl+c to copy)" when its
+// implied effective tempo lies outside the [0.125, 8.0] envelope
+// (NormalizedReason::ExtremeRatio); both copy "1.00". The parenthetical
+// comes from the reason field, never a raw-store re-search. A projection-
+// path ref in the last segment measures to total_frames — the resolver's
+// own rule — so it reads out and classifies exactly as it renders. TIME is
+// formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
 // The hover-copy hint is added to every qualifying readout. When the readout
 // carries a provenance parenthetical the hint folds inside it after a comma:
@@ -254,9 +312,8 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // (a first-marker pass, or one whose source is unresolvable) the hint is its
 // own trailing "(ctrl+c to copy)".
 // Returns "" when the marker does not qualify (owning, malformed, or a
-// last-segment ref with no surviving successor — the popup cannot know
-// total_frames, so such a ref shows no readout even where the resolver's
-// band check, which has total_frames, may normalize it). GUI callers slice
+// carve-out ref — a group member or effectively-disabled ref — whose raw
+// walk finds no surviving successor to bound a segment). GUI callers slice
 // their GuiWarpMarker store to WarpMarker
 // (slice_to_warp_markers) before calling.
 //
@@ -270,11 +327,12 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx);
 // when the marker does not qualify (the function returns "" first).
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate,
-    std::string* copy_payload_out = nullptr);
+    long total_frames, std::string* copy_payload_out = nullptr);
 
 // The map artifacts are always the FULL maps — trim is a wav-only render
-// window, never an artifact shape (the map formats refuse when a trim bound
-// is set), so no windowed derivation exists here. Artifact convention: the
-// target column is deliverable-relative (first pair's target exactly zero)
-// and the source column is absolute undisplaced source frames, matching the
-// project-wide convention shared by marker files and render-entry sidecars.
+// window, never an artifact shape (the map formats silently ignore a set
+// trim and always write the full maps), so no windowed derivation exists
+// here. Artifact convention: the target column is deliverable-relative
+// (first pair's target exactly zero) and the source column is absolute
+// undisplaced source frames, matching the project-wide convention shared by
+// marker files and render-entry sidecars.
