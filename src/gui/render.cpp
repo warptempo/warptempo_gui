@@ -1353,13 +1353,17 @@ double flag_pending_text_left_x(
     const auto& mv = app.warpmarkers.markers();
     if (marker_idx < 0 ||
         marker_idx >= static_cast<int>(mv.size())) return -1.0;
-    const GuiRect top = top_strip_area(app);
-    if (top.w <= 0) return -1.0;
+    // Effective waveform width (largest multiple of 16 not exceeding the
+    // window width), matching render_one_editor_flag / compute_flag_hit_rects:
+    // an off-view marker past the effective right edge sits in the inert
+    // gutter and must read as not-visible, not as gutter geometry.
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return -1.0;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return -1.0;
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end = vp_start +
-        static_cast<int64_t>(std::nearbyint(spp * top.w));
+        static_cast<int64_t>(std::nearbyint(spp * area.w));
     // Target view: forward-translate the marker's source-frame through a
     // freshly-built target-view warp_frame_map so the visible-range check and
     // x-position math match where render_flags actually paints the flag.
@@ -1386,10 +1390,10 @@ double flag_pending_text_left_x(
     if (ms >= static_cast<double>(vp_end))   return -1.0;
     const double samples_per_pixel =
         static_cast<double>(vp_end - vp_start) /
-        static_cast<double>(top.w);
+        static_cast<double>(area.w);
     const double x_raw =
         (ms - static_cast<double>(vp_start)) / samples_per_pixel;
     const double text_left =
-        static_cast<double>(top.x) + std::nearbyint(x_raw);
+        static_cast<double>(area.x) + std::nearbyint(x_raw);
     return text_left + flag_pad_x_px();
 }
