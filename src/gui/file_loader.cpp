@@ -34,10 +34,15 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // font_size descriptor in settings_io.cpp).
     app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
     // GUI launch preference for the `l` render-listen command. Constructive
-    // default (empty = "no player set") like every sibling above, so load and
-    // adopt apply it identically for any schema-legal SettingsFile: an entry
-    // that OMITS the key clears the live player instead of leaving it stale.
-    app.audio_player = sf.has_audio_player ? sf.audio_player : std::string{};
+    // default "audacious" like every sibling above (a value fallback, not a
+    // has-flag gate), so load and adopt apply it identically for any
+    // schema-legal SettingsFile: a present value (blank included — the
+    // deliberate opt-out) applies verbatim, and an entry that OMITS the key
+    // resolves to "audacious" rather than leaving the live player stale. Adopt
+    // shares this routine, so adopt-absent == load-absent == "audacious" (the
+    // 1:1); product-written render entries always emit the key, so the absent
+    // branch is reached only by legacy or hand-edited sidecars.
+    app.audio_player = sf.has_audio_player ? sf.audio_player : "audacious";
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {

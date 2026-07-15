@@ -1189,13 +1189,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // `l` (no modifiers): "Listen to renders" — launch the external audio
-    // player (the audio_player setting) with every rendered wav under
-    // <source_parent>/renders/, in the numeric order enumerate_render_entries
-    // returns them. Fire-and-forget; the GUI's own playback is unaffected. The
-    // modal / editor / read-only gates in on_key run before this handler, so
-    // `l` is inert while any of them owns the keyboard (like p/i/m). A missing
-    // player or an empty render set reports a one-line bottom-strip status and
-    // does nothing.
+    // player (the audio_player setting, default "audacious") with every
+    // rendered wav under <source_parent>/renders/, in the numeric order
+    // enumerate_render_entries returns them. Fire-and-forget; the GUI's own
+    // playback is unaffected. The modal / editor / read-only gates in on_key
+    // run before this handler, so `l` is inert while any of them owns the
+    // keyboard (like p/i/m). An explicitly-blank player (the deliberate
+    // opt-out) or an empty render set reports a one-line bottom-strip status
+    // and does nothing.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         if (app.audio_player.empty()) {
             app.transient_status_message = "no audio_player set";
