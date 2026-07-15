@@ -228,15 +228,12 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.has_font_size = true;
             out.font_size = v;
         } else if (key == "audio_player") {
-            // Optional GUI-kind launcher for the `l` render-listen command:
-            // an external player binary name or path. Any non-empty string is
-            // accepted (no path/binary grammar — it is user-supplied); an
-            // empty value is a malformed-value schema error, consistent with
-            // the other keys' malformed-value handling.
-            if (value.empty()) {
-                return bad_value(ln, key, value,
-                                 "must be a non-empty player name or path");
-            }
+            // GUI-kind launcher for the `l` render-listen command: an external
+            // player binary name or path. Any value is accepted (no path/binary
+            // grammar — it is user-supplied), INCLUDING empty: an empty value is
+            // legal and means "no external player". The key is always present in
+            // a product-written .settings, so this reader (the shared GUI+CLI
+            // schema) must load `audio_player=` in both products.
             out.has_audio_player = true;
             out.audio_player = value;
         } else {

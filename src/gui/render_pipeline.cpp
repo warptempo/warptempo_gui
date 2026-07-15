@@ -334,12 +334,11 @@ RenderOutcome do_render(const RenderRequest& req,
             note_created(tm_path, existed);
 
             // `.settings` sidecar: the SAME standard whole-file schema a
-            // source carries, so a later campaign step can display the entry
-            // as a read-only target-view snapshot and Ctrl+Alt+C can adopt it
-            // with plain load semantics. Written only for wav renders:
-            // entries display and adopt as target view (active_audio_view =
+            // source carries, so the Shift+. render-commit (adopt_render_entry)
+            // adopts it with plain load semantics. Written only for wav
+            // renders: an entry adopts as target view (active_audio_view =
             // 'T'), and 'T' requires output_format = wav, so map-format
-            // artifacts are not browse entries and get no .settings.
+            // artifacts get no .settings.
             if (output_format == "wav") {
                 // The commit tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
@@ -402,12 +401,14 @@ RenderOutcome do_render(const RenderRequest& req,
                                          req.authoring.active_tab,
                                          req.authoring.playback_speed,
                                          req.authoring.font_size,
-                                         // audio_player is deliberately omitted
-                                         // from a render entry's .settings: it
-                                         // is a global launch preference, not
-                                         // part of the per-render recipe a
-                                         // Ctrl+Alt+C adopt restores. Empty ->
-                                         // the writer leaves the line out.
+                                         // audio_player is a global/session
+                                         // launch preference, not part of the
+                                         // per-render recipe the Shift+. commit
+                                         // (adopt_render_entry) restores. Passing
+                                         // empty writes a blank `audio_player=`
+                                         // line (the key is always emitted);
+                                         // adopt ignores it, so the live pref
+                                         // survives the commit untouched.
                                          /*audio_player=*/std::string(),
                                          req.engine_settings)) {
                     note_failure(st_path);

@@ -844,7 +844,9 @@ bool GuiInputHandler::adopt_render_entry(
 }
 
 // Open the Shift+. render-commit prompt. No-op with no source loaded. An empty
-// renders/ reports a one-line bottom-strip status and does not open.
+// renders/ reports a one-line bottom-strip status and does not open. Stops
+// playback only when the modal actually opens (after every guard), so a
+// refused open leaves a listening session running.
 void GuiInputHandler::open_commit_editor() {
     if (text_editor::is_active(app.commit_editor)) return;
     if (app.source_audio_path.empty()) return;
@@ -863,6 +865,12 @@ void GuiInputHandler::open_commit_editor() {
         viewport.invalidate_timestamp_area();
         return;
     }
+    // Stop playback only now that the modal is definitely opening. Each guard
+    // above (no source, running/parked render, empty renders/) returns without
+    // touching playback, so a refused open never interrupts a listening
+    // session. Space is inside the modal blocked set, so once open, playback
+    // cannot restart until the editor closes.
+    playback_lifecycle.stop_playback_if_playing();
     text_editor::enter(app.commit_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",

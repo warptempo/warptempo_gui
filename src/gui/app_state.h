@@ -769,9 +769,10 @@ struct AppState {
     char active_tab_view = 'A';
 
     // Typed engine settings. The live authoring store: settings editor
-    // commits, .settings file load, and the BPM-sweep / Ctrl+Alt+C scale
-    // commit paths all mutate fields of this struct directly. Carried
-    // by RenderRequest at dispatch; serialized to .settings on Ctrl+S.
+    // commits, .settings file load, the BPM-sweep scale commit, and the
+    // Shift+. render-commit (adopt_render_entry, a full engine-settings
+    // adopt) all mutate fields of this struct directly. Carried by
+    // RenderRequest at dispatch; serialized to .settings on Ctrl+S.
     // Default-constructed before any source load.
     EngineSettings engine_settings;
 

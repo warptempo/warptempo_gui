@@ -367,7 +367,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-trigger chords: Ctrl+Alt+R/I render, Ctrl+Alt+C commit.
+    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+I iteration
+    // sweep. (The render-commit chord is Shift+., handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Shift+Space in actual target view, phase-reset mode: non-destructive
@@ -604,11 +605,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // `Shift+.` opens the render-commit prompt in the bottom strip: commit a
     // chosen render as the new authoring baseline by NAME. Keyboard-only. A
-    // modal bottom-strip surface: stop playback at its open (Space is inside
-    // the modal blocked set, so playback cannot restart until the editor
-    // closes). open_commit_editor owns the no-source / empty-renders guards.
+    // modal bottom-strip surface. open_commit_editor owns the no-source /
+    // empty-renders guards AND the playback stop: playback halts only when the
+    // modal actually opens, so a refused open leaves a listening session
+    // undisturbed (once open, Space is inside the modal blocked set, so
+    // playback cannot restart until the editor closes).
     if (key == GuiKeys::Period && shift && !ctrl && !alt) {
-        playback_lifecycle.stop_playback_if_playing();
         open_commit_editor();
         return;
     }

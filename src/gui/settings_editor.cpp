@@ -109,9 +109,10 @@ void GuiSettingsEditor::commit() {
 
     // audio_player is the one GUI-kind key settable here: it is a launcher path
     // with no dedicated gesture, so the settings editor is its authoring
-    // surface. Set it directly (an empty value unsets it — the writer omits an
-    // empty audio_player). A launch preference like font_size: no undo history,
-    // no dirty tracking, silently persisted on Ctrl+S.
+    // surface. Set it directly (an empty value means no external player — the
+    // writer always emits the line as `audio_player=`, which re-loads as
+    // no-player). A launch preference like font_size: no undo history, no dirty
+    // tracking, silently persisted on Ctrl+S.
     if (key == "audio_player") {
         app.audio_player = value;
         std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",

@@ -64,9 +64,10 @@ inline double map_target_to_source(double tgt_frame, const std::vector<WarpFrame
 }
 
 // target_total_frames_for_map is the single owner of the persisted-'T'-domain
-// total rule, shared by the GUI target-view cache, the CLI persisted-view load
-// check, and Ctrl+Alt+C candidate validation, so the rounding and fallback can
-// never drift between the products. An empty map returns the source total
+// total rule, shared by the GUI target-view cache (which also backs the GUI's
+// persisted-view load check), the CLI persisted-view load check, and the
+// render-entry `.settings` write clamp, so the rounding and fallback can never
+// drift between the products. An empty map returns the source total
 // unchanged; otherwise the source total (negative clamped to zero) is mapped
 // into the target domain, banker's-rounded, and returned when strictly
 // positive, else the source total is the fallback.
