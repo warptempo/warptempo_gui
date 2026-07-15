@@ -34,9 +34,11 @@
 // shared first_view_range_defect (marker_store_validate.h) against the
 // persisted active_audio_view's domain total — the source total for 'S' or
 // absent, the deformed target total for 'T' (skipped when the map cannot
-// build). Trim bound ordering is deliberately NOT checked anywhere at load —
-// equal and inverted bounds are legal authored states the defect series
-// walks; the render boundary owns trim refusals.
+// build). This schema does not check trim bound ordering itself: GUI load
+// reads the raw values, then the caller's auto-clear pass clears a crossed
+// or equal per-tab pair (one stderr line) before the store can rest; the
+// CLI loads the values verbatim, and a still-crossed or -equal pair simply
+// makes its render plan fall back to rendering untrimmed.
 
 // The persisted zoom-level vocabulary, enforced by this schema in both
 // products. kFitFileLevel = 0 ("whole file visible", computed at zoom /

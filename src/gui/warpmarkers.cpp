@@ -36,7 +36,7 @@ namespace {
 // accepts non-decreasing times; only a DECREASING sequence —
 // impossible from the sorted store, so evidence of a future op bug —
 // fails the next load with a loud line-numbered parse error. Warp
-// ties are refused at the strict render boundary
+// ties collapse to one plain 1.00 owner at the render boundary
 // (build_warp_frame_map), not by this serializer. Positions are authored
 // whole source frames and persist through the authored pair
 // (frame_format.h), so a saved store reloads bit-identically under the

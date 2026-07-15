@@ -92,13 +92,11 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // analysis phase anyway, so it is inert but harmless.
         //
         // Load rejects only DECREASING times. Equal-time (and other closely
-        // spaced) markers load deliberately — load stays lenient — but they
-        // refuse at the render boundary: the raw-store rule
-        // (marker_store_validate.h) prohibits two resets closer than one
-        // deepest-zoom pixel of time on both columns, and
-        // build_phase_reset_source_frames refuses the sub-frame subset of those
-        // pairs as the breach backstop. Decreasing stays load-fatal as a
-        // corruption tripwire — the
+        // spaced) markers load deliberately — load stays lenient. At the
+        // render boundary, exact-equal enabled resets collapse into one
+        // event (one stderr line per group); distinct whole frames render
+        // as authored, however closely spaced. Decreasing stays load-fatal
+        // as a corruption tripwire — the
         // GUI always saves its time-sorted store, so a decreasing file can only
         // be a hand-edit error or corruption.
         //

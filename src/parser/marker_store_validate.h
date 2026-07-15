@@ -60,12 +60,12 @@ std::optional<std::string> first_past_eof_wall_defect(
 // the source total; 'T' is the deformed target total of the warp frame map
 // built from the loaded markers and scale (each product computes it with
 // the same math its runtime clamps use). When 'T' is persisted but the map
-// cannot build — the marker store carries walkable defects, which load
-// intact by design — the caller SKIPS this check entirely: there is no
-// target total to wall against, and the runtime viewport clamps own the
-// values then. Returns the first violation's detail string; callers add
-// their own product prefix. std::nullopt when every present position is
-// inside the domain.
+// cannot build (the tripwire class — the resolver normalizes marker
+// arrangements, so it never refuses) the caller SKIPS this check entirely:
+// there is no target total to wall against, and the runtime viewport
+// clamps own the values then. Returns the first violation's detail
+// string; callers add their own product prefix. std::nullopt when every
+// present position is inside the domain.
 std::optional<std::string> first_view_range_defect(
     const SettingsFileTab& tab_a,
     const SettingsFileTab& tab_b,

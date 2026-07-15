@@ -123,10 +123,10 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         if (app.playhead_cursor_sample >= end) return;
         // Cursor outside the trim region (either side) is a silent no-op.
         // For unset trim, trim_begin_sample() is 0, so this never bites.
-        // Equal or INVERTED bounds (legal at-rest states; render refuses,
-        // authoring never guards) make [begin, end) empty, so the two
-        // checks together turn Space into a silent no-op everywhere —
-        // playback degrades sanely with no ordering assumption.
+        // A crossed or equal pair cannot rest — every commit and load
+        // auto-clears both bounds — so [begin, end) is well-formed
+        // whenever this runs; the two checks simply bound Space to the
+        // resting trim window.
         if (app.playhead_cursor_sample < viewport.trim_begin_sample()) return;
         // Cursor is now guaranteed in [trim_begin, trim_end).
         start = app.playhead_cursor_sample;

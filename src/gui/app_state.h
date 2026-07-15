@@ -59,7 +59,7 @@ constexpr int64_t kTrimEndWheelDivisor = 10;
 // (in input_handler.cpp) can reach them. Hit-test half-width only:
 // clicking/hovering tolerance for stems, flags, and trim bounds. It is
 // NOT a spacing gap — markers may sit arbitrarily close, overlap
-// exactly, and cross during gestures; ordering degeneracy is refused at
+// exactly, and cross during gestures; ordering degeneracy collapses at
 // the render boundary, not at authoring time.
 constexpr int kMarkerHitHalfPx    = 4;
 

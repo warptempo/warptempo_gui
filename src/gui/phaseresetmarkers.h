@@ -35,9 +35,9 @@ public:
     // the file is new. Returns true on success. Save writes every row with
     // no dedup or ordering validation; the serializer contract (the store
     // is sorted by construction, equal-time rows are legal and reload,
-    // and the strict render boundary — not the serializer — refuses
-    // degeneracy) is documented at the static save overload in
-    // phaseresetmarkers.cpp.
+    // and the render boundary — not the serializer — collapses an
+    // exact-equal group to one event) is documented at the static save
+    // overload in phaseresetmarkers.cpp.
     bool save(const std::string& path) const;
 
     // Static variant for callers that hold a raw GuiPhaseResetMarker vector

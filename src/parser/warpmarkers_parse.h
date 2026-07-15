@@ -71,7 +71,8 @@ namespace warpmarkers_internal {
 // Parse one canonical new-format line into a WarpMarker. Used by the GUI
 // editor's commit path (flag_editor). Line-local validation only —
 // cross-marker rules (label_def uniqueness, time ordering: non-decreasing
-// at load, degeneracy refused at the render boundary) are the caller's.
+// at load, exact-frame degeneracy collapsed to one 1.00 owner at the
+// render boundary) are the caller's.
 // On `pass`, tempo_cents/tempo_scale are
 // populated with inert defaults (100 / nullopt). Returns the marker on
 // success, or a one-line diagnostic on failure.

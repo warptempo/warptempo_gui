@@ -420,8 +420,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // cascade: clearing a ref would leave that marker serializing as an
     // owning 0.00 line (a pure ref parses with tempo_cents 0), which the
     // parser rejects on reload. Dangling refs, by contrast, load fine and
-    // are refused at the render boundary — so the refs are left pointing
-    // at the removed name.
+    // normalize to a plain 1.00 owner at the render boundary — so the
+    // refs are left pointing at the removed name.
     int n_refs_renamed = 0;
     if (!old_def.empty() && !new_def.empty() && old_def != new_def) {
         for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {

@@ -87,8 +87,8 @@ public:
 
     // Inserts `m` at the position that preserves ascending time_frame
     // order. Returns the insertion index. Equal times are legal —
-    // markers may coincide exactly; degeneracy is refused at the render
-    // boundary (build_warp_frame_map), not here.
+    // markers may coincide exactly; degeneracy collapses to one 1.00
+    // owner at the render boundary (build_warp_frame_map), not here.
     int insert_marker(GuiWarpMarker m);
 
     // Removes the marker at `index`. No-op if out of range.

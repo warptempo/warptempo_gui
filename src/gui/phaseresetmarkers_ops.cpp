@@ -20,9 +20,10 @@
 
 // Drop a phase reset marker at `time_frame`. Placement is bounded only
 // by the absolute range; arbitrarily close and exactly-coincident drops
-// are legal (the render boundary owns degeneracy). Selection collapses to
-// the freshly-inserted index. Frame-0 phase alignment is implicit by
-// definition and needs no marker to assert it.
+// are legal (the render boundary collapses an exact-equal group to one
+// event). Selection collapses to the freshly-inserted index. Frame-0
+// phase alignment is implicit by definition and needs no marker to
+// assert it.
 void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     if (audio.sample_rate() <= 0) return;
     // Marker creation is a commit: the position funnels through
@@ -153,7 +154,8 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // the clamp (creep-to-the-wall), and the integer walls win over the
 // pixel grid.
 // Crossing a neighbor is legal and goes through the reorder-and-remap
-// path below; the render boundary owns degeneracy.
+// path below; the render boundary collapses an exact-equal group to one
+// event.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     playback_lifecycle.stop_playback_if_playing();

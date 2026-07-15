@@ -60,7 +60,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // needs at least one source frame of headroom before EOF. That is the
     // only placement bound — markers may sit arbitrarily close to or
     // exactly on an existing marker; ordering degeneracy is the render
-    // boundary's to refuse, not this drop's.
+    // boundary's to collapse (exact-frame ties merge to one 1.00 owner),
+    // not this drop's.
     if (drop_frame > audio.total_frames() - 1)
         return;
     const auto& mv = app.warpmarkers.markers();
@@ -456,8 +457,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 // reachable by nudge — the walls win over the pixel grid, and every wall
 // is an integer frame, so a wall-clamped commit stays whole. Spacing is
 // not the GUI's concern: crossing a neighbor is legal and goes through
-// the reorder-and-remap path below; the render boundary refuses ordering
-// degeneracy.
+// the reorder-and-remap path below; the render boundary collapses
+// exact-frame ties to one 1.00 owner.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Nudges move the playhead (via sync_playhead_to_last_selected).
