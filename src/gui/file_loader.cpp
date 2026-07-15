@@ -32,6 +32,26 @@ void GuiFileLoader::join_source_sample_cache_writer() {
     }
 }
 
+void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
+    app.engine_settings = sf.engine;
+    app.follow_mode    = sf.has_follow ? sf.follow : true;
+    app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
+    app.active_markers_view = sf.has_active_markers_view ? sf.active_markers_view : 'W';
+    app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
+    app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 1.0f;
+    // GUI font size, same application shape as playback_speed: absent
+    // key means the default. The value is applied once at launch when the
+    // source loads — the same behavior class as playback_speed (see the
+    // font_size descriptor in settings_io.cpp).
+    app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
+    // GUI launch preference for the `l` render-listen command. Applied
+    // only when the key is present: it is a global preference with no
+    // per-source default to reset (absence leaves the empty default from
+    // construction, i.e. "no player set"). load_file is the sole loader,
+    // invoked once at launch, so no earlier value can survive here.
+    if (sf.has_audio_player) app.audio_player = sf.audio_player;
+}
+
 bool GuiFileLoader::load_file(const std::string& path) {
     // Opening a private cache file is a careless wrong-file slip, so it
     // refuses loudly at this earliest surface — a dismiss-only notice, no
@@ -365,23 +385,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
         };
         apply(sf.tab_a, app.tab_a);
         apply(sf.tab_b, app.tab_b);
-        app.engine_settings = sf.engine;
-        app.follow_mode    = sf.has_follow ? sf.follow : true;
-        app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
-        app.active_markers_view = sf.has_active_markers_view ? sf.active_markers_view : 'W';
-        app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
-        app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 1.0f;
-        // GUI font size, same application shape as playback_speed: absent
-        // key means the default. The value is applied once at launch when the
-        // source loads — the same behavior class as playback_speed (see the
-        // font_size descriptor in settings_io.cpp).
-        app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
-        // GUI launch preference for the `l` render-listen command. Applied
-        // only when the key is present: it is a global preference with no
-        // per-source default to reset (absence leaves the empty default from
-        // construction, i.e. "no player set"). load_file is the sole loader,
-        // invoked once at launch, so no earlier value can survive here.
-        if (sf.has_audio_player) app.audio_player = sf.audio_player;
+        // Engine block plus the scalar session prefs (follow,
+        // active_audio_view, active_markers_view, active_tab_view,
+        // playback_speed, font_size, audio_player), VALUES ONLY. The
+        // side effects that consume these (set_speed, set_gui_font_size_pt,
+        // on_resize) stay below where they always ran. The render-entry adopt
+        // shares this exact routine so its in-memory result is 1:1 with a load.
+        apply_settings_engine_and_prefs(app, sf);
         // Per-tab trim: apply each bound when its key is present;
         // absence leaves the load-time reset (above) in place.
         if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }

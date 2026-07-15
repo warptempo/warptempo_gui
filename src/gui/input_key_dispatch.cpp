@@ -5,6 +5,7 @@
 
 #include "input_handler.h"
 
+#include "file_loader.h"     // apply_settings_engine_and_prefs (shared with load)
 #include "paint_handler.h"
 #include "render.h"
 #include "render_output_naming.h"
@@ -752,9 +753,6 @@ bool GuiInputHandler::adopt_render_entry(
                         commit_marker_mode, hint_last, commit_tab);
     undo.recompute_dirty();
 
-    // Full engine-settings adopt.
-    app.engine_settings = settings->engine;
-
     const std::filesystem::path src(app.source_audio_path);
     std::filesystem::path src_parent = src.parent_path();
     if (src_parent.empty()) src_parent = std::filesystem::path(".");
@@ -775,16 +773,29 @@ bool GuiInputHandler::adopt_render_entry(
 
     // Both tab bands from the file (view_state_from_settings_tab: viewport /
     // zoom / playhead, read_only, and the trim pair; a parsed band carries no
-    // selection, matching the marker-selection reset above).
+    // selection, matching the marker-selection reset above). This clean
+    // whole-band replace is equivalent to a source load's per-key apply plus
+    // trim plus read_only for an all-keys render-entry sidecar.
     app.tab_a = view_state_from_settings_tab(settings->tab_a);
     app.tab_b = view_state_from_settings_tab(settings->tab_b);
 
-    // active_tab_view from the file (== commit_tab). Both bands are already
-    // the file's, so pull the live fields straight from the active band with
-    // no double-apply (NOT switch_active_tab_view_to).
-    app.active_tab_view = commit_tab;
+    // Engine block plus the scalar session prefs, VALUES ONLY, through the one
+    // routine a source load also calls — so adopt applies engine_settings,
+    // follow, active_audio_view, active_markers_view, active_tab_view,
+    // playback_speed, font_size, and audio_player 1:1 with load. There is NO
+    // W/P carve-out: active_markers_view is now applied from the file like
+    // every other key. The live selection and both tabs' per-mode selection
+    // slots were cleared above, so landing on the file's marker mode carries
+    // an empty selection, exactly as a fresh load's empty-selection state.
+    apply_settings_engine_and_prefs(app, *settings);
+
+    // Activate the file's tab band. active_tab_view was just set by the shared
+    // routine (== commit_tab) and both bands are already the file's, so pull
+    // the live fields straight from the active band with no double-apply (NOT
+    // switch_active_tab_view_to).
     {
-        const ViewState& band = (commit_tab == 'B') ? app.tab_b : app.tab_a;
+        const ViewState& band = (app.active_tab_view == 'B')
+                                ? app.tab_b : app.tab_a;
         app.viewport_start_sample  = band.viewport_start_sample;
         app.zoom_level             = band.zoom_level;
         // Deliberately unclamped (restore-site convention): move_playhead_to
@@ -797,24 +808,13 @@ bool GuiInputHandler::adopt_render_entry(
         app.last_sel_group      = band.last_sel_group;
     }
 
-    // Session prefs from the file (has_X ? X : default). Recorded asymmetry:
-    // active_markers_view is deliberately NOT applied — W/P is global by
-    // ruling, so the LIVE mode survives the commit, unlike playback_speed,
-    // follow, font_size, audio_player, active_audio_view, and both tab bands.
-    app.follow_mode    = settings->has_follow ? settings->follow : true;
-    app.playback_speed = settings->has_playback_speed
-        ? settings->playback_speed : 1.0f;
+    // Caller-side side effects the shared routine deliberately omits, run after
+    // the live band is in place — the same order and the same point a source
+    // load runs them: push the speed to the engine, the font size to the
+    // renderer, then the geometry-and-cache rebuild on_resize performs.
     playback.set_speed(app.playback_speed);
-    app.font_size = settings->has_font_size ? settings->font_size : 11.0;
     set_gui_font_size_pt(app.font_size);
-    // audio_player needs no side-effect call — a plain string the `l`
-    // launcher consumes on demand.
-    app.audio_player = settings->has_audio_player
-        ? settings->audio_player : std::string();
     paint_handler.on_resize(app.width, app.height);
-
-    app.active_audio_view = settings->has_active_audio_view
-        ? settings->active_audio_view : 'S';
 
     if (!app.playhead_scanner_active) {
         app.playhead_scanner_sample = app.playhead_cursor_sample;

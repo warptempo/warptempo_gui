@@ -56,3 +56,12 @@ struct GuiFileLoader {
     // synchronization before GuiAudio is destroyed.
     std::thread source_sample_cache_writer_;
 };
+
+// Apply a parsed settings file's engine block and the scalar session prefs
+// (follow, active_audio_view, active_markers_view, active_tab_view,
+// playback_speed, font_size, audio_player) into `app`. VALUES ONLY — no side
+// effects: the caller runs set_speed / set_gui_font_size_pt / on_resize itself,
+// so both callers (load_file and the render-entry adopt) apply these fields
+// identically while owning their own side-effect timing. SettingsFile is
+// visible here via app_state.h -> settings_file.h.
+void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf);
