@@ -40,6 +40,25 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
+// Active-domain playhead frame at click column `col`. SOURCE view: the exact
+// source grid (source_grid_position_at_column via painter q), matching marker
+// commits so a drop-at-playhead lands where a drag/nudge would. TARGET view:
+// the domain spp form — the source-frame commit routes through the inverse map,
+// so there is no source-grid claim there.
+int64_t playhead_frame_at_click_column(const AppState& app,
+                                       const GuiAudio& audio, int col) {
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    if (ctx.domain == GuiDisplayDomain::Source) {
+        const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
+        if (q > 0.0)
+            return static_cast<int64_t>(std::nearbyint(
+                source_grid_position_at_column(app.viewport_start_sample, col, q)));
+    }
+    const double spp = current_samples_per_pixel(app, audio);
+    return app.viewport_start_sample +
+        static_cast<int64_t>(std::nearbyint(static_cast<double>(col) * spp));
+}
+
 // sweep_select_interval (the Shift playhead-drag sweep) lives in app_state.h;
 // the source/target sweeps below resolve it from there.
 
@@ -417,14 +436,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.playhead_drag.last_swept_sample = sample;
             } else {
                 // Press on empty waveform.
-                const double spp = current_samples_per_pixel(app, audio);
                 const int click_rel_x = x - area.x;
                 if (click_rel_x < 0 || click_rel_x >= area.w) {
                     if (!shift) selection.clear_selection();
                     return;
                 }
-                const int64_t sample = app.viewport_start_sample +
-                    static_cast<int64_t>(std::nearbyint(click_rel_x * spp));
+                const int64_t sample =
+                    playhead_frame_at_click_column(app, audio, click_rel_x);
                 if (!shift) selection.clear_selection();
                 viewport.move_playhead_to(sample);
                 if (was_playing && sample != playhead_at_entry) {
@@ -627,8 +645,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             int rel = mouse_x - area.x;
             if (rel < 0) rel = 0;
             if (rel >= area.w) rel = area.w - 1;
-            new_playhead = app.viewport_start_sample +
-                static_cast<int64_t>(std::nearbyint(rel * spp));
+            new_playhead = playhead_frame_at_click_column(app, audio, rel);
         }
 
         if (new_playhead != app.playhead_cursor_sample) {

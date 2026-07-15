@@ -137,11 +137,20 @@ int64_t authored_frame_at_column(
     const double t_active =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(col) * spp;
-    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
-        // Quantize the column's target-domain time to an integer target
-        // frame (floored at 0), then inverse-map at full precision; the
-        // map is monotone increasing, so the target-domain direction is
-        // the source-domain direction.
+    if (ctx.domain == GuiDisplayDomain::Source) {
+        // Exact source grid: one rounding via the recovered viewport column
+        // (the grid-snapped viewport is a true grid point), so the stored
+        // frame is the single-rounding grid position nearbyint((m+col)*q)
+        // rather than the two-rounding nearbyint(viewport_start + col*q).
+        // snap_authored_frame stays the sole double-to-authored conversion.
+        return snap_authored_frame(
+            source_grid_position_at_column(app.viewport_start_sample, col, spp));
+    }
+    if (!warp_frame_map.empty()) {
+        // Target view: quantize the column's target-domain time to an integer
+        // target frame (floored at 0), then inverse-map at full precision; the
+        // map is monotone increasing, so the target-domain direction is the
+        // source-domain direction.
         const double q = (t_active < 0.0)
             ? 0.0
             : static_cast<double>(std::llrint(t_active));

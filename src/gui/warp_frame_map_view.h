@@ -3,6 +3,7 @@
 #include "warp_frame_map_build.h"
 #include "warpmarkers.h"   // GuiWarpMarker (the view-overload signature)
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -114,6 +115,21 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
 struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
+
+// The exact source-grid position at pixel column `col` for a grid-snapped
+// viewport: recover the viewport's column index m = nearbyint(viewport_start/q)
+// and round once. Returns the double (m+col)*q; a marker commit funnels this
+// through snap_authored_frame, the click-playhead nearbyints it (a view
+// position, not an authored one). Caller supplies q>0 (painter spp). SOURCE
+// view only. m recovery is exact for product-reachable audio lengths: at the
+// deepest numeric zoom q >= ~27.5 frames/px and a source length fits well within
+// the double mantissa, so |viewport_start/q - m| << 0.5; it is NOT claimed exact
+// over the whole int64 range.
+inline double source_grid_position_at_column(int64_t viewport_start,
+                                             int col, double q) {
+    const double m = std::nearbyint(static_cast<double>(viewport_start) / q);
+    return (m + static_cast<double>(col)) * q;
+}
 
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the Ctrl+Left/Right nudges on both
