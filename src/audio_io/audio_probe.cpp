@@ -36,9 +36,6 @@ audio_probe(const std::string& path)
         case WavSampleFormat::Pcm24:
             out.kind = AudioFileKind::WavPcm24;
             break;
-        case WavSampleFormat::Float32:
-            out.kind = AudioFileKind::WavFloat32;
-            break;
         }
         return out;
     }

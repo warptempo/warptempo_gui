@@ -59,8 +59,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     // Preflight. Print the probe owner's diagnostic verbatim in the unified
     // shape: a malformed but recognized WAV (duplicate chunk, truncated
-    // header, non-finite Float32) must not be misread as an unsupported
-    // format. The convert-once acquisition hint applies only when the magic
+    // header) must not be misread as an unsupported format. The convert-once
+    // acquisition hint applies only when the magic
     // matched no container at all (kUnknownAudioMagicError), so it is
     // appended in that one case.
     auto source_info = audio_probe(path);

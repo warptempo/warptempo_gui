@@ -173,7 +173,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
 
-    audio_stft.limiter         = p.limiter;
     audio_stft.limiter_verbose = p.limiter_verbose;
 
     if (audio_stft.N <= 0 || audio_stft.N % 4 != 0) {
@@ -322,7 +321,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         size_t s = static_cast<size_t>(it - fm.begin());
         audio_stft.phase_reset_placements.push_back({static_cast<int>(s)});
     }
-    std::cout << "[Pass 1/" << (audio_stft.limiter ? 3 : 2)
+    std::cout << "[Pass 1/3"
               << "] Phase reset placement............. "
               << audio_stft.phase_reset_placements.size()
               << " phase resets\n";
@@ -338,9 +337,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     }
 
     // Pass 2: synthesis (clean render) into the caller-owned output buffer.
-    // synthesize_full applies no attenuation, so a limiter-off buffer holds
-    // the clean render exactly.
-    const bool limited = audio_stft.limiter;
+    // synthesize_full applies no attenuation; the spectral limiter (Pass 3
+    // below) then runs in place on this buffer.
     auto t_p2_0 = profile::now();
     synthesis.process_to_buffer(audio_stft, p.output_buffer);
     auto t_p2_1 = profile::now();
@@ -373,9 +371,9 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     }
 
     // Pass 3: the spectral limiter, applied in place on the emitted buffer.
-    // Limiter-off renders have no Pass 3. The peak stage and the encode both
-    // live orchestrator-side, downstream of the engine.
-    if (limited) {
+    // The peak stage and the encode both live orchestrator-side, downstream
+    // of the engine.
+    {
         auto t_p3_0 = profile::now();
         std::vector<float>& buf = *p.output_buffer;
         const size_t limiter_input_frames = (audio_stft.channels > 0)
@@ -396,9 +394,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                       << " channels=" << audio_stft.channels
                       << "\n";
         }
-    } else if (prof) {
-        std::cerr << "[profile] engine_pass name=limiter ms=0.000 sample_frames=0 channels="
-                  << audio_stft.channels << " bypass=yes\n";
     }
 
     if (prof) {

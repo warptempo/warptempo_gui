@@ -39,8 +39,7 @@ inline std::unexpected<std::string> prefix_line_error(int ln, std::string msg) {
 }
 
 // Strict whole-token bool parser: the canonical truthy/falsy token set
-// shared by the settings schemas (the limiter engine key and the per-tab
-// read_only keys).
+// shared by the settings schemas (the per-tab read_only keys).
 inline bool parse_bool_token(const std::string& s, bool& out) {
     if (s == "true"  || s == "1" || s == "yes" || s == "on")  { out = true;  return true; }
     if (s == "false" || s == "0" || s == "no"  || s == "off") { out = false; return true; }

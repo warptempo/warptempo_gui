@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-enum class AudioFileKind { WavPcm16, WavPcm24, WavFloat32 };
+enum class AudioFileKind { WavPcm16, WavPcm24 };
 
 // The exact error audio_probe returns when the file's leading magic bytes
 // match no recognized container (as opposed to a malformed but recognized

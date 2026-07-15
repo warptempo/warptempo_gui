@@ -645,13 +645,9 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             output_buffer->end(), buf,
             buf + n_frames * static_cast<size_t>(channels));
     };
-    // The spectral limiter (Pass 3, limiter-on) runs in the engine after
-    // synthesis, in place on this buffer — process_to_buffer always does the
-    // plain append.
-    const std::string pass_label = stft.limiter
-        ? "[Pass 2/3] Synthesis........................ "
-        : "[Pass 2/2] Synthesis........................ ";
+    // The spectral limiter (Pass 3) runs in the engine after synthesis, in
+    // place on this buffer — process_to_buffer always does the plain append.
     synthesize_full(stft, append_to_buffer,
                     /*show_progress=*/true,
-                    /*pass_label=*/pass_label.c_str());
+                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
 }

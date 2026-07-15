@@ -27,7 +27,6 @@ struct EngineSettings {
                        // string). Unvalidated, empty by default.
     std::string cover; // Free-text provenance (cover-art path or URL).
                        // Unvalidated, empty by default.
-    bool        limiter                  = true;
 };
 
 // Identifier for one field of EngineSettings. Stored on each
@@ -42,11 +41,10 @@ enum class EngineField {
     Url,
     Cover,
     OutputFormat,
-    Limiter,
 };
 
 // True iff `key` is one of the canonical engine setting keys
-// (title, scale, bpm, notes, url, cover, output_format, limiter).
+// (title, scale, bpm, notes, url, cover, output_format).
 bool is_canonical_engine_key(const std::string& key);
 
 // The default render title for a source: the source stem plus "-rendered".
@@ -74,8 +72,8 @@ bool validate_engine_setting(const std::string& key,
 
 // Current on-disk string form of `field`'s value in `es`, formatted exactly
 // as the settings writer emits it (padded shortest round-trip form at min 4
-// decimals for scale — value_format.h — true/false for limiter, verbatim
-// for the string fields). This is the single byte definition for engine
+// decimals for scale — value_format.h — verbatim for the string fields).
+// This is the single byte definition for engine
 // field serialization: format_engine_setting_value below delegates to it,
 // and every settings writer (write_settings_file,
 // format_default_settings_template) reaches it through kSettingsOrder's

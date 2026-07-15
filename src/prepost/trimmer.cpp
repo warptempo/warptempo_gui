@@ -81,9 +81,9 @@ std::expected<void, std::string> validate_trim_frames(
 //               grid with N-wide windows, so that frame's analysis reads
 //               emitted samples through L = f_max*R_s + N - 1: the trimmed
 //               emission must carry full-render-identical audio through L.
-//               plan_trim does not know the limiter flag, so this limiter-on
-//               bound applies unconditionally; it strictly contains the
-//               limiter-off requirement (identical audio through K < L).
+//               The spectral limiter always runs, so this bound applies
+//               unconditionally; it strictly contains the bare kept-audio
+//               requirement (identical audio through K < L).
 //       m_max = (L + N/2) / R_s (floor), the last synthesis frame whose OLA
 //               window can touch sample L (the frame at exactly L + N/2
 //               lands on window index 0, weight zero; including it costs at
@@ -395,17 +395,15 @@ std::expected<void, std::string> apply_post_trim(
 
 std::expected<void, std::string> validate_render_projection(
         int64_t engine_output_frames, int64_t encoded_frames,
-        int channels, bool limiter, bool encode_to_disk) {
+        int channels, bool encode_to_disk) {
     auto projected = checked_audio_sample_count(engine_output_frames,
                                                 channels);
     if (!projected) {
         return std::unexpected(projected.error());
     }
     if (encode_to_disk) {
-        const WavSampleFormat fmt =
-            limiter ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
         if (wav_projected_exceeds_riff_limits(
-                fmt, channels, static_cast<uint64_t>(encoded_frames))) {
+                channels, static_cast<uint64_t>(encoded_frames))) {
             return std::unexpected(
                 "projected output of " + std::to_string(encoded_frames) +
                 " frames exceeds RIFF 32-bit limits");
@@ -416,7 +414,7 @@ std::expected<void, std::string> validate_render_projection(
 
 std::expected<FinishRenderStatus, std::string> finish_render(
         std::vector<float>& buffer, int channels, int sample_rate,
-        bool limiter, const PostTrim* post_trim,
+        const PostTrim* post_trim,
         const std::string& output_wav_path,
         const std::atomic<bool>* cancel_flag) {
     const auto cancelled = [&]() {
@@ -460,23 +458,18 @@ std::expected<FinishRenderStatus, std::string> finish_render(
         }
     }
     if (cancelled()) return FinishRenderStatus::Cancelled;
-    if (limiter) {
-        apply_peak_limiter(buffer, channels, sample_rate,
-                           kPeakLimiterCeilingDbfs, kPeakLimiterAttackMs,
-                           kPeakLimiterReleaseMs);
-        if (cancelled()) return FinishRenderStatus::Cancelled;
-    }
+    apply_peak_limiter(buffer, channels, sample_rate,
+                       kPeakLimiterCeilingDbfs, kPeakLimiterAttackMs,
+                       kPeakLimiterReleaseMs);
+    if (cancelled()) return FinishRenderStatus::Cancelled;
     if (output_wav_path.empty()) {
         // Buffer route (target view). Target playback auditions the
-        // deliverable lattice, so a limited buffer is snapped to PCM 24 in
-        // place — one linear scan, negligible next to synthesis — making
-        // fresh renders, cache hits, and archival-artifact loads carry
-        // sample-identical target-view audio. Limiter-off buffers need no
-        // snap: their float wav deliverable is the clean floats themselves.
-        if (limiter) {
-            for (float& sample : buffer) {
-                sample = pcm24_quantize(sample);
-            }
+        // deliverable lattice, so the buffer is snapped to PCM 24 in place —
+        // one linear scan, negligible next to synthesis — making fresh
+        // renders, cache hits, and archival-artifact loads carry
+        // sample-identical target-view audio.
+        for (float& sample : buffer) {
+            sample = pcm24_quantize(sample);
         }
         // Buffer-route completion gate: a cancel that lands during the snap
         // (or any earlier stage) must never surface as Completed — the
@@ -485,9 +478,7 @@ std::expected<FinishRenderStatus, std::string> finish_render(
         if (cancelled()) return FinishRenderStatus::Cancelled;
         return FinishRenderStatus::Completed;
     }
-    const WavSampleFormat fmt =
-        limiter ? WavSampleFormat::Pcm24 : WavSampleFormat::Float32;
-    auto writer = WavWriter::open_file(output_wav_path, fmt, channels,
+    auto writer = WavWriter::open_file(output_wav_path, channels,
                                        sample_rate);
     if (!writer) {
         return std::unexpected("could not open output '" + output_wav_path +

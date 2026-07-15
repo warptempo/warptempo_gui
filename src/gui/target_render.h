@@ -33,7 +33,7 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 //   - In target view: stops playback, requests cancellation of an active
 //     batch/queue run when needed. It sets
 //     queue_progress_text="updating..." and dispatches a fresh render to
-//     app.target_buffer using the current global limiter setting. The dispatch
+//     app.target_buffer (the always-on limiter applies). The dispatch
 //     is deferred until the worker is idle (the existing on_done callback paths
 //     pump pending target renders through maybe_dispatch_pending()).
 //

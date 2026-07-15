@@ -118,11 +118,10 @@ struct RenderRequest {
     // the render to this buffer instead of a staged .wav file. Skips the
     // atomic rename and every batch sidecar write (.warpmarkers /
     // .phaseresetmarkers / .settings). The post-engine chain
-    // (post_trim crop when trimmed, then the spectral + peak limited chain
-    // whenever the global `limiter` toggle is on, exactly as on the disk
-    // path) runs in place on this buffer; on the limited route, the buffer
-    // is quantized to the deliverable PCM_24 lattice in place after the
-    // chain. Defaults to nullptr; the existing wav-to-disk path is taken
+    // (post_trim crop when trimmed, then the always-on spectral + peak
+    // limited chain, exactly as on the disk path) runs in place on this
+    // buffer; the buffer is then quantized to the deliverable PCM_24 lattice
+    // in place. Defaults to nullptr; the existing wav-to-disk path is taken
     // when null. Reserved for target-view target rendering; not
     // authoring-facing. Non-wav output_format branches silently ignore this
     // field.
@@ -140,7 +139,7 @@ struct RenderRequest {
     // `.fingerprint` is an optional cache artifact.
     // The folder must already exist; do_render does not create it. When
     // `batch_folder` is empty, do_render uses the
-    // source-directory title/limiter-prefix naming used by the
+    // source-directory title naming used by the
     // immediate Ctrl+Alt+R path. Sibling wav publishes still emit the
     // `.fingerprint` sidecar; batch-only sidecars are not written on the
     // sibling path.

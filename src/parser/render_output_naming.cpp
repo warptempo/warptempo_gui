@@ -25,9 +25,9 @@ std::string render_output_stem(const EngineSettings& es,
                                const std::string& source_stem) {
     // Map artifacts are project files named by the source stem, like the
     // authoring sidecars beside the source. Only the wav deliverable is
-    // title-named, so the clean-float prefix is wav-scoped by construction.
+    // title-named.
     if (es.output_format != "wav") return source_stem;
-    return es.limiter ? es.title : ("limiter=false;" + es.title);
+    return es.title;
 }
 
 std::vector<std::filesystem::path> compose_render_output_paths(

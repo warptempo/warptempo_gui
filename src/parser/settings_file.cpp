@@ -68,7 +68,7 @@ std::expected<void, std::string> scan_settings_file(
         return std::unexpected(std::string("I/O read error"));
     }
 
-    for (const char* k : {"title", "output_format", "scale", "limiter"}) {
+    for (const char* k : {"title", "output_format", "scale"}) {
         if (seen.count(k) == 0) {
             return std::unexpected(
                 std::string("missing required key '") + k + "'");

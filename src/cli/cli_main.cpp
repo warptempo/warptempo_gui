@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     // --- settings: required, like the two marker sidecars below. The strict
     // whole-file reader refuses an unopenable file with its own could-not-open
     // diagnostic, which surfaces verbatim through the print below.
-    // output_format, title, limiter, and the applied trim all come from it. ---
+    // output_format, title, and the applied trim all come from it. ---
     EngineSettings es;
     SettingsFile   sf;
     SettingsTrim   trim;
@@ -121,8 +121,7 @@ int main(int argc, char** argv) {
     }
 
     // --- output path: the shared composer's single wav entry, title-named
-    // beside the source with the limiter=false; prefix when the settings
-    // limiter is off — exactly where the GUI writes the same project's
+    // beside the source — exactly where the GUI writes the same project's
     // deliverable. ---
     const std::string out_path =
         compose_render_output_paths(render_output_directory(source_path),
@@ -378,9 +377,8 @@ int main(int argc, char** argv) {
         ? &trim_plan->pre.source_frame_schedule
         : nullptr;
     ep.N            = N_fft;
-    ep.limiter      = es.limiter;
     // limiter_ceiling_dbfs / tolerance stay at EngineParams defaults —
-    // do_render sets only limiter and inherits the rest.
+    // do_render inherits them too. The spectral limiter always runs.
 
     // Projection refusal, orchestrator-side before the engine allocates
     // (refuse-before-cost), same shape as do_render's wav branch.
@@ -389,15 +387,15 @@ int main(int argc, char** argv) {
     const int64_t encoded_frames =
         trim_plan ? trim_plan->post.samples : engine_output_frames;
     if (auto v = validate_render_projection(
-            engine_output_frames, encoded_frames, src_ch, ep.limiter,
+            engine_output_frames, encoded_frames, src_ch,
             /*encode_to_disk=*/true); !v) {
         std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
         return 1;
     }
 
     // --- render into the buffer, then run the shared post-engine chain
-    // (crop when trimmed -> peak limiter when limiter=true -> encode to the
-    // sibling staging file); success publishes atomically via rename.
+    // (crop when trimmed -> peak limiter -> encode to the sibling staging
+    // file); success publishes atomically via rename.
     const std::string staging_output_path = render_staging_path(out_path);
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
@@ -405,7 +403,7 @@ int main(int argc, char** argv) {
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
     }
-    if (auto fin = finish_render(render_buf, src_ch, src_sr, ep.limiter,
+    if (auto fin = finish_render(render_buf, src_ch, src_sr,
                                  trim_plan ? &trim_plan->post : nullptr,
                                  staging_output_path); !fin) {
         unlink_silent(staging_output_path);

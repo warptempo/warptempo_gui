@@ -22,16 +22,15 @@ struct EngineParams {
     // The engine's sole output sink, required non-null (the engine is
     // buffer-out only; encode lives orchestrator-side in the prepost chain).
     // Synthesis output is appended to this caller-owned vector via
-    // std::vector::insert. When limiter is true the spectral limiter is
-    // applied in place on this buffer; when false the buffer holds clean
-    // synthesis. The buffer must remain valid through run_warptempo_engine;
-    // the caller is responsible for clearing or reserving.
+    // std::vector::insert. The spectral limiter is always applied in place on
+    // this buffer after synthesis. The buffer must remain valid through
+    // run_warptempo_engine; the caller is responsible for clearing or
+    // reserving.
     std::vector<float>* output_buffer = nullptr;
 
     std::vector<WarpFrameMapSegment> warp_frame_map;  // rounded + precise breakpoints
 
     int    N                          = 4096;
-    bool   limiter                    = false;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
     // When false, the spectral limiter's stdout header and per-peak residual

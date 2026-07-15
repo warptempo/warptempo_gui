@@ -188,15 +188,9 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     // physical file size; the in-tree WavWriter patches exactly this value at
     // close. A declaration short of or past the physical EOF contradicts the
     // container and is adversarial input that no in-tree writer can produce, so
-    // it refuses here like the duplicate-chunk and truncated-chunk guards. The
-    // sole tolerated deviation is the 0xffffffff placeholder, the sibling of
-    // the data-chunk streamed-encoder exception below: an encoder that leaves
-    // the data size at the placeholder leaves the RIFF size there too, and
-    // refusing it would kill that ruled data-size salvage. This exception does
-    // NOT broaden into a general RIFF-size tolerance.
+    // it refuses here like the duplicate-chunk and truncated-chunk guards.
     const uint32_t riff_size = read_u32(u32buf);
-    if (riff_size != 0xffffffffu &&
-        static_cast<uint64_t>(riff_size) + 8 != file_size) {
+    if (static_cast<uint64_t>(riff_size) + 8 != file_size) {
         return std::unexpected(
             "WAV RIFF size contradicts file size (declared " +
             std::to_string(static_cast<uint64_t>(riff_size) + 8) +
@@ -204,7 +198,6 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     }
     bool fmt_seen = false;
     bool data_seen = false;
-    bool salvaged = false;
     WavLayout layout;
     uint16_t tag = 0;
     uint16_t bits = 0;
@@ -217,24 +210,12 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         }
         const uint32_t chunk_size = read_u32(u32buf);
         const uint64_t payload = src.tell();
-        uint64_t chunk_payload_size = chunk_size;
-        bool stop_after_chunk = false;
+        const uint64_t chunk_payload_size = chunk_size;
+        // A chunk whose declared payload runs past the physical EOF is an
+        // ordinary truncated or corrupted file — adversarial input — and
+        // refuses here.
         if (chunk_payload_size > file_size - payload) {
-            if (fourcc_eq(id, "data") && chunk_size == 0xffffffffu) {
-                // The single recognized streamed-encoder exception: a data
-                // size left at the 0xffffffff placeholder. Trust the bytes
-                // present, clamped to whole frames. Any OTHER declaration
-                // extending past EOF is an ordinary truncated or corrupted
-                // file — adversarial input — and refuses rather than being
-                // silently salvaged as a shorter recording.
-                chunk_payload_size = file_size - payload;
-                if (layout.block_align != 0) {
-                    chunk_payload_size -= chunk_payload_size % layout.block_align;
-                }
-                stop_after_chunk = true;
-            } else {
-                return std::unexpected("WAV chunk extends past end of file");
-            }
+            return std::unexpected("WAV chunk extends past end of file");
         }
 
         if (fourcc_eq(id, "fmt ")) {
@@ -293,8 +274,6 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
                 layout.info.format = WavSampleFormat::Pcm16;
             } else if (tag == 1 && valid_bits == 24 && bits == 24) {
                 layout.info.format = WavSampleFormat::Pcm24;
-            } else if (tag == 3 && valid_bits == 32 && bits == 32) {
-                layout.info.format = WavSampleFormat::Float32;
             } else {
                 return std::unexpected("unsupported WAV sample format");
             }
@@ -328,11 +307,6 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             data_seen = true;
         }
 
-        if (stop_after_chunk) {
-            salvaged = true;
-            break;
-        }
-
         uint64_t next =
             payload + chunk_payload_size + (chunk_payload_size & 1u);
         // The FINAL chunk's pad byte may be legitimately absent: common
@@ -356,9 +330,8 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     // walk that halts short of EOF left fewer than eight dangling bytes — a
     // truncated chunk header, adversarial (the RIFF-size equality guard above
     // passes on a file whose dangling 1..7 trailing bytes are counted into
-    // riff_size, so this catch is not redundant with it). The 0xffffffff
-    // placeholder-salvage path legitimately ends mid-file and is exempt.
-    if (!salvaged && src.tell() != file_size) {
+    // riff_size, so this catch is not redundant with it).
+    if (src.tell() != file_size) {
         return std::unexpected("truncated WAV chunk header");
     }
 
@@ -370,17 +343,14 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     layout.info.frames =
         static_cast<int64_t>(layout.data_size / layout.block_align);
     // Zero frames is unusable audio, so it hard-fails here at the owner
-    // boundary instead of proceeding into the load-lenient marker flow. This
-    // also covers a streamed 0xffffffff placeholder whose present payload is
-    // under one frame: the salvage tolerance recovers frames that exist, and
-    // none exist here.
+    // boundary instead of proceeding into the load-lenient marker flow.
     if (layout.info.frames == 0) {
         return std::unexpected("WAV data chunk holds zero frames");
     }
     return layout;
 }
 
-bool decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                         int64_t samples, float* out);
 
 std::expected<std::vector<float>, std::string>
@@ -424,20 +394,14 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
         return std::unexpected("truncated WAV data");
     }
 
-    if (!decode_wav_samples(raw.data(), layout.info.format,
-                            static_cast<int64_t>(*sample_count), out.data())) {
-        return std::unexpected("non-finite sample in Float32 WAV data");
-    }
+    decode_wav_samples(raw.data(), layout.info.format,
+                       static_cast<int64_t>(*sample_count), out.data());
     return out;
 }
 
-// Returns false when a Float32 payload carries a non-finite sample (NaN or
-// infinity). Downstream those diverge silently — NaN zeros on the limited
-// path, infinity reaches llrint outside its domain, limiter-off writes them
-// back to the deliverable — so the read boundary rejects them once, as
-// adversarial input, before any sample enters the source buffer. PCM
-// payloads decode every bit pattern to a finite value by construction.
-bool decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
+// Decodes a PCM 16 or PCM 24 payload to interleaved float32. Every bit
+// pattern of both formats decodes to a finite value by construction.
+void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                         int64_t samples, float* out)
 {
     size_t rp = 0;
@@ -447,26 +411,15 @@ bool decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
                 static_cast<int16_t>(raw[rp] | (raw[rp + 1] << 8));
             out[static_cast<size_t>(i)] = static_cast<float>(v) / 32768.0f;
             rp += 2;
-        } else if (format == WavSampleFormat::Pcm24) {
+        } else {
             int32_t v = static_cast<int32_t>(raw[rp]) |
                         (static_cast<int32_t>(raw[rp + 1]) << 8) |
                         (static_cast<int32_t>(raw[rp + 2]) << 16);
             if (v & 0x00800000) v |= static_cast<int32_t>(0xff000000);
             out[static_cast<size_t>(i)] = pcm24_float_from_code(v);
             rp += 3;
-        } else {
-            uint32_t bits32 = static_cast<uint32_t>(raw[rp]) |
-                              (static_cast<uint32_t>(raw[rp + 1]) << 8) |
-                              (static_cast<uint32_t>(raw[rp + 2]) << 16) |
-                              (static_cast<uint32_t>(raw[rp + 3]) << 24);
-            float v;
-            std::memcpy(&v, &bits32, sizeof(v));
-            if (!std::isfinite(v)) return false;
-            out[static_cast<size_t>(i)] = v;
-            rp += 4;
         }
     }
-    return true;
 }
 
 std::expected<ByteSource, std::string> memory_source(std::span<const char> bytes)
@@ -502,17 +455,12 @@ bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
            frames_written > std::numeric_limits<uint32_t>::max();
 }
 
-bool wav_projected_exceeds_riff_limits(WavSampleFormat format,
-                                       int channels, uint64_t frames)
+bool wav_projected_exceeds_riff_limits(int channels, uint64_t frames)
 {
-    const uint64_t bytes_per_sample =
-        format == WavSampleFormat::Pcm16 ? 2 :
-        format == WavSampleFormat::Pcm24 ? 3 : 4;
-    const uint64_t block_align =
-        static_cast<uint64_t>(channels) * bytes_per_sample;
+    const uint64_t block_align = static_cast<uint64_t>(channels) * 3;
     const uint64_t data_bytes = frames * block_align;
     if (block_align > 0 && data_bytes / block_align != frames) return true;
-    const uint64_t header_span = 44 + (format == WavSampleFormat::Float32 ? 12 : 0);
+    const uint64_t header_span = 44;
     return wav_exceeds_riff_limits(header_span, data_bytes, frames);
 }
 
@@ -673,10 +621,8 @@ std::expected<int64_t, std::string> WavReader::read_frames(float* out,
         scratch_.size()) {
         return std::unexpected("truncated WAV data");
     }
-    if (!decode_wav_samples(scratch_.data(), info_.format,
-                            to_read * info_.channels, out)) {
-        return std::unexpected("non-finite sample in Float32 WAV data");
-    }
+    decode_wav_samples(scratch_.data(), info_.format,
+                       to_read * info_.channels, out);
     cursor_frame_ += to_read;
     return to_read;
 }
@@ -703,13 +649,11 @@ WavWriter& WavWriter::operator=(WavWriter&& other) noexcept
     sink_kind_ = other.sink_kind_;
     file_ = other.file_;
     memory_ = other.memory_;
-    format_ = other.format_;
     channels_ = other.channels_;
     sample_rate_ = other.sample_rate_;
     frames_written_ = other.frames_written_;
     data_bytes_ = other.data_bytes_;
     riff_size_offset_ = other.riff_size_offset_;
-    fact_frames_offset_ = other.fact_frames_offset_;
     data_size_offset_ = other.data_size_offset_;
     closed_ = other.closed_;
     scratch_ = std::move(other.scratch_);
@@ -726,16 +670,10 @@ WavWriter::~WavWriter()
 }
 
 std::expected<WavWriter, std::string>
-WavWriter::open_file(const std::string& path, WavSampleFormat format,
-                     int channels, int sample_rate)
+WavWriter::open_file(const std::string& path, int channels, int sample_rate)
 {
-    // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
-    // otherwise silently take the float path. The writer narrows the caller's
-    // geometry into the RIFF fmt fields as given.
-    if (format != WavSampleFormat::Pcm24 &&
-        format != WavSampleFormat::Float32) {
-        return std::unexpected("unsupported WAV writer format");
-    }
+    // The writer emits PCM 24 only and narrows the caller's geometry into the
+    // RIFF fmt fields as given.
     FILE* f = std::fopen(path.c_str(), "wb+");
     if (!f) {
         const int err = errno;
@@ -746,7 +684,6 @@ WavWriter::open_file(const std::string& path, WavSampleFormat format,
     WavWriter w;
     w.sink_kind_ = SinkKind::File;
     w.file_ = f;
-    w.format_ = format;
     w.channels_ = channels;
     w.sample_rate_ = sample_rate;
     w.closed_ = false;
@@ -764,21 +701,14 @@ WavWriter::open_file(const std::string& path, WavSampleFormat format,
 }
 
 std::expected<WavWriter, std::string>
-WavWriter::open_memory(std::vector<char>& out, WavSampleFormat format,
-                       int channels, int sample_rate)
+WavWriter::open_memory(std::vector<char>& out, int channels, int sample_rate)
 {
-    // Only Pcm24 and Float32 have a write_frames branch; a Pcm16 request would
-    // otherwise silently take the float path. The writer narrows the caller's
-    // geometry into the RIFF fmt fields as given.
-    if (format != WavSampleFormat::Pcm24 &&
-        format != WavSampleFormat::Float32) {
-        return std::unexpected("unsupported WAV writer format");
-    }
+    // The writer emits PCM 24 only and narrows the caller's geometry into the
+    // RIFF fmt fields as given.
     out.clear();
     WavWriter w;
     w.sink_kind_ = SinkKind::Memory;
     w.memory_ = &out;
-    w.format_ = format;
     w.channels_ = channels;
     w.sample_rate_ = sample_rate;
     w.closed_ = false;
@@ -803,12 +733,8 @@ std::expected<void, std::string> WavWriter::write_frames(
             static_cast<uint64_t>(frames)) {
         return std::unexpected("WAV write is too large");
     }
-    const uint64_t bytes =
-        format_ == WavSampleFormat::Pcm24 ? samples * 3
-                                          : samples * sizeof(float);
-    if ((format_ == WavSampleFormat::Pcm24 && bytes / 3 != samples) ||
-        (format_ == WavSampleFormat::Float32 &&
-         bytes / sizeof(float) != samples) ||
+    const uint64_t bytes = samples * 3;
+    if (bytes / 3 != samples ||
         bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max()) ||
         data_bytes_ > std::numeric_limits<uint64_t>::max() - bytes ||
         frames_written_ > std::numeric_limits<uint64_t>::max() -
@@ -826,28 +752,24 @@ std::expected<void, std::string> WavWriter::write_frames(
         return std::unexpected("WAV file exceeds RIFF size limit");
     }
 
-    if (format_ == WavSampleFormat::Pcm24) {
-        scratch_.resize(static_cast<size_t>(bytes));
-        size_t wp = 0;
-        for (uint64_t i = 0; i < samples; ++i) {
-            // Breach guard: nothing program-generated is non-finite (the
-            // read boundary rejects non-finite sources), so a NaN or
-            // infinity here means an internal contract broke — refuse
-            // loudly rather than silently normalizing it into the lattice.
-            if (!std::isfinite(interleaved[i])) {
-                return std::unexpected("non-finite sample in PCM 24 write");
-            }
-            const uint32_t code =
-                static_cast<uint32_t>(pcm24_code_from_float(interleaved[i]));
-            scratch_[wp++] = static_cast<unsigned char>(code & 0xff);
-            scratch_[wp++] = static_cast<unsigned char>((code >> 8) & 0xff);
-            scratch_[wp++] = static_cast<unsigned char>((code >> 16) & 0xff);
+    scratch_.resize(static_cast<size_t>(bytes));
+    size_t wp = 0;
+    for (uint64_t i = 0; i < samples; ++i) {
+        // Breach guard: nothing program-generated is non-finite (the
+        // read boundary rejects non-finite sources), so a NaN or
+        // infinity here means an internal contract broke — refuse
+        // loudly rather than silently normalizing it into the lattice.
+        if (!std::isfinite(interleaved[i])) {
+            return std::unexpected("non-finite sample in PCM 24 write");
         }
-        auto ok = write_bytes(scratch_.data(), scratch_.size());
-        if (!ok) return ok;
-    } else {
-        auto ok = write_bytes(interleaved, static_cast<size_t>(bytes));
-        if (!ok) return ok;
+        const uint32_t code =
+            static_cast<uint32_t>(pcm24_code_from_float(interleaved[i]));
+        scratch_[wp++] = static_cast<unsigned char>(code & 0xff);
+        scratch_[wp++] = static_cast<unsigned char>((code >> 8) & 0xff);
+        scratch_[wp++] = static_cast<unsigned char>((code >> 16) & 0xff);
+    }
+    if (auto ok = write_bytes(scratch_.data(), scratch_.size()); !ok) {
+        return ok;
     }
     data_bytes_ = post_data_bytes;
     frames_written_ = post_frames;
@@ -865,21 +787,15 @@ std::expected<void, std::string> WavWriter::close()
         return std::unexpected("WAV file exceeds RIFF size limit");
     }
     // Every payload this writer produces is even by construction: PCM24 frames
-    // are 3 bytes times the stereo channel pair (6) and Float32 samples are 4
-    // bytes, because sources are stereo-only and output channels equal source
-    // channels. The RIFF odd-payload pad byte is therefore unreachable and
-    // deliberately unimplemented; a future channel-vocabulary change must
-    // revisit this.
+    // are 3 bytes times the stereo channel pair (6), because sources are
+    // stereo-only and output channels equal source channels. The RIFF
+    // odd-payload pad byte is therefore unreachable and deliberately
+    // unimplemented; a future channel-vocabulary change must revisit this.
     const uint64_t riff_size = header_span + data_bytes_ - 8;
     auto ok = patch_u32(riff_size_offset_, static_cast<uint32_t>(riff_size));
     if (!ok) return ok;
     ok = patch_u32(data_size_offset_, static_cast<uint32_t>(data_bytes_));
     if (!ok) return ok;
-    if (format_ == WavSampleFormat::Float32) {
-        ok = patch_u32(fact_frames_offset_,
-                       static_cast<uint32_t>(frames_written_));
-        if (!ok) return ok;
-    }
     if (sink_kind_ == SinkKind::File) {
         errno = 0;
         if (std::fflush(file_) != 0) {
@@ -907,7 +823,7 @@ std::expected<void, std::string> WavWriter::close()
 
 std::expected<void, std::string> WavWriter::write_header()
 {
-    const uint16_t bits = format_ == WavSampleFormat::Pcm24 ? 24 : 32;
+    const uint16_t bits = 24;
     const uint16_t block_align = static_cast<uint16_t>(channels_ * (bits / 8));
     const uint32_t byte_rate =
         static_cast<uint32_t>(sample_rate_) * block_align;
@@ -918,18 +834,12 @@ std::expected<void, std::string> WavWriter::write_header()
     h.insert(h.end(), {'W', 'A', 'V', 'E'});
     h.insert(h.end(), {'f', 'm', 't', ' '});
     append_u32(h, 16);
-    append_u16(h, format_ == WavSampleFormat::Pcm24 ? 1 : 3);
+    append_u16(h, 1);  // WAVE_FORMAT_PCM
     append_u16(h, static_cast<uint16_t>(channels_));
     append_u32(h, static_cast<uint32_t>(sample_rate_));
     append_u32(h, byte_rate);
     append_u16(h, block_align);
     append_u16(h, bits);
-    if (format_ == WavSampleFormat::Float32) {
-        h.insert(h.end(), {'f', 'a', 'c', 't'});
-        append_u32(h, 4);
-        fact_frames_offset_ = h.size();
-        append_u32(h, 0);
-    }
     h.insert(h.end(), {'d', 'a', 't', 'a'});
     data_size_offset_ = h.size();
     append_u32(h, 0);

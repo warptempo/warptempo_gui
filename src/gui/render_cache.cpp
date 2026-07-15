@@ -139,8 +139,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // outside the authored per-marker envelope [0.125, 8.0] to a plain 1.00
 // owner instead of rendering the unclamped implied ratio — a
 // previously-valid input whose bytes change, so prior artifacts must stop
-// matching and re-render.
-constexpr uint32_t kFingerprintVersion = 7;
+// matching and re-render. Version 8: the limiter became unconditional and
+// left the settings vocabulary, so the `limiter` field no longer participates
+// in the fingerprint — prior artifacts, whose keys still carried that byte,
+// must re-render rather than pose as current recipes.
+constexpr uint32_t kFingerprintVersion = 8;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -223,7 +226,6 @@ std::vector<uint8_t> render_fingerprint(
     put_str(fp, s.notes);
     put_str(fp, s.url);
     put_str(fp, s.cover);
-    put_u8 (fp, s.limiter ? 1 : 0);
 
     // Trim, with the frame values normalized to 0 when the bound is unset so
     // a stale value behind a false has-bound cannot move the key (the engine
@@ -932,8 +934,7 @@ bool encode_pcm24_wav_blob(const std::vector<float>& samples,
     const int64_t frame_count = static_cast<int64_t>(samples.size() / ch);
 
     std::vector<char> blob;
-    auto writer = WavWriter::open_memory(blob, WavSampleFormat::Pcm24,
-                                         channels, sample_rate);
+    auto writer = WavWriter::open_memory(blob, channels, sample_rate);
     if (!writer) return false;
     auto ok = writer->write_frames(samples.data(), frame_count);
     if (!ok) return false;

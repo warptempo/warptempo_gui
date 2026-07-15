@@ -19,9 +19,9 @@
 // Pipeline shape: parser (builds the FULL warp frame map and the FULL phase
 // reset frame map, knows nothing of trim) -> pre_trim when a bound is set
 // (validate-or-refuse; cut audio view + translated maps) -> engine (analysis,
-// PGHI, synthesis, spectral limiter when limiter=true, emits its map's
-// extent) -> post_trim (crop to the exact authored window) -> peak limiter
-// when limiter=true -> encode to disk and/or hand the buffer to the caller.
+// PGHI, synthesis, the spectral limiter, emits its map's extent) ->
+// post_trim (crop to the exact authored window) -> peak limiter -> encode to
+// disk and/or hand the buffer to the caller.
 // Full renders bypass the trimmer completely — both stages.
 //
 // Trim is output_format=wav ONLY (ruled): the map formats (warptempo_maps,
@@ -123,11 +123,10 @@ std::expected<void, std::string> apply_post_trim(
 // engine_output_frames is llrint of the engine map's last anchor target (the
 // emission the engine will buffer); encoded_frames is what lands on disk
 // (post-crop when trimmed, the same value untrimmed). The RIFF check applies
-// only when encoding to disk, against the format the limiter decision selects
-// (PCM 24 when limiter, else 32-bit float).
+// only when encoding to disk, against the PCM 24 deliverable format.
 std::expected<void, std::string> validate_render_projection(
     int64_t engine_output_frames, int64_t encoded_frames,
-    int channels, bool limiter, bool encode_to_disk);
+    int channels, bool encode_to_disk);
 
 // The shared post-engine chain — ONE implementation compiled by both
 // warptempo_gui (do_render's wav arm) and warptempo_cli, so the CLI stays
@@ -138,16 +137,15 @@ std::expected<void, std::string> validate_render_projection(
 // a deliberate single linear scan, negligible next to synthesis (the same
 // argument as the buffer route's PCM 24 snap). Stages, in order:
 //   post_trim crop        when post_trim != nullptr (trimmed renders)
-//   peak limiter          when limiter (kPeakLimiter* constants)
-//   pcm24 decision + sink:
-//     output_wav_path set   -> encode to that path (PCM 24 when limiter,
-//                              clean 32-bit float otherwise); staging-file
+//   peak limiter          (kPeakLimiter* constants)
+//   pcm24 sink:
+//     output_wav_path set   -> encode to that path as PCM 24; staging-file
 //                              naming and the atomic rename publication stay
 //                              orchestrator-owned.
 //     output_wav_path empty -> buffer route (target view): quantize the
 //                              buffer to the deliverable PCM 24 lattice in
-//                              place (limiter-on only), no encode, and hand
-//                              the buffer back to the caller as-is.
+//                              place, no encode, and hand the buffer back to
+//                              the caller as-is.
 // Optional cancellation hook, the post-engine sibling of the engine's own
 // flag: when non-null, the chain checks it at stage boundaries (before the
 // peak limiter, before the pcm24 snap or encode, and on the buffer route
@@ -162,6 +160,6 @@ std::expected<void, std::string> validate_render_projection(
 enum class FinishRenderStatus { Completed, Cancelled };
 std::expected<FinishRenderStatus, std::string> finish_render(
     std::vector<float>& buffer, int channels, int sample_rate,
-    bool limiter, const PostTrim* post_trim,
+    const PostTrim* post_trim,
     const std::string& output_wav_path,
     const std::atomic<bool>* cancel_flag = nullptr);

@@ -9,11 +9,11 @@
 
 // The WAV boundary is kept in-tree so package-level codec changes cannot
 // silently redefine source decode or deliverable bytes. Decode exposes
-// interleaved float32; PCM_24 uses the exact lattice in pcm24.h, while Float32
-// preserves source bits. Encode owns the same PCM_24 clip-and-round policy.
-// The writer emits a minimal spec-conformant layout.
+// interleaved float32 from PCM 16 or PCM 24 sources; PCM_24 uses the exact
+// lattice in pcm24.h. The writer emits a minimal spec-conformant PCM_24
+// layout — the sole deliverable format — with the same clip-and-round policy.
 
-enum class WavSampleFormat { Pcm16, Pcm24, Float32 };
+enum class WavSampleFormat { Pcm16, Pcm24 };
 
 // Refusal policy for absurd header claims, not a memory manager. This leaves
 // generous headroom for real sources while rejecting malformed terabyte shapes.
@@ -35,7 +35,7 @@ struct WavInfo {
     int             sample_rate = 0;
     int             channels    = 0;
     int64_t         frames      = 0;
-    WavSampleFormat format      = WavSampleFormat::Float32;
+    WavSampleFormat format      = WavSampleFormat::Pcm16;
 };
 
 // True when a WAV of this shape can no longer be finalized inside RIFF's
@@ -44,12 +44,11 @@ struct WavInfo {
 bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
                              uint64_t frames_written);
 
-// Projects the writer's minimal layout for a WAV of this shape - header span
-// plus data bytes - onto the existing RIFF-limit predicate so a render can be
-// refused before synthesis rather than at the write that crosses the limit.
-// Keep this in step with WavWriter::write_header().
-bool wav_projected_exceeds_riff_limits(WavSampleFormat format,
-                                       int channels, uint64_t frames);
+// Projects the writer's minimal PCM_24 layout for a WAV of this shape -
+// header span plus data bytes - onto the existing RIFF-limit predicate so a
+// render can be refused before synthesis rather than at the write that
+// crosses the limit. Keep this in step with WavWriter::write_header().
+bool wav_projected_exceeds_riff_limits(int channels, uint64_t frames);
 
 std::expected<WavInfo, std::string> wav_probe(const std::string& path);
 std::expected<WavInfo, std::string> wav_probe(std::span<const char> bytes);
@@ -77,17 +76,15 @@ public:
     WavWriter& operator=(WavWriter&& other) noexcept;
     ~WavWriter();
 
-    // open_file and open_memory trust the caller's channels and sample_rate and
-    // narrow them into RIFF fmt's 16-bit and 32-bit fields as written. Sources
-    // admitted by the in-tree probes are structurally within those fields'
-    // ranges; geometry beyond them is not refused, the header simply carries the
-    // narrowed values.
+    // open_file and open_memory write a PCM_24 layout and trust the caller's
+    // channels and sample_rate, narrowing them into RIFF fmt's 16-bit and
+    // 32-bit fields as written. Sources admitted by the in-tree probes are
+    // structurally within those fields' ranges; geometry beyond them is not
+    // refused, the header simply carries the narrowed values.
     static std::expected<WavWriter, std::string>
-    open_file(const std::string& path, WavSampleFormat format, int channels,
-              int sample_rate);
+    open_file(const std::string& path, int channels, int sample_rate);
     static std::expected<WavWriter, std::string>
-    open_memory(std::vector<char>& out, WavSampleFormat format, int channels,
-                int sample_rate);
+    open_memory(std::vector<char>& out, int channels, int sample_rate);
 
     std::expected<void, std::string> write_frames(const float* interleaved,
                                                   int64_t frames);
@@ -99,13 +96,11 @@ private:
     SinkKind sink_kind_ = SinkKind::None;
     FILE* file_ = nullptr;
     std::vector<char>* memory_ = nullptr;
-    WavSampleFormat format_ = WavSampleFormat::Float32;
     int channels_ = 0;
     int sample_rate_ = 0;
     uint64_t frames_written_ = 0;
     uint64_t data_bytes_ = 0;
     uint64_t riff_size_offset_ = 0;
-    uint64_t fact_frames_offset_ = 0;
     uint64_t data_size_offset_ = 0;
     bool closed_ = true;
     // Writer objects are single-threaded; this scratch is reused across writes.

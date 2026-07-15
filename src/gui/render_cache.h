@@ -89,8 +89,7 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 
 // Two-tier store for rendered target-view and archival audio, keyed by
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded
-// exactly once: PCM_24 when the limiter produced them, or float wav on the
-// limiter-off fallback path. Those routes have separate fingerprints. For
+// exactly once as PCM_24, the sole deliverable format. For
 // target-route buffers, limited masters arrive pre-quantized, so that single
 // PCM_24 writer-thread encode is an exact re-expression rather than a lossy
 // step and render completion never waits for it. The in-tree encode/decode

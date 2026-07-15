@@ -143,11 +143,6 @@ struct AudioSTFT {
     // Spectral limiter
     LimiterParams limiter_params;
 
-    // Mirrors EngineParams::limiter. When true, Pass 3 runs the spectral
-    // limiter in place on the emitted buffer; when false, the buffer holds
-    // clean synthesis. Encode-format decisions (PCM 24 vs float) and the
-    // peak stage live orchestrator-side in the prepost chain.
-    bool limiter = false;
     // Mirrors EngineParams::limiter_verbose: gates the spectral limiter's
     // stdout header and per-peak residual lines (suppressed on the
     // target-view scrub path).

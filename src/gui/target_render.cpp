@@ -259,10 +259,9 @@ void GuiTargetRender::dispatch_render_now() {
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
-    // buffer: the post_trim crop when a trim bound is set, and the spectral
-    // + peak limited chain whenever the global `limiter` toggle is on — the
-    // target-view preview gets the same cropping and limiting as the disk
-    // path.
+    // buffer: the post_trim crop when a trim bound is set, and the always-on
+    // spectral + peak limited chain — the target-view preview gets the same
+    // cropping and limiting as the disk path.
     req.output_buffer = &app.target_buffer;
     // The process's single RenderCache (this struct's own member, wired from
     // main.cpp). do_render uses it on this path only to queue the writer-thread

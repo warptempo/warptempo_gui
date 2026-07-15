@@ -35,9 +35,7 @@ std::filesystem::path render_output_directory(
 // named by the source stem, siblings of the source exactly like the
 // authoring sidecars (.warpmarkers, .phaseresetmarkers, .settings), so for
 // the three map formats this returns source_stem. The wav deliverable is
-// title-named: the title, prefixed with `limiter=false;` when the limiter is
-// off (the clean-float wav render). Only wav reaches the title arm, so the
-// clean-float prefix is wav-scoped by construction; this is its single owner.
+// title-named: the title itself.
 // The fingerprint sidecar and the .peaks cache are not composed here — they
 // follow the output path directly.
 std::string render_output_stem(const EngineSettings& es,

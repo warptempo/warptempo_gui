@@ -1,6 +1,5 @@
 #include "engine_settings.h"
 
-#include "parse_text_util.h"
 #include "value_format.h"
 
 #include <cctype>
@@ -27,7 +26,6 @@ constexpr EngineKeyEntry kEngineKeys[] = {
     { "url",           EngineField::Url },
     { "cover",         EngineField::Cover },
     { "output_format", EngineField::OutputFormat },
-    { "limiter",       EngineField::Limiter },
 };
 
 } // namespace
@@ -138,15 +136,6 @@ bool validate_engine_setting(const std::string& key,
         out.cover = value;
         return true;
     }
-    if (key == "limiter") {
-        bool v;
-        if (!warptempo_parse::parse_bool_token(value, v)) {
-            reason = "must be one of {true, false, 1, 0, yes, no, on, off}";
-            return false;
-        }
-        out.limiter = v;
-        return true;
-    }
     reason = "unknown engine key";
     return false;
 }
@@ -177,9 +166,6 @@ std::string format_engine_field_value(const EngineSettings& es,
             break;
         case EngineField::Cover:
             out = es.cover;
-            break;
-        case EngineField::Limiter:
-            out = es.limiter ? "true" : "false";
             break;
     }
     return out;

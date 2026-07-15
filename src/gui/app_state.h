@@ -633,7 +633,7 @@ struct AppState {
     // saved_distance against each persistence-affecting entry's op_mode.
     // Drives both the unsaved-work dialog and the dirty-dot.
     //
-    // Authoring-class settings (engine, scale, N, limiter, title,
+    // Authoring-class settings (engine, scale, N, title,
     // audio_input, plus any free-form non-view key typed into the settings
     // editor) participate in dirty via settings_dirty. View-state keys
     // (viewport, zoom, playhead, follow_mode, active_markers_view,

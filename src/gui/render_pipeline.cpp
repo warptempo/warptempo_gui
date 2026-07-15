@@ -418,7 +418,7 @@ RenderOutcome do_render(const RenderRequest& req,
             const auto t_render_1 = profile::now();
             const double render_ms = profile::ms(t_render_0, t_render_1);
             std::fprintf(stderr,
-                "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu output_buffer=%s limiter=%s outcome=%s\n",
+                "[profile] render_summary route=%s output_format=%s sr=%d ch=%d source_frames_passed=%zu trim_begin_frame=%lld trim_end_frame=%lld trim_span_frames=%lld target_frames=%lld target_seconds=%.3f source_read_ms=%.3f engine_ms=%.3f render_ms=%.3f marker_count=%zu phase_reset_count=%zu output_buffer=%s outcome=%s\n",
                 req.output_buffer ? "target" : "file", output_format.c_str(),
                 profile_source_sample_rate, profile_source_channels,
                 profile_source_frames_passed,
@@ -429,7 +429,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 profile_target_seconds, source_read_ms, engine_ms, render_ms,
                 req.warp_markers.size(), phase_reset_source_frames.size(),
                 req.output_buffer ? "yes" : "no",
-                req.engine_settings.limiter ? "yes" : "no",
                 outcome);
         }
         std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
@@ -672,10 +671,9 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
 
-        // Global limiter toggle. When on, every path (disk trimmed/untrimmed
-        // and the target-view buffer) gets the spectral(-0.3) + lifted
-        // peak(0) chain; when off, both limiters sit out entirely and disk
-        // output is clean 32-bit float.
+        // The limiter is always on: every path (disk trimmed/untrimmed and the
+        // target-view buffer) gets the spectral(-0.3) + lifted peak(0) chain,
+        // and disk output is always the limited PCM 24 deliverable.
 
         EngineParams ep;
         ep.source_audio_samples = src_sample_data;
@@ -711,7 +709,6 @@ RenderOutcome do_render(const RenderRequest& req,
             ? &trim_plan->pre.source_frame_schedule
             : nullptr;
         ep.N                    = N_fft;
-        ep.limiter              = req.engine_settings.limiter;
 
         // Projection refusal, orchestrator-side before the engine allocates
         // (refuse-before-cost): the engine's buffered emission is llrint of
@@ -721,7 +718,7 @@ RenderOutcome do_render(const RenderRequest& req,
         const int64_t encoded_frames =
             trim_plan ? trim_plan->post.samples : engine_output_frames;
         if (auto v = validate_render_projection(
-                engine_output_frames, encoded_frames, src_ch, ep.limiter,
+                engine_output_frames, encoded_frames, src_ch,
                 /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
             std::fprintf(stderr, "warptempo_gui: render error: %s\n",
                          v.error().c_str());
@@ -748,12 +745,11 @@ RenderOutcome do_render(const RenderRequest& req,
             const auto t_engine_1 = profile::now();
             engine_ms = profile::ms(t_engine_0, t_engine_1);
             std::fprintf(stderr,
-                "[profile] stage name=engine_total ms=%.3f result=%d source_buffer_frames=%zu target_frames=%lld output_buffer=%s limiter=%s\n",
+                "[profile] stage name=engine_total ms=%.3f result=%d source_buffer_frames=%zu target_frames=%lld output_buffer=%s\n",
                 engine_ms, static_cast<int>(er),
                 ep.source_audio_frames,
                 static_cast<long long>(profile_target_frames),
-                req.output_buffer ? "yes" : "no",
-                ep.limiter ? "yes" : "no");
+                req.output_buffer ? "yes" : "no");
         }
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
@@ -764,15 +760,14 @@ RenderOutcome do_render(const RenderRequest& req,
         if (cancel_requested()) return cancelled_outcome();
 
         // The shared post-engine chain (finish_render, src/prepost/): crop
-        // to the exact authored window when trimmed, peak limiter when
-        // limiter=true, then the pcm24 decision — encode to the staging path
-        // on the disk route, or the in-place PCM_24 snap (limiter-on only,
-        // no encode) on the target-view buffer route. One implementation
-        // shared with warptempo_cli, so the CLI stays byte-identical to the
-        // GUI by construction (the CLI passes no cancel flag, so its chain
-        // always completes).
+        // to the exact authored window when trimmed, the peak limiter, then
+        // the pcm24 sink — encode to the staging path on the disk route, or
+        // the in-place PCM_24 snap (no encode) on the target-view buffer
+        // route. One implementation shared with warptempo_cli, so the CLI
+        // stays byte-identical to the GUI by construction (the CLI passes no
+        // cancel flag, so its chain always completes).
         auto fin = finish_render(
-            *out_buf, src_ch, src_sr, ep.limiter,
+            *out_buf, src_ch, src_sr,
             trim_plan ? &trim_plan->post : nullptr,
             req.output_buffer ? std::string() : staging_output_path,
             cancel_flag);
@@ -784,15 +779,14 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
-        if (req.output_buffer && ep.limiter) {
+        if (req.output_buffer) {
             // Target playback auditions the deliverable lattice —
             // finish_render just snapped the limited buffer to PCM_24 in
             // place — so fresh renders, cache hits, and archival-artifact
             // loads carry sample-identical target-view audio: the writer
             // thread encodes the already-quantized buffer exactly by the
             // codec's roundtrip identity, so the cache blob decodes back to
-            // these floats. Limiter-off target renders skip the insert as
-            // before.
+            // these floats.
             const int64_t inserted_frames = src_ch > 0
                 ? static_cast<int64_t>(req.output_buffer->size() /
                                        static_cast<size_t>(src_ch))
