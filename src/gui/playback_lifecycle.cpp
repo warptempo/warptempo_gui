@@ -176,10 +176,10 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     }
     // Source view: enforce the trim window with in-range-only semantics,
     // mirroring the two arms above. Equal or crossed trim bounds make
-    // [trim_begin, trim_end) empty; such bounds may rest (nothing gates a
-    // trim commit — the render boundary owns trim refusals). Whenever the
-    // window is empty every live reseek stops — the same sane degradation
-    // as Space's silent no-op. This
+    // [trim_begin, trim_end) empty; such a pair cannot REST any more (the
+    // commit auto-clear destroys it), but it exists freely mid-gesture, and
+    // whenever the window is empty every live reseek stops — the same sane
+    // degradation as Space's silent no-op. This
     // guard also means play() below can never be reached with an empty range
     // from this site, closing the play() early-return trap (end_sample <=
     // start_sample returns early WITHOUT clearing the playing flag) at its

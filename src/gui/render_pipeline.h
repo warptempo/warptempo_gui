@@ -104,7 +104,9 @@ struct RenderRequest {
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
     // counterparts. Trim is wav-only: the wav arm forwards these bounds to
     // the prepost trimmer (plan_trim: cut source view, translated maps,
-    // output crop), and the map formats refuse when a bound is set.
+    // output crop; a plan refusal falls back to the full, untrimmed
+    // deliverable with one stderr line), and the map formats silently
+    // ignore any set bounds — they always write the FULL maps.
     bool    has_trim_begin = false;
     int64_t trim_begin_frame = 0;    // source frames
     bool    has_trim_end   = false;

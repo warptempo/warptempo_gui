@@ -320,9 +320,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // legitimately puts past the source total (Ctrl+S from target view
     // writes such values). A position past its own domain's total is
     // adversarial exactly like a past-EOF marker (the sidecar was authored
-    // against this audio's frame grid). Trim bound ordering stays
-    // deliberately unchecked — equal/inverted bounds load intact; the
-    // render boundary owns trim refusals.
+    // against this audio's frame grid). Trim bound ordering is normalized,
+    // not checked: a per-tab pair with end <= begin clears both of that
+    // tab's bounds after the adversarial walls run (the auto-clear block
+    // below the past-EOF guard), and the render's ambiguous-trim fallback
+    // renders untrimmed — never a refusal.
     {
         auto sf_r = read_settings_file(app.settings_path);
         if (!sf_r) {
@@ -382,7 +384,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // shares this exact routine so its in-memory result is 1:1 with a load.
         apply_settings_engine_and_prefs(app, sf);
         // Per-tab trim: apply each bound when its key is present;
-        // absence leaves the load-time reset (above) in place.
+        // absence leaves the load-time reset (above) in place. Values apply
+        // verbatim here; a crossed/equal pair normalizes in the auto-clear
+        // block after the past-EOF guard below (order rationale there).
         if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }
         if (sf.tab_a.trim.has_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = sf.tab_a.trim.end_frame; }
         if (sf.tab_b.trim.has_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = sf.tab_b.trim.begin_frame; }
@@ -503,6 +507,36 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
     }
 
+    // Load auto-clear: a persisted per-tab trim pair with end <= begin —
+    // exact integer compare — clears BOTH of that tab's bounds, one stderr
+    // line per cleared tab (crossed/equal cannot REST anywhere; the trim
+    // sibling of the marker normalizations, gesture half at
+    // auto_clear_crossed_trim). Deliberately AFTER the adversarial past-EOF
+    // hard-fail above: a crossed pair containing a past-EOF bound must
+    // still abort the load, identically in warptempo_cli (which loads the
+    // same values, runs the same wall check, and has no clear) — clearing
+    // first would swallow the adversarial defect in one product only. The
+    // live app.trim mirror was copied from the active tab at activation
+    // above, so it re-syncs after the clears. Render-entry sidecars reach
+    // memory through adopt_render_entry's own application path and
+    // deliberately skip this: they are written once at dispatch from a live
+    // store that can no longer rest crossed — trusted, no re-check.
+    {
+        const auto clear_crossed_tab = [](TrimState& t, char tab_name) {
+            if (t.has_begin && t.has_end && t.end_frame <= t.begin_frame) {
+                t = TrimState{};
+                std::fprintf(stderr,
+                    "warptempo_gui: tab %c trim bounds crossed or equal; "
+                    "both cleared\n",
+                    tab_name);
+            }
+        };
+        clear_crossed_tab(app.tab_a.trim, 'A');
+        clear_crossed_tab(app.tab_b.trim, 'B');
+        app.trim = (app.active_tab_view == 'B') ? app.tab_b.trim
+                                                : app.tab_a.trim;
+    }
+
     // Bring up the audio device bound to the new sample buffer. Init
     // failure disables playback but leaves the rest of the GUI usable.
     // Domain offset 0: the source is its own domain origin.
@@ -545,37 +579,32 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // the predicate that gates a keyboard S → T entry —
     // validate_target_view_entry (input_handler.h): resolve the loaded warp
     // store (the resolver normalizes ambiguous arrangements to tempo 1.00,
-    // one stderr line per timestamp — marker arrangements always enter),
-    // build the whole-song warp_frame_map with the loaded scale, and, when
-    // the active tab loaded a trim bound, validate_trim_frames against that
-    // map. Every input the walk consumes is in place by this point: markers
-    // (parsed above, default zero-marker seeded), engine settings (strict
-    // block above), and the active tab's trim (tab activation above). On
-    // failure — trim validity or the tripwire-class build failures — force
-    // source view SILENTLY (a load is not a user command; the next `t`
-    // entry surfaces the refusal through the popup), so no target render of
-    // an unrenderable window is ever dispatched. The gate mirrors the entry
-    // gate exactly — the only refusal it does not carry is a trim bound
-    // under a map format (validate_target_view_entry never sees
-    // output_format; the render dispatch popup owns that conflict).
-    // Forcing 'S' intentionally means a later save persists
+    // one stderr line per timestamp — marker arrangements always enter) and
+    // build the whole-song warp_frame_map with the loaded scale. Trim plays
+    // no part (crossed/equal cleared above; an ambiguous trim at render
+    // time falls back to untrimmed), so a persisted T view restores
+    // whenever the map builds. Every input the walk consumes is in place by
+    // this point: markers (parsed above, default zero-marker seeded) and
+    // engine settings (strict block above). On failure — the tripwire-class
+    // build failures only — force source view SILENTLY (a load is not a
+    // user command; the next `t` entry surfaces the refusal through the
+    // popup). Forcing 'S' intentionally means a later save persists
     // active_audio_view=S — the saved line reflects the view actually
     // shown.
     if (app.active_audio_view == 'T') {
         if (!validate_target_view_entry(
                 app.warpmarkers.markers(),
                 app.engine_settings.scale,
-                audio.sample_rate(), static_cast<long>(audio.total_frames()),
-                app.trim.has_begin, app.trim.begin_frame,
-                app.trim.has_end,   app.trim.end_frame)) {
+                audio.sample_rate(),
+                static_cast<long>(audio.total_frames()))) {
             app.active_audio_view = 'S';
             // The tab-activation clamp above ran against the target-domain
             // total (live_total_frames consults the target map cache while
             // active_audio_view=='T'); with the view forced back to source
-            // the source total governs, so re-clamp. This matters when the
-            // map builds but the trim fails: the deformed total can exceed
-            // the source total, leaving viewport_start past the
-            // source-domain maximum.
+            // the source total governs, so re-clamp — cheap insurance for
+            // the forced-S path (with the map unbuildable the earlier clamp
+            // already fell back to the source total, so this is usually a
+            // no-op).
             clamp_viewport_start(app, audio);
         }
     }

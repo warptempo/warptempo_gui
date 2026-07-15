@@ -42,8 +42,9 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         }
         // Per-side clamp to the deformed timeline only — no ordering clamp:
         // inverted bounds pass through as authored, mirroring
-        // compute_trim_samples' contract (consumers must not assume
-        // begin <= end; the render boundary owns validity).
+        // compute_trim_samples' contract (crossed cannot rest, but
+        // mid-gesture crossing is free and this runs per frame, so
+        // consumers must not assume begin <= end).
         if (begin_tgt < 0) begin_tgt = 0;
         if (begin_tgt > live_total) begin_tgt = live_total;
         if (end_tgt < 0) end_tgt = 0;

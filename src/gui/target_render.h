@@ -141,15 +141,21 @@ private:
 
     // Compute the domain offset for the target-buffer playback bind: the
     // full-target-frame coordinate that target_buffer[0] represents, for an
-    // explicit (has_begin, begin_frame) trim pair. 0 for a full-song (no-trim)
-    // render; with trim set, the trim-begin source frame mapped through the
+    // explicit trim pair. 0 for a full-song (no-trim) render; with a
+    // surviving trim, the trim-begin source frame mapped through the
     // target-view warp_frame_map (the engine renders only the trim range, so
-    // buffer frame 0 is the trim's target-frame start). No buffer-frames gate:
-    // callers stamp the origin at production time, when the buffer may still be
-    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
-    // travels to GuiPlayback with each bind.
+    // buffer frame 0 is the trim's target-frame start). Takes BOTH bounds
+    // because it must mirror do_render's ambiguous-trim fallback: a trim
+    // whose target span rounds below one output sample renders the FULL
+    // deliverable, so the anchor is 0 then, not the begin's target image
+    // (rule mirror at the definition). No buffer-frames gate: callers stamp
+    // the origin at production time, when the buffer may still be empty.
+    // The stamp rests in dispatched_buffer_start_frame_ below and travels
+    // to GuiPlayback with each bind.
     int64_t compute_buffer_start_frame_for(bool has_begin,
-                                           int64_t begin_frame) const;
+                                           int64_t begin_frame,
+                                           bool has_end,
+                                           int64_t end_frame) const;
 
     // Render fingerprint of the most recent dispatch. Computed at the top of
     // dispatch_render_now() and used for target-view cache/artifact lookups.

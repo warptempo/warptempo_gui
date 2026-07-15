@@ -45,13 +45,13 @@ struct GuiPrompt {
     // `text` is displayed verbatim — callers pass the owner's own error
     // string, unmodified. While active it is modal exactly like the other
     // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
-    // Covers the environmental, settings-choice, and tripwire-class
-    // refusals. Callers: the render dispatch pre-flight (the
-    // resolve/build/trim chain — trim refusals plus the engine-metadata /
-    // non-positive-tempo-product class, and the map-format-with-trim
-    // refusal — a settings choice, not corruption) and the target-view
-    // entry gate (trim validity and the same tripwire class; marker
-    // arrangements always enter — the parser resolver normalizes them).
+    // Covers the environmental and tripwire-class refusals. Callers: the
+    // render dispatch pre-flight and the target-view entry gate (both the
+    // resolve/build chain — the engine-metadata /
+    // non-positive-tempo-product class; marker arrangements always enter —
+    // the parser resolver normalizes them, and trim never refuses: crossed
+    // cannot rest, ambiguous trim falls back to untrimmed at render, maps
+    // ignore trim).
     void open_error_notice(std::string text);
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the

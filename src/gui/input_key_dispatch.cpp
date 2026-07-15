@@ -354,15 +354,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
 
-        // Pre-flight the live state on the GUI thread: a trim refusal (a
-        // trimmed map-format render included) or a tripwire-class build
-        // failure raises the popup and the dispatch is refused. Marker
-        // arrangements never refuse — the resolver normalizes them.
+        // Pre-flight the live state on the GUI thread: a tripwire-class
+        // build failure raises the popup and the dispatch is refused.
+        // Marker arrangements never refuse — the resolver normalizes them —
+        // and trim never refuses (crossed cannot rest, an ambiguous trim
+        // falls back to untrimmed inside do_render, maps ignore trim).
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale,
-                                   app.engine_settings.output_format,
-                                   app.trim.has_begin, app.trim.begin_frame,
-                                   app.trim.has_end, app.trim.end_frame)) {
+                                   app.engine_settings.scale)) {
             return true;
         }
 
@@ -409,15 +407,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
 
-        // Pre-flight the live state: a trim refusal (a trimmed map-format
-        // render included) or a tripwire-class build failure refuses the
-        // whole sweep with the popup. Per-cell tempo_cents mutations
+        // Pre-flight the live state: a tripwire-class build failure refuses
+        // the whole sweep with the popup (trim never refuses a dispatch;
+        // see warp_render_preflight). Per-cell tempo_cents mutations
         // remain on the async stderr backstop.
         if (!warp_render_preflight(app.warpmarkers.markers(),
-                                   app.engine_settings.scale,
-                                   app.engine_settings.output_format,
-                                   app.trim.has_begin, app.trim.begin_frame,
-                                   app.trim.has_end, app.trim.end_frame)) {
+                                   app.engine_settings.scale)) {
             return true;
         }
 

@@ -843,8 +843,9 @@ GuiPaintHandler::compute_displayed_trim() const {
     // playback ranges): stems and chips paint at the authored spot — past
     // EOF included — and the hit tests (hit_test_trim_boundary/_chip) test
     // the same authored positions, so paint and pick stay in agreement.
-    // Bounds may rest inverted; this helper is position-only and needs no
-    // order (the dim-rect consumer applies its own inverted-window rule).
+    // Bounds may be inverted mid-gesture (crossed cannot rest; this runs
+    // per frame); the helper is position-only and needs no order (the
+    // dim-rect consumer applies its own inverted-window rule).
     std::pair<long long, long long> t{0, audio.total_frames()};
     if (app.trim.has_begin) {
         t.first = static_cast<long long>(
@@ -882,10 +883,12 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
     // Inverted trim does not dim: with both bounds set and begin strictly
     // later than end (compared here in the displayed domain the rects are
     // computed in) there is no coherent window to shade, so no dim rects at
-    // all — no negative-width shading, no misleading window. The stems and
-    // chips still paint at their authored positions; the render boundary's
-    // refusal is the user-facing signal. Equal bounds are NOT inverted: the
-    // two rects meet at the shared stem naturally.
+    // all — no negative-width shading, no misleading window. Inverted is a
+    // MID-GESTURE-only state now (crossed/equal cannot rest — the commit
+    // auto-clear destroys the pair), so this paints the free crossing
+    // during a drag; the stems and chips still paint at their authored
+    // positions. Equal bounds are NOT inverted: the two rects meet at the
+    // shared stem naturally.
     if (dtrim.has_begin && dtrim.has_end && dtrim.begin > dtrim.end) {
         return out;
     }

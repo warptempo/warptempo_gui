@@ -461,7 +461,8 @@ private:
     // chips that cap them). Computing it in one place keeps chip and stem in
     // lockstep — same positions, same has/selected bits — so they always read
     // as one continuous unit. Positions are the AUTHORED per-bound frames —
-    // unordered (bounds may rest inverted; past-EOF is load-fatal, so each
+    // unordered (bounds may be inverted mid-gesture — crossed cannot rest —
+    // and this paints per frame; past-EOF is load-fatal, so each
     // bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
@@ -479,7 +480,8 @@ private:
     // Out-of-trim dim rects in SCREEN coordinates for the current frame, or
     // an empty result when nothing should dim (no trim, or an
     // INVERTED trim — begin strictly later than end in the displayed domain
-    // shades nothing; the render boundary's refusal is the signal).
+    // shades nothing; a mid-gesture-only state, since crossed bounds
+    // cannot rest past the commit auto-clear).
     // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the
     // waveform plate blit, so the dim recolors only the out-of-trim sample
     // pixels (the plate itself is trim-agnostic — see render_waveform).

@@ -159,7 +159,9 @@ void GuiTargetRender::dispatch_render_now() {
         // request state on this synchronous rung, so the stamp is exact.
         dispatched_buffer_start_frame_ =
             compute_buffer_start_frame_for(app.trim.has_begin,
-                                           app.trim.begin_frame);
+                                           app.trim.begin_frame,
+                                           app.trim.has_end,
+                                           app.trim.end_frame);
         complete_successful_buffer();
         return;
     }
@@ -186,7 +188,9 @@ void GuiTargetRender::dispatch_render_now() {
             // stamp is exact.
             dispatched_buffer_start_frame_ =
                 compute_buffer_start_frame_for(app.trim.has_begin,
-                                               app.trim.begin_frame);
+                                               app.trim.begin_frame,
+                                               app.trim.has_end,
+                                               app.trim.end_frame);
             complete_successful_buffer();
             std::fprintf(stderr,
                 "warptempo_gui: target view loaded from archival render: %s\n",
@@ -224,7 +228,8 @@ void GuiTargetRender::dispatch_render_now() {
     // consumes this stamp rather than recomputing the origin from a store that
     // may have drifted mid-render.
     dispatched_buffer_start_frame_ =
-        compute_buffer_start_frame_for(app.trim.has_begin, app.trim.begin_frame);
+        compute_buffer_start_frame_for(app.trim.has_begin, app.trim.begin_frame,
+                                       app.trim.has_end,   app.trim.end_frame);
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
@@ -319,26 +324,45 @@ void GuiTargetRender::complete_successful_buffer() {
 }
 
 int64_t GuiTargetRender::compute_buffer_start_frame_for(
-    bool has_begin, int64_t begin_frame) const {
+    bool has_begin, int64_t begin_frame,
+    bool has_end, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
-    // with a trim begin set, buffer[0] IS llrint(T_b) by construction — the
-    // post_trim crop cut the render at exactly the authored begin's target
-    // image (T_b = the authored begin frame through the map, exact doubles,
-    // the trimmer's own formula) — so the anchor is that same llrint(T_b) in
-    // full-target coordinates and the exact authored begin/end display falls
-    // out. Reads ONLY the begin bound, so an inverted trim store (legal at
-    // rest; the target-view validity gate kicks to source view within a tick)
-    // cannot misanchor it — no ordering assumption here. Callers pass the trim
-    // pair the produced samples embody and stamp the result at production time,
-    // so no buffer-frames gate: the buffer may still be empty at the stamp.
+    // with a SURVIVING trim begin, buffer[0] IS llrint(T_b) by construction
+    // — the post_trim crop cut the render at exactly the authored begin's
+    // target image (T_b = the authored begin frame through the map, exact
+    // doubles, the trimmer's own formula) — so the anchor is that same
+    // llrint(T_b) in full-target coordinates and the exact authored
+    // begin/end display falls out.
+    //
+    // Fallback mirror (do_render decoupling): a trim plan_trim refuses
+    // renders the FULL, untrimmed buffer, so its anchor is 0, not
+    // llrint(T_b). This is the one downstream read that must distinguish "a
+    // trim bound was set" from "a trim plan exists", and it cannot see the
+    // worker's plan — so it re-derives the survival verdict from the same
+    // exact-double images through the same map: the render is trimmed iff
+    // llrint(T_e) - llrint(T_b) >= 1 (validate_trim_frames' span rule, the
+    // only refusal reachable from a live store — crossed/equal cannot rest
+    // and past-EOF is adversarial load-fatal; a crossed pair would fail
+    // this same compare anyway, T being monotone). Callers pass the trim
+    // pair the produced samples embody and stamp the result at production
+    // time, so no buffer-frames gate: the buffer may still be empty at the
+    // stamp.
     if (has_begin && audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
-        const double begin_source_frame = begin_frame;
-        return std::llrint(map_source_to_target(
-            begin_source_frame < 0.0 ? 0.0 : begin_source_frame,
+        const double begin_source_frame =
+            begin_frame < 0 ? 0.0 : static_cast<double>(begin_frame);
+        const double end_source_frame = has_end
+            ? static_cast<double>(end_frame)
+            : static_cast<double>(audio.total_frames());
+        const int64_t t_begin = std::llrint(map_source_to_target(
+            begin_source_frame, target_warp_frame_map));
+        const int64_t t_end = std::llrint(map_source_to_target(
+            end_source_frame < 0.0 ? 0.0 : end_source_frame,
             target_warp_frame_map));
+        if (t_end - t_begin < 1) return 0;  // fallback: untrimmed render
+        return t_begin;
     }
     return 0;
 }

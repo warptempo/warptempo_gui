@@ -13,22 +13,24 @@
 // Every gesture clamps each bound to its own absolute walls — begin from
 // frame 0 to EOF-1, end from frame 0 to EOF exactly (end-at-EOF is a valid
 // render, so the GUI must represent it). There are no partner walls: a bound
-// crosses its partner freely during any gesture and may rest inverted or
-// equal; no gesture guards against zero-length windows. The per-bound wall
-// split (begin EOF-1 vs end EOF) is a recorded trim-vs-marker asymmetry — it
-// replaces the older no-walls asymmetry, now dead — sitting beside the marker
-// nudges' single EOF wall. Every wall check is a plain integer compare
-// — literally the load guard's comparison. The zero floor is subsumed by the
-// walls but remains the reason the floor exists at all: a negative position
-// is unrepresentable in the authored frame form the .settings file persists
-// (parse_authored_frame rejects negatives as malformed) — a format-
-// representability floor, not a spacing or validity rule. Past-EOF bounds
-// are unreachable: the gesture walls forbid authoring one, and the load
-// boundary (file_loader / CLI) hard-fails a past-EOF bound in a hand-edited
-// .settings as adversarial input (a .settings applies only to its own
-// audio). validate_trim_frames (trimmer.h) owns every trim refusal at the
-// render boundary and the target-view gate, and stays the breach backstop
-// for hand-edited artifacts.
+// crosses its partner freely during any gesture — but crossed/equal can no
+// longer REST: every trim commit runs auto_clear_crossed_trim (below), so a
+// commit landing on or across the partner destroys both bounds. The
+// per-bound wall split (begin EOF-1 vs end EOF) is a recorded
+// trim-vs-marker asymmetry — it replaces the older no-walls asymmetry, now
+// dead — sitting beside the marker nudges' single EOF wall. Every wall
+// check is a plain integer compare — literally the load guard's comparison.
+// The zero floor is subsumed by the walls but remains the reason the floor
+// exists at all: a negative position is unrepresentable in the authored
+// frame form the .settings file persists (parse_authored_frame rejects
+// negatives as malformed) — a format-representability floor, not a spacing
+// or validity rule. Past-EOF bounds are unreachable: the gesture walls
+// forbid authoring one, and the load boundary (file_loader / CLI)
+// hard-fails a past-EOF bound in a hand-edited .settings as adversarial
+// input (a .settings applies only to its own audio). validate_trim_frames
+// (trimmer.h) still authors the trim-validity vocabulary, but a refusal at
+// render time now means "render untrimmed" (do_render's fallback), not a
+// refused render.
 
 namespace {
 // x autoset places the far bound half of the visible span from the near bound:
@@ -113,6 +115,13 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     app.last_selected_trim  = 'B';
     app.last_sel_group      = LastSelGroup::Trim;
 
+    // The autoset is a commit: at the head/tail walls the partner clamp can
+    // land the pair equal (e.g. an End-side autoset at playhead 0 pins both
+    // bounds to frame 0), and equal cannot rest. Runs after the selection
+    // flags above so the cleared state wins, before the invalidations below
+    // so the repaint shows it.
+    auto_clear_crossed_trim();
+
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
@@ -136,17 +145,43 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     target_render.trigger();
 }
 
+// The clear-both field resets, shared verbatim by Shift+x
+// (handle_trim_clear_both) and the crossed-commit auto-clear
+// (auto_clear_crossed_trim) so the two clears can never drift. Fields only:
+// no invalidation, no trigger — callers own their repaint tail.
+void GuiInputHandler::clear_trim_bounds() {
+    app.trim.has_begin      = false;
+    app.trim.has_end        = false;
+    app.trim.begin_frame    = 0;
+    app.trim.end_frame      = 0;
+    app.trim_begin_selected = false;
+    app.trim_end_selected   = false;
+    app.last_selected_trim  = 0;
+}
+
+// Architect ruling (2026-07-15): crossed/equal trim bounds cannot REST —
+// committing one bound onto or across the other destroys BOTH bounds, the
+// trim sibling of the marker normalizations (ambiguous states resolve
+// instead of resting or refusing). SILENT by design: the chips visibly
+// disappear, which is the whole signal. The check is the exact integer
+// compare end_frame <= begin_frame, run only when both bounds are set, and
+// only at COMMIT — mid-gesture crossing stays free (nothing pops
+// mid-gesture; update_trim_drag never calls this). Every trim commit site —
+// the x autoset, the drag release, the nudge press, the trim-end Ctrl+wheel
+// — calls this after its mutation and before its invalidations, so the
+// repaint shows the cleared state.
+void GuiInputHandler::auto_clear_crossed_trim() {
+    if (app.trim.has_begin && app.trim.has_end &&
+        app.trim.end_frame <= app.trim.begin_frame) {
+        clear_trim_bounds();
+    }
+}
+
 // Shift+x: clear both trim bounds unconditionally. Silent no-op when neither
 // bound is set. Trim is gesture-owned and excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
-        app.trim.has_begin      = false;
-        app.trim.has_end        = false;
-        app.trim.begin_frame  = 0;
-        app.trim.end_frame    = 0;
-        app.trim_begin_selected = false;
-        app.trim_end_selected   = false;
-        app.last_selected_trim  = 0;
+        clear_trim_bounds();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
@@ -484,6 +519,11 @@ void GuiInputHandler::commit_trim_drag() {
             if (live_total > 0 && pin >= live_total) pin = live_total - 1;
             app.playhead_cursor_sample = pin;
         }
+        // The release is the commit: a bound released on or across its
+        // partner destroys both bounds (crossed/equal cannot rest; ruling at
+        // auto_clear_crossed_trim). Mid-drag crossing above stayed free; the
+        // playhead keeps the pin computed from the released position.
+        auto_clear_crossed_trim();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
@@ -520,8 +560,9 @@ void GuiInputHandler::delete_selected_trim() {
 // recorded trim-vs-marker asymmetry (marker nudges keep a single EOF
 // wall, total frames minus one source frame). The integer walls win over
 // the pixel grid, so a wall-clamped press rests exactly on its wall.
-// There is still no partner wall: the bound crosses its partner freely.
-// The render boundary owns trim validity.
+// There is still no partner wall — the bound crosses its partner freely —
+// but each press is a commit, so a press landing on or across the partner
+// destroys both bounds (auto_clear_crossed_trim).
 void GuiInputHandler::nudge_selected_trim(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     const int sr = audio.sample_rate();
@@ -583,6 +624,12 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     // other trim gesture; see handle_trim_clear_both).
     field = proposed;
 
+    // Each press is a commit: a press landing the bound on or across its
+    // partner destroys both bounds (crossed/equal cannot rest; ruling at
+    // auto_clear_crossed_trim). Before the invalidations so the repaint
+    // shows the cleared state.
+    auto_clear_crossed_trim();
+
     // The same invalidation set the trim drag's motion branch emits.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -591,9 +638,11 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     // No viewport gate, mirroring the marker nudge (drags viewport-clamp the
     // grabbed item; nudges do not). Track the playhead onto the bound through
     // move_playhead_to's edge-follow path — at most one pixel of scroll,
-    // keeping the bound just inside the edge.
+    // keeping the bound just inside the edge. `proposed` rather than `field`:
+    // the auto-clear may have zeroed the store, and the playhead should rest
+    // where the press actually landed.
     viewport.move_playhead_to(
-        source_frame_to_active_domain(app, audio, field));
+        source_frame_to_active_domain(app, audio, proposed));
 }
 
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool ctrl,

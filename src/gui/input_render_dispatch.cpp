@@ -4,7 +4,6 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "time_format.h"
-#include "trimmer.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
@@ -26,27 +25,26 @@
 
 // Render dispatch pre-flight. One pass on the GUI thread,
 // marker-count-sized and cheap. Always validates the LIVE state
-// (app.warpmarkers / app.trim at dispatch time).
+// (app.warpmarkers at dispatch time).
 //
 // The resolve-then-build chain the render worker runs —
 // resolve_warp_markers_for_render (which normalizes ambiguous marker
 // arrangements to tempo 1.00, one stderr line per timestamp, and never
 // refuses an authored store) then build_warp_frame_map — runs against the
-// given marker list and scale, plus, when a trim bound is set, the
-// map-format refusal (trim is wav-only, ruled) and validate_trim_frames
-// against the built map. The chain is the tripwire-class backstop
+// given marker list and scale. The chain is the tripwire-class backstop
 // (effectively the engine-metadata and non-positive-tempo-product class),
 // surfacing through the error-notice popup with the owner's error string,
-// unmodified. The async pipeline's existing stderr failure paths remain
-// the backstop for what the pre-flight never sees (per-cell tempo/scale
-// mutations in the sweep batches); the popup never blocks the render
-// thread and no strings flow through the async callback.
+// unmodified. Trim never refuses a dispatch: crossed/equal bounds cannot
+// rest (the commit and load auto-clears), an ambiguous trim at render time
+// falls back to the full, untrimmed deliverable inside do_render (one
+// stderr line), and the map formats silently ignore any set trim (they
+// always write the FULL maps). The async pipeline's existing stderr
+// failure paths remain the backstop for what the pre-flight never sees
+// (per-cell tempo/scale mutations in the sweep batches); the popup never
+// blocks the render thread and no strings flow through the async callback.
 bool GuiInputHandler::warp_render_preflight(
         const std::vector<GuiWarpMarker>& markers,
-        double scale,
-        const std::string& output_format,
-        bool has_trim_begin, int64_t trim_begin_frame,
-        bool has_trim_end, int64_t trim_end_frame) {
+        double scale) {
     const long sr    = static_cast<long>(audio.sample_rate());
     const long total = static_cast<long>(audio.total_frames());
 
@@ -62,19 +60,6 @@ bool GuiInputHandler::warp_render_preflight(
     if (!built) {
         prompt.open_error_notice(std::move(built.error()));
         return false;
-    }
-    if (has_trim_begin || has_trim_end) {
-        if (output_format != "wav") {
-            prompt.open_error_notice(
-                "map formats take no trim; clear the trim or render wav");
-            return false;
-        }
-        if (auto v = validate_trim_frames(
-                has_trim_begin, trim_begin_frame, has_trim_end, trim_end_frame,
-                static_cast<int64_t>(audio.total_frames()), *built); !v) {
-            prompt.open_error_notice(std::move(v.error()));
-            return false;
-        }
     }
     return true;
 }
@@ -340,18 +325,14 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     // Pre-flight before any cell work. This base site validates the LIVE
     // state at dispatch time — base_warp_markers is a just-taken copy of
-    // app.warpmarkers, and the settings/trim arguments read the live state
-    // directly — so a trim refusal (a trimmed map-format render included)
-    // or a tripwire-class build failure refuses with the popup. Per-cell
-    // scale/tempo mutations stay on the async stderr backstop. The bpm
-    // editor session is modal — nothing can mutate the stores, settings,
-    // or trim between mode entry and this dispatch — so a refusal here is
+    // app.warpmarkers — so a tripwire-class build failure refuses with the
+    // popup (trim never refuses a dispatch; see warp_render_preflight).
+    // Per-cell scale/tempo mutations stay on the async stderr backstop. The
+    // bpm editor session is modal — nothing can mutate the stores or
+    // settings between mode entry and this dispatch — so a refusal here is
     // a backstop, not a reachable path.
     if (!warp_render_preflight(base_warp_markers,
-                               app.engine_settings.scale,
-                               app.engine_settings.output_format,
-                               app.trim.has_begin, app.trim.begin_frame,
-                               app.trim.has_end, app.trim.end_frame)) {
+                               app.engine_settings.scale)) {
         return false;
     }
 

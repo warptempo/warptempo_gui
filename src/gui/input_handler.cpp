@@ -7,7 +7,6 @@
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
-#include "trimmer.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
@@ -774,11 +773,13 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             // valid render); plain integer compares, the load
             // guard's own comparison, applied AFTER the column snap so
             // the walls win over the pixel grid. There is no
-            // partner wall: the end bound crosses the begin bound freely
-            // and the begin bound is untouched here. The zero floor is the
-            // walls' lower end, kept for representability — a negative
-            // position is unrepresentable in the authored frame form the
-            // .settings file persists.
+            // partner wall — the end bound crosses the begin bound freely
+            // and the begin bound is untouched here — but each wheel frame
+            // is a commit, so a move landing the end on or before the
+            // begin destroys both bounds (auto_clear_crossed_trim). The
+            // zero floor is the walls' lower end, kept for
+            // representability — a negative position is unrepresentable in
+            // the authored frame form the .settings file persists.
             const int64_t step = std::max<int64_t>(
                 1, samples_visible(app, audio) / kTrimEndWheelDivisor);
             const int64_t step_cols = std::max<int64_t>(
@@ -796,6 +797,9 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
             const int64_t end_wall = audio.total_frames();
             if (v > end_wall) v = end_wall;
             app.trim.end_frame = v;
+            // Commit auto-clear (ruling at auto_clear_crossed_trim), before
+            // the invalidations so the repaint shows the cleared state.
+            auto_clear_crossed_trim();
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             target_render.trigger();
@@ -914,30 +918,20 @@ bool GuiInputHandler::apply_editor_clipboard(
 
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
-                           double scale, int sample_rate, long total_frames,
-                           bool has_trim_begin, int64_t trim_begin_frame,
-                           bool has_trim_end,   int64_t trim_end_frame) {
+                           double scale, int sample_rate, long total_frames) {
     // Contract and caller list in input_handler.h: this is the shared
     // entry-half validity predicate for target view — the keyboard S → T
     // toggle below and GuiFileLoader::load_file's active_audio_view=T
     // restore gate on exactly this walk. The resolver normalizes ambiguous
-    // marker arrangements to tempo 1.00 (one stderr line per timestamp), so
-    // entry effectively gates only on trim validity and the tripwire-class
-    // build failures.
+    // marker arrangements to tempo 1.00 (one stderr line per timestamp),
+    // and trim plays no part (crossed/equal cannot rest; an ambiguous trim
+    // at render time falls back to untrimmed), so entry effectively gates
+    // only on the tripwire-class build failures.
     auto resolved = resolve_warp_markers_for_render(
         slice_to_warp_markers(markers), sample_rate, total_frames);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
     auto r = build_warp_frame_map(*resolved, scale, sample_rate, total_frames);
     if (!r) return std::unexpected(std::move(r.error()));
-    if (has_trim_begin || has_trim_end) {
-        if (auto v = validate_trim_frames(
-                has_trim_begin, trim_begin_frame,
-                has_trim_end,   trim_end_frame,
-                static_cast<int64_t>(total_frames), *r);
-            !v) {
-            return std::unexpected(std::move(v.error()));
-        }
-    }
     return std::move(*r);
 }
 
@@ -952,47 +946,40 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         return;
     }
 
-    // Build the current warp_frame_map from the live warp marker store +
-    // settings trim. Same resolve-then-build pipeline the render
-    // pipeline runs, so the visible deformity in target view matches
-    // what the engine would emit.
+    // Build the current warp_frame_map from the live warp marker store.
+    // Same resolve-then-build pipeline the render pipeline runs, so the
+    // visible deformity in target view matches what the engine would emit.
     // Trim is a render-time cut, not a view-time concept: build_warp_frame_map
     // builds the WHOLE-song map, and the toggle translates source-frame
     // viewport / playhead / total_frames across the whole song against it —
     // see the matching comment in paint_handler.cpp's per-paint recompute.
     //
     // Validity gate, entry half: entering target view (S → T) gates only on
-    // trim validity and the tripwire-class build failures — marker
-    // arrangements always enter, because the parser resolver normalizes
-    // ambiguous arrangements to tempo 1.00 at resolve time (one stderr line
-    // per timestamp); nothing gates or modals in the GUI. The predicate is
-    // validate_target_view_entry (definition above): resolve, then build,
-    // then — trim bound set — validate_trim_frames against the full
-    // trim-off map just built (the same construction the target-view cache
-    // holds); it returns that map, so entry validation and the translation
-    // map below are one build. GuiFileLoader::load_file gates its
-    // active_audio_view=T restore on the SAME predicate — a load restore
-    // and a keystroke entry block identically. A refusal — a set trim
-    // failing validate_trim_frames, or the engine-metadata /
+    // the tripwire-class build failures — marker arrangements always enter,
+    // because the parser resolver normalizes ambiguous arrangements to
+    // tempo 1.00 at resolve time (one stderr line per timestamp), and trim
+    // plays no part (crossed/equal cannot rest, and an ambiguous trim at
+    // render time falls back to the full, untrimmed deliverable, so there
+    // is no unrenderable window to protect playback from); nothing gates or
+    // modals in the GUI. The predicate is validate_target_view_entry
+    // (definition above): resolve, then build; it returns the built map, so
+    // entry validation and the translation map below are one build.
+    // GuiFileLoader::load_file gates its active_audio_view=T restore on the
+    // SAME predicate — a load restore and a keystroke entry block
+    // identically. A refusal — the engine-metadata /
     // non-positive-tempo-product class, unreachable from program-written
     // input — surfaces through the error-notice popup with the owner's
-    // error string; target playback must never audition an unrenderable
-    // window.
+    // error string.
     //
-    // Leaving target view (T → S) never gates: the trim column is masked
-    // off from the predicate call and a resolve/build failure is ignored —
-    // the exit falls back to the empty map — identity translation for the
-    // playhead/viewport — and always succeeds (a valid map with an invalid
-    // trim keeps the built map for the exit translation, exactly as
-    // before).
+    // Leaving target view (T → S) never gates: a resolve/build failure is
+    // ignored — the exit falls back to the empty map — identity translation
+    // for the playhead/viewport — and always succeeds.
     const bool entering_target = (app.active_audio_view == 'S');
     std::vector<WarpFrameMapSegment> warp_frame_map;
     auto entry = validate_target_view_entry(
         app.warpmarkers.markers(),
         app.engine_settings.scale,
-        audio.sample_rate(), static_cast<long>(audio.total_frames()),
-        entering_target && app.trim.has_begin, app.trim.begin_frame,
-        entering_target && app.trim.has_end,   app.trim.end_frame);
+        audio.sample_rate(), static_cast<long>(audio.total_frames()));
     if (entry) {
         warp_frame_map = std::move(*entry);
     } else if (entering_target) {

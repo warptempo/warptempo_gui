@@ -242,11 +242,12 @@ GuiRect bottom_lower_row_area(const AppState& a) {
 // already whole int64 frames; each side clamps to
 // [0, total_frames] independently so playback ranges stay inside the
 // buffer. There is NO
-// ordering clamp: trim bounds may rest inverted (begin later than end) and
-// the pair passes through as authored — consumers (the Space gate's
-// cursor-in-[begin,end) check, Home/End via trim_range, the load-time
-// playhead) degrade to a no-op or a per-side position and must not assume
-// begin <= end. The render boundary (validate_trim_frames) owns validity.
+// ordering clamp: the pair passes through as authored. Crossed/equal
+// bounds can no longer REST (the commit and load auto-clears destroy such
+// pairs), but MID-GESTURE crossing stays free and this runs per frame, so
+// consumers (the Space gate's cursor-in-[begin,end) check, Home/End via
+// trim_range, the load-time playhead) still degrade to a no-op or a
+// per-side position and must not assume begin <= end.
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames) {
     long long begin = 0;

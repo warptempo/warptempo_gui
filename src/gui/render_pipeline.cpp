@@ -476,26 +476,40 @@ RenderOutcome do_render(const RenderRequest& req,
         return finish_success("reused_up_to_date");
     }
 
-    // Trim plan (wav only; the map formats refuse a trim in their arm
-    // below). plan_trim validates the authored bounds first — the sole owner
-    // of every trim refusal — then derives the source cut, the translated
-    // maps, and the output crop in one computation. The GUI dispatch
-    // preflight already ran the same validation with its popup surface, so
-    // this stderr refusal is the async backstop.
-    const bool trimmed = req.has_trim_begin || req.has_trim_end;
+    // Trim plan (wav only; the map formats silently ignore any set trim and
+    // always write the FULL maps). plan_trim validates the authored bounds
+    // first — validate_trim_frames stays the sole author of the
+    // trim-validity vocabulary — then derives the source cut, the
+    // translated maps, and the output crop in one computation. A refusal is
+    // NOT a render failure: ambiguous trim falls back to the full,
+    // untrimmed deliverable with one stderr line (the reachable case is the
+    // target span rounding below one output sample — legal whole-frame
+    // bounds under a fast tempo; crossed/equal cannot rest after the commit
+    // and load auto-clears, and past-EOF is adversarial load-fatal).
+    // trim_plan stays unset then, and every downstream RENDER stage (source
+    // view, engine maps/schedule, crop, projection, profiling) keys on
+    // trim_plan — never on "a bound was set" — so the fallback render is
+    // byte-identical to a no-trim render of the same recipe. The
+    // fingerprint above and the entry .settings recipe record keep the
+    // request's trim bounds unchanged on purpose: under the fallback that
+    // recipe genuinely renders the full bytes, so the attestation stays
+    // honest.
     std::optional<TrimPlan> trim_plan;
-    if (trimmed && output_format == "wav") {
+    if ((req.has_trim_begin || req.has_trim_end) && output_format == "wav") {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
                               req.has_trim_begin, req.trim_begin_frame,
                               req.has_trim_end, req.trim_end_frame,
                               static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
+            // plan.error() strings all begin with "trim ..." (the
+            // vocabulary in trimmer.cpp), so no extra category word here.
             std::fprintf(stderr,
-                "warptempo_gui: render error: %s\n", plan.error().c_str());
-            return RenderOutcome::Failed;
+                "warptempo_gui: %s; rendering untrimmed\n",
+                plan.error().c_str());
+        } else {
+            trim_plan = std::move(*plan);
         }
-        trim_plan = std::move(*plan);
     }
 
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
@@ -837,21 +851,14 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     } else {
         // Map formats: output_format == "warptempo_maps", "generic_map", or
-        // "midi_map". No engine, no limiter, and no trim (ruled): trim is a
-        // wav-only render window, never an artifact shape — the map formats
-        // only ever write the FULL maps. The GUI dispatch preflight refuses
-        // a trimmed map-format render with the popup; this stderr refusal is
-        // the async backstop.
+        // "midi_map". No engine, no limiter, and no trim: a set trim is
+        // SILENTLY ignored (ruled) — trim is a wav-only render window,
+        // never an artifact shape, so the map formats only ever write the
+        // FULL maps regardless of any set bounds (no popup, no stderr, no
+        // refusal anywhere on the map path).
         // These exports carry deliverable-relative targets and absolute
         // source frames, so a consumer reads the original source audio
         // directly and no companion audio is written.
-        if (trimmed) {
-            std::fprintf(stderr,
-                "warptempo_gui: render error: map formats take no trim; "
-                "clear the trim or render wav\n");
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
         if (cancel_requested()) return cancelled_outcome();
         // The full midi tempo map is derived here, on the only path that
         // consumes it; the wav branch never needs it. The phase reset column
@@ -985,8 +992,8 @@ RenderOutcome do_render(const RenderRequest& req,
             }
         }
         if (prof) {
-            // Map formats are untrimmed by the refusal above; the profiling
-            // fields carry the whole source.
+            // Map formats are always untrimmed (a set trim is ignored); the
+            // profiling fields carry the whole source.
             profile_trim_begin_frame = 0;
             profile_trim_end_frame = static_cast<int64_t>(total_frames);
             profile_trim_span_frames = profile_trim_end_frame;

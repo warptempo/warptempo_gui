@@ -128,18 +128,16 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // normalizes ambiguous arrangements to tempo 1.00 — one stderr line per
 // timestamp — so it never refuses an authored store), then
 // build_warp_frame_map with `scale` (the whole-song map — trim is
-// render-time, not view-time), then — only when a trim bound is set —
-// validate_trim_frames against the full map just built. Failure of any
-// stage blocks entry — after the normalizing resolver that is trim
-// validity plus the tripwire-class build failures. On success the built
-// map is returned so the toggle can reuse it for its viewport/playhead
-// translation (no second build); on failure the first owner's error
-// string is returned verbatim.
+// render-time, not view-time). Trim plays no part: crossed/equal bounds
+// cannot rest (the commit and load auto-clears), and an ambiguous trim at
+// render time falls back to the full, untrimmed deliverable — so after the
+// normalizing resolver, entry gates only on the tripwire-class build
+// failures. On success the built map is returned so the toggle can reuse
+// it for its viewport/playhead translation (no second build); on failure
+// the first owner's error string is returned verbatim.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
-                           double scale, int sample_rate, long total_frames,
-                           bool has_trim_begin, int64_t trim_begin_frame,
-                           bool has_trim_end,   int64_t trim_end_frame);
+                           double scale, int sample_rate, long total_frames);
 
 // -- GuiInputHandler ----------------------------------------------------
 //
@@ -341,26 +339,26 @@ private:
     bool render_bpm_sweep();
 
     // Render dispatch pre-flight (GUI thread, marker-count-sized, cheap).
-    // Always validates the live state (`markers` / trim at
-    // dispatch time): resolve_warp_markers_for_render on the sliced
-    // `markers` (the resolver normalizes ambiguous arrangements to tempo
-    // 1.00, one stderr line per timestamp, and never refuses an authored
-    // store), build_warp_frame_map with `scale` and the live sample_rate /
+    // Always validates the live state (`markers` at dispatch time):
+    // resolve_warp_markers_for_render on the sliced `markers` (the resolver
+    // normalizes ambiguous arrangements to tempo 1.00, one stderr line per
+    // timestamp, and never refuses an authored store), then
+    // build_warp_frame_map with `scale` and the live sample_rate /
     // total_frames (the tripwire-class backstop: engine metadata,
-    // non-positive tempo product), then — when a trim bound is set — the
-    // map-format refusal (trim is wav-only, ruled) and validate_trim_frames
-    // against the built map, all surfacing through the error-notice popup
-    // with the owner's error string, unmodified. Returns false on any
-    // refusal — the caller must then refuse to enqueue. Called by every
-    // archival render dispatch site (Ctrl+Alt+R single render, Ctrl+Alt+I
-    // iteration sweep, the BPM sweep); the async pipeline's stderr failure
-    // paths stay as the backstop for per-cell mutations the pre-flight does
-    // not model (no strings are plumbed through the async callback).
+    // non-positive tempo product), surfacing through the error-notice popup
+    // with the owner's error string, unmodified. Trim never refuses a
+    // dispatch: crossed/equal bounds cannot rest (the commit and load
+    // auto-clears), an ambiguous trim at render time falls back to the
+    // full, untrimmed deliverable inside do_render, and the map formats
+    // silently ignore any set trim (they always write the FULL maps).
+    // Returns false on any refusal — the caller must then refuse to
+    // enqueue. Called by every archival render dispatch site (Ctrl+Alt+R
+    // single render, Ctrl+Alt+I iteration sweep, the BPM sweep); the async
+    // pipeline's stderr failure paths stay as the backstop for per-cell
+    // mutations the pre-flight does not model (no strings are plumbed
+    // through the async callback).
     bool warp_render_preflight(const std::vector<GuiWarpMarker>& markers,
-                               double scale,
-                               const std::string& output_format,
-                               bool has_trim_begin, int64_t trim_begin_frame,
-                               bool has_trim_end, int64_t trim_end_frame);
+                               double scale);
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
     // button release both route here). Collapses a never-moved anchor back
@@ -485,6 +483,20 @@ private:
     // neither bound is set.
     void handle_trim_clear_both();
 
+    // Field-reset core shared by Shift+x (handle_trim_clear_both) and the
+    // crossed-commit auto-clear below: unset both bounds, zero both frames,
+    // drop both trim selections and last_selected_trim. No invalidation and
+    // no trigger — callers own their repaint tail. One implementation so
+    // the two clears can never drift.
+    void clear_trim_bounds();
+
+    // Crossed/equal trim cannot REST (ruling comment at the definition):
+    // when both bounds are set and end_frame <= begin_frame — exact integer
+    // compare — at a trim COMMIT, destroy both bounds, silently. Called by
+    // every trim commit site after its mutation and before its
+    // invalidations, so the repaint shows the cleared state.
+    void auto_clear_crossed_trim();
+
     void handle_trim_set_autoset(TrimSide side);
     void handle_trim_unset(TrimSide side);
 
@@ -521,7 +533,8 @@ private:
     // each bound clamps to its own absolute per-bound range — begin to
     // [0, EOF-1], end to [0, EOF] (EOF is the exclusive upper bound) — and
     // there is no partner wall, so the two bounds may cross or equal
-    // mid-gesture; the render boundary owns cross/equal validity at commit.
+    // mid-gesture; a press that COMMITS the bound onto or across its
+    // partner destroys both bounds (auto_clear_crossed_trim).
     void nudge_selected_trim(int direction);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.

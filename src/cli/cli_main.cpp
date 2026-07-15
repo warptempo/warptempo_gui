@@ -303,8 +303,13 @@ int main(int argc, char** argv) {
         derive_phase_reset_frame_map(*phase_reset_source_frames_r,
                                      full_warp_frame_map);
 
-    // --- trim plan. plan_trim validates the authored bounds first (the sole
-    // owner of every trim refusal) and its error string surfaces verbatim. ---
+    // --- trim plan. plan_trim validates the authored bounds first
+    // (validate_trim_frames stays the sole author of the trim-validity
+    // vocabulary). A refusal is NOT a render failure: ambiguous trim falls
+    // back to the full, untrimmed deliverable with one stderr line —
+    // trim_plan stays unset and every downstream stage keys on trim_plan,
+    // so the fallback render is byte-identical to a no-trim render of the
+    // same recipe (identical to do_render's wav-arm fallback). ---
     std::optional<TrimPlan> trim_plan;
     if (trim.has_begin || trim.has_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
@@ -313,10 +318,14 @@ int main(int argc, char** argv) {
                               static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
-            std::fprintf(stderr, "warptempo_cli: %s\n", plan.error().c_str());
-            return 1;
+            // plan.error() strings all begin with "trim ..." (the
+            // vocabulary in trimmer.cpp), so no extra category word here.
+            std::fprintf(stderr,
+                "warptempo_cli: %s; rendering untrimmed\n",
+                plan.error().c_str());
+        } else {
+            trim_plan = std::move(*plan);
         }
-        trim_plan = std::move(*plan);
     }
 
     // --- load the full source; trimmed renders read an offset+length view

@@ -25,9 +25,9 @@
 // Full renders bypass the trimmer completely — both stages.
 //
 // Trim is output_format=wav ONLY (ruled): the map formats (warptempo_maps,
-// generic_map, midi_map) refuse when a trim bound is set — the GUI dispatch
-// preflight raises the popup, do_render's map-format arm refuses on stderr as
-// the backstop. The .settings vocabulary is unchanged.
+// generic_map, midi_map) silently ignore any set trim bound and always write
+// the FULL maps — trim is a render window, never an artifact shape. The
+// .settings vocabulary is unchanged.
 //
 // Vocabulary is pre_trim / post_trim, as in pre-/post-processing. One
 // computation (plan_trim) yields both stages, so the source view, the
@@ -59,20 +59,23 @@ struct TrimPlan {
     PostTrim post;
 };
 
-// Render-boundary trim validation — the sole owner of every trim refusal.
-// Authored bounds arrive as whole int64_t source frames — the authored domain
-// itself; unset begin is 0, unset end is total_frames — and widen exactly into
-// the double map arithmetic at one point inside the trimmer. Refusals, in
-// check order: end at or before begin (e_src <= b_src); begin at or past the
-// source end (b_src >= total_frames); end past the source end (e_src >
-// total_frames); target span rounding below one sample (llrint(T_e) -
-// llrint(T_b) < 1, the spans' exact double images through the full map).
-// NOTHING else refuses — a one-frame fady trim renders; it is not degenerate
-// in the strictest sense, which is what is applied. Returns {} when valid,
-// else std::unexpected with the concise reason; callers add their own context
-// prefix (the GUI dispatch preflight pops it verbatim, the CLI prints it to
-// stderr). plan_trim calls this first, so callers routing through plan_trim
-// need no separate call.
+// Render-boundary trim validation — the sole author of the trim-validity
+// vocabulary. Authored bounds arrive as whole int64_t source frames — the
+// authored domain itself; unset begin is 0, unset end is total_frames — and
+// widen exactly into the double map arithmetic at one point inside the
+// trimmer. Refusals, in check order: end at or before begin (e_src <=
+// b_src); begin at or past the source end (b_src >= total_frames); end past
+// the source end (e_src > total_frames); target span rounding below one
+// sample (llrint(T_e) - llrint(T_b) < 1, the spans' exact double images
+// through the full map). NOTHING else refuses — a one-frame fady trim
+// renders; it is not degenerate in the strictest sense, which is what is
+// applied. Returns {} when valid, else std::unexpected with the concise
+// reason. A refusal no longer fails anyone's render: plan_trim's callers
+// (GUI do_render, warptempo_cli) interpret it as "render untrimmed" — one
+// stderr line carrying the reason verbatim, then the full, untrimmed
+// deliverable. The reasons authored here remain the product's sole
+// trim-validity vocabulary. plan_trim calls this first, so callers routing
+// through plan_trim need no separate call.
 std::expected<void, std::string> validate_trim_frames(
     bool has_begin, int64_t begin_frame,
     bool has_end,   int64_t end_frame,

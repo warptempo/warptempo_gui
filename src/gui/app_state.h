@@ -393,25 +393,28 @@ struct PromptState {
 // (end-at-EOF is valid, so the GUI must be able to represent it) — plain
 // integer compares, the load guard's own comparison — so past-EOF
 // cannot be gestured. There are NO partner walls — a bound crosses its
-// partner freely during any gesture — and crossed or equal bounds may
-// REST: nothing gates or modals a trim commit; the render boundary refuses
-// them when they matter. The zero floor
+// partner freely during any gesture — but crossed or equal bounds can no
+// longer REST anywhere: every trim commit auto-clears a pair left with
+// end_frame <= begin_frame (both bounds destroyed, silently —
+// GuiInputHandler::auto_clear_crossed_trim, the trim sibling of the marker
+// normalizations), and a persisted crossed/equal pair clears per tab at
+// load with one stderr line (file_loader). The zero floor
 // is now subsumed by the per-bound walls, but it remains the reason the
 // floor exists at all: a negative position is unrepresentable in the
 // authored frame form the .settings file persists (parse_authored_frame
 // rejects negatives as malformed) — a format-representability floor, not a
-// validity rule. Loaded values mostly bypass this: the loader stays
-// lenient for crossed and equal bounds (there is no trim corruption
-// tripwire — those load intact). A past-EOF
-// bound is the exception — it is adversarial (the gesture walls make it
+// validity rule. A past-EOF
+// bound is adversarial (the gesture walls make it
 // uncommittable and a .settings applies only to its own audio, so a
 // past-EOF bound means the audio was swapped outside the GUI), hard-failed
-// at the load boundary (file_loader / CLI) like a corrupt audio file. The
-// render boundary owns trim validity: validate_trim_frames
-// (trimmer.h) issues every trim refusal — at render dispatch preflight, at
-// the target-view entry gate, and as the breach backstop for hand-edited
-// artifacts — surfacing through the error-notice popup; it never guards a
-// gesture. Readers must not assume begin <= end.
+// at the load boundary (file_loader / CLI) like a corrupt audio file.
+// validate_trim_frames (trimmer.h) stays the sole author of the
+// trim-validity vocabulary, but a refusal at render time means "render
+// untrimmed" (plan_trim's callers fall back to the full deliverable, one
+// stderr line), never a refused render; it never guards a gesture.
+// Readers of MID-GESTURE state must not assume begin <= end — crossing is
+// free until the commit — but at REST the order begin < end now holds
+// whenever both bounds are set.
 struct TrimState {
     int64_t begin_frame = 0;    // whole source frame (int64_t)
     int64_t end_frame   = 0;    // whole source frame (int64_t)
