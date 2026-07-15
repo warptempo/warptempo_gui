@@ -209,9 +209,12 @@ RenderOutcome do_render(const RenderRequest& req,
     // relative target column, absolute source frames, always untrimmed). The
     // dir is removed at shutdown and orphans
     // are swept at the next launch, so the pair rests only between a render
-    // and program close and nothing accumulates. Buffer-route previews and the
-    // CLI deliberately skip. This write is non-fatal — a failure prints one
-    // stderr line and the render proceeds — and needs no staging/rename dance
+    // and program close and nothing accumulates. Buffer-route previews
+    // deliberately skip; the CLI writes the same pair through the same
+    // writers into the same cache convention, its pid dir swept as a
+    // dead-PID orphan by the GUI's next launch. This write is non-fatal — a
+    // failure prints one stderr line and the render proceeds — and needs no
+    // staging/rename dance
     // (these are cache files, not deliverables) or cancel gating (a cancelled
     // render leaving a pair in the swept pid dir is harmless). ---
     if (!req.output_buffer) {
