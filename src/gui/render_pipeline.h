@@ -41,10 +41,11 @@ struct AuthoringSnapshot {
     // Dispatch-time session prefs the standard .settings schema needs and
     // the request does not otherwise carry. Types match the AppState fields
     // they are captured from.
-    char    active_markers_view = 'W';   // 'W' or 'P'
-    float   playback_speed      = 1.0f;
-    bool    follow              = true;
-    double  font_size           = 11.0;
+    char        active_markers_view = 'W';   // 'W' or 'P'
+    float       playback_speed      = 1.0f;
+    bool        follow              = true;
+    double      font_size           = 11.0;
+    std::string audio_player;                // empty = unset
 
     // Dispatch-time browse position, captured on the TARGET axis: the
     // entry's .settings persists active_audio_view=T, so the browse keys

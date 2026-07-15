@@ -800,13 +800,17 @@ bool GuiInputHandler::adopt_render_entry(
     // Session prefs from the file (has_X ? X : default). Recorded asymmetry:
     // active_markers_view is deliberately NOT applied — W/P is global by
     // ruling, so the LIVE mode survives the commit, unlike playback_speed,
-    // follow, font_size, active_audio_view, and both tab bands.
+    // follow, font_size, audio_player, active_audio_view, and both tab bands.
     app.follow_mode    = settings->has_follow ? settings->follow : true;
     app.playback_speed = settings->has_playback_speed
         ? settings->playback_speed : 1.0f;
     playback.set_speed(app.playback_speed);
     app.font_size = settings->has_font_size ? settings->font_size : 11.0;
     set_gui_font_size_pt(app.font_size);
+    // audio_player needs no side-effect call — a plain string the `l`
+    // launcher consumes on demand.
+    app.audio_player = settings->has_audio_player
+        ? settings->audio_player : std::string();
     paint_handler.on_resize(app.width, app.height);
 
     app.active_audio_view = settings->has_active_audio_view

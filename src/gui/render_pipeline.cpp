@@ -401,15 +401,7 @@ RenderOutcome do_render(const RenderRequest& req,
                                          req.authoring.active_tab,
                                          req.authoring.playback_speed,
                                          req.authoring.font_size,
-                                         // audio_player is a global/session
-                                         // launch preference, not part of the
-                                         // per-render recipe the Shift+. commit
-                                         // (adopt_render_entry) restores. Passing
-                                         // empty writes a blank `audio_player=`
-                                         // line (the key is always emitted);
-                                         // adopt ignores it, so the live pref
-                                         // survives the commit untouched.
-                                         /*audio_player=*/std::string(),
+                                         req.authoring.audio_player,
                                          req.engine_settings)) {
                     note_failure(st_path);
                     return result;

@@ -157,6 +157,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.playback_speed      = app.playback_speed;
     s.follow              = app.follow_mode;
     s.font_size           = app.font_size;
+    s.audio_player        = app.audio_player;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is
     // an active_audio_view=T state). Zoom rides through unchanged; the

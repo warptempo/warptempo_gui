@@ -38,7 +38,7 @@
 // hardfail still covers raw phaseresetframemap inputs that bypass the marker
 // parser. The
 // result is the authored (undisplaced) source-frame intermediate consumed by
-// render-view display and by derive_phase_reset_frame_map below, which
+// target-view display (the phase-reset overlay) and by derive_phase_reset_frame_map below, which
 // compiles it into the engine-domain artifact and engine input. There is no
 // resolver cascade sibling to resolve_warp_markers_for_render because phase
 // reset markers carry no inheritance, labels, or references — a timestamp

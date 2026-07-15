@@ -279,4 +279,4 @@ std::string compute_hover_popup_text(
 // is set), so no windowed derivation exists here. Artifact convention: the
 // target column is deliverable-relative (first pair's target exactly zero)
 // and the source column is absolute undisplaced source frames, matching the
-// project-wide convention shared by marker files and render-view sidecars.
+// project-wide convention shared by marker files and render-entry sidecars.

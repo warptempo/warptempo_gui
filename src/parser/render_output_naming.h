@@ -86,7 +86,7 @@ std::string render_staging_path(const std::string& final_path);
 // and the warptempo_cli loader at load (a hand-edited sidecar composing the
 // output onto the source is adversarial — refused first-error, stderr-only, in
 // both products so a file set is loadable in both or neither), and the
-// Ctrl+Alt+C commit pre-mutation guard (a hand-edited entry .settings that
+// Shift+. render-commit pre-mutation guard (a hand-edited entry .settings that
 // composes onto the source aborts before the first marker or AppState
 // mutation). Separately, the render worker is the breach backstop: it composes
 // batch-folder paths too and keeps its own exists-gated check.
