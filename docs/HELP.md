@@ -61,7 +61,7 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-The default build produces one binary: the `warptempo_gui` application (Cairo/Wayland front end over the in-tree parser, engine, prepost, and audio-io sources; FLAC bitstream decode is the vendored single-file `dr_flac` decoder, so all audio container and codec I/O is in-tree). There are no library archives — each binary compiles the shared source lists directly. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+The default build produces one binary: the `warptempo_gui` application (Cairo/Wayland front end over the in-tree parser, engine, prepost, and audio-io sources; all audio container I/O is in-tree — WAV only, no third-party codec). There are no library archives — each binary compiles the shared source lists directly. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
 
 Two opt-in binaries, both default OFF:
 
@@ -91,7 +91,7 @@ The shipped `.desktop` file uses the freedesktop `audio-x-generic` icon name, wh
 
 ## First run
 
-`warptempo_gui` takes a single argument: the path to a source audio file. Source inputs are native FLAC or WAV (16-bit, 24-bit, or 32-bit float) at 44100 Hz or above — lower sample rates refuse to load; anything else — including Opus or MP3 downloads — is converted once at acquisition with an external tool and the converted file becomes the project source. Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename. The sidecars are program-written and strictly validated at load: hand-edited or corrupt sidecar files fail the load with the first error on stderr, and legacy MM:SS.mmm-timestamp sidecars convert once through `tools/migrate_sidecar_to_frames`.
+`warptempo_gui` takes a single argument: the path to a source audio file. Source inputs are WAV only (16-bit, 24-bit, or 32-bit float) at 44100 Hz or above — lower sample rates refuse to load; anything else — including FLAC, Opus, or MP3 — is converted once at acquisition with an external tool (e.g. ffmpeg) and the converted WAV becomes the project source. Marker and settings files for that audio file live in the same directory as the audio file itself, named by appending `.warpmarkers`, `.phaseresetmarkers`, and `.settings` to the audio file's basename. The sidecars are program-written and strictly validated at load: hand-edited or corrupt sidecar files fail the load with the first error on stderr, and legacy MM:SS.mmm-timestamp sidecars convert once through `tools/migrate_sidecar_to_frames`.
 
 ```bash
 warptempo_gui "path/to/source.wav"
