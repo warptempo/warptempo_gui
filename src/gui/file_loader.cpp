@@ -44,12 +44,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // source loads — the same behavior class as playback_speed (see the
     // font_size descriptor in settings_io.cpp).
     app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
-    // GUI launch preference for the `l` render-listen command. Applied
-    // only when the key is present: it is a global preference with no
-    // per-source default to reset (absence leaves the empty default from
-    // construction, i.e. "no player set"). load_file is the sole loader,
-    // invoked once at launch, so no earlier value can survive here.
-    if (sf.has_audio_player) app.audio_player = sf.audio_player;
+    // GUI launch preference for the `l` render-listen command. Constructive
+    // default (empty = "no player set") like every sibling above, so load and
+    // adopt apply it identically for any schema-legal SettingsFile: an entry
+    // that OMITS the key clears the live player instead of leaving it stale.
+    app.audio_player = sf.has_audio_player ? sf.audio_player : std::string{};
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {

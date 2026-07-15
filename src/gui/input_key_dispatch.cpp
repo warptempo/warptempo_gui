@@ -15,6 +15,7 @@
 #include "time_format.h"
 #include "warpmarkers.h"
 
+#include <signal.h>
 #include <spawn.h>
 
 #include <algorithm>
@@ -43,11 +44,13 @@ namespace {
 // Launch `player` DETACHED with `wavs` as its arguments, searching $PATH so a
 // bare binary name (e.g. `audacious`) works and an absolute path works too.
 // Fire-and-forget: the GUI neither tracks nor waits on the child (SIGCHLD is
-// SIG_IGN from startup, so it auto-reaps). posix_spawnp wants a
-// NULL-terminated char* const argv[]; the backing std::strings (player and the
-// wavs vector) stay alive across the call, so const_cast'ing their c_str()
-// pointers is safe — POSIX does not modify them. Returns true iff the spawn
-// started.
+// SIG_IGN from startup, so it auto-reaps). The child, however, is spawned with
+// SIGCHLD RESET TO DEFAULT (SETSIGDEF): the parent's SIG_IGN would otherwise
+// survive exec and give a player that waitpid()s its own helper/decoder an
+// ECHILD, breaking its sequencing. posix_spawnp wants a NULL-terminated
+// char* const argv[]; the backing std::strings (player and the wavs vector)
+// stay alive across the call, so const_cast'ing their c_str() pointers is safe
+// — POSIX does not modify them. Returns true iff the spawn started.
 bool spawn_audio_player(const std::string& player,
                         const std::vector<std::string>& wavs) {
     std::vector<char*> argv;
@@ -57,9 +60,19 @@ bool spawn_audio_player(const std::string& player,
         argv.push_back(const_cast<char*>(w.c_str()));
     }
     argv.push_back(nullptr);
+
+    posix_spawnattr_t attr;
+    posix_spawnattr_init(&attr);
+    sigset_t def;
+    sigemptyset(&def);
+    sigaddset(&def, SIGCHLD);
+    posix_spawnattr_setsigdefault(&attr, &def);
+    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF);
+
     pid_t pid = 0;
-    const int rc = posix_spawnp(&pid, player.c_str(), nullptr, nullptr,
+    const int rc = posix_spawnp(&pid, player.c_str(), nullptr, &attr,
                                 argv.data(), environ);
+    posix_spawnattr_destroy(&attr);
     return rc == 0;
 }
 
@@ -686,6 +699,12 @@ static std::string render_entry_wav_id(
 // after the recipe is applied and renders/ wiped.
 bool GuiInputHandler::adopt_render_entry(
         const AppState::RenderViewEntry& e) {
+    // Self-guard on the standalone mutator: a successful adopt wipes renders/,
+    // which must never race a batch publishing into it. The Shift+. opener
+    // already refuses on this same condition, so the keyboard route never
+    // reaches here; this backstop protects any other caller.
+    if (app.queue_running || app.pending_archival.armed) return false;
+
     // The bottom-strip modal already froze playback at the editor's open;
     // stop explicitly so this is correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
