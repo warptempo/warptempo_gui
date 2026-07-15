@@ -320,8 +320,8 @@ bool test_byte_rate_contradiction_fails()
 
 bool test_zero_frame_data_fails()
 {
-    // A zero-length data chunk parses to zero frames — unusable audio, the
-    // WAV sibling of the FLAC zero-stream-length refusal.
+    // A zero-length data chunk parses to zero frames — unusable audio,
+    // refused outright at the container boundary.
     std::vector<char> blob = riff_prefix();
     append_pcm16_fmt(blob, 1, 44100);
     append_fourcc(blob, "data");
@@ -771,7 +771,7 @@ int run_selftest()
     if (!run_source_sample_cache_selftest()) {
         return 1;
     }
-    std::cout << "selftest: .samples container and identity fixtures passed\n";
+    std::cout << "selftest: .samples cache fixtures passed\n";
 
     std::cout << "selftest: all passed\n";
     return 0;

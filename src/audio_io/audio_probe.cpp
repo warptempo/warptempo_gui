@@ -1,6 +1,5 @@
 #include "audio_probe.h"
 
-#include "flac_io.h"
 #include "wav_io.h"
 
 #include <cerrno>
@@ -40,25 +39,6 @@ audio_probe(const std::string& path)
         case WavSampleFormat::Float32:
             out.kind = AudioFileKind::WavFloat32;
             break;
-        }
-        return out;
-    }
-
-    if (std::memcmp(magic, "fLaC", 4) == 0) {
-        auto info = flac_probe(path);
-        if (!info) return std::unexpected(info.error());
-        AudioFileInfo out;
-        out.kind = AudioFileKind::Flac;
-        out.sample_rate = info->sample_rate;
-        out.channels = info->channels;
-        out.frames = info->frames;
-        std::memcpy(out.content_md5, info->md5, sizeof(out.content_md5));
-        out.has_content_md5 = false;
-        for (unsigned char b : out.content_md5) {
-            if (b != 0) {
-                out.has_content_md5 = true;
-                break;
-            }
         }
         return out;
     }

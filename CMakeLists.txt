@@ -29,8 +29,8 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  is what matters — not the packaging. The GUI is canonical and warptempo_cli
 #  is the insurance render path; both draw the same four lists.
 #
-#  audio_io: in-tree audio container/codec boundary (dr_flac vendored for FLAC
-#  decode only; container probing and WAV handling are in-tree).
+#  audio_io: in-tree audio container boundary (WAV-only: probing, reading,
+#  and writing all in-tree, no third-party codec).
 #  parser: map / file-parse core (no fftw, no GUI, no engine; the shared headers
 #  warp_frame_map.h and time_format.h live in src/).
 #  engine: PGHI DSP core (needs fftw; reads warp_frame_map.h header-only, no
@@ -41,10 +41,8 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #  post-engine chain (crop -> peak -> encode). Calls audio_io's writers.
 # ============================================================
 set(WARPTEMPO_AUDIO_IO_SOURCES
-    src/audio_io/dr_flac_impl.cpp
     src/audio_io/pcm24.cpp
     src/audio_io/wav_io.cpp
-    src/audio_io/flac_io.cpp
     src/audio_io/audio_probe.cpp
     src/audio_io/audio_reader.cpp
 )
@@ -69,13 +67,6 @@ set(WARPTEMPO_PREPOST_SOURCES
     src/prepost/trimmer.cpp
     src/prepost/peak_limiter.cpp
 )
-
-# dr_flac is vendored third-party C. Suppress warnings only on its dedicated
-# implementation TU, so our own code stays under -Wall -Wextra. As a
-# directory-scope source property it applies to every target that compiles this
-# file from this CMakeLists.
-set_source_files_properties(src/audio_io/dr_flac_impl.cpp PROPERTIES
-    COMPILE_FLAGS "-w")
 
 # ============================================================
 #  warptempo_gui — Cairo/Wayland front end (canonical product, default ON).
@@ -231,9 +222,9 @@ endif()
 
 # ============================================================
 #  warptempo_audio_io_test — the project's single test binary.
-#  It covers the audio_io codec surface and the GUI-side .samples container and
-#  identity logic, compiling source_sample_cache.cpp directly into the target to
-#  keep the executable count flat. Draws the audio_io and parser sources (the
+#  It covers the audio_io container surface and the GUI-side .samples cache
+#  admission and path logic, compiling source_sample_cache.cpp directly into
+#  the target to keep the executable count flat. Draws the audio_io and parser sources (the
 #  parser side is what source_sample_cache leans on).
 # ============================================================
 if(WARPTEMPO_BUILD_AUDIO_IO_TEST)

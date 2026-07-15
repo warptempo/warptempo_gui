@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-// The audio I/O surface is deliberately asymmetric. WAV exposes probe, full
-// read, range read, streaming reader, and writer APIs; FLAC exposes probe plus
-// this streaming reader only. audio_probe dispatches on file magic alone, and
-// FLAC means native FLAC, not another container carrying FLAC frames.
+// The audio I/O surface is WAV-only: probe, full read, range read, this
+// streaming reader, and writer APIs. audio_probe dispatches on file magic
+// alone, so anything that is not a RIFF/WAVE container refuses with the
+// unknown-magic error.
 class AudioReader {
 public:
     struct Impl;
@@ -27,7 +27,7 @@ public:
 
     const AudioFileInfo& info() const;
     std::expected<void, std::string> seek_to_frame(int64_t frame);
-    // Both backends clamp to frames remaining, so reading past the end returns
+    // The reader clamps to frames remaining, so reading past the end returns
     // a short count with exact position bookkeeping. A short count inside the
     // clamped request means mid-stream decode loss or truncation. Inside a
     // probed known-length range, use read_frames_exact.
@@ -41,11 +41,10 @@ private:
 // Read exactly `frames` frames or fail. For use inside a probed,
 // known-length stream where the caller has already validated the range against
 // info().frames, so a short read inside the clamped request can only mean the
-// stream is truncated or lost frames mid-stream (dr_flac silently skips FLAC
-// frames whose CRC mismatches, shortening the stream). This contract detects
+// stream is truncated or lost frames mid-stream. This contract detects
 // truncation; it cannot detect a content splice inside a read that still
-// returns the full count. Both backends treat a short return as terminal, so
-// there is no retry loop.
+// returns the full count. A short return is terminal, so there is no retry
+// loop.
 std::expected<void, std::string>
 read_frames_exact(AudioReader& reader, float* out, int64_t frames);
 

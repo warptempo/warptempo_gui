@@ -19,9 +19,10 @@
 namespace {
 
 constexpr char kMagic[] = "WARPTEMPO_SOURCE_SAMPLE_CACHE";
-constexpr uint32_t kFileVersion = 2;
-constexpr uint32_t kHashAlgorithmNone = 0;
-constexpr uint32_t kHashAlgorithmFlacStreaminfoMd5 = 1;
+// Version 3 removed the content-hash axis (the hash_algorithm/hash header
+// fields), so any pre-existing version-2 cache cleanly mismatches on the
+// version compare instead of being misparsed under the new layout.
+constexpr uint32_t kFileVersion = 3;
 // Header strings are bounded so a corrupt cache is a cheap miss rather than a
 // memory-pressure event. The writer enforces the same bound as a format rule.
 constexpr uint32_t kMaxHeaderStringBytes = 4096;
@@ -29,12 +30,10 @@ constexpr char kPayloadType[] = "float32_interleaved";
 constexpr char kSampleCacheExtension[] = ".samples";
 std::atomic<uint64_t> g_cache_tmp_counter{0};
 
-// For FLAC sources the identity includes the STREAMINFO MD5 of the unencoded
-// audio, read for free by the probe, so content replacement invalidates the
-// cache even when size and mtime are preserved. WAV sources deliberately trust
-// this metadata tuple alone because hashing a WAV costs the full read this
-// cache exists to avoid. An all-zero FLAC MD5 means the encoder never set it
-// and falls back to the same metadata-only trust.
+// Cache identity is the source's metadata tuple alone: name (basename plus
+// extension), byte size, mtime, container kind code, and probe geometry
+// (sample rate, channels, frame count). There is no content hash — hashing a
+// source would cost the full read a cache exists to avoid.
 struct SourceMetadata {
     std::string basename;
     std::string extension;
@@ -44,8 +43,6 @@ struct SourceMetadata {
     int channels = 0;
     int64_t frame_count = 0;
     int kind_code = 0;
-    uint32_t hash_algorithm = kHashAlgorithmNone;
-    unsigned char hash[16] = {};
 };
 
 bool put_bytes(std::FILE* f, const void* p, size_t n) {
@@ -92,13 +89,19 @@ int audio_kind_code(AudioFileKind kind) {
         case AudioFileKind::WavPcm16:   return 1;
         case AudioFileKind::WavPcm24:   return 2;
         case AudioFileKind::WavFloat32: return 3;
-        case AudioFileKind::Flac:       return 4;
     }
     return 0;
 }
 
-bool is_cacheable_source(const AudioFileInfo& source_info) {
-    return source_info.kind == AudioFileKind::Flac;
+// No surviving source kind is admitted: the cache existed to skip the FLAC
+// decode on reload, and FLAC support is removed. WAV sources deliberately
+// never cache — the direct PCM read is already cheap, and a float32 payload
+// would only duplicate it on disk. Both public entry points stay inert (the
+// read misses, the ensure skips silently); the format machinery below remains
+// the .samples format owner behind the load-time open refusal
+// (is_source_sample_cache_path).
+bool is_cacheable_source(const AudioFileInfo&) {
+    return false;
 }
 
 std::filesystem::path cache_path_for_source(const std::string& source_path) {
@@ -134,10 +137,6 @@ SourceMetadata source_metadata(const std::string& source_path,
     m.channels = source_info.channels;
     m.frame_count = static_cast<int64_t>(source_info.frames);
     m.kind_code = audio_kind_code(source_info.kind);
-    if (source_info.has_content_md5) {
-        m.hash_algorithm = kHashAlgorithmFlacStreaminfoMd5;
-        std::memcpy(m.hash, source_info.content_md5, sizeof(m.hash));
-    }
     return m;
 }
 
@@ -149,10 +148,7 @@ bool metadata_matches(const SourceMetadata& have, const SourceMetadata& want) {
            have.sample_rate == want.sample_rate &&
            have.channels == want.channels &&
            have.frame_count == want.frame_count &&
-           have.kind_code == want.kind_code &&
-           have.hash_algorithm == want.hash_algorithm &&
-           (want.hash_algorithm != kHashAlgorithmFlacStreaminfoMd5 ||
-            std::memcmp(have.hash, want.hash, sizeof(want.hash)) == 0);
+           have.kind_code == want.kind_code;
 }
 
 bool read_header_metadata(std::FILE* f, SourceMetadata& have,
@@ -183,18 +179,6 @@ bool read_header_metadata(std::FILE* f, SourceMetadata& have,
     if (!get_str(f, payload_type) || payload_type != kPayloadType) return false;
     if (!get_i64(f, payload_frames)) return false;
     if (!get_u64(f, payload_bytes)) return false;
-
-    uint32_t hash_len = 0;
-    if (!get_u32(f, have.hash_algorithm)) return false;
-    if (!get_u32(f, hash_len)) return false;
-    if (have.hash_algorithm == kHashAlgorithmNone) {
-        if (hash_len != 0) return false;
-    } else if (have.hash_algorithm == kHashAlgorithmFlacStreaminfoMd5) {
-        if (hash_len != sizeof(have.hash)) return false;
-        if (!get_bytes(f, have.hash, sizeof(have.hash))) return false;
-    } else {
-        return false;
-    }
 
     payload_offset = std::ftell(f);
     return payload_offset >= 0;
@@ -280,10 +264,6 @@ bool cache_file_matches(const std::filesystem::path& cache_path,
 }
 
 bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes) {
-    const uint32_t hash_len =
-        m.hash_algorithm == kHashAlgorithmFlacStreaminfoMd5
-            ? static_cast<uint32_t>(sizeof(m.hash))
-            : 0;
     return put_bytes(f, kMagic, sizeof(kMagic)) &&
            put_u32(f, kFileVersion) &&
            put_str(f, m.basename) &&
@@ -296,10 +276,7 @@ bool write_header(std::FILE* f, const SourceMetadata& m, uint64_t payload_bytes)
            put_i32(f, m.kind_code) &&
            put_str(f, kPayloadType) &&
            put_i64(f, m.frame_count) &&
-           put_u64(f, payload_bytes) &&
-           put_u32(f, m.hash_algorithm) &&
-           put_u32(f, hash_len) &&
-           put_bytes(f, m.hash, hash_len);
+           put_u64(f, payload_bytes);
 }
 
 bool write_cache_samples(const std::filesystem::path& cache_path,
@@ -392,11 +369,7 @@ bool ensure_source_sample_cache_from_buffer(const std::string& source_path,
     if (fresh_probe->sample_rate != source_info.sample_rate ||
         fresh_probe->channels != source_info.channels ||
         fresh_probe->frames != source_info.frames ||
-        fresh_probe->kind != source_info.kind ||
-        fresh_probe->has_content_md5 != source_info.has_content_md5 ||
-        (fresh_probe->has_content_md5 &&
-         std::memcmp(fresh_probe->content_md5, source_info.content_md5,
-                     sizeof(source_info.content_md5)) != 0)) {
+        fresh_probe->kind != source_info.kind) {
         return false;
     }
 

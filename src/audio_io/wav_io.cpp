@@ -369,8 +369,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     }
     layout.info.frames =
         static_cast<int64_t>(layout.data_size / layout.block_align);
-    // Zero frames is unusable audio — the WAV sibling of the FLAC
-    // zero-stream-length refusal — so it hard-fails here at the owner
+    // Zero frames is unusable audio, so it hard-fails here at the owner
     // boundary instead of proceeding into the load-lenient marker flow. This
     // also covers a streamed 0xffffffff placeholder whose present payload is
     // under one frame: the salvage tolerance recovers frames that exist, and

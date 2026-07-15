@@ -69,7 +69,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     }
 
     // Preflight. Print the probe owner's diagnostic verbatim in the unified
-    // shape: a malformed but recognized WAV/FLAC (duplicate chunk, truncated
+    // shape: a malformed but recognized WAV (duplicate chunk, truncated
     // header, non-finite Float32) must not be misread as an unsupported
     // format. The convert-once acquisition hint applies only when the magic
     // matched no container at all (kUnknownAudioMagicError), so it is
@@ -79,8 +79,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (source_info.error() == kUnknownAudioMagicError) {
             std::fprintf(stderr,
                 "warptempo_gui: source open failed for '%s': %s; inputs are "
-                "native FLAC or WAV, so convert once at acquisition (e.g. with "
-                "ffmpeg or opusdec) and load the converted file\n",
+                "WAV only, so convert once at acquisition (e.g. with ffmpeg) "
+                "and load the converted file\n",
                 path.c_str(), source_info.error().c_str());
         } else {
             std::fprintf(stderr,
