@@ -331,10 +331,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
             return false;
         }
         // The schema already enforced syntax, non-negativity, and the zoom
-        // vocabulary; the per-tab view scratch applies verbatim here. The
-        // audio-relative viewport/playhead bounds run at the end of this
-        // block instead, because the 'T' domain total needs the warp frame
-        // map built from the loaded markers and the adopted scale.
+        // vocabulary; the per-tab view scratch applies verbatim here. Viewport
+        // and playhead positions are display scratch, not authored data, so
+        // there is no audio-relative range check on them — the runtime clamps
+        // own any out-of-range value.
         auto apply = [&](const SettingsFileTab& src, ViewState& dst) {
             if (src.has_viewport_start) {
                 dst.viewport_start_sample = src.viewport_start;
@@ -343,10 +343,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 dst.zoom_level = src.zoom;
             }
             if (src.has_playhead) {
-                // Deliberately unclamped: persisted view scratch, validated
-                // by first_view_range_defect below; playhead == total stays
-                // load-legal (pre-wall files) and the runtime clamp
-                // (move_playhead_to) owns the value at first use.
+                // Deliberately unclamped: persisted view scratch, not
+                // authored data, applied verbatim. The runtime clamp
+                // (move_playhead_to) owns any out-of-range value at first use.
                 dst.playhead_cursor_sample = src.playhead;
             }
         };
@@ -370,47 +369,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (sf.tab_a.has_read_only) app.tab_a.read_only = sf.tab_a.read_only;
         if (sf.tab_b.has_read_only) app.tab_b.read_only = sf.tab_b.read_only;
 
-        // Deferred audio-relative viewport/playhead validation — the domain
-        // rule from the block comment above, one shared implementation with
-        // warptempo_cli (first_view_range_defect, marker_store_validate.h)
-        // so a sidecar set is loadable in both products or neither. The
-        // domain total: the source total for 'S'; for 'T' the memoized
-        // target-view cache's tgt_total_frames — EXACTLY the value
-        // live_total_frames feeds the runtime viewport clamps and zoom
-        // bounds, so the load-time wall and the runtime domain always agree
-        // (the markers and engine scale the cache derives from are both in
-        // place by this point). When 'T' is persisted but the map cannot
-        // build (the tripwire class — the resolver normalizes marker
-        // arrangements, so it never refuses), SKIP this validation
-        // entirely: there is no target total to wall against, and the
-        // runtime viewport clamps plus the target-view entry gate
-        // (validate_target_view_entry below) own the values then.
-        {
-            bool    run_view_check = true;
-            int64_t domain_total   = audio.total_frames();
-            if (app.active_audio_view == 'T') {
-                const TargetWarpFrameMapCache& c =
-                    target_view_warp_frame_map_cached(
-                        app, audio.sample_rate(),
-                        static_cast<long>(audio.total_frames()));
-                if (!c.build_error.empty()) {
-                    run_view_check = false;
-                } else {
-                    domain_total = c.tgt_total_frames;
-                }
-            }
-            if (run_view_check) {
-                if (auto detail = first_view_range_defect(
-                        sf.tab_a, sf.tab_b, domain_total)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: source load aborted: invalid "
-                        "settings in '%s': %s\n",
-                        app.settings_path.c_str(), detail->c_str());
-                    gui.request_exit();
-                    return false;
-                }
-            }
-        }
+        // Persisted viewport/playhead positions are display scratch, not
+        // authored data: they apply verbatim (above) with no load-range
+        // check. The runtime clamps (clamp_viewport_start, and the playhead
+        // clamp at first use) own any out-of-range value harmlessly.
     }
     if (app.active_audio_view == 'T' &&
         !target_render.target_view_available()) {
@@ -436,10 +398,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
                                       ? app.tab_b : app.tab_a;
         app.viewport_start_sample = parsed_tab.viewport_start_sample;
         app.zoom_level            = parsed_tab.zoom_level;
-        // Deliberately unclamped: persisted view scratch, validated by
-        // first_view_range_defect below; playhead == total stays load-legal
-        // (pre-wall files) and the runtime clamp (move_playhead_to) owns
-        // the value at first use.
+        // Deliberately unclamped: persisted view scratch, not authored data.
+        // The runtime clamp (move_playhead_to) owns any out-of-range value at
+        // first use.
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         app.trim                = parsed_tab.trim;
         app.trim_begin_selected = parsed_tab.trim_begin_selected;

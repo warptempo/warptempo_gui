@@ -352,12 +352,12 @@ RenderOutcome do_render(const RenderRequest& req,
                 // the LIVE map's axis; a sweep cell rewrites its markers per
                 // cell, giving the cell a different (possibly shorter) target
                 // axis, so the values are CLAMPED into this entry's own map
-                // domain before writing — the GUI never authors a
-                // load-refusable value. The clamp mirrors
-                // first_view_range_defect's load rule exactly: viewport start
-                // must sit in [0, total-1] (a start on the total's frame shows
-                // nothing) and the playhead in [0, total] (it may rest on the
-                // end exactly). target_total is this entry's map domain total.
+                // domain before writing — the adopted view then lands sensibly
+                // on the entry's own axis rather than off its end. Viewport
+                // start sits in [0, total-1] (a start on the total's frame
+                // shows nothing) and the playhead in [0, total] (it may rest
+                // on the end exactly). target_total is this entry's map domain
+                // total.
                 // Zoom passes through: the live zoom is always in the persisted
                 // vocabulary. Its trim comes from the recipe trim that shaped
                 // this render; read_only and the rest take their ViewState

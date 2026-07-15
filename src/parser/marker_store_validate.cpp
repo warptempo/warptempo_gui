@@ -48,34 +48,3 @@ std::optional<std::string> first_past_eof_wall_defect(
     }
     return std::nullopt;
 }
-
-std::optional<std::string> first_view_range_defect(
-        const SettingsFileTab& tab_a,
-        const SettingsFileTab& tab_b,
-        int64_t domain_total_frames) {
-    // The comparisons are the historical load walls verbatim: viewport
-    // start at or past the total refuses, playhead strictly past the total
-    // refuses. playhead == total remains load-legal (files written before
-    // the marker walls pulled in; view scratch is display state, and the
-    // runtime clamp owns the value at first use).
-    // The caller passes the persisted active_audio_view's domain
-    // total (see the header comment); no timestamp is rendered because the
-    // positions are view scratch, not authored times, and under 'T' a
-    // frame-over-sample-rate rendering would name a time on the deformed
-    // timeline, not in the audio.
-    const struct { const char* name; const SettingsFileTab& t; } tabs[] = {
-        {"tab A", tab_a}, {"tab B", tab_b},
-    };
-    for (const auto& [name, t] : tabs) {
-        if (t.has_viewport_start &&
-            t.viewport_start >= domain_total_frames) {
-            return std::string(name) +
-                   " viewport start past the end of the persisted audio view";
-        }
-        if (t.has_playhead && t.playhead > domain_total_frames) {
-            return std::string(name) +
-                   " playhead past the end of the persisted audio view";
-        }
-    }
-    return std::nullopt;
-}

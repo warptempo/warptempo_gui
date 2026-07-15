@@ -5,8 +5,7 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
-#include "marker_store_validate.h"      // first_past_eof_wall_defect,
-                                        // first_view_range_defect
+#include "marker_store_validate.h"      // first_past_eof_wall_defect
 #include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
@@ -218,52 +217,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- persisted view-scratch range guard, the same shared validator the
-    // GUI load runs (first_view_range_defect, marker_store_validate.h) so a
-    // sidecar set stays loadable in both products or neither. The CLI never
-    // applies a viewport or playhead, but persisted view positions live in
-    // the persisted active_audio_view's domain — while 'T' the GUI's live
-    // view fields carry target-frame values, so 'S' or absent walls at the
-    // source total and 'T' walls at the built warp frame map's deformed
-    // target total (a slowing map legitimately persists positions past the
-    // source total). The 'T' total mirrors the GUI runtime's
-    // target_view_warp_frame_map_cached tgt_total_frames math
-    // (warp_frame_map_view.cpp) exactly, over the same resolve-then-build
-    // the render performs below — built early here for the check only, the
-    // render's own build and its refusal messages stay untouched. When the
-    // map cannot build (the tripwire class — the resolver normalizes marker
-    // arrangements, so it never refuses) the check is SKIPPED entirely,
-    // matching the GUI's skip: there is no target total to wall against, and
-    // the render-boundary owners refuse then. ---
-    {
-        const int64_t total = static_cast<int64_t>(total_frames);
-        bool    run_view_check = true;
-        int64_t domain_total   = total;
-        const char persisted_audio_view =
-            sf.has_active_audio_view ? sf.active_audio_view : 'S';
-        if (persisted_audio_view == 'T') {
-            auto view_resolved =
-                resolve_warp_markers_for_render(markers, sample_rate,
-                                                total_frames);
-            if (!view_resolved) {
-                run_view_check = false;
-            } else if (auto view_map = build_warp_frame_map(
-                           *view_resolved, es.scale, sample_rate,
-                           total_frames);
-                       !view_map) {
-                run_view_check = false;
-            } else {
-                domain_total = target_total_frames_for_map(total, *view_map);
-            }
-        }
-        if (run_view_check) {
-            if (auto detail = first_view_range_defect(
-                    sf.tab_a, sf.tab_b, domain_total)) {
-                std::fprintf(stderr, "warptempo_cli: %s\n", detail->c_str());
-                return 1;
-            }
-        }
-    }
+    // Persisted viewport/playhead positions are display scratch, not authored
+    // data, and the CLI never applies a viewport or playhead. They are not
+    // guarded at load: the GUI's runtime clamps own any out-of-range value,
+    // so there is nothing here to refuse.
 
     // --- locked engine geometry (shared with render_pipeline.cpp via
     // engine_geometry.h) ---

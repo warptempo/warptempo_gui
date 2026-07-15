@@ -27,14 +27,14 @@
 //
 // This schema owns the zoom-level range too: a zoom outside
 // kFitFileLevel..kMaxNumericLevel is refused here in both products. What
-// stays caller-side, ON TOP of this schema, is the audio-relative range:
-// viewport/playhead positions need the loaded source's frame count, which
-// this reader never sees. Both loaders (GUI file_loader and CLI) run that
-// check load-fatally after this reader accepts the syntax, through the one
-// shared first_view_range_defect (marker_store_validate.h) against the
-// persisted active_audio_view's domain total — the source total for 'S' or
-// absent, the deformed target total for 'T' (skipped when the map cannot
-// build). This schema does not check trim bound ordering itself: GUI load
+// stays caller-side, ON TOP of this schema, is the audio-relative past-EOF
+// wall check on authored marker/trim positions, which needs the loaded
+// source's frame count this reader never sees: both loaders (GUI file_loader
+// and CLI) run it load-fatally through the one shared
+// first_past_eof_wall_defect (marker_store_validate.h). Persisted
+// viewport/playhead positions are NOT range-checked at load — they are
+// display scratch, not authored data, and the runtime clamps own any
+// out-of-range value. This schema does not check trim bound ordering itself: GUI load
 // reads the raw values, then the caller's auto-clear pass clears a crossed
 // or equal per-tab pair (one stderr line) before the store can rest; the
 // CLI loads the values verbatim, and a still-crossed or -equal pair simply

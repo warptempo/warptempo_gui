@@ -52,10 +52,9 @@ struct TargetWarpFrameMapCache {
     // Empty when the last rebuild succeeded; otherwise the
     // resolve_warp_markers_for_render / build_warp_frame_map error string
     // verbatim (tripwire-class only — the resolver normalizes ambiguous
-    // marker arrangements rather than refusing). Consumed by the callers
+    // marker arrangements rather than refusing). Consumed by the caller
     // that must skip target-domain math when no map is in effect (the
-    // load-time view-range check, the dispatch snapshot's playhead
-    // translation).
+    // dispatch snapshot's playhead translation).
     std::string build_error;
 
     // Deformed-timeline length: the source total forward-translated
