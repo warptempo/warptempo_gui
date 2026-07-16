@@ -1,17 +1,50 @@
 #include "peak_limiter.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 
 namespace {
 
 constexpr double kAttFloor = 1e-12;
+
+// Deliberate local duplicate of the temporary render_profile helper (avoids a
+// cross-directory include from src/prepost into src/engine). True iff
+// WARPTEMPO_PROFILE is exactly "1". Removed with the profiling facility.
+bool profile_enabled() {
+    static const bool enabled = [] {
+        const char* v = std::getenv("WARPTEMPO_PROFILE");
+        return v && std::strcmp(v, "1") == 0;
+    }();
+    return enabled;
+}
 
 }  // namespace
 
 void apply_peak_limiter(std::vector<float>& buffer, int channels,
                         int sample_rate, double ceiling_dbfs,
                         double attack_ms, double release_ms) {
+    // Temporary render profiling: clock the whole stage and, when enabled,
+    // size the approved unity-bypass predicate (all input samples finite and
+    // within the ceiling) without acting on it.
+    const bool prof = profile_enabled();
+    std::chrono::steady_clock::time_point prof_t0;
+    double prof_max = 0.0, prof_ceiling = 0.0;
+    bool   prof_all_finite = true;
+    if (prof) {
+        prof_t0 = std::chrono::steady_clock::now();
+        prof_ceiling = std::pow(10.0, ceiling_dbfs / 20.0);
+        for (float s : buffer) {
+            if (!std::isfinite(s)) prof_all_finite = false;
+            const double a = std::fabs(static_cast<double>(s));
+            if (a > prof_max) prof_max = a;
+        }
+    }
+
     const std::size_t total_frames =
         buffer.size() / static_cast<std::size_t>(channels);
     PeakLimiter pl(ceiling_dbfs, attack_ms, release_ms, sample_rate, channels);
@@ -23,6 +56,17 @@ void apply_peak_limiter(std::vector<float>& buffer, int channels,
     pl.process(buffer.data(), total_frames, sink);
     pl.flush(sink);
     buffer.swap(out);
+
+    if (prof) {
+        const double wall = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - prof_t0).count();
+        const bool bypass = prof_all_finite && (prof_max <= prof_ceiling);
+        char line[256];
+        std::snprintf(line, sizeof(line),
+            "[profile] peak limiter: wall %.3fs max %.5f ceiling %.5f would-bypass %s",
+            wall, prof_max, prof_ceiling, bypass ? "yes" : "no");
+        std::cerr << line << "\n";
+    }
 }
 
 PeakLimiter::PeakLimiter(double ceiling_dbfs,

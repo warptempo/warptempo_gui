@@ -1,7 +1,10 @@
 #include "limiter.h"
+#include "render_profile.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <complex>
+#include <cstdio>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -217,6 +220,13 @@ All allocations are function-local and freed at every return; nothing persists
 across renders.
 */
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
+    // Temporary render profiling: clock the whole pass and, when enabled,
+    // size the approved direct-bypass predicate (all input samples finite and
+    // within the ceiling) without acting on it.
+    const bool prof = render_profile_enabled();
+    std::chrono::steady_clock::time_point prof_t0;
+    if (prof) prof_t0 = std::chrono::steady_clock::now();
+
     auto& lp = stft.limiter_params;
 
     const int channels    = stft.channels;
@@ -362,6 +372,30 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     const double band3_hi   = std::pow(10.0, (lp.ceiling_dbfs + 3.0 * lp.tolerance_db) / 20.0);
     const double band3_lo   = std::pow(10.0, (lp.ceiling_dbfs - 3.0 * lp.tolerance_db) / 20.0);
 
+    // Direct-bypass predicate scan over the untouched input render (extra read
+    // bandwidth, so it exists only under the profile flag). Reports the raw
+    // peak, the ceiling, and the resulting verdict; the render is not altered.
+    double prof_raw_max = 0.0;
+    bool   prof_all_finite = true;
+    if (prof) {
+        for (float s : render) {
+            if (!std::isfinite(s)) prof_all_finite = false;
+            const double a = std::fabs(static_cast<double>(s));
+            if (a > prof_raw_max) prof_raw_max = a;
+        }
+    }
+    auto emit_spectral_profile = [&](int peaks, double recon_max) {
+        const double wall = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - prof_t0).count();
+        const bool bypass = prof_all_finite && (prof_raw_max <= ceiling);
+        char line[256];
+        std::snprintf(line, sizeof(line),
+            "[profile] spectral limiter: wall %.3fs raw-max %.5f ceiling %.5f "
+            "would-bypass %s peaks %d recon-max %.5f",
+            wall, prof_raw_max, ceiling, bypass ? "yes" : "no", peaks, recon_max);
+        std::cerr << line << "\n";
+    };
+
     // -- Initial identity reconstruction -> meas_ola (pre coords) --
     std::vector<float> meas_ola;
     rescan_region(g, cached_spectra.data(), gain_map, 0, padded_total, meas_ola);
@@ -375,6 +409,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     if (observed_cancel()) return;
     if (queue.empty()) {
         std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
+        if (prof) emit_spectral_profile(0, prof_raw_max);  // render left untouched
         destroy();
         return;   // render left untouched (no round-trip applied)
     }
@@ -648,6 +683,15 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::cout << "[Pass 3/3] Spectral limiter................. "
               << resolved.size() << " peaks, " << iterations
               << " iterations, done\n";
+
+    if (prof) {
+        double prof_recon_max = 0.0;
+        for (float s : render) {
+            const double a = std::fabs(static_cast<double>(s));
+            if (a > prof_recon_max) prof_recon_max = a;
+        }
+        emit_spectral_profile(iterations, prof_recon_max);
+    }
 
     destroy();
 }

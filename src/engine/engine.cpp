@@ -19,8 +19,10 @@
 #include "engine.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -29,6 +31,7 @@
 
 #include "stft_container.h"
 #include "limiter.h"
+#include "render_profile.h"
 #include "synthesis.h"
 
 namespace {
@@ -315,10 +318,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
               << audio_stft.phase_reset_placements.size()
               << " phase resets\n";
 
+    // Temporary render profiling: coarse per-stage walls, printed once after
+    // the limiter. Clock reads only when enabled.
+    const bool prof = render_profile_enabled();
+    double prof_synth_s = 0.0, prof_spectral_s = 0.0;
+    std::chrono::steady_clock::time_point prof_t;
+
     // Pass 2: synthesis (clean render) into the caller-owned output buffer.
     // synthesize_full applies no attenuation; the spectral limiter (Pass 3
     // below) then runs in place on this buffer.
+    if (prof) prof_t = std::chrono::steady_clock::now();
     synthesis.process_to_buffer(audio_stft, p.output_buffer);
+    if (prof) prof_synth_s = std::chrono::duration<double>(
+        std::chrono::steady_clock::now() - prof_t).count();
     // Pass boundaries check the raw flag alongside cancellation_observed: a
     // kill that lands after a pass's last internal check must still stop the
     // render here rather than letting the remaining passes run to a Success
@@ -338,7 +350,17 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // of the engine.
     {
         std::vector<float>& buf = *p.output_buffer;
+        if (prof) prof_t = std::chrono::steady_clock::now();
         limiter.process(audio_stft, buf);          // spectral -0.3
+        if (prof) prof_spectral_s = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - prof_t).count();
+        if (prof) {
+            char line[128];
+            std::snprintf(line, sizeof(line),
+                "[profile] engine: synthesis %.3fs spectral-limiter %.3fs",
+                prof_synth_s, prof_spectral_s);
+            std::cerr << line << "\n";
+        }
         if (cancel_pending()) {
             std::cerr << "[Cancelled]\n";
             audio_stft.cleanup();

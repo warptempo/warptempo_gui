@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <random>
 #include <vector>
 #include <string>
@@ -10,6 +11,7 @@
 #include <fftw3.h>
 
 #include "engine.h"
+#include "render_profile.h"
 #include "warp_frame_map.h"
 
 // --- Data Structures ---
@@ -423,8 +425,16 @@ struct AudioSTFT {
                         std::vector<double>& theta,
                         std::vector<char>&   done_scratch,
                         std::vector<PghiHeapNode>& heap_scratch,
-                        std::mt19937& rng) {
+                        std::mt19937& rng,
+                        PghiProfile* prof = nullptr) {
         const int K = M / 2 + 1;
+
+        // Profiling (temporary): count/clock only when prof is non-null.
+        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet;
+        if (prof) {
+            prof->frames += 1;
+            prof_t_entry = std::chrono::steady_clock::now();
+        }
 
         // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
         // Used as b_s = alpha * b_a in the vertical (frequency) integration
@@ -438,6 +448,11 @@ struct AudioSTFT {
         // Reset / frame-0 seat: seed theta = phi, skip integration.
         if (seed) {
             for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
+            if (prof) {
+                prof->seed_frames += 1;
+                prof->heap_s += std::chrono::duration<double>(
+                    std::chrono::steady_clock::now() - prof_t_entry).count();
+            }
             return;
         }
 
@@ -449,14 +464,25 @@ struct AudioSTFT {
         // structure, so freshly randomized phase is what keeps the residual
         // floor decorrelated from frame to frame. Significant bins (in I)
         // get their phase via the heap below.
+        // Instrumentation-only countdown of still-unassigned significant bins;
+        // it never affects the loop condition (the heap still drains fully) and
+        // exists only to classify inert pops.
+        long long remaining = 0;
         std::uniform_real_distribution<double> quiet_dist(-M_PI, M_PI);
         for (int k = 0; k < K; ++k) {
             if (quiet[k] == 1) {
                 theta[k] = quiet_dist(rng);
                 done_scratch[k] = 1;
+                if (prof) prof->quiet_bins += 1;
             } else {
                 done_scratch[k] = 0;                                  // in I
+                if (prof) { prof->significant_bins += 1; ++remaining; }
             }
+        }
+        if (prof) {
+            prof_t_quiet = std::chrono::steady_clock::now();
+            prof->quiet_s += std::chrono::duration<double>(
+                prof_t_quiet - prof_t_entry).count();
         }
 
         // Algorithm 1. Seed the heap with the previous frame's significant bins
@@ -475,12 +501,17 @@ struct AudioSTFT {
             std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
             const PghiHeapNode node = heap_scratch.back();
             heap_scratch.pop_back();
+            if (prof) {
+                prof->pops_total += 1;
+                if (remaining == 0) prof->pops_inert += 1;
+            }
             const int m = node.bin;
             if (!node.current) {
                 // Previous-frame bin -> trapezoidal time-step into frame n.
                 if (done_scratch[m] == 0) {
                     theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                     done_scratch[m] = 1;
+                    if (prof) --remaining;
                     heap_scratch.push_back({mag_cur[m], m, true});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
@@ -496,10 +527,15 @@ struct AudioSTFT {
                     const double step = alpha_fp * 0.5 * (df[m] + df[nb]);
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
+                    if (prof) --remaining;
                     heap_scratch.push_back({mag_cur[nb], nb, true});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
             }
+        }
+        if (prof) {
+            prof->heap_s += std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - prof_t_quiet).count();
         }
     }
 
