@@ -20,6 +20,67 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
 
+# --- Static DSP reference (render-byte reproducibility) ------------------------
+# The render-byte reference surface is exactly three libraries: libm (analysis
+# window, atan2), libmvec (the vectorized synthesis trig), and fftw (every FFT).
+# Dynamically linked, a routine system update to any of them changes the bytes an
+# UNTOUCHED binary produces. When ON, both products pin fftw as static archives;
+# the CLI additionally links glibc's static libmvec/libm and links -static,
+# making it the fully self-contained archival reference renderer whose render
+# bytes are a property of the built binary alone, immune to system library
+# updates until a deliberate rebuild. The GUI cannot go fully static: glibc
+# cannot statically link libm/libmvec into a PIE, because their ifunc objects
+# reference the loader-private _dl_x86_cpu_features symbol, so the GUI pins fftw
+# only and keeps its glibc math dynamic (-lm pulls libmvec via glibc's linker
+# script exactly as in a default build). Within one glibc epoch the GUI and CLI
+# render bytes are identical — glibc's libm.a/libmvec.a are numerically identical
+# to their shared counterparts (verified) — and a glibc update drifts the GUI's
+# output ulp-class until a deliberate rebuild while the fully static CLI holds.
+# Everything else the products link (wayland, cairo, jack, libstdc++) never
+# touches render bytes and stays dynamic. OFF by default so package-manager-only
+# (distro/portable) builds work everywhere; docs/HELP.md's Reproducibility
+# section carries the user-facing story.
+option(WARPTEMPO_STATIC_DSP
+    "Link fftw statically (GUI+CLI) and the CLI fully static to pin render bytes" OFF)
+set(WARPTEMPO_FFTW_STATIC_PREFIX "$ENV{HOME}/.warptempo/fftw-3.3.11-static"
+    CACHE PATH "Prefix of the static fftw build used by WARPTEMPO_STATIC_DSP")
+
+if(WARPTEMPO_STATIC_DSP)
+    # Both products consume these two fftw archives (threads before core) where
+    # they consumed the pkg-config fftw libs. Pair the static build's own headers
+    # with its archives for a self-consistent header/lib match.
+    set(WARPTEMPO_DSP_LIBS
+        ${WARPTEMPO_FFTW_STATIC_PREFIX}/lib/libfftw3_threads.a
+        ${WARPTEMPO_FFTW_STATIC_PREFIX}/lib/libfftw3.a)
+    set(WARPTEMPO_FFTW_INCLUDE_DIRS ${WARPTEMPO_FFTW_STATIC_PREFIX}/include)
+    # The CLI additionally links glibc's static math archives (libmvec before
+    # libm — libmvec's scalar fallbacks call libm); the GUI links neither, its
+    # glibc math staying dynamic under the PIE constraint above.
+    if(WARPTEMPO_BUILD_CLI)
+        set(WARPTEMPO_CLI_STATIC_MATH_LIBS /usr/lib/libmvec.a /usr/lib/libm.a)
+    else()
+        set(WARPTEMPO_CLI_STATIC_MATH_LIBS "")
+    endif()
+    # Existence check: the two fftw archives are needed by every enabled target;
+    # the glibc math archives only when the CLI target is built.
+    foreach(dsp_archive ${WARPTEMPO_DSP_LIBS} ${WARPTEMPO_CLI_STATIC_MATH_LIBS})
+        if(NOT EXISTS ${dsp_archive})
+            message(FATAL_ERROR
+                "WARPTEMPO_STATIC_DSP: missing static archive ${dsp_archive}. "
+                "Build the static fftw once into ${WARPTEMPO_FFTW_STATIC_PREFIX} "
+                "(fftw 3.3.11, --enable-sse2 --enable-avx, generic "
+                "-march=x86-64 -O2) and ensure glibc's libm.a/libmvec.a are "
+                "present, or configure with -DWARPTEMPO_STATIC_DSP=OFF.")
+        endif()
+    endforeach()
+else()
+    # Dynamic (default): the libs and includes exactly as pkg-config discovers
+    # them — behavior-identical to a build with no static-DSP switch at all.
+    set(WARPTEMPO_DSP_LIBS ${FFTW3_THREADS_LIB} ${FFTW3_LIBRARIES})
+    set(WARPTEMPO_FFTW_INCLUDE_DIRS ${FFTW3_INCLUDE_DIRS})
+    set(WARPTEMPO_CLI_STATIC_MATH_LIBS "")
+endif()
+
 # ============================================================
 #  Per-directory source lists.
 #  Each binary compiles these .cpp lists directly rather than linking a shared
@@ -180,7 +241,7 @@ if(WARPTEMPO_BUILD_GUI)
         ${CMAKE_SOURCE_DIR}/src/prepost
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
-        ${FFTW3_INCLUDE_DIRS}
+        ${WARPTEMPO_FFTW_INCLUDE_DIRS}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}
         ${XKBCOMMON_INCLUDE_DIRS}
@@ -188,8 +249,7 @@ if(WARPTEMPO_BUILD_GUI)
         ${JACK_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
-        ${FFTW3_THREADS_LIB}
-        ${FFTW3_LIBRARIES}
+        ${WARPTEMPO_DSP_LIBS}
         ${WAYLAND_CLIENT_LIBRARIES}
         ${WAYLAND_CURSOR_LIBRARIES}
         ${XKBCOMMON_LIBRARIES}
@@ -223,13 +283,21 @@ if(WARPTEMPO_BUILD_CLI)
         ${CMAKE_SOURCE_DIR}/src/engine
         ${CMAKE_SOURCE_DIR}/src/audio_io
         ${CMAKE_SOURCE_DIR}/src/prepost
-        ${FFTW3_INCLUDE_DIRS}
+        ${WARPTEMPO_FFTW_INCLUDE_DIRS}
     )
+    # The static-math archives sit right after the fftw archives (empty unless
+    # WARPTEMPO_STATIC_DSP is ON). Under WARPTEMPO_STATIC_DSP the CLI is the fully
+    # static archival reference renderer, so it also links -static; the GUI never
+    # does (a PIE cannot statically link glibc's libm/libmvec — see the option
+    # comment above).
     target_link_libraries(warptempo_cli PRIVATE
-        ${FFTW3_THREADS_LIB}
-        ${FFTW3_LIBRARIES}
+        ${WARPTEMPO_DSP_LIBS}
+        ${WARPTEMPO_CLI_STATIC_MATH_LIBS}
         pthread
     )
+    if(WARPTEMPO_STATIC_DSP)
+        target_link_options(warptempo_cli PRIVATE -static)
+    endif()
 endif()
 
 # --- Compiler Optimizations ---

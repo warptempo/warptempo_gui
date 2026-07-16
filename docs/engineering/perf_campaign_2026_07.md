@@ -392,3 +392,32 @@ startup — flushing denormals in the entire engine: a silent global
 reference change, not a scoped one. The `-fno-lto` pin on the same TU
 guards the boundary against whole-program optimization for the same
 reason.
+
+## 12. Postscript: the static reference (option landed post-campaign, same day)
+
+Following §11's observation that the dynamic reference surface drifts under
+system updates, the architect ruled to pin it (`WARPTEMPO_STATIC_DSP`,
+fingerprint v15). Findings from the implementation:
+
+- glibc 2.43 cannot statically link libm/libmvec into a PIE: their ifunc
+  objects reference the loader-private `_dl_x86_cpu_features` (DT_TEXTREL
+  error in PIE; undefined symbol under -no-pie). Full `-static` is the only
+  complete-pinning shape, available to the CLI alone (the GUI needs dynamic
+  wayland/jack).
+- glibc's libm.a/libmvec.a are numerically IDENTICAL to their shared
+  counterparts on this host — verified by byte-comparing renders of a fully
+  static CLI against a static-fftw-only CLI. This is what makes the split
+  shape coherent: the GUI (pinned fftw + dynamic glibc math) and the fully
+  static CLI render byte-identically within one glibc epoch.
+- A static fftw 3.3.11 built with Arch's documented double-precision
+  codelet set (--enable-sse2 --enable-avx) and generic -march=x86-64 -O2
+  flags does NOT numerically match Arch's shipped shared fftw (first
+  divergence one cascade ~15 s into the reference render) — their
+  additional hardening/LTO flags or build path differ. Chasing byte parity
+  with the outgoing dynamic epoch was declined as decoration: the goal was
+  future stability, so the static build became the canonical reference via
+  a one-time fingerprint bump (v15) instead.
+- Resulting model: the fully static CLI is the archival truth, immune to
+  every system update; the GUI matches it from each rebuild until the next
+  glibc update, then may drift ulp-class until the next chosen rebuild
+  (epoch semantics, documented in HELP's Reproducibility section).
