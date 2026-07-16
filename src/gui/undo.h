@@ -87,9 +87,6 @@ struct Undo {
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
-    // True when do_undo would actually act (non-empty stack, top entry's
-    // target tab writable). do_undo's authoritative guard.
-    bool can_undo() const;
     void do_undo();
     void do_redo();
 
@@ -109,4 +106,17 @@ struct Undo {
     // Per-press side effects for a coalesced (push-skipped) press: the same
     // hover-popup clear the push_undo_* helpers do, minus the history push.
     void note_coalesced_commit();
+
+  private:
+    // Shared authoritative guard for do_undo / do_redo: true when the step
+    // would actually act (non-empty source stack, top entry's target tab
+    // writable). See the rationale block at the definition.
+    bool history_entry_actionable(const std::vector<UndoEntry>& stack) const;
+    // Direction-parameterized restore core shared by do_undo / do_redo. Pops
+    // `from`, pushes the live-state counter-entry onto `to`, and applies the
+    // whole common restore body; saved_distance_delta is +1 for undo, -1 for
+    // redo. Callers guard with history_entry_actionable first.
+    void restore_history_entry(std::vector<UndoEntry>& from,
+                               std::vector<UndoEntry>& to,
+                               int saved_distance_delta);
 };

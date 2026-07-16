@@ -287,48 +287,57 @@ void Undo::apply_post_restore_rules_phase_reset(
         });
 }
 
-// True when do_undo would actually act — do_undo's authoritative guard.
-// Two ways undo is a silent no-op:
-//   - empty undo stack;
+// True when do_undo / do_redo would actually act — the authoritative guard for
+// both, run on the source stack. Two ways a step is a silent no-op:
+//   - empty source stack;
 //   - the top entry's TARGET tab is currently read-only. When the ACTIVE tab
-//     is read-only Ctrl+Z is already dropped at the keyboard gate
+//     is read-only Ctrl+Z / Ctrl+Shift+Z is already dropped at the keyboard gate
 //     (read_only_key_blocked); this catches the remaining cross-tab path — the
 //     active tab writable but the top entry targeting the OTHER, locked tab.
 //     Read-only is a reversible per-tab toggle, so honored-ness is decided by
 //     the target tab's state now, not when the action was recorded.
 // Each bail leaves the entry on the stack and the view unchanged, so unlocking
 // the tab makes the history reachable again with nothing lost.
-bool Undo::can_undo() const {
-    if (app.history.undo_stack.empty()) return false;
-    const char tt = app.history.undo_stack.back().tab;
+bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
+    if (stack.empty()) return false;
+    const char tt = stack.back().tab;
     const bool target_ro = (tt == 'B') ? app.tab_b.read_only
                                         : app.tab_a.read_only;
     return !target_ro;
 }
 
-void Undo::do_undo() {
-    if (!can_undo()) return;   // authoritative guard; see can_undo's comment
+// Direction-parameterized restore core shared by do_undo / do_redo, making the
+// two symmetric by construction. Pops the top entry of `from`, records the
+// live-state counter-entry onto `to` (kCap-trimmed), and applies the common
+// restore body; saved_distance moves by `saved_distance_delta` (+1 undo, −1
+// redo). The caller has already run history_entry_actionable on `from`.
+void Undo::restore_history_entry(std::vector<UndoEntry>& from,
+                                 std::vector<UndoEntry>& to,
+                                 int saved_distance_delta) {
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
-    UndoEntry entry = std::move(app.history.undo_stack.back());
-    app.history.undo_stack.pop_back();
+    UndoEntry entry = std::move(from.back());
+    from.pop_back();
 
-    UndoEntry redo_entry;
-    redo_entry.snapshot           = app.warpmarkers.markers();
-    redo_entry.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    redo_entry.settings           = capture_current_settings(app);
-    redo_entry.op_mode            = entry.op_mode;
-    redo_entry.tab                = entry.tab;
-    redo_entry.hint_last_selected = entry.hint_last_selected;
-    redo_entry.affects_persistence = entry.affects_persistence;
-    std::vector<GuiWarpMarker>    before_w = redo_entry.snapshot;
-    std::vector<GuiPhaseResetMarker> before_t = redo_entry.phase_reset_snapshot;
+    // Counter-entry captured from live state so the opposite direction can
+    // reverse this restore. Same carry-everywhere field list the push_undo_*
+    // helpers use, so marker and settings entries round-trip identically.
+    UndoEntry counter;
+    counter.snapshot            = app.warpmarkers.markers();
+    counter.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    counter.settings            = capture_current_settings(app);
+    counter.op_mode             = entry.op_mode;
+    counter.tab                 = entry.tab;
+    counter.hint_last_selected  = entry.hint_last_selected;
+    counter.affects_persistence = entry.affects_persistence;
+    std::vector<GuiWarpMarker>       before_w = counter.snapshot;
+    std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
 
-    app.history.redo_stack.push_back(std::move(redo_entry));
-    if (app.history.redo_stack.size() > UndoHistory::kCap) {
-        app.history.redo_stack.erase(app.history.redo_stack.begin());
+    to.push_back(std::move(counter));
+    if (to.size() > UndoHistory::kCap) {
+        to.erase(to.begin());
     }
-    if (app.history.saved_valid) app.history.saved_distance += 1;
+    if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
     // Restore the originating A/B tab before the marker swap. The
     // post-restore rules below call selection.jump_playhead_to(...),
@@ -347,11 +356,21 @@ void Undo::do_undo() {
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
-    // Switch active mode to match the op being undone before applying
+    // Switch active mode to match the op being restored before applying
     // post-restore rules — selection state is mode-bound, so the rules
     // and the sanitize step must run against the correct list. Skip
     // entirely for settings-only entries: they don't carry an authoring
     // mode, and active_markers_view is a view-state key that's not undoable.
+    //
+    // Kept inline rather than delegated to
+    // GuiActiveViews::switch_active_markers_view_to: that helper additionally
+    // runs selection.prune_live_selection(), whose last_selected repair
+    // (re-anchor to the max surviving index) differs from
+    // sanitize_selection_after_restore's (set to -1) when the restored slot's
+    // last_selected falls outside the clamped set while the set stays
+    // non-empty. In the same-count / no-field-change branch the post-restore
+    // rules leave the selection untouched, so that repair difference would be
+    // observable — the swap must stay pre-sanitize-only here.
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         // Stash the current selection into the leaving mode's slot,
         // then restore the destination mode's slot.
@@ -392,93 +411,18 @@ void Undo::do_undo() {
     // below still owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
-    // Every undo restores engine input (markers, phase resets, or
+    // Every undo/redo restores engine input (markers, phase resets, or
     // settings) — fire a target render in target view. No-op in
     // source view.
     target_render.trigger();
 }
 
+void Undo::do_undo() {
+    if (!history_entry_actionable(app.history.undo_stack)) return;
+    restore_history_entry(app.history.undo_stack, app.history.redo_stack, +1);
+}
+
 void Undo::do_redo() {
-    if (app.history.redo_stack.empty()) return;
-    // Symmetric to do_undo: peek the entry on top of the redo stack and bail
-    // silently if its target tab is currently read-only. Entry stays on the
-    // stack; unlocking the tab restores reachability.
-    {
-        const char tt = app.history.redo_stack.back().tab;
-        const bool target_ro = (tt == 'B') ? app.tab_b.read_only
-                                            : app.tab_a.read_only;
-        if (target_ro) return;
-    }
-    playback_lifecycle.stop_playback_if_playing();
-    viewport.clear_hover_popup();
-    UndoEntry entry = std::move(app.history.redo_stack.back());
-    app.history.redo_stack.pop_back();
-
-    UndoEntry undo_entry;
-    undo_entry.snapshot           = app.warpmarkers.markers();
-    undo_entry.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    undo_entry.settings           = capture_current_settings(app);
-    undo_entry.op_mode            = entry.op_mode;
-    undo_entry.tab                = entry.tab;
-    undo_entry.hint_last_selected = entry.hint_last_selected;
-    undo_entry.affects_persistence = entry.affects_persistence;
-    std::vector<GuiWarpMarker>    before_w = undo_entry.snapshot;
-    std::vector<GuiPhaseResetMarker> before_t = undo_entry.phase_reset_snapshot;
-
-    app.history.undo_stack.push_back(std::move(undo_entry));
-    if (app.history.undo_stack.size() > UndoHistory::kCap) {
-        app.history.undo_stack.erase(app.history.undo_stack.begin());
-    }
-    if (app.history.saved_valid) app.history.saved_distance -= 1;
-
-    if (entry.tab != app.active_tab_view) {
-        active_views.switch_active_tab_view_to(entry.tab);
-    }
-
-    app.engine_settings    = std::move(entry.settings.engine_settings);
-
-    app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
-    app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-
-    if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
-        ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
-        if (app.active_markers_view == 'P') {
-            curtab.phase_reset_selected      = app.selected_markers;
-            curtab.phase_reset_last_selected = app.last_selected_marker;
-            app.selected_markers           = curtab.warp_selected;
-            app.last_selected_marker       = curtab.warp_last_selected;
-        } else {
-            curtab.warp_selected           = app.selected_markers;
-            curtab.warp_last_selected      = app.last_selected_marker;
-            app.selected_markers           = curtab.phase_reset_selected;
-            app.last_selected_marker       = curtab.phase_reset_last_selected;
-        }
-        app.active_markers_view = entry.op_mode;
-    }
-
-    // Settings-only entries carry no marker or focus post-restore work.
-    if (entry.op_mode == 'P') {
-        apply_post_restore_rules_phase_reset(entry, before_t);
-        selection.sanitize_selection_after_restore(
-            static_cast<int>(app.phaseresetmarkers.markers().size()));
-    } else if (entry.op_mode != 'S') {
-        apply_post_restore_rules_warp(entry, before_w);
-        selection.sanitize_selection_after_restore(
-            static_cast<int>(app.warpmarkers.markers().size()));
-    }
-    recompute_dirty();
-    viewport.invalidate_waveform_area();
-    // One-shot discrete jump: undo/redo restored markers / phase resets /
-    // settings, changing the displayed plate (the target-view warp_frame_map, and the
-    // viewport when an offscreen-marker restore recenters). Render it
-    // synchronously so the restored markers and the waveform land together. A
-    // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
-    // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
-    // duplicates invalidate_waveform_area above (harmless); target_render.trigger
-    // below still owns target-buffer freshness when target view is available.
-    viewport.kick_waveform_sync();
-    viewport.invalidate_timestamp_area();
-    // Every redo restores engine input — fire a target render in
-    // target view. No-op in source view.
-    target_render.trigger();
+    if (!history_entry_actionable(app.history.redo_stack)) return;
+    restore_history_entry(app.history.redo_stack, app.history.undo_stack, -1);
 }
