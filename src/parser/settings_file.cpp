@@ -175,15 +175,15 @@ std::expected<SettingsFile, std::string> read_settings_file(
             tab->trim.has_end = true;
             tab->trim.end_frame = v;
         } else if (key == "follow") {
-            // Historical grammar: case-insensitive true/false only.
-            std::string lower = value;
-            for (char& c : lower) c = static_cast<char>(
-                std::tolower(static_cast<unsigned char>(c)));
-            if (lower == "true")       { out.follow = true;  }
-            else if (lower == "false") { out.follow = false; }
-            else {
-                return bad_value(ln, key, value, "must be true or false");
+            // Bools share parse_bool_token schema-wide (same grammar as
+            // the per-tab read_only keys).
+            bool v = false;
+            if (!parse_bool_token(value, v)) {
+                return bad_value(
+                    ln, key, value,
+                    "must be one of {true, false, 1, 0, yes, no, on, off}");
             }
+            out.follow = v;
             out.has_follow = true;
         } else if (key == "active_audio_view") {
             if (value != "S" && value != "T") {
@@ -205,9 +205,10 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.active_tab_view = value[0];
         } else if (key == "playback_speed") {
             // Preset-vocabulary-only on disk: the GUI authors playback_speed
-            // exclusively through the Shift+0..9 presets
-            // (kPlaybackSpeedPresets, the shared source of truth), so any
-            // off-preset value is a state the GUI can never produce.
+            // through the settings editor (:playback_speed=), whose commit
+            // red-flashes any value outside kPlaybackSpeedPresets (the shared
+            // source of truth), so any off-preset value is a state the GUI
+            // can never produce.
             // Exact float equality against the table is sound: the writer
             // emits each preset with the same one-decimal %.1f this parses
             // back, and both the on-disk text and the table literal are the

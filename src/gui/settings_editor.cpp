@@ -38,20 +38,6 @@ bool is_key_char(char c) {
     return std::isalnum(uc) || c == '_';
 }
 
-// The `follow` value grammar, mirrored from the loader arm in
-// src/parser/settings_file.cpp (case-insensitive true/false ONLY). The parser
-// is frozen, so this is deliberate duplication: the loader arm there is the
-// grammar owner. Note this is NOT parse_bool_token -- follow does not accept
-// the {1,0,yes,no,on,off} vocabulary the loader reserves for per-tab read_only.
-bool parse_follow_token(const std::string& value, bool& out) {
-    std::string lower = value;
-    for (char& c : lower)
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    if (lower == "true")  { out = true;  return true; }
-    if (lower == "false") { out = false; return true; }
-    return false;
-}
-
 } // namespace
 
 void GuiSettingsEditor::open() {
@@ -115,9 +101,12 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (key == "follow") {
+        // parse_bool_token at both boundaries, shared with read_only —
+        // one bool grammar schema-wide.
         bool v = false;
-        if (!parse_follow_token(value, v)) {
-            reject("follow must be true or false");
+        if (!warptempo_parse::parse_bool_token(value, v)) {
+            reject("follow must be one of "
+                   "{true, false, 1, 0, yes, no, on, off}");
             return true;
         }
         if (v == app.follow_mode) { unchanged(); return true; }
