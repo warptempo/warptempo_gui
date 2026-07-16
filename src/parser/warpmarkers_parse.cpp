@@ -8,15 +8,20 @@
 #include <cstdio>
 #include <expected>
 #include <fstream>
-#include <map>
-#include <regex>
 #include <set>
 
 namespace {
 
+// Label shape is exactly `x.yz`: a lowercase letter, a dot, then two
+// lowercase-letter-or-digit characters. ASCII ranges compared directly (no
+// locale, no isalpha/isdigit).
 bool is_valid_label_format(const std::string& s) {
-    static const std::regex re("^[a-z]\\.[a-z0-9]{2}$");
-    return std::regex_match(s, re);
+    auto is_lower = [](char c) { return c >= 'a' && c <= 'z'; };
+    auto is_lower_alnum = [](char c) {
+        return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+    };
+    return s.size() == 4 && is_lower(s[0]) && s[1] == '.' &&
+           is_lower_alnum(s[2]) && is_lower_alnum(s[3]);
 }
 
 // Parse and bracket-check an authored TEMPO field, straight to integer
@@ -56,9 +61,10 @@ bool parse_tempo_field(const std::string& s, int64_t& out,
 
 // Parse and range-check an authored SCALE value: full double via
 // parse_value_double (whole field consumed, finite, no leading '-') under
-// a strict positivity refusal — a well-formed negative or typed zero gets
-// a pointed message, other malformed spellings fail the parse — then the
-// scale bracket [kScaleMin, kScaleMax] (value_format.h), then ONE canonical
+// a strict positivity refusal — a typed zero (a canonical spelling like
+// "0.0000") parses and gets the pointed positivity message; any other
+// refused spelling, negative included, is the plain invalid-value refusal —
+// then the scale bracket [kScaleMin, kScaleMax] (value_format.h), then ONE canonical
 // spelling: the accepted spelling IS the writer's spelling
 // (format_value_double at `canonical_decimals`, min 4 for scale), so "1.2000"
 // loads and "1.2" refuses. This is a deliberate tempo/scale asymmetry with
@@ -69,16 +75,7 @@ bool parse_positive_value(const std::string& s, double& out,
                           int canonical_decimals, std::string& error_out) {
     double v = 0.0;
     if (!parse_value_double(s, v)) {
-        // parse_value_double rejects a leading '-' outright; a well-formed
-        // negative number is still a positivity violation, not gibberish,
-        // so it gets the same message a typed zero does.
-        double neg_probe = 0.0;
-        if (s.size() > 1 && s.front() == '-' &&
-            parse_value_double(std::string_view(s).substr(1), neg_probe)) {
-            error_out = std::string(what) + " must be positive: " + s;
-        } else {
-            error_out = std::string("invalid ") + what + " value: " + s;
-        }
+        error_out = std::string("invalid ") + what + " value: " + s;
         return false;
     }
     if (!(v > 0.0)) {
@@ -96,6 +93,35 @@ bool parse_positive_value(const std::string& s, double& out,
         return false;
     }
     out = v;
+    return true;
+}
+
+// Parse TEMPO[*SCALE] into m's tempo fields (owner form: inherits=false).
+// Splits on an optional '*', parses the tempo through parse_tempo_field and
+// the optional scale through parse_positive_value, then writes the three
+// tempo fields. label_def, if any, is the caller's to attach.
+bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
+                            std::string& error_out) {
+    const size_t star = s.find('*');
+    const std::string tempo_part = (star == std::string::npos)
+        ? s : s.substr(0, star);
+    const std::string scale_part = (star == std::string::npos)
+        ? std::string() : s.substr(star + 1);
+    int64_t tempo_c = 0;
+    if (!parse_tempo_field(tempo_part, tempo_c, error_out)) {
+        return false;
+    }
+    std::optional<double> scale_v;
+    if (star != std::string::npos) {
+        double sv = 0.0;
+        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, 4, error_out)) {
+            return false;
+        }
+        scale_v = sv;
+    }
+    m.tempo_inherits = false;
+    m.tempo_cents    = tempo_c;
+    m.tempo_scale    = scale_v;
     return true;
 }
 
@@ -153,27 +179,7 @@ bool parse_new_payload(const std::string& payload,
             return true;
         }
         // Tempo (numeric, with optional *scale).
-        const size_t star = payload.find('*');
-        const std::string tempo_part = (star == std::string::npos)
-            ? payload : payload.substr(0, star);
-        const std::string scale_part = (star == std::string::npos)
-            ? std::string() : payload.substr(star + 1);
-        int64_t tempo_c = 0;
-        if (!parse_tempo_field(tempo_part, tempo_c, error_out)) {
-            return false;
-        }
-        std::optional<double> scale_v;
-        if (star != std::string::npos) {
-            double sv = 0.0;
-            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, 4, error_out)) {
-                return false;
-            }
-            scale_v = sv;
-        }
-        m.tempo_inherits = false;
-        m.tempo_cents    = tempo_c;
-        m.tempo_scale    = scale_v;
-        return true;
+        return parse_tempo_with_scale(payload, m, error_out);
     }
 
     // Two parts: (TEMPO[*SCALE] | pass) : label_def. The three WarpMarker
@@ -197,27 +203,10 @@ bool parse_new_payload(const std::string& payload,
         m.label_def      = label_def;
         return true;
     }
-    const size_t star = tempo_with_scale.find('*');
-    const std::string tempo_part = (star == std::string::npos)
-        ? tempo_with_scale : tempo_with_scale.substr(0, star);
-    const std::string scale_part = (star == std::string::npos)
-        ? std::string() : tempo_with_scale.substr(star + 1);
-    int64_t tempo_c = 0;
-    if (!parse_tempo_field(tempo_part, tempo_c, error_out)) {
+    if (!parse_tempo_with_scale(tempo_with_scale, m, error_out)) {
         return false;
     }
-    std::optional<double> scale_v;
-    if (star != std::string::npos) {
-        double sv = 0.0;
-        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, 4, error_out)) {
-            return false;
-        }
-        scale_v = sv;
-    }
-    m.tempo_inherits = false;
-    m.tempo_cents    = tempo_c;
-    m.tempo_scale    = scale_v;
-    m.label_def      = label_def;
+    m.label_def = label_def;
     return true;
 }
 
@@ -309,9 +298,8 @@ parse_warpmarkers_file(const std::string& path) {
     // proceeds.
     int64_t last_time = -1;
 
-    // Track which line first defined each label (for duplicate errors).
-    std::set<std::string>      seen_def;
-    std::map<std::string, int> seen_def_line;
+    // Track which labels have been defined (for duplicate-definition errors).
+    std::set<std::string> seen_def;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
@@ -368,11 +356,8 @@ parse_warpmarkers_file(const std::string& path) {
         if (!m.label_def.empty()) {
             if (seen_def.count(m.label_def))
                 return fail(line_number,
-                    "duplicate label definition: " + m.label_def +
-                    " (first defined at line " +
-                    std::to_string(seen_def_line[m.label_def]) + ")");
+                    "duplicate label definition: " + m.label_def);
             seen_def.insert(m.label_def);
-            seen_def_line[m.label_def] = line_number;
         }
 
         // pass markers carry inert defaults (set by parse_new_payload). No
